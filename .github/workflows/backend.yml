@@ -1,0 +1,78 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "services/backend/**"
+      - ".github/workflows/backend.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "services/backend/**"
+      - ".github/workflows/backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: quran
+          POSTGRES_USER: quran
+          POSTGRES_PASSWORD: quran-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quran -d quran"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: quran_backend.settings.test
+      DATABASE_HOST: localhost
+      DATABASE_NAME: quran
+      DATABASE_USER: quran
+      DATABASE_PASSWORD: quran-ci
+      REDIS_URL: redis://localhost:6379/0
+      QURAN_TEST_DATABASE: postgresql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.28"
+          enable-cache: true
+      - name: Install Python
+        run: uv python install 3.14
+        working-directory: services/backend
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+        working-directory: services/backend
+      - name: Ruff
+        run: uv run ruff check . && uv run ruff format --check .
+        working-directory: services/backend
+      - name: Type checking
+        run: uv run mypy src
+        working-directory: services/backend
+      - name: Django checks and migrations
+        run: uv run python manage.py check && uv run python manage.py makemigrations --check --dry-run
+        working-directory: services/backend
+      - name: OpenAPI validation
+        run: uv run python manage.py spectacular --file /tmp/quran-openapi.yaml --validate
+        working-directory: services/backend
+      - name: Tests
+        run: uv run pytest
+        working-directory: services/backend

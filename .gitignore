@@ -1,0 +1,25 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+.venv/
+dist/
+build/
+staticfiles/
+media/
+tmp/
+
+# Licensed/source media is kept outside Git and verified by checksum at import time.
+/quran-hafs-mushaf.pdf

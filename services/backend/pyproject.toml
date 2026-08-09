@@ -1,0 +1,118 @@
+[project]
+name = "quran-platform-backend"
+version = "0.1.0"
+description = "Backend API for Quran Platform"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "celery[redis]>=5.5,<6",
+    "django==6.1",
+    "django-cors-headers==4.9.0",
+    "djangorestframework>=3.16,<4",
+    "drf-spectacular>=0.28,<1",
+    "gunicorn>=23,<24",
+    "psycopg[binary]>=3.2,<4",
+    "redis>=6,<7",
+    "uvicorn[standard]>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]>=5.2,<6",
+    "djangorestframework-stubs[compatible-mypy]>=3.16,<4",
+    "mypy>=1.17,<2",
+    "pytest>=8.4,<9",
+    "pytest-cov>=6.2,<7",
+    "pytest-django>=4.11,<5",
+    "ruff>=0.12,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quran_backend"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "quran_backend.settings.test"
+pythonpath = ["src"]
+testpaths = ["tests", "src"]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=quran_backend",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+
+[tool.coverage.run]
+branch = true
+omit = ["*/migrations/*", "*/settings/*", "*/asgi.py", "*/wsgi.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ARG",
+    "ASYNC",
+    "B",
+    "C4",
+    "DJ",
+    "DTZ",
+    "E",
+    "F",
+    "I",
+    "N",
+    "PERF",
+    "PIE",
+    "PL",
+    "PT",
+    "RET",
+    "RUF",
+    "S",
+    "SIM",
+    "T20",
+    "UP",
+    "W",
+]
+ignore = [
+    "DJ001",
+    "PLR2004",
+    "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501", "I001", "RUF012"]
+"**/models.py" = ["RUF012"]
+"**/modules/*/api.py" = ["RUF012"]
+"**/settings/test.py" = ["S105"]
+"tests/**/*.py" = ["ARG001", "PLR2004", "S105", "S106"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.14"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+strict = true
+warn_unreachable = true
+exclude = ["migrations"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "drf_spectacular.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "quran_backend.settings.test"
