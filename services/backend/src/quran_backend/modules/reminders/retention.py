@@ -8,10 +8,11 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from quran_backend.modules.accounts.models import User
+from quran_backend.modules.reading.models import SyncChange, SyncOperation
 from quran_backend.modules.reminders.models import ReminderRule, RetiredReminderId
 from quran_backend.modules.reminders.policies import reminder_id_policy
 
@@ -69,7 +70,23 @@ def prune_reminder_tombstones(
 
 
 def _eligible_tombstones(cutoff: datetime) -> QuerySet[ReminderRule]:
-    return ReminderRule.objects.filter(deleted_at__lt=cutoff).order_by("deleted_at", "id")
+    retained_changes = SyncChange.objects.filter(
+        user_id=OuterRef("user_id"),
+        entity_type="reminder",
+        entity_id=OuterRef("id"),
+    )
+    retained_operations = SyncOperation.objects.filter(
+        user_id=OuterRef("user_id"),
+        entity_type="reminder",
+        entity_id=OuterRef("id"),
+    )
+    return (
+        ReminderRule.objects.filter(deleted_at__lt=cutoff)
+        .annotate(has_retained_change=Exists(retained_changes))
+        .annotate(has_retained_operation=Exists(retained_operations))
+        .filter(has_retained_change=False, has_retained_operation=False)
+        .order_by("deleted_at", "id")
+    )
 
 
 @transaction.atomic

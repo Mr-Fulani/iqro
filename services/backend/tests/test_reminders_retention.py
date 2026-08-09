@@ -24,6 +24,7 @@ from quran_backend.modules.accounts.models import (
     User,
 )
 from quran_backend.modules.accounts.services import AccessAuthContext
+from quran_backend.modules.reading.models import SyncChange, SyncOperation
 from quran_backend.modules.reminders import tasks as reminder_tasks
 from quran_backend.modules.reminders.checks import (
     check_reminder_id_retention_policy,
@@ -75,6 +76,13 @@ def _delete(client: APIClient, reminder_id: str, *, revision: int = 1) -> dict[s
     )
     assert response.status_code == 200
     return cast(dict[str, Any], response.json())
+
+
+def _discard_reminder_sync_changes(user: User, *reminder_ids: str | uuid.UUID) -> None:
+    changes = SyncChange.objects.filter(user=user, entity_type="reminder")
+    if reminder_ids:
+        changes = changes.filter(entity_id__in=reminder_ids)
+    changes.delete()
 
 
 @pytest.mark.django_db
@@ -145,6 +153,7 @@ def test_prune_replaces_expired_tombstone_with_ownership_aware_retired_id() -> N
     deleted = _delete(client, created["id"])
     old = timezone.now() - timedelta(days=31)
     ReminderRule.objects.filter(pk=created["id"]).update(deleted_at=old)
+    _discard_reminder_sync_changes(user, created["id"])
 
     preview = prune_reminder_tombstones(now=timezone.now(), dry_run=True)
     result = prune_reminder_tombstones(now=timezone.now())
@@ -177,6 +186,93 @@ def test_prune_replaces_expired_tombstone_with_ownership_aware_retired_id() -> N
 
 
 @pytest.mark.django_db
+@override_settings(**SAFE_RETENTION_SETTINGS)
+@pytest.mark.parametrize("retained_kind", ["change", "operation"])
+def test_prune_waits_for_matching_retained_sync_history(retained_kind: str) -> None:
+    user = User.objects.create_user()
+    client = _client(user)
+    created = _create(client, _prayer_payload())
+    deleted = _delete(client, created["id"])
+    reminder_id = uuid.UUID(created["id"])
+    ReminderRule.objects.filter(pk=reminder_id).update(
+        deleted_at=timezone.now() - timedelta(days=31)
+    )
+
+    if retained_kind == "change":
+        assert SyncChange.objects.filter(
+            user=user,
+            entity_type="reminder",
+            entity_id=reminder_id,
+        ).exists()
+    else:
+        _discard_reminder_sync_changes(user, reminder_id)
+        SyncOperation.objects.create(
+            user=user,
+            operation_id=uuid.uuid7(),
+            entity_type="reminder",
+            entity_id=reminder_id,
+            action="delete",
+            request_hash="a" * 64,
+            outcome="accepted",
+            response={"entity": deleted},
+        )
+
+    blocked = prune_reminder_tombstones(now=timezone.now())
+
+    assert blocked["tombstones"] == 0
+    assert ReminderRule.objects.filter(pk=reminder_id).exists()
+    assert RetiredReminderId.objects.filter(reminder_id=reminder_id).exists() is False
+
+    SyncChange.objects.filter(user=user, entity_id=reminder_id).delete()
+    SyncOperation.objects.filter(user=user, entity_id=reminder_id).delete()
+
+    released = prune_reminder_tombstones(now=timezone.now())
+
+    assert released["tombstones"] == 1
+    assert ReminderRule.objects.filter(pk=reminder_id).exists() is False
+    assert RetiredReminderId.objects.filter(reminder_id=reminder_id).exists()
+
+
+@pytest.mark.django_db
+@override_settings(**SAFE_RETENTION_SETTINGS)
+def test_prune_ignores_sync_history_for_other_entity_type_or_user() -> None:
+    owner = User.objects.create_user()
+    other_user = User.objects.create_user()
+    created = _create(_client(owner), _prayer_payload())
+    _delete(_client(owner), created["id"])
+    reminder_id = uuid.UUID(created["id"])
+    ReminderRule.objects.filter(pk=reminder_id).update(
+        deleted_at=timezone.now() - timedelta(days=31)
+    )
+    _discard_reminder_sync_changes(owner, reminder_id)
+    SyncChange.objects.create(
+        user=owner,
+        sequence=3,
+        entity_type="bookmark",
+        entity_id=reminder_id,
+        action="delete",
+        revision=1,
+        snapshot={},
+    )
+    SyncOperation.objects.create(
+        user=other_user,
+        operation_id=uuid.uuid7(),
+        entity_type="reminder",
+        entity_id=reminder_id,
+        action="delete",
+        request_hash="b" * 64,
+        outcome="accepted",
+        response={},
+    )
+
+    result = prune_reminder_tombstones(now=timezone.now())
+
+    assert result["tombstones"] == 1
+    assert ReminderRule.objects.filter(pk=reminder_id).exists() is False
+    assert RetiredReminderId.objects.filter(reminder_id=reminder_id).exists()
+
+
+@pytest.mark.django_db
 @override_settings(
     **SAFE_RETENTION_SETTINGS,
     QURAN_REMINDER_MAX_ACTIVE_PER_USER=2,
@@ -192,6 +288,7 @@ def test_pruning_releases_total_quota_without_allowing_id_reuse() -> None:
     ReminderRule.objects.filter(pk=first["id"]).update(
         deleted_at=timezone.now() - timedelta(days=31)
     )
+    _discard_reminder_sync_changes(user, first["id"])
     before_prune = client.post(reverse("reminders:reminder-list"), _prayer_payload(), format="json")
     assert before_prune.status_code == 409
     assert before_prune.json()["code"] == "reminder_quota_exceeded"
@@ -268,6 +365,7 @@ def test_bounded_ledger_evicts_only_ids_already_rejected_by_freshness(
         _delete(client, created["id"])
     old = timezone.now() - timedelta(days=31)
     ReminderRule.objects.filter(user=user).update(deleted_at=old)
+    _discard_reminder_sync_changes(user)
     future = timezone.now() + timedelta(days=31)
 
     first = prune_reminder_tombstones(now=future)
@@ -312,6 +410,7 @@ def test_task_drains_multiple_bounded_batches_and_command_supports_dry_run() -> 
         created = _create(client, _prayer_payload())
         _delete(client, created["id"])
     ReminderRule.objects.filter(user=user).update(deleted_at=timezone.now() - timedelta(days=31))
+    _discard_reminder_sync_changes(user)
 
     output = io.StringIO()
     call_command("prune_reminder_tombstones", "--dry-run", stdout=output)
@@ -343,6 +442,7 @@ def test_concurrent_postgresql_pruners_retire_a_tombstone_once() -> None:
     ReminderRule.objects.filter(pk=created["id"]).update(
         deleted_at=timezone.now() - timedelta(days=31)
     )
+    _discard_reminder_sync_changes(user, created["id"])
     barrier = Barrier(2)
 
     def prune() -> int:

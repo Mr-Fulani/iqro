@@ -13,6 +13,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
 from django.db.models import QuerySet
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 from rest_framework import status
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 
@@ -23,6 +24,7 @@ from quran_backend.modules.quran.models import (
     PublicationStatus,
     QuranEdition,
 )
+from quran_backend.modules.reading.change_log import append_sync_change, current_sync_cursor
 from quran_backend.modules.reading.models import (
     Bookmark,
     ReadingPosition,
@@ -35,6 +37,11 @@ from quran_backend.modules.reading.models import (
     UserSyncCursor,
 )
 from quran_backend.modules.reading.policies import bookmark_id_policy
+from quran_backend.modules.reminders.sync_adapter import (
+    apply_reminder_sync_operation,
+    current_reminder_sync_entity,
+    full_resync_reminders,
+)
 
 
 class SyncRevisionConflict(APIException):
@@ -101,6 +108,15 @@ class BookmarkNotFoundError(NotFound):
 class QuranEditionNotFoundError(NotFound):
     default_detail = "Published Quran edition was not found."
     default_code = "edition_not_found"
+
+
+_FULL_RESYNC_PHASES = (
+    SyncEntityType.READING_POSITION,
+    SyncEntityType.BOOKMARK,
+    SyncEntityType.REMINDER,
+)
+_FULL_RESYNC_REGISTRY_VERSION = "v2:reading_position:bookmark:reminder"
+_FULL_RESYNC_SIGNING_CONTEXT = "quran-platform.offline-sync.full-resync.v2"
 
 
 def reading_position_snapshot(position: ReadingPosition) -> dict[str, Any]:
@@ -183,6 +199,7 @@ def upsert_reading_position_direct(
     user: User,
     data: dict[str, Any],
 ) -> dict[str, Any]:
+    User.objects.select_for_update().only("id").get(id=user.id)
     edition = _active_edition(data["edition_code"])
     current = ReadingPosition.objects.select_for_update().filter(user=user, edition=edition).first()
     entity_id = current.id if current else uuid.uuid7()
@@ -237,6 +254,7 @@ def update_bookmark_direct(
     bookmark_id: uuid.UUID,
     data: dict[str, Any],
 ) -> dict[str, Any]:
+    User.objects.select_for_update().only("id").get(id=user.id)
     result = _mutate_bookmark(
         user=user,
         entity_id=bookmark_id,
@@ -256,6 +274,7 @@ def delete_bookmark_direct(
     bookmark_id: uuid.UUID,
     data: dict[str, Any],
 ) -> dict[str, Any]:
+    User.objects.select_for_update().only("id").get(id=user.id)
     if not Bookmark.objects.filter(user=user, id=bookmark_id).exists():
         raise BookmarkNotFoundError
     result = _mutate_bookmark(
@@ -271,20 +290,47 @@ def delete_bookmark_direct(
     return cast(dict[str, Any], result["entity"])
 
 
+@sensitive_variables("operations")
 @transaction.atomic
-def apply_sync_batch(user: User, operations: list[dict[str, Any]]) -> dict[str, Any]:
+def apply_sync_batch(
+    user: User,
+    operations: list[dict[str, Any]],
+    *,
+    authenticated_device: Device | None = None,
+) -> dict[str, Any]:
     """Apply a batch atomically while preserving stored per-operation conflict results."""
 
-    results = [_apply_sync_operation(user, operation) for operation in operations]
+    results = [
+        _apply_sync_operation(
+            user,
+            operation,
+            authenticated_device=authenticated_device,
+        )
+        for operation in operations
+    ]
     return {"results": results, "cursor": current_sync_cursor(user)}
 
 
+@sensitive_variables("operation")
 @transaction.atomic
-def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, Any]:
+def _apply_sync_operation(
+    user: User,
+    operation: dict[str, Any],
+    *,
+    authenticated_device: Device | None,
+) -> dict[str, Any]:
     # Serialize a user's operation log so concurrent retries cannot apply twice
     # before the operation_id uniqueness constraint is observed.
     User.objects.select_for_update().only("id").get(id=user.id)
-    request_hash = _operation_hash(operation)
+    entity_type = operation["entity_type"]
+    request_hash = _operation_hash(
+        operation,
+        bound_device_id=(
+            authenticated_device.id
+            if entity_type == SyncEntityType.REMINDER and authenticated_device
+            else None
+        ),
+    )
     existing = (
         SyncOperation.objects.select_for_update()
         .filter(user=user, operation_id=operation["operation_id"])
@@ -294,10 +340,16 @@ def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, An
         if existing.request_hash != request_hash:
             raise SyncOperationReuse()
         replayed_response = dict(existing.response)
+        if existing.entity_type == SyncEntityType.REMINDER:
+            entity_was_present = bool(replayed_response.pop("_entity_was_present", False))
+            replayed_response["entity"] = (
+                current_reminder_sync_entity(user, existing.entity_id)
+                if entity_was_present
+                else None
+            )
         replayed_response["replayed"] = True
         return replayed_response
 
-    entity_type = operation["entity_type"]
     if entity_type == SyncEntityType.READING_POSITION:
         mutation = _mutate_reading_position(
             user=user,
@@ -307,7 +359,7 @@ def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, An
             device_id=operation.get("device_id"),
             payload=operation["payload"],
         )
-    else:
+    elif entity_type == SyncEntityType.BOOKMARK:
         mutation = _mutate_bookmark(
             user=user,
             entity_id=operation["entity_id"],
@@ -317,6 +369,14 @@ def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, An
             device_id=operation.get("device_id"),
             payload=operation["payload"],
         )
+    elif entity_type == SyncEntityType.REMINDER:
+        mutation = apply_reminder_sync_operation(
+            user=user,
+            device=authenticated_device,
+            operation=operation,
+        )
+    else:  # pragma: no cover - serializer and model choices are fail-closed.
+        raise RuntimeError(f"Unsupported sync entity type: {entity_type}")
 
     response = {
         "operation_id": str(operation["operation_id"]),
@@ -328,6 +388,16 @@ def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, An
     if mutation.get("conflict_reason"):
         response["conflict_reason"] = mutation["conflict_reason"]
 
+    stored_response = response
+    if entity_type == SyncEntityType.REMINDER:
+        # Reminder operation replay is hydrated from the current domain row.
+        # Avoid duplicating schedule, timezone, ayah range, and device data in
+        # the long-lived operation ledger.
+        stored_response = {
+            **response,
+            "entity": None,
+            "_entity_was_present": response.get("entity") is not None,
+        }
     SyncOperation.objects.create(
         user=user,
         operation_id=operation["operation_id"],
@@ -336,7 +406,7 @@ def _apply_sync_operation(user: User, operation: dict[str, Any]) -> dict[str, An
         action=operation["action"],
         request_hash=request_hash,
         outcome=mutation["outcome"],
-        response=response,
+        response=stored_response,
     )
     return response
 
@@ -369,7 +439,7 @@ def pull_changes(user: User, *, cursor: int, limit: int) -> dict[str, Any]:
                 "action": change.action,
                 "revision": change.revision,
                 "entity": change.snapshot,
-                "server_updated_at": change.created_at.isoformat(),
+                "server_updated_at": change.updated_at.isoformat(),
             }
             for change in changes
         ],
@@ -401,37 +471,48 @@ def full_resync_page(
             )
     else:
         snapshot_cursor = current_cursor
-        phase = "reading_position"
+        phase = SyncEntityType.READING_POSITION
         after = None
 
     entities: list[dict[str, Any]] = []
     next_phase: str | None = None
     next_after: uuid.UUID | None = None
 
-    if phase == "reading_position":
-        positions = _full_resync_positions(user, after=after, limit=limit + 1)
-        if len(positions) > limit:
-            positions = positions[:limit]
-            next_phase = "reading_position"
-            next_after = positions[-1].id
-        else:
-            remaining = limit - len(positions)
-            bookmarks = _full_resync_bookmarks(user, after=None, limit=remaining + 1)
-            if len(bookmarks) > remaining:
-                bookmarks = bookmarks[:remaining]
-                next_phase = "bookmark"
-                next_after = bookmarks[-1].id if bookmarks else None
-            entities.extend(reading_position_snapshot(position) for position in positions)
-            entities.extend(bookmark_snapshot(bookmark) for bookmark in bookmarks)
-        if next_phase == "reading_position":
-            entities.extend(reading_position_snapshot(position) for position in positions)
-    else:
-        bookmarks = _full_resync_bookmarks(user, after=after, limit=limit + 1)
-        if len(bookmarks) > limit:
-            bookmarks = bookmarks[:limit]
-            next_phase = "bookmark"
-            next_after = bookmarks[-1].id
-        entities.extend(bookmark_snapshot(bookmark) for bookmark in bookmarks)
+    phase_index = _FULL_RESYNC_PHASES.index(phase)
+    current_after = after
+    while phase_index < len(_FULL_RESYNC_PHASES) and len(entities) < limit:
+        current_phase = _FULL_RESYNC_PHASES[phase_index]
+        remaining = limit - len(entities)
+        page = _full_resync_entities(
+            current_phase,
+            user=user,
+            after=current_after,
+            limit=remaining + 1,
+        )
+        if len(page) > remaining:
+            page = page[:remaining]
+            entities.extend(page)
+            next_phase = current_phase
+            next_after = uuid.UUID(page[-1]["id"])
+            break
+        entities.extend(page)
+        phase_index += 1
+        current_after = None
+
+    # If a phase ended exactly at the response limit, find the next non-empty
+    # phase so has_more never advertises a guaranteed empty page.
+    if next_phase is None and len(entities) == limit:
+        while phase_index < len(_FULL_RESYNC_PHASES):
+            candidate_phase = _FULL_RESYNC_PHASES[phase_index]
+            if _full_resync_entities(
+                candidate_phase,
+                user=user,
+                after=None,
+                limit=1,
+            ):
+                next_phase = candidate_phase
+                break
+            phase_index += 1
 
     next_page_token = None
     if next_phase:
@@ -448,10 +529,6 @@ def full_resync_page(
         "next_page_token": next_page_token,
         "has_more": next_page_token is not None,
     }
-
-
-def current_sync_cursor(user: User) -> int:
-    return UserSyncCursor.objects.filter(user=user).values_list("value", flat=True).first() or 0
 
 
 def _matches_bookmark_create(
@@ -499,6 +576,28 @@ def _full_resync_bookmarks(
     return list(queryset[:limit])
 
 
+def _full_resync_entities(
+    phase: str,
+    *,
+    user: User,
+    after: uuid.UUID | None,
+    limit: int,
+) -> list[dict[str, Any]]:
+    if phase == SyncEntityType.READING_POSITION:
+        return [
+            reading_position_snapshot(position)
+            for position in _full_resync_positions(user, after=after, limit=limit)
+        ]
+    if phase == SyncEntityType.BOOKMARK:
+        return [
+            bookmark_snapshot(bookmark)
+            for bookmark in _full_resync_bookmarks(user, after=after, limit=limit)
+        ]
+    if phase == SyncEntityType.REMINDER:
+        return full_resync_reminders(user, after=after, limit=limit)
+    raise RuntimeError(f"Unsupported full-resync phase: {phase}")
+
+
 def _encode_full_resync_token(
     *,
     user: User,
@@ -510,10 +609,11 @@ def _encode_full_resync_token(
         {
             "user_id": str(user.id),
             "snapshot_cursor": snapshot_cursor,
+            "registry_version": _FULL_RESYNC_REGISTRY_VERSION,
             "phase": phase,
             "after": str(after) if after else None,
         },
-        salt="quran-platform.reading.full-resync.v1",
+        salt=_FULL_RESYNC_SIGNING_CONTEXT,
         compress=True,
     )
 
@@ -522,7 +622,7 @@ def _decode_full_resync_token(token: str, user: User) -> dict[str, Any]:
     try:
         payload = signing.loads(
             token,
-            salt="quran-platform.reading.full-resync.v1",
+            salt=_FULL_RESYNC_SIGNING_CONTEXT,
             max_age=_positive_setting(
                 "QURAN_SYNC_FULL_RESYNC_TOKEN_MAX_AGE_SECONDS",
                 24 * 60 * 60,
@@ -530,8 +630,10 @@ def _decode_full_resync_token(token: str, user: User) -> dict[str, Any]:
         )
         if not isinstance(payload, dict) or payload.get("user_id") != str(user.id):
             raise FullResyncTokenInvalidError
+        if payload.get("registry_version") != _FULL_RESYNC_REGISTRY_VERSION:
+            raise FullResyncTokenInvalidError
         phase = payload.get("phase")
-        if phase not in {"reading_position", "bookmark"}:
+        if phase not in _FULL_RESYNC_PHASES:
             raise FullResyncTokenInvalidError
         after_value = payload.get("after")
         after = uuid.UUID(after_value) if after_value else None
@@ -626,7 +728,7 @@ def _mutate_reading_position(  # noqa: PLR0913
         )
 
     snapshot = reading_position_snapshot(position)
-    cursor = _append_change(
+    cursor = append_sync_change(
         user=user,
         entity_type=SyncEntityType.READING_POSITION,
         entity_id=position.id,
@@ -669,7 +771,7 @@ def _mutate_bookmark(  # noqa: PLR0911, PLR0912, PLR0913
             ]
         )
         snapshot = bookmark_snapshot(bookmark)
-        cursor = _append_change(
+        cursor = append_sync_change(
             user=user,
             entity_type=SyncEntityType.BOOKMARK,
             entity_id=bookmark.id,
@@ -743,7 +845,7 @@ def _mutate_bookmark(  # noqa: PLR0911, PLR0912, PLR0913
         )
 
     snapshot = bookmark_snapshot(bookmark)
-    cursor = _append_change(
+    cursor = append_sync_change(
         user=user,
         entity_type=SyncEntityType.BOOKMARK,
         entity_id=bookmark.id,
@@ -860,36 +962,6 @@ def _bookmark_queryset(*, for_update: bool = False) -> QuerySet[Bookmark]:
     return queryset.select_for_update(of=("self",)) if for_update else queryset
 
 
-def _append_change(  # noqa: PLR0913
-    *,
-    user: User,
-    entity_type: str,
-    entity_id: uuid.UUID,
-    action: str,
-    revision: int,
-    snapshot: dict[str, Any],
-) -> int:
-    cursor = UserSyncCursor.objects.select_for_update().filter(user=user).first()
-    if cursor is None:
-        try:
-            with transaction.atomic():
-                cursor = UserSyncCursor.objects.create(user=user)
-        except IntegrityError:
-            cursor = UserSyncCursor.objects.select_for_update().get(user=user)
-    cursor.value += 1
-    cursor.save(update_fields=["value", "updated_at"])
-    SyncChange.objects.create(
-        user=user,
-        sequence=cursor.value,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        action=action,
-        revision=revision,
-        snapshot=snapshot,
-    )
-    return cursor.value
-
-
 def _conflict(
     user: User,
     reason: str,
@@ -926,10 +998,17 @@ def _new_bookmark_id_is_acceptable(entity_id: uuid.UUID, *, now: datetime) -> bo
     )
 
 
-def _operation_hash(operation: dict[str, Any]) -> str:
+def _operation_hash(
+    operation: dict[str, Any],
+    *,
+    bound_device_id: uuid.UUID | None = None,
+) -> str:
     try:
+        canonical_operation = dict(operation)
+        if operation.get("entity_type") == SyncEntityType.REMINDER:
+            canonical_operation["_bound_device_id"] = bound_device_id
         serialized = json.dumps(
-            operation,
+            canonical_operation,
             cls=DjangoJSONEncoder,
             ensure_ascii=False,
             sort_keys=True,

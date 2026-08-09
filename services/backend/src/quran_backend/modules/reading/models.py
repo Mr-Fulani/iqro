@@ -13,6 +13,7 @@ from quran_backend.modules.core.models import BaseModel
 class SyncEntityType(models.TextChoices):
     READING_POSITION = "reading_position", "Reading position"
     BOOKMARK = "bookmark", "Bookmark"
+    REMINDER = "reminder", "Reminder"
 
 
 class SyncAction(models.TextChoices):

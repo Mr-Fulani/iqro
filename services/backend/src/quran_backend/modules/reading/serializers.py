@@ -3,13 +3,19 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
+from drf_spectacular.extensions import OpenApiSerializerExtension
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_field
 from rest_framework import serializers
 
-from quran_backend.modules.core.serializers import UUIDv7Field
+from quran_backend.modules.core.serializers import StrictFieldsSerializer, UUIDv7Field
 from quran_backend.modules.reading.models import SyncAction, SyncEntityType, SyncOutcome
+from quran_backend.modules.reminders.serializers import (
+    ReminderFunctionalSerializer,
+    ReminderPatchFunctionalSerializer,
+    ReminderSyncOutputSerializer,
+)
 
 READING_ANCHOR_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -169,11 +175,13 @@ class BookmarkDeleteSerializer(serializers.Serializer[Any]):
     device_id = serializers.UUIDField(required=False, allow_null=True)
 
 
-class SyncOperationInputSerializer(serializers.Serializer[Any]):
+class SyncOperationInputSerializer(StrictFieldsSerializer):
     operation_id = serializers.UUIDField()
     entity_type = serializers.ChoiceField(choices=SyncEntityType.choices)
     entity_id = serializers.UUIDField(
-        help_text="Bookmark entity_id values must be client-generated UUIDv7 identifiers."
+        help_text=(
+            "Bookmark and reminder entity_id values must be client-generated UUIDv7 identifiers."
+        )
     )
     action = serializers.ChoiceField(choices=SyncAction.choices)
     base_revision = serializers.IntegerField(min_value=0)
@@ -181,15 +189,22 @@ class SyncOperationInputSerializer(serializers.Serializer[Any]):
     device_id = serializers.UUIDField(required=False, allow_null=True)
     payload = serializers.JSONField(required=False, default=dict)
 
-    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:  # noqa: PLR0912
         entity_type = attrs["entity_type"]
         action = attrs["action"]
         payload = attrs.get("payload", {})
         base_revision = attrs["base_revision"]
 
-        if entity_type == SyncEntityType.BOOKMARK and attrs["entity_id"].version != 7:
+        if (
+            entity_type in {SyncEntityType.BOOKMARK, SyncEntityType.REMINDER}
+            and attrs["entity_id"].version != 7
+        ):
             raise serializers.ValidationError(
-                {"entity_id": "Bookmark identifiers must use UUIDv7."}
+                {
+                    "entity_id": (
+                        f"{entity_type.replace('_', ' ').title()} identifiers must use UUIDv7."
+                    )
+                }
             )
 
         if entity_type == SyncEntityType.READING_POSITION:
@@ -200,18 +215,41 @@ class SyncOperationInputSerializer(serializers.Serializer[Any]):
             payload_serializer: serializers.Serializer[Any] = ReadingPositionPayloadSerializer(
                 data=payload
             )
-        elif action == SyncAction.DELETE:
+        elif entity_type == SyncEntityType.BOOKMARK and action == SyncAction.DELETE:
             if payload:
                 raise serializers.ValidationError(
                     {"payload": "Delete operations must have an empty payload."}
                 )
             attrs["payload"] = {}
             return attrs
-        else:
+        elif entity_type == SyncEntityType.BOOKMARK:
             payload_serializer = BookmarkPayloadSerializer(
                 data=payload,
                 partial=base_revision > 0,
             )
+        elif entity_type == SyncEntityType.REMINDER:
+            if "device_id" in attrs:
+                raise serializers.ValidationError(
+                    {"device_id": "Reminder device provenance comes from the access token."}
+                )
+            if action == SyncAction.DELETE:
+                if base_revision == 0:
+                    raise serializers.ValidationError(
+                        {"base_revision": "Reminder deletes require an existing revision."}
+                    )
+                if payload:
+                    raise serializers.ValidationError(
+                        {"payload": "Delete operations must have an empty payload."}
+                    )
+                attrs["payload"] = {}
+                return attrs
+            payload_serializer = (
+                ReminderFunctionalSerializer(data=payload)
+                if base_revision == 0
+                else ReminderPatchFunctionalSerializer(data=payload)
+            )
+        else:  # pragma: no cover - ChoiceField rejects unknown values first.
+            raise serializers.ValidationError({"entity_type": "Unsupported sync entity type."})
 
         payload_serializer.is_valid(raise_exception=True)
         validated_payload = dict(payload_serializer.validated_data)
@@ -228,7 +266,165 @@ class SyncOperationInputSerializer(serializers.Serializer[Any]):
         return attrs
 
 
-class SyncPushSerializer(serializers.Serializer[Any]):
+class EmptySyncPayloadSerializer(StrictFieldsSerializer):
+    """An empty JSON object. Omission is equivalent to ``{}`` for delete operations."""
+
+
+class ReadingPositionSyncOperationSerializer(StrictFieldsSerializer):
+    """Schema-only reading-position upsert contract."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.READING_POSITION])
+    entity_id = serializers.UUIDField()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(
+        min_value=0,
+        help_text=(
+            "Use 0 to create the position; otherwise send the exact current revision. "
+            "A mismatch is returned as a per-operation conflict."
+        ),
+    )
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = ReadingPositionPayloadSerializer()
+
+
+class BookmarkSyncCreatePayloadSerializer(BookmarkPayloadSerializer):
+    """New-bookmark payload; a page or complete ayah target is also required."""
+
+    edition_code = serializers.SlugField(max_length=64)
+
+
+class BookmarkSyncCreateOperationSerializer(StrictFieldsSerializer):
+    """Schema-only bookmark create contract (upsert at base revision 0)."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.BOOKMARK])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=0, max_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = BookmarkSyncCreatePayloadSerializer(
+        help_text="Requires edition_code and either page_number or an ayah-number pair."
+    )
+
+
+class BookmarkSyncPatchOperationSerializer(StrictFieldsSerializer):
+    """Schema-only bookmark patch contract (upsert at an existing revision)."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.BOOKMARK])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = BookmarkPayloadSerializer(required=False)
+
+
+class BookmarkSyncDeleteOperationSerializer(StrictFieldsSerializer):
+    """Schema-only bookmark delete contract."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.BOOKMARK])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.DELETE])
+    base_revision = serializers.IntegerField(
+        min_value=0,
+        help_text=(
+            "Send the exact current revision. Persisted bookmarks start at revision 1; "
+            "base_revision=0 is accepted syntactically and resolves as a conflict."
+        ),
+    )
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = EmptySyncPayloadSerializer(required=False)
+
+
+class ReminderSyncCreateOperationSerializer(StrictFieldsSerializer):
+    """Create a reminder with a complete functional payload."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.REMINDER])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=0, max_value=0)
+    client_updated_at = serializers.DateTimeField()
+    payload = ReminderFunctionalSerializer()
+
+
+class ReminderSyncPatchOperationSerializer(StrictFieldsSerializer):
+    """Patch an existing reminder at its exact current revision."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.REMINDER])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    payload = ReminderPatchFunctionalSerializer(required=False)
+
+
+class ReminderSyncDeleteOperationSerializer(StrictFieldsSerializer):
+    """Delete an existing reminder; payload must be omitted or an empty object."""
+
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.REMINDER])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.DELETE])
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    payload = EmptySyncPayloadSerializer(required=False)
+
+
+def _sync_operation_openapi_proxy() -> PolymorphicProxySerializer:
+    bookmark = PolymorphicProxySerializer(
+        component_name="BookmarkSyncOperation",
+        serializers=[
+            BookmarkSyncCreateOperationSerializer,
+            BookmarkSyncPatchOperationSerializer,
+            BookmarkSyncDeleteOperationSerializer,
+        ],
+        resource_type_field_name=None,
+        many=False,
+    )
+    reminder = PolymorphicProxySerializer(
+        component_name="ReminderSyncOperation",
+        serializers=[
+            ReminderSyncCreateOperationSerializer,
+            ReminderSyncPatchOperationSerializer,
+            ReminderSyncDeleteOperationSerializer,
+        ],
+        resource_type_field_name=None,
+        many=False,
+    )
+    return PolymorphicProxySerializer(
+        component_name="SyncOperationInput",
+        serializers={
+            SyncEntityType.READING_POSITION.value: ReadingPositionSyncOperationSerializer,
+            SyncEntityType.BOOKMARK.value: bookmark,
+            SyncEntityType.REMINDER.value: reminder,
+        },
+        resource_type_field_name="entity_type",
+        many=False,
+    )
+
+
+class SyncOperationInputSerializerSchema(OpenApiSerializerExtension):  # type: ignore[no-untyped-call]
+    """Expose the strict discriminated request union while retaining one runtime validator."""
+
+    target_class = SyncOperationInputSerializer
+    priority = 1
+
+    def map_serializer(self, auto_schema: Any, direction: Any) -> dict[str, Any]:
+        return cast(
+            dict[str, Any],
+            auto_schema._map_serializer(_sync_operation_openapi_proxy(), direction),
+        )
+
+
+class SyncPushSerializer(StrictFieldsSerializer):
     operations = SyncOperationInputSerializer(many=True, allow_empty=False)
 
     def validate_operations(self, operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -316,6 +512,7 @@ class BookmarkListQuerySerializer(serializers.Serializer[Any]):
         serializers={
             "reading_position": ReadingPositionOutputSerializer,
             "bookmark": BookmarkOutputSerializer,
+            "reminder": ReminderSyncOutputSerializer,
         },
         resource_type_field_name="entity_type",
     )

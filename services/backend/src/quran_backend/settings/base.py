@@ -311,9 +311,13 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "ReadingPositionEntityTypeEnum": ["reading_position"],
         "BookmarkEntityTypeEnum": ["bookmark"],
+        "ReminderEntityTypeEnum": ["reminder"],
+        "SyncUpsertActionEnum": ["upsert"],
+        "SyncDeleteActionEnum": ["delete"],
         "SyncEntityTypeEnum": [
             ("reading_position", "Reading position"),
             ("bookmark", "Bookmark"),
+            ("reminder", "Reminder"),
         ],
     },
     "POSTPROCESSING_HOOKS": [

@@ -164,9 +164,7 @@ class ReminderCreateSerializer(ReminderFunctionalSerializer):
     client_updated_at = serializers.DateTimeField()
 
 
-class ReminderPatchSerializer(StrictFieldsSerializer):
-    base_revision = serializers.IntegerField(min_value=1)
-    client_updated_at = serializers.DateTimeField()
+class ReminderPatchFunctionalSerializer(StrictFieldsSerializer):
     reminder_type = serializers.ChoiceField(choices=ReminderType.choices, required=False)
     schedule = ReminderScheduleField(required=False)
     review_target = ReminderReviewTargetSerializer(required=False, allow_null=True)
@@ -178,6 +176,11 @@ class ReminderPatchSerializer(StrictFieldsSerializer):
     timezone = ReminderTimezoneField(required=False)
     signal = serializers.ChoiceField(choices=ReminderSignal.choices, required=False)
     is_enabled = serializers.BooleanField(required=False)
+
+
+class ReminderPatchSerializer(ReminderPatchFunctionalSerializer):
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
 
 
 class ReminderDeleteSerializer(StrictFieldsSerializer):
@@ -212,6 +215,10 @@ class ReminderOutputSerializer(serializers.Serializer[Any]):
     deleted_at = serializers.DateTimeField(allow_null=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+
+
+class ReminderSyncOutputSerializer(ReminderOutputSerializer):
+    entity_type = serializers.ChoiceField(choices=["reminder"], read_only=True)
 
 
 class ReminderFullSnapshotSerializer(serializers.Serializer[Any]):

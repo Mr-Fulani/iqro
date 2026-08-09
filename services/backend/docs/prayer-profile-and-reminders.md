@@ -16,6 +16,10 @@ Backend:
 - никогда не хранит координаты, вычисленные occurrence times, push token или историю
   срабатываний в этом модуле.
 
+Правила напоминаний являются сущностями общего sync v1 вместе с reading position и
+закладками. Профиль намаза намеренно остаётся отдельным singleton endpoint: его нельзя
+посылать как `entity_type` в `/api/v1/sync/push`.
+
 Flutter рассчитывает ближайшие occurrence times и регистрирует локальные системные
 уведомления. Web и Mini App в текущем срезе синхронизируют настройки и показывают
 in-app напоминания только пока клиент активен. Server push, bot delivery, delivery log и
@@ -216,6 +220,40 @@ wall-clock recurrence. `device_local` означает текущую IANA zone 
 часов. Это ограничение гарантирует, что физическое удаление старого tombstone не позволит
 вернуть давно удалённую identity.
 
+### Единый sync v1
+
+Offline-клиент может отправлять те же изменения через `POST /api/v1/sync/push` с
+`entity_type=reminder`. Внутри sync-envelope:
+
+- `entity_id` — UUIDv7 правила;
+- `action=upsert`, `base_revision=0` и полный functional payload создают правило;
+- `action=upsert`, `base_revision>=1` и частичный functional payload изменяют его;
+- `action=delete`, `base_revision>=1` и пустой/отсутствующий payload создают tombstone;
+- `client_updated_at` находится во внешней операции, а `id`, `base_revision`,
+  `client_updated_at` и `device_id` никогда не дублируются в payload.
+
+Форма functional payload совпадает с direct API: `reminder_type`, `schedule`,
+`review_target`, `weekdays_mask`, `timezone`, `signal`, `is_enabled`. Вложенные union
+объекты заменяются целиком. `device_id` определяется access token; сохранённое во внешнем
+sync-envelope поле для reminder запрещено, чтобы клиент не мог подменить provenance.
+
+Точное повторение нормализованной операции с тем же `operation_id` возвращает сохранённый
+outcome/cursor с `replayed=true`, подставляет текущий user-owned snapshot и ничего не
+записывает. Другой запрос с тем же operation ID даёт `409 sync_operation_reuse`;
+разрешение конфликта всегда получает новый operation ID.
+Реальные create/patch/delete через direct endpoints и sync атомарно записывают один и тот
+же глобальный change-log. No-op, exact retry и повторное удаление tombstone не создают
+новую ревизию или cursor.
+
+Incremental pull возвращает полный reminder snapshot с discriminator
+`entity_type=reminder`; для delete это минимизированный tombstone, а не `null`.
+При delete прежние retained changes этой identity также схлопываются в минимизированный
+tombstone, поэтому obsolete schedule/timezone/ayah/device data не остаются в change-log.
+`SyncOperation` хранит outcome/cursor без дублирования functional snapshot.
+Конфликты `revision_mismatch`, `entity_missing`, `entity_id_unavailable`,
+`entity_id_not_reusable` и `reminder_quota_exceeded` возвращаются внутри result
+конкретной операции. Ошибка формы payload, timezone или ayah откатывает весь batch.
+
 ### Полный snapshot и tombstones
 
 `GET /api/v1/me/reminders` возвращает:
@@ -246,8 +284,23 @@ tombstone физически заменяется компактной запи�
 uv run python manage.py prune_reminder_tombstones --dry-run
 ```
 
-До следующего sync-среза напоминания не входят в общий `/api/v1/sync/push|pull`; для них
-источником истины является отдельный полный snapshot выше.
+Общий full resync (`GET /api/v1/sync/pull?full_resync=true`) проходит фазы reading
+position, bookmark, затем reminder и включает активные правила и tombstones. Signed
+`next_page_token` фиксирует snapshot cursor и текущую фазу. Отсутствие записи становится
+авторитетным только после получения последней страницы; до этого клиент не удаляет
+локальные правила и не отменяет уведомления из-за промежуточного неполного списка.
+
+Отдельный `GET /api/v1/me/reminders` остаётся компактным авторитетным snapshot только
+правил напоминаний. Он полезен клиенту, которому не требуется полный reading-state sync,
+но не образует отдельную конкурирующую историю: обе поверхности читают те же revision и
+tombstones.
+
+Физическое удаление reminder tombstone разрешено только после удаления всех retained
+`SyncChange` и `SyncOperation` этой identity. Сначала транзакционно создаётся компактный
+`RetiredReminderId`; поэтому старый UUID нельзя воскресить. Exact replay действует в
+пределах retention окна `SyncOperation`, а физическое удаление tombstone ждёт окончания
+этого окна. После pruning завершённый full resync сообщает старое удаление авторитетным
+отсутствием.
 
 ## Планирование на Flutter
 
@@ -261,6 +314,20 @@ uv run python manage.py prune_reminder_tombstones --dry-run
 6. зарегистрировать локальные уведомления со стабильным локальным идентификатором,
    производным от `(reminder_id, civil_date, event)`;
 7. атомарно заменить предыдущий локальный план и сохранить версии входов.
+
+Outbox и локальное optimistic state сохраняются атомарно; до terminal result клиент не
+меняет `operation_id`. Для одной identity держится не более одной незавершённой операции,
+а несколько offline-правок схлопываются в желаемое состояние. При
+`revision_mismatch` клиент принимает серверный snapshot, повторно накладывает локальное
+намерение и отправляет новую операцию с новой base revision и новым operation ID.
+
+Cursor из ответа push нельзя записывать как локальный pull cursor: между прежним cursor и
+push могли находиться изменения другого устройства. После push клиент продолжает pull от
+своего прежнего сохранённого cursor до `has_more=false`. При истёкшем cursor незавершённый
+outbox сохраняется, full resync собирается во временное состояние до последней страницы,
+после чего outbox перебазируется. Tombstone сразу отменяет локальное системное
+уведомление; перепланирование выполняется только после reconciliation и отдельного
+получения prayer profile.
 
 Полный replan нужен при изменении профиля/rule revision, даты, координат, IANA timezone,
 UTC offset/DST, разрешений, метода/checksum, algorithm/tzdb version, после перезагрузки

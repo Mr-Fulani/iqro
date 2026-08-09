@@ -12,6 +12,8 @@ from rest_framework.exceptions import ValidationError
 from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.quran.models import Ayah
 from quran_backend.modules.quran.selectors import published_active_ayahs_by_id
+from quran_backend.modules.reading.change_log import append_sync_change
+from quran_backend.modules.reading.models import SyncAction, SyncChange, SyncEntityType
 from quran_backend.modules.reminders.exceptions import (
     ReminderCreateConflictError,
     ReminderDeletedError,
@@ -84,6 +86,15 @@ def reminder_snapshot(reminder: ReminderRule) -> dict[str, Any]:
     }
 
 
+def reminder_sync_snapshot(reminder: ReminderRule) -> dict[str, Any]:
+    """Return the reminder shape used by the polymorphic offline-sync contract."""
+
+    return {
+        "entity_type": SyncEntityType.REMINDER,
+        **reminder_snapshot(reminder),
+    }
+
+
 def full_reminder_snapshot(user: User) -> dict[str, Any]:
     reminders = [reminder_snapshot(reminder) for reminder in list_reminders(user)]
     return {
@@ -120,6 +131,7 @@ def create_reminder(
             raise ReminderDeletedError
         if (
             existing.user_id == user.id
+            and existing.revision == 1
             and _stored_functional_state(existing) == _input_functional_state(data)
             and existing.client_updated_at == data["client_updated_at"]
             and existing.device_id == (device.id if device else None)
@@ -161,6 +173,7 @@ def create_reminder(
             reminder.save()
     except IntegrityError as exc:
         raise ReminderCreateConflictError from exc
+    _append_reminder_change(reminder, action=SyncAction.UPSERT)
     return reminder_snapshot(reminder), True
 
 
@@ -172,6 +185,7 @@ def patch_reminder(
     reminder_id: uuid.UUID,
     data: dict[str, Any],
 ) -> dict[str, Any]:
+    User.objects.select_for_update().only("id").get(pk=user.pk)
     current = reminder_queryset(for_update=True).filter(user=user, id=reminder_id).first()
     if current is None:
         raise ReminderNotFoundError
@@ -192,6 +206,7 @@ def patch_reminder(
     current.revision += 1
     _validate_reminder(current)
     current.save()
+    _append_reminder_change(current, action=SyncAction.UPSERT)
     return reminder_snapshot(current)
 
 
@@ -204,6 +219,7 @@ def delete_reminder(
     data: dict[str, Any],
 ) -> dict[str, Any]:
     del device  # Tombstones intentionally discard device provenance.
+    User.objects.select_for_update().only("id").get(pk=user.pk)
     current = reminder_queryset(for_update=True).filter(user=user, id=reminder_id).first()
     if current is None:
         raise ReminderNotFoundError
@@ -228,7 +244,36 @@ def delete_reminder(
     current.revision += 1
     _validate_reminder(current)
     current.save()
+    _append_reminder_change(current, action=SyncAction.DELETE)
+    _collapse_reminder_change_history(current)
     return reminder_snapshot(current)
+
+
+def _append_reminder_change(reminder: ReminderRule, *, action: str) -> int:
+    return append_sync_change(
+        user=reminder.user,
+        entity_type=SyncEntityType.REMINDER,
+        entity_id=reminder.id,
+        action=action,
+        revision=reminder.revision,
+        snapshot=reminder_sync_snapshot(reminder),
+    )
+
+
+def _collapse_reminder_change_history(reminder: ReminderRule) -> None:
+    """Remove obsolete scheduling data from retained changes after deletion."""
+
+    snapshot = reminder_sync_snapshot(reminder)
+    SyncChange.objects.filter(
+        user=reminder.user,
+        entity_type=SyncEntityType.REMINDER,
+        entity_id=reminder.id,
+    ).update(
+        action=SyncAction.DELETE,
+        revision=reminder.revision,
+        snapshot=snapshot,
+        updated_at=timezone.now(),
+    )
 
 
 def _create_values(data: dict[str, Any]) -> dict[str, Any]:

@@ -41,7 +41,15 @@ def test_openapi_contract_is_31_and_matches_bookmark_concurrency_api() -> None:
     assert schema["components"]["schemas"]["ReadingSyncEntity"]["discriminator"]["mapping"] == {
         "reading_position": "#/components/schemas/ReadingPositionOutput",
         "bookmark": "#/components/schemas/BookmarkOutput",
+        "reminder": "#/components/schemas/ReminderSyncOutput",
     }
+    assert schema["components"]["schemas"]["SyncEntityTypeEnum"]["enum"] == [
+        "reading_position",
+        "bookmark",
+        "reminder",
+    ]
+    reminder_sync_schema = schema["components"]["schemas"]["ReminderSyncOutput"]
+    assert "entity_type" in reminder_sync_schema["required"]
     bookmark_parameters = {
         parameter["name"]: parameter
         for parameter in schema["paths"]["/api/v1/me/bookmarks"]["get"]["parameters"]
@@ -64,6 +72,63 @@ def test_openapi_contract_is_31_and_matches_bookmark_concurrency_api() -> None:
     }
     assert delete_parameters["base_revision"]["schema"]["minimum"] == 1
     assert delete_parameters["client_updated_at"]["schema"]["format"] == "date-time"
+
+
+def test_sync_push_openapi_is_a_strict_discriminated_request_union() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    sync_push_request = schema["components"]["schemas"]["SyncPushRequest"]
+    assert sync_push_request["additionalProperties"] is False
+    operation_items = sync_push_request["properties"]["operations"]["items"]
+    operation_union = schema["components"]["schemas"][
+        operation_items["$ref"].rsplit("/", maxsplit=1)[-1]
+    ]
+    assert len(operation_union["oneOf"]) == 3
+    assert operation_union["discriminator"] == {
+        "propertyName": "entity_type",
+        "mapping": {
+            "reading_position": "#/components/schemas/ReadingPositionSyncOperationRequest",
+            "bookmark": "#/components/schemas/BookmarkSyncOperationRequest",
+            "reminder": "#/components/schemas/ReminderSyncOperationRequest",
+        },
+    }
+    reminder_operation = schema["components"]["schemas"]["ReminderSyncOperationRequest"]
+    assert len(reminder_operation["oneOf"]) == 3
+    reminder_variants = [
+        schema["components"]["schemas"][item["$ref"].rsplit("/", maxsplit=1)[-1]]
+        for item in reminder_operation["oneOf"]
+    ]
+    create_variant, patch_variant, delete_variant = reminder_variants
+    assert create_variant["properties"]["base_revision"] == {
+        "type": "integer",
+        "maximum": 0,
+        "minimum": 0,
+    }
+    assert create_variant["properties"]["payload"]["$ref"] == (
+        "#/components/schemas/ReminderFunctionalRequest"
+    )
+    assert patch_variant["properties"]["base_revision"]["minimum"] == 1
+    assert patch_variant["properties"]["payload"]["$ref"] == (
+        "#/components/schemas/ReminderPatchFunctionalRequest"
+    )
+    assert "payload" not in patch_variant["required"]
+    assert delete_variant["properties"]["base_revision"]["minimum"] == 1
+    empty_payload_ref = delete_variant["properties"]["payload"]["$ref"]
+    empty_payload = schema["components"]["schemas"][empty_payload_ref.rsplit("/", 1)[-1]]
+    assert empty_payload == {
+        "type": "object",
+        "description": (
+            "An empty JSON object. Omission is equivalent to ``{}`` for delete operations."
+        ),
+        "additionalProperties": False,
+    }
+    assert "payload" not in delete_variant["required"]
+    assert "device_id" not in create_variant["properties"]
+    assert "device_id" not in patch_variant["properties"]
+    assert "device_id" not in delete_variant["properties"]
 
 
 def test_polymorphic_sync_output_fields_are_safe_at_runtime() -> None:
@@ -101,6 +166,21 @@ def test_polymorphic_sync_output_fields_are_safe_at_runtime() -> None:
     assert full_resync["entities"] == [entity]
     assert change["entity"] == entity
     assert operation["entity"] == entity
+
+    reminder = {
+        "id": "019fe4be-0000-7000-8000-000000000003",
+        "entity_type": "reminder",
+    }
+    reminder_full_resync = FullResyncResponseSerializer(
+        {
+            "mode": "full_resync",
+            "entities": [reminder],
+            "snapshot_cursor": 8,
+            "next_page_token": None,
+            "has_more": False,
+        }
+    ).data
+    assert reminder_full_resync["entities"] == [reminder]
 
 
 def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:

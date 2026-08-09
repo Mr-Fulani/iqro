@@ -23,6 +23,91 @@ also one database transaction: a fatal domain/validation error in any operation 
 earlier operations in that HTTP request, so the client never receives an opaque error after a
 hidden partial commit.
 
+The v1 sync entity union contains `reading_position`, `bookmark`, and `reminder`. Reminder rules
+use the same `POST /api/v1/sync/push` envelope and the same per-user monotonic cursor as reading
+state. The prayer profile remains a separate singleton resource at
+`GET/PUT /api/v1/me/prayer-profile`; it is not a sync entity.
+
+Migration `reading.0005` appends one baseline change for each reminder that predates unified
+sync, so an existing incremental cursor converges without a lucky later edit. Deploy it with
+writer replicas drained (the normal migrate-before-start sequence): old reminder PATCH/DELETE
+code does not dual-write the sync log. The migration locks each existing user and sync cursor,
+is idempotent for identities already present in the change log, and invalidates old v1
+full-resync page tokens by moving to the versioned three-phase token namespace.
+If an in-flight old token returns `full_resync_token_invalid`, the client discards only its
+temporary incomplete snapshot and restarts full resync from the first page; its persisted state
+and outbox remain untouched.
+
+### Reminder sync operations
+
+A reminder create uses `entity_type=reminder`, `action=upsert`, a client-generated UUIDv7 in
+`entity_id`, and `base_revision=0`. Its `payload` is the complete functional reminder state:
+
+```json
+{
+  "operation_id": "019fe63b-2f58-766f-8a11-b913bb2d80c0",
+  "entity_type": "reminder",
+  "entity_id": "019fe63b-2f58-766f-8a11-b913bb2d80c1",
+  "action": "upsert",
+  "base_revision": 0,
+  "client_updated_at": "2026-08-09T12:00:00Z",
+  "payload": {
+    "reminder_type": "prayer",
+    "schedule": {
+      "kind": "prayer",
+      "prayer_event": "fajr",
+      "prayer_offset_minutes": -10
+    },
+    "weekdays_mask": 127,
+    "timezone": {"mode": "device_local"},
+    "signal": "sound",
+    "is_enabled": true
+  }
+}
+```
+
+An update also uses `action=upsert`, requires `base_revision>=1`, and accepts a partial
+functional payload. Nested `schedule`, `timezone`, and `review_target` values are strict unions
+and are replaced as whole values when present. An empty update payload is a no-op. A delete uses
+`action=delete`, requires `base_revision>=1`, and requires an omitted or empty payload. Reminder
+payloads never contain `id`, revision metadata, device identity, coordinates, occurrence times,
+push tokens, or sound file URLs.
+
+The authenticated access-token device is authoritative. Reminder operations reject a client
+`device_id` even in the outer sync envelope; the server binds the device only from the access
+token. Unknown reminder payload fields are rejected at every nesting level. The create defaults
+are identical to the direct reminder API: all weekdays, device-local timezone, short system
+sound, and enabled state.
+
+Real reminder creates and updates append an `upsert` change; deletion appends a `delete` change
+whose entity is the minimized tombstone. Direct `POST/PATCH/DELETE /api/v1/me/reminders`
+mutations append the same changes atomically, so a mutation through the direct API is visible to
+every device through incremental pull. Exact create retries, state-equivalent update no-ops, and
+repeated tombstone deletes do not increment the entity revision or sync cursor.
+
+On deletion, older retained changes for that reminder are privacy-collapsed to the same minimized
+tombstone. A client that never observed the active rule therefore receives only deletion state,
+not obsolete wall-clock, timezone, ayah-range, or device data. Reminder `SyncOperation` rows store
+the deterministic outcome/cursor but do not duplicate the functional snapshot; exact replay
+rehydrates the current user-owned rule or tombstone.
+
+Reminder concurrency outcomes use the existing per-operation response envelope. Supported
+conflict reasons are `revision_mismatch`, `entity_missing`, `entity_id_unavailable`,
+`entity_id_not_reusable`, and `reminder_quota_exceeded`. A retained current entity is included
+when it is safe and useful; cross-user UUID collisions never expose another user's state.
+Tombstones and retired IDs cannot be resurrected. Malformed payloads and invalid timezone/ayah
+domain values are request errors and roll back the whole batch rather than becoming stored
+per-operation conflicts.
+
+Replay hashing happens after parsing, default application, strict payload normalization, and
+authenticated-device binding. JSON object key order, equivalent date/time representations, and
+an omitted versus empty delete payload therefore do not create different operations. An exact
+replay returns the stored accepted/conflict outcome and original cursor with `replayed=true`; its
+reminder entity is rehydrated from the current row so deleted scheduling data is never retained
+solely for replay. It does not mutate state or append a change. A different normalized request
+under the same `operation_id` returns `409 sync_operation_reuse`. Conflict resolution always uses
+a new `operation_id`.
+
 `intra_page_anchor` is intentionally small and typed. It accepts only `x_ratio` and `y_ratio`
 (finite numbers from 0 through 1) and `line_number` (1 through 30). Unknown keys are rejected;
 clients must omit an unavailable coordinate instead of placing arbitrary renderer state in sync
@@ -52,15 +137,44 @@ gap. A cursor below this floor returns `410 application/problem+json` with:
 ## Full resync
 
 Start with `GET /api/v1/sync/pull?full_resync=true&limit=...`. The response contains current
-reading positions and bookmarks, including tombstones, plus `snapshot_cursor`. Continue with the
-signed `next_page_token` until `has_more=false`. Tokens are bound to the authenticated user and
-expire by default after 24 hours.
+reading positions, bookmarks, and reminder rules, including tombstones, plus `snapshot_cursor`.
+The stable phase order is reading positions, bookmarks, then reminders; entities inside each
+phase are ordered by ID. Continue with the signed `next_page_token` until `has_more=false`.
+Tokens bind the authenticated user, snapshot cursor, phase, and last ID, and expire by default
+after 24 hours.
 
-The client must treat the collected snapshot as an authoritative replacement, not as a merge:
-after all pages arrive, any local synchronized entity absent from the snapshot must be removed.
-It then sets its incremental cursor to `snapshot_cursor` and immediately calls incremental pull.
-Mutations committed after the snapshot cursor are replayed. Clients must apply entity revisions
+The client must treat the collected snapshot as an authoritative replacement, not as a merge,
+but only after all pages have arrived. It should build the snapshot in temporary state; after the
+final page, any local synchronized entity absent from the snapshot is removed and any absent or
+deleted reminder has its operating-system notification cancelled. The client then sets its
+incremental cursor to `snapshot_cursor` and immediately calls incremental pull. Mutations
+committed after the snapshot cursor are replayed. Clients must apply entity revisions
 monotonically; this also makes duplicate state observed during a paginated resync harmless.
+
+Pending local outbox operations are not discarded during a full resync. They are rebased onto
+the completed authoritative snapshot and submitted afterward with new operation IDs where the
+base revision changed.
+
+## Client outbox and cursor rules
+
+Persist the local desired state and its outbox operation atomically, retain `operation_id` until
+a terminal result is received, and keep at most one unresolved operation per entity. Multiple
+offline edits should be squashed into one desired update against the last known server revision;
+delete wins over pending edits.
+
+Process push results in input order. On `revision_mismatch`, first accept the returned server
+snapshot, reapply still-relevant local intent, and submit a new operation with the returned
+revision and a new `operation_id`. An unsynchronized create that receives
+`entity_id_not_reusable` or `entity_id_unavailable` must atomically remap itself to a fresh
+UUIDv7. A tombstone immediately cancels the corresponding scheduled local notification.
+
+The cursor returned by push is informational. A client must **not** assign either a result cursor
+or the outer push cursor to its persisted pull cursor: doing so can skip changes written by a
+different device. After every push, pull from the previously persisted cursor until
+`has_more=false`, apply changes in cursor order and revisions monotonically, and only then persist
+each returned `next_cursor`. On `410 sync_cursor_expired`, preserve the outbox, complete a full
+resync in temporary state, reconcile authoritatively, rebase the outbox, and resume incremental
+pull.
 
 ## Bounded retention
 
@@ -107,3 +221,11 @@ When that cap is reached, pruning leaves later tombstones in place, so the 5,000
 still bounds storage and no identity evidence is discarded. Tombstone retention must also be
 longer than the configured unseen-ID age window plus accepted future clock skew; unsafe settings
 fail the Django system check and reject unseen identifiers.
+
+Reminder tombstones use the same history interlock: physical pruning is allowed only after no
+retained `SyncChange` or `SyncOperation` references that user/reminder identity. The pruning
+transaction first records the UUID and final revision in `RetiredReminderId`; this preserves
+non-resurrection after the full reminder row is gone. Exact operation replay remains available
+only for the configured `SyncOperation` retention window; physical tombstone pruning waits for
+that window to end. An authoritative full resync then communicates an old deletion by absence,
+while a retained incremental delete always carries its minimized tombstone snapshot.

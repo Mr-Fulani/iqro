@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from typing import Any, NoReturn, cast
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -12,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
-from quran_backend.modules.accounts.models import User
+from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.reading.serializers import (
@@ -55,6 +57,12 @@ from quran_backend.modules.reading.throttling import (
 
 def _authenticated_user(request: Request) -> User:
     return cast(User, request.user)
+
+
+def _authenticated_device(request: Request) -> Device | None:
+    if isinstance(request.auth, AccessAuthContext):
+        return request.auth.device
+    return None
 
 
 def _bind_authenticated_device(request: Request, data: dict[str, Any]) -> dict[str, Any]:
@@ -206,19 +214,30 @@ class BookmarkDetailView(ReadingRateLimitMixin, PrivateNoStoreResponseMixin, API
         return Response(entity)
 
 
+@method_decorator(sensitive_post_parameters(), name="dispatch")
 @extend_schema(tags=["sync"])
 class SyncPushView(ReadingRateLimitMixin, PrivateNoStoreResponseMixin, APIView):
     throttle_classes = (SyncPushThrottle,)
 
     @extend_schema(request=SyncPushSerializer, responses=SyncPushResponseSerializer)
+    @sensitive_variables("operations")
     def post(self, request: Request) -> Response:
         serializer = SyncPushSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         operations = cast(list[dict[str, Any]], serializer.validated_data["operations"])
         operations = [
-            _bind_authenticated_device(request, dict(operation)) for operation in operations
+            (
+                dict(operation)
+                if operation["entity_type"] == "reminder"
+                else _bind_authenticated_device(request, dict(operation))
+            )
+            for operation in operations
         ]
-        result = apply_sync_batch(_authenticated_user(request), operations)
+        result = apply_sync_batch(
+            _authenticated_user(request),
+            operations,
+            authenticated_device=_authenticated_device(request),
+        )
         return Response(result)
 
 

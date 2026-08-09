@@ -92,17 +92,30 @@ per-user monotonically increasing sync cursor are authoritative. A stale revisio
 a deterministic conflict instead of overwriting newer state. Bearer-authenticated calls
 are always bound to the device encoded in the access token.
 
-`POST /api/v1/sync/push` accepts up to 100 operations. Each operation has a UUID
-`operation_id`; replaying the identical request returns the stored result, while reusing
-the ID for different data returns `sync_operation_reuse`. Pull responses are bounded and
-contain accepted snapshots, including bookmark tombstones.
+`POST /api/v1/sync/push` accepts up to 100 operations. The v1 entity union contains reading
+positions, bookmarks, and reminder rules; the prayer profile remains a separate singleton API.
+Each operation has a UUID `operation_id`; replaying the same normalized request returns the
+stored result, while reusing the ID for different data returns `sync_operation_reuse`. Pull
+responses are bounded and contain accepted snapshots, including bookmark and reminder
+tombstones. Direct reminder mutations append to this same change log atomically, so direct CRUD
+and offline sync cannot diverge.
 
 Celery Beat runs bounded auth and sync retention tasks hourly; production must run exactly
 one Beat scheduler. Sync changes are retained for 180 days by default. When an older cursor
 has been pruned, `/sync/pull` returns `410 sync_cursor_expired` instead of silently
 skipping data. The client starts `full_resync=true`; subsequent pages use short-lived,
-user-bound signed continuation tokens. It must complete that full-resync protocol before
-resuming incremental pull from the returned snapshot cursor.
+user-bound signed continuation tokens. Full resync visits reading positions, bookmarks, then
+reminders, and includes active reminder rules and tombstones. It must complete that full-resync
+protocol before treating absence as authoritative or resuming incremental pull from the returned
+snapshot cursor.
+
+The push response cursor is informational and must never replace the client's persisted pull
+cursor: that would skip concurrent changes from another device. After push, the client pulls from
+its previously persisted cursor until `has_more=false`. A pending outbox survives cursor expiry;
+the client builds full resync in temporary state, reconciles only after the final page, then
+rebases pending operations and resumes incremental pull. Reminder tombstones are physically
+pruned only after their retained sync changes and operation-replay records are gone, and their
+identity is recorded in the compact retired-ID ledger first.
 
 ## Browser origins
 
