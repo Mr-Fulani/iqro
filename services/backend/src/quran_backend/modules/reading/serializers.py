@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import uuid
 from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
@@ -9,12 +8,9 @@ from typing import Any
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_field
 from rest_framework import serializers
 
+from quran_backend.modules.core.serializers import UUIDv7Field
 from quran_backend.modules.reading.models import SyncAction, SyncEntityType, SyncOutcome
 
-UUIDV7_PATTERN = (
-    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-"
-    r"[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-)
 READING_ANCHOR_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -24,22 +20,6 @@ READING_ANCHOR_SCHEMA: dict[str, Any] = {
         "line_number": {"type": "integer", "minimum": 1, "maximum": 30},
     },
 }
-
-
-@extend_schema_field(
-    {
-        "type": "string",
-        "format": "uuid",
-        "pattern": UUIDV7_PATTERN,
-        "description": "Client-generated UUIDv7.",
-    }
-)
-class UUIDv7Field(serializers.UUIDField):
-    def to_internal_value(self, data: Any) -> uuid.UUID:
-        value = super().to_internal_value(data)
-        if value.version != 7:
-            raise serializers.ValidationError("A UUIDv7 value is required.", code="invalid")
-        return value
 
 
 @extend_schema_field(READING_ANCHOR_SCHEMA)

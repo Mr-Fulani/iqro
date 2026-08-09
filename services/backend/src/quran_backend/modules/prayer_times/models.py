@@ -5,11 +5,16 @@ import json
 from decimal import Decimal
 from typing import Any, ClassVar
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
 from quran_backend.modules.core.models import BaseModel
+from quran_backend.modules.prayer_times.timezones import (
+    InvalidPrayerTimezoneError,
+    get_prayer_timezone,
+)
 from quran_backend.modules.prayer_times.validators import (
     validate_method_code,
     validate_sha256,
@@ -57,6 +62,16 @@ class PolarCircleResolution(models.TextChoices):
     UNRESOLVED = "unresolved", "No polar-circle substitution"
     AQRAB_BALAD = "aqrab_balad", "Aqrab al-balad (nearest latitude)"
     AQRAB_YAUM = "aqrab_yaum", "Aqrab al-yaum (nearest day)"
+
+
+class PrayerAsrMethod(models.TextChoices):
+    STANDARD = "standard", "Standard"
+    HANAFI = "hanafi", "Hanafi"
+
+
+class PrayerTimezoneMode(models.TextChoices):
+    DEVICE_LOCAL = "device_local", "Device local"
+    FIXED = "fixed", "Fixed timezone"
 
 
 class PrayerMethod(BaseModel):
@@ -840,3 +855,145 @@ def polar_support_items(
         (PolarCircleResolution.AQRAB_BALAD, configuration.supports_polar_aqrab_balad),
         (PolarCircleResolution.AQRAB_YAUM, configuration.supports_polar_aqrab_yaum),
     )
+
+
+class PrayerProfile(BaseModel):
+    """Versioned user calculation preferences; deliberately contains no location data."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="prayer_profile",
+    )
+    method_config = models.ForeignKey(
+        PrayerMethodConfig,
+        on_delete=models.PROTECT,
+        related_name="profiles",
+    )
+    asr_method = models.CharField(
+        max_length=16,
+        choices=PrayerAsrMethod,
+        default=PrayerAsrMethod.STANDARD,
+    )
+    high_latitude_rule = models.CharField(max_length=24, choices=HighLatitudeRule)
+    polar_resolution = models.CharField(max_length=16, choices=PolarCircleResolution)
+
+    fajr_adjustment_minutes = models.SmallIntegerField(default=0)
+    sunrise_adjustment_minutes = models.SmallIntegerField(default=0)
+    dhuhr_adjustment_minutes = models.SmallIntegerField(default=0)
+    asr_adjustment_minutes = models.SmallIntegerField(default=0)
+    maghrib_adjustment_minutes = models.SmallIntegerField(default=0)
+    isha_adjustment_minutes = models.SmallIntegerField(default=0)
+
+    timezone_mode = models.CharField(
+        max_length=16,
+        choices=PrayerTimezoneMode,
+        default=PrayerTimezoneMode.DEVICE_LOCAL,
+    )
+    fixed_timezone = models.CharField(max_length=255, blank=True, default="")
+    revision = models.PositiveBigIntegerField(default=1)
+    client_updated_at = models.DateTimeField()
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="prayer_profiles",
+        null=True,
+        blank=True,
+    )
+
+    adjustment_fields: ClassVar[tuple[str, ...]] = PrayerMethodConfig.adjustment_fields
+
+    class Meta:
+        db_table = "prayer_profile"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(revision__gte=1),
+                name="prayer_profile_revision_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        timezone_mode=PrayerTimezoneMode.DEVICE_LOCAL,
+                        fixed_timezone="",
+                    )
+                    | (
+                        models.Q(timezone_mode=PrayerTimezoneMode.FIXED)
+                        & ~models.Q(fixed_timezone="")
+                    )
+                ),
+                name="prayer_profile_timezone_shape",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(fajr_adjustment_minutes__gte=-120, fajr_adjustment_minutes__lte=120)
+                    & models.Q(
+                        sunrise_adjustment_minutes__gte=-120,
+                        sunrise_adjustment_minutes__lte=120,
+                    )
+                    & models.Q(
+                        dhuhr_adjustment_minutes__gte=-120,
+                        dhuhr_adjustment_minutes__lte=120,
+                    )
+                    & models.Q(asr_adjustment_minutes__gte=-120, asr_adjustment_minutes__lte=120)
+                    & models.Q(
+                        maghrib_adjustment_minutes__gte=-120,
+                        maghrib_adjustment_minutes__lte=120,
+                    )
+                    & models.Q(isha_adjustment_minutes__gte=-120, isha_adjustment_minutes__lte=120)
+                ),
+                name="prayer_profile_adjustments",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["method_config"], name="prayer_profile_method_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"prayer-profile:{self.user_id}"
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        for field in self.adjustment_fields:
+            value = int(getattr(self, field))
+            if not -120 <= value <= 120:
+                errors[field] = "Adjustment must be between -120 and 120 minutes."
+
+        configuration = self.method_config
+        supported_high_latitude = {
+            str(rule) for rule, supported in high_latitude_support_items(configuration) if supported
+        }
+        if self.high_latitude_rule not in supported_high_latitude:
+            errors["high_latitude_rule"] = "The selected method does not support this rule."
+        supported_polar = {
+            str(strategy) for strategy, supported in polar_support_items(configuration) if supported
+        }
+        if self.polar_resolution not in supported_polar:
+            errors["polar_resolution"] = "The selected method does not support this strategy."
+
+        if self.timezone_mode == PrayerTimezoneMode.DEVICE_LOCAL:
+            if self.fixed_timezone:
+                errors["fixed_timezone"] = "Device-local mode cannot store a fixed timezone."
+        elif self.timezone_mode == PrayerTimezoneMode.FIXED:
+            if not self.fixed_timezone:
+                errors["fixed_timezone"] = "A fixed timezone is required in fixed mode."
+            else:
+                try:
+                    get_prayer_timezone(self.fixed_timezone)
+                except InvalidPrayerTimezoneError:
+                    errors["fixed_timezone"] = (
+                        "Use a timezone identifier available in the pinned IANA database."
+                    )
+
+        device = self.device
+        if device is not None and device.user_id != self.user_id:
+            errors["device"] = "Device must belong to the same user."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Database constraints remain authoritative for uniqueness and row
+        # shape; domain checks here protect IANA/rule/device invariants that
+        # cannot be represented portably as SQL constraints.
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(*args, **kwargs)

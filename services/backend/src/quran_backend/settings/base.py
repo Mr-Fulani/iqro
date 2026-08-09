@@ -85,6 +85,34 @@ QURAN_BOOKMARK_ID_FUTURE_SKEW_SECONDS = os.getenv(
     "86400",
 )
 QURAN_BOOKMARK_MAX_PER_USER = os.getenv("QURAN_BOOKMARK_MAX_PER_USER", "5000")
+QURAN_REMINDER_MAX_ACTIVE_PER_USER = os.getenv(
+    "QURAN_REMINDER_MAX_ACTIVE_PER_USER",
+    "64",
+)
+QURAN_REMINDER_MAX_TOTAL_PER_USER = os.getenv(
+    "QURAN_REMINDER_MAX_TOTAL_PER_USER",
+    "256",
+)
+QURAN_REMINDER_TOMBSTONE_RETENTION_DAYS = os.getenv(
+    "QURAN_REMINDER_TOMBSTONE_RETENTION_DAYS",
+    "365",
+)
+QURAN_REMINDER_NEW_ID_MAX_AGE_DAYS = os.getenv(
+    "QURAN_REMINDER_NEW_ID_MAX_AGE_DAYS",
+    "360",
+)
+QURAN_REMINDER_ID_FUTURE_SKEW_SECONDS = os.getenv(
+    "QURAN_REMINDER_ID_FUTURE_SKEW_SECONDS",
+    "86400",
+)
+QURAN_RETIRED_REMINDER_ID_MAX_PER_USER = os.getenv(
+    "QURAN_RETIRED_REMINDER_ID_MAX_PER_USER",
+    "50000",
+)
+QURAN_REMINDER_PRUNE_BATCH_SIZE = os.getenv(
+    "QURAN_REMINDER_PRUNE_BATCH_SIZE",
+    "5000",
+)
 QURAN_RETIRED_BOOKMARK_ID_MAX_PER_USER = os.getenv(
     "QURAN_RETIRED_BOOKMARK_ID_MAX_PER_USER",
     "50000",
@@ -112,6 +140,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.audio.apps.AudioConfig",
     "quran_backend.modules.prayer_times.apps.PrayerTimesConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",
+    "quran_backend.modules.reminders.apps.RemindersConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
 ]
 
@@ -248,8 +277,16 @@ REST_FRAMEWORK: dict[str, Any] = {
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
+        "prayer_profile_mutation": os.getenv(
+            "QURAN_PRAYER_PROFILE_MUTATION_RATE",
+            "60/minute",
+        ),
         "reading_mutation": os.getenv(
             "QURAN_READING_MUTATION_RATE",
+            "120/minute",
+        ),
+        "reminder_mutation": os.getenv(
+            "QURAN_REMINDER_MUTATION_RATE",
             "120/minute",
         ),
         "sync_push": os.getenv("QURAN_SYNC_PUSH_RATE", "300/minute"),
@@ -302,6 +339,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "prune-sync-history-hourly": {
         "task": "reading.prune_sync_history",
+        "schedule": 3_600.0,
+    },
+    "prune-reminder-tombstones-hourly": {
+        "task": "reminders.prune_tombstones",
         "schedule": 3_600.0,
     },
 }

@@ -43,6 +43,11 @@ immutable CDN contract и безопасная загрузка отдельно
 правила, pinned tzdata и privacy contract для координат описаны в
 [docs/prayer-api.md](docs/prayer-api.md).
 
+Синхронизируемый профиль намаза, строгие правила локальных prayer/Quran reminders,
+optimistic concurrency, минимизированные tombstones, retention и контракты планирования
+для Flutter/Web/Telegram Mini App описаны в
+[docs/prayer-profile-and-reminders.md](docs/prayer-profile-and-reminders.md).
+
 ## Подготовка страниц мусхафа
 
 Проверка закреплённого PDF и атомарная подготовка lossless WebP-вариантов выполняются

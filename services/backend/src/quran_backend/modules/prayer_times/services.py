@@ -277,12 +277,18 @@ def _validate_supported_rules(
 
 
 def _assert_engine_compatibility(release: PrayerConfigRelease) -> None:
-    if (
+    if not is_release_engine_compatible(release):
+        raise PrayerEngineUnsupportedError
+
+
+def is_release_engine_compatible(release: PrayerConfigRelease) -> bool:
+    """Return whether this backend can reproduce a release exactly."""
+
+    return not (
         release.algorithm != ENGINE_ID
         or release.algorithm_version != ENGINE_VERSION
         or release.timezone_database_version != TZDB_VERSION
-    ):
-        raise PrayerEngineUnsupportedError
+    )
 
 
 def _algorithm_snapshot(release: PrayerConfigRelease) -> dict[str, str]:

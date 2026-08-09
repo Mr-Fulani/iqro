@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from django.db.models import F, IntegerField, Min, QuerySet
 
 from quran_backend.modules.quran.models import (
@@ -49,6 +51,16 @@ def published_ayahs(edition_code: str, surah_number: int) -> QuerySet[Ayah]:
         .prefetch_related("page_regions__page")
         .order_by("number")
     )
+
+
+def published_active_ayahs_by_id(ayah_ids: Collection[object]) -> QuerySet[Ayah]:
+    """Resolve opaque ids without exposing draft or superseded Quran content."""
+
+    return Ayah.objects.filter(
+        id__in=ayah_ids,
+        surah__edition_version__edition__active_version_id=F("surah__edition_version_id"),
+        surah__edition_version__status=PublicationStatus.PUBLISHED,
+    ).select_related("surah", "surah__edition_version", "surah__edition_version__edition")
 
 
 def published_pages(edition_code: str) -> QuerySet[MushafPage]:

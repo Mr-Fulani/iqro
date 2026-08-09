@@ -12,6 +12,7 @@ from quran_backend.modules.prayer_times.models import (
     PrayerConfigReleaseStatus,
     PrayerMethod,
     PrayerMethodConfig,
+    PrayerProfile,
 )
 
 
@@ -249,3 +250,46 @@ class PrayerMethodConfigAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[PrayerMethodConfig]:
         return super().get_queryset(request).select_related("release", "method")
+
+
+@admin.register(PrayerProfile)
+class PrayerProfileAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """Support visibility only; profile mutations must use the concurrency-safe API."""
+
+    actions = None
+    list_display = (
+        "user",
+        "method_config",
+        "asr_method",
+        "timezone_mode",
+        "revision",
+        "updated_at",
+    )
+    list_filter = ("asr_method", "timezone_mode", "high_latitude_rule", "polar_resolution")
+    search_fields = ("=user__id", "user__email", "method_config__method__code")
+    list_select_related = ("user", "method_config__method", "method_config__release")
+    readonly_fields = tuple(field.name for field in PrayerProfile._meta.fields)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
+        return False
+
+    def has_change_permission(
+        self,
+        _request: HttpRequest,
+        _obj: PrayerProfile | None = None,
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self,
+        _request: HttpRequest,
+        _obj: PrayerProfile | None = None,
+    ) -> bool:
+        return False
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[PrayerProfile]:
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user", "method_config__method", "method_config__release")
+        )

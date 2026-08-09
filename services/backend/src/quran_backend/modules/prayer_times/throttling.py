@@ -24,3 +24,16 @@ class PrayerCalculationThrottle(AtomicFixedWindowRateThrottle):
             hashlib.sha256,
         ).hexdigest()
         return self.cache_format % {"scope": self.scope, "ident": digest}
+
+
+class PrayerProfileMutationThrottle(AtomicFixedWindowRateThrottle):
+    scope = "prayer_profile_mutation"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        user = request.user
+        if not user or not user.is_authenticated:
+            return None
+        device = getattr(request.auth, "device", None)
+        device_id = getattr(device, "pk", None)
+        identity = f"{user.pk}:{device_id or 'unbound'}"
+        return self.cache_format % {"scope": self.scope, "ident": identity}

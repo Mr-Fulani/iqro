@@ -48,3 +48,19 @@ class PrayerRuleUnsupportedError(APIException):
 class PrayerCalculationRateLimitedError(Throttled):
     default_detail = "Prayer-time calculation rate limit exceeded."
     default_code = "prayer_calculation_rate_limited"
+
+
+class PrayerProfileNotFoundError(NotFound):
+    default_detail = "Prayer profile was not found."
+    default_code = "prayer_profile_not_found"
+
+
+class PrayerProfileRevisionConflictError(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "The prayer profile changed after the client's base revision."
+    default_code = "prayer_profile_revision_conflict"
+
+
+class PrayerProfileRateLimitedError(Throttled):
+    default_detail = "Too many prayer-profile mutations. Retry later."
+    default_code = "prayer_profile_rate_limited"

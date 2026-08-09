@@ -12,9 +12,11 @@ urlpatterns = [
     path("api/v1/auth/", include("quran_backend.modules.accounts.urls")),
     path("api/v1/quran/", include("quran_backend.modules.quran.urls")),
     path("api/v1/prayer/", include("quran_backend.modules.prayer_times.urls")),
+    path("api/v1/", include("quran_backend.modules.prayer_times.profile_urls")),
     path("api/v1/", include("quran_backend.modules.audio.urls")),
     path("api/v1/feedback/", include("quran_backend.modules.feedback.urls")),
     path("api/v1/", include("quran_backend.modules.reading.urls")),
+    path("api/v1/", include("quran_backend.modules.reminders.urls")),
     path("api/schema", SpectacularAPIView.as_view(), name="openapi-schema"),
     path(
         "api/docs",

@@ -1,32 +1,22 @@
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
 
 from rest_framework import serializers
 
+from quran_backend.modules.core.serializers import StrictFieldsSerializer
 from quran_backend.modules.prayer_times.domain import AsrMethod
-from quran_backend.modules.prayer_times.models import HighLatitudeRule, PolarCircleResolution
+from quran_backend.modules.prayer_times.models import (
+    HighLatitudeRule,
+    PolarCircleResolution,
+    PrayerAsrMethod,
+)
 from quran_backend.modules.prayer_times.timezones import (
     InvalidPrayerTimezoneError,
     get_prayer_timezone,
 )
-
-
-class StrictFieldsSerializer(serializers.Serializer[Any]):
-    """Reject silently ignored input keys at every request nesting level."""
-
-    def to_internal_value(self, data: Any) -> dict[str, Any]:
-        if isinstance(data, Mapping):
-            unknown = sorted(str(key) for key in data if key not in self.fields)
-            if unknown:
-                raise serializers.ValidationError(
-                    {key: ["Unknown field."] for key in unknown},
-                    code="unknown_field",
-                )
-        return dict(super().to_internal_value(data))
 
 
 class PrayerLocationInputSerializer(StrictFieldsSerializer):
@@ -63,7 +53,7 @@ class PrayerCalculationRequestSerializer(StrictFieldsSerializer):
         required=False,
     )
     asr_method = serializers.ChoiceField(
-        choices=[(item.value, item.value) for item in AsrMethod],
+        choices=PrayerAsrMethod.choices,
         default=AsrMethod.STANDARD,
     )
     high_latitude_rule = serializers.ChoiceField(
@@ -203,9 +193,9 @@ class PrayerCalculationResponseSerializer(serializers.Serializer[Any]):
     timezone_database_version = serializers.CharField()
     method = PrayerMethodResultSerializer()
     algorithm = PrayerAlgorithmSerializer()
-    asr_method = serializers.ChoiceField(choices=[item.value for item in AsrMethod])
-    high_latitude_rule = serializers.ChoiceField(choices=HighLatitudeRule.values)
-    polar_resolution = serializers.ChoiceField(choices=PolarCircleResolution.values)
+    asr_method = serializers.ChoiceField(choices=PrayerAsrMethod.choices)
+    high_latitude_rule = serializers.ChoiceField(choices=HighLatitudeRule.choices)
+    polar_resolution = serializers.ChoiceField(choices=PolarCircleResolution.choices)
     adjustments = PrayerAdjustmentsSerializer()
     times = PrayerTimesResultSerializer()
     fallback = PrayerFallbackSerializer()
