@@ -1,0 +1,272 @@
+from __future__ import annotations
+
+from typing import Any
+
+from django.conf import settings
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
+
+from quran_backend.modules.audio.models import (
+    AudioCodec,
+    AudioTimingVersion,
+    AudioTrack,
+    AudioTrackScope,
+    AyahAudioSegment,
+    RecitationEdition,
+    RecitationStyle,
+    Reciter,
+)
+from quran_backend.modules.quran.models import QuranEditionVersion
+
+
+def public_audio_url(object_key: str) -> str:
+    """Build a CDN URL from an already validated relative object key."""
+
+    return f"{settings.PUBLIC_AUDIO_BASE_URL.rstrip('/')}/{object_key}"
+
+
+class ReciterSummarySerializer(serializers.ModelSerializer[Reciter]):
+    slug = serializers.CharField(source="code", read_only=True)
+
+    class Meta:
+        model = Reciter
+        fields = ("id", "slug", "name_ar", "name_en", "name_ru", "country_code")
+
+
+class ReciterDetailSerializer(ReciterSummarySerializer):
+    portrait_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Reciter
+        fields = (
+            "id",
+            "slug",
+            "name_ar",
+            "name_en",
+            "name_ru",
+            "country_code",
+            "biography_ar",
+            "biography_en",
+            "biography_ru",
+            "portrait_url",
+        )
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_portrait_url(self, obj: Reciter) -> str | None:
+        if not obj.portrait_object_key:
+            return None
+        return public_audio_url(obj.portrait_object_key)
+
+
+class QuranEditionAudioReferenceSerializer(serializers.ModelSerializer[QuranEditionVersion]):
+    code = serializers.CharField(source="edition.code", read_only=True)
+    content_version = serializers.CharField(source="version", read_only=True)
+    riwayah = serializers.CharField(source="edition.riwayah", read_only=True)
+
+    class Meta:
+        model = QuranEditionVersion
+        fields = ("id", "code", "content_version", "riwayah")
+
+
+class RecitationSourceSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField()
+    url = serializers.URLField(allow_blank=True)
+    version = serializers.CharField()
+    checksum_sha256 = serializers.CharField()
+
+
+class RecitationLicenseSerializer(serializers.Serializer[Any]):
+    rights_holder = serializers.CharField()
+    name = serializers.CharField()
+    url = serializers.URLField(allow_blank=True)
+    spdx_id = serializers.CharField(allow_blank=True)
+    attribution = serializers.CharField(allow_blank=True)
+
+
+class RecitationRightsSerializer(serializers.Serializer[Any]):
+    stream = serializers.BooleanField()
+    offline_download = serializers.BooleanField()
+
+
+class RecitationCoverageSerializer(serializers.Serializer[Any]):
+    track_count = serializers.IntegerField(min_value=0)
+    surah_count = serializers.IntegerField(min_value=0)
+    complete = serializers.BooleanField()
+
+
+class RecitationTimingsSerializer(serializers.Serializer[Any]):
+    available = serializers.BooleanField()
+    segment_count = serializers.IntegerField(min_value=0)
+
+
+class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]):
+    reciter = ReciterSummarySerializer(read_only=True)
+    quran_edition = QuranEditionAudioReferenceSerializer(
+        source="quran_edition_version",
+        read_only=True,
+    )
+    source: Any = serializers.SerializerMethodField()
+    license = serializers.SerializerMethodField()
+    rights = serializers.SerializerMethodField()
+    coverage = serializers.SerializerMethodField()
+    timings = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecitationEdition
+        fields = (
+            "id",
+            "code",
+            "version",
+            "style",
+            "reciter",
+            "quran_edition",
+            "source",
+            "license",
+            "rights",
+            "coverage",
+            "timings",
+            "published_at",
+        )
+
+    @extend_schema_field(RecitationSourceSerializer)
+    def get_source(self, obj: RecitationEdition) -> dict[str, str]:
+        return {
+            "name": obj.source_name,
+            "url": obj.source_url,
+            "version": obj.source_version,
+            "checksum_sha256": obj.source_checksum_sha256,
+        }
+
+    @extend_schema_field(RecitationLicenseSerializer)
+    def get_license(self, obj: RecitationEdition) -> dict[str, str]:
+        return {
+            "rights_holder": obj.rights_holder,
+            "name": obj.license_name,
+            "url": obj.license_url,
+            "spdx_id": obj.license_spdx_id,
+            "attribution": obj.license_attribution,
+        }
+
+    @extend_schema_field(RecitationRightsSerializer)
+    def get_rights(self, obj: RecitationEdition) -> dict[str, bool]:
+        return {
+            "stream": bool(obj.stream_allowed),
+            "offline_download": bool(obj.offline_download_allowed),
+        }
+
+    @extend_schema_field(RecitationCoverageSerializer)
+    def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool]:
+        track_count = int(getattr(obj, "track_count", 0))
+        surah_count = int(getattr(obj, "surah_track_count", 0))
+        return {
+            "track_count": track_count,
+            "surah_count": surah_count,
+            "complete": surah_count == 114,
+        }
+
+    @extend_schema_field(RecitationTimingsSerializer)
+    def get_timings(self, obj: RecitationEdition) -> dict[str, int | bool]:
+        segment_count = int(getattr(obj, "timing_segment_count", 0))
+        return {"available": segment_count > 0, "segment_count": segment_count}
+
+
+class AudioAssetSerializer(serializers.Serializer[Any]):
+    url = serializers.URLField()
+    content_type = serializers.CharField()
+    codec = serializers.ChoiceField(choices=list(AudioCodec.choices))
+    bitrate_kbps = serializers.IntegerField(min_value=1)
+    bytes = serializers.IntegerField(min_value=1)
+    sha256 = serializers.CharField()
+    etag = serializers.CharField()
+    range_supported = serializers.BooleanField()
+    immutable = serializers.BooleanField()
+
+
+class AudioTimingVersionSerializer(serializers.ModelSerializer[AudioTimingVersion]):
+    class Meta:
+        model = AudioTimingVersion
+        fields = (
+            "id",
+            "version",
+            "source_name",
+            "source_version",
+            "source_checksum_sha256",
+            "verified_at",
+        )
+
+
+class AudioTrackSerializer(serializers.ModelSerializer[AudioTrack]):
+    recitation_id = serializers.UUIDField(source="recitation_edition_id", read_only=True)
+    asset = serializers.SerializerMethodField()
+    offline_download_allowed = serializers.BooleanField(
+        source="recitation_edition.offline_download_allowed",
+        read_only=True,
+    )
+    timing_version = AudioTimingVersionSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = AudioTrack
+        fields = (
+            "id",
+            "recitation_id",
+            "scope",
+            "surah_number",
+            "juz_number",
+            "duration_ms",
+            "timing_version",
+            "asset",
+            "offline_download_allowed",
+        )
+
+    @extend_schema_field(AudioAssetSerializer)
+    def get_asset(self, obj: AudioTrack) -> dict[str, Any]:
+        return {
+            "url": public_audio_url(obj.object_key),
+            "content_type": obj.content_type,
+            "codec": obj.codec,
+            "bitrate_kbps": obj.bitrate_kbps,
+            "bytes": obj.size_bytes,
+            "sha256": obj.checksum_sha256,
+            "etag": f'"{obj.checksum_sha256}"',
+            "range_supported": True,
+            "immutable": True,
+        }
+
+
+class AyahAudioSegmentSerializer(serializers.ModelSerializer[AyahAudioSegment]):
+    ayah_id = serializers.UUIDField(source="ayah.id", read_only=True)
+    surah_number = serializers.IntegerField(source="ayah.surah.number", read_only=True)
+    ayah_number = serializers.IntegerField(source="ayah.number", read_only=True)
+
+    class Meta:
+        model = AyahAudioSegment
+        fields = ("ayah_id", "surah_number", "ayah_number", "start_ms", "end_ms")
+
+
+class SurahPlaybackSerializer(serializers.Serializer[Any]):
+    track = AudioTrackSerializer()
+    segments = AyahAudioSegmentSerializer(many=True)
+
+
+class AyahPlaybackSerializer(serializers.Serializer[Any]):
+    track = AudioTrackSerializer()
+    segment = AyahAudioSegmentSerializer()
+
+
+class PublicCatalogPageQuerySerializer(serializers.Serializer[Any]):
+    cursor = serializers.CharField(required=False, max_length=2048)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100)
+
+
+class RecitationListQuerySerializer(PublicCatalogPageQuerySerializer):
+    reciter_id = serializers.UUIDField(required=False)
+    quran_edition = serializers.SlugField(required=False, max_length=64)
+    style: Any = serializers.ChoiceField(
+        choices=list(RecitationStyle.choices),
+        required=False,
+    )
+
+
+class TrackListQuerySerializer(PublicCatalogPageQuerySerializer):
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=114)
+    scope = serializers.ChoiceField(choices=list(AudioTrackScope.choices), required=False)

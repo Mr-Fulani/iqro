@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
@@ -29,6 +30,23 @@ def positive_env_int(name: str, default: int) -> int:
         raise ImproperlyConfigured(f"{name} must be a positive integer") from exc
     if value <= 0:
         raise ImproperlyConfigured(f"{name} must be a positive integer")
+    return value
+
+
+def validate_https_base_url(name: str, value: str) -> str:
+    parsed = urlsplit(value)
+    valid = (
+        parsed.scheme == "https"
+        and parsed.hostname is not None
+        and parsed.username is None
+        and parsed.password is None
+        and not parsed.query
+        and not parsed.fragment
+    )
+    if not valid:
+        raise ImproperlyConfigured(
+            f"{name} must be an HTTPS base URL without credentials, query, or fragment"
+        )
     return value
 
 
@@ -90,6 +108,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.core.apps.CoreConfig",
     "quran_backend.modules.accounts.apps.AccountsConfig",
     "quran_backend.modules.quran.apps.QuranConfig",
+    "quran_backend.modules.audio.apps.AudioConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
 ]
@@ -163,6 +182,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 PUBLIC_MEDIA_BASE_URL = os.getenv("PUBLIC_MEDIA_BASE_URL", "http://localhost:8000/media/")
+PUBLIC_AUDIO_BASE_URL = os.getenv("PUBLIC_AUDIO_BASE_URL", PUBLIC_MEDIA_BASE_URL)
 DATA_UPLOAD_MAX_MEMORY_SIZE = positive_env_int("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", 1_048_576)
 FILE_UPLOAD_MAX_MEMORY_SIZE = positive_env_int("DJANGO_FILE_UPLOAD_MAX_MEMORY_SIZE", 1_048_576)
 
@@ -256,6 +276,10 @@ SPECTACULAR_SETTINGS = {
             ("bookmark", "Bookmark"),
         ],
     },
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "quran_backend.modules.core.openapi.add_public_cache_contract",
+    ],
 }
 
 CELERY_BROKER_URL = REDIS_URL

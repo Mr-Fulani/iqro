@@ -101,3 +101,49 @@ def test_polymorphic_sync_output_fields_are_safe_at_runtime() -> None:
     assert full_resync["entities"] == [entity]
     assert change["entity"] == entity
     assert operation["entity"] == entity
+
+
+def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    expected_paths = {
+        "/api/v1/reciters",
+        "/api/v1/reciters/{reciter_id}",
+        "/api/v1/recitations",
+        "/api/v1/recitations/{recitation_id}",
+        "/api/v1/recitations/{recitation_id}/tracks",
+        "/api/v1/recitations/{recitation_id}/surahs/{surah}",
+        "/api/v1/recitations/{recitation_id}/ayahs/{surah}/{ayah}",
+    }
+    assert expected_paths <= paths.keys()
+
+    recitation_parameters = {
+        parameter["name"]: parameter
+        for parameter in paths["/api/v1/recitations"]["get"]["parameters"]
+    }
+    track_parameters = {
+        parameter["name"]: parameter
+        for parameter in paths["/api/v1/recitations/{recitation_id}/tracks"]["get"]["parameters"]
+    }
+    assert recitation_parameters["cursor"]["schema"]["maxLength"] == 2048
+    assert recitation_parameters["page_size"]["schema"] == {
+        "type": "integer",
+        "maximum": 100,
+        "minimum": 1,
+    }
+    assert track_parameters["page_size"]["schema"]["maximum"] == 114
+    assert track_parameters["scope"]["schema"]["enum"] == ["surah", "juz", "full"]
+    assert paths["/api/v1/reciters"]["get"]["security"] == [{}]
+    public_responses = paths["/api/v1/reciters"]["get"]["responses"]
+    assert set(public_responses["200"]["headers"]) == {"ETag", "Cache-Control"}
+    assert set(public_responses["304"]["headers"]) == {"ETag", "Cache-Control"}
+    assert "content" not in public_responses["304"]
+
+    timing_schema = schema["components"]["schemas"]["AudioTrack"]["properties"]["timing_version"]
+    assert timing_schema["oneOf"][1] == {"type": "null"}
+    asset_properties = schema["components"]["schemas"]["AudioAsset"]["properties"]
+    assert {"url", "content_type", "bytes", "sha256", "etag"} <= asset_properties.keys()

@@ -1,22 +1,10 @@
 from __future__ import annotations
 
-import hashlib
-import json
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
-
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics
-from rest_framework.authentication import BaseAuthentication
-from rest_framework.permissions import AllowAny
-from rest_framework.request import Request
-from rest_framework.response import Response
 
-if TYPE_CHECKING:
-    from rest_framework.permissions import _PermissionClass
-
+from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
 from quran_backend.modules.quran.models import Ayah, Juz, MushafPage, QuranEdition, Surah
 from quran_backend.modules.quran.selectors import (
     published_ayahs,
@@ -34,31 +22,8 @@ from quran_backend.modules.quran.serializers import (
 )
 
 
-class PublicQuranViewMixin:
-    authentication_classes: Sequence[type[BaseAuthentication]] = ()
-    permission_classes: Sequence[_PermissionClass] = (AllowAny,)
-
-    def finalize_response(
-        self,
-        request: Request,
-        response: Response,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
-        if response.status_code == 200 and response.data is not None:
-            payload = json.dumps(
-                response.data,
-                cls=DjangoJSONEncoder,
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
-            etag = f'"{hashlib.sha256(payload).hexdigest()}"'
-            if request.headers.get("If-None-Match") == etag:
-                response = Response(status=304)
-            response["ETag"] = etag
-            response["Cache-Control"] = "public, max-age=300, stale-while-revalidate=86400"
-        return super().finalize_response(request, response, *args, **kwargs)  # type: ignore[misc,no-any-return]
+class PublicQuranViewMixin(PublicReadOnlyViewMixin):
+    """Backward-compatible Quran-specific alias for the shared public API behavior."""
 
 
 @extend_schema(tags=["quran"])

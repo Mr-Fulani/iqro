@@ -3,12 +3,21 @@ from __future__ import annotations
 from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.settings.base import *  # noqa: F403
-from quran_backend.settings.base import REST_FRAMEWORK, env_list, required_env
+from quran_backend.settings.base import (
+    REST_FRAMEWORK,
+    env_list,
+    required_env,
+    validate_https_base_url,
+)
 
 SECRET_KEY = required_env("DJANGO_SECRET_KEY")
 QURAN_INSTALLATION_HASH_KEY = required_env("QURAN_INSTALLATION_HASH_KEY")
 QURAN_GUEST_CREDENTIAL_HASH_KEY = required_env("QURAN_GUEST_CREDENTIAL_HASH_KEY")
 QURAN_REFRESH_TOKEN_HASH_KEY = required_env("QURAN_REFRESH_TOKEN_HASH_KEY")
+PUBLIC_AUDIO_BASE_URL = validate_https_base_url(
+    "PUBLIC_AUDIO_BASE_URL",
+    required_env("PUBLIC_AUDIO_BASE_URL"),
+)
 try:
     TRUSTED_PROXY_COUNT = int(required_env("DJANGO_NUM_PROXIES"))
 except ValueError as exc:
