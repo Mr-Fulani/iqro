@@ -39,6 +39,10 @@ MVP обратной связи с пользовательскими тикет
 immutable CDN contract и безопасная загрузка отдельной суры описаны в
 [docs/audio-api.md](docs/audio-api.md).
 
+Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar
+правила, pinned tzdata и privacy contract для координат описаны в
+[docs/prayer-api.md](docs/prayer-api.md).
+
 ## Подготовка страниц мусхафа
 
 Проверка закреплённого PDF и атомарная подготовка lossless WebP-вариантов выполняются

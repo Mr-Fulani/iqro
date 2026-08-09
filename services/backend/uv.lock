@@ -3,6 +3,15 @@ revision = 3
 requires-python = "==3.14.*"
 
 [[package]]
+name = "adhanpy"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/77/1111dd754493146e14d4a28ac4df114cc5c74b4317055a300dd5df3df1bf/adhanpy-1.0.5.tar.gz", hash = "sha256:9b6670f8d563d61d4f9fde581165cbe692c917710b694cb6b5e2130ffc902680", size = 13738, upload-time = "2023-01-28T15:54:32.095Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/5b/89b9705b95aca620409574ce4bd4e013c33d3fd1f27edf7ab9b9ca40a18c/adhanpy-1.0.5-py3-none-any.whl", hash = "sha256:79d765e6b91d3b29448988691957b51109faaca10f498eb3656e7c87b56b6066", size = 17178, upload-time = "2023-01-28T15:54:30.328Z" },
+]
+
+[[package]]
 name = "amqp"
 version = "5.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -647,6 +656,7 @@ name = "quran-platform-backend"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "adhanpy" },
     { name = "celery", extra = ["redis"] },
     { name = "django" },
     { name = "django-cors-headers" },
@@ -655,6 +665,7 @@ dependencies = [
     { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
     { name = "redis" },
+    { name = "tzdata" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -671,6 +682,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "adhanpy", specifier = "==1.0.5" },
     { name = "celery", extras = ["redis"], specifier = ">=5.5,<6" },
     { name = "django", specifier = "==6.1" },
     { name = "django-cors-headers", specifier = "==4.9.0" },
@@ -679,6 +691,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=23,<24" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "redis", specifier = ">=6,<7" },
+    { name = "tzdata", specifier = "==2026.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35,<1" },
 ]
 

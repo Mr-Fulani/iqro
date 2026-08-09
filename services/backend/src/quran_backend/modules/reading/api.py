@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 from typing import Any, NoReturn, cast
 
-from django.utils.cache import patch_vary_headers
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -15,6 +14,7 @@ from rest_framework.views import APIView
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.accounts.services import AccessAuthContext
+from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.reading.serializers import (
     BookmarkCreateSerializer,
     BookmarkDeleteSerializer,
@@ -67,22 +67,6 @@ def _bind_authenticated_device(request: Request, data: dict[str, Any]) -> dict[s
         )
     data["device_id"] = request.auth.device.id
     return data
-
-
-class PrivateNoStoreResponseMixin:
-    def finalize_response(
-        self,
-        request: Request,
-        response: Response,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
-        response = super().finalize_response(request, response, *args, **kwargs)  # type: ignore[misc]
-        response["Cache-Control"] = "private, no-store"
-        response["Pragma"] = "no-cache"
-        response["Expires"] = "0"
-        patch_vary_headers(response, ("Authorization",))
-        return response
 
 
 class ReadingRateLimitMixin:

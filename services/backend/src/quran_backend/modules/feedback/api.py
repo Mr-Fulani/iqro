@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
-from django.utils.cache import patch_vary_headers
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -14,6 +13,7 @@ from rest_framework.views import APIView
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.accounts.services import AccessAuthContext
+from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.feedback.models import FeedbackStatus
 from quran_backend.modules.feedback.serializers import (
     FeedbackMessageCreateSerializer,
@@ -43,22 +43,6 @@ def _channel(request: Request) -> str:
     if isinstance(request.auth, AccessAuthContext):
         return str(request.auth.device.platform)
     return "web"
-
-
-class PrivateNoStoreResponseMixin:
-    def finalize_response(
-        self,
-        request: Request,
-        response: Response,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
-        response = super().finalize_response(request, response, *args, **kwargs)  # type: ignore[misc]
-        response["Cache-Control"] = "private, no-store"
-        response["Pragma"] = "no-cache"
-        response["Expires"] = "0"
-        patch_vary_headers(response, ("Authorization",))
-        return response
 
 
 class FeedbackTicketCursorPagination(CursorPagination):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-PUBLIC_CACHE_TAGS = {"audio", "quran"}
+PUBLIC_CACHE_TAGS = {"audio", "prayer", "quran"}
 PUBLIC_CACHE_HEADERS = {
     "ETag": {
         "description": "Weak validator for the semantic JSON representation.",

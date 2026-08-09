@@ -30,6 +30,7 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "token_refresh_session": "10000/minute",
     "token_refresh_ip_burst": "10000/minute",
     "feedback_write": "10000/minute",
+    "prayer_calculate": "10000/minute",
     "reading_mutation": "10000/minute",
     "sync_push": "10000/minute",
     "sync_push_daily": "100000/day",

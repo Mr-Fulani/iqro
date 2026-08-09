@@ -86,7 +86,7 @@ def test_religious_ticket_has_accelerated_sla_context_and_audit() -> None:
     )
 
     assert response.status_code == 201
-    assert response.headers["Cache-Control"] == "private, no-store"
+    assert response.headers["Cache-Control"] == "private, no-store, max-age=0"
     assert "Authorization" in response.headers["Vary"]
     body = response.json()
     assert body["public_id"].startswith("FB-")

@@ -67,6 +67,9 @@ def _title_for_status(status_code: int) -> str:
         status.HTTP_404_NOT_FOUND: "Not Found",
         status.HTTP_405_METHOD_NOT_ALLOWED: "Method Not Allowed",
         status.HTTP_409_CONFLICT: "Conflict",
+        status.HTTP_410_GONE: "Gone",
         status.HTTP_413_REQUEST_ENTITY_TOO_LARGE: "Content Too Large",
+        status.HTTP_422_UNPROCESSABLE_ENTITY: "Unprocessable Content",
         status.HTTP_429_TOO_MANY_REQUESTS: "Too Many Requests",
+        status.HTTP_503_SERVICE_UNAVAILABLE: "Service Unavailable",
     }.get(status_code, "Request Error")

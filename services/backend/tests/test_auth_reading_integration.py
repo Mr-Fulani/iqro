@@ -50,7 +50,7 @@ def test_guest_credentials_bind_reading_state_to_authenticated_device(
 
     assert saved.status_code == 200
     assert saved.json()["device_id"] == credentials["device"]["id"]
-    assert saved["Cache-Control"] == "private, no-store"
+    assert saved["Cache-Control"] == "private, no-store, max-age=0"
 
     logout = api_client.post(reverse("accounts:logout"), format="json")
     rejected = api_client.get(position_url)

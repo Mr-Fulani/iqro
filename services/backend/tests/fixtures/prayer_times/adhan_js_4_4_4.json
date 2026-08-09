@@ -1,0 +1,106 @@
+{
+  "fixture_version": "1.0.0",
+  "provenance": {
+    "engine": "Adhan JS",
+    "version": "4.4.4",
+    "upstream_commit": "a6f1a5c4a00105103f310ef18200b95f7184d2e7",
+    "source": "https://github.com/batoulapps/adhan-js/releases/tag/v4.4.4",
+    "generated_with": "official npm package adhan@4.4.4",
+    "verified_at": "2026-08-09",
+    "tolerance_seconds": 1
+  },
+  "method": {
+    "code": "muslim_world_league",
+    "fajr_angle": 18.0,
+    "isha_angle": 17.0,
+    "method_adjustments": {
+      "dhuhr": 1
+    }
+  },
+  "cases": [
+    {
+      "id": "raleigh-ordinary",
+      "date": "2026-08-09",
+      "latitude": 35.78056,
+      "longitude": -78.6389,
+      "high_latitude_rule": "middle_of_night",
+      "polar_resolution": "unresolved",
+      "expected_utc": {
+        "fajr": "2026-08-09T08:53:00Z",
+        "sunrise": "2026-08-09T10:29:00Z",
+        "dhuhr": "2026-08-09T17:21:00Z",
+        "asr": "2026-08-09T21:05:00Z",
+        "maghrib": "2026-08-10T00:11:00Z",
+        "isha": "2026-08-10T01:40:00Z"
+      }
+    },
+    {
+      "id": "istanbul-ordinary",
+      "date": "2026-08-09",
+      "latitude": 41.0082,
+      "longitude": 28.9784,
+      "high_latitude_rule": "middle_of_night",
+      "polar_resolution": "unresolved",
+      "expected_utc": {
+        "fajr": "2026-08-09T01:20:00Z",
+        "sunrise": "2026-08-09T03:08:00Z",
+        "dhuhr": "2026-08-09T10:11:00Z",
+        "asr": "2026-08-09T14:01:00Z",
+        "maghrib": "2026-08-09T17:11:00Z",
+        "isha": "2026-08-09T18:51:00Z"
+      }
+    },
+    {
+      "id": "arjeplog-polar-aqrab-yaum",
+      "date": "2020-06-21",
+      "latitude": 66.313,
+      "longitude": 17.886,
+      "high_latitude_rule": "seventh_of_night",
+      "polar_resolution": "aqrab_yaum",
+      "expected_utc": {
+        "fajr": "2020-06-20T22:44:00Z",
+        "sunrise": "2020-06-20T22:55:00Z",
+        "dhuhr": "2020-06-21T10:54:00Z",
+        "asr": "2020-06-21T15:49:00Z",
+        "maghrib": "2020-06-21T21:58:00Z",
+        "isha": "2020-06-21T22:09:00Z"
+      },
+      "expected_fallback": {
+        "strategy": "aqrab_yaum",
+        "reference_date": "2020-07-04"
+      }
+    },
+    {
+      "id": "kiritimati-international-date-line",
+      "date": "2026-08-09",
+      "latitude": 1.8721,
+      "longitude": -157.4278,
+      "high_latitude_rule": "middle_of_night",
+      "polar_resolution": "unresolved",
+      "expected_utc": {
+        "fajr": "2026-08-09T15:18:00Z",
+        "sunrise": "2026-08-09T16:30:00Z",
+        "dhuhr": "2026-08-09T22:36:00Z",
+        "asr": "2026-08-10T01:56:00Z",
+        "maghrib": "2026-08-10T04:41:00Z",
+        "isha": "2026-08-10T05:48:00Z"
+      }
+    },
+    {
+      "id": "pago-pago-international-date-line",
+      "date": "2026-08-09",
+      "latitude": -14.2756,
+      "longitude": -170.702,
+      "high_latitude_rule": "middle_of_night",
+      "polar_resolution": "unresolved",
+      "expected_utc": {
+        "fajr": "2026-08-09T16:28:00Z",
+        "sunrise": "2026-08-09T17:41:00Z",
+        "dhuhr": "2026-08-09T23:29:00Z",
+        "asr": "2026-08-10T02:48:00Z",
+        "maghrib": "2026-08-10T05:16:00Z",
+        "isha": "2026-08-10T06:24:00Z"
+      }
+    }
+  ]
+}

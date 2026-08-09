@@ -88,7 +88,7 @@ def test_reading_position_create_update_and_user_isolation(
     other_response = _authenticated_client(other_user).get(url)
 
     assert create_response.status_code == 200
-    assert create_response.headers["Cache-Control"] == "private, no-store"
+    assert create_response.headers["Cache-Control"] == "private, no-store, max-age=0"
     assert create_response.json()["revision"] == 1
     assert create_response.json()["ayah"]["ayah_number"] == 1
     assert update_response.status_code == 200

@@ -57,6 +57,7 @@ QURAN_REFRESH_TOKEN_TTL_SECONDS = os.getenv("QURAN_REFRESH_TOKEN_TTL_SECONDS", "
 QURAN_INSTALLATION_HASH_KEY = os.getenv("QURAN_INSTALLATION_HASH_KEY", SECRET_KEY)
 QURAN_GUEST_CREDENTIAL_HASH_KEY = os.getenv("QURAN_GUEST_CREDENTIAL_HASH_KEY", SECRET_KEY)
 QURAN_REFRESH_TOKEN_HASH_KEY = os.getenv("QURAN_REFRESH_TOKEN_HASH_KEY", SECRET_KEY)
+QURAN_PRAYER_THROTTLE_HASH_KEY = os.getenv("QURAN_PRAYER_THROTTLE_HASH_KEY", SECRET_KEY)
 QURAN_AUTH_SESSION_RETENTION_DAYS = os.getenv("QURAN_AUTH_SESSION_RETENTION_DAYS", "90")
 QURAN_AUTH_PRUNE_BATCH_SIZE = os.getenv("QURAN_AUTH_PRUNE_BATCH_SIZE", "5000")
 QURAN_AUTH_PRUNE_TOKEN_BATCH_SIZE = os.getenv("QURAN_AUTH_PRUNE_TOKEN_BATCH_SIZE", "50000")
@@ -109,6 +110,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.accounts.apps.AccountsConfig",
     "quran_backend.modules.quran.apps.QuranConfig",
     "quran_backend.modules.audio.apps.AudioConfig",
+    "quran_backend.modules.prayer_times.apps.PrayerTimesConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
 ]
@@ -245,6 +247,7 @@ REST_FRAMEWORK: dict[str, Any] = {
             "6000/minute",
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
+        "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
         "reading_mutation": os.getenv(
             "QURAN_READING_MUTATION_RATE",
             "120/minute",
