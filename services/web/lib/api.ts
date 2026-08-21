@@ -199,11 +199,11 @@ export type AudioTrack = {
 };
 
 export type AyahAudioSegment = {
-  id: string;
-  ayah: { id: string; surah: number; number: number };
+  ayah_id: string;
+  surah_number: number;
+  ayah_number: number;
   start_ms: number;
   end_ms: number;
-  duration_ms: number;
 };
 
 export type SurahPlayback = {

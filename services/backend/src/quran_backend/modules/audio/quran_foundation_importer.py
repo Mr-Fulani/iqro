@@ -250,8 +250,14 @@ def _prepare_track(
         or parsed_url.password is not None
     ):
         raise QuranFoundationError("Quran.Foundation returned an unapproved audio origin.")
-    audio_format = str(audio_file.get("format", "")).lower()
-    if audio_format not in {"", "mp3"} or not parsed_url.path.lower().endswith(".mp3"):
+    audio_formats = {
+        value.strip().lower()
+        for value in str(audio_file.get("format", "")).split(",")
+        if value.strip()
+    }
+    if (audio_formats and "mp3" not in audio_formats) or not parsed_url.path.lower().endswith(
+        ".mp3"
+    ):
         raise QuranFoundationError("Only MP3 chapter audio is supported by this importer.")
     try:
         size_bytes = int(float(audio_file.get("file_size", 0)))
@@ -268,6 +274,7 @@ def _prepare_track(
     )
     segments: list[PreparedSegment] = []
     canonical: list[dict[str, int | str]] = []
+    previous_start = -1
     previous_end = 0
     for timestamp in timestamps:
         if not isinstance(timestamp, dict):
@@ -279,8 +286,27 @@ def _prepare_track(
             end_ms = int(timestamp["timestamp_to"])
         except (KeyError, TypeError, ValueError) as exc:
             raise QuranFoundationError("Audio timestamps contain invalid values.") from exc
-        if verse_surah != surah_number or start_ms < previous_end or end_ms <= start_ms:
-            raise QuranFoundationError("Audio timestamps do not form a valid surah timeline.")
+        if (
+            verse_surah != surah_number
+            or start_ms < 0
+            or start_ms <= previous_start
+            or end_ms <= start_ms
+            or end_ms <= previous_end
+        ):
+            raise QuranFoundationError(
+                f"Surah {surah_number} has an invalid timeline at {verse_key}: "
+                f"previous_start={previous_start}, previous_end={previous_end}, "
+                f"start={start_ms}, end={end_ms}."
+            )
+        if segments and start_ms < segments[-1].end_ms:
+            previous = segments[-1]
+            segments[-1] = PreparedSegment(
+                ayah_number=previous.ayah_number,
+                start_ms=previous.start_ms,
+                end_ms=start_ms,
+            )
+            canonical[-1]["end_ms"] = start_ms
+        previous_start = start_ms
         previous_end = end_ms
         segments.append(PreparedSegment(verse_ayah, start_ms, end_ms))
         canonical.append({"verse_key": verse_key, "start_ms": start_ms, "end_ms": end_ms})

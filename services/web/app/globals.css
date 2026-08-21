@@ -588,6 +588,46 @@ input:focus, select:focus, textarea:focus {
   stroke: rgba(8, 94, 68, 0.9);
 }
 
+.mushaf-region.is-playing {
+  fill: rgba(20, 145, 104, 0.46);
+  stroke: rgba(4, 75, 52, 1);
+  stroke-width: 0.0035;
+}
+
+.mushaf-audio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--primary-subtle);
+}
+
+.mushaf-audio-controls,
+.mushaf-audio-now-playing {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mushaf-reciter-select {
+  flex: 1 1 320px;
+}
+
+.mushaf-audio-now-playing {
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--primary-border);
+}
+
+.mushaf-audio-now-playing audio {
+  width: min(520px, 100%);
+}
+
 .mushaf-selection-label {
   position: absolute;
   left: 50%;

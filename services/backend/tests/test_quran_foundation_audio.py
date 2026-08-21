@@ -56,6 +56,31 @@ class FakeQuranFoundationClient:
         return 192_000
 
 
+class OverlappingAyahClient(FakeQuranFoundationClient):
+    def get_chapter_audio(
+        self,
+        reciter_id: int,
+        chapter_number: int,
+    ) -> dict[str, Any]:
+        payload = super().get_chapter_audio(reciter_id, chapter_number)
+        payload["timestamps"] = [
+            {"verse_key": "1:1", "timestamp_from": 0, "timestamp_to": 6_000},
+            {"verse_key": "1:2", "timestamp_from": 5_000, "timestamp_to": 10_000},
+        ]
+        return payload
+
+
+class MultiFormatClient(FakeQuranFoundationClient):
+    def get_chapter_audio(
+        self,
+        reciter_id: int,
+        chapter_number: int,
+    ) -> dict[str, Any]:
+        payload = super().get_chapter_audio(reciter_id, chapter_number)
+        payload["format"] = "mp3,opus"
+        return payload
+
+
 @pytest.mark.django_db
 def test_imports_external_quran_foundation_audio_as_streaming_only(
     quran_dataset: dict[str, Any],
@@ -110,3 +135,34 @@ def test_external_audio_cannot_be_published_for_offline_download(
 
     with pytest.raises(ValidationError, match="External provider tracks"):
         result.recitation.save()
+
+
+@pytest.mark.django_db
+def test_normalizes_ordered_quran_foundation_ayah_ranges_that_overlap(
+    quran_dataset: dict[str, Any],
+) -> None:
+    prepared = prepare_quran_foundation_recitation(
+        OverlappingAyahClient(),
+        reciter_id=7,
+        surah_numbers=[1],
+        quran_version=quran_dataset["version"],
+    )
+
+    assert [(segment.start_ms, segment.end_ms) for segment in prepared.tracks[0].segments] == [
+        (0, 5_000),
+        (5_000, 10_000),
+    ]
+
+
+@pytest.mark.django_db
+def test_accepts_mp3_when_quran_foundation_advertises_multiple_formats(
+    quran_dataset: dict[str, Any],
+) -> None:
+    prepared = prepare_quran_foundation_recitation(
+        MultiFormatClient(),
+        reciter_id=7,
+        surah_numbers=[1],
+        quran_version=quran_dataset["version"],
+    )
+
+    assert prepared.tracks[0].external_url.endswith(".mp3")

@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState, useTransition } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { MushafAudioPlayer } from "../../components/MushafAudioPlayer";
 import {
   api,
   Ayah,
@@ -26,6 +27,7 @@ function QuranContent() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
+  const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
   const [loading, setLoading] = useState<boolean>(true);
@@ -97,6 +99,26 @@ function QuranContent() {
   }, [selectedEdition, currentPage, viewMode]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
+  const mushafRegions = useMemo(() => {
+    const unique = new Map<string, MushafPage["regions"][number]>();
+    for (const region of mushafPage?.regions || []) {
+      const key = `${region.ayah.surah}:${region.ayah.number}:${JSON.stringify(region.polygon)}`;
+      if (!unique.has(key)) unique.set(key, region);
+    }
+    return [...unique.values()];
+  }, [mushafPage]);
+
+  const handleActiveAyahChange = useCallback((ayahKey: string | null) => {
+    setPlayingMushafAyah(ayahKey);
+    if (!ayahKey) return;
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    if (surahNumber !== selectedSurah) return;
+    const activeAyah = ayahs.find((ayah) => ayah.number === ayahNumber);
+    const nextPage = activeAyah?.pages[0];
+    if (viewMode === "mushaf" && nextPage) {
+      setCurrentPage((page) => nextPage === page ? page : nextPage);
+    }
+  }, [ayahs, selectedSurah, viewMode]);
 
   const handleSavePosition = async (ayahNumber?: number) => {
     if (!isLoggedIn) {
@@ -317,6 +339,12 @@ function QuranContent() {
       ) : (
         /* Mushaf Page View */
         <section className="surface">
+          <MushafAudioPlayer
+            editionCode={selectedEdition}
+            selectedSurah={selectedSurah}
+            selectedAyahKey={selectedMushafAyah}
+            onActiveAyahChange={handleActiveAyahChange}
+          />
           <div className="mushaf-page-container">
             {mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
               <div className="mushaf-page-frame">
@@ -332,13 +360,13 @@ function QuranContent() {
                   preserveAspectRatio="none"
                   aria-label={`Интерактивные области аятов страницы ${currentPage}`}
                 >
-                  {mushafPage.regions.map((region) => {
+                  {mushafRegions.map((region) => {
                     const key = `${region.ayah.surah}:${region.ayah.number}`;
                     return (
                       <polygon
                         key={region.id}
                         points={region.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
-                        className={selectedMushafAyah === key ? "mushaf-region is-selected" : "mushaf-region"}
+                        className={`mushaf-region${selectedMushafAyah === key ? " is-selected" : ""}${playingMushafAyah === key ? " is-playing" : ""}`}
                         role="button"
                         tabIndex={0}
                         aria-label={`Аят ${key}`}
@@ -356,7 +384,9 @@ function QuranContent() {
                   })}
                 </svg>
                 {selectedMushafAyah && (
-                  <div className="mushaf-selection-label">Выбран аят {selectedMushafAyah}</div>
+                  <div className="mushaf-selection-label">
+                    {playingMushafAyah === selectedMushafAyah ? "Звучит" : "Выбран"} аят {selectedMushafAyah}
+                  </div>
                 )}
               </div>
             ) : (

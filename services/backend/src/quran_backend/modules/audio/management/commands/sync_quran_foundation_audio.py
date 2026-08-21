@@ -27,12 +27,18 @@ class Command(BaseCommand):
             dest="reciter_ids",
             help="Quran.Foundation chapter-reciter ID; repeat for multiple variants.",
         )
-        parser.add_argument(
+        surah_selection = parser.add_mutually_exclusive_group()
+        surah_selection.add_argument(
             "--surah",
             action="append",
             type=int,
             dest="surahs",
             help="Surah number to import; repeat as needed. Defaults to surah 1 for a pilot.",
+        )
+        surah_selection.add_argument(
+            "--all-surahs",
+            action="store_true",
+            help="Import all 114 surahs for every selected reciter.",
         )
         parser.add_argument(
             "--content-version",
@@ -59,7 +65,7 @@ class Command(BaseCommand):
             if quran_version is None:
                 raise QuranFoundationError("The selected Quran edition has no active version.")
             client = QuranFoundationClient.from_environment()
-            surahs = options["surahs"] or [1]
+            surahs = list(range(1, 115)) if options["all_surahs"] else options["surahs"] or [1]
             for reciter_id in options["reciter_ids"]:
                 self.stdout.write(f"Preparing Quran.Foundation reciter {reciter_id}...")
                 prepared = prepare_quran_foundation_recitation(

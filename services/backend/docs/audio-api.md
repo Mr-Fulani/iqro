@@ -96,12 +96,14 @@ Credentials хранятся только в backend environment: `QF_CLIENT_ID`
 ```bash
 python manage.py sync_quran_foundation_audio \
   --reciter-id 6 --reciter-id 7 --reciter-id 12 \
-  --surah 1 \
-  --content-version 2026.08.21-prelive \
+  --all-surahs \
+  --content-version 2026.08.21-production \
   --publish
 ```
 
-`--surah` можно повторять. Если параметр отсутствует, пилот импортирует только суру 1.
+`--surah` можно повторять; `--all-surahs` импортирует все 114 сур. Если оба параметра
+отсутствуют, пилот импортирует только суру 1. Параметры `--surah` и `--all-surahs`
+взаимоисключающие.
 Каждая повторная синхронизация должна получать новую immutable `--content-version`.
 Согласно Developer Terms, сохранённые QF metadata необходимо обновлять не реже одного
 раза в семь дней, если не используется отдельное разрешение или Content Sync.
