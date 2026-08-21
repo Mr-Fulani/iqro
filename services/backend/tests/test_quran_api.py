@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from quran_backend.modules.quran.models import QuranEdition
+from quran_backend.modules.quran.models import AyahPageRegion, QuranEdition
 
 
 @pytest.mark.django_db
@@ -76,6 +77,33 @@ def test_ayah_detail_contains_stable_reference(
         "juz_number": 1,
         "pages": [1],
     }
+
+
+@pytest.mark.django_db
+def test_ayah_pages_do_not_repeat_for_multiline_regions(
+    api_client: APIClient,
+    quran_dataset: dict[str, Any],
+) -> None:
+    AyahPageRegion.objects.create(
+        page=quran_dataset["page"],
+        ayah=quran_dataset["first_ayah"],
+        reading_order=2,
+        polygon=[[0.1, 0.3], [0.9, 0.3], [0.9, 0.4], [0.1, 0.4]],
+        x=Decimal("0.1"),
+        y=Decimal("0.3"),
+        width=Decimal("0.8"),
+        height=Decimal("0.1"),
+    )
+
+    response = api_client.get(
+        reverse(
+            "quran:ayah-detail",
+            kwargs={"edition": "madani-hafs", "surah": 1, "ayah": 1},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["pages"] == [1]
 
 
 @pytest.mark.django_db

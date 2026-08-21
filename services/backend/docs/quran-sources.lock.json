@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "edition": "madani-hafs@1.0.1",
+  "corpus": {
+    "upstream": "https://tanzil.net",
+    "mirror": "https://github.com/mjmirza/quran-dataset",
+    "commit": "c0dc86b060b854d03f62848692bf1d2936dba630",
+    "quran_json_sha256": "8b06e904890d9b918a470381c61c0a02bea70dcd595c56b6407c839483750de3",
+    "tanzil_uthmani_sha256": "c456766b702529e6d86d9e4419a13d0d687af36054d8ac5a0bb827166431f0f8",
+    "tanzil_metadata_sha256": "8867c1d88191472adec9db694b3cd9f135b1a2ef580574d32cf888dcb22c5c7a",
+    "license": "CC BY 3.0",
+    "license_url": "https://tanzil.net/docs/Text_License"
+  },
+  "regions": {
+    "repository": "https://github.com/quranpedia/quran-svg",
+    "commit": "5fbcb1d4d92b5a2972ab51472fe991b6066bb6e2",
+    "numeric_page_json_aggregate_sha256": "1278aa23076974174a59b577284ae757b12efac90124fb8241229f77486294cd",
+    "license": "CC0 1.0"
+  },
+  "pdf": {
+    "filename": "quran-hafs-mushaf.pdf",
+    "sha256": "76c690a92e0b464377e765f75d76976cc432877d297091a863b424ec782d234a",
+    "logical_pages": 604,
+    "registration_scale": 2.337
+  },
+  "built_dataset": {
+    "content_sha256": "c21e071f4fce38fd5a1958cb9a6e4732837a5d2ba5badd09f337dd96ba6eb2e9",
+    "surahs": 114,
+    "ayahs": 6236,
+    "pages": 604,
+    "juz": 30,
+    "region_segments": 12346,
+    "corpus_page_mapping_differences_resolved_by_kfqc_geometry": 56
+  }
+}

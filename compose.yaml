@@ -1,0 +1,125 @@
+x-backend-environment: &backend-environment
+  DJANGO_SETTINGS_MODULE: quran_backend.settings.local
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-unsafe-local-development-key}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,web}
+  DATABASE_HOST: postgres
+  DATABASE_PORT: 5432
+  DATABASE_NAME: ${DATABASE_NAME:-quran}
+  DATABASE_USER: ${DATABASE_USER:-quran}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-quran-local-only}
+  REDIS_URL: redis://redis:6379/0
+
+x-backend-service: &backend-service
+  build:
+    context: ./services/backend
+  env_file:
+    - path: ./services/backend/.env
+      required: false
+  environment: *backend-environment
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-quran}
+      POSTGRES_USER: ${DATABASE_USER:-quran}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-quran-local-only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+  migrate:
+    <<: *backend-service
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    volumes:
+      - ./services/backend/src:/app/src:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *backend-service
+    command: ["uvicorn", "quran_backend.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/backend/src:/app/src
+      - ./services/backend/media:/app/media
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker:
+    <<: *backend-service
+    command: ["celery", "-A", "quran_backend", "worker", "--loglevel=INFO"]
+    volumes:
+      - ./services/backend/src:/app/src
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  beat:
+    <<: *backend-service
+    command: ["celery", "-A", "quran_backend", "beat", "--loglevel=INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    volumes:
+      - ./services/backend/src:/app/src:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: ""
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - npm
+      - run
+      - dev
+      - --
+      - --hostname
+      - 0.0.0.0
+      - --port
+      - "3000"
+    volumes:
+      - ./services/web:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres-data:
+  redis-data:

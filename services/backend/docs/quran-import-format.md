@@ -80,6 +80,10 @@ Aggregate checksum — SHA-256 строки `filename:file_sha256\n`, сформ
 ```bash
 python manage.py import_quran_dataset /path/to/dataset --validate-only
 python manage.py import_quran_dataset /path/to/dataset
+python manage.py publish_quran_version --edition madani-hafs --content-version 1.0.1 --activate
 ```
 
 До импорта проверяются размеры файлов, SHA-256, непрерывность нумерации, количества, ссылки джузов, покрытие каждого аята страницей и безопасность относительных путей assets.
+
+Публикация выполняется отдельно от импорта. Она проверяет, что фактические количества
+совпадают с версией, все аяты имеют page region, а у версии есть проверенный source manifest.

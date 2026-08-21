@@ -239,6 +239,14 @@ class RecitationEdition(BaseModel):
             raise ValidationError(
                 {"status": "At least one surah audio track is required for publication."}
             )
+        if self.offline_download_allowed and tracks.exclude(external_url="").exists():
+            raise ValidationError(
+                {
+                    "offline_download_allowed": (
+                        "External provider tracks cannot be offered for offline download."
+                    )
+                }
+            )
 
         invalid_timing = tracks.filter(segments__isnull=False).filter(
             models.Q(timing_version__isnull=True)
@@ -553,12 +561,19 @@ class AudioTrack(BaseModel):
     )
     bitrate_kbps = models.PositiveIntegerField()
     size_bytes = models.PositiveBigIntegerField()
-    checksum_sha256 = models.CharField(max_length=64, validators=[validate_sha256])
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        validators=[validate_sha256],
+    )
     object_key = models.CharField(
         max_length=512,
+        null=True,
+        blank=True,
         unique=True,
         validators=[validate_relative_object_key],
     )
+    external_url = models.URLField(max_length=1000, blank=True)
 
     class Meta:
         db_table = "audio_track"
@@ -598,6 +613,13 @@ class AudioTrack(BaseModel):
                 condition=models.Q(size_bytes__gt=0),
                 name="audio_track_size_positive",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(object_key__isnull=False, external_url="")
+                    | (models.Q(object_key__isnull=True) & ~models.Q(external_url=""))
+                ),
+                name="audio_track_delivery_source_valid",
+            ),
             models.UniqueConstraint(
                 fields=["recitation_edition", "surah_number"],
                 condition=models.Q(scope=AudioTrackScope.SURAH),
@@ -630,6 +652,16 @@ class AudioTrack(BaseModel):
         super().clean()
         self._assert_parent_is_mutable()
         self._validate_segment_bound_fields()
+        has_object_key = bool(self.object_key)
+        has_external_url = bool(self.external_url)
+        if has_object_key == has_external_url:
+            raise ValidationError(
+                "Exactly one managed object key or external provider URL is required."
+            )
+        if has_object_key and not self.checksum_sha256:
+            raise ValidationError(
+                {"checksum_sha256": "Managed audio assets require a SHA-256 checksum."}
+            )
         timing_version_id = self.__dict__.get("timing_version_id")
         if timing_version_id is not None:
             timing_recitation_id = (
@@ -676,6 +708,9 @@ class AudioTrack(BaseModel):
             "surah_number",
             "juz_number",
             "duration_ms",
+            "object_key",
+            "external_url",
+            "checksum_sha256",
         )
         persisted = type(self).objects.filter(pk=self.pk).values(*fields).first()
         if persisted is None:

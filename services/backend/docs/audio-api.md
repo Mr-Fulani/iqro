@@ -4,6 +4,11 @@
 таймкоды аятов. Django никогда не проксирует аудиобайты: клиенты получают immutable
 CDN URL и читают/скачивают файл напрямую.
 
+Для внешних Quran.Foundation assets API возвращает исходный HTTPS URL напрямую. Такие
+треки всегда имеют `offline_download_allowed=false`, `immutable=false`,
+`range_supported=false`, а `sha256` и `etag` равны `null`: backend не должен заявлять
+гарантии собственного object storage для файла провайдера.
+
 ## Публичные endpoints
 
 Все endpoints доступны без авторизации, используют cursor pagination для списков и
@@ -81,6 +86,25 @@ Endpoint суры возвращает один трек и все его сег
 Реальные записи нельзя загружать или публиковать без документированного разрешения на
 мировой streaming и, отдельно, offline redistribution. Автотесты используют только
 синтетические метаданные.
+
+### Quran.Foundation pilot sync
+
+Credentials хранятся только в backend environment: `QF_CLIENT_ID`, `QF_CLIENT_SECRET`,
+`QF_ENV=prelive|production`. Команда ниже получает метаданные и проверенные таймкоды,
+привязывает их к активной Quran edition и публикует внешние треки только для streaming:
+
+```bash
+python manage.py sync_quran_foundation_audio \
+  --reciter-id 6 --reciter-id 7 --reciter-id 12 \
+  --surah 1 \
+  --content-version 2026.08.21-prelive \
+  --publish
+```
+
+`--surah` можно повторять. Если параметр отсутствует, пилот импортирует только суру 1.
+Каждая повторная синхронизация должна получать новую immutable `--content-version`.
+Согласно Developer Terms, сохранённые QF metadata необходимо обновлять не реже одного
+раза в семь дней, если не используется отдельное разрешение или Content Sync.
 
 ## CDN contract
 

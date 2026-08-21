@@ -1,6 +1,23 @@
 BACKEND_DIR := services/backend
+WEB_DIR := services/web
 
-.PHONY: backend-install backend-check backend-test backend-migrations backend-run backend-up
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run
+
+# Запуск с сохранением данных базы данных
+up:
+	docker compose up --build
+
+# Остановка с сохранением данных базы данных
+down:
+	docker compose down --remove-orphans
+
+# Перезапуск с сохранением данных базы данных
+restart:
+	docker compose down --remove-orphans && docker compose up --build
+
+# Полный сброс (с удалением томов базы данных и Redis)
+reset-all:
+	docker compose down -v --remove-orphans && docker compose up --build
 
 backend-install:
 	cd $(BACKEND_DIR) && uv sync --all-groups
@@ -24,3 +41,15 @@ backend-run:
 
 backend-up:
 	docker compose -f $(BACKEND_DIR)/compose.yaml up --build
+
+web-install:
+	cd $(WEB_DIR) && npm install
+
+web-dev:
+	cd $(WEB_DIR) && npm run dev
+
+web-build:
+	cd $(WEB_DIR) && npm run build
+
+web-run:
+	cd $(WEB_DIR) && npm start

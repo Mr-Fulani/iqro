@@ -1,0 +1,10 @@
+# Node
+node_modules/
+
+# Next.js
+.next/
+
+# Logs
+npm-debug.log*
+.yarn-error.log*
+.pnpm-debug.log*

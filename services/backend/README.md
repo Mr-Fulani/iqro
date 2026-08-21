@@ -53,3 +53,47 @@ optimistic concurrency, минимизированные tombstones, retention �
 Проверка закреплённого PDF и атомарная подготовка lossless WebP-вариантов выполняются
 отдельной management-командой. Она не импортирует данные в БД и не публикует контент.
 Подробный операторский регламент: [docs/mushaf-page-assets.md](docs/mushaf-page-assets.md).
+
+Для локального page-only просмотра полный результат можно разместить внутри `MEDIA_ROOT`,
+проверить повторно, зарегистрировать в БД и активировать:
+
+```bash
+uv run python manage.py prepare_mushaf_pages \
+  ../../quran-hafs-mushaf.pdf \
+  --output media/quran/madani-hafs/1.0.0 \
+  --variant-width 900
+
+uv run python manage.py publish_mushaf_pages \
+  media/quran/madani-hafs/1.0.0/manifest.json \
+  --activate
+```
+
+Команда публикации идемпотентна и перед записью в БД сверяет `manifest.sha256`, наличие,
+размер и SHA-256 каждой из 604 страниц. Page-only версия не добавляет канонический текст,
+границы джузов или интерактивные координаты аятов; их по-прежнему следует импортировать
+отдельным проверенным Quran dataset.
+
+## Полный Quran dataset
+
+Сборщик `build_quran_dataset` объединяет закреплённый Tanzil Uthmani corpus, KFQC
+ayah-polygons и подготовленные WebP-страницы. Он принимает только известные SHA-256,
+проверяет покрытие всех 6236 аятов и переводит нативные координаты KFQC в координаты
+страницы PDF. Точные commits, SHA и лицензии записаны в
+[docs/quran-sources.lock.json](docs/quran-sources.lock.json).
+
+```bash
+uv run python manage.py build_quran_dataset \
+  /path/to/quran-dataset/data/quran.json \
+  /path/to/quran-svg/mushafs/hafs/kfqc/json \
+  media/quran/madani-hafs/1.0.0/manifest.json \
+  media/quran/datasets/madani-hafs-1.0.1
+
+uv run python manage.py import_quran_dataset \
+  media/quran/datasets/madani-hafs-1.0.1
+
+uv run python manage.py publish_quran_version \
+  --edition madani-hafs --content-version 1.0.1 --activate
+```
+
+Импорт создаёт только draft. Отдельная команда публикации повторно проверяет фактические
+количества сур, страниц и джузов, покрытие каждого аята регионом и наличие source manifest.

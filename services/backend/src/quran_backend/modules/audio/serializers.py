@@ -176,8 +176,8 @@ class AudioAssetSerializer(serializers.Serializer[Any]):
     codec = serializers.ChoiceField(choices=list(AudioCodec.choices))
     bitrate_kbps = serializers.IntegerField(min_value=1)
     bytes = serializers.IntegerField(min_value=1)
-    sha256 = serializers.CharField()
-    etag = serializers.CharField()
+    sha256 = serializers.CharField(allow_null=True)
+    etag = serializers.CharField(allow_null=True)
     range_supported = serializers.BooleanField()
     immutable = serializers.BooleanField()
 
@@ -220,16 +220,23 @@ class AudioTrackSerializer(serializers.ModelSerializer[AudioTrack]):
 
     @extend_schema_field(AudioAssetSerializer)
     def get_asset(self, obj: AudioTrack) -> dict[str, Any]:
+        checksum = obj.checksum_sha256 or None
+        if obj.object_key is not None:
+            url = public_audio_url(obj.object_key)
+            is_managed = True
+        else:
+            url = obj.external_url
+            is_managed = False
         return {
-            "url": public_audio_url(obj.object_key),
+            "url": url,
             "content_type": obj.content_type,
             "codec": obj.codec,
             "bitrate_kbps": obj.bitrate_kbps,
             "bytes": obj.size_bytes,
-            "sha256": obj.checksum_sha256,
-            "etag": f'"{obj.checksum_sha256}"',
-            "range_supported": True,
-            "immutable": True,
+            "sha256": checksum,
+            "etag": f'"{checksum}"' if checksum else None,
+            "range_supported": is_managed,
+            "immutable": is_managed,
         }
 
 

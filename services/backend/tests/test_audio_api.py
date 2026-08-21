@@ -364,6 +364,40 @@ def test_track_contains_verified_timing_version(
 
 
 @pytest.mark.django_db
+def test_external_track_exposes_non_immutable_streaming_asset(
+    api_client: APIClient,
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    track = published_audio_dataset["track"]
+    AudioTrack.objects.filter(pk=track.pk).update(
+        object_key=None,
+        external_url="https://download.quranicaudio.com/qdc/test/1.mp3",
+        checksum_sha256="",
+    )
+
+    response = api_client.get(
+        reverse(
+            "audio:track-list",
+            kwargs={"recitation_id": published_audio_dataset["recitation"].id},
+        )
+    )
+
+    assert response.status_code == 200
+    asset = response.json()["results"][0]["asset"]
+    assert asset == {
+        "url": "https://download.quranicaudio.com/qdc/test/1.mp3",
+        "content_type": "audio/mpeg",
+        "codec": "mp3",
+        "bitrate_kbps": 128,
+        "bytes": 192_000,
+        "sha256": None,
+        "etag": None,
+        "range_supported": False,
+        "immutable": False,
+    }
+
+
+@pytest.mark.django_db
 def test_surah_and_ayah_playback_payloads_are_timeline_ready(
     api_client: APIClient,
     quran_dataset: dict[str, Any],

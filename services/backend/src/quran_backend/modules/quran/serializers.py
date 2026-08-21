@@ -91,7 +91,9 @@ class AyahSerializer(serializers.ModelSerializer[Ayah]):
 
     def get_pages(self, obj: Ayah) -> list[int]:
         return list(
-            obj.page_regions.order_by("page__number").values_list("page__number", flat=True)
+            obj.page_regions.order_by("page__number")
+            .values_list("page__number", flat=True)
+            .distinct()
         )
 
 
