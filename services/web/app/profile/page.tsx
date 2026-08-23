@@ -40,7 +40,14 @@ const FEEDBACK_STATUS_LABELS: Record<string, string> = {
 const FEEDBACK_CATEGORY_LABELS = Object.fromEntries(FEEDBACK_CATEGORIES);
 
 export default function ProfilePage() {
-  const { session, isLoggedIn, loginGuest, logout, isLoading: authLoading } = useAuth();
+  const {
+    session,
+    isLoggedIn,
+    loginGuest,
+    logout,
+    logoutAll,
+    isLoading: authLoading,
+  } = useAuth();
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -49,6 +56,7 @@ export default function ProfilePage() {
   const [loadingSync, setLoadingSync] = useState<boolean>(false);
   const [pendingSync, setPendingSync] = useState<number>(0);
   const [syncVersion, setSyncVersion] = useState<number>(0);
+  const [confirmLogoutAll, setConfirmLogoutAll] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -205,6 +213,15 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogoutAll = async () => {
+    setError(null);
+    const succeeded = await logoutAll();
+    if (!succeeded) {
+      setError("Не удалось завершить все сессии. Повторите попытку.");
+      setConfirmLogoutAll(false);
+    }
+  };
+
   const handleCreateFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackSubject || !feedbackMessage) return;
@@ -337,18 +354,53 @@ export default function ProfilePage() {
                 Войти по email
               </Link>
             ) : (
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => void logout()}
-              >
-                Выйти
-              </button>
+              <>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void logout()}
+                >
+                  Выйти
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => setConfirmLogoutAll(true)}
+                >
+                  Выйти на всех устройствах
+                </button>
+              </>
             )}
           </div>
         </div>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 14 }}>{error}</div>}
         {successMsg && <div className="alert alert-success" style={{ marginBottom: 14 }}>{successMsg}</div>}
+        {confirmLogoutAll && (
+          <div className="alert alert-error" style={{ marginBottom: 14 }}>
+            <strong>Завершить все сессии?</strong>
+            <p style={{ marginTop: 6 }}>
+              Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения
+              потребуется снова получить код по email.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button
+                className="btn btn-danger btn-sm"
+                type="button"
+                disabled={authLoading}
+                onClick={() => void handleLogoutAll()}
+              >
+                {authLoading ? "Завершение сессий..." : "Подтвердить выход везде"}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                disabled={authLoading}
+                onClick={() => setConfirmLogoutAll(false)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
         {isGuest && (
           <div className="alert alert-info" style={{ marginBottom: 14 }}>
             Сейчас данные привязаны только к этому устройству. Войдите по email, чтобы сохранить

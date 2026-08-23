@@ -23,6 +23,7 @@ type AuthContextType = {
     idempotencyKey: string,
   ) => Promise<EmailVerificationResponse | null>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<boolean>;
   isLoggedIn: boolean;
 };
 
@@ -154,6 +155,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const logoutAll = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await api.logoutAll();
+      setSession(null);
+      return true;
+    } catch (err) {
+      setError(api.normalizeError(err));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -164,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         startEmailChallenge,
         verifyEmailChallenge,
         logout,
+        logoutAll,
         isLoggedIn: Boolean(session?.access_token),
       }}
     >

@@ -168,6 +168,32 @@ test("guest session keeps verified email login visible in the header", async ({ 
   await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
 });
 
+test("logout all sessions requires confirmation and clears the web session", async ({ page }) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: activeSession }),
+  );
+  let logoutAllCalls = 0;
+  await page.route("**/api/web-auth/logout-all", (route) => {
+    logoutAllCalls += 1;
+    return route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "Выйти на всех устройствах" }).click();
+  await expect(page.getByText("Завершить все сессии?")).toBeVisible();
+  expect(logoutAllCalls).toBe(0);
+
+  await page.getByRole("button", { name: "Отмена" }).click();
+  await expect(page.getByText("Завершить все сессии?")).toHaveCount(0);
+  await page.getByRole("button", { name: "Выйти на всех устройствах" }).click();
+  await page.getByRole("button", { name: "Подтвердить выход везде" }).click();
+
+  await expect(page.getByRole("heading", { name: "Личный кабинет читателя" })).toBeVisible();
+  expect(logoutAllCalls).toBe(1);
+});
+
 test("email challenge reconciles a restored guest with its installation", async ({ page }) => {
   await installAuthMocks(page);
   await page.unroute("**/api/web-auth/refresh");

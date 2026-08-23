@@ -42,7 +42,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет 19 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 20 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px и переходы по juz/hizb/rub/ayah.
@@ -56,7 +56,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 
 | # | Требование P0 | Статус | Реализовано | Для полного P0 не хватает |
 |---:|---|:---:|---|---|
-| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF | Identity unlink/change safeguards, self-service deletion, device/session UI и дополнительные OAuth providers |
+| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF, session restore и revoke-all UI | Identity unlink/change safeguards, self-service deletion, device inventory/per-session revoke UI и дополнительные OAuth providers |
 | 2 | RU/EN/AR и RTL | 🟡 | Многоязычные имена контента, locale constraints, арабский RTL-текст | Web зафиксирован на `lang=ru`; нет i18n routing/catalog, language switch и полного RTL UI |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
@@ -167,6 +167,9 @@ account lifecycle, offline packages, расширенном плеере, лок
   `push` с conflict rebase/remap, постраничный incremental pull, cursor-expiry/full-resync recovery,
   сохранение pull-курсора и guest-outbox flush до email merge. Live PostgreSQL проверка выполнена
   внутри транзакции с rollback.
+- Реализованный account API закрыт web-интерфейсом: `/me` проверяет восстановленную BFF-сессию,
+  а `logout-all` доступен из кабинета только после отдельного подтверждения и отзывает все token
+  families. Device inventory, выборочный revoke и deletion остаются backend-задачами.
 
 ## Приоритетный backlog
 

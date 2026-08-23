@@ -62,4 +62,6 @@ hourly in bounded batches by `accounts.prune_email_challenges`. Production must 
 Celery Beat scheduler.
 
 Remaining lifecycle work outside this slice: identity unlink/change safeguards, self-service
-account deletion, device/session management UI and optional Google/Apple/Telegram providers.
+account deletion, device inventory/per-session revoke UI and optional Google/Apple/Telegram
+providers. The web cabinet already exposes the implemented global `logout-all` operation behind
+an explicit confirmation step.

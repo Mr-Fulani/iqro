@@ -866,6 +866,11 @@ export class ApiClient {
     }
   }
 
+  public async logoutAll(): Promise<void> {
+    await this.webAuthRequest<void>("/logout-all", { method: "POST" });
+    this.setSession(null);
+  }
+
   public async startEmailChallenge(email: string): Promise<EmailChallenge> {
     return this.webAuthRequest<EmailChallenge>("/email/start", {
       method: "POST",
