@@ -6,7 +6,7 @@ import {
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("Origin");
-  if (origin && origin !== request.nextUrl.origin) {
+  if (origin && origin !== publicRequestOrigin(request)) {
     return NextResponse.json(
       { code: "cross_origin_request", detail: "Cross-origin request rejected." },
       { status: 403, headers: { "Cache-Control": "private, no-store" } },
@@ -26,4 +26,17 @@ export async function POST(request: NextRequest) {
     }),
     input,
   );
+}
+
+function publicRequestOrigin(request: NextRequest): string {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",", 1)[0]?.trim();
+  const host = forwardedHost || request.headers.get("host");
+  if (!host) return request.nextUrl.origin;
+
+  const forwardedProtocol = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",", 1)[0]
+    ?.trim();
+  const protocol = forwardedProtocol || request.nextUrl.protocol.replace(/:$/, "");
+  return `${protocol}://${host}`;
 }

@@ -133,7 +133,10 @@ def verify_email_challenge(
     with transaction.atomic():
         challenge = (
             EmailAuthChallenge.objects.select_for_update()
-            .select_related("requester", "device", "result_user")
+            # PostgreSQL cannot lock the nullable side of the OUTER JOIN that
+            # select_related("result_user") would add here. The replay path
+            # locks and loads the result user explicitly below.
+            .select_related("requester", "device")
             .filter(id=challenge_id)
             .first()
         )
@@ -266,9 +269,8 @@ def _replay_consumed_challenge(
     challenge: EmailAuthChallenge,
     idempotency_key: uuid.UUID,
 ) -> EmailVerificationResult:
-    if challenge.verification_key != idempotency_key or challenge.result_user is None:
+    if challenge.verification_key != idempotency_key or challenge.result_user_id is None:
         raise EmailChallengeInvalid
-    assert challenge.result_user_id is not None
     user = User.objects.select_for_update().get(id=challenge.result_user_id)
     device = Device.objects.select_for_update().get(id=challenge.device_id)
     if user.status != UserStatus.ACTIVE or not user.is_active or device.user_id != user.id:
