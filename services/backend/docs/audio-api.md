@@ -166,7 +166,12 @@ API-флаги `range_supported` и `immutable` описывают обязат�
 Общий каталог `download-packages` с отзывом, зависимостями и пакетами full/juz будет
 следующим отдельным модулем. Текущий срез уже позволяет безопасно скачать конкретную суру.
 
-Flutter отвечает за background playback, media notification, lock screen controls,
-interruption handling и восстановление очереди. Web использует Media Session API в пределах
-возможностей браузера. Telegram Mini App гарантирует только foreground playback, пока жив
-WebView; backend не обещает воспроизведение после закрытия Telegram.
+Web-клиент строит repeat/range queue по проверенным сегментам, поддерживает учебные паузы,
+скорость, sleep timer, сохраняет текущий курсор при browser pause/waiting и использует Media
+Session API в пределах возможностей браузера. Это не является гарантией OS background
+playback: после закрытия вкладки или приложения воспроизведение может остановиться.
+
+Flutter отдельно отвечает за background playback, media notification, lock screen controls,
+native audio focus/interruption handling и восстановление очереди. Telegram Mini App
+гарантирует только foreground playback, пока жив WebView; backend не обещает воспроизведение
+после закрытия Telegram.

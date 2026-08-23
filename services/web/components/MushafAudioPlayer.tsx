@@ -1,25 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api, Recitation, SurahPlayback } from "../lib/api";
 import {
-  api,
-  AudioTrack,
-  AyahAudioSegment,
-  Recitation,
-} from "../lib/api";
+  AudioPlaybackRequest,
+  SegmentedAudioPlayer,
+} from "./SegmentedAudioPlayer";
 
 type MushafAudioPlayerProps = {
   editionCode: string;
   selectedSurah: number;
   selectedAyahKey: string | null;
   onActiveAyahChange: (ayahKey: string | null) => void;
-};
-
-type PlaybackTarget = {
-  surah: number;
-  ayah: number | null;
-  startMs: number;
-  endMs: number | null;
 };
 
 function parseAyahKey(value: string | null): { surah: number; ayah: number } | null {
@@ -46,21 +38,19 @@ export function MushafAudioPlayer({
 }: MushafAudioPlayerProps) {
   const [recitations, setRecitations] = useState<Recitation[]>([]);
   const [selectedRecitationId, setSelectedRecitationId] = useState("");
-  const [track, setTrack] = useState<AudioTrack | null>(null);
-  const [target, setTarget] = useState<PlaybackTarget | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [preparedPlayback, setPreparedPlayback] = useState<SurahPlayback | null>(null);
+  const [playerRequest, setPlayerRequest] = useState<AudioPlaybackRequest | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [playbackLoading, setPlaybackLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const targetRef = useRef<PlaybackTarget | null>(null);
-  const segmentsRef = useRef<AyahAudioSegment[]>([]);
+  const requestIdRef = useRef(0);
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setCatalogLoading(true);
     setError(null);
     api
       .getRecitations({ quran_edition: editionCode })
@@ -80,7 +70,7 @@ export function MushafAudioPlayer({
         if (!cancelled) setError(api.normalizeError(reason));
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setCatalogLoading(false);
       });
     return () => {
       cancelled = true;
@@ -88,131 +78,79 @@ export function MushafAudioPlayer({
   }, [editionCode]);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-    }
-    setTrack(null);
-    segmentsRef.current = [];
-    setTarget(null);
-    targetRef.current = null;
-    setIsPlaying(false);
-    setLoading(false);
-    onActiveAyahChange(null);
-  }, [selectedRecitationId, onActiveAyahChange]);
-
-  const startAudio = (nextTrack: AudioTrack, nextTarget: PlaybackTarget) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const start = () => {
-      audio.currentTime = nextTarget.startMs / 1000;
-      void audio.play().catch(() => {
-        setError("Браузер заблокировал автозапуск. Нажмите ▶ в аудиоплеере.");
-      });
-    };
-    if (audio.getAttribute("src") !== nextTrack.asset.url) {
-      audio.src = nextTrack.asset.url;
-      audio.load();
-      audio.addEventListener("loadedmetadata", start, { once: true });
-    } else if (audio.readyState >= 1) {
-      start();
-    } else {
-      audio.addEventListener("loadedmetadata", start, { once: true });
-    }
-  };
-
-  const playSurah = async () => {
-    if (!selectedRecitationId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const playback = await api.getSurahPlayback(selectedRecitationId, selectedSurah);
-      const nextSegments = playback.segments || [];
-      const nextTarget = { surah: selectedSurah, ayah: null, startMs: 0, endMs: null };
-      setTrack(playback.track);
-      segmentsRef.current = nextSegments;
-      setTarget(nextTarget);
-      targetRef.current = nextTarget;
-      onActiveAyahChange(
-        nextSegments[0]
-          ? `${nextSegments[0].surah_number}:${nextSegments[0].ayah_number}`
-          : null,
-      );
-      startAudio(playback.track, nextTarget);
-    } catch (reason) {
-      setError(api.normalizeError(reason));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const playAyah = async () => {
-    if (!selectedRecitationId || !selectedAyah) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const playback = await api.getAyahPlayback(
-        selectedRecitationId,
-        selectedAyah.surah,
-        selectedAyah.ayah,
-      );
-      const nextTarget = {
-        surah: selectedAyah.surah,
-        ayah: selectedAyah.ayah,
-        startMs: playback.segment.start_ms,
-        endMs: playback.segment.end_ms,
-      };
-      setTrack(playback.track);
-      segmentsRef.current = [playback.segment];
-      setTarget(nextTarget);
-      targetRef.current = nextTarget;
-      onActiveAyahChange(`${selectedAyah.surah}:${selectedAyah.ayah}`);
-      startAudio(playback.track, nextTarget);
-    } catch (reason) {
-      setError(api.normalizeError(reason));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    const audio = audioRef.current;
-    const currentTarget = targetRef.current;
-    if (!audio || !currentTarget) return;
-    const currentMs = Math.round(audio.currentTime * 1000);
-    if (currentTarget.endMs !== null && currentMs >= currentTarget.endMs) {
-      audio.pause();
-      audio.currentTime = currentTarget.endMs / 1000;
-      setIsPlaying(false);
-      onActiveAyahChange(null);
+    if (!selectedRecitationId) {
+      setPreparedPlayback(null);
+      setPlayerRequest(null);
       return;
     }
-    let currentSegment: AyahAudioSegment | undefined;
-    for (const segment of segmentsRef.current) {
-      if (currentMs >= segment.start_ms && currentMs < segment.end_ms) {
-        currentSegment = segment;
-      }
-    }
-    if (currentSegment) {
-      onActiveAyahChange(`${currentSegment.surah_number}:${currentSegment.ayah_number}`);
-    }
-  };
 
-  const handlePlay = () => {
-    const audio = audioRef.current;
-    const currentTarget = targetRef.current;
-    if (
-      audio &&
-      currentTarget?.endMs !== null &&
-      currentTarget?.endMs !== undefined &&
-      audio.currentTime * 1000 >= currentTarget.endMs - 40
-    ) {
-      audio.currentTime = currentTarget.startMs / 1000;
+    let cancelled = false;
+    setPlaybackLoading(true);
+    setPreparedPlayback(null);
+    setPlayerRequest(null);
+    setError(null);
+    api
+      .getSurahPlayback(selectedRecitationId, selectedSurah)
+      .then((playback) => {
+        if (cancelled) return;
+        setPreparedPlayback(playback);
+        const recitation = recitations.find((item) => item.id === selectedRecitationId);
+        requestIdRef.current += 1;
+        setPlayerRequest({
+          requestId: requestIdRef.current,
+          track: playback.track,
+          segments: playback.segments || [],
+          kind: "surah",
+          title: `Сура ${selectedSurah}`,
+          artist: recitation ? recitationLabel(recitation) : "Чтец Quran.Foundation",
+          album: "Quran Platform · Мусхаф",
+          autoPlay: false,
+        });
+      })
+      .catch((reason) => {
+        if (!cancelled) setError(api.normalizeError(reason));
+      })
+      .finally(() => {
+        if (!cancelled) setPlaybackLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [recitations, selectedRecitationId, selectedSurah]);
+
+  const startPlayback = async (kind: "surah" | "ayah") => {
+    if (!selectedRecitationId) return;
+    if (kind === "ayah" && !selectedAyah) return;
+    setPlaybackLoading(true);
+    setError(null);
+    try {
+      const playback = preparedPlayback || await api.getSurahPlayback(
+        selectedRecitationId,
+        selectedSurah,
+      );
+      setPreparedPlayback(playback);
+      requestIdRef.current += 1;
+      setPlayerRequest({
+        requestId: requestIdRef.current,
+        track: playback.track,
+        segments: playback.segments || [],
+        kind,
+        startAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
+        endAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
+        title: kind === "ayah" && selectedAyah
+          ? `Аят ${selectedAyah.surah}:${selectedAyah.ayah}`
+          : `Сура ${selectedSurah}`,
+        artist: selectedRecitation
+          ? recitationLabel(selectedRecitation)
+          : "Чтец Quran.Foundation",
+        album: "Quran Platform · Мусхаф",
+        autoPlay: true,
+      });
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+    } finally {
+      setPlaybackLoading(false);
     }
-    setIsPlaying(true);
-    handleTimeUpdate();
   };
 
   return (
@@ -225,11 +163,8 @@ export function MushafAudioPlayer({
           <select
             id="mushaf-recitation"
             value={selectedRecitationId}
-            onChange={(event) => {
-              setLoading(true);
-              setSelectedRecitationId(event.target.value);
-            }}
-            disabled={loading || recitations.length === 0}
+            onChange={(event) => setSelectedRecitationId(event.target.value)}
+            disabled={catalogLoading || recitations.length === 0}
           >
             {recitations.map((recitation) => (
               <option key={recitation.id} value={recitation.id}>
@@ -242,56 +177,31 @@ export function MushafAudioPlayer({
         <button
           className="btn btn-primary"
           type="button"
-          onClick={() => void playSurah()}
-          disabled={loading || !selectedRecitationId}
+          onClick={() => void startPlayback("surah")}
+          disabled={playbackLoading || !preparedPlayback}
         >
-          {loading ? "Загрузка…" : `▶ Сура ${selectedSurah}`}
+          {playbackLoading ? "Загрузка…" : `▶ Сура ${selectedSurah}`}
         </button>
         <button
           className="btn btn-secondary"
           type="button"
-          onClick={() => void playAyah()}
-          disabled={loading || !selectedRecitationId || !selectedAyah}
+          onClick={() => void startPlayback("ayah")}
+          disabled={playbackLoading || !preparedPlayback || !selectedAyah}
         >
           ▶ {selectedAyahKey ? `Аят ${selectedAyahKey}` : "Выберите аят"}
         </button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
-      {recitations.length === 0 && !loading && !error && (
+      {recitations.length === 0 && !catalogLoading && !error && (
         <div className="alert alert-info">Для этого издания пока нет опубликованных аудиозаписей.</div>
       )}
 
-      <div className="mushaf-audio-now-playing">
-        <div>
-          <strong>
-            {target
-              ? target.ayah
-                ? `Аят ${target.surah}:${target.ayah}`
-                : `Сура ${target.surah}`
-              : "Аудио не запущено"}
-          </strong>
-          <p className="kpi-desc">
-            {selectedRecitation ? recitationLabel(selectedRecitation) : "Выберите чтеца"}
-            {track && isPlaying ? " · воспроизводится" : ""}
-          </p>
-        </div>
-        <audio
-          ref={audioRef}
-          controls
-          preload="metadata"
-          onPlay={handlePlay}
-          onPause={() => {
-            setIsPlaying(false);
-            onActiveAyahChange(null);
-          }}
-          onEnded={() => {
-            setIsPlaying(false);
-            onActiveAyahChange(null);
-          }}
-          onTimeUpdate={handleTimeUpdate}
-        />
-      </div>
+      <SegmentedAudioPlayer
+        request={playerRequest}
+        className="mushaf-audio-now-playing"
+        onActiveAyahChange={onActiveAyahChange}
+      />
     </div>
   );
 }

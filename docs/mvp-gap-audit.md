@@ -42,15 +42,15 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет 20 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 23 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
-  viewport matrix 375/768/1440 px и переходы по juz/hizb/rub/ayah.
+  viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah и расширенный аудиоплеер.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
-- Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
-  был вручную поставлен на паузу. Статусы данных основаны на versioned manifests и коде,
-  а не на изменяемом локальном состоянии.
+- Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
+  114 треков выбранной декламации, таймкоды и реальное воспроизведение первой суры. Это не
+  заменяет versioned manifests и внешний лицензионный/religious release evidence.
 
 ## Матрица P0
 
@@ -63,7 +63,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
 | 6 | Позиции, закладки, история, цели, серии | 🟡 | Position, bookmarks, revisions, tombstones и sync | Нет reading sessions/history, goals и streaks |
 | 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable recitations, 114 surah tracks, ayah timings, streaming | Не доказаны три полностью лицензированных релиза; нет управляемой offline-установки и redistribution pipeline |
-| 8 | Repeat/range/pause/speed/sleep timer | 🟡 | Воспроизведение суры и отдельного аята, native browser controls | Нет repeat/range mode, учебных пауз, скорости 0,5–2,0× и sleep timer |
+| 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут | — |
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
 | 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |
@@ -92,9 +92,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | Минимум три полностью лицензированных чтеца | ⏸ | API не ограничивает количество, но production rights/sign-off не зафиксирован в репозитории |
-| Stream/offline/repeat/range/speed/pause/timer | 🟡 | Streaming, surah/ayah playback и pause есть; остальные режимы отсутствуют |
+| Stream/offline/repeat/range/speed/pause/timer | 🟡 | Streaming и все перечисленные режимы плеера есть на web; управляемый offline installer отсутствует |
 | Flutter background/lock-screen controls | ❌ | Flutter отсутствует |
-| Корректное восстановление после interruption | ❌ | Нет platform player/state machine и device tests |
+| Корректное восстановление после interruption | 🟡 | Web сохраняет курсор при pause/waiting, явно возобновляет его и покрыт E2E; native audio focus/device tests отсутствуют |
 | Повреждённый файл не устанавливается | ❌ | Checksums присутствуют в контракте, но client package installer отсутствует |
 
 ### Намаз и напоминания
@@ -170,6 +170,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Реализованный account API закрыт web-интерфейсом: `/me` проверяет восстановленную BFF-сессию,
   а `logout-all` доступен из кабинета только после отдельного подтверждения и отзывает все token
   families. Device inventory, выборочный revoke и deletion остаются backend-задачами.
+- Web-аудиоплеер использует единый segment state machine в каталоге и Мусхафе: repeat ayah/
+  selection, диапазоны, учебные паузы, скорость, sleep timer, сохранение позиции при browser
+  interruption и Media Session actions. Это не заявляет OS background playback.
 
 ## Приоритетный backlog
 
@@ -196,8 +199,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 ### P0-C — offline/audio/prayer
 
 1. Offline package manifests, resumable/checksummed installer и quota/eviction UI.
-2. Player state machine: repeat/range, паузы, скорость, sleep timer, interruption recovery,
-   background audio и system media controls.
+2. ✅ Web player state machine: repeat/range, паузы, скорость, sleep timer, browser interruption
+   recovery и Media Session controls. Flutter background audio, native audio focus и system
+   media controls остаются отдельной mobile-задачей.
 3. Flutter local prayer parity и local notification scheduler с timezone/location reschedule.
 
 ### P0-D — продуктовые домены

@@ -187,6 +187,34 @@ function paginated<T>(results: T[]) {
 
 async function installApiMocks(page: Page) {
   await page.addInitScript(() => {
+    const mediaSessionHandlers: Record<string, ((details?: { seekOffset?: number }) => void) | null> = {};
+    Object.defineProperty(window, "__mediaSessionHandlers", {
+      configurable: true,
+      value: mediaSessionHandlers,
+    });
+    Object.defineProperty(window, "MediaMetadata", {
+      configurable: true,
+      value: class MediaMetadataMock {
+        title?: string;
+        artist?: string;
+        album?: string;
+
+        constructor(init: { title?: string; artist?: string; album?: string }) {
+          Object.assign(this, init);
+        }
+      },
+    });
+    Object.defineProperty(navigator, "mediaSession", {
+      configurable: true,
+      value: {
+        metadata: null,
+        playbackState: "none",
+        setActionHandler(action: string, handler: ((details?: { seekOffset?: number }) => void) | null) {
+          mediaSessionHandlers[action] = handler;
+        },
+        setPositionState() {},
+      },
+    });
     Object.defineProperty(HTMLMediaElement.prototype, "play", {
       configurable: true,
       value(this: HTMLMediaElement) {
@@ -221,6 +249,21 @@ async function installApiMocks(page: Page) {
       await route.fulfill({ json: paginated([recitation]) });
     } else if (path === `/api/v1/recitations/${recitation.id}/tracks`) {
       await route.fulfill({ json: paginated(tracks) });
+    } else if (path.startsWith(`/api/v1/recitations/${recitation.id}/surahs/`)) {
+      const surahNumber = Number(path.split("/").at(-1));
+      const track = tracks[surahNumber - 1];
+      await route.fulfill({
+        json: {
+          track,
+          segments: [1, 2].map((ayahNumber) => ({
+            ayah_id: `00000000-0000-7000-8500-${String(surahNumber * 10 + ayahNumber).padStart(12, "0")}`,
+            surah_number: surahNumber,
+            ayah_number: ayahNumber,
+            start_ms: (ayahNumber - 1) * 1_000,
+            end_ms: ayahNumber * 1_000,
+          })),
+        },
+      });
     } else if (path === `/api/v1/recitations/${recitation.id}/ayahs/6/2`) {
       await route.fulfill({
         json: {
@@ -303,7 +346,123 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
     "src",
     tracks[5].asset.url,
   );
-  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · воспроизводится/)).toBeVisible();
+  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
+  await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+});
+
+test("advanced player handles ranges, repeat, learning pauses, speed and sleep", async ({ page }) => {
+  await page.goto("/quran?surah=6");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+
+  await expect(page.getByLabel("Начало диапазона аятов").locator("option")).toHaveCount(2);
+  await page.getByLabel("Начало диапазона аятов").selectOption("1");
+  await page.getByLabel("Конец диапазона аятов").selectOption("2");
+  await page.getByLabel("Скорость воспроизведения").selectOption("1.5");
+  await page.getByLabel("Пауза между аятами").selectOption("500");
+  await page.getByRole("button", { name: "▶ Воспроизвести диапазон" }).click();
+
+  const audio = page.locator(".mushaf-audio-now-playing audio");
+  await expect(page.getByText("Диапазон 6:1–6:2", { exact: true })).toBeVisible();
+  await expect(audio).toHaveJSProperty("playbackRate", 1.5);
+
+  await audio.evaluate((element) => {
+    const media = element as HTMLAudioElement;
+    media.currentTime = 0.97;
+    media.dispatchEvent(new Event("timeupdate"));
+  });
+  await expect(page.getByText("Пауза между аятами · 0,5 с", { exact: true })).toBeVisible();
+  await page.waitForTimeout(550);
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(1);
+
+  await page.getByLabel("Пауза между аятами").selectOption("0");
+  await page.getByLabel("Режим повтора").selectOption("selection");
+  await audio.evaluate((element) => {
+    const media = element as HTMLAudioElement;
+    media.currentTime = 1.97;
+    media.dispatchEvent(new Event("timeupdate"));
+  });
+  await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(0);
+
+  const ayahRegions = page.getByRole("button", { name: "Аят 6:2", exact: true });
+  await ayahRegions.first().click();
+  await page.getByRole("button", { name: "▶ Аят 6:2", exact: true }).click();
+  await page.getByLabel("Режим повтора").selectOption("ayah");
+  await audio.evaluate((element) => {
+    const media = element as HTMLAudioElement;
+    media.currentTime = 1.97;
+    media.dispatchEvent(new Event("timeupdate"));
+  });
+  await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(1);
+
+  await page.getByLabel("Таймер сна").selectOption("ayah");
+  await audio.evaluate((element) => {
+    const media = element as HTMLAudioElement;
+    media.currentTime = 1.97;
+    media.dispatchEvent(new Event("timeupdate"));
+  });
+  await expect(page.getByText("Таймер сна остановил воспроизведение после аята", { exact: true })).toBeVisible();
+});
+
+test("player preserves the cursor after interruption and registers Media Session controls", async ({ page }) => {
+  await page.goto("/quran?surah=6");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+  const ayahRegions = page.getByRole("button", { name: "Аят 6:2", exact: true });
+  await ayahRegions.first().click();
+  await page.getByRole("button", { name: "▶ Аят 6:2", exact: true }).click();
+
+  const audio = page.locator(".mushaf-audio-now-playing audio");
+  await audio.evaluate((element) => element.dispatchEvent(new Event("waiting")));
+  await expect(page.getByText("Буферизация · позиция сохранена", { exact: true })).toBeVisible();
+  await audio.evaluate((element) => element.dispatchEvent(new Event("playing")));
+  await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await audio.evaluate((element) => {
+    const media = element as HTMLAudioElement;
+    media.currentTime = 1.4;
+    media.dispatchEvent(new Event("pause"));
+  });
+  await expect(page.getByText("Пауза · позиция сохранена", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(1.4);
+  await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  const mediaSession = await page.evaluate(() => {
+    const handlers = (window as typeof window & {
+      __mediaSessionHandlers: Record<string, unknown>;
+    }).__mediaSessionHandlers;
+    return {
+      title: navigator.mediaSession.metadata?.title,
+      actions: Object.entries(handlers)
+        .filter(([, handler]) => typeof handler === "function")
+        .map(([action]) => action)
+        .sort(),
+    };
+  });
+  expect(mediaSession.title).toBe("Аят 6:2");
+  expect(mediaSession.actions).toEqual([
+    "nexttrack",
+    "pause",
+    "play",
+    "previoustrack",
+    "seekbackward",
+    "seekforward",
+    "stop",
+  ]);
+});
+
+test("minute sleep timer stops playback without losing the current position", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  const audio = page.locator(".audio-player-bar audio");
+  await audio.evaluate((element) => {
+    (element as HTMLAudioElement).currentTime = 0.4;
+  });
+
+  await page.clock.install();
+  await page.getByLabel("Таймер сна").selectOption("5");
+  await expect(page.getByText("Осталось 5:00", { exact: true })).toBeVisible();
+  await page.clock.fastForward("05:00");
+  await expect(page.getByText(/Таймер сна остановил воспроизведение/)).toBeVisible();
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(0.4);
 });
 
 for (const viewport of [

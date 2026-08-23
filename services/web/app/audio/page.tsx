@@ -7,6 +7,10 @@ import {
   Recitation,
   Reciter,
 } from "../../lib/api";
+import {
+  AudioPlaybackRequest,
+  SegmentedAudioPlayer,
+} from "../../components/SegmentedAudioPlayer";
 
 export default function AudioPage() {
   const [reciters, setReciters] = useState<Reciter[]>([]);
@@ -17,10 +21,10 @@ export default function AudioPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Active audio player state
-  const [currentTrack, setCurrentTrack] = useState<AudioTrack | null>(null);
+  const [playerRequest, setPlayerRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   // Load reciters on mount
   useEffect(() => {
@@ -65,8 +69,7 @@ export default function AudioPage() {
   // Load tracks when recitation changes
   useEffect(() => {
     if (!selectedRecitationId) return;
-    audioRef.current?.pause();
-    setCurrentTrack(null);
+    setPlayerRequest(null);
     setIsPlaying(false);
     setLoading(true);
     api
@@ -85,15 +88,26 @@ export default function AudioPage() {
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
 
   const handlePlayTrack = async (track: AudioTrack) => {
-    setCurrentTrack(track);
-    if (audioRef.current) {
-      audioRef.current.src = track.asset.url;
-      try {
-        await audioRef.current.play();
-      } catch {
-        setIsPlaying(false);
-        setError("Браузер не смог запустить аудио. Нажмите воспроизведение ещё раз.");
-      }
+    if (!track.surah_number || !selectedRecitation) return;
+    setLoadingTrackId(track.id);
+    setError(null);
+    try {
+      const playback = await api.getSurahPlayback(selectedRecitation.id, track.surah_number);
+      requestIdRef.current += 1;
+      setPlayerRequest({
+        requestId: requestIdRef.current,
+        track: playback.track,
+        segments: playback.segments || [],
+        kind: "surah",
+        title: `Сура ${track.surah_number}`,
+        artist: selectedReciter?.name_ru || selectedReciter?.name_en || "Чтец",
+        album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+        autoPlay: true,
+      });
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+    } finally {
+      setLoadingTrackId(null);
     }
   };
 
@@ -201,7 +215,7 @@ export default function AudioPage() {
         ) : tracks.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tracks.map((track) => {
-              const isSelected = currentTrack?.id === track.id;
+              const isSelected = playerRequest?.track.id === track.id;
               return (
                 <div
                   key={track.id}
@@ -230,8 +244,15 @@ export default function AudioPage() {
                     <button
                       className={`btn ${isSelected && isPlaying ? "btn-primary" : "btn-secondary"} btn-sm`}
                       onClick={() => void handlePlayTrack(track)}
+                      disabled={loadingTrackId === track.id}
                     >
-                      {isSelected && isPlaying ? "▶ Играет" : "Слушать"}
+                      {loadingTrackId === track.id
+                        ? "Загрузка…"
+                        : isSelected && isPlaying
+                          ? "▶ Играет"
+                          : isSelected
+                            ? "Продолжить в плеере"
+                            : "Слушать"}
                     </button>
                     {track.offline_download_allowed && (
                       <a
@@ -256,29 +277,13 @@ export default function AudioPage() {
         )}
       </section>
 
-      {/* Persistent Audio Player Bar */}
-      <div className="audio-player-bar" hidden={!currentTrack}>
-        {currentTrack && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span className="brand-mark sm">🎵</span>
-            <div>
-              <strong>
-                {currentTrack.surah_number ? `Сура ${currentTrack.surah_number}` : currentTrack.scope}
-              </strong>
-              <p className="kpi-desc" style={{ fontSize: 12 }}>
-                {selectedReciter?.name_ru || "Чтец"} · {formatDuration(currentTrack.duration_ms)}
-              </p>
-            </div>
-          </div>
-        )}
-        <audio
-          ref={audioRef}
-          controls
-          style={{ width: "min(500px, 100%)" }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+      {playerRequest && (
+        <SegmentedAudioPlayer
+          request={playerRequest}
+          className="audio-player-bar"
+          onPlayingChange={setIsPlaying}
         />
-      </div>
+      )}
     </div>
   );
 }

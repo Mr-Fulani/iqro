@@ -605,8 +605,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary-subtle);
 }
 
-.mushaf-audio-controls,
-.mushaf-audio-now-playing {
+.mushaf-audio-controls {
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -618,14 +617,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .mushaf-audio-now-playing {
-  align-items: center;
-  justify-content: space-between;
   padding-top: 12px;
   border-top: 1px solid var(--primary-border);
-}
-
-.mushaf-audio-now-playing audio {
-  width: min(520px, 100%);
 }
 
 .mushaf-selection-label {
@@ -698,14 +691,84 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   box-shadow: var(--shadow-md);
   position: sticky;
   bottom: 20px;
   z-index: 50;
   backdrop-filter: blur(8px);
+}
+
+.segmented-audio-player {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.segmented-audio-summary,
+.segmented-audio-native-controls,
+.segmented-audio-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.segmented-audio-summary > div {
+  min-width: 0;
+}
+
+.segmented-audio-summary strong,
+.segmented-audio-summary p {
+  overflow-wrap: anywhere;
+}
+
+.segmented-audio-native-controls audio {
+  flex: 1 1 420px;
+  width: min(620px, 100%);
+}
+
+.segmented-audio-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.segmented-audio-settings-toggle {
+  display: none;
+  align-self: flex-start;
+}
+
+.segmented-audio-settings .form-group,
+.segmented-audio-range .form-group {
+  gap: 4px;
+}
+
+.segmented-audio-range {
+  justify-content: flex-start;
+  padding: 12px;
+  border: 1px dashed var(--primary-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.segmented-audio-range .form-group {
+  flex: 1 1 120px;
+  max-width: 180px;
+}
+
+.segmented-audio-range .btn {
+  align-self: flex-end;
+}
+
+.segmented-audio-browser-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .track-row {
@@ -857,6 +920,10 @@ input:focus, select:focus, textarea:focus {
 
   .hero-actions button {
     width: 100%;
+  }
+
+  .segmented-audio-settings-toggle {
+    display: inline-flex;
   }
 
   .footer-content {
