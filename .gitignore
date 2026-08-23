@@ -15,6 +15,8 @@ __pycache__/
 *.sqlite3
 *.log
 *.tsbuildinfo
+playwright-report/
+test-results/
 .venv/
 dist/
 build/

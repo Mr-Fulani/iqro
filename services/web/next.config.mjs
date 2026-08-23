@@ -5,6 +5,7 @@ const backendUrl =
   "http://127.0.0.1:8000";
 
 const nextConfig = {
+  output: "standalone",
   reactStrictMode: true,
   async rewrites() {
     return [

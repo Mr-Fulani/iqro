@@ -262,9 +262,7 @@ class QuranFoundationClient:
         try:
             values = urllib.parse.parse_qs(parsed.query, strict_parsing=True)
         except ValueError as exc:
-            raise QuranFoundationError(
-                "Quran.Foundation returned an invalid sync cursor."
-            ) from exc
+            raise QuranFoundationError("Quran.Foundation returned an invalid sync cursor.") from exc
         cursor_values = values.get("cursor", [])
         if len(cursor_values) != 1 or not cursor_values[0]:
             raise QuranFoundationError("Quran.Foundation returned an invalid sync cursor.")
@@ -317,9 +315,7 @@ class QuranFoundationClient:
         return self._request_api(path, query=query, token=self._request_token())
 
     def _request_token(self) -> str:
-        credentials = base64.b64encode(
-            f"{self.client_id}:{self._client_secret}".encode()
-        ).decode()
+        credentials = base64.b64encode(f"{self.client_id}:{self._client_secret}".encode()).decode()
         request = urllib.request.Request(  # noqa: S310 - fixed Quran.Foundation HTTPS origin
             f"{self.environment.oauth_base_url}/oauth2/token",
             data=urllib.parse.urlencode(

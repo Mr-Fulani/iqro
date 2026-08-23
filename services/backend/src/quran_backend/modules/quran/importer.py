@@ -369,8 +369,7 @@ def _validate_page_mappings(
             geometry_key = (key, geometry)
             if geometry_key in region_geometries:
                 raise QuranDatasetError(
-                    f"Page {page['number']} repeats polygon geometry for ayah "
-                    f"{key[0]}:{key[1]}."
+                    f"Page {page['number']} repeats polygon geometry for ayah {key[0]}:{key[1]}."
                 )
             region_geometries.add(geometry_key)
             covered_ayahs.add(key)

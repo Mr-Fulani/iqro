@@ -99,9 +99,7 @@ def refresh_quran_foundation_audio(
             failures += 1
             state.consecutive_failures += 1
             state.last_error_code = "quran_foundation_error"
-            state.save(
-                update_fields=["consecutive_failures", "last_error_code", "updated_at"]
-            )
+            state.save(update_fields=["consecutive_failures", "last_error_code", "updated_at"])
 
     if failures:
         raise QuranFoundationError(
@@ -250,7 +248,7 @@ def _matching_content_sync_resource(
             continue
         try:
             resource_id = int(row["id"])
-        except (KeyError, TypeError, ValueError):
+        except KeyError, TypeError, ValueError:
             continue
         if resource_id > 0:
             matches.append(resource_id)

@@ -7,8 +7,9 @@
 ## Структура
 
 - `services/backend` — Django API и фоновые задачи;
+- `services/web` — Next.js-клиент для Корана, Мусхафа, аудио и личного кабинета;
 - `thoughts/shared/specs` — утверждённые продуктовые и технические спецификации;
-- клиентские приложения Flutter и Next.js будут добавляться отдельными workspace-пакетами.
+- мобильный Flutter-клиент будет добавлен отдельным workspace-пакетом.
 
 Текущий срез содержит публичный каталог Корана, 604 интерактивные страницы Мусхафа,
 каталог чтецов, version-pinned аудиотреки и таймкоды аятов, автоматическое обновление
@@ -31,3 +32,35 @@ docker compose -f services/backend/compose.yaml up --build
 - readiness: `http://localhost:8000/api/v1/health/ready`;
 - OpenAPI: `http://localhost:8000/api/schema`;
 - Swagger UI: `http://localhost:8000/api/docs`.
+
+## Полный локальный стек
+
+```bash
+docker compose up --build
+```
+
+Web доступен на `http://localhost:3000`. Корневой Compose использует development-target
+с hot reload. Production-образ собирается последним target из `services/web/Dockerfile`:
+
+```bash
+docker build \
+  --build-arg BACKEND_INTERNAL_URL=http://backend:8000 \
+  -t quran-web:production \
+  services/web
+```
+
+Образ запускает минимальный Next.js standalone server от непривилегированного пользователя
+и содержит встроенный healthcheck. Адрес backend для rewrites фиксируется при сборке через
+`BACKEND_INTERNAL_URL`.
+
+## Проверки web
+
+```bash
+cd services/web
+npm ci
+npx playwright install chromium
+npm run lint
+npm run typecheck
+npm run build
+npm run test:e2e
+```

@@ -29,9 +29,7 @@ class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     list_filter = ("environment", "last_success_at", "consecutive_failures")
     search_fields = ("=source_reciter_id", "=content_sync_resource_id")
-    readonly_fields = tuple(
-        field.name for field in QuranFoundationSyncState._meta.fields
-    )
+    readonly_fields = tuple(field.name for field in QuranFoundationSyncState._meta.fields)
 
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False

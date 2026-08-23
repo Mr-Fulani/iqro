@@ -81,6 +81,7 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         verified_at=timezone.now(),
     )
     track = _create_track(recitation, timing_version=timing_version)
+    _complete_surah_catalog(recitation)
     first_segment = AyahAudioSegment.objects.create(
         track=track,
         ayah=quran_dataset["first_ayah"],
@@ -148,6 +149,25 @@ def _create_track(
     )
 
 
+def _complete_surah_catalog(recitation: RecitationEdition) -> None:
+    AudioTrack.objects.bulk_create(
+        [
+            AudioTrack(
+                recitation_edition=recitation,
+                scope=AudioTrackScope.SURAH,
+                surah_number=surah_number,
+                duration_ms=12_000,
+                codec=AudioCodec.MP3,
+                bitrate_kbps=128,
+                size_bytes=192_000,
+                checksum_sha256=f"{surah_number:064x}",
+                object_key=f"audio/{recitation.code}/{recitation.version}/surah-{surah_number:03d}.mp3",
+            )
+            for surah_number in range(2, 115)
+        ]
+    )
+
+
 def _publish(
     recitation: RecitationEdition,
     *,
@@ -185,6 +205,7 @@ def _create_second_public_recitation(
         recitation,
         object_key=f"audio/{code}/{version}/surah-001.mp3",
     )
+    _complete_surah_catalog(recitation)
     _publish(recitation)
     return recitation
 
@@ -216,9 +237,9 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
     assert recitation_detail.json()["source"]["url"] == ("https://example.test/sources/audio")
     assert recitation_detail.json()["license"]["url"] == ("https://example.test/licenses/audio")
     assert recitation_detail.json()["coverage"] == {
-        "track_count": 1,
-        "surah_count": 1,
-        "complete": False,
+        "track_count": 114,
+        "surah_count": 114,
+        "complete": True,
     }
     assert recitation_detail.json()["timings"] == {
         "available": True,
@@ -301,7 +322,8 @@ def test_audio_catalog_filters_recitations_and_tracks(
     assert missing_quran_edition.json()["results"] == []
     assert len(by_style.json()["results"]) == 2
     assert missing_style.json()["results"] == []
-    assert [item["scope"] for item in surah_tracks.json()["results"]] == ["surah"]
+    assert surah_tracks.json()["results"]
+    assert {item["scope"] for item in surah_tracks.json()["results"]} == {"surah"}
     assert full_tracks.json()["results"] == []
 
 
@@ -487,6 +509,7 @@ def test_audio_api_supports_conditional_etag(
         "non_streaming",
         "withdrawn_quran_version",
         "inactive_quran_version",
+        "incomplete_recitation",
         "empty_recitation",
     ],
 )
@@ -529,6 +552,11 @@ def test_non_public_recitations_and_reciters_are_hidden(
         QuranEdition.objects.filter(pk=quran_dataset["edition"].id).update(
             active_version=inactive_version
         )
+    elif hidden_state == "incomplete_recitation":
+        AudioTrack.objects.filter(
+            recitation_edition=recitation,
+            surah_number__gt=1,
+        ).delete()
     else:
         AudioTrack.objects.filter(recitation_edition=recitation).delete()
 
@@ -618,6 +646,7 @@ def test_ayah_playback_returns_404_when_verified_timing_is_missing(
         recitation,
         object_key="audio/untimed/1.0.0/surah-001.mp3",
     )
+    _complete_surah_catalog(recitation)
     _publish(recitation)
 
     response = api_client.get(

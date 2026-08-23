@@ -18,16 +18,23 @@ from quran_backend.modules.quran.models import PublicationStatus
 def public_recitation_base() -> QuerySet[RecitationEdition]:
     """Cheap visibility predicate shared by catalog and playback selectors."""
 
-    has_surah_track = AudioTrack.objects.filter(
-        recitation_edition_id=OuterRef("pk"),
-        scope=AudioTrackScope.SURAH,
+    complete_surah_catalog = (
+        AudioTrack.objects.filter(
+            recitation_edition_id=OuterRef("pk"),
+            scope=AudioTrackScope.SURAH,
+        )
+        .values("recitation_edition_id")
+        .annotate(surah_count=Count("surah_number", distinct=True))
+        .filter(surah_count=114)
     )
     return (
-        RecitationEdition.objects.alias(has_surah_track=Exists(has_surah_track))
+        RecitationEdition.objects.alias(
+            has_complete_surah_catalog=Exists(complete_surah_catalog),
+        )
         .filter(
             status=RecitationPublicationStatus.PUBLISHED,
             stream_allowed=True,
-            has_surah_track=True,
+            has_complete_surah_catalog=True,
             reciter__is_active=True,
             quran_edition_version__status=PublicationStatus.PUBLISHED,
             quran_edition_version__edition__active_version_id=F("quran_edition_version_id"),
