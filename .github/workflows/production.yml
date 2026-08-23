@@ -1,0 +1,44 @@
+name: Production Compose CI
+
+on:
+  pull_request:
+    paths:
+      - "compose.production.yaml"
+      - "services/backend/**"
+      - "services/web/**"
+      - "ops/gateway/**"
+      - "docs/production.md"
+      - ".github/workflows/production.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "compose.production.yaml"
+      - "services/backend/**"
+      - "services/web/**"
+      - "ops/gateway/**"
+      - "docs/production.md"
+      - ".github/workflows/production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PRODUCTION_ENV_FILE: ./services/backend/.env.production.example
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose model
+        run: >-
+          docker compose
+          --env-file services/backend/.env.production.example
+          -f compose.production.yaml
+          config --quiet
+      - name: Build production images
+        run: >-
+          docker compose
+          --env-file services/backend/.env.production.example
+          -f compose.production.yaml
+          build backend web gateway

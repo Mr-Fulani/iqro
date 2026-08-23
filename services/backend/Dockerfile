@@ -15,6 +15,8 @@ COPY src ./src
 COPY manage.py ./manage.py
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
+RUN DJANGO_SETTINGS_MODULE=quran_backend.settings.test \
+    .venv/bin/python manage.py collectstatic --noinput
 
 FROM builder AS test
 
@@ -48,6 +50,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
+COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
 USER app
 
 FROM runtime-foundation AS runtime
@@ -55,6 +58,7 @@ FROM runtime-foundation AS runtime
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
+COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
 USER app
 
 EXPOSE 8000

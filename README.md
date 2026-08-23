@@ -36,6 +36,8 @@ docker compose -f services/backend/compose.yaml up --build
 
 Production-наблюдаемость, резервные копии PostgreSQL, restore drill и безопасный
 нагрузочный smoke-тест описаны в [операционном runbook](docs/operations.md).
+Production Compose без hot reload и bind-mount исходников описан в
+[руководстве по production-запуску](docs/production.md).
 
 ## Полный локальный стек
 

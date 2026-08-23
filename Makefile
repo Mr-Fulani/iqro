@@ -1,7 +1,9 @@
 BACKEND_DIR := services/backend
 WEB_DIR := services/web
+PRODUCTION_ENV ?= services/backend/.env.production
+PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run ops-backup ops-backup-verify ops-restore-check ops-load-smoke
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check ops-backup ops-backup-verify ops-restore-check ops-load-smoke
 
 # Запуск с сохранением данных базы данных
 up:
@@ -53,6 +55,33 @@ web-build:
 
 web-run:
 	cd $(WEB_DIR) && npm start
+
+production-config:
+	$(PRODUCTION_COMPOSE) config --quiet
+
+production-build:
+	$(PRODUCTION_COMPOSE) build backend web gateway
+
+production-up:
+	$(PRODUCTION_COMPOSE) up --build --detach --wait
+
+production-down:
+	$(PRODUCTION_COMPOSE) down --remove-orphans
+
+production-ps:
+	$(PRODUCTION_COMPOSE) ps
+
+production-logs:
+	$(PRODUCTION_COMPOSE) logs --tail=200
+
+production-backup:
+	$(PRODUCTION_COMPOSE) --profile ops run --rm db-backup
+
+production-backup-verify:
+	$(PRODUCTION_COMPOSE) --profile ops run --rm db-backup-verify
+
+production-restore-check:
+	$(PRODUCTION_COMPOSE) --profile ops run --rm db-restore-check
 
 ops-backup:
 	docker compose --profile ops run --rm db-backup

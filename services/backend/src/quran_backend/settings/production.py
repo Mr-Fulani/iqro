@@ -5,6 +5,7 @@ from django.core.exceptions import ImproperlyConfigured
 from quran_backend.settings.base import *  # noqa: F403
 from quran_backend.settings.base import (
     REST_FRAMEWORK,
+    env_bool,
     env_list,
     required_env,
     validate_https_base_url,
@@ -36,7 +37,7 @@ if not ALLOWED_HOSTS:
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 SECURE_HSTS_SECONDS = 31_536_000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
