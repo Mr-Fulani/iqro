@@ -9,6 +9,7 @@ import {
   GuestBootstrapResponse,
   loadLegacyStoredIdentity,
 } from "./api";
+import { clearSyncState } from "./sync-state";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -115,11 +116,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       setError(null);
       try {
+        const currentSession = api.getSession();
+        const guestUserId = currentSession?.user.status === "guest" ? currentSession.user.id : null;
+        if (guestUserId && api.getPendingSyncCount() > 0) {
+          await api.syncNow();
+        }
         const result = await api.verifyEmailChallenge({
           challenge_id: challengeId,
           code,
           idempotency_key: idempotencyKey,
         });
+        if (result.merged_guest && guestUserId && guestUserId !== result.user.id) {
+          clearSyncState(guestUserId);
+        }
         setSession(result);
         return result;
       } catch (err) {

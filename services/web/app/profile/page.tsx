@@ -11,6 +11,7 @@ import {
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { ReminderManager } from "../../components/ReminderManager";
+import { SYNC_STATE_EVENT } from "../../lib/sync-state";
 
 const FEEDBACK_CATEGORIES = [
   ["religious_content", "Религиозное содержание"],
@@ -46,6 +47,8 @@ export default function ProfilePage() {
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState<boolean>(false);
   const [loadingSync, setLoadingSync] = useState<boolean>(false);
+  const [pendingSync, setPendingSync] = useState<number>(0);
+  const [syncVersion, setSyncVersion] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -80,6 +83,17 @@ export default function ProfilePage() {
       void loadTicketsData();
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!session?.user.id) {
+      setPendingSync(0);
+      return;
+    }
+    const refreshPending = () => setPendingSync(api.getPendingSyncCount());
+    refreshPending();
+    window.addEventListener(SYNC_STATE_EVENT, refreshPending);
+    return () => window.removeEventListener(SYNC_STATE_EVENT, refreshPending);
+  }, [session?.user.id]);
 
   const loadReadingData = async () => {
     try {
@@ -169,11 +183,21 @@ export default function ProfilePage() {
     setLoadingSync(true);
     setError(null);
     try {
-      await api.syncPull(20);
-      setSuccessMsg("Синхронизация успешно выполнена!");
+      const result = await api.syncNow();
+      const details = [
+        result.pushed ? `отправлено: ${result.pushed}` : null,
+        result.changes ? `получено изменений: ${result.changes}` : null,
+        result.full_resync ? `полная сверка: ${result.snapshot_entities} объектов` : null,
+        result.conflicts ? `конфликтов: ${result.conflicts}` : null,
+      ].filter(Boolean);
+      setSuccessMsg(
+        `Синхронизация завершена${details.length ? ` (${details.join(", ")})` : ": данные актуальны"}.`,
+      );
       await loadBookmarksData();
       await loadReadingData();
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setPendingSync(result.pending);
+      setSyncVersion((current) => current + 1);
+      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -306,6 +330,7 @@ export default function ProfilePage() {
               disabled={loadingSync}
             >
               {loadingSync ? "Синхронизация..." : "🔄 Офлайн-синхронизация"}
+              {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
             </button>
             {isGuest ? (
               <Link href="/login" className="btn btn-primary btn-sm">
@@ -337,6 +362,14 @@ export default function ProfilePage() {
             <span className="kpi-value">{session?.user.status === "guest" ? "Гость" : "Активен"}</span>
             <span className="kpi-desc">
               {session?.user.email || `Платформа: ${session?.device.platform}`}
+            </span>
+          </div>
+
+          <div className="kpi-card">
+            <span className="kpi-label">Очередь синхронизации</span>
+            <span className="kpi-value">{pendingSync}</span>
+            <span className="kpi-desc">
+              {pendingSync ? "Изменения ожидают отправки" : "Локальных изменений нет"}
             </span>
           </div>
 
@@ -567,7 +600,7 @@ export default function ProfilePage() {
         )}
       </section>
 
-      <ReminderManager />
+      <ReminderManager key={syncVersion} />
 
       {/* Feedback & Support Section */}
       <section className="surface">

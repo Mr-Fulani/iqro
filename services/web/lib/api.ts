@@ -3,6 +3,20 @@
  * Compatible with Django backend specification and DRF serializers.
  */
 
+import {
+  discardEntityOperation,
+  enqueueSyncOperation,
+  getPendingSyncCount,
+  getPendingSyncOperations,
+  getReadingPositionId,
+  getSyncCursor,
+  rebaseOutboxFromSnapshot,
+  rememberReadingPositionId,
+  removeSyncOperations,
+  replaceSyncOperation,
+  setSyncCursor,
+} from "./sync-state";
+
 export type RequestState<T = unknown> = {
   loading?: boolean;
   data?: T;
@@ -373,14 +387,73 @@ export type PaginatedResponse<T> = {
   results: T[];
 };
 
-export type SyncPullResponse = {
-  mode: "incremental" | "full_resync";
+export type SyncEntityType = "reading_position" | "bookmark" | "reminder";
+export type SyncAction = "upsert" | "delete";
+
+export type SyncEntity =
+  | (ReadingPosition & { id: string; entity_type: "reading_position" })
+  | (Bookmark & { entity_type: "bookmark" })
+  | (Reminder & { entity_type: "reminder" });
+
+export type SyncOperation = {
+  operation_id: string;
+  entity_type: SyncEntityType;
+  entity_id: string;
+  action: SyncAction;
+  base_revision: number;
+  client_updated_at: string;
+  payload: Record<string, unknown>;
+};
+
+export type SyncOperationResult = {
+  operation_id: string;
+  outcome: "accepted" | "conflict";
+  replayed: boolean;
+  conflict_reason?: string;
+  entity: SyncEntity | null;
+  cursor: number;
+};
+
+export type SyncPushResponse = {
+  results: SyncOperationResult[];
+  cursor: number;
+};
+
+export type SyncChange = {
+  cursor: number;
+  entity_type: SyncEntityType;
+  entity_id: string;
+  action: SyncAction;
+  revision: number;
+  entity: SyncEntity;
+  server_updated_at: string;
+};
+
+export type SyncIncrementalResponse = {
+  mode: "incremental";
+  changes: SyncChange[];
+  next_cursor: number;
   has_more: boolean;
-  next_cursor?: number;
-  next_page_token?: string | null;
-  changes?: unknown[];
-  entities?: unknown[];
-  snapshot_cursor?: number;
+};
+
+export type SyncFullResyncResponse = {
+  mode: "full_resync";
+  entities: SyncEntity[];
+  snapshot_cursor: number;
+  next_page_token: string | null;
+  has_more: boolean;
+};
+
+export type SyncPullResponse = SyncIncrementalResponse | SyncFullResyncResponse;
+
+export type SyncRunResult = {
+  pushed: number;
+  conflicts: number;
+  changes: number;
+  full_resync: boolean;
+  snapshot_entities: number;
+  cursor: number;
+  pending: number;
 };
 
 export type ReminderSchedule =
@@ -526,7 +599,32 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   installation_identity_missing: "Сессия устройства потеряна. Запросите новый код.",
   account_link_unavailable: "Этот вход нельзя завершить в текущей сессии.",
   identity_already_linked: "Этот email уже привязан к другому аккаунту.",
+  sync_cursor_expired: "История синхронизации устарела. Выполняется полная сверка данных.",
 };
+
+export class ApiError extends Error {
+  public readonly status: number;
+  public readonly code: string | null;
+  public readonly payload: unknown;
+
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.payload = payload;
+    this.code =
+      payload && typeof payload === "object" && typeof (payload as { code?: unknown }).code === "string"
+        ? String((payload as { code: string }).code)
+        : null;
+  }
+}
+
+export class OfflineMutationQueuedError extends Error {
+  constructor() {
+    super("Сеть недоступна. Изменение сохранено на устройстве и будет отправлено при синхронизации.");
+    this.name = "OfflineMutationQueuedError";
+  }
+}
 
 export function loadLegacyStoredIdentity(): InstallIdentity | null {
   if (typeof window === "undefined") return null;
@@ -580,6 +678,19 @@ export class ApiClient {
 
   public getSession(): GuestBootstrapResponse | null {
     return this.session;
+  }
+
+  private queueMutationAfterNetworkFailure(error: unknown, operation: SyncOperation): never {
+    if (error instanceof ApiError) throw error;
+    const userId = this.session?.user.id;
+    if (!userId) throw error;
+    enqueueSyncOperation(userId, operation);
+    throw new OfflineMutationQueuedError();
+  }
+
+  private clearQueuedEntity(entityType: SyncEntityType, entityId: string): void {
+    const userId = this.session?.user.id;
+    if (userId) discardEntityOperation(userId, entityType, entityId);
   }
 
   public normalizeError(err: unknown): string {
@@ -666,7 +777,7 @@ export class ApiClient {
           }
         }
       }
-      throw new Error(message);
+      throw new ApiError(message, response.status, payload);
     }
 
     return payload as T;
@@ -898,7 +1009,10 @@ export class ApiClient {
   // Reading Position, Bookmarks & Sync
   // -------------------------------------------------------------------------
   public async getReadingPosition(edition: string): Promise<ReadingPosition> {
-    return this.request<ReadingPosition>(`/api/v1/me/reading-position/${edition}`);
+    const position = await this.request<ReadingPosition>(`/api/v1/me/reading-position/${edition}`);
+    const userId = this.session?.user.id;
+    if (userId && position.id) rememberReadingPositionId(userId, edition, position.id);
+    return position;
   }
 
   public async saveReadingPosition(
@@ -936,10 +1050,43 @@ export class ApiClient {
       body.intra_page_anchor = data.intra_page_anchor;
     }
 
-    return this.request<ReadingPosition>(`/api/v1/me/reading-position/${edition}`, {
-      method: "PUT",
-      body: JSON.stringify(body),
-    });
+    const userId = this.session?.user.id;
+    let entityId = userId ? getReadingPositionId(userId, edition) : null;
+    let baseRevision = data.base_revision;
+    if (!entityId) {
+      try {
+        const current = await this.getReadingPosition(edition);
+        entityId = current.id || null;
+        baseRevision = current.revision;
+        body.base_revision = current.revision;
+      } catch (error) {
+        if (error instanceof ApiError && error.status !== 404) throw error;
+      }
+    }
+    entityId ||= generateUuidV7();
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "reading_position",
+      entity_id: entityId,
+      action: "upsert",
+      base_revision: baseRevision,
+      client_updated_at: now,
+      payload: Object.fromEntries(
+        Object.entries(body).filter(([key]) => key !== "base_revision" && key !== "client_updated_at"),
+      ),
+    };
+
+    try {
+      const saved = await this.request<ReadingPosition>(`/api/v1/me/reading-position/${edition}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      this.clearQueuedEntity("reading_position", entityId);
+      if (userId && saved.id) rememberReadingPositionId(userId, edition, saved.id);
+      return saved;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   public async getBookmarks(cursor?: string): Promise<PaginatedResponse<Bookmark>> {
@@ -962,8 +1109,9 @@ export class ApiClient {
     note?: string;
   }): Promise<Bookmark> {
     const now = new Date().toISOString();
+    const entityId = generateUuidV7();
     const body: Record<string, unknown> = {
-      id: generateUuidV7(),
+      id: entityId,
       edition_code: data.edition_code,
       label: data.label || "Закладка",
       color_key: data.color_key || "teal",
@@ -977,10 +1125,27 @@ export class ApiClient {
     }
     if (data.note) body.note = data.note;
 
-    return this.request<Bookmark>("/api/v1/me/bookmarks", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "bookmark",
+      entity_id: entityId,
+      action: "upsert",
+      base_revision: 0,
+      client_updated_at: now,
+      payload: Object.fromEntries(
+        Object.entries(body).filter(([key]) => key !== "id" && key !== "client_updated_at"),
+      ),
+    };
+    try {
+      const bookmark = await this.request<Bookmark>("/api/v1/me/bookmarks", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      this.clearQueuedEntity("bookmark", entityId);
+      return bookmark;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   public async updateBookmark(
@@ -992,13 +1157,27 @@ export class ApiClient {
       base_revision: number;
     },
   ): Promise<Bookmark> {
-    return this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        ...data,
-        client_updated_at: new Date().toISOString(),
-      }),
-    });
+    const now = new Date().toISOString();
+    const { base_revision: baseRevision, ...payload } = data;
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "bookmark",
+      entity_id: bookmarkId,
+      action: "upsert",
+      base_revision: baseRevision,
+      client_updated_at: now,
+      payload,
+    };
+    try {
+      const bookmark = await this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ...data, client_updated_at: now }),
+      });
+      this.clearQueuedEntity("bookmark", bookmarkId);
+      return bookmark;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   public async deleteBookmark(bookmarkId: string, baseRevision = 1): Promise<Bookmark> {
@@ -1007,13 +1186,213 @@ export class ApiClient {
       base_revision: String(baseRevision),
       client_updated_at: now,
     });
-    return this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}?${params}`, {
-      method: "DELETE",
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "bookmark",
+      entity_id: bookmarkId,
+      action: "delete",
+      base_revision: baseRevision,
+      client_updated_at: now,
+      payload: {},
+    };
+    try {
+      const bookmark = await this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}?${params}`, {
+        method: "DELETE",
+      });
+      this.clearQueuedEntity("bookmark", bookmarkId);
+      return bookmark;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
+  }
+
+  public async syncPush(operations: SyncOperation[]): Promise<SyncPushResponse> {
+    return this.request<SyncPushResponse>("/api/v1/sync/push", {
+      method: "POST",
+      body: JSON.stringify({ operations }),
     });
   }
 
-  public async syncPull(limit = 20): Promise<SyncPullResponse> {
-    return this.request<SyncPullResponse>(`/api/v1/sync/pull?limit=${limit}`);
+  public async syncPull(options: {
+    cursor?: number;
+    limit?: number;
+    full_resync?: boolean;
+    page_token?: string;
+  } = {}): Promise<SyncPullResponse> {
+    const params = new URLSearchParams({ limit: String(options.limit || 100) });
+    if (options.full_resync) params.set("full_resync", "true");
+    else if (options.cursor !== undefined) params.set("cursor", String(options.cursor));
+    if (options.page_token) params.set("page_token", options.page_token);
+    return this.request<SyncPullResponse>(`/api/v1/sync/pull?${params.toString()}`);
+  }
+
+  public getPendingSyncCount(): number {
+    const userId = this.session?.user.id;
+    return userId ? getPendingSyncCount(userId) : 0;
+  }
+
+  public async syncNow(limit = 100): Promise<SyncRunResult> {
+    const userId = this.session?.user.id;
+    if (!userId) throw new Error("Для синхронизации требуется активная сессия.");
+
+    let pushed = 0;
+    let conflicts = 0;
+    let changes = 0;
+    let fullResync = false;
+    let snapshotEntities = 0;
+
+    const flushOutbox = async () => {
+      const attempts = new Map<string, number>();
+      for (let cycle = 0; cycle < 20; cycle += 1) {
+        const operations = getPendingSyncOperations(userId).slice(0, 100);
+        if (operations.length === 0) return;
+        const response = await this.syncPush(operations);
+        const terminalIds: string[] = [];
+        let rebased = false;
+
+        for (const result of response.results) {
+          const operation = operations.find(
+            (candidate) => candidate.operation_id === result.operation_id,
+          );
+          if (!operation) continue;
+          if (result.outcome === "accepted") {
+            terminalIds.push(operation.operation_id);
+            pushed += 1;
+            if (result.entity?.entity_type === "reading_position") {
+              rememberReadingPositionId(
+                userId,
+                result.entity.edition_code,
+                result.entity.id,
+              );
+            }
+            continue;
+          }
+
+          const attempt = (attempts.get(operation.operation_id) || 0) + 1;
+          const current = result.entity;
+          const canRebase =
+            attempt <= 3 &&
+            Boolean(current) &&
+            ["revision_mismatch", "entity_identity_mismatch"].includes(
+              result.conflict_reason || "",
+            );
+          const canRemap =
+            attempt <= 3 &&
+            operation.base_revision === 0 &&
+            ["entity_id_unavailable", "entity_id_not_reusable"].includes(
+              result.conflict_reason || "",
+            );
+
+          if (canRebase && current) {
+            const replacement: SyncOperation = {
+              ...operation,
+              operation_id: generateUuidV7(),
+              entity_id: current.id,
+              base_revision: current.revision,
+              client_updated_at: new Date().toISOString(),
+            };
+            replaceSyncOperation(userId, operation.operation_id, replacement);
+            attempts.set(replacement.operation_id, attempt);
+            rebased = true;
+          } else if (canRemap) {
+            const replacement: SyncOperation = {
+              ...operation,
+              operation_id: generateUuidV7(),
+              entity_id: generateUuidV7(),
+              client_updated_at: new Date().toISOString(),
+            };
+            replaceSyncOperation(userId, operation.operation_id, replacement);
+            attempts.set(replacement.operation_id, attempt);
+            rebased = true;
+          } else {
+            terminalIds.push(operation.operation_id);
+            conflicts += 1;
+          }
+        }
+
+        removeSyncOperations(userId, terminalIds);
+        if (!rebased && terminalIds.length === 0) return;
+      }
+      throw new Error("Очередь синхронизации не сошлась после повторных попыток.");
+    };
+
+    const pullIncremental = async () => {
+      let cursor = getSyncCursor(userId);
+      while (true) {
+        const response = await this.syncPull({ cursor, limit });
+        if (response.mode !== "incremental") {
+          throw new Error("Сервер вернул неожиданный режим синхронизации.");
+        }
+        changes += response.changes.length;
+        cursor = response.next_cursor;
+        setSyncCursor(userId, cursor);
+        if (!response.has_more) return cursor;
+      }
+    };
+
+    const collectFullSnapshot = async () => {
+      for (let restart = 0; restart < 2; restart += 1) {
+        let pageToken: string | undefined;
+        let snapshotCursor = 0;
+        const entities: SyncEntity[] = [];
+        try {
+          for (let page = 0; page < 1000; page += 1) {
+            const response = await this.syncPull({
+              full_resync: true,
+              limit,
+              ...(pageToken ? { page_token: pageToken } : {}),
+            });
+            if (response.mode !== "full_resync") {
+              throw new Error("Сервер не вернул полный снимок синхронизации.");
+            }
+            if (page === 0) snapshotCursor = response.snapshot_cursor;
+            else if (snapshotCursor !== response.snapshot_cursor) {
+              throw new Error("Курсор полного снимка изменился во время загрузки.");
+            }
+            entities.push(...response.entities);
+            pageToken = response.next_page_token || undefined;
+            if (!response.has_more) {
+              rebaseOutboxFromSnapshot(userId, entities);
+              setSyncCursor(userId, snapshotCursor);
+              snapshotEntities = entities.length;
+              return;
+            }
+            if (!pageToken) {
+              throw new Error("Сервер не вернул токен следующей страницы снимка.");
+            }
+          }
+        } catch (error) {
+          const tokenInvalid =
+            error instanceof ApiError && error.code === "full_resync_token_invalid";
+          if (tokenInvalid && restart === 0) continue;
+          throw error;
+        }
+      }
+      throw new Error("Полный снимок превысил допустимое число страниц.");
+    };
+
+    await flushOutbox();
+    try {
+      await pullIncremental();
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 410 || error.code !== "sync_cursor_expired") {
+        throw error;
+      }
+      fullResync = true;
+      await collectFullSnapshot();
+      await flushOutbox();
+      await pullIncremental();
+    }
+
+    return {
+      pushed,
+      conflicts,
+      changes,
+      full_resync: fullResync,
+      snapshot_entities: snapshotEntities,
+      cursor: getSyncCursor(userId),
+      pending: getPendingSyncCount(userId),
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -1036,15 +1415,32 @@ export class ApiClient {
     signal: Reminder["signal"];
     is_enabled: boolean;
   }): Promise<Reminder> {
-    return this.request<Reminder>("/api/v1/me/reminders", {
-      method: "POST",
-      body: JSON.stringify({
-        ...data,
-        id: generateUuidV7(),
-        base_revision: 0,
-        client_updated_at: new Date().toISOString(),
-      }),
-    });
+    const entityId = generateUuidV7();
+    const now = new Date().toISOString();
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "reminder",
+      entity_id: entityId,
+      action: "upsert",
+      base_revision: 0,
+      client_updated_at: now,
+      payload: { ...data },
+    };
+    try {
+      const reminder = await this.request<Reminder>("/api/v1/me/reminders", {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          id: entityId,
+          base_revision: 0,
+          client_updated_at: now,
+        }),
+      });
+      this.clearQueuedEntity("reminder", entityId);
+      return reminder;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   public async updateReminder(
@@ -1059,20 +1455,53 @@ export class ApiClient {
       is_enabled: boolean;
     }> & { base_revision: number },
   ): Promise<Reminder> {
-    return this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
-    });
+    const now = new Date().toISOString();
+    const { base_revision: baseRevision, ...payload } = data;
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "reminder",
+      entity_id: reminderId,
+      action: "upsert",
+      base_revision: baseRevision,
+      client_updated_at: now,
+      payload,
+    };
+    try {
+      const reminder = await this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ...data, client_updated_at: now }),
+      });
+      this.clearQueuedEntity("reminder", reminderId);
+      return reminder;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   public async deleteReminder(reminderId: string, baseRevision: number): Promise<Reminder> {
-    return this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
-      method: "DELETE",
-      body: JSON.stringify({
-        base_revision: baseRevision,
-        client_updated_at: new Date().toISOString(),
-      }),
-    });
+    const now = new Date().toISOString();
+    const operation: SyncOperation = {
+      operation_id: generateUuidV7(),
+      entity_type: "reminder",
+      entity_id: reminderId,
+      action: "delete",
+      base_revision: baseRevision,
+      client_updated_at: now,
+      payload: {},
+    };
+    try {
+      const reminder = await this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
+        method: "DELETE",
+        body: JSON.stringify({
+          base_revision: baseRevision,
+          client_updated_at: now,
+        }),
+      });
+      this.clearQueuedEntity("reminder", reminderId);
+      return reminder;
+    } catch (error) {
+      return this.queueMutationAfterNetworkFailure(error, operation);
+    }
   }
 
   // -------------------------------------------------------------------------

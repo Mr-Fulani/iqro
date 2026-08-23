@@ -86,6 +86,74 @@ test("verified email login merges the guest without persisting tokens in localSt
   expect(storageDump).not.toContain("installation_credential");
 });
 
+test("pending guest changes are pushed before the account merge", async ({ page }) => {
+  await installAuthMocks(page);
+  const guestSyncKey = `quran_platform_sync_v1:${guestSession.user.id}`;
+  const operation = {
+    operation_id: "01992d87-6c00-7000-8000-000000000901",
+    entity_type: "bookmark",
+    entity_id: "01992d87-6c00-7000-8000-000000000902",
+    action: "upsert",
+    base_revision: 0,
+    client_updated_at: "2026-08-23T16:00:00Z",
+    payload: { edition_code: "madani-hafs", page_number: 1 },
+  };
+  await page.addInitScript(
+    ({ key, queued }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({ cursor: 0, outbox: [queued], reading_position_ids: {} }),
+      );
+    },
+    { key: guestSyncKey, queued: operation },
+  );
+
+  const order: string[] = [];
+  await page.unroute("**/api/v1/**");
+  await page.route("**/api/v1/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/sync/push") {
+      order.push("sync-push");
+      return route.fulfill({
+        json: {
+          results: [
+            {
+              operation_id: operation.operation_id,
+              outcome: "accepted",
+              replayed: false,
+              entity: null,
+              cursor: 1,
+            },
+          ],
+          cursor: 1,
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/sync/pull") {
+      order.push("sync-pull");
+      return route.fulfill({
+        json: { mode: "incremental", changes: [], next_cursor: 1, has_more: false },
+      });
+    }
+    return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
+  });
+  await page.unroute("**/api/web-auth/email/verify");
+  await page.route("**/api/web-auth/email/verify", (route) => {
+    order.push("email-verify");
+    return route.fulfill({ json: activeSession });
+  });
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("reader@example.com");
+  await page.getByRole("button", { name: "Получить код" }).click();
+  await page.getByLabel("Код из письма").fill("123456");
+  await page.getByRole("button", { name: "Подтвердить и войти" }).click();
+
+  await expect(page.getByText("Вход выполнен, гостевые данные объединены с аккаунтом.")).toBeVisible();
+  expect(order).toEqual(["sync-push", "sync-pull", "email-verify"]);
+  expect(await page.evaluate((key) => localStorage.getItem(key), guestSyncKey)).toBeNull();
+});
+
 test("guest session keeps verified email login visible in the header", async ({ page }) => {
   await installAuthMocks(page);
   await page.unroute("**/api/web-auth/refresh");

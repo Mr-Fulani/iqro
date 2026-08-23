@@ -42,10 +42,10 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет 14 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 19 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
-  reminder contracts, многосегментный аят 6:2, viewport matrix 375/768/1440 px и переходы по
-  juz/hizb/rub/ayah.
+  reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
+  viewport matrix 375/768/1440 px и переходы по juz/hizb/rub/ayah.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
@@ -65,7 +65,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable recitations, 114 surah tracks, ayah timings, streaming | Не доказаны три полностью лицензированных релиза; нет управляемой offline-установки и redistribution pipeline |
 | 8 | Repeat/range/pause/speed/sleep timer | 🟡 | Воспроизведение суры и отдельного аята, native browser controls | Нет repeat/range mode, учебных пауз, скорости 0,5–2,0× и sleep timer |
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
-| 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones для reading/reminders | Нет package domain/manifest API, resumable installer, durable client outbox и полноценного offline web/Flutter клиента |
+| 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
 | 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |
 | 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI | Flutter local parity и региональный content review отсутствуют |
 | 13 | Локальные уведомления и напоминания | 🟡 | Local-only prayer/reading/review rules, revisions, retention, sync и web CRUD UI | Нет исполняющего системного scheduler, permission/diagnostics flow и перепланирования после timezone/location changes |
@@ -115,7 +115,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions, prayer profile и reminders есть; goals/playback отсутствуют |
 | Повтор operation ID не создаёт дубликат | ✅ | Idempotency/fingerprint tests присутствуют |
 | Tombstones не возвращают удалённые данные | ✅ | Bookmark/reminder tombstones и retired-ID ledgers реализованы |
-| Full resync после expired cursor без потери outbox | ✅ | Snapshot token/restart/retention contract и tests реализованы на backend |
+| Full resync после expired cursor без потери outbox | ✅ | Backend token/restart/retention contract и web постраничный recovery с rebase/pull покрыты тестами |
 
 ### Обратная связь
 
@@ -163,6 +163,10 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Web prayer-profile и reminder contracts подключены полностью: revisioned method/asr/high-latitude/
   polar/adjustment/timezone profile и CRUD правил prayer/Quran reading/Quran review. Исполнение
   системных уведомлений намеренно остаётся обязанностью мобильного клиента.
+- Web sync доведён до полного transport lifecycle: user-scoped durable outbox без credentials,
+  `push` с conflict rebase/remap, постраничный incremental pull, cursor-expiry/full-resync recovery,
+  сохранение pull-курсора и guest-outbox flush до email merge. Live PostgreSQL проверка выполнена
+  внутри транзакции с rollback.
 
 ## Приоритетный backlog
 
