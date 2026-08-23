@@ -64,6 +64,8 @@ def _validate_complete_version(version: QuranEditionVersion) -> None:
     actual_surahs = version.surahs.count()
     actual_pages = version.pages.count()
     actual_juz = version.juz.count()
+    actual_hizb = version.hizb.count()
+    actual_rub_el_hizb = version.rub_el_hizb.count()
     actual_ayahs = Ayah.objects.filter(surah__edition_version=version).count()
     covered_ayahs = (
         Ayah.objects.filter(
@@ -84,6 +86,31 @@ def _validate_complete_version(version: QuranEditionVersion) -> None:
         raise QuranPublicationError(
             f"Juz count mismatch: expected {version.juz_count}, got {actual_juz}."
         )
+    if actual_hizb != version.hizb_count:
+        raise QuranPublicationError(
+            f"Hizb count mismatch: expected {version.hizb_count}, got {actual_hizb}."
+        )
+    if actual_rub_el_hizb != version.rub_el_hizb_count:
+        raise QuranPublicationError(
+            "Rub el Hizb count mismatch: "
+            f"expected {version.rub_el_hizb_count}, got {actual_rub_el_hizb}."
+        )
+    if (
+        version.hizb_count
+        and Ayah.objects.filter(
+            surah__edition_version=version,
+            hizb_number__isnull=True,
+        ).exists()
+    ):
+        raise QuranPublicationError("Published Hizb metadata must cover every ayah.")
+    if (
+        version.rub_el_hizb_count
+        and Ayah.objects.filter(
+            surah__edition_version=version,
+            rub_el_hizb_number__isnull=True,
+        ).exists()
+    ):
+        raise QuranPublicationError("Published Rub el Hizb metadata must cover every ayah.")
     if actual_ayahs <= 0 or covered_ayahs != actual_ayahs:
         raise QuranPublicationError(
             f"Ayah region coverage mismatch: expected {actual_ayahs}, got {covered_ayahs}."

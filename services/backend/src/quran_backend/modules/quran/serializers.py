@@ -8,10 +8,12 @@ from rest_framework import serializers
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageRegion,
+    Hizb,
     Juz,
     MushafPage,
     QuranEdition,
     QuranEditionVersion,
+    RubElHizb,
     Surah,
 )
 
@@ -26,6 +28,8 @@ class QuranEditionVersionSerializer(serializers.ModelSerializer[QuranEditionVers
             "page_count",
             "surah_count",
             "juz_count",
+            "hizb_count",
+            "rub_el_hizb_count",
             "published_at",
         )
 
@@ -86,6 +90,8 @@ class AyahSerializer(serializers.ModelSerializer[Ayah]):
             "number",
             "text_uthmani",
             "juz_number",
+            "hizb_number",
+            "rub_el_hizb_number",
             "pages",
         )
 
@@ -147,7 +153,45 @@ class MushafPageSerializer(serializers.ModelSerializer[MushafPage]):
 class JuzSerializer(serializers.ModelSerializer[Juz]):
     start_ayah = AyahReferenceSerializer(read_only=True)
     end_ayah = AyahReferenceSerializer(read_only=True)
+    start_page = serializers.IntegerField(read_only=True)
+    end_page = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Juz
-        fields = ("id", "number", "start_ayah", "end_ayah")
+        fields = ("id", "number", "start_ayah", "end_ayah", "start_page", "end_page")
+
+
+class HizbSerializer(serializers.ModelSerializer[Hizb]):
+    start_ayah = AyahReferenceSerializer(read_only=True)
+    end_ayah = AyahReferenceSerializer(read_only=True)
+    start_page = serializers.IntegerField(read_only=True)
+    end_page = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Hizb
+        fields = ("id", "number", "start_ayah", "end_ayah", "start_page", "end_page")
+
+
+class RubElHizbSerializer(serializers.ModelSerializer[RubElHizb]):
+    hizb_number = serializers.IntegerField(source="hizb.number", read_only=True)
+    quarter_number = serializers.SerializerMethodField()
+    start_ayah = AyahReferenceSerializer(read_only=True)
+    end_ayah = AyahReferenceSerializer(read_only=True)
+    start_page = serializers.IntegerField(read_only=True)
+    end_page = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = RubElHizb
+        fields = (
+            "id",
+            "number",
+            "hizb_number",
+            "quarter_number",
+            "start_ayah",
+            "end_ayah",
+            "start_page",
+            "end_page",
+        )
+
+    def get_quarter_number(self, obj: RubElHizb) -> int:
+        return (obj.number - 1) % 4 + 1

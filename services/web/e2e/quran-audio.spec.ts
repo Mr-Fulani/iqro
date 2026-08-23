@@ -68,6 +68,8 @@ const edition = {
     page_count: 604,
     surah_count: 114,
     juz_count: 30,
+    hizb_count: 60,
+    rub_el_hizb_count: 240,
     published_at: "2026-08-23T00:00:00Z",
   },
 };
@@ -91,7 +93,34 @@ const ayahs = [1, 2].map((number) => ({
   number,
   text_uthmani: number === 1 ? "ٱلْحَمْدُ لِلَّهِ" : "هُوَ ٱلَّذِى خَلَقَكُم",
   juz_number: 7,
+  hizb_number: 13,
+  rub_el_hizb_number: 49,
   pages: [128],
+}));
+
+function divisions(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `00000000-0000-7000-8400-${String(index + 1).padStart(12, "0")}`,
+    number: index + 1,
+    start_ayah: { id: ayahs[0].id, surah: 6, number: 1 },
+    end_ayah: { id: ayahs[1].id, surah: 6, number: 2 },
+    start_page: 128,
+    end_page: 128,
+  }));
+}
+
+const juz = divisions(30);
+const hizb = divisions(60);
+hizb[12] = {
+  ...hizb[12],
+  start_ayah: { id: ayahs[1].id, surah: 6, number: 2 },
+  start_page: 129,
+  end_page: 129,
+};
+const rubElHizb = divisions(240).map((division) => ({
+  ...division,
+  hizb_number: Math.floor((division.number - 1) / 4) + 1,
+  quarter_number: ((division.number - 1) % 4) + 1,
 }));
 
 const page128 = {
@@ -143,6 +172,13 @@ const page128 = {
       height: 0.09,
     },
   ],
+};
+
+const page129 = {
+  ...page128,
+  id: "00000000-0000-7000-8300-000000000129",
+  number: 129,
+  regions: page128.regions.filter((region) => region.ayah.number === 2),
 };
 
 function paginated<T>(results: T[]) {
@@ -204,8 +240,16 @@ async function installApiMocks(page: Page) {
       await route.fulfill({ json: [surah] });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/6/ayahs") {
       await route.fulfill({ json: ayahs });
+    } else if (path === "/api/v1/quran/editions/madani-hafs/juz") {
+      await route.fulfill({ json: juz });
+    } else if (path === "/api/v1/quran/editions/madani-hafs/hizb") {
+      await route.fulfill({ json: hizb });
+    } else if (path === "/api/v1/quran/editions/madani-hafs/rub-el-hizb") {
+      await route.fulfill({ json: rubElHizb });
     } else if (path === "/api/v1/quran/editions/madani-hafs/pages/128") {
       await route.fulfill({ json: page128 });
+    } else if (path === "/api/v1/quran/editions/madani-hafs/pages/129") {
+      await route.fulfill({ json: page129 });
     } else {
       await route.fulfill({
         status: 404,
@@ -260,4 +304,53 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
     tracks[5].asset.url,
   );
   await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · воспроизводится/)).toBeVisible();
+});
+
+for (const viewport of [
+  { name: "mobile", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "desktop", width: 1440, height: 1000 },
+]) {
+  test(`mushaf overlay remains registered and selectable on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/quran?surah=6");
+    await page.getByRole("button", { name: /Мусхаф/ }).click();
+
+    const image = page.locator(".mushaf-image");
+    const overlay = page.locator(".mushaf-regions");
+    await expect(image).toBeVisible();
+    await expect(overlay).toBeVisible();
+    const imageBox = await image.boundingBox();
+    const overlayBox = await overlay.boundingBox();
+    expect(imageBox).not.toBeNull();
+    expect(overlayBox).not.toBeNull();
+    expect(Math.abs(imageBox!.x - overlayBox!.x)).toBeLessThan(1);
+    expect(Math.abs(imageBox!.y - overlayBox!.y)).toBeLessThan(1);
+    expect(Math.abs(imageBox!.width - overlayBox!.width)).toBeLessThan(1);
+    expect(Math.abs(imageBox!.height - overlayBox!.height)).toBeLessThan(1);
+
+    const fragments = page.getByRole("button", { name: "Аят 6:2", exact: true });
+    await expect(fragments).toHaveCount(2);
+    await fragments.last().click();
+    await expect(fragments.first()).toHaveClass(/is-selected/);
+    await expect(fragments.last()).toHaveClass(/is-selected/);
+  });
+}
+
+test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ page }) => {
+  await page.goto("/quran?surah=6");
+
+  await expect(page.getByLabel("Джуз (1-30)").locator("option")).toHaveCount(31);
+  await expect(page.getByLabel("Хизб (1-60)").locator("option")).toHaveCount(61);
+  await expect(page.getByLabel("Руб аль-хизб (1-240)").locator("option")).toHaveCount(241);
+  await expect(page.getByLabel(/Аят суры/).locator("option")).toHaveCount(3);
+
+  await page.getByLabel("Хизб (1-60)").selectOption("13");
+  await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
+
+  await page.getByLabel(/Аят суры/).selectOption("2");
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
 });

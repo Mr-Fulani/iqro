@@ -25,6 +25,8 @@ def _write_sources(root: Path) -> tuple[Path, Path, Path]:
                                 "number": 1,
                                 "text": "بِسْمِ ٱللَّهِ",
                                 "juz": 1,
+                                "hizb": 1,
+                                "hizb_quarter": 1,
                                 "page": 2,
                             }
                         ],
@@ -90,6 +92,8 @@ def test_builds_checksummed_dataset_from_verified_sources(
     monkeypatch.setattr(dataset_builder, "EXPECTED_AYAH_COUNT", 1)
     monkeypatch.setattr(dataset_builder, "EXPECTED_PAGE_COUNT", 1)
     monkeypatch.setattr(dataset_builder, "EXPECTED_JUZ_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_HIZB_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_RUB_EL_HIZB_COUNT", 1)
     monkeypatch.setattr(dataset_builder, "RUSSIAN_SURAH_NAMES", ("Аль-Фатиха",))
 
     result = dataset_builder.build_madani_hafs_dataset(
@@ -102,10 +106,20 @@ def test_builds_checksummed_dataset_from_verified_sources(
     manifest = json.loads((result.output / "manifest.json").read_text(encoding="utf-8"))
     page_payload = json.loads((result.output / "pages.jsonl").read_text(encoding="utf-8"))
     assert manifest["content_sha256"] == result.content_sha256
-    assert manifest["counts"] == {"surahs": 1, "ayahs": 1, "pages": 1, "juz": 1}
+    assert manifest["schema_version"] == 2
+    assert manifest["counts"] == {
+        "surahs": 1,
+        "ayahs": 1,
+        "pages": 1,
+        "juz": 1,
+        "hizb": 1,
+        "rub_el_hizb": 1,
+    }
     assert result.page_mapping_differences == 1
     assert page_payload["regions"][0]["polygon"][0] == pytest.approx([0.2208583, 0.3179511])
     assert page_payload["assets"][0]["path"] == "quran/madani-hafs/1.0.0/page.webp"
+    assert json.loads((result.output / "hizb.json").read_text())[0]["number"] == 1
+    assert json.loads((result.output / "rub-el-hizb.json").read_text())[0]["number"] == 1
 
 
 def test_rejects_changed_corpus(tmp_path: Path) -> None:

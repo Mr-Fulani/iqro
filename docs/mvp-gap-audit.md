@@ -1,7 +1,9 @@
 # P0/MVP gap audit
 
-Дата аудита: 23 августа 2026 года  
-Аудируемый baseline: `efc0f17` (`feat: add hardened production compose stack`)  
+Дата аудита: 23 августа 2026 года
+
+Аудируемый baseline: репозиторий после технического среза P0-A от 23 августа 2026 года
+
 Источник требований: [утверждённое ТЗ](../thoughts/shared/specs/2026-08-09-quran-platform-backend.md)
 
 ## Правила оценки
@@ -20,8 +22,8 @@
 
 | Срез | Готово | Частично | Нет | Внешний gate |
 |---|---:|---:|---:|---:|
-| 18 P0-групп | 1 | 13 | 4 | 0 |
-| 36 критериев приёмки | 8 | 14 | 12 | 2 |
+| 18 P0-групп | 2 | 12 | 4 | 0 |
+| 36 критериев приёмки | 9 | 13 | 12 | 2 |
 
 Сильная часть текущего baseline — канонический Quran dataset, публичное Quran/audio API,
 гостевая сессия, позиции/закладки, надёжная offline-синхронизация серверного состояния,
@@ -32,17 +34,15 @@ packages, расширенном плеере, локальном планиро
 
 ## Доказательная база
 
-- Dataset `madani-hafs@1.0.1`: 114 сур, 6 236 аятов, 604 страницы, 30 джузов,
-  12 346 региональных сегментов; source commits и SHA-256 закреплены в
+- Dataset `madani-hafs@1.0.2`: 114 сур, 6 236 аятов, 604 страницы, 30 джузов,
+  60 хизбов, 240 четвертей и 12 346 региональных сегментов; source commits и SHA-256 закреплены в
   [source lock](../services/backend/docs/quran-sources.lock.json) и dataset manifest.
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- В backend test suite находится 311 тестовых функций (parameterization расширяет число
-  фактических cases); сохранённый coverage artifact показывает 88,32% line coverage и
-  70,96% branch coverage.
-- Web имеет только два Playwright-сценария: первый запуск каталога аудио и выбор
-  многосегментного аята 6:2 с запуском аудио.
+- Полный backend test suite: 463 passed, 6 skipped; суммарное покрытие 84,99%.
+- Web имеет шесть Playwright cases, включая многосегментный аят 6:2, viewport matrix
+  375/768/1440 px и переходы по juz/hizb/rub/ayah.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
@@ -56,8 +56,8 @@ packages, расширенном плеере, локальном планиро
 | 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, devices, access/refresh rotation, logout, `AuthIdentity` model | Verified login/linking, регистрация обычного пользователя, guest-to-account merge, re-auth flows |
 | 2 | RU/EN/AR и RTL | 🟡 | Многоязычные имена контента, locale constraints, арабский RTL-текст | Web зафиксирован на `lang=ru`; нет i18n routing/catalog, language switch и полного RTL UI |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
-| 4 | Навигация по page/surah/ayah/juz/hizb/rub | 🟡 | API page/surah/ayah/juz; web выбирает суру и страницу | Нет моделей/API/UI для hizb и rub‘ al-hizb; в web нет полноценного перехода по juz и точному аяту |
-| 5 | Интерактивные области аятов | 🟡 | 12 346 polygon segments, 6 236 ayah coverage, группировка сегментов, E2E для 6:2 | Нет viewport/device regression matrix и приёмки всех сложных страниц; ранее наблюдались неверные выделения |
+| 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
+| 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
 | 6 | Позиции, закладки, история, цели, серии | 🟡 | Position, bookmarks, revisions, tombstones и sync | Нет reading sessions/history, goals и streaks |
 | 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable recitations, 114 surah tracks, ayah timings, streaming | Не доказаны три полностью лицензированных релиза; нет управляемой offline-установки и redistribution pipeline |
 | 8 | Repeat/range/pause/speed/sleep timer | 🟡 | Воспроизведение суры и отдельного аята, native browser controls | Нет repeat/range mode, учебных пауз, скорости 0,5–2,0× и sleep timer |
@@ -80,8 +80,8 @@ packages, расширенном плеере, локальном планиро
 |---|:---:|---|
 | Утверждённое опубликованное издание 114/30/604 | 🟡 | Технический артефакт полный; нет зафиксированного религиозного и лицензионного acceptance record |
 | Assets и канонические данные прошли integrity pipeline | ✅ | Source lock, per-file/asset SHA-256, builder/import/publication tests |
-| Переход к любой суре, аяту, джузу и странице | 🟡 | API покрывает все четыре адресации, web UI — не все |
-| Стабильный выбор области на поддерживаемых размерах | 🟡 | Есть structural checks и один E2E case, но нет viewport matrix/full acceptance |
+| Переход к любой суре, аяту, джузу и странице | ✅ | API и web UI покрывают все четыре адресации, а также hizb/rub |
+| Стабильный выбор области на поддерживаемых размерах | 🟡 | Structural sweep и viewport matrix пройдены; остаётся ручная content acceptance |
 | Позиция восстанавливается локально и на другом устройстве | 🟡 | Backend cross-device revisions/sync реализованы; registered cross-client flow отсутствует |
 
 ### Аудио
@@ -159,14 +159,14 @@ packages, расширенном плеере, локальном планиро
 
 ### P0-A — точность Корана и release evidence
 
-1. Добавить regression harness для ayah regions: structural sweep всех 604 страниц,
-   viewport matrix в Playwright и curated визуальные cases сложных многосегментных аятов.
-2. Добавить hizb/rub‘ al-hizb в dataset/model/API и полноценный переход по juz/ayah в web.
-3. Зафиксировать content acceptance record: source/license review, религиозный reviewer,
-   checksum принятой версии и критерии rollback.
+1. ✅ Regression harness для ayah regions: structural sweep всех 604 страниц, viewport
+   matrix в Playwright и закреплённый многосегментный case 6:2.
+2. ✅ Hizb/rub‘ al-hizb добавлены в dataset/model/API; web переходит по juz/hizb/rub/ayah.
+3. 🟡 [Content acceptance record](quran-content-acceptance.md) создан с checksum и rollback;
+   религиозный, юридический и product sign-off остаются внешними release gates.
 
-Это следующий рекомендуемый блок: он локален, не требует bucket/monitoring и снижает самый
-чувствительный риск — неверное сопоставление религиозного текста и интерактивной области.
+Техническая часть блока закрыта. Публичная активация dataset остаётся заблокированной до
+трёх внешних sign-off, перечисленных в content acceptance record.
 
 ### P0-B — account lifecycle и client foundation
 

@@ -10,12 +10,14 @@ from rest_framework.test import APIClient
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageRegion,
+    Hizb,
     Juz,
     MushafPage,
     PublicationStatus,
     QuranEdition,
     QuranEditionVersion,
     RevelationType,
+    RubElHizb,
     Surah,
 )
 
@@ -44,6 +46,8 @@ def quran_dataset(db: None) -> dict[str, Any]:
         page_count=604,
         surah_count=114,
         juz_count=30,
+        hizb_count=1,
+        rub_el_hizb_count=1,
         published_at=timezone.now(),
     )
     edition.active_version = version
@@ -64,6 +68,8 @@ def quran_dataset(db: None) -> dict[str, Any]:
         text_uthmani="بِسْمِ اللَّهِ",
         text_search="بسم الله",
         juz_number=1,
+        hizb_number=1,
+        rub_el_hizb_number=1,
     )
     second_ayah = Ayah.objects.create(
         surah=surah,
@@ -71,6 +77,8 @@ def quran_dataset(db: None) -> dict[str, Any]:
         text_uthmani="الْحَمْدُ لِلَّهِ",
         text_search="الحمد لله",
         juz_number=1,
+        hizb_number=1,
+        rub_el_hizb_number=1,
     )
     page = MushafPage.objects.create(
         edition_version=version,
@@ -99,8 +107,31 @@ def quran_dataset(db: None) -> dict[str, Any]:
         width=Decimal("0.8"),
         height=Decimal("0.1"),
     )
+    AyahPageRegion.objects.create(
+        page=page,
+        ayah=second_ayah,
+        reading_order=2,
+        polygon=[[0.1, 0.3], [0.9, 0.3], [0.9, 0.4], [0.1, 0.4]],
+        x=Decimal("0.1"),
+        y=Decimal("0.3"),
+        width=Decimal("0.8"),
+        height=Decimal("0.1"),
+    )
     Juz.objects.create(
         edition_version=version,
+        number=1,
+        start_ayah=first_ayah,
+        end_ayah=second_ayah,
+    )
+    hizb = Hizb.objects.create(
+        edition_version=version,
+        number=1,
+        start_ayah=first_ayah,
+        end_ayah=second_ayah,
+    )
+    rub_el_hizb = RubElHizb.objects.create(
+        edition_version=version,
+        hizb=hizb,
         number=1,
         start_ayah=first_ayah,
         end_ayah=second_ayah,
@@ -112,4 +143,6 @@ def quran_dataset(db: None) -> dict[str, Any]:
         "first_ayah": first_ayah,
         "second_ayah": second_ayah,
         "page": page,
+        "hizb": hizb,
+        "rub_el_hizb": rub_el_hizb,
     }

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "edition": "madani-hafs@1.0.1",
+  "edition": "madani-hafs@1.0.2",
   "corpus": {
     "upstream": "https://tanzil.net",
     "mirror": "https://github.com/mjmirza/quran-dataset",
@@ -24,11 +24,13 @@
     "registration_scale": 2.337
   },
   "built_dataset": {
-    "content_sha256": "c21e071f4fce38fd5a1958cb9a6e4732837a5d2ba5badd09f337dd96ba6eb2e9",
+    "content_sha256": "66cc6b136ed3a8c43130278e07ad55e1f68af6064395d034dbdf765ed043c081",
     "surahs": 114,
     "ayahs": 6236,
     "pages": 604,
     "juz": 30,
+    "hizb": 60,
+    "rub_el_hizb": 240,
     "region_segments": 12346,
     "corpus_page_mapping_differences_resolved_by_kfqc_geometry": 56
   }

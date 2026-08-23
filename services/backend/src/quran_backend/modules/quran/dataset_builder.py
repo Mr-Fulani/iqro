@@ -15,7 +15,9 @@ EXPECTED_SURAH_COUNT = 114
 EXPECTED_AYAH_COUNT = 6_236
 EXPECTED_PAGE_COUNT = 604
 EXPECTED_JUZ_COUNT = 30
-DATASET_VERSION = "1.0.1"
+EXPECTED_HIZB_COUNT = 60
+EXPECTED_RUB_EL_HIZB_COUNT = 240
+DATASET_VERSION = "1.0.2"
 
 # quranpedia/quran-svg native coordinates were registered against the pinned PDF raster.
 # The KFQC page art is centered on the PDF page with the same scale on both axes.
@@ -201,6 +203,8 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
                     "text_uthmani": text,
                     "text_search": _search_text(text),
                     "juz": int(source_ayah["juz"]),
+                    "hizb": int(source_ayah["hizb"]),
+                    "rub_el_hizb": int(source_ayah["hizb_quarter"]),
                 }
             )
 
@@ -269,7 +273,14 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
             f"Polygon coverage mismatch: missing={missing[:1]}, extra={extra[:1]}."
         )
     _require_counts(surahs, ayahs, pages)
-    juz = _build_juz(ayahs)
+    juz = _build_divisions(ayahs, field="juz", count=EXPECTED_JUZ_COUNT, label="Juz")
+    hizb = _build_divisions(ayahs, field="hizb", count=EXPECTED_HIZB_COUNT, label="Hizb")
+    rub_el_hizb = _build_divisions(
+        ayahs,
+        field="rub_el_hizb",
+        count=EXPECTED_RUB_EL_HIZB_COUNT,
+        label="Rub el Hizb",
+    )
 
     output.mkdir(parents=True, exist_ok=True)
     payloads = {
@@ -277,6 +288,8 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
         "ayahs.jsonl": _jsonl_bytes(ayahs),
         "pages.jsonl": _jsonl_bytes(pages),
         "juz.json": _json_bytes(juz),
+        "hizb.json": _json_bytes(hizb),
+        "rub-el-hizb.json": _json_bytes(rub_el_hizb),
     }
     file_hashes: dict[str, str] = {}
     for filename, payload in payloads.items():
@@ -285,7 +298,7 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
     canonical = "".join(f"{name}:{file_hashes[name]}\n" for name in sorted(file_hashes))
     content_sha256 = hashlib.sha256(canonical.encode()).hexdigest()
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "source_version": (
             "tanzil-mirror-c0dc86b060b854d03f62848692bf1d2936dba630+"
             "quran-svg-5fbcb1d4d92b5a2972ab51472fe991b6066bb6e2"
@@ -308,6 +321,8 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
             "ayahs": len(ayahs),
             "pages": len(pages),
             "juz": len(juz),
+            "hizb": len(hizb),
+            "rub_el_hizb": len(rub_el_hizb),
         },
         "files": file_hashes,
         "sources": {
@@ -332,6 +347,8 @@ def build_madani_hafs_dataset(  # noqa: PLR0915
         "verification": {
             "ayah_polygon_coverage": len(polygon_keys),
             "region_segments": sum(len(page["regions"]) for page in pages),
+            "hizb_coverage": len({ayah["hizb"] for ayah in ayahs}),
+            "rub_el_hizb_coverage": len({ayah["rub_el_hizb"] for ayah in ayahs}),
             "corpus_page_mapping_differences": page_mapping_differences,
             "page_assignment_authority": "KFQC polygon geometry",
         },
@@ -402,12 +419,18 @@ def _normalize_polygon(
     return normalized
 
 
-def _build_juz(ayahs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_divisions(
+    ayahs: list[dict[str, Any]],
+    *,
+    field: str,
+    count: int,
+    label: str,
+) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
-    for number in range(1, EXPECTED_JUZ_COUNT + 1):
-        members = [ayah for ayah in ayahs if ayah["juz"] == number]
+    for number in range(1, count + 1):
+        members = [ayah for ayah in ayahs if ayah[field] == number]
         if not members:
-            raise QuranDatasetBuildError(f"Juz {number} is empty.")
+            raise QuranDatasetBuildError(f"{label} {number} is empty.")
         first, last = members[0], members[-1]
         result.append(
             {

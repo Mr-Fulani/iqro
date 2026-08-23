@@ -75,6 +75,8 @@ def test_ayah_detail_contains_stable_reference(
         "number": 1,
         "text_uthmani": "بِسْمِ اللَّهِ",
         "juz_number": 1,
+        "hizb_number": 1,
+        "rub_el_hizb_number": 1,
         "pages": [1],
     }
 
@@ -139,3 +141,42 @@ def test_quran_api_supports_conditional_etag(
     assert second_response.status_code == 304
     assert second_response.headers["ETag"] == first_response.headers["ETag"]
     assert second_response.headers["Cache-Control"].startswith("public")
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("route_name", "expected"),
+    [
+        ("quran:juz-list", {"number": 1}),
+        ("quran:hizb-list", {"number": 1}),
+        (
+            "quran:rub-el-hizb-list",
+            {"number": 1, "hizb_number": 1, "quarter_number": 1},
+        ),
+    ],
+)
+def test_division_navigation_exposes_canonical_boundaries_and_pages(
+    api_client: APIClient,
+    quran_dataset: dict[str, Any],
+    route_name: str,
+    expected: dict[str, int],
+) -> None:
+    response = api_client.get(reverse(route_name, kwargs={"edition": "madani-hafs"}))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    for key, value in expected.items():
+        assert payload[0][key] == value
+    assert payload[0]["start_ayah"] == {
+        "id": str(quran_dataset["first_ayah"].id),
+        "surah": 1,
+        "number": 1,
+    }
+    assert payload[0]["end_ayah"] == {
+        "id": str(quran_dataset["second_ayah"].id),
+        "surah": 1,
+        "number": 2,
+    }
+    assert payload[0]["start_page"] == 1
+    assert payload[0]["end_page"] == 1

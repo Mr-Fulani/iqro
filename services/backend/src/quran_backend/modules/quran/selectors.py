@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Collection
 
-from django.db.models import F, IntegerField, Min, QuerySet
+from django.db.models import F, IntegerField, Max, Min, QuerySet
 
 from quran_backend.modules.quran.models import (
     Ayah,
+    Hizb,
     Juz,
     MushafPage,
     PublicationStatus,
     QuranEdition,
+    RubElHizb,
     Surah,
 )
 
@@ -86,6 +88,42 @@ def published_juz(edition_code: str) -> QuerySet[Juz]:
         .select_related(
             "start_ayah__surah",
             "end_ayah__surah",
+        )
+        .annotate(
+            start_page=Min("start_ayah__page_regions__page__number"),
+            end_page=Max("end_ayah__page_regions__page__number"),
+        )
+        .order_by("number")
+    )
+
+
+def published_hizb(edition_code: str) -> QuerySet[Hizb]:
+    return (
+        Hizb.objects.filter(
+            edition_version__edition__code=edition_code,
+            edition_version__edition__active_version_id=F("edition_version_id"),
+            edition_version__status=PublicationStatus.PUBLISHED,
+        )
+        .select_related("start_ayah__surah", "end_ayah__surah")
+        .annotate(
+            start_page=Min("start_ayah__page_regions__page__number"),
+            end_page=Max("end_ayah__page_regions__page__number"),
+        )
+        .order_by("number")
+    )
+
+
+def published_rub_el_hizb(edition_code: str) -> QuerySet[RubElHizb]:
+    return (
+        RubElHizb.objects.filter(
+            edition_version__edition__code=edition_code,
+            edition_version__edition__active_version_id=F("edition_version_id"),
+            edition_version__status=PublicationStatus.PUBLISHED,
+        )
+        .select_related("hizb", "start_ayah__surah", "end_ayah__surah")
+        .annotate(
+            start_page=Min("start_ayah__page_regions__page__number"),
+            end_page=Max("end_ayah__page_regions__page__number"),
         )
         .order_by("number")
     )

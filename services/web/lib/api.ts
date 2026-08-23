@@ -67,6 +67,8 @@ export type QuranEditionVersion = {
   page_count: number;
   surah_count: number;
   juz_count: number;
+  hizb_count: number;
+  rub_el_hizb_count: number;
   published_at: string;
 };
 
@@ -103,6 +105,8 @@ export type Ayah = {
   number: number;
   text_uthmani: string;
   juz_number: number;
+  hizb_number: number | null;
+  rub_el_hizb_number: number | null;
   pages: number[];
 };
 
@@ -137,11 +141,20 @@ export type MushafPage = {
   regions: AyahPageRegion[];
 };
 
-export type Juz = {
+export type QuranDivision = {
   id: string;
   number: number;
   start_ayah: { id: string; surah: number; number: number };
   end_ayah: { id: string; surah: number; number: number };
+  start_page: number;
+  end_page: number;
+};
+
+export type Juz = QuranDivision;
+export type Hizb = QuranDivision;
+export type RubElHizb = QuranDivision & {
+  hizb_number: number;
+  quarter_number: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -686,6 +699,14 @@ export class ApiClient {
 
   public async getJuzList(edition: string): Promise<Juz[]> {
     return this.request<Juz[]>(`/api/v1/quran/editions/${edition}/juz`);
+  }
+
+  public async getHizbList(edition: string): Promise<Hizb[]> {
+    return this.request<Hizb[]>(`/api/v1/quran/editions/${edition}/hizb`);
+  }
+
+  public async getRubElHizbList(edition: string): Promise<RubElHizb[]> {
+    return this.request<RubElHizb[]>(`/api/v1/quran/editions/${edition}/rub-el-hizb`);
   }
 
   // -------------------------------------------------------------------------

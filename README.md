@@ -40,6 +40,8 @@ Production Compose без hot reload и bind-mount исходников опис
 [руководстве по production-запуску](docs/production.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
 [P0/MVP gap audit](docs/mvp-gap-audit.md).
+Технические доказательства, внешние sign-off и rollback для Quran dataset фиксируются в
+[Quran content acceptance record](docs/quran-content-acceptance.md).
 
 ## Полный локальный стек
 

@@ -5,19 +5,31 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics
 
 from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
-from quran_backend.modules.quran.models import Ayah, Juz, MushafPage, QuranEdition, Surah
+from quran_backend.modules.quran.models import (
+    Ayah,
+    Hizb,
+    Juz,
+    MushafPage,
+    QuranEdition,
+    RubElHizb,
+    Surah,
+)
 from quran_backend.modules.quran.selectors import (
     published_ayahs,
     published_editions,
+    published_hizb,
     published_juz,
     published_pages,
+    published_rub_el_hizb,
     published_surahs,
 )
 from quran_backend.modules.quran.serializers import (
     AyahSerializer,
+    HizbSerializer,
     JuzSerializer,
     MushafPageSerializer,
     QuranEditionSerializer,
+    RubElHizbSerializer,
     SurahSerializer,
 )
 
@@ -131,3 +143,27 @@ class JuzListView(PublicQuranViewMixin, generics.ListAPIView[Juz]):
 
     def get_queryset(self) -> QuerySet[Juz]:
         return published_juz(self.kwargs["edition"])
+
+
+@extend_schema(
+    tags=["quran"],
+    parameters=[OpenApiParameter("edition", str, OpenApiParameter.PATH)],
+)
+class HizbListView(PublicQuranViewMixin, generics.ListAPIView[Hizb]):
+    serializer_class = HizbSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[Hizb]:
+        return published_hizb(self.kwargs["edition"])
+
+
+@extend_schema(
+    tags=["quran"],
+    parameters=[OpenApiParameter("edition", str, OpenApiParameter.PATH)],
+)
+class RubElHizbListView(PublicQuranViewMixin, generics.ListAPIView[RubElHizb]):
+    serializer_class = RubElHizbSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[RubElHizb]:
+        return published_rub_el_hizb(self.kwargs["edition"])

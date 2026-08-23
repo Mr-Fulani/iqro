@@ -59,6 +59,8 @@ class QuranEditionVersion(BaseModel):
     page_count = models.PositiveSmallIntegerField(default=604)
     surah_count = models.PositiveSmallIntegerField(default=114)
     juz_count = models.PositiveSmallIntegerField(default=30)
+    hizb_count = models.PositiveSmallIntegerField(default=0)
+    rub_el_hizb_count = models.PositiveSmallIntegerField(default=0)
     published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -79,6 +81,14 @@ class QuranEditionVersion(BaseModel):
             models.CheckConstraint(
                 condition=models.Q(juz_count__gt=0),
                 name="quran_version_positive_juz",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(hizb_count__gte=0, hizb_count__lte=60),
+                name="quran_version_hizb_count_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rub_el_hizb_count__gte=0, rub_el_hizb_count__lte=240),
+                name="quran_version_rub_count_range",
             ),
             models.CheckConstraint(
                 condition=(
@@ -147,6 +157,8 @@ class Ayah(BaseModel):
     text_uthmani = models.TextField()
     text_search = models.TextField(blank=True)
     juz_number = models.PositiveSmallIntegerField()
+    hizb_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    rub_el_hizb_number = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "quran_ayah"
@@ -164,9 +176,28 @@ class Ayah(BaseModel):
                 condition=models.Q(juz_number__gte=1, juz_number__lte=30),
                 name="quran_ayah_juz_range",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(hizb_number__isnull=True)
+                    | models.Q(hizb_number__gte=1, hizb_number__lte=60)
+                ),
+                name="quran_ayah_hizb_range",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(rub_el_hizb_number__isnull=True)
+                    | models.Q(rub_el_hizb_number__gte=1, rub_el_hizb_number__lte=240)
+                ),
+                name="quran_ayah_rub_range",
+            ),
         ]
         indexes = [
             models.Index(fields=["juz_number", "surah", "number"], name="quran_ayah_juz_idx"),
+            models.Index(fields=["hizb_number", "surah", "number"], name="quran_ayah_hizb_idx"),
+            models.Index(
+                fields=["rub_el_hizb_number", "surah", "number"],
+                name="quran_ayah_rub_idx",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -315,6 +346,76 @@ class Juz(BaseModel):
         }
         if version_ids != {self.edition_version_id}:
             raise ValidationError("Juz boundaries must belong to the same Quran edition.")
+
+
+class Hizb(BaseModel):
+    edition_version = models.ForeignKey(
+        QuranEditionVersion,
+        on_delete=models.PROTECT,
+        related_name="hizb",
+    )
+    number = models.PositiveSmallIntegerField()
+    start_ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="hizb_starts")
+    end_ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="hizb_ends")
+
+    class Meta:
+        db_table = "quran_hizb"
+        ordering = ["number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["edition_version", "number"],
+                name="quran_hizb_version_number_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(number__gte=1, number__lte=60),
+                name="quran_hizb_number_range",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        version_ids = {
+            self.start_ayah.surah.edition_version_id,
+            self.end_ayah.surah.edition_version_id,
+        }
+        if version_ids != {self.edition_version_id}:
+            raise ValidationError("Hizb boundaries must belong to the same Quran edition.")
+
+
+class RubElHizb(BaseModel):
+    edition_version = models.ForeignKey(
+        QuranEditionVersion,
+        on_delete=models.PROTECT,
+        related_name="rub_el_hizb",
+    )
+    hizb = models.ForeignKey(Hizb, on_delete=models.PROTECT, related_name="quarters")
+    number = models.PositiveSmallIntegerField()
+    start_ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="rub_starts")
+    end_ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="rub_ends")
+
+    class Meta:
+        db_table = "quran_rub_el_hizb"
+        ordering = ["number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["edition_version", "number"],
+                name="quran_rub_version_number_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(number__gte=1, number__lte=240),
+                name="quran_rub_number_range",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        version_ids = {
+            self.hizb.edition_version_id,
+            self.start_ayah.surah.edition_version_id,
+            self.end_ayah.surah.edition_version_id,
+        }
+        if version_ids != {self.edition_version_id}:
+            raise ValidationError("Rub el Hizb boundaries must belong to the same Quran edition.")
 
 
 class SourceManifest(BaseModel):

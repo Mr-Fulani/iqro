@@ -5,10 +5,12 @@ from django.contrib import admin
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageRegion,
+    Hizb,
     Juz,
     MushafPage,
     QuranEdition,
     QuranEditionVersion,
+    RubElHizb,
     SourceManifest,
     Surah,
 )
@@ -49,8 +51,8 @@ class SurahAdmin(CanonicalReadOnlyAdmin):
 
 @admin.register(Ayah)
 class AyahAdmin(CanonicalReadOnlyAdmin):
-    list_display = ("surah", "number", "juz_number")
-    list_filter = ("surah__edition_version", "juz_number")
+    list_display = ("surah", "number", "juz_number", "hizb_number", "rub_el_hizb_number")
+    list_filter = ("surah__edition_version", "juz_number", "hizb_number")
     search_fields = ("text_uthmani",)
 
 
@@ -70,6 +72,18 @@ class AyahPageRegionAdmin(CanonicalReadOnlyAdmin):
 class JuzAdmin(CanonicalReadOnlyAdmin):
     list_display = ("edition_version", "number", "start_ayah", "end_ayah")
     list_filter = ("edition_version",)
+
+
+@admin.register(Hizb)
+class HizbAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("edition_version", "number", "start_ayah", "end_ayah")
+    list_filter = ("edition_version",)
+
+
+@admin.register(RubElHizb)
+class RubElHizbAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("edition_version", "number", "hizb", "start_ayah", "end_ayah")
+    list_filter = ("edition_version", "hizb")
 
 
 @admin.register(SourceManifest)

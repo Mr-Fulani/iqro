@@ -1,13 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MushafAudioPlayer } from "../../components/MushafAudioPlayer";
 import {
   api,
   Ayah,
+  Hizb,
+  Juz,
   MushafPage,
+  QuranDivision,
   QuranEdition,
+  RubElHizb,
   Surah,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
@@ -22,10 +26,14 @@ function QuranContent() {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<number>(initialSurahParam ? Number(initialSurahParam) : 1);
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
+  const [juz, setJuz] = useState<Juz[]>([]);
+  const [hizb, setHizb] = useState<Hizb[]>([]);
+  const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
+  const pendingNavigationPage = useRef<number | null>(null);
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,10 +59,17 @@ function QuranContent() {
   useEffect(() => {
     if (!selectedEdition) return;
     setLoading(true);
-    api
-      .getSurahs(selectedEdition)
-      .then((res) => {
-        setSurahs(res);
+    Promise.all([
+      api.getSurahs(selectedEdition),
+      api.getJuzList(selectedEdition),
+      api.getHizbList(selectedEdition),
+      api.getRubElHizbList(selectedEdition),
+    ])
+      .then(([surahList, juzList, hizbList, rubList]) => {
+        setSurahs(surahList);
+        setJuz(juzList);
+        setHizb(hizbList);
+        setRubElHizb(rubList);
         setLoading(false);
       })
       .catch((err) => {
@@ -72,7 +87,10 @@ function QuranContent() {
       .then((res) => {
         setAyahs(res);
         setLoading(false);
-        if (res.length > 0 && res[0].pages?.length > 0) {
+        if (pendingNavigationPage.current !== null) {
+          setCurrentPage(pendingNavigationPage.current);
+          pendingNavigationPage.current = null;
+        } else if (res.length > 0 && res[0].pages?.length > 0) {
           setCurrentPage(res[0].pages[0]);
         }
       })
@@ -89,7 +107,13 @@ function QuranContent() {
       .getPage(selectedEdition, currentPage)
       .then((pageData) => {
         setMushafPage(pageData);
-        setSelectedMushafAyah(null);
+        setSelectedMushafAyah((selectedAyah) => {
+          if (!selectedAyah) return null;
+          const isOnLoadedPage = pageData.regions.some(
+            (region) => `${region.ayah.surah}:${region.ayah.number}` === selectedAyah,
+          );
+          return isOnLoadedPage ? selectedAyah : null;
+        });
       })
       .catch(() => {
         setMushafPage(null);
@@ -117,6 +141,27 @@ function QuranContent() {
       setCurrentPage((page) => nextPage === page ? page : nextPage);
     }
   }, [ayahs, selectedSurah, viewMode]);
+
+  const navigateToDivision = useCallback((division: QuranDivision) => {
+    const targetSurah = division.start_ayah.surah;
+    const targetAyah = division.start_ayah.number;
+    setViewMode("mushaf");
+    setSelectedMushafAyah(`${targetSurah}:${targetAyah}`);
+    if (targetSurah === selectedSurah) {
+      setCurrentPage(division.start_page);
+      return;
+    }
+    pendingNavigationPage.current = division.start_page;
+    setSelectedSurah(targetSurah);
+  }, [selectedSurah]);
+
+  const navigateToAyah = useCallback((ayahNumber: number) => {
+    const ayah = ayahs.find((item) => item.number === ayahNumber);
+    if (!ayah?.pages.length) return;
+    setViewMode("mushaf");
+    setSelectedMushafAyah(`${selectedSurah}:${ayahNumber}`);
+    setCurrentPage(ayah.pages[0]);
+  }, [ayahs, selectedSurah]);
 
   const handleSavePosition = async (ayahNumber?: number) => {
     if (!isLoggedIn) {
@@ -276,6 +321,89 @@ function QuranContent() {
             </div>
           </div>
         </div>
+
+        <div className="form-row" style={{ marginTop: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="juz-navigation">Джуз (1-30)</label>
+            <select
+              id="juz-navigation"
+              value=""
+              onChange={(event) => {
+                const division = juz.find((item) => item.number === Number(event.target.value));
+                if (division) navigateToDivision(division);
+              }}
+              disabled={juz.length === 0}
+            >
+              <option value="">Перейти к джузу…</option>
+              {juz.map((item) => (
+                <option key={item.id} value={item.number}>
+                  {item.number}. {item.start_ayah.surah}:{item.start_ayah.number} · стр. {item.start_page}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="hizb-navigation">Хизб (1-60)</label>
+            <select
+              id="hizb-navigation"
+              value=""
+              onChange={(event) => {
+                const division = hizb.find((item) => item.number === Number(event.target.value));
+                if (division) navigateToDivision(division);
+              }}
+              disabled={hizb.length === 0}
+            >
+              <option value="">Перейти к хизбу…</option>
+              {hizb.map((item) => (
+                <option key={item.id} value={item.number}>
+                  {item.number}. {item.start_ayah.surah}:{item.start_ayah.number} · стр. {item.start_page}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="rub-navigation">Руб аль-хизб (1-240)</label>
+            <select
+              id="rub-navigation"
+              value=""
+              onChange={(event) => {
+                const division = rubElHizb.find(
+                  (item) => item.number === Number(event.target.value),
+                );
+                if (division) navigateToDivision(division);
+              }}
+              disabled={rubElHizb.length === 0}
+            >
+              <option value="">Перейти к четверти…</option>
+              {rubElHizb.map((item) => (
+                <option key={item.id} value={item.number}>
+                  {item.number}. Хизб {item.hizb_number}, ¼ {item.quarter_number} · {item.start_ayah.surah}:{item.start_ayah.number}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="ayah-navigation">
+              Аят суры (1-{currentSurahObj?.ayah_count || "—"})
+            </label>
+            <select
+              id="ayah-navigation"
+              value=""
+              onChange={(event) => navigateToAyah(Number(event.target.value))}
+              disabled={ayahs.length === 0}
+            >
+              <option value="">Перейти к аяту…</option>
+              {ayahs.map((ayah) => (
+                <option key={ayah.id} value={ayah.number}>
+                  {selectedSurah}:{ayah.number} · стр. {ayah.pages.join(", ")}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </section>
 
       {/* Content Area */}
@@ -351,12 +479,14 @@ function QuranContent() {
                   src={mushafPage.assets[0].url}
                   alt={`Страница Мусхафа ${currentPage}`}
                   className="mushaf-image"
+                  data-page-number={currentPage}
                 />
                 <svg
                   className="mushaf-regions"
                   viewBox="0 0 1 1"
                   preserveAspectRatio="none"
                   aria-label={`Интерактивные области аятов страницы ${currentPage}`}
+                  data-page-number={currentPage}
                 >
                   {mushafRegions.map((region) => {
                     const key = `${region.ayah.surah}:${region.ayah.number}`;

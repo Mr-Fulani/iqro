@@ -122,12 +122,66 @@ def _write_dataset(
     return root
 
 
+def _write_schema2_dataset(root: Path) -> Path:
+    root = _write_dataset(root)
+    ayah_path = root / "ayahs.jsonl"
+    ayah = json.loads(ayah_path.read_text(encoding="utf-8"))
+    ayah.update({"hizb": 1, "rub_el_hizb": 1})
+    ayah_path.write_text(json.dumps(ayah, ensure_ascii=False) + "\n", encoding="utf-8")
+    division = [
+        {
+            "number": 1,
+            "start": {"surah": 1, "ayah": 1},
+            "end": {"surah": 1, "ayah": 1},
+        }
+    ]
+    (root / "hizb.json").write_text(json.dumps(division), encoding="utf-8")
+    (root / "rub-el-hizb.json").write_text(json.dumps(division), encoding="utf-8")
+
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["schema_version"] = 2
+    manifest["edition"]["version"] = "1.0.1"
+    manifest["counts"].update({"hizb": 1, "rub_el_hizb": 1})
+    filenames = (
+        "surahs.json",
+        "ayahs.jsonl",
+        "pages.jsonl",
+        "juz.json",
+        "hizb.json",
+        "rub-el-hizb.json",
+    )
+    manifest["files"] = {
+        filename: hashlib.sha256((root / filename).read_bytes()).hexdigest()
+        for filename in filenames
+    }
+    canonical = "".join(f"{name}:{manifest['files'][name]}\n" for name in sorted(filenames))
+    manifest["content_sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    return root
+
+
 def test_validate_quran_dataset_checks_all_references(tmp_path: Path) -> None:
     dataset = validate_quran_dataset(_write_dataset(tmp_path / "dataset"))
 
     assert dataset.manifest["edition"]["code"] == "test-hafs"
     assert len(dataset.ayahs) == 1
     assert len(dataset.pages) == 1
+
+
+@pytest.mark.django_db
+def test_schema2_imports_hizb_and_rub_el_hizb_navigation(tmp_path: Path) -> None:
+    dataset = validate_quran_dataset(_write_schema2_dataset(tmp_path / "dataset"))
+
+    result = import_quran_dataset(dataset)
+    ayah = result.version.surahs.get(number=1).ayahs.get(number=1)
+
+    assert result.version.hizb_count == 1
+    assert result.version.rub_el_hizb_count == 1
+    assert result.version.hizb.count() == 1
+    assert result.version.rub_el_hizb.count() == 1
+    assert ayah.hizb_number == 1
+    assert ayah.rub_el_hizb_number == 1
 
 
 def test_validate_quran_dataset_rejects_unmapped_ayah(tmp_path: Path) -> None:

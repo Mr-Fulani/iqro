@@ -5,10 +5,12 @@ from django.urls import path
 from quran_backend.modules.quran.api import (
     AyahDetailView,
     AyahListView,
+    HizbListView,
     JuzListView,
     MushafPageDetailView,
     QuranEditionDetailView,
     QuranEditionListView,
+    RubElHizbListView,
     SurahDetailView,
     SurahListView,
 )
@@ -40,4 +42,10 @@ urlpatterns = [
         name="page-detail",
     ),
     path("editions/<slug:edition>/juz", JuzListView.as_view(), name="juz-list"),
+    path("editions/<slug:edition>/hizb", HizbListView.as_view(), name="hizb-list"),
+    path(
+        "editions/<slug:edition>/rub-el-hizb",
+        RubElHizbListView.as_view(),
+        name="rub-el-hizb-list",
+    ),
 ]
