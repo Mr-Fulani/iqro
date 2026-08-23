@@ -85,3 +85,17 @@ test("verified email login merges the guest without persisting tokens in localSt
   expect(storageDump).not.toContain("refresh_token");
   expect(storageDump).not.toContain("installation_credential");
 });
+
+test("guest session keeps verified email login visible in the header", async ({ page }) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: guestSession }));
+
+  await page.goto("/");
+
+  await expect(page.getByText("Гостевой режим", { exact: true }).first()).toBeVisible();
+  const emailLogin = page.getByRole("link", { name: "Войти по email" }).first();
+  await expect(emailLogin).toBeVisible();
+  await expect(emailLogin).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
+});

@@ -6,7 +6,8 @@ import { useAuth } from "../lib/auth-context";
 
 export function Header() {
   const pathname = usePathname();
-  const { isLoggedIn, loginGuest, logout, isLoading } = useAuth();
+  const { session, logout, isLoading } = useAuth();
+  const isActiveAccount = session?.user.status === "active";
 
   const navItems = [
     { href: "/", label: "Главная", icon: "🏠" },
@@ -45,12 +46,12 @@ export function Header() {
       </nav>
 
       <div className="header-actions">
-        <div className={`status-chip ${isLoggedIn ? "ok" : "muted"}`}>
+        <div className={`status-chip ${isActiveAccount ? "ok" : "muted"}`}>
           <span className="status-dot"></span>
-          {isLoggedIn ? "Авторизован" : "Гость"}
+          {isActiveAccount ? "Аккаунт" : "Гостевой режим"}
         </div>
 
-        {isLoggedIn ? (
+        {isActiveAccount ? (
           <button
             onClick={() => void logout()}
             className="btn btn-secondary btn-sm"
@@ -60,14 +61,14 @@ export function Header() {
             Выйти
           </button>
         ) : (
-          <button
-            onClick={() => void loginGuest()}
+          <Link
+            href="/login"
             className="btn btn-primary btn-sm"
-            disabled={isLoading}
-            title="Быстрый вход как гость"
+            aria-disabled={isLoading}
+            title="Войти по одноразовому коду из email"
           >
-            {isLoading ? "Вход..." : "Войти как гость"}
-          </button>
+            Войти по email
+          </Link>
         )}
       </div>
     </header>

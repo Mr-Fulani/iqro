@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth-context";
 
 export default function HomePage() {
   const { session, isLoggedIn, loginGuest, isLoading: authLoading } = useAuth();
+  const isActiveAccount = session?.user.status === "active";
 
   const [liveStatus, setLiveStatus] = useState<{ loading: boolean; ok?: boolean; error?: string }>({
     loading: true,
@@ -125,13 +126,17 @@ export default function HomePage() {
         <article className="kpi-card">
           <div className="kpi-header">
             <span className="kpi-label">Режим пользователя</span>
-            <span className="kpi-icon">{isLoggedIn ? "👤" : "🛡️"}</span>
+            <span className="kpi-icon">{isActiveAccount ? "👤" : "🛡️"}</span>
           </div>
-          <div className="kpi-value">{isLoggedIn ? "Личный профиль" : "Гостевой режим"}</div>
+          <div className="kpi-value">
+            {isActiveAccount ? "Подтверждённый аккаунт" : "Гостевой режим"}
+          </div>
           <div className="kpi-desc">
-            {isLoggedIn && session
-              ? `ID: ${session.user.id.slice(0, 8)}... (${session.device.platform})`
-              : "Нажмите 'Войти как гость' для сохранения прогресса"}
+            {isActiveAccount
+              ? session.user.email
+              : isLoggedIn && session
+                ? `Данные пока привязаны только к устройству · ID: ${session.user.id.slice(0, 8)}...`
+                : "Можно читать без регистрации или войти по email"}
           </div>
         </article>
 
@@ -147,24 +152,31 @@ export default function HomePage() {
         </article>
       </section>
 
-      {/* Guest Authentication Banner (if not logged in) */}
-      {!isLoggedIn && (
+      {/* Account upgrade banner */}
+      {!isActiveAccount && (
         <section className="surface" style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)" }}>
           <div className="surface-head">
             <div>
-              <h3 className="surface-title">Быстрый старт без регистрации</h3>
+              <h3 className="surface-title">Войдите по email и сохраните прогресс</h3>
               <p className="surface-subtitle">
-                Quran Platform не требует ввода почты или пароля для начала чтения. Получите
-                защищенный гостевой токен устройства в один клик.
+                Гостевые закладки и позиция чтения сохранятся и будут объединены с аккаунтом
+                после подтверждения одноразового кода.
               </p>
             </div>
-            <button
-              onClick={() => void loginGuest()}
-              className="btn btn-primary"
-              disabled={authLoading}
-            >
-              {authLoading ? "Авторизация..." : "Войти как гость"}
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href="/login" className="btn btn-primary">
+                Войти по email
+              </Link>
+              {!isLoggedIn && (
+                <button
+                  onClick={() => void loginGuest()}
+                  className="btn btn-secondary"
+                  disabled={authLoading}
+                >
+                  {authLoading ? "Подготовка..." : "Продолжить как гость"}
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   api,
@@ -167,6 +168,8 @@ export default function ProfilePage() {
     );
   }
 
+  const isGuest = session?.user.status === "guest";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Account Info Header */}
@@ -189,17 +192,29 @@ export default function ProfilePage() {
             >
               {loadingSync ? "Синхронизация..." : "🔄 Офлайн-синхронизация"}
             </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={() => void logout()}
-            >
-              Выйти
-            </button>
+            {isGuest ? (
+              <Link href="/login" className="btn btn-primary btn-sm">
+                Войти по email
+              </Link>
+            ) : (
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => void logout()}
+              >
+                Выйти
+              </button>
+            )}
           </div>
         </div>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 14 }}>{error}</div>}
         {successMsg && <div className="alert alert-success" style={{ marginBottom: 14 }}>{successMsg}</div>}
+        {isGuest && (
+          <div className="alert alert-info" style={{ marginBottom: 14 }}>
+            Сейчас данные привязаны только к этому устройству. Войдите по email, чтобы сохранить
+            их в аккаунте и синхронизировать между устройствами.
+          </div>
+        )}
 
         <div className="kpi-grid" style={{ marginTop: 8 }}>
           <div className="kpi-card">
