@@ -14,6 +14,7 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 *.log
+*.tsbuildinfo
 .venv/
 dist/
 build/

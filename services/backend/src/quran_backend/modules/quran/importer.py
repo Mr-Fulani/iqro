@@ -354,12 +354,25 @@ def _validate_page_mappings(
             raise QuranDatasetError(f"Page {page.get('number')} has no assets.")
         if not isinstance(page.get("regions"), list):
             raise QuranDatasetError(f"Page {page.get('number')} has invalid regions.")
+        region_geometries: set[tuple[tuple[int, int], str]] = set()
         for region in page["regions"]:
             key = (int(region.get("surah", 0)), int(region.get("ayah", 0)))
             if key not in ayah_keys:
                 raise QuranDatasetError(
                     f"Page {page['number']} references unknown ayah {key[0]}:{key[1]}."
                 )
+            geometry = json.dumps(
+                region.get("polygon"),
+                ensure_ascii=True,
+                separators=(",", ":"),
+            )
+            geometry_key = (key, geometry)
+            if geometry_key in region_geometries:
+                raise QuranDatasetError(
+                    f"Page {page['number']} repeats polygon geometry for ayah "
+                    f"{key[0]}:{key[1]}."
+                )
+            region_geometries.add(geometry_key)
             covered_ayahs.add(key)
     if covered_ayahs != ayah_keys:
         missing = sorted(ayah_keys - covered_ayahs)[0]

@@ -1,9 +1,9 @@
-FROM node:22-alpine
+FROM node:22.14-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund
 
 COPY . .
 

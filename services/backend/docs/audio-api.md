@@ -87,7 +87,7 @@ Endpoint суры возвращает один трек и все его сег
 мировой streaming и, отдельно, offline redistribution. Автотесты используют только
 синтетические метаданные.
 
-### Quran.Foundation pilot sync
+### Quran.Foundation import and refresh
 
 Credentials хранятся только в backend environment: `QF_CLIENT_ID`, `QF_CLIENT_SECRET`,
 `QF_ENV=prelive|production`. Команда ниже получает метаданные и проверенные таймкоды,
@@ -104,9 +104,32 @@ python manage.py sync_quran_foundation_audio \
 `--surah` можно повторять; `--all-surahs` импортирует все 114 сур. Если оба параметра
 отсутствуют, пилот импортирует только суру 1. Параметры `--surah` и `--all-surahs`
 взаимоисключающие.
-Каждая повторная синхронизация должна получать новую immutable `--content-version`.
+Каждая повторная ручная публикация должна получать новую immutable `--content-version`.
+
+После полного импорта включите автоматическую проверку в backend environment:
+
+```dotenv
+QF_AUDIO_SYNC_ENABLED=true
+QF_AUDIO_REFRESH_DAYS=5
+```
+
+Celery Beat ежедневно запускает `audio.sync_quran_foundation`. Свежие каталоги
+пропускаются, но успешная проверка каждого опубликованного QF-чтеца выполняется не реже
+заданного интервала (допустимо 1–6 дней). Для доступных ресурсов используется официальный
+QF Content Sync с сохранённым checkpoint; для chapter-reciter, которому не соответствует
+Content Sync resource, выполняется полная сверка 114 сур. При изменении создаётся новая
+immutable-версия, а прежняя атомарно переводится в `withdrawn`.
+
+Ручная проверка тем же механизмом:
+
+```bash
+python manage.py refresh_quran_foundation_audio --force
+```
+
 Согласно Developer Terms, сохранённые QF metadata необходимо обновлять не реже одного
-раза в семь дней, если не используется отдельное разрешение или Content Sync.
+раза в семь дней, если не используется отдельное разрешение или Content Sync. Ошибка
+обновления не публикует частичный каталог: задача повторяется с exponential backoff, а
+счётчик и безопасный код последней ошибки доступны в Django Admin.
 
 ## CDN contract
 

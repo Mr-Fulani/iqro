@@ -506,7 +506,7 @@ export class ApiClient {
     return "Неизвестная ошибка";
   }
 
-  public async request<T>(path: string, options: RequestInit = {}, requiresAuth = false): Promise<T> {
+  public async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = path.startsWith("http") ? path : `${this.base}${path.startsWith("/") ? "" : "/"}${path}`;
     const headers = new Headers();
     headers.set("Content-Type", "application/json");
@@ -712,10 +712,11 @@ export class ApiClient {
     return this.request<PaginatedResponse<Recitation>>(`/api/v1/recitations${qs}`);
   }
 
-  public async getTracks(recitationId: string, params: { scope?: string; cursor?: string } = {}): Promise<PaginatedResponse<AudioTrack>> {
+  public async getTracks(recitationId: string, params: { scope?: string; cursor?: string; page_size?: number } = {}): Promise<PaginatedResponse<AudioTrack>> {
     const query = new URLSearchParams();
     if (params.scope) query.set("scope", params.scope);
     if (params.cursor) query.set("cursor", params.cursor);
+    if (params.page_size) query.set("page_size", String(params.page_size));
     const qs = query.toString() ? `?${query.toString()}` : "";
     return this.request<PaginatedResponse<AudioTrack>>(`/api/v1/recitations/${recitationId}/tracks${qs}`);
   }

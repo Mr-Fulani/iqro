@@ -15,8 +15,27 @@ from quran_backend.modules.quran.importer import (
 from quran_backend.modules.quran.models import PublicationStatus, QuranEditionVersion
 
 
-def _write_dataset(root: Path, *, mapped: bool = True) -> Path:
+def _write_dataset(
+    root: Path,
+    *,
+    mapped: bool = True,
+    duplicate_region: bool = False,
+) -> Path:
     root.mkdir()
+    regions = [
+        {
+            "surah": 1,
+            "ayah": 1,
+            "reading_order": 1,
+            "polygon": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.2]],
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.8,
+            "height": 0.1,
+        }
+    ]
+    if duplicate_region:
+        regions.append({**regions[0], "reading_order": 2})
     content: dict[str, str] = {
         "surahs.json": json.dumps(
             [
@@ -58,22 +77,7 @@ def _write_dataset(root: Path, *, mapped: bool = True) -> Path:
                         "bytes": 1_000,
                     }
                 ],
-                "regions": (
-                    [
-                        {
-                            "surah": 1,
-                            "ayah": 1,
-                            "reading_order": 1,
-                            "polygon": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.2]],
-                            "x": 0.1,
-                            "y": 0.1,
-                            "width": 0.8,
-                            "height": 0.1,
-                        }
-                    ]
-                    if mapped
-                    else []
-                ),
+                "regions": regions if mapped else [],
             }
         )
         + "\n",
@@ -130,6 +134,13 @@ def test_validate_quran_dataset_rejects_unmapped_ayah(tmp_path: Path) -> None:
     dataset_path = _write_dataset(tmp_path / "dataset", mapped=False)
 
     with pytest.raises(QuranDatasetError, match="is not mapped to a page"):
+        validate_quran_dataset(dataset_path)
+
+
+def test_validate_quran_dataset_rejects_duplicate_ayah_polygon(tmp_path: Path) -> None:
+    dataset_path = _write_dataset(tmp_path / "dataset", duplicate_region=True)
+
+    with pytest.raises(QuranDatasetError, match="repeats polygon geometry"):
         validate_quran_dataset(dataset_path)
 
 

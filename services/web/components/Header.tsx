@@ -6,7 +6,7 @@ import { useAuth } from "../lib/auth-context";
 
 export function Header() {
   const pathname = usePathname();
-  const { session, isLoggedIn, loginGuest, logout, isLoading } = useAuth();
+  const { isLoggedIn, loginGuest, logout, isLoading } = useAuth();
 
   const navItems = [
     { href: "/", label: "Главная", icon: "🏠" },

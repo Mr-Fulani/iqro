@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MushafAudioPlayer } from "../../components/MushafAudioPlayer";
 import {
@@ -17,8 +17,6 @@ function QuranContent() {
   const initialSurahParam = searchParams.get("surah");
 
   const { isLoggedIn, loginGuest } = useAuth();
-  const [isPending, startTransition] = useTransition();
-
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);

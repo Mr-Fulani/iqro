@@ -9,10 +9,46 @@ from quran_backend.modules.audio.models import (
     AudioTimingVersion,
     AudioTrack,
     AyahAudioSegment,
+    QuranFoundationSyncState,
     RecitationEdition,
     RecitationPublicationStatus,
     Reciter,
 )
+
+
+@admin.register(QuranFoundationSyncState)
+class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    actions = None
+    list_display = (
+        "source_reciter_id",
+        "environment",
+        "content_sync_resource_id",
+        "last_success_at",
+        "consecutive_failures",
+        "last_error_code",
+    )
+    list_filter = ("environment", "last_success_at", "consecutive_failures")
+    search_fields = ("=source_reciter_id", "=content_sync_resource_id")
+    readonly_fields = tuple(
+        field.name for field in QuranFoundationSyncState._meta.fields
+    )
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: QuranFoundationSyncState | None = None,
+    ) -> bool:
+        return bool(super().has_change_permission(request, obj) and obj is not None)
+
+    def has_delete_permission(
+        self,
+        _request: HttpRequest,
+        _obj: QuranFoundationSyncState | None = None,
+    ) -> bool:
+        return False
 
 
 @admin.register(Reciter)

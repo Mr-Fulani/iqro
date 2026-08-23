@@ -33,6 +33,18 @@ def positive_env_int(name: str, default: int) -> int:
     return value
 
 
+def env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(f"{name} must be a boolean")
+
+
 def validate_https_base_url(name: str, value: str) -> str:
     parsed = urlsplit(value)
     valid = (
@@ -121,6 +133,10 @@ QURAN_SYNC_FULL_RESYNC_TOKEN_MAX_AGE_SECONDS = os.getenv(
     "QURAN_SYNC_FULL_RESYNC_TOKEN_MAX_AGE_SECONDS",
     "86400",
 )
+QURAN_QF_AUDIO_SYNC_ENABLED = env_bool("QF_AUDIO_SYNC_ENABLED", False)
+QURAN_QF_AUDIO_REFRESH_DAYS = positive_env_int("QF_AUDIO_REFRESH_DAYS", 5)
+if QURAN_QF_AUDIO_REFRESH_DAYS > 6:
+    raise ImproperlyConfigured("QF_AUDIO_REFRESH_DAYS must be between 1 and 6")
 DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 
@@ -337,6 +353,10 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    "sync-quran-foundation-audio-daily": {
+        "task": "audio.sync_quran_foundation",
+        "schedule": 86_400.0,
+    },
     "prune-auth-sessions-hourly": {
         "task": "accounts.prune_auth_sessions",
         "schedule": 3_600.0,

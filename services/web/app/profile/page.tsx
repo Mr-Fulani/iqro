@@ -6,19 +6,15 @@ import {
   Bookmark,
   FeedbackTicket,
   ReadingPosition,
-  SyncPullResponse,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 
 export default function ProfilePage() {
-  const { session, identity, isLoggedIn, loginGuest, logout, isLoading: authLoading } = useAuth();
+  const { session, isLoggedIn, loginGuest, logout, isLoading: authLoading } = useAuth();
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
-  const [syncResult, setSyncResult] = useState<SyncPullResponse | null>(null);
-
-  const [loadingReading, setLoadingReading] = useState<boolean>(false);
   const [loadingBookmarks, setLoadingBookmarks] = useState<boolean>(false);
   const [loadingSync, setLoadingSync] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,15 +43,12 @@ export default function ProfilePage() {
   }, [isLoggedIn]);
 
   const loadReadingData = async () => {
-    setLoadingReading(true);
     try {
       const pos = await api.getReadingPosition("madani-hafs");
       setReading(pos);
     } catch {
       // Position might not be set yet
       setReading(null);
-    } finally {
-      setLoadingReading(false);
     }
   };
 
@@ -115,8 +108,7 @@ export default function ProfilePage() {
     setLoadingSync(true);
     setError(null);
     try {
-      const syncData = await api.syncPull(20);
-      setSyncResult(syncData);
+      await api.syncPull(20);
       setSuccessMsg("Синхронизация успешно выполнена!");
       await loadBookmarksData();
       await loadReadingData();

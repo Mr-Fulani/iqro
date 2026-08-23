@@ -46,13 +46,6 @@ export default function PrayerPage() {
       });
   }, []);
 
-  // Calculate automatically when method is selected
-  useEffect(() => {
-    if (selectedMethodId) {
-      void handleCalculate();
-    }
-  }, [selectedMethodId]);
-
   const handleCitySelect = (cityIndex: number) => {
     const city = PRESET_CITIES[cityIndex];
     if (city) {
@@ -108,6 +101,15 @@ export default function PrayerPage() {
       setLoading(false);
     }
   };
+
+  // Calculate automatically when the selected method becomes available.
+  useEffect(() => {
+    if (selectedMethodId) {
+      void handleCalculate();
+    }
+    // Recalculate here only when the method changes; the form submit handles other edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMethodId]);
 
   const formatPrayerTime = (isoString?: string) => {
     if (!isoString) return "--:--";

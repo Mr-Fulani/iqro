@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   api,
   AudioTrack,
-  AyahAudioSegment,
   Recitation,
   Reciter,
 } from "../../lib/api";
@@ -21,7 +20,6 @@ export default function AudioPage() {
   // Active audio player state
   const [currentTrack, setCurrentTrack] = useState<AudioTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [segments, setSegments] = useState<AyahAudioSegment[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load reciters on mount
@@ -67,9 +65,12 @@ export default function AudioPage() {
   // Load tracks when recitation changes
   useEffect(() => {
     if (!selectedRecitationId) return;
+    audioRef.current?.pause();
+    setCurrentTrack(null);
+    setIsPlaying(false);
     setLoading(true);
     api
-      .getTracks(selectedRecitationId)
+      .getTracks(selectedRecitationId, { scope: "surah", page_size: 114 })
       .then((res) => {
         setTracks(res.results || []);
         setLoading(false);
@@ -85,21 +86,14 @@ export default function AudioPage() {
 
   const handlePlayTrack = async (track: AudioTrack) => {
     setCurrentTrack(track);
-    setIsPlaying(true);
-
-    // Fetch verified timings if available
-    if (selectedRecitationId && track.surah_number) {
-      try {
-        const playback = await api.getSurahPlayback(selectedRecitationId, track.surah_number);
-        setSegments(playback.segments || []);
-      } catch {
-        setSegments([]);
-      }
-    }
-
     if (audioRef.current) {
       audioRef.current.src = track.asset.url;
-      void audioRef.current.play();
+      try {
+        await audioRef.current.play();
+      } catch {
+        setIsPlaying(false);
+        setError("Браузер не смог запустить аудио. Нажмите воспроизведение ещё раз.");
+      }
     }
   };
 
@@ -263,8 +257,8 @@ export default function AudioPage() {
       </section>
 
       {/* Persistent Audio Player Bar */}
-      {currentTrack && (
-        <div className="audio-player-bar">
+      <div className="audio-player-bar" hidden={!currentTrack}>
+        {currentTrack && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span className="brand-mark sm">🎵</span>
             <div>
@@ -276,17 +270,15 @@ export default function AudioPage() {
               </p>
             </div>
           </div>
-
-          <audio
-            ref={audioRef}
-            controls
-            autoPlay
-            style={{ width: "min(500px, 100%)" }}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          />
-        </div>
-      )}
+        )}
+        <audio
+          ref={audioRef}
+          controls
+          style={{ width: "min(500px, 100%)" }}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      </div>
     </div>
   );
 }
