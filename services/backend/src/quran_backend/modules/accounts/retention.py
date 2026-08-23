@@ -8,7 +8,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
-from quran_backend.modules.accounts.models import RefreshSession, RefreshToken
+from quran_backend.modules.accounts.models import EmailAuthChallenge, RefreshSession, RefreshToken
 
 
 class AuthPruneResult(TypedDict):
@@ -17,6 +17,13 @@ class AuthPruneResult(TypedDict):
     tokens: int
     has_more: bool
     retention_days: int
+
+
+class EmailChallengePruneResult(TypedDict):
+    dry_run: bool
+    challenges: int
+    has_more: bool
+    retention_hours: int
 
 
 def prune_auth_sessions(
@@ -55,6 +62,33 @@ def prune_auth_sessions(
         "tokens": len(token_ids),
         "has_more": _stale_sessions(cutoff).exists(),
         "retention_days": retention_days,
+    }
+
+
+def prune_email_challenges(
+    *,
+    now: datetime | None = None,
+    dry_run: bool = False,
+) -> EmailChallengePruneResult:
+    """Delete one bounded batch of expired passwordless-login challenges."""
+
+    effective_now = now or timezone.now()
+    retention_hours = _positive_setting("QURAN_EMAIL_CHALLENGE_RETENTION_HOURS", 24)
+    batch_size = _positive_setting("QURAN_EMAIL_CHALLENGE_PRUNE_BATCH_SIZE", 5_000)
+    cutoff = effective_now - timedelta(hours=retention_hours)
+    stale = EmailAuthChallenge.objects.filter(
+        Q(expires_at__lt=cutoff) | Q(invalidated_at__lt=cutoff) | Q(consumed_at__lt=cutoff)
+    )
+    challenge_ids = list(
+        stale.order_by("expires_at", "id").values_list("id", flat=True)[:batch_size]
+    )
+    if challenge_ids and not dry_run:
+        EmailAuthChallenge.objects.filter(id__in=challenge_ids).delete()
+    return {
+        "dry_run": dry_run,
+        "challenges": len(challenge_ids),
+        "has_more": stale.exclude(id__in=challenge_ids).exists(),
+        "retention_hours": retention_hours,
     }
 
 

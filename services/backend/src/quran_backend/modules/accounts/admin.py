@@ -7,6 +7,8 @@ from quran_backend.modules.accounts.models import (
     AuthIdentity,
     Consent,
     Device,
+    EmailAuthChallenge,
+    GuestMergeAudit,
     RefreshSession,
     RefreshToken,
     User,
@@ -126,3 +128,63 @@ class ConsentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ("purpose", "policy_version")
     search_fields = ("=id", "=user__id")
     readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(EmailAuthChallenge)
+class EmailAuthChallengeAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "id",
+        "requester",
+        "device",
+        "email",
+        "expires_at",
+        "attempts_remaining",
+        "consumed_at",
+        "invalidated_at",
+    )
+    list_filter = ("consumed_at", "invalidated_at")
+    search_fields = ("=id", "=requester__id", "=device__id", "email")
+    readonly_fields = (
+        "id",
+        "requester",
+        "device",
+        "email",
+        "expires_at",
+        "attempts_remaining",
+        "invalidated_at",
+        "consumed_at",
+        "verification_key",
+        "result_user",
+        "created_at",
+        "updated_at",
+    )
+    exclude = ("code_hash",)
+
+    def has_add_permission(self, _request: object) -> bool:
+        return False
+
+    def has_delete_permission(self, _request: object, _obj: object | None = None) -> bool:
+        return False
+
+
+@admin.register(GuestMergeAudit)
+class GuestMergeAuditAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("id", "source_user", "target_user", "trigger_identity", "completed_at")
+    search_fields = ("=id", "=source_user__id", "=target_user__id", "=idempotency_key")
+    readonly_fields = (
+        "id",
+        "source_user",
+        "target_user",
+        "trigger_identity",
+        "idempotency_key",
+        "moved_counts",
+        "completed_at",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, _request: object) -> bool:
+        return False
+
+    def has_delete_permission(self, _request: object, _obj: object | None = None) -> bool:
+        return False

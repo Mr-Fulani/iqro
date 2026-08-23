@@ -21,6 +21,11 @@ CACHES = {
         "LOCATION": "quran-platform-tests",
     }
 }
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.locmem.EmailBackend",
+    }
+}
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
@@ -29,6 +34,10 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "guest_bootstrap_ip_burst": "10000/minute",
     "token_refresh_session": "10000/minute",
     "token_refresh_ip_burst": "10000/minute",
+    "email_start_identity": "10000/minute",
+    "email_start_ip_burst": "10000/minute",
+    "email_verify_challenge": "10000/minute",
+    "email_verify_ip_burst": "10000/minute",
     "feedback_write": "10000/minute",
     "prayer_calculate": "10000/minute",
     "prayer_profile_mutation": "10000/minute",

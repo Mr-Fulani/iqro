@@ -9,6 +9,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("quran_backend.modules.core.urls")),
+    path("api/v1/", include("quran_backend.modules.accounts.user_urls")),
     path("api/v1/auth/", include("quran_backend.modules.accounts.urls")),
     path("api/v1/quran/", include("quran_backend.modules.quran.urls")),
     path("api/v1/prayer/", include("quran_backend.modules.prayer_times.urls")),

@@ -31,6 +31,10 @@ API гостевой авторизации, безопасной ротации
 offline-sync описан в [docs/auth-and-sync.md](docs/auth-and-sync.md). Актуальный контракт
 доступен как OpenAPI 3.1 по `/api/schema`.
 
+Passwordless-вход по подтверждённому email, HttpOnly browser-session и транзакционное
+объединение гостевых данных описаны в
+[docs/email-auth-and-guest-merge.md](docs/email-auth-and-guest-merge.md).
+
 MVP обратной связи с пользовательскими тикетами, безопасным reopen, SLA религиозного
 контента и операторским workflow описан в [docs/feedback.md](docs/feedback.md). Вложения
 на этом этапе намеренно не принимаются: небезопасного локального upload fallback нет.

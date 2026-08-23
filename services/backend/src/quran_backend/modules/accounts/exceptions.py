@@ -32,3 +32,33 @@ class GuestBootstrapUnavailable(APIException):
 class AuthRateLimitExceeded(Throttled):
     default_detail = "Too many authentication requests. Retry later."
     default_code = "auth_rate_limited"
+
+
+class EmailChallengeInvalid(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Email verification could not be completed."
+    default_code = "email_challenge_invalid"
+
+
+class EmailChallengeExpired(APIException):
+    status_code = status.HTTP_410_GONE
+    default_detail = "Email verification could not be completed."
+    default_code = "email_challenge_expired"
+
+
+class EmailChallengeDeliveryFailed(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "The verification message could not be delivered. Retry later."
+    default_code = "email_delivery_failed"
+
+
+class IdentityAlreadyLinked(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "This identity is already linked to another account."
+    default_code = "identity_already_linked"
+
+
+class AccountLinkUnavailable(APIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "Account linking is unavailable for this session."
+    default_code = "account_link_unavailable"

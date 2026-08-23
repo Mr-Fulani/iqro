@@ -6,7 +6,7 @@ from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from quran_backend.modules.accounts.retention import prune_auth_sessions
+from quran_backend.modules.accounts.retention import prune_auth_sessions, prune_email_challenges
 
 
 @shared_task(name="accounts.prune_auth_sessions")  # type: ignore[untyped-decorator]
@@ -38,6 +38,32 @@ def prune_auth_sessions_task() -> dict[str, Any]:
         "batches": batches,
         "has_more": has_more,
         "retention_days": retention_days,
+    }
+
+
+@shared_task(name="accounts.prune_email_challenges")  # type: ignore[untyped-decorator]
+def prune_email_challenges_task() -> dict[str, Any]:
+    """Drain bounded email-challenge retention batches."""
+
+    max_batches = _positive_setting("QURAN_RETENTION_TASK_MAX_BATCHES", 10)
+    total_challenges = 0
+    batches = 0
+    has_more = False
+    retention_hours = 0
+    for _ in range(max_batches):
+        result = prune_email_challenges()
+        batches += 1
+        total_challenges += result["challenges"]
+        has_more = result["has_more"]
+        retention_hours = result["retention_hours"]
+        if not has_more or result["challenges"] == 0:
+            break
+    return {
+        "dry_run": False,
+        "challenges": total_challenges,
+        "batches": batches,
+        "has_more": has_more,
+        "retention_hours": retention_hours,
     }
 
 

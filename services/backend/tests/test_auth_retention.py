@@ -4,12 +4,22 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.test import override_settings
 from django.utils import timezone
 
-from quran_backend.modules.accounts.models import Device, RefreshSession, RefreshToken, User
-from quran_backend.modules.accounts.retention import prune_auth_sessions
-from quran_backend.modules.accounts.tasks import prune_auth_sessions_task
+from quran_backend.modules.accounts.models import (
+    Device,
+    EmailAuthChallenge,
+    RefreshSession,
+    RefreshToken,
+    User,
+)
+from quran_backend.modules.accounts.retention import prune_auth_sessions, prune_email_challenges
+from quran_backend.modules.accounts.tasks import (
+    prune_auth_sessions_task,
+    prune_email_challenges_task,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -145,3 +155,67 @@ def test_auth_retention_task_stops_when_batch_cannot_make_progress() -> None:
     assert prune.call_count == 1
     assert result["batches"] == 1
     assert result["has_more"] is True
+
+
+@override_settings(
+    QURAN_EMAIL_CHALLENGE_RETENTION_HOURS=24,
+    QURAN_EMAIL_CHALLENGE_PRUNE_BATCH_SIZE=1,
+)
+def test_email_challenge_retention_is_bounded_and_preserves_recent_rows() -> None:
+    now = timezone.now()
+    old_session = _session(expires_delta=timedelta(days=1))
+    recent_session = _session(expires_delta=timedelta(days=1))
+    old = EmailAuthChallenge.objects.create(
+        requester=old_session.user,
+        device=old_session.device,
+        email="old@example.com",
+        code_hash="a" * 64,
+        expires_at=now - timedelta(hours=48),
+    )
+    recent = EmailAuthChallenge.objects.create(
+        requester=recent_session.user,
+        device=recent_session.device,
+        email="recent@example.com",
+        code_hash="b" * 64,
+        expires_at=now - timedelta(hours=1),
+    )
+
+    result = prune_email_challenges(now=now)
+
+    assert result == {
+        "dry_run": False,
+        "challenges": 1,
+        "has_more": False,
+        "retention_hours": 24,
+    }
+    assert not EmailAuthChallenge.objects.filter(id=old.id).exists()
+    assert EmailAuthChallenge.objects.filter(id=recent.id).exists()
+
+
+@override_settings(QURAN_RETENTION_TASK_MAX_BATCHES=2)
+def test_email_challenge_retention_task_drains_batches() -> None:
+    results = [
+        {"dry_run": False, "challenges": 2, "has_more": True, "retention_hours": 24},
+        {"dry_run": False, "challenges": 1, "has_more": False, "retention_hours": 24},
+    ]
+    with patch(
+        "quran_backend.modules.accounts.tasks.prune_email_challenges",
+        side_effect=results,
+    ) as prune:
+        result = prune_email_challenges_task()
+
+    assert prune.call_count == 2
+    assert result == {
+        "dry_run": False,
+        "challenges": 3,
+        "batches": 2,
+        "has_more": False,
+        "retention_hours": 24,
+    }
+
+
+def test_celery_beat_schedules_email_challenge_retention() -> None:
+    schedule = settings.CELERY_BEAT_SCHEDULE["prune-email-challenges-hourly"]
+
+    assert schedule["task"] == "accounts.prune_email_challenges"
+    assert schedule["schedule"] == 3_600.0

@@ -13,6 +13,9 @@ request. Flutter stores it in Keychain/Keystore. It must never be logged, includ
 analytics, or reused between installations. A browser client should call this API through
 the same-origin Next.js BFF and must not put credentials in `localStorage`.
 
+Verified email login, the browser HttpOnly-cookie boundary and transactional guest merge are
+specified separately in [email-auth-and-guest-merge.md](email-auth-and-guest-merge.md).
+
 ```http
 POST /api/v1/auth/guest
 Content-Type: application/json

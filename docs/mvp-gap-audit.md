@@ -23,13 +23,14 @@
 | Срез | Готово | Частично | Нет | Внешний gate |
 |---|---:|---:|---:|---:|
 | 18 P0-групп | 2 | 12 | 4 | 0 |
-| 36 критериев приёмки | 9 | 13 | 12 | 2 |
+| 36 критериев приёмки | 10 | 13 | 11 | 2 |
 
 Сильная часть текущего baseline — канонический Quran dataset, публичное Quran/audio API,
-гостевая сессия, позиции/закладки, надёжная offline-синхронизация серверного состояния,
-prayer engine/profile, local-only reminder rules, feedback и production runtime. Основной
-незакрытый объём находится в зарегистрированном аккаунте/guest merge, Flutter, offline
-packages, расширенном плеере, локальном планировщике уведомлений, локализации и отсутствующих
+гостевая и verified-email сессии, transactional guest merge, позиции/закладки, надёжная
+offline-синхронизация серверного состояния, prayer engine/profile, local-only reminder rules,
+feedback и production runtime. Основной незакрытый объём находится в Flutter, расширенном
+account lifecycle, offline packages, расширенном плеере, локальном планировщике уведомлений,
+локализации и отсутствующих
 контентных/коммерческих доменах.
 
 ## Доказательная база
@@ -40,9 +41,10 @@ packages, расширенном плеере, локальном планиро
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 463 passed, 6 skipped; суммарное покрытие 84,99%.
-- Web имеет шесть Playwright cases, включая многосегментный аят 6:2, viewport matrix
-  375/768/1440 px и переходы по juz/hizb/rub/ayah.
+- Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
+- Web имеет семь Playwright cases, включая verified-email merge без credentials в
+  `localStorage`, многосегментный аят 6:2, viewport matrix 375/768/1440 px и переходы по
+  juz/hizb/rub/ayah.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
@@ -53,7 +55,7 @@ packages, расширенном плеере, локальном планиро
 
 | # | Требование P0 | Статус | Реализовано | Для полного P0 не хватает |
 |---:|---|:---:|---|---|
-| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, devices, access/refresh rotation, logout, `AuthIdentity` model | Verified login/linking, регистрация обычного пользователя, guest-to-account merge, re-auth flows |
+| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF | Identity unlink/change safeguards, self-service deletion, device/session UI и дополнительные OAuth providers |
 | 2 | RU/EN/AR и RTL | 🟡 | Многоязычные имена контента, locale constraints, арабский RTL-текст | Web зафиксирован на `lang=ru`; нет i18n routing/catalog, language switch и полного RTL UI |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
@@ -108,7 +110,7 @@ packages, расширенном плеере, локальном планиро
 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
-| Guest data не теряются после регистрации | ❌ | Нет account linking/guest merge endpoint |
+| Guest data не теряются после регистрации | ✅ | Verified-email вход транзакционно переносит позиции, закладки, reminders, профиль, feedback и устройства; merge и rollback покрыты тестами |
 | Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions, prayer profile и reminders есть; goals/playback отсутствуют |
 | Повтор operation ID не создаёт дубликат | ✅ | Idempotency/fingerprint tests присутствуют |
 | Tombstones не возвращают удалённые данные | ✅ | Bookmark/reminder tombstones и retired-ID ledgers реализованы |
@@ -170,7 +172,8 @@ packages, расширенном плеере, локальном планиро
 
 ### P0-B — account lifecycle и client foundation
 
-1. Реализовать verified identity/login, account linking и transactional guest merge.
+1. ✅ Verified email login/linking, device proof, HttpOnly web-session и transactional guest
+   merge реализованы; расширенные identity/delete/device flows остаются последующим hardening.
 2. Создать Flutter workspace: secure storage, локальная БД, API client, durable outbox,
    sync bootstrap и базовый Mushaf reader.
 3. Добавить Telegram Mini App auth validation и client shell либо оформить ADR об исключении
@@ -202,7 +205,7 @@ packages, расширенном плеере, локальном планиро
 ## Не считать закрытым
 
 - Наличие поля checksum без client installer не закрывает offline integrity.
-- Наличие `AuthIdentity` model без link/login/merge endpoints не закрывает аккаунт.
+- Verified email и guest merge не закрывают identity unlink, account deletion и device/session UI.
 - Хранение reminder rules без локального scheduler не означает работающие уведомления.
 - Наличие metrics endpoint без dashboards/alerts не означает operational monitoring.
 - Отсутствие ads/payments code не доказывает безопасность ещё не реализованного flow.

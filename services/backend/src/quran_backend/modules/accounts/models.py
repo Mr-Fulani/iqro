@@ -103,6 +103,98 @@ class AuthIdentity(BaseModel):
         ]
 
 
+class EmailAuthChallenge(BaseModel):
+    """Short-lived, device-bound proof for passwordless email authentication."""
+
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="email_auth_challenges",
+    )
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.PROTECT,
+        related_name="email_auth_challenges",
+    )
+    email = models.EmailField()
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts_remaining = models.PositiveSmallIntegerField(default=5)
+    invalidated_at = models.DateTimeField(null=True, blank=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    verification_key = models.UUIDField(null=True, blank=True)
+    result_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="completed_email_auth_challenges",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "accounts_email_auth_challenge"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(attempts_remaining__lte=10),
+                name="accounts_email_attempts_bounded",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        consumed_at__isnull=True,
+                        verification_key__isnull=True,
+                        result_user__isnull=True,
+                    )
+                    | models.Q(
+                        consumed_at__isnull=False,
+                        verification_key__isnull=False,
+                        result_user__isnull=False,
+                    )
+                ),
+                name="accounts_email_challenge_result_shape",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["device", "created_at"], name="accounts_email_device_idx"),
+            models.Index(fields=["expires_at"], name="accounts_email_expiry_idx"),
+        ]
+
+
+class GuestMergeAudit(BaseModel):
+    """Immutable evidence that one guest was transactionally merged into an account."""
+
+    source_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="guest_merge_source_audit",
+    )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="guest_merge_target_audits",
+    )
+    trigger_identity = models.ForeignKey(
+        AuthIdentity,
+        on_delete=models.PROTECT,
+        related_name="guest_merge_audits",
+    )
+    idempotency_key = models.UUIDField(unique=True)
+    moved_counts = models.JSONField(default=dict)
+    completed_at = models.DateTimeField(default=django_timezone.now)
+
+    class Meta:
+        db_table = "accounts_guest_merge_audit"
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(source_user=models.F("target_user")),
+                name="accounts_guest_merge_distinct_users",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["target_user", "completed_at"], name="accounts_merge_target_idx"),
+        ]
+
+
 class DevicePlatform(models.TextChoices):
     IOS = "ios", "iOS"
     ANDROID = "android", "Android"

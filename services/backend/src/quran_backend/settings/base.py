@@ -69,6 +69,17 @@ QURAN_REFRESH_TOKEN_TTL_SECONDS = os.getenv("QURAN_REFRESH_TOKEN_TTL_SECONDS", "
 QURAN_INSTALLATION_HASH_KEY = os.getenv("QURAN_INSTALLATION_HASH_KEY", SECRET_KEY)
 QURAN_GUEST_CREDENTIAL_HASH_KEY = os.getenv("QURAN_GUEST_CREDENTIAL_HASH_KEY", SECRET_KEY)
 QURAN_REFRESH_TOKEN_HASH_KEY = os.getenv("QURAN_REFRESH_TOKEN_HASH_KEY", SECRET_KEY)
+QURAN_EMAIL_CODE_HASH_KEY = os.getenv("QURAN_EMAIL_CODE_HASH_KEY", SECRET_KEY)
+QURAN_EMAIL_CODE_TTL_SECONDS = os.getenv("QURAN_EMAIL_CODE_TTL_SECONDS", "600")
+QURAN_EMAIL_CODE_ATTEMPTS = os.getenv("QURAN_EMAIL_CODE_ATTEMPTS", "5")
+QURAN_EMAIL_CHALLENGE_RETENTION_HOURS = os.getenv(
+    "QURAN_EMAIL_CHALLENGE_RETENTION_HOURS",
+    "24",
+)
+QURAN_EMAIL_CHALLENGE_PRUNE_BATCH_SIZE = os.getenv(
+    "QURAN_EMAIL_CHALLENGE_PRUNE_BATCH_SIZE",
+    "5000",
+)
 QURAN_PRAYER_THROTTLE_HASH_KEY = os.getenv("QURAN_PRAYER_THROTTLE_HASH_KEY", SECRET_KEY)
 QURAN_AUTH_SESSION_RETENTION_DAYS = os.getenv("QURAN_AUTH_SESSION_RETENTION_DAYS", "90")
 QURAN_AUTH_PRUNE_BATCH_SIZE = os.getenv("QURAN_AUTH_PRUNE_BATCH_SIZE", "5000")
@@ -242,6 +253,23 @@ PUBLIC_AUDIO_BASE_URL = os.getenv("PUBLIC_AUDIO_BASE_URL", PUBLIC_MEDIA_BASE_URL
 DATA_UPLOAD_MAX_MEMORY_SIZE = positive_env_int("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", 1_048_576)
 FILE_UPLOAD_MAX_MEMORY_SIZE = positive_env_int("DJANGO_FILE_UPLOAD_MAX_MEMORY_SIZE", 1_048_576)
 
+MAILERS = {
+    "default": {
+        "BACKEND": os.getenv(
+            "DJANGO_EMAIL_BACKEND",
+            "django.core.mail.backends.smtp.EmailBackend",
+        ),
+        "OPTIONS": {
+            "host": os.getenv("DJANGO_EMAIL_HOST", "localhost"),
+            "port": positive_env_int("DJANGO_EMAIL_PORT", 587),
+            "username": os.getenv("DJANGO_EMAIL_HOST_USER", ""),
+            "password": os.getenv("DJANGO_EMAIL_HOST_PASSWORD", ""),
+            "use_tls": env_bool("DJANGO_EMAIL_USE_TLS", True),
+        },
+    }
+}
+DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "Quran Platform <noreply@localhost>")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -299,6 +327,22 @@ REST_FRAMEWORK: dict[str, Any] = {
         "token_refresh_ip_burst": os.getenv(
             "QURAN_TOKEN_REFRESH_IP_BURST_RATE",
             "6000/minute",
+        ),
+        "email_start_identity": os.getenv(
+            "QURAN_EMAIL_START_IDENTITY_RATE",
+            "5/hour",
+        ),
+        "email_start_ip_burst": os.getenv(
+            "QURAN_EMAIL_START_IP_BURST_RATE",
+            "100/hour",
+        ),
+        "email_verify_challenge": os.getenv(
+            "QURAN_EMAIL_VERIFY_CHALLENGE_RATE",
+            "10/hour",
+        ),
+        "email_verify_ip_burst": os.getenv(
+            "QURAN_EMAIL_VERIFY_IP_BURST_RATE",
+            "300/hour",
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
@@ -368,6 +412,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "prune-auth-sessions-hourly": {
         "task": "accounts.prune_auth_sessions",
+        "schedule": 3_600.0,
+    },
+    "prune-email-challenges-hourly": {
+        "task": "accounts.prune_email_challenges",
         "schedule": 3_600.0,
     },
     "prune-sync-history-hourly": {

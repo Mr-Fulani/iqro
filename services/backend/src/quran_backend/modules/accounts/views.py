@@ -12,9 +12,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from quran_backend.modules.accounts.authentication import SignedAccessTokenAuthentication
+from quran_backend.modules.accounts.email_auth import (
+    EmailVerificationResult,
+    start_email_challenge,
+    verify_email_challenge,
+)
 from quran_backend.modules.accounts.exceptions import AccessTokenInvalid, AuthRateLimitExceeded
-from quran_backend.modules.accounts.models import User
+from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.accounts.serializers import (
+    CurrentSessionResponseSerializer,
+    EmailChallengeStartRequestSerializer,
+    EmailChallengeStartResponseSerializer,
+    EmailChallengeVerifyRequestSerializer,
+    EmailChallengeVerifyResponseSerializer,
     GuestBootstrapRequestSerializer,
     GuestBootstrapResponseSerializer,
     RefreshTokenRequestSerializer,
@@ -32,6 +42,8 @@ from quran_backend.modules.accounts.services import (
     rotate_refresh_token,
 )
 from quran_backend.modules.accounts.throttling import (
+    EmailStartThrottle,
+    EmailVerifyThrottle,
     GuestBootstrapThrottle,
     RefreshTokenThrottle,
 )
@@ -94,6 +106,59 @@ class RefreshTokenView(PrivateNoStoreResponseMixin, APIView):
 
 
 @extend_schema(tags=["authentication"])
+class EmailChallengeStartView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedAccessTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    throttle_classes = (EmailStartThrottle,)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise AuthRateLimitExceeded(wait)
+
+    @extend_schema(
+        request=EmailChallengeStartRequestSerializer,
+        responses={status.HTTP_202_ACCEPTED: EmailChallengeStartResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        serializer = EmailChallengeStartRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = start_email_challenge(
+            user=request.user,
+            device=request.auth.device,
+            email=serializer.validated_data["email"],
+        )
+        return Response(
+            {
+                "challenge_id": result.challenge.id,
+                "expires_in": result.expires_in,
+                "expires_at": result.challenge.expires_at,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+@extend_schema(tags=["authentication"])
+class EmailChallengeVerifyView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = ()
+    permission_classes = (AllowAny,)
+    throttle_classes = (EmailVerifyThrottle,)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise AuthRateLimitExceeded(wait)
+
+    @extend_schema(
+        request=EmailChallengeVerifyRequestSerializer,
+        responses={status.HTTP_200_OK: EmailChallengeVerifyResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        serializer = EmailChallengeVerifyRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = verify_email_challenge(**serializer.validated_data)
+        return Response(_email_verification_response(result), status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["authentication"])
 class LogoutView(PrivateNoStoreResponseMixin, APIView):
     authentication_classes = (SignedAccessTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -122,21 +187,57 @@ class LogoutAllView(PrivateNoStoreResponseMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["user"])
+class CurrentSessionView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedAccessTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(responses={status.HTTP_200_OK: CurrentSessionResponseSerializer})
+    def get(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        return Response(
+            {
+                "user": _user_summary(request.user),
+                "device": _device_summary(request.auth.device),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 def _guest_response(result: GuestBootstrapResult) -> dict[str, object]:
     response = _credentials_response(result.credentials)
-    response["user"] = {
-        "id": result.user.id,
-        "status": result.user.status,
-        "preferred_locale": result.user.preferred_locale,
-    }
-    response["device"] = {
-        "id": result.device.id,
-        "platform": result.device.platform,
-        "locale": result.device.locale,
-        "app_version": result.device.app_version,
-        "bootstrap_generation": result.device.bootstrap_generation,
-    }
+    response["user"] = _user_summary(result.user)
+    response["device"] = _device_summary(result.device)
     return response
+
+
+def _email_verification_response(result: EmailVerificationResult) -> dict[str, object]:
+    response = _credentials_response(result.credentials)
+    response["user"] = _user_summary(result.user)
+    response["device"] = _device_summary(result.device)
+    response["merged_guest"] = result.merged_guest
+    response["replayed"] = result.replayed
+    return response
+
+
+def _user_summary(user: User) -> dict[str, object]:
+    return {
+        "id": user.id,
+        "status": user.status,
+        "preferred_locale": user.preferred_locale,
+        "email": user.email,
+    }
+
+
+def _device_summary(device: Device) -> dict[str, object]:
+    return {
+        "id": device.id,
+        "platform": device.platform,
+        "locale": device.locale,
+        "app_version": device.app_version,
+        "bootstrap_generation": device.bootstrap_generation,
+    }
 
 
 def _credentials_response(credentials: IssuedCredentials) -> dict[str, object]:

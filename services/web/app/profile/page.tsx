@@ -149,8 +149,8 @@ export default function ProfilePage() {
         <span className="brand-mark sm" style={{ margin: "0 auto 16px" }}>👤</span>
         <h2 className="surface-title" style={{ marginBottom: 8 }}>Личный кабинет читателя</h2>
         <p className="kpi-desc" style={{ marginBottom: 24 }}>
-          Войдите с помощью защищенной гостевой сессии, чтобы просматривать закладки,
-          историю чтения и синхронизировать данные между устройствами.
+          Войдите по одноразовому коду из email либо продолжите как гость, чтобы просматривать
+          закладки, историю чтения и синхронизировать данные между устройствами.
         </p>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
@@ -176,7 +176,8 @@ export default function ProfilePage() {
             <p className="eyebrow">Персональный профиль</p>
             <h2 className="surface-title">Личный кабинет</h2>
             <p className="surface-subtitle">
-              ID пользователя: <code>{session?.user.id}</code> · Устройство: <code>{session?.device.id}</code>
+              {session?.user.email ? `${session.user.email} · ` : ""}ID пользователя: {" "}
+              <code>{session?.user.id}</code> · Устройство: <code>{session?.device.id}</code>
             </p>
           </div>
 
@@ -204,7 +205,9 @@ export default function ProfilePage() {
           <div className="kpi-card">
             <span className="kpi-label">Статус профиля</span>
             <span className="kpi-value">{session?.user.status === "guest" ? "Гость" : "Активен"}</span>
-            <span className="kpi-desc">Платформа: {session?.device.platform}</span>
+            <span className="kpi-desc">
+              {session?.user.email || `Платформа: ${session?.device.platform}`}
+            </span>
           </div>
 
           <div className="kpi-card">

@@ -28,6 +28,14 @@ class RefreshTokenIPBurstThrottle(_IPBurstThrottle):
     scope = "token_refresh_ip_burst"
 
 
+class EmailStartIPBurstThrottle(_IPBurstThrottle):
+    scope = "email_start_ip_burst"
+
+
+class EmailVerifyIPBurstThrottle(_IPBurstThrottle):
+    scope = "email_verify_ip_burst"
+
+
 class GuestBootstrapInstallationThrottle(AtomicFixedWindowRateThrottle):
     """Limit one installation proof without coupling unrelated CGNAT users."""
 
@@ -72,6 +80,38 @@ class RefreshTokenSessionThrottle(AtomicFixedWindowRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": identity}
 
 
+class EmailStartIdentityThrottle(AtomicFixedWindowRateThrottle):
+    scope = "email_start_identity"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        email = request.data.get("email")
+        user_id = getattr(request.user, "id", None)
+        if not isinstance(email, str) or user_id is None:
+            return None
+        identity = _keyed_cache_identity(
+            setting_name="QURAN_EMAIL_CODE_HASH_KEY",
+            namespace="email-start",
+            value=f"{user_id}\x00{email.strip().lower()}",
+        )
+        return self.cache_format % {"scope": self.scope, "ident": identity}
+
+
+class EmailVerifyChallengeThrottle(AtomicFixedWindowRateThrottle):
+    scope = "email_verify_challenge"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        challenge_id = request.data.get("challenge_id")
+        credential = request.data.get("installation_credential")
+        if not isinstance(challenge_id, str) or not isinstance(credential, str):
+            return None
+        identity = _keyed_cache_identity(
+            setting_name="QURAN_EMAIL_CODE_HASH_KEY",
+            namespace="email-verify",
+            value=f"{challenge_id}\x00{credential}",
+        )
+        return self.cache_format % {"scope": self.scope, "ident": identity}
+
+
 class _ShortCircuitThrottle(BaseThrottle):
     """Apply an IP breaker before any identity lookup that may touch the database."""
 
@@ -103,6 +143,20 @@ class RefreshTokenThrottle(_ShortCircuitThrottle):
     throttle_classes = (
         RefreshTokenIPBurstThrottle,
         RefreshTokenSessionThrottle,
+    )
+
+
+class EmailStartThrottle(_ShortCircuitThrottle):
+    throttle_classes = (
+        EmailStartIPBurstThrottle,
+        EmailStartIdentityThrottle,
+    )
+
+
+class EmailVerifyThrottle(_ShortCircuitThrottle):
+    throttle_classes = (
+        EmailVerifyIPBurstThrottle,
+        EmailVerifyChallengeThrottle,
     )
 
 

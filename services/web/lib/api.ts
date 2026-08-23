@@ -16,9 +16,6 @@ export type DevicePlatform = "web" | "ios" | "android" | "telegram";
 export type SupportedLocale = "ar" | "en" | "ru";
 
 export type GuestBootstrapRequest = {
-  installation_id: string;
-  installation_credential: string;
-  platform: DevicePlatform;
   locale: SupportedLocale;
   app_version: string;
 };
@@ -27,6 +24,7 @@ export type UserSummary = {
   id: string;
   status: "guest" | "active" | "pending_deletion" | "suspended" | "deleted";
   preferred_locale: SupportedLocale;
+  email: string | null;
 };
 
 export type DeviceSummary = {
@@ -42,9 +40,6 @@ export type AuthTokens = {
   access_token: string;
   expires_in: number;
   access_expires_at: string;
-  refresh_token: string;
-  refresh_expires_in: number;
-  refresh_expires_at: string;
 };
 
 export type GuestBootstrapResponse = AuthTokens & {
@@ -55,6 +50,17 @@ export type GuestBootstrapResponse = AuthTokens & {
 export type InstallIdentity = {
   installation_id: string;
   installation_credential: string;
+};
+
+export type EmailChallenge = {
+  challenge_id: string;
+  expires_in: number;
+  expires_at: string;
+};
+
+export type EmailVerificationResponse = GuestBootstrapResponse & {
+  merged_guest: boolean;
+  replayed: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -398,31 +404,14 @@ export function generateUuidV7(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
-export function generateInstallationCredential(): string {
-  const bytes = new Uint8Array(32);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < 32; i += 1) bytes[i] = Math.floor(Math.random() * 256);
-  }
-
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
-}
-
 // ---------------------------------------------------------------------------
 // Storage Keys
 // ---------------------------------------------------------------------------
 const STORAGE_IDENTITY = "quran_platform_identity_v1";
 const STORAGE_SESSION = "quran_platform_session_v1";
 
-export function loadStoredIdentity(): InstallIdentity {
-  if (typeof window === "undefined") {
-    return { installation_id: generateUuidV7(), installation_credential: generateInstallationCredential() };
-  }
+export function loadLegacyStoredIdentity(): InstallIdentity | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_IDENTITY);
     if (raw) {
@@ -434,39 +423,14 @@ export function loadStoredIdentity(): InstallIdentity {
   } catch {
     // Ignore storage parse errors
   }
-  const created: InstallIdentity = {
-    installation_id: generateUuidV7(),
-    installation_credential: generateInstallationCredential(),
-  };
-  try {
-    localStorage.setItem(STORAGE_IDENTITY, JSON.stringify(created));
-  } catch {
-    // Ignore storage write errors
-  }
-  return created;
-}
-
-export function loadStoredSession(): GuestBootstrapResponse | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_SESSION);
-    if (raw) {
-      return JSON.parse(raw) as GuestBootstrapResponse;
-    }
-  } catch {
-    // Ignore storage parse errors
-  }
   return null;
 }
 
-export function saveStoredSession(session: GuestBootstrapResponse | null): void {
+export function clearLegacyStoredAuth(): void {
   if (typeof window === "undefined") return;
   try {
-    if (session) {
-      localStorage.setItem(STORAGE_SESSION, JSON.stringify(session));
-    } else {
-      localStorage.removeItem(STORAGE_SESSION);
-    }
+    localStorage.removeItem(STORAGE_SESSION);
+    localStorage.removeItem(STORAGE_IDENTITY);
   } catch {
     // Ignore storage errors
   }
@@ -482,9 +446,6 @@ export class ApiClient {
 
   constructor() {
     this.base = "";
-    if (typeof window !== "undefined") {
-      this.session = loadStoredSession();
-    }
   }
 
   public setBase(url: string) {
@@ -497,7 +458,6 @@ export class ApiClient {
 
   public setSession(session: GuestBootstrapResponse | null) {
     this.session = session;
-    saveStoredSession(session);
   }
 
   public getSession(): GuestBootstrapResponse | null {
@@ -543,8 +503,8 @@ export class ApiClient {
     };
     let response = await fetch(url, fetchOptions);
 
-    // Handle 401 token refresh if refresh_token is present
-    if (response.status === 401 && this.session?.refresh_token && !path.includes("/auth/")) {
+    // Refresh is handled by the same-origin BFF; the refresh credential is HttpOnly.
+    if (response.status === 401 && this.session?.access_token && !path.includes("/auth/")) {
       const newToken = await this.performTokenRefresh();
       if (newToken) {
         headers.set("Authorization", `Bearer ${newToken}`);
@@ -552,6 +512,10 @@ export class ApiClient {
       }
     }
 
+    return this.parseResponse<T>(response);
+  }
+
+  private async parseResponse<T>(response: Response): Promise<T> {
     if (response.status === 204) {
       return {} as T;
     }
@@ -587,38 +551,34 @@ export class ApiClient {
     return payload as T;
   }
 
+  private async webAuthRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const headers = new Headers(options.headers);
+    headers.set("Content-Type", "application/json");
+    headers.set("X-Request-ID", generateUuidV7());
+    if (this.session?.access_token) {
+      headers.set("Authorization", `Bearer ${this.session.access_token}`);
+    }
+    const response = await fetch(`/api/web-auth${path}`, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+    return this.parseResponse<T>(response);
+  }
+
   private async performTokenRefresh(): Promise<string | null> {
     if (this.refreshingPromise) {
       return this.refreshingPromise;
     }
     this.refreshingPromise = (async () => {
-      if (!this.session?.refresh_token) return null;
       try {
-        const result = await fetch(`${this.base}/api/v1/auth/token/refresh`, {
+        const session = await this.webAuthRequest<GuestBootstrapResponse>("/refresh", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: this.session.refresh_token }),
         });
-        if (!result.ok) {
-          this.setSession(null);
-          return null;
-        }
-        const data = (await result.json()) as AuthTokens;
-        if (this.session) {
-          const updated: GuestBootstrapResponse = {
-            ...this.session,
-            access_token: data.access_token,
-            expires_in: data.expires_in,
-            access_expires_at: data.access_expires_at,
-            refresh_token: data.refresh_token,
-            refresh_expires_in: data.refresh_expires_in,
-            refresh_expires_at: data.refresh_expires_at,
-          };
-          this.setSession(updated);
-          return data.access_token;
-        }
-        return null;
+        this.setSession(session);
+        return session.access_token;
       } catch {
+        this.setSession(null);
         return null;
       } finally {
         this.refreshingPromise = null;
@@ -641,16 +601,24 @@ export class ApiClient {
   // -------------------------------------------------------------------------
   // Auth
   // -------------------------------------------------------------------------
-  public async bootstrapGuest(identity?: InstallIdentity, locale: SupportedLocale = "ru"): Promise<GuestBootstrapResponse> {
-    const id = identity || loadStoredIdentity();
+  public async restoreSession(): Promise<GuestBootstrapResponse | null> {
+    const token = await this.performTokenRefresh();
+    return token ? this.session : null;
+  }
+
+  public async adoptLegacyInstallation(identity: InstallIdentity): Promise<void> {
+    await this.webAuthRequest<void>("/installation", {
+      method: "POST",
+      body: JSON.stringify(identity),
+    });
+  }
+
+  public async bootstrapGuest(locale: SupportedLocale = "ru"): Promise<GuestBootstrapResponse> {
     const payload: GuestBootstrapRequest = {
-      installation_id: id.installation_id,
-      installation_credential: id.installation_credential,
-      platform: "web",
       locale,
       app_version: "1.0.0",
     };
-    const response = await this.request<GuestBootstrapResponse>("/api/v1/auth/guest", {
+    const response = await this.webAuthRequest<GuestBootstrapResponse>("/guest", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -660,10 +628,30 @@ export class ApiClient {
 
   public async logout(): Promise<void> {
     try {
-      await this.request<void>("/api/v1/auth/logout", { method: "POST" });
+      await this.webAuthRequest<void>("/logout", { method: "POST" });
     } finally {
       this.setSession(null);
     }
+  }
+
+  public async startEmailChallenge(email: string): Promise<EmailChallenge> {
+    return this.webAuthRequest<EmailChallenge>("/email/start", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  public async verifyEmailChallenge(input: {
+    challenge_id: string;
+    code: string;
+    idempotency_key: string;
+  }): Promise<EmailVerificationResponse> {
+    const session = await this.webAuthRequest<EmailVerificationResponse>("/email/verify", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    this.setSession(session);
+    return session;
   }
 
   // -------------------------------------------------------------------------

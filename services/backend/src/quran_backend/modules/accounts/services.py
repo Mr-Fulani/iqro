@@ -166,6 +166,21 @@ def bootstrap_guest(
     return GuestBootstrapResult(user=user, device=device, credentials=credentials)
 
 
+def replace_device_credentials(*, user: User, device: Device) -> IssuedCredentials:
+    """Revoke every credential for a device and issue one fresh token family."""
+
+    now = timezone.now()
+    with transaction.atomic():
+        locked_device = Device.objects.select_for_update().get(id=device.id, user=user)
+        _revoke_device_sessions(device=locked_device, revoked_at=now)
+        session = RefreshSession.objects.create(
+            user=user,
+            device=locked_device,
+            expires_at=now + timedelta(seconds=refresh_token_ttl_seconds()),
+        )
+        return _issue_credentials(session=session, now=now)
+
+
 def rotate_refresh_token(raw_token: str) -> IssuedCredentials:
     token_id, supplied_secret = _parse_refresh_token(raw_token)
     locator = (
