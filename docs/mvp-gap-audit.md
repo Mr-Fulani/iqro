@@ -42,9 +42,10 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет 12 Playwright cases, включая verified-email merge без credentials в
-  `localStorage`, bookmark revision contracts, reporter feedback lifecycle, многосегментный
-  аят 6:2, viewport matrix 375/768/1440 px и переходы по juz/hizb/rub/ayah.
+- Web имеет 14 Playwright cases, включая verified-email merge без credentials в
+  `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
+  reminder contracts, многосегментный аят 6:2, viewport matrix 375/768/1440 px и переходы по
+  juz/hizb/rub/ayah.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
@@ -66,8 +67,8 @@ account lifecycle, offline packages, расширенном плеере, лок
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones для reading/reminders | Нет package domain/manifest API, resumable installer, durable client outbox и полноценного offline web/Flutter клиента |
 | 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |
-| 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules, web fallback | Web не управляет полным prayer profile; Flutter local parity и региональный content review отсутствуют |
-| 13 | Локальные уведомления и напоминания | 🟡 | Local-only prayer/reading/review rules, revisions, retention, sync | Нет клиентского scheduler, permission/diagnostics flow и перепланирования после timezone/location changes |
+| 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI | Flutter local parity и региональный content review отсутствуют |
+| 13 | Локальные уведомления и напоминания | 🟡 | Local-only prayer/reading/review rules, revisions, retention, sync и web CRUD UI | Нет исполняющего системного scheduler, permission/diagnostics flow и перепланирования после timezone/location changes |
 | 14 | Управляемая реклама | ❌ | Только feedback context/category для жалобы на рекламу | Нет campaign/creative/placement/frequency cap/moderation/kill-switch домена |
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
@@ -100,7 +101,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
-| Method/asr/timezone/high-latitude/adjustments доступны | 🟡 | Backend profile полный; web UI показывает только часть |
+| Method/asr/timezone/high-latitude/adjustments доступны | 🟡 | Backend и web profile UI закрывают полный контракт; Flutter local parity отсутствует |
 | Результаты совпадают с golden cases | ✅ | Есть engine golden tests и pinned config/tzdb metadata |
 | Координаты не логируются и не сохраняются без consent | ✅ | Calculate request redaction тестируется; `PrayerProfile` намеренно не содержит location fields |
 | Локальные уведомления работают offline | ❌ | Правила хранятся, но клиентского scheduler нет |
@@ -159,6 +160,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Web bookmark/feedback contracts приведены к OpenAPI: bookmark PATCH/DELETE используют
   revision protocol, feedback поддерживает paginated list, UUIDv7 idempotency, reporter messages,
   close/reopen и отображение публичной переписки.
+- Web prayer-profile и reminder contracts подключены полностью: revisioned method/asr/high-latitude/
+  polar/adjustment/timezone profile и CRUD правил prayer/Quran reading/Quran review. Исполнение
+  системных уведомлений намеренно остаётся обязанностью мобильного клиента.
 
 ## Приоритетный backlog
 

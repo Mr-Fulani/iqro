@@ -295,6 +295,37 @@ export type PrayerCalculationResponse = {
   prayer_times?: PrayerTimesResult;
 };
 
+export type PrayerAdjustments = {
+  fajr: number;
+  sunrise: number;
+  dhuhr: number;
+  asr: number;
+  maghrib: number;
+  isha: number;
+};
+
+export type PrayerProfile = {
+  id: string;
+  method_config: {
+    id: string;
+    code: string;
+    catalog_version: string;
+    checksum_sha256: string;
+  };
+  method_available: boolean;
+  asr_method: "standard" | "hanafi";
+  high_latitude_rule: "middle_of_night" | "seventh_of_night" | "twilight_angle";
+  polar_resolution: "unresolved" | "aqrab_balad" | "aqrab_yaum";
+  adjustments: PrayerAdjustments;
+  timezone_mode: "device_local" | "fixed";
+  fixed_timezone: string | null;
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // ---------------------------------------------------------------------------
 // Reading, Bookmarks & Sync Types
 // ---------------------------------------------------------------------------
@@ -352,16 +383,45 @@ export type SyncPullResponse = {
   snapshot_cursor?: number;
 };
 
+export type ReminderSchedule =
+  | {
+      kind: "prayer";
+      prayer_event: "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+      prayer_offset_minutes: number;
+    }
+  | { kind: "local_time"; local_time: string };
+
+export type ReminderTimezone =
+  | { mode: "device_local" }
+  | { mode: "fixed"; name: string };
+
 export type Reminder = {
   id: string;
-  type: string;
-  title: string;
-  time_of_day: string;
-  days_of_week: number[];
-  is_active: boolean;
+  reminder_type: "prayer" | "quran_reading" | "quran_review";
+  schedule: ReminderSchedule | null;
+  review_target: {
+    start: { id: string; surah_number: number; ayah_number: number };
+    end: { id: string; surah_number: number; ayah_number: number };
+  } | null;
+  weekdays_mask: number;
+  timezone: ReminderTimezone;
+  delivery_mode: "local";
+  signal: "silent" | "vibration" | "sound";
+  is_enabled: boolean;
   revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ReminderSnapshot = {
+  mode: "full_snapshot";
+  authoritative: boolean;
+  generated_at: string;
+  count: number;
+  reminders: Reminder[];
 };
 
 export type FeedbackTicket = {
@@ -813,6 +873,27 @@ export class ApiClient {
     });
   }
 
+  public async getPrayerProfile(): Promise<PrayerProfile> {
+    return this.request<PrayerProfile>("/api/v1/me/prayer-profile");
+  }
+
+  public async savePrayerProfile(data: {
+    base_revision: number;
+    method_config_id: string;
+    method_checksum_sha256: string;
+    asr_method: "standard" | "hanafi";
+    high_latitude_rule: PrayerProfile["high_latitude_rule"];
+    polar_resolution: PrayerProfile["polar_resolution"];
+    adjustments: PrayerAdjustments;
+    timezone_mode: PrayerProfile["timezone_mode"];
+    fixed_timezone?: string;
+  }): Promise<PrayerProfile> {
+    return this.request<PrayerProfile>("/api/v1/me/prayer-profile", {
+      method: "PUT",
+      body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+    });
+  }
+
   // -------------------------------------------------------------------------
   // Reading Position, Bookmarks & Sync
   // -------------------------------------------------------------------------
@@ -933,6 +1014,65 @@ export class ApiClient {
 
   public async syncPull(limit = 20): Promise<SyncPullResponse> {
     return this.request<SyncPullResponse>(`/api/v1/sync/pull?limit=${limit}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Local reminder rules
+  // -------------------------------------------------------------------------
+  public async getReminders(): Promise<ReminderSnapshot> {
+    return this.request<ReminderSnapshot>("/api/v1/me/reminders");
+  }
+
+  public async getReminder(reminderId: string): Promise<Reminder> {
+    return this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`);
+  }
+
+  public async createReminder(data: {
+    reminder_type: Reminder["reminder_type"];
+    schedule: ReminderSchedule;
+    review_target?: { start_ayah_id: string; end_ayah_id: string };
+    weekdays_mask: number;
+    timezone: ReminderTimezone;
+    signal: Reminder["signal"];
+    is_enabled: boolean;
+  }): Promise<Reminder> {
+    return this.request<Reminder>("/api/v1/me/reminders", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        id: generateUuidV7(),
+        base_revision: 0,
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
+  }
+
+  public async updateReminder(
+    reminderId: string,
+    data: Partial<{
+      reminder_type: Reminder["reminder_type"];
+      schedule: ReminderSchedule;
+      review_target: { start_ayah_id: string; end_ayah_id: string } | null;
+      weekdays_mask: number;
+      timezone: ReminderTimezone;
+      signal: Reminder["signal"];
+      is_enabled: boolean;
+    }> & { base_revision: number },
+  ): Promise<Reminder> {
+    return this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+    });
+  }
+
+  public async deleteReminder(reminderId: string, baseRevision: number): Promise<Reminder> {
+    return this.request<Reminder>(`/api/v1/me/reminders/${reminderId}`, {
+      method: "DELETE",
+      body: JSON.stringify({
+        base_revision: baseRevision,
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
   }
 
   // -------------------------------------------------------------------------

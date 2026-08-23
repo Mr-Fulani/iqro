@@ -10,6 +10,7 @@ import {
   ReadingPosition,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
+import { ReminderManager } from "../../components/ReminderManager";
 
 const FEEDBACK_CATEGORIES = [
   ["religious_content", "Религиозное содержание"],
@@ -565,6 +566,8 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+
+      <ReminderManager />
 
       {/* Feedback & Support Section */}
       <section className="surface">

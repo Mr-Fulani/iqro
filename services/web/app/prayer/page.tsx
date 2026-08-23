@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import {
   api,
+  PrayerAdjustments,
   PrayerCalculationResponse,
   PrayerMethod,
+  PrayerProfile,
 } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 
 const PRESET_CITIES = [
   { name: "Мекка (Саудовская Аравия)", lat: "21.4225", lng: "39.8262", tz: "Asia/Riyadh" },
@@ -17,7 +20,17 @@ const PRESET_CITIES = [
   { name: "Лондон (Великобритания)", lat: "51.5074", lng: "-0.1278", tz: "Europe/London" },
 ];
 
+const ADJUSTMENT_LABELS: Array<[keyof PrayerAdjustments, string]> = [
+  ["fajr", "Фаджр"],
+  ["sunrise", "Восход"],
+  ["dhuhr", "Зухр"],
+  ["asr", "Аср"],
+  ["maghrib", "Магриб"],
+  ["isha", "Иша"],
+];
+
 export default function PrayerPage() {
+  const { isLoggedIn, loginGuest } = useAuth();
   const [methods, setMethods] = useState<PrayerMethod[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("");
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -25,6 +38,27 @@ export default function PrayerPage() {
   const [longitude, setLongitude] = useState<string>("39.8262");
   const [timezone, setTimezone] = useState<string>("Asia/Riyadh");
   const [asrMethod, setAsrMethod] = useState<"standard" | "hanafi">("standard");
+  const [highLatitudeRule, setHighLatitudeRule] = useState<
+    PrayerProfile["high_latitude_rule"]
+  >("middle_of_night");
+  const [polarResolution, setPolarResolution] = useState<PrayerProfile["polar_resolution"]>(
+    "unresolved",
+  );
+  const [adjustments, setAdjustments] = useState<PrayerAdjustments>({
+    fajr: 0,
+    sunrise: 0,
+    dhuhr: 0,
+    asr: 0,
+    maghrib: 0,
+    isha: 0,
+  });
+  const [profileTimezoneMode, setProfileTimezoneMode] = useState<
+    PrayerProfile["timezone_mode"]
+  >("device_local");
+  const [fixedTimezone, setFixedTimezone] = useState<string>("Europe/Istanbul");
+  const [profileRevision, setProfileRevision] = useState<number>(0);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState<boolean>(false);
 
   const [result, setResult] = useState<PrayerCalculationResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -45,6 +79,38 @@ export default function PrayerPage() {
         setError(api.normalizeError(err));
       });
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let active = true;
+    api
+      .getPrayerProfile()
+      .then((profile) => {
+        if (!active) return;
+        setSelectedMethodId(profile.method_config.id);
+        setAsrMethod(profile.asr_method);
+        setHighLatitudeRule(profile.high_latitude_rule);
+        setPolarResolution(profile.polar_resolution);
+        setAdjustments(profile.adjustments);
+        setProfileTimezoneMode(profile.timezone_mode);
+        if (profile.fixed_timezone) {
+          setFixedTimezone(profile.fixed_timezone);
+          setTimezone(profile.fixed_timezone);
+        }
+        setProfileRevision(profile.revision);
+        setProfileMessage(
+          profile.method_available
+            ? `Профиль загружен, ревизия ${profile.revision}.`
+            : "Сохранённый метод больше недоступен — выберите новый.",
+        );
+      })
+      .catch(() => {
+        if (active) setProfileRevision(0);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn]);
 
   const handleCitySelect = (cityIndex: number) => {
     const city = PRESET_CITIES[cityIndex];
@@ -93,12 +159,46 @@ export default function PrayerPage() {
         method_config_id: selectedMethodId,
         method_checksum_sha256: activeMethod?.checksum_sha256,
         asr_method: asrMethod,
+        high_latitude_rule: highLatitudeRule,
+        polar_resolution: polarResolution,
+        adjustments,
       });
       setResult(calc);
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    const activeMethod = methods.find((method) => method.id === selectedMethodId);
+    if (!activeMethod) return;
+    setSavingProfile(true);
+    setError(null);
+    setProfileMessage(null);
+    try {
+      if (!isLoggedIn) {
+        const guest = await loginGuest();
+        if (!guest) return;
+      }
+      const profile = await api.savePrayerProfile({
+        base_revision: profileRevision,
+        method_config_id: activeMethod.id,
+        method_checksum_sha256: activeMethod.checksum_sha256,
+        asr_method: asrMethod,
+        high_latitude_rule: highLatitudeRule,
+        polar_resolution: polarResolution,
+        adjustments,
+        timezone_mode: profileTimezoneMode,
+        ...(profileTimezoneMode === "fixed" ? { fixed_timezone: fixedTimezone } : {}),
+      });
+      setProfileRevision(profile.revision);
+      setProfileMessage(`Настройки сохранены, ревизия ${profile.revision}.`);
+    } catch (err) {
+      setError(api.normalizeError(err));
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -229,9 +329,130 @@ export default function PrayerPage() {
             </div>
           </div>
 
-          <div>
+          <details
+            open
+            style={{
+              padding: 14,
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              background: "var(--bg-subtle)",
+            }}
+          >
+            <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+              Профиль расчёта и ручные настройки
+            </summary>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+              {profileMessage && <div className="alert alert-info">{profileMessage}</div>}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="high-latitude-rule">
+                    Высокие широты
+                  </label>
+                  <select
+                    id="high-latitude-rule"
+                    value={highLatitudeRule}
+                    onChange={(event) =>
+                      setHighLatitudeRule(
+                        event.target.value as PrayerProfile["high_latitude_rule"],
+                      )
+                    }
+                  >
+                    <option value="middle_of_night">Середина ночи</option>
+                    <option value="seventh_of_night">Одна седьмая ночи</option>
+                    <option value="twilight_angle">Угол сумерек</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="polar-resolution">
+                    Полярная зона
+                  </label>
+                  <select
+                    id="polar-resolution"
+                    value={polarResolution}
+                    onChange={(event) =>
+                      setPolarResolution(
+                        event.target.value as PrayerProfile["polar_resolution"],
+                      )
+                    }
+                  >
+                    <option value="unresolved">Без подстановки</option>
+                    <option value="aqrab_balad">Ближайшая широта</option>
+                    <option value="aqrab_yaum">Ближайший день</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="profile-timezone-mode">
+                    Часовой пояс профиля
+                  </label>
+                  <select
+                    id="profile-timezone-mode"
+                    value={profileTimezoneMode}
+                    onChange={(event) =>
+                      setProfileTimezoneMode(
+                        event.target.value as PrayerProfile["timezone_mode"],
+                      )
+                    }
+                  >
+                    <option value="device_local">Часовой пояс устройства</option>
+                    <option value="fixed">Фиксированный IANA timezone</option>
+                  </select>
+                </div>
+                {profileTimezoneMode === "fixed" && (
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="profile-fixed-timezone">
+                      Фиксированный timezone
+                    </label>
+                    <input
+                      id="profile-fixed-timezone"
+                      value={fixedTimezone}
+                      onChange={(event) => setFixedTimezone(event.target.value)}
+                      placeholder="Europe/Istanbul"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="form-label" style={{ marginBottom: 8 }}>
+                  Ручные поправки, минуты (−120…120)
+                </p>
+                <div className="form-row">
+                  {ADJUSTMENT_LABELS.map(([key, label]) => (
+                    <div className="form-group" key={key}>
+                      <label className="form-label" htmlFor={`adjustment-${key}`}>
+                        {label}
+                      </label>
+                      <input
+                        id={`adjustment-${key}`}
+                        type="number"
+                        min={-120}
+                        max={120}
+                        value={adjustments[key]}
+                        onChange={(event) =>
+                          setAdjustments({
+                            ...adjustments,
+                            [key]: Number(event.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? "Рассчитываем..." : "Рассчитать расписание"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={savingProfile || !selectedMethodId}
+              onClick={() => void handleSaveProfile()}
+            >
+              {savingProfile ? "Сохранение..." : "Сохранить профиль"}
             </button>
           </div>
         </form>
