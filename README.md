@@ -38,6 +38,8 @@ Production-наблюдаемость, резервные копии PostgreSQL,
 нагрузочный smoke-тест описаны в [операционном runbook](docs/operations.md).
 Production Compose без hot reload и bind-mount исходников описан в
 [руководстве по production-запуску](docs/production.md).
+Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
+[P0/MVP gap audit](docs/mvp-gap-audit.md).
 
 ## Полный локальный стек
 
