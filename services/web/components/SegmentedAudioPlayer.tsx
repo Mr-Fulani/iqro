@@ -747,43 +747,50 @@ export function SegmentedAudioPlayer({
         </div>
           </div>
 
-          {availableAyahs.length > 0 && (
-            <div className="segmented-audio-range" aria-label="Воспроизведение диапазона аятов">
+          <div className="segmented-audio-range" aria-label="Воспроизведение диапазона аятов">
               <div className="form-group">
-                <label className="form-label" htmlFor={`range-start-${activeRequest?.track.id}`}>С аята</label>
+                <label className="form-label" htmlFor={`range-start-${activeRequest?.track.id || "empty"}`}>С аята</label>
                 <select
-                  id={`range-start-${activeRequest?.track.id}`}
+                  id={`range-start-${activeRequest?.track.id || "empty"}`}
                   aria-label="Начало диапазона аятов"
                   value={rangeStartAyah ?? ""}
+                  disabled={availableAyahs.length === 0}
                   onChange={(event) => {
                     const nextStart = Number(event.target.value);
                     setRangeStartAyah(nextStart);
                     setRangeEndAyah((current) => current === null || current < nextStart ? nextStart : current);
                   }}
                 >
+                  {availableAyahs.length === 0 && <option value="">—</option>}
                   {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor={`range-end-${activeRequest?.track.id}`}>По аят</label>
+                <label className="form-label" htmlFor={`range-end-${activeRequest?.track.id || "empty"}`}>По аят</label>
                 <select
-                  id={`range-end-${activeRequest?.track.id}`}
+                  id={`range-end-${activeRequest?.track.id || "empty"}`}
                   aria-label="Конец диапазона аятов"
                   value={rangeEndAyah ?? ""}
+                  disabled={availableAyahs.length === 0}
                   onChange={(event) => {
                     const nextEnd = Number(event.target.value);
                     setRangeEndAyah(nextEnd);
                     setRangeStartAyah((current) => current === null || current > nextEnd ? nextEnd : current);
                   }}
                 >
+                  {availableAyahs.length === 0 && <option value="">—</option>}
                   {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
                 </select>
               </div>
-              <button className="btn btn-primary btn-sm" type="button" onClick={startRange}>
+              <button
+                className="btn btn-primary btn-sm"
+                type="button"
+                onClick={startRange}
+                disabled={availableAyahs.length === 0}
+              >
                 ▶ Воспроизвести диапазон
               </button>
-            </div>
-          )}
+          </div>
 
           <p className="segmented-audio-browser-note">
             Управление Media Session доступно в поддерживаемых браузерах; воспроизведение после

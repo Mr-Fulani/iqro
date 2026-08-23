@@ -310,6 +310,12 @@ test.beforeEach(async ({ page }) => {
 test("catalog loads all 114 surahs and starts the first track on one click", async ({ page }) => {
   await page.goto("/audio");
 
+  await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toBeVisible();
+  await expect(page.getByLabel("Режим повтора")).toBeVisible();
+  await expect(page.getByLabel("Режим повтора")).toBeDisabled();
+  await expect(page.getByLabel("Скорость воспроизведения")).toBeVisible();
+  await expect(page.getByLabel("Таймер сна")).toBeVisible();
+  await expect(page.getByRole("button", { name: "▶ Воспроизвести диапазон" })).toBeDisabled();
   await expect(page.getByText("Найдено треков: 114")).toBeVisible();
   const listenButtons = page.getByRole("button", { name: "Слушать", exact: true });
   await expect(listenButtons).toHaveCount(114);

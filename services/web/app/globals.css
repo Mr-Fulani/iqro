@@ -700,6 +700,15 @@ input:focus, select:focus, textarea:focus {
   backdrop-filter: blur(8px);
 }
 
+.audio-player-section .audio-player-bar {
+  position: static;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
 .segmented-audio-player {
   display: flex;
   flex-direction: column;

@@ -25,6 +25,7 @@ export default function AudioPage() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const playerSectionRef = useRef<HTMLElement | null>(null);
 
   // Load reciters on mount
   useEffect(() => {
@@ -104,6 +105,9 @@ export default function AudioPage() {
         album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
         autoPlay: true,
       });
+      window.setTimeout(() => {
+        playerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
     } catch (reason) {
       setError(api.normalizeError(reason));
     } finally {
@@ -201,6 +205,24 @@ export default function AudioPage() {
         )}
       </section>
 
+      <section ref={playerSectionRef} className="surface audio-player-section">
+        <div className="surface-head">
+          <div>
+            <p className="eyebrow">Настройки прослушивания</p>
+            <h3 className="surface-title">Расширенный аудиоплеер</h3>
+            <p className="surface-subtitle">
+              Повторяйте аят или диапазон, меняйте скорость и учебные паузы, задавайте таймер сна.
+            </p>
+          </div>
+          {!playerRequest && <span className="status-chip">Сначала выберите суру</span>}
+        </div>
+        <SegmentedAudioPlayer
+          request={playerRequest}
+          className="audio-player-bar"
+          onPlayingChange={setIsPlaying}
+        />
+      </section>
+
       {/* Tracks List */}
       <section className="surface">
         <div className="surface-head">
@@ -277,13 +299,6 @@ export default function AudioPage() {
         )}
       </section>
 
-      {playerRequest && (
-        <SegmentedAudioPlayer
-          request={playerRequest}
-          className="audio-player-bar"
-          onPlayingChange={setIsPlaying}
-        />
-      )}
     </div>
   );
 }
