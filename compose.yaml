@@ -17,6 +17,13 @@ x-backend-service: &backend-service
       required: false
   environment: *backend-environment
 
+x-postgres-ops-environment: &postgres-ops-environment
+  PGHOST: postgres
+  PGPORT: 5432
+  PGUSER: ${DATABASE_USER:-quran}
+  PGPASSWORD: ${DATABASE_PASSWORD:-quran-local-only}
+  PGDATABASE: ${DATABASE_NAME:-quran}
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -120,6 +127,63 @@ services:
       - ./services/web:/app
       - /app/node_modules
       - /app/.next
+
+  db-backup:
+    image: postgres:17-alpine
+    profiles: ["ops"]
+    environment:
+      <<: *postgres-ops-environment
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_MIN_FREE_MB: ${BACKUP_MIN_FREE_MB:-1024}
+    entrypoint: ["/ops/backup.sh"]
+    volumes:
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups
+      - ./ops/postgres:/ops:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-backup-verify:
+    image: postgres:17-alpine
+    profiles: ["ops"]
+    environment:
+      BACKUP_FILE: ${BACKUP_FILE:-}
+    entrypoint: ["/ops/verify.sh"]
+    volumes:
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups:ro
+      - ./ops/postgres:/ops:ro
+
+  db-restore-check:
+    image: postgres:17-alpine
+    profiles: ["ops"]
+    environment:
+      <<: *postgres-ops-environment
+      BACKUP_FILE: ${BACKUP_FILE:-}
+      RESTORE_CHECK_DATABASE: ${RESTORE_CHECK_DATABASE:-quran_restore_check}
+    entrypoint: ["/ops/restore-check.sh"]
+    volumes:
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups:ro
+      - ./ops/postgres:/ops:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-restore:
+    image: postgres:17-alpine
+    profiles: ["dangerous-restore"]
+    environment:
+      <<: *postgres-ops-environment
+      BACKUP_FILE: ${BACKUP_FILE:-}
+      RESTORE_DATABASE_NAME: ${RESTORE_DATABASE_NAME:-}
+      CONFIRM_RESTORE: ${CONFIRM_RESTORE:-}
+    entrypoint: ["/ops/restore.sh"]
+    volumes:
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups:ro
+      - ./ops/postgres:/ops:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres-data:

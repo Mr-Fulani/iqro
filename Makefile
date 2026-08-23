@@ -1,7 +1,7 @@
 BACKEND_DIR := services/backend
 WEB_DIR := services/web
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run ops-backup ops-backup-verify ops-restore-check ops-load-smoke
 
 # Запуск с сохранением данных базы данных
 up:
@@ -53,3 +53,15 @@ web-build:
 
 web-run:
 	cd $(WEB_DIR) && npm start
+
+ops-backup:
+	docker compose --profile ops run --rm db-backup
+
+ops-backup-verify:
+	docker compose --profile ops run --rm db-backup-verify
+
+ops-restore-check:
+	docker compose --profile ops run --rm db-restore-check
+
+ops-load-smoke:
+	python3 ops/load/smoke.py

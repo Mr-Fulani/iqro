@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
+from django.conf import settings
+
 
 class QuranFoundationError(RuntimeError):
     """A safe, credential-free Quran.Foundation integration error."""
@@ -65,7 +67,7 @@ class QuranFoundationClient:
 
     @classmethod
     def from_environment(cls) -> QuranFoundationClient:
-        environment_name = os.getenv("QF_ENV", "prelive")
+        environment_name = settings.QURAN_QF_ENV
         environment = ENVIRONMENTS.get(environment_name)
         if environment is None:
             raise QuranFoundationError("QF_ENV must be 'prelive' or 'production'.")

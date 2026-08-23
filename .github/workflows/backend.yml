@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - "services/backend/**"
+      - "ops/**"
+      - "compose.yaml"
       - ".github/workflows/backend.yml"
   push:
     branches: [master, main]
     paths:
       - "services/backend/**"
+      - "ops/**"
+      - "compose.yaml"
       - ".github/workflows/backend.yml"
 
 permissions:
@@ -51,6 +55,13 @@ jobs:
       QURAN_TEST_DATABASE: postgresql
     steps:
       - uses: actions/checkout@v4
+      - name: Operations tooling
+        run: |
+          sh -n ops/postgres/backup.sh
+          sh -n ops/postgres/verify.sh
+          sh -n ops/postgres/restore-check.sh
+          sh -n ops/postgres/restore.sh
+          python -m unittest ops.load.test_smoke
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.28"

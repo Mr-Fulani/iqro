@@ -137,6 +137,15 @@ QURAN_QF_AUDIO_SYNC_ENABLED = env_bool("QF_AUDIO_SYNC_ENABLED", False)
 QURAN_QF_AUDIO_REFRESH_DAYS = positive_env_int("QF_AUDIO_REFRESH_DAYS", 5)
 if QURAN_QF_AUDIO_REFRESH_DAYS > 6:
     raise ImproperlyConfigured("QF_AUDIO_REFRESH_DAYS must be between 1 and 6")
+QURAN_QF_ENV = os.getenv("QF_ENV", "prelive")
+if QURAN_QF_ENV not in {"prelive", "production"}:
+    raise ImproperlyConfigured("QF_ENV must be 'prelive' or 'production'")
+QURAN_QF_AUDIO_STALE_AFTER_HOURS = positive_env_int("QF_AUDIO_STALE_AFTER_HOURS", 168)
+if QURAN_QF_AUDIO_STALE_AFTER_HOURS < QURAN_QF_AUDIO_REFRESH_DAYS * 24:
+    raise ImproperlyConfigured(
+        "QF_AUDIO_STALE_AFTER_HOURS must not be shorter than QF_AUDIO_REFRESH_DAYS"
+    )
+QURAN_OPERATIONS_TOKEN = os.getenv("QURAN_OPERATIONS_TOKEN", "")
 DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 

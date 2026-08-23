@@ -60,7 +60,7 @@ def refresh_quran_foundation_audio(
     refresh_days = int(settings.QURAN_QF_AUDIO_REFRESH_DAYS)
     freshness_cutoff = current_time - timedelta(days=refresh_days)
 
-    recitations = _latest_complete_recitations(environment)
+    recitations = latest_complete_qf_recitations(environment)
     due: list[tuple[int, RecitationEdition, QuranFoundationSyncState]] = []
     skipped_fresh = 0
     for source_id, recitation in recitations:
@@ -201,7 +201,7 @@ def _sync_resource(
         return client.sync_recitation_content(resource_id, sync_token="")
 
 
-def _latest_complete_recitations(environment: str) -> list[tuple[int, RecitationEdition]]:
+def latest_complete_qf_recitations(environment: str) -> list[tuple[int, RecitationEdition]]:
     queryset = (
         RecitationEdition.objects.filter(
             source_name="Quran.Foundation Content API",

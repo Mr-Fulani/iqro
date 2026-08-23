@@ -8,6 +8,7 @@
 
 - `services/backend` — Django API и фоновые задачи;
 - `services/web` — Next.js-клиент для Корана, Мусхафа, аудио и личного кабинета;
+- `ops` — проверяемые сценарии мониторинга, резервного копирования и load-smoke;
 - `thoughts/shared/specs` — утверждённые продуктовые и технические спецификации;
 - мобильный Flutter-клиент будет добавлен отдельным workspace-пакетом.
 
@@ -32,6 +33,9 @@ docker compose -f services/backend/compose.yaml up --build
 - readiness: `http://localhost:8000/api/v1/health/ready`;
 - OpenAPI: `http://localhost:8000/api/schema`;
 - Swagger UI: `http://localhost:8000/api/docs`.
+
+Production-наблюдаемость, резервные копии PostgreSQL, restore drill и безопасный
+нагрузочный smoke-тест описаны в [операционном runbook](docs/operations.md).
 
 ## Полный локальный стек
 
