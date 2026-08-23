@@ -227,3 +227,30 @@ def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
     assert timing_schema["oneOf"][1] == {"type": "null"}
     asset_properties = schema["components"]["schemas"]["AudioAsset"]["properties"]
     assert {"url", "content_type", "bytes", "sha256", "etag"} <= asset_properties.keys()
+
+
+def test_openapi_declares_device_inventory_and_deletion_lifecycle() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    assert set(paths["/api/v1/me/devices"]) == {"get"}
+    assert set(paths["/api/v1/me/devices/{device_id}"]) == {"delete"}
+    assert set(paths["/api/v1/me/deletion-request"]) == {"post"}
+    assert set(paths["/api/v1/me/deletion-cancel"]) == {"post"}
+    assert set(paths["/api/v1/me/devices/{device_id}"]["delete"]["responses"]) == {"204"}
+    assert set(paths["/api/v1/me/deletion-request"]["post"]["responses"]) == {"202"}
+    assert set(paths["/api/v1/me/deletion-cancel"]["post"]["responses"]) == {"200"}
+    inventory_schema = schema["components"]["schemas"]["DeviceInventory"]
+    assert {
+        "id",
+        "platform",
+        "locale",
+        "app_version",
+        "created_at",
+        "last_seen_at",
+        "active_session_count",
+        "is_current",
+    } <= set(inventory_schema["required"])

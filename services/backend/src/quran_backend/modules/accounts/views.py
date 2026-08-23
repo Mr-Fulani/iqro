@@ -11,16 +11,27 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from quran_backend.modules.accounts.authentication import SignedAccessTokenAuthentication
+from quran_backend.modules.accounts.authentication import (
+    SignedAccessTokenAuthentication,
+    SignedLifecycleTokenAuthentication,
+)
 from quran_backend.modules.accounts.email_auth import (
     EmailVerificationResult,
     start_email_challenge,
     verify_email_challenge,
 )
 from quran_backend.modules.accounts.exceptions import AccessTokenInvalid, AuthRateLimitExceeded
+from quran_backend.modules.accounts.lifecycle import (
+    cancel_account_deletion,
+    list_user_devices,
+    request_account_deletion,
+    revoke_user_device,
+)
 from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.accounts.serializers import (
+    AccountDeletionRequestSerializer,
     CurrentSessionResponseSerializer,
+    DeviceInventorySerializer,
     EmailChallengeStartRequestSerializer,
     EmailChallengeStartResponseSerializer,
     EmailChallengeVerifyRequestSerializer,
@@ -107,7 +118,7 @@ class RefreshTokenView(PrivateNoStoreResponseMixin, APIView):
 
 @extend_schema(tags=["authentication"])
 class EmailChallengeStartView(PrivateNoStoreResponseMixin, APIView):
-    authentication_classes = (SignedAccessTokenAuthentication,)
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     throttle_classes = (EmailStartThrottle,)
 
@@ -160,7 +171,7 @@ class EmailChallengeVerifyView(PrivateNoStoreResponseMixin, APIView):
 
 @extend_schema(tags=["authentication"])
 class LogoutView(PrivateNoStoreResponseMixin, APIView):
-    authentication_classes = (SignedAccessTokenAuthentication,)
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(request=None, responses={status.HTTP_204_NO_CONTENT: None})
@@ -176,7 +187,7 @@ class LogoutView(PrivateNoStoreResponseMixin, APIView):
 
 @extend_schema(tags=["authentication"])
 class LogoutAllView(PrivateNoStoreResponseMixin, APIView):
-    authentication_classes = (SignedAccessTokenAuthentication,)
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(request=None, responses={status.HTTP_204_NO_CONTENT: None})
@@ -189,7 +200,7 @@ class LogoutAllView(PrivateNoStoreResponseMixin, APIView):
 
 @extend_schema(tags=["user"])
 class CurrentSessionView(PrivateNoStoreResponseMixin, APIView):
-    authentication_classes = (SignedAccessTokenAuthentication,)
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(responses={status.HTTP_200_OK: CurrentSessionResponseSerializer})
@@ -201,6 +212,84 @@ class CurrentSessionView(PrivateNoStoreResponseMixin, APIView):
                 "user": _user_summary(request.user),
                 "device": _device_summary(request.auth.device),
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["user"])
+class DeviceListView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedAccessTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(responses={status.HTTP_200_OK: DeviceInventorySerializer(many=True)})
+    def get(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        return Response(
+            list_user_devices(user=request.user, context=request.auth),
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["user"])
+class DeviceDetailView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedAccessTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(request=None, responses={status.HTTP_204_NO_CONTENT: None})
+    def delete(self, request: Request, device_id: Any) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        revoke_user_device(user=request.user, context=request.auth, device_id=device_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["user"])
+class AccountDeletionRequestView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedAccessTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request=AccountDeletionRequestSerializer,
+        responses={status.HTTP_202_ACCEPTED: CurrentSessionResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        serializer = AccountDeletionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request_account_deletion(
+            user=request.user,
+            context=request.auth,
+            reauth_challenge_id=serializer.validated_data["reauth_challenge_id"],
+        )
+        return Response(
+            {"user": _user_summary(user), "device": _device_summary(request.auth.device)},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+@extend_schema(tags=["user"])
+class AccountDeletionCancelView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request=AccountDeletionRequestSerializer,
+        responses={status.HTTP_200_OK: CurrentSessionResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        serializer = AccountDeletionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = cancel_account_deletion(
+            user=request.user,
+            context=request.auth,
+            reauth_challenge_id=serializer.validated_data["reauth_challenge_id"],
+        )
+        return Response(
+            {"user": _user_summary(user), "device": _device_summary(request.auth.device)},
             status=status.HTTP_200_OK,
         )
 
@@ -227,6 +316,8 @@ def _user_summary(user: User) -> dict[str, object]:
         "status": user.status,
         "preferred_locale": user.preferred_locale,
         "email": user.email,
+        "deletion_requested_at": user.deletion_requested_at,
+        "deletion_scheduled_for": user.deletion_scheduled_for,
     }
 
 

@@ -34,6 +34,24 @@ class SignedAccessTokenAuthentication(BaseAuthentication):
         return self.keyword
 
 
+class SignedLifecycleTokenAuthentication(SignedAccessTokenAuthentication):
+    """Also accepts a live session while its account is in the deletion grace period."""
+
+    def authenticate(self, request: Request) -> tuple[User, AccessAuthContext] | None:
+        header = get_authorization_header(request).split()
+        if not header:
+            return None
+        if header[0].lower() != self.keyword.lower().encode("ascii"):
+            return None
+        if len(header) != 2:
+            raise AccessTokenInvalid
+        try:
+            raw_token = header[1].decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise AccessTokenInvalid from exc
+        return authenticate_access_token(raw_token, allow_pending_deletion=True)
+
+
 class SignedAccessTokenAuthenticationScheme(  # type: ignore[no-untyped-call]
     OpenApiAuthenticationExtension
 ):
@@ -47,3 +65,10 @@ class SignedAccessTokenAuthenticationScheme(  # type: ignore[no-untyped-call]
             "bearerFormat": "QAT1",
             "description": "Short-lived Quran Platform signed access token.",
         }
+
+
+class SignedLifecycleTokenAuthenticationScheme(  # type: ignore[no-untyped-call]
+    SignedAccessTokenAuthenticationScheme
+):
+    target_class = SignedLifecycleTokenAuthentication
+    name = "lifecycleBearerAuth"

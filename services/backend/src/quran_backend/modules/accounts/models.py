@@ -28,6 +28,9 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=django_timezone.now)
+    deletion_requested_at = models.DateTimeField(null=True, blank=True)
+    deletion_scheduled_for = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 
@@ -49,6 +52,29 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
             models.CheckConstraint(
                 condition=~models.Q(status=UserStatus.ACTIVE) | models.Q(email__isnull=False),
                 name="accounts_active_user_has_email",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status=UserStatus.PENDING_DELETION,
+                        deletion_requested_at__isnull=False,
+                        deletion_scheduled_for__isnull=False,
+                        deleted_at__isnull=True,
+                    )
+                    | models.Q(
+                        status=UserStatus.DELETED,
+                        deleted_at__isnull=False,
+                    )
+                    | (
+                        ~models.Q(status__in=[UserStatus.PENDING_DELETION, UserStatus.DELETED])
+                        & models.Q(
+                            deletion_requested_at__isnull=True,
+                            deletion_scheduled_for__isnull=True,
+                            deleted_at__isnull=True,
+                        )
+                    )
+                ),
+                name="accounts_user_deletion_state_shape",
             ),
         ]
         indexes = [

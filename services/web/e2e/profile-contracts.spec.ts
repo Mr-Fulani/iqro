@@ -156,7 +156,7 @@ test("bookmark edit and delete follow the backend revision contract", async ({ p
   });
   expect(captured.updatePayload?.client_updated_at).toEqual(expect.any(String));
 
-  await page.getByRole("button", { name: "Удалить" }).click();
+  await page.getByRole("button", { name: "Удалить", exact: true }).click();
   await expect(page.getByText("Обновлённая закладка")).toHaveCount(0);
   expect(captured.deleteQuery?.get("base_revision")).toBe("3");
   expect(captured.deleteQuery?.get("client_updated_at")).toBeTruthy();

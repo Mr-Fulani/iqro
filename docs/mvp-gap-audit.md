@@ -41,11 +41,12 @@ account lifecycle, offline packages, расширенном плеере, лок
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет 23 Playwright cases, включая verified-email merge без credentials в
+- Полный backend test suite: 479 passed, 7 skipped; суммарное покрытие 87,87%.
+- Web имеет 25 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
-  viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah и расширенный аудиоплеер.
+  viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,
+  device revoke и grace-period account deletion/cancel.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
@@ -56,7 +57,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 
 | # | Требование P0 | Статус | Реализовано | Для полного P0 не хватает |
 |---:|---|:---:|---|---|
-| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF, session restore и revoke-all UI | Identity unlink/change safeguards, self-service deletion, device inventory/per-session revoke UI и дополнительные OAuth providers |
+| 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF, session restore, device inventory/selective revoke, logout-all и self-service deletion с grace period | Identity unlink/change safeguards и дополнительные OAuth providers |
 | 2 | RU/EN/AR и RTL | 🟡 | Многоязычные имена контента, locale constraints, арабский RTL-текст | Web зафиксирован на `lang=ru`; нет i18n routing/catalog, language switch и полного RTL UI |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
@@ -167,9 +168,11 @@ account lifecycle, offline packages, расширенном плеере, лок
   `push` с conflict rebase/remap, постраничный incremental pull, cursor-expiry/full-resync recovery,
   сохранение pull-курсора и guest-outbox flush до email merge. Live PostgreSQL проверка выполнена
   внутри транзакции с rollback.
-- Реализованный account API закрыт web-интерфейсом: `/me` проверяет восстановленную BFF-сессию,
-  а `logout-all` доступен из кабинета только после отдельного подтверждения и отзывает все token
-  families. Device inventory, выборочный revoke и deletion остаются backend-задачами.
+- Account lifecycle закрыт backend+web вертикально: `/me` восстанавливается через HttpOnly BFF,
+  кабинет показывает устройства, выборочно отзывает чужую installation-сессию, отдельно
+  подтверждает `logout-all`, а удаление/отмена требуют нового email-кода. Pending account
+  изолирован от продуктовых API; bounded Celery-финализатор после 7-дневного grace period удаляет
+  синхронизируемые данные и анонимизирует audit shell.
 - Web-аудиоплеер использует единый segment state machine в каталоге и Мусхафе: repeat ayah/
   selection, диапазоны, учебные паузы, скорость, sleep timer, сохранение позиции при browser
   interruption и Media Session actions. Это не заявляет OS background playback.
@@ -189,8 +192,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 
 ### P0-B — account lifecycle и client foundation
 
-1. ✅ Verified email login/linking, device proof, HttpOnly web-session и transactional guest
-   merge реализованы; расширенные identity/delete/device flows остаются последующим hardening.
+1. ✅ Verified email login/linking, device proof, HttpOnly web-session, transactional guest
+   merge, inventory/selective revoke и grace-period deletion/cancel реализованы; identity
+   unlink/change и дополнительные providers остаются последующим hardening.
 2. Создать Flutter workspace: secure storage, локальная БД, API client, durable outbox,
    sync bootstrap и базовый Mushaf reader.
 3. Добавить Telegram Mini App auth validation и client shell либо оформить ADR об исключении
@@ -223,7 +227,8 @@ account lifecycle, offline packages, расширенном плеере, лок
 ## Не считать закрытым
 
 - Наличие поля checksum без client installer не закрывает offline integrity.
-- Verified email и guest merge не закрывают identity unlink, account deletion и device/session UI.
+- Verified email, guest merge и device/deletion lifecycle не закрывают безопасную смену/unlink
+  identity и дополнительные OAuth providers.
 - Хранение reminder rules без локального scheduler не означает работающие уведомления.
 - Наличие metrics endpoint без dashboards/alerts не означает operational monitoring.
 - Отсутствие ads/payments code не доказывает безопасность ещё не реализованного flow.

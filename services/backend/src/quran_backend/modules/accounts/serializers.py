@@ -48,6 +48,8 @@ class UserSummarySerializer(serializers.Serializer[dict[str, object]]):
     status = serializers.CharField()
     preferred_locale = serializers.CharField()
     email = serializers.EmailField(allow_null=True)
+    deletion_requested_at = serializers.DateTimeField(allow_null=True)
+    deletion_scheduled_for = serializers.DateTimeField(allow_null=True)
 
 
 class DeviceSummarySerializer(serializers.Serializer[dict[str, object]]):
@@ -118,3 +120,24 @@ class EmailChallengeVerifyResponseSerializer(GuestBootstrapResponseSerializer):
 class CurrentSessionResponseSerializer(serializers.Serializer[dict[str, object]]):
     user = UserSummarySerializer()
     device = DeviceSummarySerializer()
+
+
+class DeviceInventorySerializer(serializers.Serializer[dict[str, object]]):
+    id = serializers.UUIDField()
+    platform = serializers.ChoiceField(choices=DevicePlatform.choices)
+    locale = serializers.ChoiceField(choices=SUPPORTED_LOCALES)
+    app_version = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    last_seen_at = serializers.DateTimeField()
+    last_session_used_at = serializers.DateTimeField(allow_null=True)
+    active_session_count = serializers.IntegerField(min_value=0)
+    is_current = serializers.BooleanField()
+
+
+class AccountDeletionRequestSerializer(serializers.Serializer[dict[str, object]]):
+    reauth_challenge_id = serializers.UUIDField()
+
+    def validate_reauth_challenge_id(self, value: UUID) -> UUID:
+        if value.int == 0:
+            raise serializers.ValidationError("A non-zero UUID is required.", code="invalid")
+        return value

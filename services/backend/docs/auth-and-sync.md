@@ -70,6 +70,44 @@ maintenance remains bounded without leaving a permanent backlog after a traffic 
 Used tokens in an otherwise active family are never pruned early because they are required
 for replay detection.
 
+## Device inventory and account deletion
+
+Registered users can inspect and revoke installation-bound sessions without exposing
+installation digests or refresh-token identifiers:
+
+```text
+GET    /api/v1/me/devices
+DELETE /api/v1/me/devices/{device_id}
+POST   /api/v1/me/deletion-request
+POST   /api/v1/me/deletion-cancel
+```
+
+The device list is scoped to the authenticated user and returns platform, locale, app version,
+creation/last-seen timestamps, active-family count and an `is_current` marker. Revoking another
+device atomically marks the installation revoked and invalidates all of its refresh families.
+The current installation cannot be revoked through the device endpoint; the client must use the
+normal `logout` action so the local HttpOnly credential is cleared as part of the same flow.
+
+Deletion request and cancellation both require a newly consumed email challenge for the same
+user, device and verified primary email. The proof is valid for 10 minutes by default
+(`QURAN_ACCOUNT_REAUTH_MAX_AGE_SECONDS`). A cancellation proof must have been issued after the
+deletion request, so the earlier code cannot be reused.
+
+A deletion request starts a configurable seven-day grace period
+(`QURAN_ACCOUNT_DELETION_GRACE_DAYS`) and moves the account to `pending_deletion`. Ordinary Quran,
+sync, prayer, reminder and feedback APIs then reject its access tokens. Token refresh, `/me`,
+logout and the email challenge flow remain available only to support recovery. After a fresh
+email verification, `deletion-cancel` returns the account to `active` before the deadline.
+
+Celery Beat runs `accounts.finalize_due_deletions` hourly. Each invocation processes at most
+`QURAN_ACCOUNT_DELETION_BATCH_SIZE` accounts. Finalization removes devices, credentials,
+consents, reading state, bookmarks, sync history, prayer profile and reminder rules; it scrubs
+email identities and leaves an inactive anonymized user shell for immutable merge/editorial audit
+references. Feedback retained under its separate category policy loses contact email and direct
+message/actor links; its reporter points only to that anonymized shell while immutable message
+and audit evidence is preserved. The task is idempotent and never touches accounts before their
+grace deadline.
+
 ## Reading position and bookmarks
 
 All personal endpoints require authentication and return `Cache-Control: private,

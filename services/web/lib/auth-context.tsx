@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import {
+  ACCOUNT_LIFECYCLE_NOTICE_KEY,
   api,
   clearLegacyStoredAuth,
   EmailChallenge,
@@ -24,6 +25,8 @@ type AuthContextType = {
   ) => Promise<EmailVerificationResponse | null>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<boolean>;
+  requestAccountDeletion: (challengeId: string) => Promise<boolean>;
+  cancelAccountDeletion: (challengeId: string) => Promise<boolean>;
   isLoggedIn: boolean;
 };
 
@@ -170,6 +173,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const requestAccountDeletion = useCallback(async (challengeId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const next = await api.requestAccountDeletion(challengeId);
+      sessionStorage.setItem(
+        ACCOUNT_LIFECYCLE_NOTICE_KEY,
+        "Удаление аккаунта запланировано. До указанной даты его можно отменить.",
+      );
+      setSession(next);
+      return true;
+    } catch (err) {
+      setError(api.normalizeError(err));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const cancelAccountDeletion = useCallback(async (challengeId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const next = await api.cancelAccountDeletion(challengeId);
+      sessionStorage.setItem(ACCOUNT_LIFECYCLE_NOTICE_KEY, "Удаление аккаунта отменено.");
+      setSession(next);
+      return true;
+    } catch (err) {
+      setError(api.normalizeError(err));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -181,6 +219,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyEmailChallenge,
         logout,
         logoutAll,
+        requestAccountDeletion,
+        cancelAccountDeletion,
         isLoggedIn: Boolean(session?.access_token),
       }}
     >

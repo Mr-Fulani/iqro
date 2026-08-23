@@ -10,6 +10,8 @@ const guestSession = {
     status: "guest",
     preferred_locale: "ru",
     email: null,
+    deletion_requested_at: null,
+    deletion_scheduled_for: null,
   },
   device: {
     id: "00000000-0000-7000-8000-000000000201",
@@ -33,6 +35,41 @@ const activeSession = {
   replayed: false,
 };
 
+const pendingDeletionSession = {
+  ...activeSession,
+  user: {
+    ...activeSession.user,
+    status: "pending_deletion",
+    deletion_requested_at: "2026-08-23T18:00:00Z",
+    deletion_scheduled_for: "2026-08-30T18:00:00Z",
+  },
+};
+
+const deviceInventory = [
+  {
+    id: activeSession.device.id,
+    platform: "web",
+    locale: "ru",
+    app_version: "1.0.0",
+    created_at: "2026-08-20T12:00:00Z",
+    last_seen_at: "2026-08-23T18:00:00Z",
+    last_session_used_at: "2026-08-23T18:00:00Z",
+    active_session_count: 1,
+    is_current: true,
+  },
+  {
+    id: "00000000-0000-7000-8000-000000000202",
+    platform: "ios",
+    locale: "en",
+    app_version: "2.1.0",
+    created_at: "2026-08-21T12:00:00Z",
+    last_seen_at: "2026-08-22T16:00:00Z",
+    last_session_used_at: "2026-08-22T16:00:00Z",
+    active_session_count: 1,
+    is_current: false,
+  },
+];
+
 async function installAuthMocks(page: Page) {
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
   await page.route("**/api/web-auth/guest", (route) => route.fulfill({ json: guestSession }));
@@ -53,6 +90,8 @@ async function installAuthMocks(page: Page) {
     const path = new URL(route.request().url()).pathname;
     if (path.includes("reading-position")) {
       await route.fulfill({ status: 404, json: { detail: "Not found" } });
+    } else if (path.endsWith("/me/devices")) {
+      await route.fulfill({ json: deviceInventory });
     } else if (path.endsWith("/bookmarks")) {
       await route.fulfill({ json: { next: null, previous: null, results: [] } });
     } else if (path.endsWith("/feedback/tickets")) {
@@ -192,6 +231,80 @@ test("logout all sessions requires confirmation and clears the web session", asy
 
   await expect(page.getByRole("heading", { name: "Личный кабинет читателя" })).toBeVisible();
   expect(logoutAllCalls).toBe(1);
+});
+
+test("account cabinet lists devices and revokes another device after confirmation", async ({
+  page,
+}) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: activeSession }));
+  let revokeCalls = 0;
+  await page.route(`**/api/v1/me/devices/${deviceInventory[1].id}`, (route) => {
+    revokeCalls += 1;
+    return route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/profile");
+  await expect(page.getByRole("heading", { name: "Устройства и сессии" })).toBeVisible();
+  await expect(page.getByText("Web-браузер")).toBeVisible();
+  await expect(page.getByText("iPhone / iPad")).toBeVisible();
+  await expect(page.getByText("Текущее", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Завершить сессии" }).click();
+  expect(revokeCalls).toBe(0);
+  await page.getByRole("button", { name: "Подтвердить отключение" }).click();
+
+  await expect(page.getByText("Сессии выбранного устройства завершены.")).toBeVisible();
+  await expect(page.getByText("iPhone / iPad")).toHaveCount(0);
+  expect(revokeCalls).toBe(1);
+});
+
+test("account deletion uses fresh email proof, grace period, and cancellable recovery", async ({
+  page,
+}) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: activeSession }));
+  let verifyCalls = 0;
+  await page.unroute("**/api/web-auth/email/verify");
+  await page.route("**/api/web-auth/email/verify", (route) => {
+    verifyCalls += 1;
+    return route.fulfill({
+      json: verifyCalls === 1 ? activeSession : pendingDeletionSession,
+    });
+  });
+  await page.route("**/api/v1/me/deletion-request", (route) =>
+    route.fulfill({
+      status: 202,
+      json: { user: pendingDeletionSession.user, device: activeSession.device },
+    }),
+  );
+  await page.route("**/api/v1/me/deletion-cancel", (route) =>
+    route.fulfill({
+      json: { user: activeSession.user, device: activeSession.device },
+    }),
+  );
+
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "Удалить аккаунт" }).click();
+  await expect(page.getByText("Запланировать удаление аккаунта?")).toBeVisible();
+  await page.getByRole("button", { name: /Получить код на reader@example.com/ }).click();
+  await page.getByLabel("Код из письма").fill("123456");
+  await page.getByRole("button", { name: "Подтвердить удаление" }).click();
+
+  await expect(page.getByRole("heading", { name: "Удаление аккаунта запланировано" })).toBeVisible();
+  await expect(page.getByText(/30 авг. 2026/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ваши закладки" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Отменить удаление" }).click();
+  await page.getByRole("button", { name: /Получить код на reader@example.com/ }).click();
+  await page.getByLabel("Код из письма").fill("654321");
+  await page.getByRole("button", { name: "Восстановить аккаунт" }).click();
+
+  await expect(page.getByRole("heading", { name: "Устройства и сессии" })).toBeVisible();
+  await expect(page.getByText("Удаление аккаунта отменено.")).toBeVisible();
+  expect(verifyCalls).toBe(2);
 });
 
 test("email challenge reconciles a restored guest with its installation", async ({ page }) => {

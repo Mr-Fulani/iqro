@@ -61,7 +61,7 @@ Consumed, invalidated or long-expired challenges are retained for 24 hours by de
 hourly in bounded batches by `accounts.prune_email_challenges`. Production must run exactly one
 Celery Beat scheduler.
 
-Remaining lifecycle work outside this slice: identity unlink/change safeguards, self-service
-account deletion, device inventory/per-session revoke UI and optional Google/Apple/Telegram
-providers. The web cabinet already exposes the implemented global `logout-all` operation behind
-an explicit confirmation step.
+Device inventory, selective revoke and grace-period account deletion/cancellation are documented
+in [auth-and-sync.md](auth-and-sync.md) and exposed in the web cabinet. Remaining identity work is
+safe unlink/change plus optional Google/Apple/Telegram providers. The cabinet also keeps global
+`logout-all` behind an explicit confirmation step.

@@ -82,6 +82,12 @@ QURAN_EMAIL_CHALLENGE_PRUNE_BATCH_SIZE = os.getenv(
 )
 QURAN_PRAYER_THROTTLE_HASH_KEY = os.getenv("QURAN_PRAYER_THROTTLE_HASH_KEY", SECRET_KEY)
 QURAN_AUTH_SESSION_RETENTION_DAYS = os.getenv("QURAN_AUTH_SESSION_RETENTION_DAYS", "90")
+QURAN_ACCOUNT_DELETION_GRACE_DAYS = os.getenv("QURAN_ACCOUNT_DELETION_GRACE_DAYS", "7")
+QURAN_ACCOUNT_REAUTH_MAX_AGE_SECONDS = os.getenv(
+    "QURAN_ACCOUNT_REAUTH_MAX_AGE_SECONDS",
+    "600",
+)
+QURAN_ACCOUNT_DELETION_BATCH_SIZE = os.getenv("QURAN_ACCOUNT_DELETION_BATCH_SIZE", "100")
 QURAN_AUTH_PRUNE_BATCH_SIZE = os.getenv("QURAN_AUTH_PRUNE_BATCH_SIZE", "5000")
 QURAN_AUTH_PRUNE_TOKEN_BATCH_SIZE = os.getenv("QURAN_AUTH_PRUNE_TOKEN_BATCH_SIZE", "50000")
 QURAN_RETENTION_TASK_MAX_BATCHES = os.getenv("QURAN_RETENTION_TASK_MAX_BATCHES", "10")
@@ -416,6 +422,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "prune-email-challenges-hourly": {
         "task": "accounts.prune_email_challenges",
+        "schedule": 3_600.0,
+    },
+    "finalize-account-deletions-hourly": {
+        "task": "accounts.finalize_due_deletions",
         "schedule": 3_600.0,
     },
     "prune-sync-history-hourly": {

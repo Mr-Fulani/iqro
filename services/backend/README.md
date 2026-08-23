@@ -34,6 +34,9 @@ offline-sync описан в [docs/auth-and-sync.md](docs/auth-and-sync.md). А�
 Passwordless-вход по подтверждённому email, HttpOnly browser-session и транзакционное
 объединение гостевых данных описаны в
 [docs/email-auth-and-guest-merge.md](docs/email-auth-and-guest-merge.md).
+Управление устройствами, выборочный отзыв сессий и удаление аккаунта с повторной
+email-проверкой и 7-дневным периодом отмены описаны в
+[docs/auth-and-sync.md](docs/auth-and-sync.md#device-inventory-and-account-deletion).
 
 MVP обратной связи с пользовательскими тикетами, безопасным reopen, SLA религиозного
 контента и операторским workflow описан в [docs/feedback.md](docs/feedback.md). Вложения

@@ -21,7 +21,16 @@ class UserAdmin(DjangoUserAdmin):  # type: ignore[type-arg]
     list_display = ("id", "email", "status", "preferred_locale", "is_staff", "created_at")
     list_filter = ("status", "preferred_locale", "is_staff", "is_active")
     search_fields = ("=id", "email")
-    readonly_fields = ("id", "created_at", "updated_at", "date_joined", "last_login")
+    readonly_fields = (
+        "id",
+        "created_at",
+        "updated_at",
+        "date_joined",
+        "last_login",
+        "deletion_requested_at",
+        "deletion_scheduled_for",
+        "deleted_at",
+    )
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
         ("Profile", {"fields": ("status", "preferred_locale", "timezone")}),
@@ -29,7 +38,20 @@ class UserAdmin(DjangoUserAdmin):  # type: ignore[type-arg]
             "Permissions",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
         ),
-        ("Dates", {"fields": ("date_joined", "last_login", "created_at", "updated_at")}),
+        (
+            "Dates",
+            {
+                "fields": (
+                    "date_joined",
+                    "last_login",
+                    "deletion_requested_at",
+                    "deletion_scheduled_for",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
     )
     add_fieldsets = (
         (

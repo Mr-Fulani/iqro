@@ -6,6 +6,7 @@ from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
+from quran_backend.modules.accounts.lifecycle import finalize_due_account_deletions
 from quran_backend.modules.accounts.retention import prune_auth_sessions, prune_email_challenges
 
 
@@ -65,6 +66,13 @@ def prune_email_challenges_task() -> dict[str, Any]:
         "has_more": has_more,
         "retention_hours": retention_hours,
     }
+
+
+@shared_task(name="accounts.finalize_due_deletions")  # type: ignore[untyped-decorator]
+def finalize_due_account_deletions_task() -> dict[str, Any]:
+    """Finalize one bounded batch of accounts whose deletion grace period ended."""
+
+    return dict(finalize_due_account_deletions())
 
 
 def _positive_setting(name: str, default: int) -> int:

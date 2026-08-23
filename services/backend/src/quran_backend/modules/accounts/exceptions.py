@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rest_framework import status
-from rest_framework.exceptions import APIException, AuthenticationFailed, Throttled
+from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound, Throttled
 
 
 class AccessTokenInvalid(AuthenticationFailed):
@@ -62,3 +62,26 @@ class AccountLinkUnavailable(APIException):
     status_code = status.HTTP_403_FORBIDDEN
     default_detail = "Account linking is unavailable for this session."
     default_code = "account_link_unavailable"
+
+
+class DeviceNotFound(NotFound):
+    default_detail = "Device was not found."
+    default_code = "device_not_found"
+
+
+class CurrentDeviceRevokeConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "Use logout to end the current device session."
+    default_code = "current_device_revoke_conflict"
+
+
+class AccountLifecycleUnavailable(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "The account lifecycle action is unavailable."
+    default_code = "account_lifecycle_unavailable"
+
+
+class AccountReauthenticationRequired(APIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "A recent email verification is required."
+    default_code = "account_reauthentication_required"

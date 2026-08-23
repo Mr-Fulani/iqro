@@ -23,6 +23,8 @@ export type RequestState<T = unknown> = {
   error?: string;
 };
 
+export const ACCOUNT_LIFECYCLE_NOTICE_KEY = "quran_platform_account_lifecycle_notice_v1";
+
 // ---------------------------------------------------------------------------
 // Authentication Types
 // ---------------------------------------------------------------------------
@@ -39,6 +41,8 @@ export type UserSummary = {
   status: "guest" | "active" | "pending_deletion" | "suspended" | "deleted";
   preferred_locale: SupportedLocale;
   email: string | null;
+  deletion_requested_at: string | null;
+  deletion_scheduled_for: string | null;
 };
 
 export type DeviceSummary = {
@@ -47,6 +51,23 @@ export type DeviceSummary = {
   locale: SupportedLocale;
   app_version: string;
   bootstrap_generation: number;
+};
+
+export type DeviceInventory = {
+  id: string;
+  platform: DevicePlatform;
+  locale: SupportedLocale;
+  app_version: string;
+  created_at: string;
+  last_seen_at: string;
+  last_session_used_at: string | null;
+  active_session_count: number;
+  is_current: boolean;
+};
+
+export type CurrentSessionSummary = {
+  user: UserSummary;
+  device: DeviceSummary;
 };
 
 export type AuthTokens = {
@@ -599,6 +620,10 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   installation_identity_missing: "Сессия устройства потеряна. Запросите новый код.",
   account_link_unavailable: "Этот вход нельзя завершить в текущей сессии.",
   identity_already_linked: "Этот email уже привязан к другому аккаунту.",
+  account_reauthentication_required: "Нужен новый код из email для этого действия.",
+  account_lifecycle_unavailable: "Это действие с аккаунтом сейчас недоступно.",
+  current_device_revoke_conflict: "Для текущего устройства используйте обычный выход.",
+  device_not_found: "Устройство уже отключено или недоступно.",
   sync_cursor_expired: "История синхронизации устарела. Выполняется полная сверка данных.",
 };
 
@@ -869,6 +894,38 @@ export class ApiClient {
   public async logoutAll(): Promise<void> {
     await this.webAuthRequest<void>("/logout-all", { method: "POST" });
     this.setSession(null);
+  }
+
+  public async getDevices(): Promise<DeviceInventory[]> {
+    return this.request<DeviceInventory[]>("/api/v1/me/devices");
+  }
+
+  public async revokeDevice(deviceId: string): Promise<void> {
+    await this.request<void>(`/api/v1/me/devices/${deviceId}`, { method: "DELETE" });
+  }
+
+  public async requestAccountDeletion(challengeId: string): Promise<GuestBootstrapResponse> {
+    const current = this.session;
+    if (!current) throw new Error("Активная сессия не найдена.");
+    const summary = await this.request<CurrentSessionSummary>("/api/v1/me/deletion-request", {
+      method: "POST",
+      body: JSON.stringify({ reauth_challenge_id: challengeId }),
+    });
+    const next = { ...current, ...summary };
+    this.setSession(next);
+    return next;
+  }
+
+  public async cancelAccountDeletion(challengeId: string): Promise<GuestBootstrapResponse> {
+    const current = this.session;
+    if (!current) throw new Error("Активная сессия не найдена.");
+    const summary = await this.request<CurrentSessionSummary>("/api/v1/me/deletion-cancel", {
+      method: "POST",
+      body: JSON.stringify({ reauth_challenge_id: challengeId }),
+    });
+    const next = { ...current, ...summary };
+    this.setSession(next);
+    return next;
   }
 
   public async startEmailChallenge(email: string): Promise<EmailChallenge> {

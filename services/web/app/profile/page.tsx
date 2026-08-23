@@ -11,6 +11,7 @@ import {
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { ReminderManager } from "../../components/ReminderManager";
+import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
 import { SYNC_STATE_EVENT } from "../../lib/sync-state";
 
 const FEEDBACK_CATEGORIES = [
@@ -85,12 +86,12 @@ export default function ProfilePage() {
 
   // Load user data on mount / login
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && session?.user.status !== "pending_deletion") {
       void loadReadingData();
       void loadBookmarksData();
       void loadTicketsData();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, session?.user.status]);
 
   useEffect(() => {
     if (!session?.user.id) {
@@ -324,6 +325,10 @@ export default function ProfilePage() {
     );
   }
 
+  if (session?.user.status === "pending_deletion") {
+    return <AccountSecurityPanel />;
+  }
+
   const isGuest = session?.user.status === "guest";
 
   return (
@@ -450,6 +455,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </section>
+
+      <AccountSecurityPanel />
 
       {/* Bookmarks Section */}
       <section className="surface">

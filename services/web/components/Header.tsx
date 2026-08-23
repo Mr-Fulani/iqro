@@ -8,6 +8,7 @@ export function Header() {
   const pathname = usePathname();
   const { session, logout, isLoading } = useAuth();
   const isActiveAccount = session?.user.status === "active";
+  const isPendingDeletion = session?.user.status === "pending_deletion";
 
   const navItems = [
     { href: "/", label: "Главная", icon: "🏠" },
@@ -48,10 +49,10 @@ export function Header() {
       <div className="header-actions">
         <div className={`status-chip ${isActiveAccount ? "ok" : "muted"}`}>
           <span className="status-dot"></span>
-          {isActiveAccount ? "Аккаунт" : "Гостевой режим"}
+          {isPendingDeletion ? "Удаление запланировано" : isActiveAccount ? "Аккаунт" : "Гостевой режим"}
         </div>
 
-        {isActiveAccount ? (
+        {isActiveAccount || isPendingDeletion ? (
           <button
             onClick={() => void logout()}
             className="btn btn-secondary btn-sm"

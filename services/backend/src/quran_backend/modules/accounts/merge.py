@@ -107,7 +107,8 @@ def merge_guest_into_account(
     source.status = UserStatus.DELETED
     source.is_active = False
     source.email = None
-    source.save(update_fields=["status", "is_active", "email", "updated_at"])
+    source.deleted_at = timezone.now()
+    source.save(update_fields=["status", "is_active", "email", "deleted_at", "updated_at"])
     GuestMergeAudit.objects.create(
         source_user=source,
         target_user=target,

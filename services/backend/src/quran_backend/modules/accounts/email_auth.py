@@ -76,9 +76,15 @@ def start_email_challenge(*, user: User, device: Device, email: str) -> EmailCha
         locked_device = Device.objects.select_for_update().get(id=device.id)
         if (
             not locked_user.is_active
-            or locked_user.status not in (UserStatus.GUEST, UserStatus.ACTIVE)
+            or locked_user.status
+            not in (UserStatus.GUEST, UserStatus.ACTIVE, UserStatus.PENDING_DELETION)
             or locked_device.user_id != locked_user.id
             or locked_device.revoked_at is not None
+        ):
+            raise AccountLinkUnavailable
+        if (
+            locked_user.status == UserStatus.PENDING_DELETION
+            and normalized_email != locked_user.email
         ):
             raise AccountLinkUnavailable
         EmailAuthChallenge.objects.filter(
@@ -187,6 +193,7 @@ def _complete_email_challenge(
     if requester.id != device.user_id or requester.status not in (
         UserStatus.GUEST,
         UserStatus.ACTIVE,
+        UserStatus.PENDING_DELETION,
     ):
         raise AccountLinkUnavailable
 
@@ -196,6 +203,8 @@ def _complete_email_challenge(
         .filter(provider=IdentityProvider.EMAIL, provider_subject=challenge.email)
         .first()
     )
+    if identity is None and requester.status == UserStatus.PENDING_DELETION:
+        raise AccountLinkUnavailable
     if identity is None:
         legacy_owner = (
             User.objects.select_for_update().filter(email__iexact=challenge.email).first()
@@ -230,6 +239,8 @@ def _complete_email_challenge(
             requester.save(update_fields=["email", "status", "updated_at"])
             target = requester
     elif requester.status == UserStatus.GUEST:
+        if target.status == UserStatus.PENDING_DELETION:
+            raise AccountLinkUnavailable
         merge_guest_into_account(
             source_user=requester,
             target_user=target,
@@ -241,7 +252,11 @@ def _complete_email_challenge(
     else:
         raise IdentityAlreadyLinked
 
-    if target.status != UserStatus.ACTIVE or not target.is_active or device.user_id != target.id:
+    if (
+        target.status not in (UserStatus.ACTIVE, UserStatus.PENDING_DELETION)
+        or not target.is_active
+        or device.user_id != target.id
+    ):
         raise AccountLinkUnavailable
     credentials = replace_device_credentials(user=target, device=device)
     challenge.consumed_at = now
@@ -273,7 +288,11 @@ def _replay_consumed_challenge(
         raise EmailChallengeInvalid
     user = User.objects.select_for_update().get(id=challenge.result_user_id)
     device = Device.objects.select_for_update().get(id=challenge.device_id)
-    if user.status != UserStatus.ACTIVE or not user.is_active or device.user_id != user.id:
+    if (
+        user.status not in (UserStatus.ACTIVE, UserStatus.PENDING_DELETION)
+        or not user.is_active
+        or device.user_id != user.id
+    ):
         raise AccountLinkUnavailable
     credentials = replace_device_credentials(user=user, device=device)
     return EmailVerificationResult(

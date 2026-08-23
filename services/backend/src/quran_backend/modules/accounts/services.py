@@ -33,7 +33,10 @@ REFRESH_TOKEN_PREFIX = "qrt1"  # noqa: S105 - public format marker, not a creden
 ACCESS_TOKEN_SALT = "quran-platform.accounts.access.v1"  # noqa: S105 - signing namespace
 DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 DEFAULT_REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60
-ACTIVE_USER_STATUSES = frozenset({UserStatus.GUEST, UserStatus.ACTIVE})
+ACCESS_USER_STATUSES = frozenset({UserStatus.GUEST, UserStatus.ACTIVE})
+REFRESH_USER_STATUSES = frozenset(
+    {UserStatus.GUEST, UserStatus.ACTIVE, UserStatus.PENDING_DELETION}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,7 +267,11 @@ def refresh_token_rate_limit_identity(raw_token: str) -> UUID | None:
     return _coerce_uuid(locator["session_id"])
 
 
-def authenticate_access_token(raw_token: str) -> tuple[User, AccessAuthContext]:
+def authenticate_access_token(
+    raw_token: str,
+    *,
+    allow_pending_deletion: bool = False,
+) -> tuple[User, AccessAuthContext]:
     claims = decode_access_token(raw_token)
     now = timezone.now()
     try:
@@ -279,7 +286,15 @@ def authenticate_access_token(raw_token: str) -> tuple[User, AccessAuthContext]:
         or device.id != claims.device_id
         or session.device_id != device.id
         or session.user_id != user.id
-        or not _session_context_is_active(user=user, device=device, session=session, now=now)
+        or not _session_context_is_active(
+            user=user,
+            device=device,
+            session=session,
+            now=now,
+            allowed_statuses=(
+                REFRESH_USER_STATUSES if allow_pending_deletion else ACCESS_USER_STATUSES
+            ),
+        )
     ):
         raise AccessTokenInvalid
     return user, AccessAuthContext(device=device, session=session)
@@ -485,7 +500,13 @@ def _refresh_context_is_active(
     now: datetime,
 ) -> bool:
     return (
-        _session_context_is_active(user=user, device=device, session=session, now=now)
+        _session_context_is_active(
+            user=user,
+            device=device,
+            session=session,
+            now=now,
+            allowed_statuses=REFRESH_USER_STATUSES,
+        )
         and token.revoked_at is None
         and token.expires_at > now
     )
@@ -497,10 +518,11 @@ def _session_context_is_active(
     device: Device,
     session: RefreshSession,
     now: datetime,
+    allowed_statuses: frozenset[str],
 ) -> bool:
     return (
         user.is_active
-        and user.status in ACTIVE_USER_STATUSES
+        and user.status in allowed_statuses
         and device.revoked_at is None
         and device.user_id == user.id
         and session.user_id == user.id
