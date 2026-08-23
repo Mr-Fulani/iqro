@@ -410,6 +410,16 @@ export function generateUuidV7(): string {
 const STORAGE_IDENTITY = "quran_platform_identity_v1";
 const STORAGE_SESSION = "quran_platform_session_v1";
 
+const API_ERROR_MESSAGES: Record<string, string> = {
+  email_challenge_invalid: "Код неверен или сессия изменилась. Запросите новый код.",
+  email_challenge_expired: "Срок действия кода истёк. Запросите новый код.",
+  email_delivery_failed: "Не удалось отправить код. Попробуйте ещё раз позже.",
+  auth_rate_limited: "Слишком много попыток. Повторите позже.",
+  installation_identity_missing: "Сессия устройства потеряна. Запросите новый код.",
+  account_link_unavailable: "Этот вход нельзя завершить в текущей сессии.",
+  identity_already_linked: "Этот email уже привязан к другому аккаунту.",
+};
+
 export function loadLegacyStoredIdentity(): InstallIdentity | null {
   if (typeof window === "undefined") return null;
   try {
@@ -534,7 +544,10 @@ export class ApiClient {
       let message = `HTTP ${response.status}`;
       if (payload && typeof payload === "object") {
         const p = payload as Record<string, unknown>;
-        if (p.detail) message = String(p.detail);
+        const localizedMessage =
+          typeof p.code === "string" ? API_ERROR_MESSAGES[p.code] : undefined;
+        if (localizedMessage) message = localizedMessage;
+        else if (p.detail) message = String(p.detail);
         else if (p.non_field_errors && Array.isArray(p.non_field_errors)) {
           message = p.non_field_errors.join(", ");
         } else {

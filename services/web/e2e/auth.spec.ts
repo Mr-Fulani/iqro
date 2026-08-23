@@ -99,3 +99,59 @@ test("guest session keeps verified email login visible in the header", async ({ 
   await expect(emailLogin).toHaveAttribute("href", "/login");
   await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
 });
+
+test("email challenge reconciles a restored guest with its installation", async ({ page }) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: guestSession }));
+
+  const authOrder: string[] = [];
+  await page.unroute("**/api/web-auth/guest");
+  await page.route("**/api/web-auth/guest", (route) => {
+    authOrder.push("guest");
+    return route.fulfill({ json: guestSession });
+  });
+  await page.unroute("**/api/web-auth/email/start");
+  await page.route("**/api/web-auth/email/start", (route) => {
+    authOrder.push("email-start");
+    return route.fulfill({
+      status: 202,
+      json: {
+        challenge_id: "00000000-0000-7000-8000-000000000301",
+        expires_in: 600,
+        expires_at: "2026-08-23T18:10:00Z",
+      },
+    });
+  });
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("reader@example.com");
+  await page.getByRole("button", { name: "Получить код" }).click();
+
+  await expect(page.getByText(/Код отправлен на reader@example.com/)).toBeVisible();
+  expect(authOrder).toEqual(["guest", "email-start"]);
+});
+
+test("invalid email challenge shows an actionable localized error", async ({ page }) => {
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/email/verify");
+  await page.route("**/api/web-auth/email/verify", (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        code: "email_challenge_invalid",
+        detail: "Email verification could not be completed.",
+      },
+    }),
+  );
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("reader@example.com");
+  await page.getByRole("button", { name: "Получить код" }).click();
+  await page.getByLabel("Код из письма").fill("123456");
+  await page.getByRole("button", { name: "Подтвердить и войти" }).click();
+
+  await expect(
+    page.getByText("Код неверен или сессия изменилась. Запросите новый код."),
+  ).toBeVisible();
+});

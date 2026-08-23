@@ -39,8 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let active = true;
     void (async () => {
+      const restored = await api.restoreSession();
       const legacyIdentity = loadLegacyStoredIdentity();
-      if (legacyIdentity) {
+      if (restored) {
+        // A valid HttpOnly session is authoritative. Do not replace its
+        // installation cookies with a stale localStorage identity.
+        clearLegacyStoredAuth();
+      } else if (legacyIdentity) {
         try {
           await api.adoptLegacyInstallation(legacyIdentity);
           clearLegacyStoredAuth();
@@ -50,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         clearLegacyStoredAuth();
       }
-      const restored = await api.restoreSession();
       if (active) {
         setSession(restored);
         setIsLoading(false);
@@ -83,8 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       try {
         let currentSession = api.getSession();
-        if (!currentSession) {
-          currentSession = await loginGuest();
+        if (!currentSession || currentSession.user.status === "guest") {
+          // Re-bootstrap guests from the HttpOnly installation identity before
+          // binding a challenge. This keeps the access token and installation
+          // credential on the same device even after a legacy-cookie migration.
+          currentSession = await api.bootstrapGuest("ru");
+          setSession(currentSession);
         }
         if (!currentSession) return null;
         return await api.startEmailChallenge(email);
@@ -95,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [loginGuest],
+    [],
   );
 
   const verifyEmailChallenge = useCallback(

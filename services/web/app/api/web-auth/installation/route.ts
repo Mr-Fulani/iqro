@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  clearRefreshCookie,
   setInstallationCookies,
   validInstallationIdentity,
 } from "../../../../lib/server-auth";
@@ -19,12 +20,14 @@ export async function POST(request: NextRequest) {
       { status: 400, headers: { "Cache-Control": "private, no-store" } },
     );
   }
-  return setInstallationCookies(
-    new NextResponse(null, {
-      status: 204,
-      headers: { "Cache-Control": "private, no-store" },
-    }),
-    input,
+  return clearRefreshCookie(
+    setInstallationCookies(
+      new NextResponse(null, {
+        status: 204,
+        headers: { "Cache-Control": "private, no-store" },
+      }),
+      input,
+    ),
   );
 }
 
