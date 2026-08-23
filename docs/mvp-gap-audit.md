@@ -42,9 +42,9 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 475 passed, 6 skipped; суммарное покрытие 84,92%.
-- Web имеет семь Playwright cases, включая verified-email merge без credentials в
-  `localStorage`, многосегментный аят 6:2, viewport matrix 375/768/1440 px и переходы по
-  juz/hizb/rub/ayah.
+- Web имеет 12 Playwright cases, включая verified-email merge без credentials в
+  `localStorage`, bookmark revision contracts, reporter feedback lifecycle, многосегментный
+  аят 6:2, viewport matrix 375/768/1440 px и переходы по juz/hizb/rub/ayah.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live inventory development-БД во время этого аудита повторно не читался: Docker Desktop
@@ -70,7 +70,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | 13 | Локальные уведомления и напоминания | 🟡 | Local-only prayer/reading/review rules, revisions, retention, sync | Нет клиентского scheduler, permission/diagnostics flow и перепланирования после timezone/location changes |
 | 14 | Управляемая реклама | ❌ | Только feedback context/category для жалобы на рекламу | Нет campaign/creative/placement/frequency cap/moderation/kill-switch домена |
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
-| 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
+| 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
 | 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, production Compose, local backup/verify/restore drill, load-smoke | Нет capacity/soak proof, централизованных dashboard/alerts, backend/container security gate и offsite backup; monitoring и bucket отложены |
 
@@ -121,7 +121,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | Гость/пользователь создаёт ticket и безопасный attachment | 🟡 | Ticket работает для гостевой сессии; attachment model/upload отсутствует |
-| Контекст контента автоматически связан | 🟡 | Immutable context schema и валидация есть; web-форма не передаёт полный route/content context |
+| Контекст контента автоматически связан | 🟡 | Web передаёт route/app/platform context; Quran/audio/prayer coordinates пока не прикладываются автоматически |
 | Религиозная ошибка получает ускоренный SLA | ✅ | Category routing, priority и SLA deadline покрыты tests |
 | Operator reply, user notification, immutable history | 🟡 | Reply/history/audit есть; пользовательская notification delivery отсутствует |
 | Ticket не меняет published content напрямую | ✅ | Feedback не имеет mutation path к Quran publication |
@@ -156,6 +156,9 @@ account lifecycle, offline packages, расширенном плеере, лок
   но не координаты дома, рассчитанные времена молитв и не запускает device/push scheduler.
 - Ссылка на этот аудит добавлена в корневой README, чтобы старый unchecked checklist больше
   не использовался как источник фактической готовности.
+- Web bookmark/feedback contracts приведены к OpenAPI: bookmark PATCH/DELETE используют
+  revision protocol, feedback поддерживает paginated list, UUIDv7 idempotency, reporter messages,
+  close/reopen и отображение публичной переписки.
 
 ## Приоритетный backlog
 

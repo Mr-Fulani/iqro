@@ -302,8 +302,11 @@ export type ReadingPosition = {
   id?: string;
   edition_code: string;
   page_number: number;
-  surah_number?: number | null;
-  ayah_number?: number | null;
+  ayah: {
+    id: string;
+    surah_number: number;
+    ayah_number: number;
+  } | null;
   intra_page_anchor?: {
     line_number?: number;
     x_ratio?: number;
@@ -319,8 +322,11 @@ export type Bookmark = {
   id: string;
   edition_code: string;
   page_number: number | null;
-  surah_number?: number | null;
-  ayah_number?: number | null;
+  ayah: {
+    id: string;
+    surah_number: number;
+    ayah_number: number;
+  } | null;
   label: string;
   color_key: string;
   note?: string;
@@ -360,19 +366,61 @@ export type Reminder = {
 
 export type FeedbackTicket = {
   public_id: string;
-  category: "quran_content" | "audio_timing" | "prayer_calculation" | "general" | string;
-  status: "open" | "in_review" | "resolved" | "closed";
+  category: string;
+  status:
+    | "new"
+    | "triaged"
+    | "in_progress"
+    | "waiting_for_user"
+    | "resolved"
+    | "rejected"
+    | "duplicate"
+    | "closed";
   subject: string;
+  priority: "normal" | "high" | "critical";
+  locale: SupportedLocale;
+  channel: DevicePlatform;
+  sla_response_due_at: string | null;
+  first_response_at: string | null;
   created_at: string;
   updated_at: string;
-  messages_count: number;
 };
 
 export type FeedbackMessage = {
   id: string;
-  author_type: "user" | "support" | "system";
-  content: string;
+  client_message_id: string;
+  author_type: "reporter" | "operator" | "system";
+  body: string;
   created_at: string;
+};
+
+export type FeedbackTicketDetail = FeedbackTicket & {
+  client_request_id: string;
+  contact_email: string | null;
+  team: string;
+  resolved_at: string | null;
+  closed_at: string | null;
+  reopened_at: string | null;
+  reopen_count: number;
+  context: {
+    edition_code: string;
+    content_version: string;
+    surah_number: number | null;
+    ayah_number: number | null;
+    page_number: number | null;
+    reciter_id: string;
+    recitation_id: string;
+    audio_track_id: string;
+    playback_ms: number | null;
+    ad_campaign_id: string;
+    ad_creative_id: string;
+    route: string;
+    app_version: string;
+    app_build: string;
+    client_platform: string;
+    os_version: string;
+  };
+  messages: FeedbackMessage[];
 };
 
 // ---------------------------------------------------------------------------
@@ -819,6 +867,10 @@ export class ApiClient {
     return this.request<PaginatedResponse<Bookmark>>(`/api/v1/me/bookmarks?${params.toString()}`);
   }
 
+  public async getBookmark(bookmarkId: string): Promise<Bookmark> {
+    return this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}`);
+  }
+
   public async createBookmark(data: {
     edition_code: string;
     page_number?: number;
@@ -850,14 +902,32 @@ export class ApiClient {
     });
   }
 
-  public async deleteBookmark(bookmarkId: string, baseRevision = 1): Promise<void> {
-    const now = new Date().toISOString();
-    return this.request<void>(`/api/v1/me/bookmarks/${bookmarkId}`, {
-      method: "DELETE",
+  public async updateBookmark(
+    bookmarkId: string,
+    data: {
+      label?: string;
+      color_key?: string;
+      note?: string;
+      base_revision: number;
+    },
+  ): Promise<Bookmark> {
+    return this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}`, {
+      method: "PATCH",
       body: JSON.stringify({
-        base_revision: baseRevision,
-        client_updated_at: now,
+        ...data,
+        client_updated_at: new Date().toISOString(),
       }),
+    });
+  }
+
+  public async deleteBookmark(bookmarkId: string, baseRevision = 1): Promise<Bookmark> {
+    const now = new Date().toISOString();
+    const params = new URLSearchParams({
+      base_revision: String(baseRevision),
+      client_updated_at: now,
+    });
+    return this.request<Bookmark>(`/api/v1/me/bookmarks/${bookmarkId}?${params}`, {
+      method: "DELETE",
     });
   }
 
@@ -868,29 +938,71 @@ export class ApiClient {
   // -------------------------------------------------------------------------
   // Feedback
   // -------------------------------------------------------------------------
-  public async getFeedbackTickets(): Promise<FeedbackTicket[]> {
-    return this.request<FeedbackTicket[]>("/api/v1/feedback/tickets");
+  public async getFeedbackTickets(cursor?: string): Promise<PaginatedResponse<FeedbackTicket>> {
+    const params = new URLSearchParams({ page_size: "25" });
+    if (cursor) params.set("cursor", cursor);
+    return this.request<PaginatedResponse<FeedbackTicket>>(
+      `/api/v1/feedback/tickets?${params}`,
+    );
   }
 
   public async createFeedbackTicket(payload: {
     category: string;
     subject: string;
     message: string;
-  }): Promise<FeedbackTicket> {
-    return this.request<FeedbackTicket>("/api/v1/feedback/tickets", {
+    context?: {
+      route?: string;
+      app_version?: string;
+      client_platform?: DevicePlatform;
+    };
+  }): Promise<FeedbackTicketDetail> {
+    return this.request<FeedbackTicketDetail>("/api/v1/feedback/tickets", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        client_request_id: generateUuidV7(),
+        client_message_id: generateUuidV7(),
+        locale: "ru",
+        context: {
+          route: payload.context?.route || "/profile",
+          app_version: payload.context?.app_version || "1.0.0",
+          client_platform: payload.context?.client_platform || "web",
+        },
+      }),
     });
   }
 
-  public async getFeedbackTicket(publicId: string): Promise<FeedbackTicket & { messages: FeedbackMessage[] }> {
-    return this.request<FeedbackTicket & { messages: FeedbackMessage[] }>(`/api/v1/feedback/tickets/${publicId}`);
+  public async getFeedbackTicket(publicId: string): Promise<FeedbackTicketDetail> {
+    return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}`);
   }
 
-  public async sendFeedbackMessage(publicId: string, message: string): Promise<FeedbackMessage> {
-    return this.request<FeedbackMessage>(`/api/v1/feedback/tickets/${publicId}/messages`, {
+  public async sendFeedbackMessage(
+    publicId: string,
+    message: string,
+  ): Promise<FeedbackTicketDetail> {
+    return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ content: message }),
+      body: JSON.stringify({ client_message_id: generateUuidV7(), body: message }),
+    });
+  }
+
+  public async closeFeedbackTicket(
+    publicId: string,
+    reason = "Закрыто пользователем",
+  ): Promise<FeedbackTicketDetail> {
+    return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/close`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  public async reopenFeedbackTicket(
+    publicId: string,
+    reason = "Повторно открыто пользователем",
+  ): Promise<FeedbackTicketDetail> {
+    return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/reopen`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
     });
   }
 }

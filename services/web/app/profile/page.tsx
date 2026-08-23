@@ -6,9 +6,36 @@ import {
   api,
   Bookmark,
   FeedbackTicket,
+  FeedbackTicketDetail,
   ReadingPosition,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
+
+const FEEDBACK_CATEGORIES = [
+  ["religious_content", "Религиозное содержание"],
+  ["page_layout", "Страница Мусхафа или область аята"],
+  ["audio", "Аудио, таймкод или чтец"],
+  ["advertisement", "Жалоба на рекламу"],
+  ["technical", "Техническая проблема"],
+  ["account_sync", "Аккаунт или синхронизация"],
+  ["donation_link", "Ссылка на пожертвование"],
+  ["accessibility_localization", "Доступность или локализация"],
+  ["general", "Общий вопрос или предложение"],
+  ["other", "Другое"],
+] as const;
+
+const FEEDBACK_STATUS_LABELS: Record<string, string> = {
+  new: "Новое",
+  triaged: "Распределено",
+  in_progress: "В работе",
+  waiting_for_user: "Ожидает ответа",
+  resolved: "Решено",
+  rejected: "Отклонено",
+  duplicate: "Дубликат",
+  closed: "Закрыто",
+};
+
+const FEEDBACK_CATEGORY_LABELS = Object.fromEntries(FEEDBACK_CATEGORIES);
 
 export default function ProfilePage() {
   const { session, isLoggedIn, loginGuest, logout, isLoading: authLoading } = useAuth();
@@ -26,13 +53,23 @@ export default function ProfilePage() {
   const [newBookmarkLabel, setNewBookmarkLabel] = useState<string>("Любимый аят");
   const [newBookmarkColor, setNewBookmarkColor] = useState<string>("emerald");
   const [newBookmarkNote, setNewBookmarkNote] = useState<string>("");
+  const [bookmarkDraft, setBookmarkDraft] = useState<{
+    id: string;
+    label: string;
+    color_key: string;
+    note: string;
+    revision: number;
+  } | null>(null);
 
   // New Feedback form state
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
-  const [feedbackCategory, setFeedbackCategory] = useState<string>("quran_content");
+  const [feedbackCategory, setFeedbackCategory] = useState<string>("religious_content");
   const [feedbackSubject, setFeedbackSubject] = useState<string>("");
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [sendingFeedback, setSendingFeedback] = useState<boolean>(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackTicketDetail | null>(null);
+  const [feedbackReply, setFeedbackReply] = useState<string>("");
+  const [feedbackActionLoading, setFeedbackActionLoading] = useState<boolean>(false);
 
   // Load user data on mount / login
   useEffect(() => {
@@ -68,7 +105,7 @@ export default function ProfilePage() {
   const loadTicketsData = async () => {
     try {
       const tickets = await api.getFeedbackTickets();
-      setFeedbackTickets(tickets || []);
+      setFeedbackTickets(tickets.results || []);
     } catch {
       // Feedback might be empty
     }
@@ -105,6 +142,28 @@ export default function ProfilePage() {
     }
   };
 
+  const handleUpdateBookmark = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookmarkDraft) return;
+    setError(null);
+    try {
+      const updated = await api.updateBookmark(bookmarkDraft.id, {
+        label: bookmarkDraft.label,
+        color_key: bookmarkDraft.color_key,
+        note: bookmarkDraft.note,
+        base_revision: bookmarkDraft.revision,
+      });
+      setBookmarks((previous) =>
+        previous.map((bookmark) => (bookmark.id === updated.id ? updated : bookmark)),
+      );
+      setBookmarkDraft(null);
+      setSuccessMsg("Закладка обновлена.");
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(api.normalizeError(err));
+    }
+  };
+
   const handleSyncPull = async () => {
     setLoadingSync(true);
     setError(null);
@@ -126,7 +185,7 @@ export default function ProfilePage() {
     if (!feedbackSubject || !feedbackMessage) return;
     setSendingFeedback(true);
     try {
-      await api.createFeedbackTicket({
+      const created = await api.createFeedbackTicket({
         category: feedbackCategory,
         subject: feedbackSubject,
         message: feedbackMessage,
@@ -135,12 +194,67 @@ export default function ProfilePage() {
       setShowFeedbackModal(false);
       setFeedbackSubject("");
       setFeedbackMessage("");
+      setSelectedFeedback(created);
       await loadTicketsData();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
       setSendingFeedback(false);
+    }
+  };
+
+  const openFeedbackTicket = async (publicId: string) => {
+    setFeedbackActionLoading(true);
+    setError(null);
+    try {
+      setSelectedFeedback(await api.getFeedbackTicket(publicId));
+      setFeedbackReply("");
+    } catch (err) {
+      setError(api.normalizeError(err));
+    } finally {
+      setFeedbackActionLoading(false);
+    }
+  };
+
+  const handleFeedbackReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFeedback || !feedbackReply.trim()) return;
+    setFeedbackActionLoading(true);
+    setError(null);
+    try {
+      const updated = await api.sendFeedbackMessage(selectedFeedback.public_id, feedbackReply);
+      setSelectedFeedback(updated);
+      setFeedbackReply("");
+      setFeedbackTickets((previous) =>
+        previous.map((ticket) => (ticket.public_id === updated.public_id ? updated : ticket)),
+      );
+    } catch (err) {
+      setError(api.normalizeError(err));
+    } finally {
+      setFeedbackActionLoading(false);
+    }
+  };
+
+  const transitionFeedbackTicket = async (action: "close" | "reopen") => {
+    if (!selectedFeedback) return;
+    setFeedbackActionLoading(true);
+    setError(null);
+    try {
+      const updated =
+        action === "close"
+          ? await api.closeFeedbackTicket(selectedFeedback.public_id)
+          : await api.reopenFeedbackTicket(selectedFeedback.public_id);
+      setSelectedFeedback(updated);
+      setFeedbackTickets((previous) =>
+        previous.map((ticket) => (ticket.public_id === updated.public_id ? updated : ticket)),
+      );
+      setSuccessMsg(action === "close" ? "Обращение закрыто." : "Обращение открыто повторно.");
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(api.normalizeError(err));
+    } finally {
+      setFeedbackActionLoading(false);
     }
   };
 
@@ -237,7 +351,9 @@ export default function ProfilePage() {
               {reading ? `Стр. ${reading.page_number}` : "Не сохранено"}
             </span>
             <span className="kpi-desc">
-              {reading?.surah_number ? `Сура ${reading.surah_number}:${reading.ayah_number || 1}` : "Начните чтение"}
+              {reading?.ayah
+                ? `Сура ${reading.ayah.surah_number}:${reading.ayah.ayah_number}`
+                : "Начните чтение"}
             </span>
           </div>
 
@@ -332,28 +448,114 @@ export default function ProfilePage() {
         ) : bookmarks.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {bookmarks.map((bm) => (
-              <div key={bm.id} className="track-row">
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span className="ayah-badge" style={{ background: "var(--accent-gold-subtle)", color: "var(--accent-gold)" }}>
-                    🔖
-                  </span>
-                  <div>
-                    <strong>{bm.label}</strong>
-                    <p className="kpi-desc">
-                      {bm.page_number ? `Страница ${bm.page_number}` : ""}
-                      {bm.surah_number ? ` · Сура ${bm.surah_number}:${bm.ayah_number || 1}` : ""}
-                      {bm.note ? ` · «${bm.note}»` : ""}
-                    </p>
-                  </div>
-                </div>
+              <div key={bm.id} className="track-row" style={{ alignItems: "stretch" }}>
+                {bookmarkDraft?.id === bm.id ? (
+                  <form
+                    onSubmit={(event) => void handleUpdateBookmark(event)}
+                    style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}
+                  >
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label" htmlFor={`bookmark-label-${bm.id}`}>
+                          Название
+                        </label>
+                        <input
+                          id={`bookmark-label-${bm.id}`}
+                          value={bookmarkDraft.label}
+                          maxLength={120}
+                          onChange={(event) =>
+                            setBookmarkDraft({ ...bookmarkDraft, label: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label" htmlFor={`bookmark-color-${bm.id}`}>
+                          Цвет
+                        </label>
+                        <select
+                          id={`bookmark-color-${bm.id}`}
+                          value={bookmarkDraft.color_key}
+                          onChange={(event) =>
+                            setBookmarkDraft({ ...bookmarkDraft, color_key: event.target.value })
+                          }
+                        >
+                          <option value="emerald">Изумрудный</option>
+                          <option value="gold">Золотой</option>
+                          <option value="sapphire">Сапфировый</option>
+                          <option value="ruby">Рубиновый</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor={`bookmark-note-${bm.id}`}>
+                        Заметка
+                      </label>
+                      <textarea
+                        id={`bookmark-note-${bm.id}`}
+                        value={bookmarkDraft.note}
+                        maxLength={2000}
+                        rows={2}
+                        onChange={(event) =>
+                          setBookmarkDraft({ ...bookmarkDraft, note: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn btn-primary btn-sm" type="submit">
+                        Сохранить
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        type="button"
+                        onClick={() => setBookmarkDraft(null)}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span className="ayah-badge" style={{ background: "var(--accent-gold-subtle)", color: "var(--accent-gold)" }}>
+                        🔖
+                      </span>
+                      <div>
+                        <strong>{bm.label}</strong>
+                        <p className="kpi-desc">
+                          {bm.page_number ? `Страница ${bm.page_number}` : ""}
+                          {bm.ayah
+                            ? ` · Сура ${bm.ayah.surah_number}:${bm.ayah.ayah_number}`
+                            : ""}
+                          {bm.note ? ` · «${bm.note}»` : ""}
+                        </p>
+                      </div>
+                    </div>
 
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => void handleDeleteBookmark(bm.id, bm.revision)}
-                  title="Удалить закладку"
-                >
-                  Удалить
-                </button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() =>
+                          setBookmarkDraft({
+                            id: bm.id,
+                            label: bm.label,
+                            color_key: bm.color_key,
+                            note: bm.note || "",
+                            revision: bm.revision,
+                          })
+                        }
+                      >
+                        Изменить
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => void handleDeleteBookmark(bm.id, bm.revision)}
+                        title="Удалить закладку"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -397,21 +599,26 @@ export default function ProfilePage() {
           >
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Категория обращения</label>
+                <label className="form-label" htmlFor="feedback-category">
+                  Категория обращения
+                </label>
                 <select
+                  id="feedback-category"
                   value={feedbackCategory}
                   onChange={(e) => setFeedbackCategory(e.target.value)}
                 >
-                  <option value="quran_content">Текст Корана и Мусхаф</option>
-                  <option value="audio_timing">Таймкоды аудиозаписи</option>
-                  <option value="prayer_calculation">Расчет времени намаза</option>
-                  <option value="general">Общий вопрос или предложение</option>
+                  {FEEDBACK_CATEGORIES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Тема</label>
+                <label className="form-label" htmlFor="feedback-subject">Тема</label>
                 <input
+                  id="feedback-subject"
                   type="text"
                   value={feedbackSubject}
                   onChange={(e) => setFeedbackSubject(e.target.value)}
@@ -422,8 +629,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Сообщение</label>
+              <label className="form-label" htmlFor="feedback-message">Сообщение</label>
               <textarea
+                id="feedback-message"
                 value={feedbackMessage}
                 onChange={(e) => setFeedbackMessage(e.target.value)}
                 rows={3}
@@ -458,18 +666,132 @@ export default function ProfilePage() {
                 <div>
                   <strong>{t.subject}</strong>
                   <p className="kpi-desc">
-                    Номер: <code>{t.public_id}</code> · Категория: {t.category} · Сообщений: {t.messages_count}
+                    Номер: <code>{t.public_id}</code> · Категория:{" "}
+                    {FEEDBACK_CATEGORY_LABELS[t.category] || t.category}
                   </p>
                 </div>
-                <span className={`status-chip ${t.status === "resolved" ? "ok" : ""}`}>
-                  {t.status === "open" ? "Открыто" : t.status === "in_review" ? "На рассмотрении" : t.status}
-                </span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span className={`status-chip ${t.status === "resolved" ? "ok" : ""}`}>
+                    {FEEDBACK_STATUS_LABELS[t.status] || t.status}
+                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    disabled={feedbackActionLoading}
+                    onClick={() => void openFeedbackTicket(t.public_id)}
+                  >
+                    Открыть
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="kpi-desc" style={{ padding: 12 }}>
             Активных обращений нет.
+          </div>
+        )}
+
+        {selectedFeedback && (
+          <div
+            style={{
+              marginTop: 18,
+              padding: 16,
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div className="surface-head" style={{ marginBottom: 0 }}>
+              <div>
+                <p className="eyebrow">Обращение {selectedFeedback.public_id}</p>
+                <h4 className="surface-title">{selectedFeedback.subject}</h4>
+                <p className="surface-subtitle">
+                  {FEEDBACK_CATEGORY_LABELS[selectedFeedback.category] || selectedFeedback.category}
+                  {selectedFeedback.team ? ` · Команда: ${selectedFeedback.team}` : ""}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span
+                  className={`status-chip ${selectedFeedback.status === "resolved" ? "ok" : ""}`}
+                >
+                  {FEEDBACK_STATUS_LABELS[selectedFeedback.status] || selectedFeedback.status}
+                </span>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  onClick={() => setSelectedFeedback(null)}
+                >
+                  Скрыть
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {selectedFeedback.messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`alert ${message.author_type === "operator" ? "alert-info" : ""}`}
+                >
+                  <strong>
+                    {message.author_type === "operator"
+                      ? "Поддержка"
+                      : message.author_type === "system"
+                        ? "Система"
+                        : "Вы"}
+                  </strong>
+                  <p style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{message.body}</p>
+                </div>
+              ))}
+            </div>
+
+            {!(["rejected", "duplicate"] as string[]).includes(selectedFeedback.status) && (
+              <form
+                onSubmit={(event) => void handleFeedbackReply(event)}
+                style={{ display: "flex", flexDirection: "column", gap: 8 }}
+              >
+                <label className="form-label" htmlFor="feedback-reply">
+                  Добавить сообщение
+                </label>
+                <textarea
+                  id="feedback-reply"
+                  rows={3}
+                  maxLength={4000}
+                  value={feedbackReply}
+                  onChange={(event) => setFeedbackReply(event.target.value)}
+                  placeholder="Ваш ответ редакции или поддержке"
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={feedbackActionLoading || !feedbackReply.trim()}
+                  >
+                    Отправить сообщение
+                  </button>
+                  {selectedFeedback.status === "closed" || selectedFeedback.status === "resolved" ? (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      type="button"
+                      disabled={feedbackActionLoading}
+                      onClick={() => void transitionFeedbackTicket("reopen")}
+                    >
+                      Открыть повторно
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-danger btn-sm"
+                      type="button"
+                      disabled={feedbackActionLoading}
+                      onClick={() => void transitionFeedbackTicket("close")}
+                    >
+                      Закрыть обращение
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
           </div>
         )}
       </section>
