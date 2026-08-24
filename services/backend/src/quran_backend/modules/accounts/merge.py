@@ -146,7 +146,7 @@ def _merge_consents(*, source: User, target: User, counts: dict[str, int]) -> No
 
 def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) -> None:
     positions = list(
-        ReadingPosition.objects.select_for_update()
+        ReadingPosition.objects.select_for_update(of=("self",))
         .filter(user=source)
         .select_related("edition", "page__edition_version", "ayah__surah__edition_version")
         .order_by("id")

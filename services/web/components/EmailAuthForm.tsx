@@ -45,6 +45,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!challengeId || !verificationKey) return;
+    setSuccess(null);
     const result = await verifyEmailChallenge(challengeId, code, verificationKey);
     if (!result) return;
     setSuccess(
