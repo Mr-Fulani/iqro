@@ -18,8 +18,9 @@
   отдельного сервиса.
 - Flutter iOS/Android, web и Telegram Mini App используют один версионированный API и одну
   модель пользователя, но имеют отдельные platform adapters и разные offline-возможности.
-- API, web и Celery workers не хранят пользовательское состояние на локальном диске и могут
-  запускаться в нескольких репликах.
+- API и Celery workers не хранят runtime-состояние на локальном диске и могут запускаться
+  в нескольких репликах. Web не хранит пользовательские данные локально, но до второй
+  реплики его Next.js cache должен быть вынесен в общий handler.
 - PostgreSQL является источником истины для транзакционных данных; Redis и CDN можно очистить
   и восстановить без потери канонического состояния.
 - Публичный контент и media публикуются immutable-версиями. Аудиобайты, страницы Мусхафа,
@@ -204,8 +205,14 @@ API не должен предполагать, что запрос пришёл
 
 ### Workers
 
-- Worker'ы stateless, idempotent и масштабируются отдельно по queue depth/oldest message age.
-- Scheduler/Beat существует в одном экземпляре либо использует распределённый lease.
+- Worker'ы не зависят от локального диска, используют late acknowledgement/reject on lost и
+  масштабируются отдельно по queue depth/oldest message age. Новая задача обязана быть
+  идемпотентной либо иметь явный deduplication/outbox contract.
+- Beat использует in-memory schedule без локального `celerybeat-schedule` и token-safe Redis
+  lease на broker endpoint. Только владелец lease планирует задачи; при невозможности продлить
+  lease процесс завершается fail-closed, а новый экземпляр может продолжить после TTL.
+- `CELERY_WORKER_PREFETCH_MULTIPLIER=1` сохраняет справедливое распределение длинных задач между
+  независимо добавляемыми worker-репликами; concurrency и число реплик входят в DB budget.
 - Тяжёлые imports, exports, media processing и построение manifests используют отдельные
   очереди с лимитами concurrency.
 - Большие payload не передаются через Redis; задача получает идентификатор объекта.

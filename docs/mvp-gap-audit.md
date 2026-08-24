@@ -84,7 +84,7 @@ runtime. Основной незакрытый объём находится в 
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
-| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API capacity harness, dependency/container security gates | Нет production-like capacity/soak proof, CDN/egress/QoE metrics, централизованных dashboard/alerts, stateless multi-replica deployment и offsite backup |
+| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers и Redis-lease для Beat | Нет production-like capacity/soak proof, CDN/egress/QoE metrics, централизованных dashboard/alerts, общего Next.js cache для второй web-реплики, фактического multi-replica deployment и offsite backup |
 
 ## Критерии приёмки
 
@@ -256,8 +256,9 @@ runtime. Основной незакрытый объём находится в 
    transcoded/лицензированные варианты, клиентский выбор качества и egress budget alerts.
 3. Edge-cache публичных Quran/audio/library endpoint'ов без `Authorization`; персональные
    ответы остаются `private, no-store`.
-4. PgBouncer-compatible connection budget, stateless API/web/workers, singleton Beat и
-   отдельно конфигурируемые Redis roles с возможностью использовать один Redis на старте.
+4. PgBouncer-compatible connection budget, stateless API/workers, token-safe Redis lease для
+   singleton Beat и отдельно конфигурируемые Redis roles готовы; перед второй web-репликой
+   остаётся общий Next.js cache handler и Redis-координация tag invalidation.
 5. Capacity harness и доказательство профиля S1 до 10 000 DAU; S2/S3 ресурсы не покупать
    до фактических triggers.
 

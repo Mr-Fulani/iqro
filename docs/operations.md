@@ -63,6 +63,39 @@ Celery broker и result backend дополнительно контролиру�
 oldest message age, task failures и Redis memory/evictions. Ни один отчёт не содержит Redis
 username, password или query parameters.
 
+## Celery workers и Beat lease
+
+API и workers не используют локальное постоянное состояние. Масштабируйте их только после
+обновления topology-переменных и проверки DB connection budget в разделе capacity ниже.
+Worker replicas можно менять независимо по queue depth/oldest message age; значение
+`CELERY_WORKER_PREFETCH_MULTIPLIER=1` оставляйте базовым, пока нагрузочный тест конкретной
+очереди не докажет пользу другого prefetch.
+
+Beat должен иметь desired replicas = 1. Scheduler не пишет `celerybeat-schedule` на диск и
+перед первым tick атомарно получает Redis lease. Второй процесс завершается с сообщением
+`Celery Beat singleton lease is already owned by another process`. Если лидер не может
+продлить lease или обнаруживает другой token, он завершается fail-closed; supervisor может
+перезапустить его после освобождения ключа по TTL.
+
+Проверка lease без вывода Redis credentials:
+
+```bash
+docker compose --env-file services/backend/.env.production \
+  -f compose.production.yaml exec redis \
+  redis-cli TTL quran-platform:celery-beat:lease
+```
+
+Если `CELERY_BEAT_LOCK_KEY` переопределён, подставьте его фактическое значение вместо ключа
+из примера. Для каждого deployment, использующего общий Redis, namespace ключа должен быть
+уникальным.
+
+Для внешнего/managed Redis выполняйте эквивалентную команду через защищённый operator channel,
+не помещая URL с паролем в shell history. Значения `-2` (ключ отсутствует) допустимо видеть
+между остановкой и failover; `-1` означает ошибочную бессрочную запись и требует расследования.
+Алерт обязателен на restart loop Beat, `lease is already owned`, `lease renewal failed` и
+`singleton lease was lost`. Ключ нельзя удалять, пока старый процесс жив: token-safe release
+защищает штатный shutdown, но ручной `DEL` обходит эту защиту.
+
 ## Content cache и sitemap
 
 Каталог и глубокие web-маршруты Quran, чтецов и декламаций получают данные server-to-server

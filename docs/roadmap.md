@@ -78,7 +78,9 @@ flowchart LR
 - [x] Разделить Redis roles: default cache и atomic throttling используют разные Django aliases,
   Celery broker/result имеют независимые URL, startup валидирует endpoints, а S0 сохраняет один
   экземпляр Redis через одинаковые role URLs.
-- [ ] Сделать web/API/workers stateless и независимо реплицируемыми; Beat — singleton.
+- [x] Сделать API/workers stateless и независимо реплицируемыми: runtime не использует
+  локальные media/schedule-файлы, worker prefetch управляется конфигурацией, а Beat защищён
+  token-safe Redis lease и прекращает работу при его потере.
 - [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts.
 - [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
   остаются auth/sync, cache-cold/warm, library API и audio Range/origin/QoE.

@@ -116,12 +116,14 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 - подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию из раздела ниже;
 - убедиться, что cache/throttle/Celery используют внешние Redis endpoints;
 - запускать migrations отдельной release-job;
-- оставить Beat/scheduler singleton;
+- оставить желаемое число Beat-процессов равным одному; Redis lease блокирует случайный дубль
+  и позволяет безопасный failover после TTL;
 - включить общий metrics/logging backend и проверку capacity profile.
 
-Количество API, web и worker replicas после этого меняется независимо. PostgreSQL read
-replica, отдельные Redis-кластеры и партиционирование добавляются только при измеренной
-saturation; они не являются условием небольшого публичного запуска.
+Количество API и worker replicas после этого меняется независимо. Вторая web-реплика требует
+общего Next.js cache handler из roadmap A.1. PostgreSQL read replica, отдельные Redis-кластеры
+и партиционирование добавляются только при измеренной saturation; они не являются условием
+небольшого публичного запуска.
 
 ### 3.2. PostgreSQL/PgBouncer connection budget
 
@@ -181,6 +183,35 @@ Cache можно вынести на evictable instance. Для throttle и brok
 windows могут начаться заново. Перед сменой broker остановите Beat и producers, дождитесь
 пустой старой очереди, переключите workers и producers одной rollout-группой, затем возобновите
 постановку задач. Старый result backend удаляется только после истечения нужных результатов.
+
+### 3.4. Stateless API/workers и singleton Beat
+
+Backend и worker используют только PostgreSQL, Redis и object storage как разделяемое
+runtime-состояние; их read-only containers имеют лишь временный `/tmp`. Миграции остаются
+отдельной release-job. Поэтому API/worker replica не требует копирования media, sessions или
+schedule-файлов. Перед изменением числа реплик обновите `DATABASE_API_REPLICAS`,
+`DATABASE_WORKER_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER` и
+`CELERY_WORKER_CONCURRENCY`, затем проверьте DB budget и capacity report.
+
+Worker получает `CELERY_WORKER_PREFETCH_MULTIPLIER=1` по умолчанию: одна реплика не резервирует
+пакет длинных задач за собой. Изменять multiplier можно только после queue-specific load test.
+Для тяжёлых media/import/export задач перед ростом добавьте отдельную очередь и собственный
+concurrency limit; большие файлы и payload не должны проходить через broker.
+
+Beat запускается с `quran_backend.celery_beat.SingletonRedisScheduler`. Расписание находится в
+коде/памяти, а лидерство — в ключе `CELERY_BEAT_LOCK_KEY` на `CELERY_BROKER_URL`. Lease живёт
+`CELERY_BEAT_LOCK_TTL_SECONDS=60`, продлевается каждые
+`CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS=20`, а loop просыпается не реже чем раз в
+`CELERY_BEAT_MAX_LOOP_INTERVAL_SECONDS=5`. Renew interval обязан быть меньше TTL. Второй Beat
+не запускает расписание; потерявший lease прекращает работу, чтобы ограничить риск дублей.
+Желаемое число Beat остаётся равным одному: lease — страховка rollout/failover, а не основание
+держать лишнюю реплику заранее.
+
+При переносе Celery broker остановите Beat и producers, дождитесь пустой очереди, переключите
+workers, затем запустите один Beat с новым broker URL. Старый lease удалять вручную не нужно:
+он исчезнет по TTL. Если требуется аварийная проверка, сначала убедитесь, что старый Beat
+остановлен, и только затем смотрите TTL ключа; удаление ключа при живом владельце может создать
+двух активных scheduler'ов.
 
 ## 4. Обновление и откат
 

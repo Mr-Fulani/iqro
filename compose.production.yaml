@@ -34,6 +34,11 @@ x-backend-environment: &backend-environment
   API_MAX_CONCURRENT_REQUESTS_PER_WORKER: ${API_MAX_CONCURRENT_REQUESTS_PER_WORKER:-5}
   DATABASE_WORKER_REPLICAS: ${DATABASE_WORKER_REPLICAS:-1}
   CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-4}
+  CELERY_WORKER_PREFETCH_MULTIPLIER: ${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}
+  CELERY_BEAT_LOCK_KEY: ${CELERY_BEAT_LOCK_KEY:-quran-platform:celery-beat:lease}
+  CELERY_BEAT_LOCK_TTL_SECONDS: ${CELERY_BEAT_LOCK_TTL_SECONDS:-60}
+  CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS: ${CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS:-20}
+  CELERY_BEAT_MAX_LOOP_INTERVAL_SECONDS: ${CELERY_BEAT_MAX_LOOP_INTERVAL_SECONDS:-5}
   DATABASE_BEAT_CONNECTIONS: ${DATABASE_BEAT_CONNECTIONS:-1}
   DATABASE_RELEASE_JOB_CONNECTIONS: ${DATABASE_RELEASE_JOB_CONNECTIONS:-2}
   DATABASE_OPERATIONS_CONNECTIONS: ${DATABASE_OPERATIONS_CONNECTIONS:-2}
@@ -188,6 +193,7 @@ services:
       - worker
       - --loglevel=INFO
       - --concurrency=${CELERY_WORKER_CONCURRENCY:-4}
+    stop_grace_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,7 +214,9 @@ services:
       - quran_backend.celery
       - beat
       - --loglevel=INFO
-      - --schedule=/tmp/celerybeat-schedule
+      - --scheduler=quran_backend.celery_beat.SingletonRedisScheduler
+      - --max-interval=${CELERY_BEAT_MAX_LOOP_INTERVAL_SECONDS:-5}
+    stop_grace_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
