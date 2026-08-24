@@ -60,7 +60,7 @@ export function Header() {
               : t("auth.guest")}
         </div>
 
-        {isActiveAccount || isPendingDeletion ? (
+        {(isActiveAccount || isPendingDeletion) && (
           <button
             onClick={() => void logout()}
             className="btn btn-secondary btn-sm"
@@ -69,15 +69,6 @@ export function Header() {
           >
             {t("auth.logout")}
           </button>
-        ) : (
-          <Link
-            href="/login"
-            className="btn btn-primary btn-sm"
-            aria-disabled={isLoading}
-            title={t("auth.emailLoginTitle")}
-          >
-            {t("auth.emailLogin")}
-          </Link>
         )}
       </div>
     </header>

@@ -193,7 +193,7 @@ test("pending guest changes are pushed before the account merge", async ({ page 
   expect(await page.evaluate((key) => localStorage.getItem(key), guestSyncKey)).toBeNull();
 });
 
-test("guest session keeps verified email login visible in the header", async ({ page }) => {
+test("guest session keeps the email login CTA in main content, not the header", async ({ page }) => {
   await installAuthMocks(page);
   await page.unroute("**/api/web-auth/refresh");
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: guestSession }));
@@ -201,7 +201,8 @@ test("guest session keeps verified email login visible in the header", async ({ 
   await page.goto("/");
 
   await expect(page.getByText("Гостевой режим", { exact: true }).first()).toBeVisible();
-  const emailLogin = page.getByRole("link", { name: "Войти по email" }).first();
+  await expect(page.locator(".app-header").getByRole("link", { name: "Войти по email" })).toHaveCount(0);
+  const emailLogin = page.locator("main").getByRole("link", { name: "Войти по email" }).first();
   await expect(emailLogin).toBeVisible();
   await expect(emailLogin).toHaveAttribute("href", "/login");
   await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
