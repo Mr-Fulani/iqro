@@ -1,0 +1,61 @@
+# Functional staging profile for a 2 vCPU / 4 GiB host (for example Hetzner CX23).
+# It is intentionally not a production capacity profile and excludes observability services.
+services:
+  postgres:
+    cpus: 0.75
+    mem_limit: 640m
+    shm_size: 128m
+
+  redis:
+    cpus: 0.20
+    mem_limit: 128m
+
+  migrate:
+    cpus: 0.40
+    mem_limit: 384m
+
+  static-init:
+    cpus: 0.15
+    mem_limit: 192m
+
+  backend:
+    environment:
+      GUNICORN_WORKERS: "1"
+      API_MAX_CONCURRENT_REQUESTS_PER_WORKER: "4"
+      DATABASE_API_REPLICAS: "1"
+    cpus: 0.65
+    mem_limit: 512m
+
+  worker:
+    command:
+      - celery
+      - -A
+      - quran_backend.celery
+      - worker
+      - --loglevel=INFO
+      - --concurrency=1
+    environment:
+      CELERY_WORKER_CONCURRENCY: "1"
+      CELERY_WORKER_PREFETCH_MULTIPLIER: "1"
+    cpus: 0.40
+    mem_limit: 384m
+
+  beat:
+    cpus: 0.10
+    mem_limit: 128m
+
+  web:
+    cpus: 0.50
+    mem_limit: 448m
+
+  gateway:
+    cpus: 0.15
+    mem_limit: 96m
+
+  mailpit:
+    cpus: 0.10
+    mem_limit: 64m
+
+  tls-proxy:
+    cpus: 0.10
+    mem_limit: 64m

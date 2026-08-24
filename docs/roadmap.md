@@ -68,7 +68,9 @@ flowchart LR
 - [x] Подготовить воспроизводимый staging bootstrap поверх production topology: отдельные
   secrets/data, Caddy automatic HTTPS, noindex/robots isolation, закрытый Mailpit, безопасная
   R2 credential/CORS настройка, preflight, backup/observability Make-команды и пошаговый
-  [runbook](staging.md). Внешний VPS/DNS/R2 ещё не provisioned, поэтому deployment gate открыт.
+  [runbook](staging.md). Отдельный budget overlay поддерживает функциональный staging на
+  2 vCPU/4 GiB без выдачи его за capacity evidence. Внешний VPS/DNS/R2 ещё не provisioned,
+  поэтому deployment gate открыт.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.

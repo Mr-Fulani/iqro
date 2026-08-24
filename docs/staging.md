@@ -57,7 +57,7 @@ flowchart LR
 
 ### 1.2. VPS
 
-Для первого функционального staging достаточно стартовать с:
+Стандартный staging-профиль рассчитан на:
 
 - 4 vCPU;
 - 8 GiB RAM;
@@ -69,6 +69,12 @@ flowchart LR
 Prometheus/Grafana baseline разумно временно увеличить VPS до 8 vCPU/16 GiB, провести замер и
 вернуть меньший размер. Так постоянная мощность покупается по текущей потребности, а не под
 100 000 DAU заранее.
+
+Для бюджетного функционального staging разрешён профиль 2 vCPU / 4 GiB RAM / 40 GiB SSD
+(например Hetzner CX23), но только через `compose.staging.budget.yaml`. Он запускает по одному
+API/Celery worker, уменьшает memory/CPU ceilings, собирает образы последовательно и не включает
+постоянный observability stack. Такой сервер проверяет продуктовые сценарии, HTTPS, R2 и smoke,
+но его результаты нельзя объявлять capacity-гарантией будущего более мощного production.
 
 В firewall провайдера открыть:
 
@@ -138,6 +144,20 @@ docker compose version
 Членство в группе `docker` фактически даёт административный доступ к host. На staging оно
 выдаётся только отдельному deploy-пользователю с SSH key.
 
+На 4 GiB host один раз добавьте 2 GiB swap только как защиту от краткого пика во время сборки:
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+```
+
+Swap не заменяет RAM и не используется для доказательства capacity; его задача — не допустить
+OOM во время первой последовательной Docker-сборки.
+
 ## 3. Доставка текущего commit на сервер
 
 Сейчас у проекта нет Git remote, поэтому безопасный первый вариант — передать только tracked
@@ -178,7 +198,8 @@ secrets и ничего секретного не выводит. Повторн
 
 ```bash
 make staging-preflight
-make staging-config
+make staging-budget-config  # 2 vCPU / 4 GiB
+# make staging-config       # стандартный 4 vCPU / 8 GiB профиль
 ```
 
 До настройки R2 первая команда покажет `WARN`. Это сознательно разрешает поднять текст/API и
@@ -189,8 +210,8 @@ HTTPS раньше, но не разрешает публиковать media и
 Убедиться, что DNS уже возвращает IP VPS, затем:
 
 ```bash
-make staging-up
-make staging-ps
+make staging-budget-up
+make staging-budget-ps
 ```
 
 Caddy обратится к ACME CA, получит certificate для `STAGING_HOST` и будет автоматически его
@@ -211,8 +232,8 @@ curl https://staging.example.org/robots.txt
 Если запуск не прошёл:
 
 ```bash
-make staging-ps
-make staging-logs
+make staging-budget-ps
+make staging-budget-logs
 ```
 
 ### Тестовые email-коды
@@ -274,6 +295,10 @@ Mini App, Git или issue tracker.
 make staging-observability-up
 ```
 
+Не запускайте этот полный stack на бюджетном 4 GiB host одновременно с приложением: для него
+используются health/metrics endpoints, `docker stats` и bounded JSON reports. Полный временной ряд
+Prometheus/Grafana и финальный capacity run выполняются уже на production-sized машине.
+
 Grafana/Prometheus/Alertmanager слушают loopback. Пример tunnel для Grafana:
 
 ```bash
@@ -312,9 +337,9 @@ make staging-backup-verify
 
 ```bash
 cd /opt/quran
-make staging-config
-make staging-up
-make staging-ps
+make staging-budget-config
+make staging-budget-up
+make staging-budget-ps
 ```
 
 `staging.env`, PostgreSQL/Redis volumes, Caddy certificates и backup directory не входят в Git
@@ -331,7 +356,9 @@ Staging считается созданным, когда одновременн
 - `make staging-preflight` и `make staging-config` зелёные;
 - email login проверен через закрытый Mailpit UI;
 - отдельный R2 bucket/custom domain/CORS активны и `make staging-media-preflight` зелёный;
-- Grafana доступна через SSH tunnel, alert delivery проверена;
+- на стандартном профиле Grafana доступна через SSH tunnel и alert delivery проверена; на
+  budget-профиле сохранены health/metrics/load reports, а полный observability gate остаётся
+  открытым до production-sized среды;
 - backup → verify → restore-check выполнены;
 - integration E2E и три capacity harness дали сохранённые reports.
 

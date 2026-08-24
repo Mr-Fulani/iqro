@@ -5,8 +5,9 @@ PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-
 STAGING_ENV ?= ops/staging/staging.env
 STAGING_APP_VERSION ?= staging-$(shell git rev-parse --short HEAD)
 STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
+STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.staging.budget.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -143,6 +144,24 @@ staging-observability-up: staging-observability-config
 staging-observability-down:
 	$(STAGING_COMPOSE) -f compose.observability.yaml stop prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter
 	$(STAGING_COMPOSE) -f compose.observability.yaml rm --force prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter observability-init
+
+staging-budget-config: staging-preflight
+	$(STAGING_BUDGET_COMPOSE) config --quiet
+
+staging-budget-build: staging-budget-config
+	$(STAGING_BUDGET_COMPOSE) build backend web gateway postgres
+
+staging-budget-up: staging-budget-config
+	$(STAGING_BUDGET_COMPOSE) up --build --detach --wait
+
+staging-budget-down:
+	$(STAGING_BUDGET_COMPOSE) down --remove-orphans
+
+staging-budget-ps:
+	$(STAGING_BUDGET_COMPOSE) ps
+
+staging-budget-logs:
+	$(STAGING_BUDGET_COMPOSE) logs --tail=200
 
 observability-config:
 	$(PRODUCTION_COMPOSE) -f compose.observability.yaml config --quiet

@@ -6,6 +6,7 @@ on:
       - "compose.production.yaml"
       - "compose.observability.yaml"
       - "compose.staging.yaml"
+      - "compose.staging.budget.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
@@ -22,6 +23,7 @@ on:
       - "compose.production.yaml"
       - "compose.observability.yaml"
       - "compose.staging.yaml"
+      - "compose.staging.budget.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
@@ -71,6 +73,13 @@ jobs:
               --env-file "$RUNNER_TEMP/quran-staging.env" \
               -f compose.production.yaml \
               -f compose.staging.yaml \
+              config --quiet
+          PRODUCTION_ENV_FILE="$RUNNER_TEMP/quran-staging.env" \
+            docker compose \
+              --env-file "$RUNNER_TEMP/quran-staging.env" \
+              -f compose.production.yaml \
+              -f compose.staging.yaml \
+              -f compose.staging.budget.yaml \
               config --quiet
       - name: Validate observability model and rules
         run: |
