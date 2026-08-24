@@ -583,6 +583,43 @@ Client bytes и cache outcome нельзя считать точным origin eg
 берутся из provider telemetry за то же окно. TTFB/throughput являются transport proxy для QoE,
 но не заменяют browser/mobile telemetry startup и buffering по rendition.
 
+### Stateful auth и reading sync capacity test
+
+`ops/load/sync_capacity.py` воспроизводит отдельного гостя на виртуального пользователя:
+guest bootstrap, `/me`, batched reading-position `sync/push`, incremental `sync/pull`, ротацию
+refresh token и logout. Installation credentials и access/refresh tokens генерируются CSPRNG,
+существуют только в памяти worker и не попадают в stdout или JSON evidence.
+
+Сценарий создаёт постоянные guest/device/session, reading-position и sync-change строки. Поэтому
+он fail-closed требует точного hostname, двух явных подтверждений и предназначен только для
+staging с disposable database, которую сбрасывают после окна теста:
+
+```bash
+python3 ops/load/sync_capacity.py \
+  --base-url https://staging.example.org \
+  --confirm-target-host staging.example.org \
+  --allow-stateful-writes \
+  --confirm-disposable-staging-data \
+  --stage 5:60 \
+  --stage 20:300 \
+  --label release-abc1234-s0-sync \
+  --json-report /tmp/quran-capacity-release-abc1234-s0-sync.json
+```
+
+То же можно вызвать через `make ops-sync-capacity SYNC_CAPACITY_ARGS='...'`. По умолчанию push
+содержит одну операцию, think time равен 500 ms, refresh выполняется каждые 20 циклов, один
+пользователь ограничен 200 циклами, а стадия — 5 000 sync operations. Жёсткие пределы:
+concurrency 100, длительность 900 секунд, batch 20, 500 циклов на пользователя, 20 000 sync
+operations и 1 MiB response. Достижение safety cap завершает стадию как failed evidence, а не
+как успешную capacity-цифру.
+
+При увеличении `--operations-per-push` учитывайте operation-based hourly/daily throttles:
+уменьшайте частоту циклов так, чтобы тест проверял выбранный профиль, а не случайно только
+политику rate limit. Каждый запуск маркирует device `app_version=load.<run_tag>` и записывает
+верхнюю оценку числа созданных guest users; маркер помогает аудиту, но не заменяет полный reset
+disposable staging database. Отчёт сопоставляется с API/DB/Redis metrics и connection budget за
+то же окно. На production этот сценарий не запускается.
+
 Перед каждым изменением числа API/worker replicas сначала обновите topology/runtime-переменные
 `DATABASE_API_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER`,
 `DATABASE_WORKER_REPLICAS` и `CELERY_WORKER_CONCURRENCY`. Затем сохраните отчёт рядом с
@@ -611,7 +648,8 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
 
 - встроенный public-read workload для web, Quran/audio API уже автоматизирован; дополнительно
   нужны public library reads и отдельные cache-cold/cache-warm прогоны;
-- авторизация, token refresh, reading writes и sync push/pull;
+- bounded guest auth, token refresh, reading writes и sync push/pull автоматизированы;
+  production-like evidence и сценарий зарегистрированного пользователя остаются;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
 - bounded CDN/origin `HEAD`, startup/seek `Range`, TTFB, throughput и cache outcomes уже
   автоматизированы; production-like cold/warm/origin evidence, `416` и origin-failure остаются;

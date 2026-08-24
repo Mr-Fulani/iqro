@@ -86,9 +86,10 @@ flowchart LR
   rules и budget rendering готовы; остаются provider CDN/billing/QoE ingestion, внешний uptime,
   production alert routing и доказательство синтетической доставки.
 - [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
-  bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence;
-  остаются auth/sync, library API, production-like cache-cold/warm/origin прогоны и client
-  startup/buffering QoE.
+  bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence,
+  fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
+  остаются library API, registered-user journey, production-like cache-cold/warm/origin прогоны
+  и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики

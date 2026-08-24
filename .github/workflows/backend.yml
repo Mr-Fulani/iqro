@@ -65,6 +65,7 @@ jobs:
             ops.load.test_smoke \
             ops.load.test_capacity \
             ops.load.test_audio_capacity \
+            ops.load.test_sync_capacity \
             ops.media.test_contract \
             ops.observability.test_render_config
       - uses: astral-sh/setup-uv@v6

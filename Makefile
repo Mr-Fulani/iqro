@@ -3,7 +3,7 @@ WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -110,3 +110,6 @@ ops-load-smoke:
 
 ops-audio-capacity:
 	python3 ops/load/audio_capacity.py $(AUDIO_CAPACITY_ARGS)
+
+ops-sync-capacity:
+	python3 ops/load/sync_capacity.py $(SYNC_CAPACITY_ARGS)
