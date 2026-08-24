@@ -9,7 +9,7 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 46 Playwright-сценариев проходят. Это ещё не означает готовность
+ESLint, TypeScript и 47 Playwright-сценариев проходят. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
 - каталог и страницы опубликованных сур/аятов, чтецов и декламаций уже отдают содержательный
@@ -121,7 +121,10 @@ flowchart LR
 ### Web launch gates
 
 - [ ] Развернуть staging и production на публичном домене с TLS, redirects HTTP→HTTPS,
-  security headers и проверенной proxy-конфигурацией.
+  и проверенной proxy-конфигурацией.
+- [x] Добавить defense-in-depth security headers в Next.js и gateway: CSP без `unsafe-eval`
+  в production, clickjacking/MIME/referrer/permissions policy и HSTS; отдельный Telegram Mini
+  App origin должен получить собственный `frame-ancestors`, а не ослаблять web policy.
 - [ ] Подключить внешний uptime/error monitoring, dashboards/alerts и offsite backup с
   проверенным restore.
 - [x] Добавить SEO/metadata/robots/sitemap regression tests.

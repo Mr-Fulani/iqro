@@ -180,6 +180,21 @@ test("root layout publishes WebSite structured data", async ({ request }) => {
   expect(html).toContain('"@id":"http://127.0.0.1:3100/#website"');
 });
 
+test("public responses include the defense-in-depth security policy", async ({ request }) => {
+  const response = await request.get("/ru");
+  expect(response.ok()).toBe(true);
+  const headers = response.headers();
+  expect(headers["content-security-policy"]).toContain("default-src 'self'");
+  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(headers["content-security-policy"]).toContain("media-src 'self' blob: https:");
+  expect(headers["permissions-policy"]).toContain("geolocation=(self)");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["strict-transport-security"]).toBe("max-age=31536000; includeSubDomains");
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["x-powered-by"]).toBeUndefined();
+});
+
 test("legal and contact pages are localized, canonical, and linked from the footer", async ({ page, request }) => {
   const privacyResponse = await request.get("/tr/privacy");
   expect(privacyResponse.ok()).toBe(true);

@@ -122,6 +122,24 @@ deployment; тексты в репозитории не заменяют так�
 После rollout проверьте четыре локали, рабочие `mailto:`, якорь `/profile#feedback`, а также что
 `/sources` совпадает с public API и не содержит прямых audio URLs.
 
+## Security headers
+
+Next.js ставит одинаковую базовую политику и при прямом доступе, а gateway скрывает upstream
+варианты и выдаёт один нормализованный набор для web, API, admin, static и media: CSP,
+`frame-ancestors 'none'`/`X-Frame-Options: DENY`, MIME/referrer/permissions policy, COOP и HSTS.
+Production CSP не содержит `unsafe-eval`; `unsafe-inline` пока сохранён для Next.js hydration,
+JSON-LD и существующих inline styles, чтобы не отключать ISR/SSG ради per-request nonce. После
+перехода на self-hosted fonts и отказа от inline styles можно оценить experimental SRI/hash CSP.
+
+`geolocation` разрешена только собственному origin для расчёта намаза; camera, microphone,
+payment и USB запрещены. Quran/audio media разрешены по HTTPS, но исполнение script — только с
+собственного origin. Отдельный Telegram Mini App следует публиковать на отдельном origin с
+точным allowlist `frame-ancestors`; ослаблять публичный web до произвольного embedding нельзя.
+
+HSTS начинает защищать пользователя только после реального HTTPS-ответа. До включения
+`includeSubDomains` убедитесь, что все поддомены обслуживаются по TLS; preload намеренно не
+добавлен на gateway без отдельного решения владельца домена.
+
 ## PostgreSQL backup
 
 Скрипт создаёт custom-format dump, записывает SHA-256, проверяет, что `pg_restore` читает

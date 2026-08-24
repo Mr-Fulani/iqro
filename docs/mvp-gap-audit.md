@@ -45,7 +45,7 @@ runtime. Основной незакрытый объём находится в 
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 485 passed, 6 skipped; суммарное покрытие 84,89%.
-- Web имеет 46 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 47 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,

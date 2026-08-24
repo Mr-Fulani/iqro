@@ -1,6 +1,7 @@
 FROM nginx:1.28.3-alpine
 
 COPY default.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/snippets/quran-security-headers.conf
 
 EXPOSE 8080
 
