@@ -18,7 +18,11 @@ export type AudioPlaybackRequest = {
   autoPlay?: boolean;
 };
 
-type RepeatMode = "off" | "ayah" | "selection";
+export type RepeatMode = "off" | "ayah" | "selection";
+export type AudioPlaybackSettings = {
+  repeatMode: RepeatMode;
+  playbackRate: number;
+};
 type SleepMode = "off" | "ayah" | "5" | "15" | "30" | "60";
 
 type RuntimePlan = {
@@ -40,6 +44,7 @@ type SegmentedAudioPlayerProps = {
   className?: string;
   onActiveAyahChange?: (ayahKey: string | null) => void;
   onPlayingChange?: (isPlaying: boolean) => void;
+  onSettingsChange?: (settings: AudioPlaybackSettings) => void;
   pauseOnNavigationKey?: string;
   compact?: boolean;
 };
@@ -107,6 +112,7 @@ export function SegmentedAudioPlayer({
   className = "",
   onActiveAyahChange,
   onPlayingChange,
+  onSettingsChange,
   pauseOnNavigationKey,
   compact = false,
 }: SegmentedAudioPlayerProps) {
@@ -343,6 +349,10 @@ export function SegmentedAudioPlayer({
   useEffect(() => {
     repeatModeRef.current = repeatMode;
   }, [repeatMode]);
+
+  useEffect(() => {
+    onSettingsChange?.({ repeatMode, playbackRate });
+  }, [onSettingsChange, playbackRate, repeatMode]);
 
   useEffect(() => {
     pauseMsRef.current = pauseMs;

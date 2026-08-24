@@ -30,7 +30,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const startPlayback = useCallback((nextRequest: AudioPlaybackRequest) => {
     setRequest(nextRequest);
@@ -49,7 +49,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }), [clearPlayback, isPlaying, request, startPlayback]);
 
   const isAudioPage = pathname === "/audio";
-  const expanded = expandedOverride ?? isAudioPage;
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
   const modeActionLabel = expanded
@@ -82,7 +81,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
                   aria-expanded="true"
                   aria-label={modeActionLabel}
                   title={modeActionLabel}
-                  onClick={() => setExpandedOverride(false)}
+                  onClick={() => setExpanded(false)}
                 >
                   <span aria-hidden="true">▾</span>
                   <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
@@ -104,7 +103,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
                   aria-expanded="false"
                   aria-label={modeActionLabel}
                   title={modeActionLabel}
-                  onClick={() => setExpandedOverride(true)}
+                  onClick={() => setExpanded(true)}
                 >
                   <span aria-hidden="true">⤢</span>
                   <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>

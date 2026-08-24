@@ -311,18 +311,25 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await page.goto("/audio");
 
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toBeVisible();
+  const player = page.getByTestId("global-audio-player");
+  expect((await player.boundingBox())!.height).toBeLessThan(130);
+  await expect(player.getByRole("button", { name: "Развернуть плеер", exact: true })).toBeVisible();
+  await expect(player.getByLabel("Режим повтора")).toBeHidden();
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
   await expect(page.getByLabel("Режим повтора")).toBeVisible();
   await expect(page.getByLabel("Режим повтора")).toBeDisabled();
   await expect(page.getByLabel("Скорость воспроизведения")).toBeVisible();
   await expect(page.getByLabel("Таймер сна")).toBeVisible();
   await expect(page.getByRole("button", { name: "▶ Воспроизвести диапазон" })).toBeDisabled();
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+
   await expect(page.getByText("Найдено треков: 114")).toBeVisible();
   const listenButtons = page.getByRole("button", { name: "Слушать", exact: true });
   await expect(listenButtons).toHaveCount(114);
 
   await listenButtons.first().click();
 
-  const player = page.getByTestId("global-audio-player");
   await expect(player.locator(".audio-player-bar")).toBeVisible();
   await expect(player.locator(".audio-player-bar audio")).toHaveAttribute(
     "src",
@@ -330,7 +337,6 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   );
   await expect(page.getByRole("button", { name: "▶ Играет", exact: true })).toBeVisible();
 
-  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
   expect((await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("button", { name: "Развернуть плеер", exact: true })).toBeVisible();
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toHaveCount(0);
@@ -347,10 +353,10 @@ test("audio widget survives route navigation and pauses at the current position"
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
   await expect(player).toBeVisible();
-  await expect(page.getByLabel("Режим повтора")).toBeVisible();
-  const expandedPlayerBox = await player.boundingBox();
-  expect(expandedPlayerBox).not.toBeNull();
-  expect(expandedPlayerBox!.height).toBeGreaterThan(200);
+  await expect(page.getByLabel("Режим повтора")).toBeHidden();
+  const compactAudioPagePlayerBox = await player.boundingBox();
+  expect(compactAudioPagePlayerBox).not.toBeNull();
+  expect(compactAudioPagePlayerBox!.height).toBeLessThan(130);
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
   await audio.evaluate((element) => {
     (element as HTMLAudioElement).currentTime = 12.5;
@@ -392,12 +398,18 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   await expect(player).toBeVisible();
   await expect(resumeButton).toBeVisible();
   await expect(settingsButton).toBeVisible();
-  expect((await resumeButton.boundingBox())!.width).toBeGreaterThan(40);
-  expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
-  expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
+  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  expect((await resumeButton.boundingBox())!.width).toBeGreaterThan(40);
+  expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
+  expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
   await page.locator('.app-menu a[href="/"]').click();
   await expect(page).toHaveURL("/");
@@ -458,6 +470,30 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
   );
   await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+});
+
+test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {
+  await page.goto("/quran?surah=6");
+
+  const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
+  await expect(recitationSelect).toBeVisible();
+  await expect(recitationSelect.locator("option")).toHaveCount(1);
+
+  const firstAyah = page.locator(".ayah-card").first();
+  await expect(firstAyah.getByRole("button", { name: "▶ Воспроизвести Аят 6:1" })).toBeVisible();
+  await expect(firstAyah.getByLabel("Повтор: Без повтора")).toBeVisible();
+  await expect(firstAyah.getByLabel("Скорость: 1×")).toBeVisible();
+
+  await firstAyah.getByRole("button", { name: "▶ Воспроизвести Аят 6:1" }).click();
+  const audio = page.locator(".mushaf-audio-now-playing audio");
+  await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
+  await expect(firstAyah).toHaveClass(/is-audio-active/);
+  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:1/)).toBeVisible();
+
+  await page.getByLabel("Режим повтора").selectOption("ayah");
+  await page.getByLabel("Скорость воспроизведения").selectOption("1.5");
+  await expect(firstAyah.getByLabel("Повтор: Повтор аята")).toBeVisible();
+  await expect(firstAyah.getByLabel("Скорость: 1,5×")).toBeVisible();
 });
 
 test("advanced player handles ranges, repeat, learning pauses, speed and sleep", async ({ page }) => {
@@ -562,6 +598,9 @@ test("player preserves the cursor after interruption and registers Media Session
 test("minute sleep timer stops playback without losing the current position", async ({ page }) => {
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByTestId("global-audio-player")
+    .getByRole("button", { name: "Развернуть плеер", exact: true })
+    .click();
   const audio = page.locator(".audio-player-bar audio");
   await audio.evaluate((element) => {
     (element as HTMLAudioElement).currentTime = 0.4;

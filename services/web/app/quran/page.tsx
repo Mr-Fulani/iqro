@@ -2,7 +2,11 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MushafAudioPlayer } from "../../components/MushafAudioPlayer";
+import {
+  MushafAudioPlayer,
+  type AyahPlaybackTrigger,
+} from "../../components/MushafAudioPlayer";
+import type { AudioPlaybackSettings } from "../../components/SegmentedAudioPlayer";
 import {
   api,
   Ayah,
@@ -22,7 +26,7 @@ function QuranContent() {
   const initialSurahParam = searchParams.get("surah");
 
   const { isLoggedIn, loginGuest } = useAuth();
-  const { locale, t } = useI18n();
+  const { formatNumber, locale, t } = useI18n();
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);
@@ -35,7 +39,13 @@ function QuranContent() {
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
+  const [playAyahRequest, setPlayAyahRequest] = useState<AyahPlaybackTrigger | null>(null);
+  const [audioSettings, setAudioSettings] = useState<AudioPlaybackSettings>({
+    repeatMode: "off",
+    playbackRate: 1,
+  });
   const pendingNavigationPage = useRef<number | null>(null);
+  const ayahPlaybackRequestId = useRef(0);
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
   const [loading, setLoading] = useState<boolean>(true);
@@ -168,6 +178,22 @@ function QuranContent() {
     setSelectedMushafAyah(`${selectedSurah}:${ayahNumber}`);
     setCurrentPage(ayah.pages[0]);
   }, [ayahs, selectedSurah]);
+
+  const handlePlayAyah = useCallback((ayahNumber: number) => {
+    const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    ayahPlaybackRequestId.current += 1;
+    setSelectedMushafAyah(ayahKey);
+    setPlayAyahRequest({
+      requestId: ayahPlaybackRequestId.current,
+      ayahKey,
+    });
+  }, [selectedSurah]);
+
+  const repeatModeLabel = audioSettings.repeatMode === "ayah"
+    ? t("player.repeatAyah")
+    : audioSettings.repeatMode === "selection"
+      ? t("player.repeatSelection")
+      : t("player.repeatOff");
 
   const handleSavePosition = async (ayahNumber?: number) => {
     if (!isLoggedIn) {
@@ -420,6 +446,17 @@ function QuranContent() {
         </div>
       </section>
 
+      <section className="surface quran-audio-surface" aria-label={t("audio.playerTitle")}>
+        <MushafAudioPlayer
+          editionCode={selectedEdition}
+          selectedSurah={selectedSurah}
+          selectedAyahKey={selectedMushafAyah}
+          playAyahRequest={playAyahRequest}
+          onActiveAyahChange={handleActiveAyahChange}
+          onSettingsChange={setAudioSettings}
+        />
+      </section>
+
       {/* Content Area */}
       {viewMode === "text" ? (
         <section className="surface">
@@ -438,37 +475,70 @@ function QuranContent() {
             </div>
           ) : ayahs.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
-              {ayahs.map((ayah) => (
-                <article key={ayah.id} className="ayah-card">
-                  <div className="ayah-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span className="ayah-badge">{ayah.number}</span>
-                      <span className="kpi-desc">
-                        {t("quran.ayahMeta", { ayah: ayah.number, juz: ayah.juz_number })}
-                      </span>
+              {ayahs.map((ayah) => {
+                const ayahKey = `${selectedSurah}:${ayah.number}`;
+                return (
+                  <article
+                    key={ayah.id}
+                    className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}`}
+                  >
+                    <div className="ayah-header">
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="ayah-badge">{ayah.number}</span>
+                        <span className="kpi-desc">
+                          {t("quran.ayahMeta", { ayah: ayah.number, juz: ayah.juz_number })}
+                        </span>
+                      </div>
+
+                      <div className="ayah-actions">
+                        <div className="ayah-playback-indicators">
+                          <span
+                            className="status-chip"
+                            aria-label={`${t("player.repeat")}: ${repeatModeLabel}`}
+                            title={t("player.repeatAria")}
+                          >
+                            🔁 {repeatModeLabel}
+                          </span>
+                          <span
+                            className="status-chip"
+                            aria-label={`${t("player.speed")}: ${formatNumber(audioSettings.playbackRate)}×`}
+                            title={t("player.speedAria")}
+                          >
+                            ⚡ {formatNumber(audioSettings.playbackRate)}×
+                          </span>
+                        </div>
+                        <div className="ayah-action-buttons">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            type="button"
+                            onClick={() => handlePlayAyah(ayah.number)}
+                            aria-label={`▶ ${t("player.play")} ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={t("common.ayah", { ayah: ayahKey })}
+                          >
+                            ▶ {t("player.play")}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => void handleSavePosition(ayah.number)}
+                            title={t("quran.markReadTitle")}
+                          >
+                            {t("quran.mark")}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => void handleAddBookmark(ayah.number)}
+                            title={t("quran.bookmarkTitle")}
+                          >
+                            {t("quran.bookmark")}
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => void handleSavePosition(ayah.number)}
-                        title={t("quran.markReadTitle")}
-                      >
-                        {t("quran.mark")}
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => void handleAddBookmark(ayah.number)}
-                        title={t("quran.bookmarkTitle")}
-                      >
-                        {t("quran.bookmark")}
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="quran-arabic-text">{ayah.text_uthmani}</p>
-                </article>
-              ))}
+                    <p className="quran-arabic-text">{ayah.text_uthmani}</p>
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
@@ -479,12 +549,6 @@ function QuranContent() {
       ) : (
         /* Mushaf Page View */
         <section className="surface">
-          <MushafAudioPlayer
-            editionCode={selectedEdition}
-            selectedSurah={selectedSurah}
-            selectedAyahKey={selectedMushafAyah}
-            onActiveAyahChange={handleActiveAyahChange}
-          />
           <div className="mushaf-page-container">
             {mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
               <div className="mushaf-page-frame">

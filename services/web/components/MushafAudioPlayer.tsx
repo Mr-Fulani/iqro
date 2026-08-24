@@ -6,13 +6,21 @@ import { useI18n } from "../lib/i18n-context";
 import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
+  type AudioPlaybackSettings,
 } from "./SegmentedAudioPlayer";
+
+export type AyahPlaybackTrigger = {
+  requestId: number;
+  ayahKey: string;
+};
 
 type MushafAudioPlayerProps = {
   editionCode: string;
   selectedSurah: number;
   selectedAyahKey: string | null;
+  playAyahRequest?: AyahPlaybackTrigger | null;
   onActiveAyahChange: (ayahKey: string | null) => void;
+  onSettingsChange?: (settings: AudioPlaybackSettings) => void;
 };
 
 function parseAyahKey(value: string | null): { surah: number; ayah: number } | null {
@@ -26,7 +34,9 @@ export function MushafAudioPlayer({
   editionCode,
   selectedSurah,
   selectedAyahKey,
+  playAyahRequest,
   onActiveAyahChange,
+  onSettingsChange,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
   const [recitations, setRecitations] = useState<Recitation[]>([]);
@@ -37,6 +47,7 @@ export function MushafAudioPlayer({
   const [playbackLoading, setPlaybackLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const handledAyahRequestRef = useRef<number | null>(null);
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
@@ -124,9 +135,12 @@ export function MushafAudioPlayer({
     };
   }, [recitationLabel, recitations, selectedRecitationId, selectedSurah, t]);
 
-  const startPlayback = async (kind: "surah" | "ayah") => {
+  const startPlayback = useCallback(async (
+    kind: "surah" | "ayah",
+    requestedAyah = selectedAyah,
+  ) => {
     if (!selectedRecitationId) return;
-    if (kind === "ayah" && !selectedAyah) return;
+    if (kind === "ayah" && (!requestedAyah || requestedAyah.surah !== selectedSurah)) return;
     setPlaybackLoading(true);
     setError(null);
     try {
@@ -141,10 +155,10 @@ export function MushafAudioPlayer({
         track: playback.track,
         segments: playback.segments || [],
         kind,
-        startAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
-        endAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
-        title: kind === "ayah" && selectedAyah
-          ? t("common.ayah", { ayah: `${selectedAyah.surah}:${selectedAyah.ayah}` })
+        startAyah: kind === "ayah" ? requestedAyah?.ayah : undefined,
+        endAyah: kind === "ayah" ? requestedAyah?.ayah : undefined,
+        title: kind === "ayah" && requestedAyah
+          ? t("common.ayah", { ayah: `${requestedAyah.surah}:${requestedAyah.ayah}` })
           : t("common.surah", { surah: selectedSurah }),
         artist: selectedRecitation
           ? recitationLabel(selectedRecitation)
@@ -157,7 +171,37 @@ export function MushafAudioPlayer({
     } finally {
       setPlaybackLoading(false);
     }
-  };
+  }, [
+    preparedPlayback,
+    recitationLabel,
+    selectedAyah,
+    selectedRecitation,
+    selectedRecitationId,
+    selectedSurah,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (
+      !playAyahRequest ||
+      handledAyahRequestRef.current === playAyahRequest.requestId ||
+      !selectedRecitationId ||
+      !preparedPlayback ||
+      preparedPlayback.track.surah_number !== selectedSurah
+    ) {
+      return;
+    }
+    const requestedAyah = parseAyahKey(playAyahRequest.ayahKey);
+    if (!requestedAyah || requestedAyah.surah !== selectedSurah) return;
+    handledAyahRequestRef.current = playAyahRequest.requestId;
+    void startPlayback("ayah", requestedAyah);
+  }, [
+    playAyahRequest,
+    preparedPlayback,
+    selectedRecitationId,
+    selectedSurah,
+    startPlayback,
+  ]);
 
   return (
     <div className="mushaf-audio-panel">
@@ -207,6 +251,7 @@ export function MushafAudioPlayer({
         request={playerRequest}
         className="mushaf-audio-now-playing"
         onActiveAyahChange={onActiveAyahChange}
+        onSettingsChange={onSettingsChange}
       />
     </div>
   );

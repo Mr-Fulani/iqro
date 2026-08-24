@@ -750,12 +750,37 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--primary-border);
 }
 
+.ayah-card.is-audio-active {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  box-shadow: 0 0 0 1px var(--primary-border);
+}
+
 .ayah-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   border-bottom: 1px dashed var(--border);
   padding-bottom: 10px;
+}
+
+.ayah-actions,
+.ayah-action-buttons,
+.ayah-playback-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ayah-actions {
+  justify-content: flex-end;
+}
+
+.ayah-playback-indicators .status-chip {
+  padding: 5px 9px;
+  white-space: nowrap;
 }
 
 .ayah-badge {
@@ -840,6 +865,10 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--primary-border);
   border-radius: var(--radius-lg);
   background: var(--primary-subtle);
+}
+
+.quran-audio-surface .mushaf-audio-panel {
+  margin-bottom: 0;
 }
 
 .mushaf-audio-controls {
@@ -1392,6 +1421,16 @@ input:focus, select:focus, textarea:focus {
 
   .hero-actions button {
     width: 100%;
+  }
+
+  .ayah-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ayah-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .segmented-audio-settings-toggle {
