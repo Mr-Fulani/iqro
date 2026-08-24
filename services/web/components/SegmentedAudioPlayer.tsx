@@ -621,6 +621,8 @@ export function SegmentedAudioPlayer({
       ? t("common.ayah", { ayah: `${activeAyah.surah_number}:${activeAyah.ayah_number}` })
       : activeRequest?.title || t("player.noAudio");
   const statusLabel = t(status.key, status.variables);
+  const playbackActionLabel = hasStarted ? t("player.continue") : t("player.play");
+  const settingsActionLabel = settingsOpen ? t("player.hideSettings") : t("player.showSettings");
 
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
@@ -645,12 +647,15 @@ export function SegmentedAudioPlayer({
 
       <div className="segmented-audio-native-controls">
         <button
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary btn-sm segmented-audio-resume"
           type="button"
           onClick={resumePlayback}
           disabled={!activeRequest || isPlaying}
+          aria-label={`▶ ${playbackActionLabel}`}
+          title={compact ? playbackActionLabel : undefined}
         >
-          ▶ {hasStarted ? t("player.continue") : t("player.play")}
+          <span aria-hidden="true">▶</span>
+          <span className="segmented-audio-resume-label">{playbackActionLabel}</span>
         </button>
         <audio
           ref={audioRef}
@@ -705,9 +710,14 @@ export function SegmentedAudioPlayer({
         className="btn btn-secondary btn-sm segmented-audio-settings-toggle"
         type="button"
         aria-expanded={settingsOpen}
+        aria-label={settingsActionLabel}
+        title={compact ? settingsActionLabel : undefined}
         onClick={() => setSettingsOpen((current) => !current)}
       >
-        {settingsOpen ? t("player.hideSettings") : t("player.showSettings")}
+        {compact && <span aria-hidden="true">⚙</span>}
+        <span className="segmented-audio-settings-label">
+          {compact ? t("player.settingsShort") : settingsActionLabel}
+        </span>
       </button>
 
       {settingsOpen && (

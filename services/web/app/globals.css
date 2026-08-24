@@ -995,6 +995,10 @@ input:focus, select:focus, textarea:focus {
 .global-audio-player-dock .segmented-audio-settings-toggle,
 .global-audio-player-link {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   white-space: nowrap;
 }
 
@@ -1240,6 +1244,8 @@ input:focus, select:focus, textarea:focus {
 
   .header-actions {
     justify-content: space-between;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .hero-card {
@@ -1308,5 +1314,29 @@ input:focus, select:focus, textarea:focus {
 
   .footer-content {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .global-audio-player-spacer {
+    height: 158px;
+  }
+
+  .global-audio-player-dock .segmented-audio-resume-label,
+  .global-audio-player-dock .segmented-audio-settings-label,
+  .global-audio-player-link-label {
+    display: none;
+  }
+
+  .global-audio-player-dock .segmented-audio-resume,
+  .global-audio-player-dock .segmented-audio-settings-toggle,
+  .global-audio-player-link {
+    width: 36px;
+    min-width: 36px;
+    padding-inline: 8px;
+  }
+
+  .global-audio-player-dock .segmented-audio-native-controls {
+    gap: 6px;
   }
 }

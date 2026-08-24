@@ -74,8 +74,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
               compact
             />
             {pathname !== "/audio" && (
-              <Link href="/audio" className="btn btn-secondary btn-sm global-audio-player-link">
-                {t("player.openAudio")}
+              <Link
+                href="/audio"
+                className="btn btn-secondary btn-sm global-audio-player-link"
+                aria-label={t("player.openAudio")}
+                title={t("player.openAudio")}
+              >
+                <span aria-hidden="true">🎵</span>
+                <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
               </Link>
             )}
           </aside>

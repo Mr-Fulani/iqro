@@ -358,6 +358,31 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
+test("persistent player actions adapt without horizontal overflow on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const resumeButton = player.getByRole("button", { name: "▶ Продолжить", exact: true });
+  const settingsButton = player.getByRole("button", { name: "Повтор, диапазон и таймер", exact: true });
+  const audio = player.locator("audio");
+  await expect(player).toBeVisible();
+  await expect(resumeButton).toBeVisible();
+  await expect(settingsButton).toBeVisible();
+  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+
+  await page.locator('.app-menu a[href="/"]').click();
+  const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
+  await expect(audioLink).toBeVisible();
+  expect((await audioLink.boundingBox())!.width).toBeLessThanOrEqual(40);
+});
+
 test("mushaf selects every fragment of an ayah and starts ayah playback", async ({ page }) => {
   await page.goto("/quran?surah=6");
   await page.getByRole("button", { name: /Мусхаф/ }).click();

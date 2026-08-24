@@ -241,6 +241,7 @@ export const MESSAGES = {
   "player.play": message("Воспроизвести", "Play", "تشغيل", "Oynat"),
   "player.hideSettings": message("Скрыть расширенные настройки", "Hide advanced settings", "إخفاء الإعدادات المتقدمة", "Gelişmiş ayarları gizle"),
   "player.showSettings": message("Повтор, диапазон и таймер", "Repeat, range, and timer", "التكرار والنطاق والمؤقت", "Tekrar, aralık ve zamanlayıcı"),
+  "player.settingsShort": message("Настройки", "Settings", "الإعدادات", "Ayarlar"),
   "player.repeat": message("Повтор", "Repeat", "التكرار", "Tekrar"),
   "player.repeatAria": message("Режим повтора", "Repeat mode", "وضع التكرار", "Tekrar modu"),
   "player.repeatOff": message("Без повтора", "No repeat", "دون تكرار", "Tekrar yok"),
