@@ -25,6 +25,7 @@ from quran_backend.modules.audio.quran_foundation import (
     ALLOWED_AUDIO_HOSTS,
     QuranFoundationError,
 )
+from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
 from quran_backend.modules.quran.models import Ayah, QuranEditionVersion
 
 DEVELOPER_TERMS_URL = "https://api-docs.quran.foundation/legal/developer-terms/"
@@ -231,6 +232,12 @@ def import_quran_foundation_recitation(
     if publish:
         recitation.publish()
         recitation.save()
+        enqueue_audio_content_change(
+            action="published",
+            recitation_id=recitation.id,
+            reciter_id=recitation.reciter_id,
+            version=recitation.version,
+        )
     return ImportResult(recitation, True)
 
 

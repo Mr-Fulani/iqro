@@ -128,9 +128,7 @@ test("published surah and ayah routes render indexable Quran text on the server"
     `http://127.0.0.1:3100${surahPath}`,
   );
   expect(
-    await page.locator('script[type="application/ld+json"]').evaluate(
-      (element) => element.textContent,
-    ),
+    (await page.locator('script[type="application/ld+json"]').allTextContents()).join("\n"),
   ).toContain("BreadcrumbList");
 
   await page.goto(`${surahPath}/ayah/1`);
@@ -161,6 +159,38 @@ test("published reciter and recitation routes render the licensed audio catalog 
   expect(recitationHtml).toContain("Test streaming license");
   expect(recitationHtml).toContain("Сура 114");
   expect(recitationHtml).not.toContain("audio.example.test");
+  expect(recitationHtml).toContain('"@type":"AudioObject"');
+  expect(recitationHtml).toContain('"license":"https://example.test/licenses/audio"');
+});
+
+test("root layout publishes WebSite structured data", async ({ request }) => {
+  const response = await request.get("/ru");
+  expect(response.ok()).toBe(true);
+  const html = await response.text();
+  expect(html).toContain('"@type":"WebSite"');
+  expect(html).toContain('"@id":"http://127.0.0.1:3100/#website"');
+});
+
+test("content revalidation accepts only authenticated allowlisted events", async ({ request }) => {
+  const endpoint = "/api/internal/content-revalidation";
+  const event = {
+    type: "quran.edition.changed",
+    action: "activated",
+    edition: "madani-hafs",
+    version: "1.0.0",
+  };
+
+  expect((await request.post(endpoint, { data: event })).status()).toBe(404);
+  expect((await request.post(endpoint, {
+    data: { ...event, arbitrary_tag: "everything" },
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  })).status()).toBe(422);
+  const accepted = await request.post(endpoint, {
+    data: event,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(accepted.ok()).toBe(true);
+  expect(await accepted.json()).toEqual({ accepted: true, type: event.type });
 });
 
 test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {

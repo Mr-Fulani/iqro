@@ -9,14 +9,14 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 42 Playwright-сценария проходят. Это ещё не означает готовность
+ESLint, TypeScript и 44 Playwright-сценария проходят. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
 - каталог и страницы опубликованных сур/аятов, чтецов и декламаций уже отдают содержательный
   server-rendered HTML; интерактивные reader и audio player остаются client surfaces;
 - locale-prefixed RU/EN/AR/TR routes, legacy redirects, canonical/hreflang, `robots.txt`,
   sitemap, page-specific metadata, manifest и social preview уже добавлены;
-- юридические страницы, `WebSite`/`AudioObject` structured data и полный Lighthouse/SEO gate
+- юридические страницы и полный Lighthouse/SEO gate
   ещё не закрыты;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
@@ -96,10 +96,14 @@ flowchart LR
   отсекающий withdrawn, non-streaming, incomplete и stale-version releases через public API.
 - [x] Явно установить `noindex, nofollow` для login/register/profile и других персональных или
   технических страниц.
-- [ ] Определить ISR/edge-cache policy и invalidation по content version; персональные ответы
-  оставить `private, no-store`.
+- [x] Определить ISR policy и автоматическую invalidation по content version через защищённое
+  backend → Celery → web событие; персональные ответы оставить `private, no-store`, а gateway
+  не должен независимо кэшировать HTML/RSC/JSON до появления CDN purge adapter.
+- [ ] Перед второй web-репликой подключить общий Next.js cache handler и Redis-координацию
+  tag invalidation; при edge-cache HTML/RSC/JSON добавить purge adapter к тому же событию.
 - [x] Добавить `BreadcrumbList` для глубоких маршрутов сур и аятов.
-- [ ] Добавить `WebSite` и `AudioObject` только для опубликованных лицензированных записей.
+- [x] Добавить `WebSite` и `AudioObject` только для опубликованных лицензированных записей,
+  не раскрывая прямые media URL в server-rendered HTML.
 
 ### Публичная поверхность продукта
 

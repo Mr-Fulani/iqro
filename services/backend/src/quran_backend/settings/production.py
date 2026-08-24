@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.settings.base import *  # noqa: F403
@@ -18,6 +20,23 @@ QURAN_REFRESH_TOKEN_HASH_KEY = required_env("QURAN_REFRESH_TOKEN_HASH_KEY")
 QURAN_EMAIL_CODE_HASH_KEY = required_env("QURAN_EMAIL_CODE_HASH_KEY")
 QURAN_PRAYER_THROTTLE_HASH_KEY = required_env("QURAN_PRAYER_THROTTLE_HASH_KEY")
 QURAN_OPERATIONS_TOKEN = required_env("QURAN_OPERATIONS_TOKEN")
+WEB_CONTENT_REVALIDATION_SECRET = required_env("WEB_CONTENT_REVALIDATION_SECRET")
+if len(WEB_CONTENT_REVALIDATION_SECRET) < 32:
+    raise ImproperlyConfigured("WEB_CONTENT_REVALIDATION_SECRET must be at least 32 characters")
+WEB_CONTENT_REVALIDATION_URL = required_env("WEB_CONTENT_REVALIDATION_URL")
+revalidation_url = urlsplit(WEB_CONTENT_REVALIDATION_URL)
+if (
+    revalidation_url.scheme not in {"http", "https"}
+    or revalidation_url.hostname is None
+    or revalidation_url.username is not None
+    or revalidation_url.password is not None
+    or revalidation_url.query
+    or revalidation_url.fragment
+):
+    raise ImproperlyConfigured(
+        "WEB_CONTENT_REVALIDATION_URL must be an HTTP(S) URL without credentials, "
+        "query, or fragment"
+    )
 for email_setting in (
     "DJANGO_EMAIL_HOST",
     "DJANGO_EMAIL_HOST_USER",

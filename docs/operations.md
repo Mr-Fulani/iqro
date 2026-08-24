@@ -58,10 +58,27 @@ API по-прежнему идёт через gateway. В запрос не пе
 selectors являются единственной границей, решающей, какие Quran edition/version и полные
 streamable audio releases доступны поисковому индексу.
 
-Next.js fetch cache обновляет опубликованный Quran-контент не чаще одного раза в час и помечает
-запросы тегами edition/surah/ayah. После появления редакционного publish webhook эти теги нужно
-инвалидировать on demand; до этого максимальное штатное окно обновления — 60 минут. Персональные
-маршруты в этот кэш не входят.
+Next.js fetch cache обновляет опубликованный Quran/audio-контент не реже одного раза в час и
+помечает запросы тегами edition/surah/ayah или reciter/recitation/track. Публикация, активация и
+отзыв версии после commit автоматически ставят Celery-задачу
+`core.notify_web_content_change`. Она подписанным внутренним POST инвалидирует соответствующие
+data tags, ISR pages и versioned sitemap. Временные сетевые/5xx ошибки повторяются с backoff;
+4xx считается ошибкой конфигурации или контракта и требует вмешательства. Часовой TTL остаётся
+страховочной границей, если webhook исчерпал retry. Персональные маршруты в этот кэш не входят.
+
+Один и тот же случайный `WEB_CONTENT_REVALIDATION_SECRET` длиной от 32 символов передаётся
+backend/worker и web через secret store; в логах и URL его быть не должно. Internal URL по
+умолчанию в Compose — `http://web:3000/api/internal/content-revalidation`. Endpoint не принимает
+произвольные cache tags/paths: только allowlisted Quran/audio события с валидными edition,
+content version и UUID. Без корректного секрета он отвечает 404.
+
+Текущий single-web профиль использует стандартный filesystem cache Next.js. Перед запуском
+второй web-реплики необходимо подключить общий cache handler и Redis-backed координацию tag
+timestamps (`updateTags`/`refreshTags`/`getExpiration`): стандартная on-demand invalidation
+локальна для одного инстанса. Если CDN начнёт кэшировать HTML/RSC или public JSON поверх
+Next.js, тот же publication event обязан purge'ить CDN-варианты; до появления purge adapter
+gateway не должен добавлять для них независимый edge TTL. Immutable media кэшируется отдельно
+в media CDN и не зависит от ISR webhook.
 
 `/sitemaps/quran/sitemap.xml` ссылается на child sitemap с edition и активной content version в
 URL. `/sitemaps/audio/sitemap.xml` делает то же для каждой опубликованной декламации. Child
@@ -75,6 +92,11 @@ curl --fail https://example.org/ru/quran/madani-hafs/surah/1
 curl --fail https://example.org/sitemaps/audio/sitemap.xml
 curl --fail https://example.org/ru/audio/reciters
 ```
+
+При ротации секрета сначала обновите worker/backend и web как одну rollout-группу, затем
+повторно отправьте последнее publication event либо дождитесь часового TTL. Алерт обязателен
+на окончательно failed `core.notify_web_content_change` и на расхождение active content version
+между public API, страницей и sitemap.
 
 Ошибка upstream не подменяется пустым успешным sitemap: endpoint отвечает 503, чтобы crawler
 повторил запрос позднее и не счёл исчезновение контента штатным удалением.

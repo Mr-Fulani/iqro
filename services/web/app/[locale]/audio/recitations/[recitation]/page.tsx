@@ -17,6 +17,7 @@ import {
 } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 export const revalidate = 3_600;
 
@@ -69,28 +70,50 @@ export default async function RecitationPage({ params }: { params: Promise<Route
     new Date(recitation.published_at),
   );
   const currentPath = recitationPath(route.recitation);
-  const breadcrumbJson = JSON.stringify({
+  const pageUrl = absoluteSiteUrl(localizedPath(route.locale, currentPath));
+  const totalDurationSeconds = Math.round(
+    tracks.reduce((total, track) => total + track.duration_ms, 0) / 1_000,
+  );
+  const structuredDataJson = serializeJsonLd({
     "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
+    "@graph": [
       {
-        "@type": "ListItem",
-        position: 1,
-        name,
-        item: absoluteSiteUrl(localizedPath(route.locale, reciterPath(recitation.reciter.id))),
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name,
+            item: absoluteSiteUrl(localizedPath(route.locale, reciterPath(recitation.reciter.id))),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: label,
+            item: pageUrl,
+          },
+        ],
       },
       {
-        "@type": "ListItem",
-        position: 2,
-        name: label,
-        item: absoluteSiteUrl(localizedPath(route.locale, currentPath)),
+        "@type": "AudioObject",
+        "@id": `${pageUrl}#audio`,
+        name: translate(route.locale, "audio.deep.recitationTitle", { name, recitation: label }),
+        url: pageUrl,
+        inLanguage: "ar",
+        encodingFormat: [...new Set(tracks.map((track) => track.asset.content_type))],
+        duration: `PT${totalDurationSeconds}S`,
+        uploadDate: recitation.published_at,
+        creator: { "@type": "Person", name },
+        copyrightHolder: { "@type": "Organization", name: recitation.license.rights_holder },
+        license: recitation.license.url || recitation.license.name,
+        isAccessibleForFree: true,
       },
     ],
-  }).replace(/</g, "\\u003c");
+  });
 
   return (
     <div className="seo-quran-page">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson }} />
       <nav className="breadcrumbs" aria-label={translate(route.locale, "audio.deep.breadcrumbs")}>
         <ol>
           <li><Link href={localizedPath(route.locale, reciterPath(recitation.reciter.id))}>{name}</Link></li>

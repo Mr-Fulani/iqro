@@ -8,6 +8,7 @@ from typing import Any
 
 from django.db import transaction
 
+from quran_backend.modules.core.content_revalidation import enqueue_quran_content_change
 from quran_backend.modules.quran.models import (
     MushafPage,
     PublicationStatus,
@@ -177,6 +178,13 @@ def publish_prepared_mushaf_catalog(
             edition.full_clean()
             edition.save(update_fields=["active_version", "updated_at"])
         activated = True
+
+    if activated:
+        enqueue_quran_content_change(
+            action="activated",
+            edition=edition.code,
+            version=version.version,
+        )
 
     return PublicationResult(
         edition=edition,

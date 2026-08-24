@@ -181,6 +181,11 @@ API не должен предполагать, что запрос пришёл
 - Redis не является источником истины; eviction cache не ломает данные и авторизацию.
 - Переход к HA или разделению выполняется при memory pressure, evictions, latency либо
   конфликте queue/cache workloads.
+- Стандартный Next.js filesystem cache допустим только для одной web-реплики. Перед второй
+  репликой cache entries и timestamps tag invalidation выносятся в общий handler; publication
+  event пишет инвалидирование централизованно, а каждый инстанс refresh'ит его до request.
+- CDN HTML/RSC/public JSON вводится только вместе с purge adapter. Без него edge TTL может
+  пережить Next.js `revalidateTag`; immutable audio/image media остаётся отдельным CDN-контуром.
 
 ### Workers
 

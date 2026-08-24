@@ -30,6 +30,8 @@ x-backend-environment: &backend-environment
   DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
   PUBLIC_MEDIA_BASE_URL: ${PUBLIC_MEDIA_BASE_URL:?Set PUBLIC_MEDIA_BASE_URL in the production env file}
   PUBLIC_AUDIO_BASE_URL: ${PUBLIC_AUDIO_BASE_URL:?Set PUBLIC_AUDIO_BASE_URL in the production env file}
+  WEB_CONTENT_REVALIDATION_URL: http://web:3000/api/internal/content-revalidation
+  WEB_CONTENT_REVALIDATION_SECRET: ${WEB_CONTENT_REVALIDATION_SECRET:?Set WEB_CONTENT_REVALIDATION_SECRET in the production env file}
   QF_AUDIO_SYNC_ENABLED: ${QF_AUDIO_SYNC_ENABLED:-false}
 
 x-backend-service: &backend-service
@@ -200,6 +202,7 @@ services:
       PORT: "3000"
       SITE_URL: ${SITE_URL:?Set SITE_URL in the production env file}
       BACKEND_INTERNAL_URL: http://backend:8000
+      WEB_CONTENT_REVALIDATION_SECRET: ${WEB_CONTENT_REVALIDATION_SECRET:?Set WEB_CONTENT_REVALIDATION_SECRET in the production env file}
     tmpfs:
       - /tmp:size=64m,mode=1777
       - /app/.next/cache:size=128m,mode=0755

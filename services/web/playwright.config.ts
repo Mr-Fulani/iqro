@@ -41,6 +41,7 @@ export default defineConfig({
           env: {
             SITE_URL: baseURL,
             BACKEND_INTERNAL_URL: mockPublicApiUrl,
+            WEB_CONTENT_REVALIDATION_SECRET: "test-only-content-revalidation-secret-0001",
           },
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

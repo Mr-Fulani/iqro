@@ -14,6 +14,7 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     Reciter,
 )
+from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
 
 
 @admin.register(QuranFoundationSyncState)
@@ -103,6 +104,32 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             and obj is not None
             and obj.status == RecitationPublicationStatus.DRAFT
         )
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: RecitationEdition,
+        form: Any,
+        change: bool,
+    ) -> None:
+        previous_status = None
+        if change:
+            previous_status = (
+                RecitationEdition.objects.filter(pk=obj.pk)
+                .values_list("status", flat=True)
+                .first()
+            )
+        super().save_model(request, obj, form, change)
+        if previous_status != obj.status and obj.status in {
+            RecitationPublicationStatus.PUBLISHED,
+            RecitationPublicationStatus.WITHDRAWN,
+        }:
+            enqueue_audio_content_change(
+                action=obj.status,
+                recitation_id=obj.id,
+                reciter_id=obj.reciter_id,
+                version=obj.version,
+            )
 
 
 @admin.register(AudioTimingVersion)

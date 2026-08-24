@@ -25,6 +25,7 @@ from quran_backend.modules.audio.quran_foundation_importer import (
     import_quran_foundation_recitation,
     prepare_quran_foundation_recitation,
 )
+from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
 
 SOURCE_ID_PATTERN = re.compile(r"^qf-(?P<source_id>[1-9][0-9]*)-")
 
@@ -294,6 +295,12 @@ def _refresh_recitation_version(
         locked = RecitationEdition.objects.select_for_update().get(pk=recitation.pk)
         locked.withdraw()
         locked.save(update_fields=["status", "updated_at"])
+        enqueue_audio_content_change(
+            action="withdrawn",
+            recitation_id=locked.id,
+            reciter_id=locked.reciter_id,
+            version=locked.version,
+        )
     return True
 
 
@@ -304,4 +311,10 @@ def _withdraw_recitation(recitation: RecitationEdition) -> bool:
             return False
         locked.withdraw()
         locked.save(update_fields=["status", "updated_at"])
+        enqueue_audio_content_change(
+            action="withdrawn",
+            recitation_id=locked.id,
+            reciter_id=locked.reciter_id,
+            version=locked.version,
+        )
     return True

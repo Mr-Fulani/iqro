@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from django.db import transaction
 
+from quran_backend.modules.core.content_revalidation import enqueue_quran_content_change
 from quran_backend.modules.quran.models import (
     Ayah,
     PublicationStatus,
@@ -57,6 +58,12 @@ def publish_quran_version(
         edition.active_version = version
         edition.full_clean()
         edition.save(update_fields=["active_version", "updated_at"])
+    if published or activated:
+        enqueue_quran_content_change(
+            action="activated" if activated else "published",
+            edition=edition.code,
+            version=version.version,
+        )
     return QuranPublicationResult(version=version, published=published, activated=activated)
 
 
