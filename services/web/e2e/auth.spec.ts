@@ -102,11 +102,13 @@ async function installAuthMocks(page: Page) {
   });
 }
 
-test("verified email login merges the guest without persisting tokens in localStorage", async ({
+test("verified email login returns to the previous page without persisting tokens", async ({
   page,
 }) => {
   await installAuthMocks(page);
-  await page.goto("/login");
+  await page.goto("/");
+  await page.locator("main").getByRole("link", { name: "Войти по email" }).first().click();
+  await expect(page).toHaveURL(/\/login$/);
 
   await page.getByLabel("Email").fill("reader@example.com");
   await page.getByRole("button", { name: "Получить код" }).click();
@@ -115,9 +117,8 @@ test("verified email login merges the guest without persisting tokens in localSt
   await page.getByLabel("Код из письма").fill("123456");
   await page.getByRole("button", { name: "Подтвердить и войти" }).click();
 
-  await expect(page.getByText("Вход выполнен, гостевые данные объединены с аккаунтом.")).toBeVisible();
-  await expect(page.getByText("reader@example.com", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "В личный кабинет" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator(".app-header").getByText("Аккаунт", { exact: true })).toBeVisible();
   const storageDump = await page.evaluate(() => JSON.stringify({ ...localStorage }));
   expect(storageDump).not.toContain("guest-access-token");
   expect(storageDump).not.toContain("active-access-token");
@@ -188,7 +189,7 @@ test("pending guest changes are pushed before the account merge", async ({ page 
   await page.getByLabel("Код из письма").fill("123456");
   await page.getByRole("button", { name: "Подтвердить и войти" }).click();
 
-  await expect(page.getByText("Вход выполнен, гостевые данные объединены с аккаунтом.")).toBeVisible();
+  await expect(page).toHaveURL(/\/profile$/);
   expect(order).toEqual(["sync-push", "sync-pull", "email-verify"]);
   expect(await page.evaluate((key) => localStorage.getItem(key), guestSyncKey)).toBeNull();
 });

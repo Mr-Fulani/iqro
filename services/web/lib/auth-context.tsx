@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import {
   ACCOUNT_LIFECYCLE_NOTICE_KEY,
   api,
@@ -12,6 +13,7 @@ import {
 } from "./api";
 import { clearSyncState } from "./sync-state";
 import { useI18n } from "./i18n-context";
+import { rememberPostAuthReturnPath } from "./auth-navigation";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -35,9 +37,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { locale, t } = useI18n();
+  const pathname = usePathname();
   const [session, setSession] = useState<GuestBootstrapResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    rememberPostAuthReturnPath(
+      `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    );
+  }, [pathname]);
 
   useEffect(() => {
     // Initialize base URL if set in environment or default to relative/localhost

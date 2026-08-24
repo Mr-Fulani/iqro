@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { generateUuidV7 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { consumePostAuthReturnPath } from "../lib/auth-navigation";
 import { useI18n } from "../lib/i18n-context";
 
 export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
@@ -53,6 +54,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
         ? t("authForm.merged")
         : t("authForm.activated"),
     );
+    router.replace(consumePostAuthReturnPath());
   }
 
   return (
