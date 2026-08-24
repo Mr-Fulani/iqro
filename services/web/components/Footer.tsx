@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useI18n } from "../lib/i18n-context";
+import { localizedPath } from "../lib/routing";
 
 export function Footer() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   return (
     <footer className="app-footer">
       <div className="footer-content">
@@ -18,21 +19,16 @@ export function Footer() {
         <div className="footer-links">
           <div className="footer-column">
             <h4>{t("footer.sections")}</h4>
-            <Link href="/quran">{t("footer.quran")}</Link>
-            <Link href="/audio">{t("footer.reciters")}</Link>
-            <Link href="/prayer">{t("footer.prayer")}</Link>
-            <Link href="/profile">{t("footer.sync")}</Link>
+            <Link href={localizedPath(locale, "/quran")}>{t("footer.quran")}</Link>
+            <Link href={localizedPath(locale, "/audio")}>{t("footer.reciters")}</Link>
+            <Link href={localizedPath(locale, "/prayer")}>{t("footer.prayer")}</Link>
+            <Link href={localizedPath(locale, "/profile")}>{t("footer.sync")}</Link>
           </div>
 
           <div className="footer-column">
-            <h4>{t("footer.developers")}</h4>
-            <a href="http://localhost:8000/api/docs" target="_blank" rel="noreferrer">
-              Swagger UI
-            </a>
-            <a href="http://localhost:8000/api/schema" target="_blank" rel="noreferrer">
-              OpenAPI Schema
-            </a>
-            <Link href="/login">{t("footer.session")}</Link>
+            <h4>{t("footer.account")}</h4>
+            <Link href={localizedPath(locale, "/login")}>{t("footer.session")}</Link>
+            <Link href={localizedPath(locale, "/profile")}>{t("nav.profile")}</Link>
           </div>
         </div>
       </div>

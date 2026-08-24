@@ -132,3 +132,24 @@ python3 ops/load/smoke.py \
 Это regression-smoke, а не доказательство production capacity. Полноценный capacity-тест
 проводится на staging с production-подобными PostgreSQL/Redis и наблюдением CPU, RAM,
 connection pools и database latency.
+
+## Capacity profiles и рост
+
+Проект использует профили S0–S3 из
+[архитектуры масштабирования](architecture-and-scaling.md). Переход не выполняется только
+по DAU: нагрузочный отчёт должен фиксировать workload mix Flutter/web/Telegram Mini App,
+requests per active user, sync operations/day, audio minutes/day и peak factor.
+
+Минимальный набор сценариев capacity/soak:
+
+- публичные Quran/audio/library reads при cache-cold и cache-warm;
+- авторизация, token refresh, reading writes и sync push/pull;
+- одновременный импорт/retention task без нарушения пользовательского SLO;
+- CDN `HEAD`, `Range`, `206`, `416`, CORS/ETag и origin-failure;
+- audio startup/buffering для экономной, стандартной и высокой rendition;
+- graceful degradation при недоступности Redis, provider API и worker queue.
+
+Отчёт содержит API p95/p99/5xx, DB pool/locks/query latency, Redis latency/evictions,
+Celery queue age, CDN byte hit ratio/origin egress и стоимость media на DAU. После теста
+фиксируются максимальная проверенная нагрузка, запас, bottleneck, rollback и следующий
+конкретный trigger масштабирования.

@@ -28,6 +28,9 @@ export default defineConfig({
     : {
         command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
         url: baseURL,
+        env: {
+          SITE_URL: baseURL,
+        },
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         stdout: "ignore",

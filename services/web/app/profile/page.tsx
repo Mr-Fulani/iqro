@@ -15,6 +15,7 @@ import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
 import { SYNC_STATE_EVENT } from "../../lib/sync-state";
 import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
+import { localizedPath } from "../../lib/routing";
 
 const FEEDBACK_CATEGORIES = [
   ["religious_content", "feedback.category.religious"],
@@ -51,7 +52,7 @@ export default function ProfilePage() {
     logoutAll,
     isLoading: authLoading,
   } = useAuth();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -310,7 +311,7 @@ export default function ProfilePage() {
     return (
       <div className="surface" style={{ maxWidth: 640, margin: "24px auto", textAlign: "center" }}>
         <span className="brand-mark sm" style={{ margin: "0 auto 16px" }}>👤</span>
-        <h2 className="surface-title" style={{ marginBottom: 8 }}>{t("profile.readerProfile")}</h2>
+        <h1 className="surface-title" style={{ marginBottom: 8 }}>{t("profile.readerProfile")}</h1>
         <p className="kpi-desc" style={{ marginBottom: 24 }}>
           {t("profile.loginDescription")}
         </p>
@@ -342,7 +343,7 @@ export default function ProfilePage() {
         <div className="surface-head">
           <div>
             <p className="eyebrow">{t("profile.eyebrow")}</p>
-            <h2 className="surface-title">{t("profile.title")}</h2>
+            <h1 className="surface-title">{t("profile.title")}</h1>
             <p className="surface-subtitle">
               {session?.user.email ? `${session.user.email} · ` : ""}
               {t("profile.identity", {
@@ -362,7 +363,7 @@ export default function ProfilePage() {
               {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
             </button>
             {isGuest ? (
-              <Link href="/login" className="btn btn-primary btn-sm">
+              <Link href={localizedPath(locale, "/login")} className="btn btn-primary btn-sm">
                 {t("auth.emailLogin")}
               </Link>
             ) : (

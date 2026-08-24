@@ -96,6 +96,7 @@ export const MESSAGES = {
   "footer.prayer": message("Время намаза", "Prayer times", "مواقيت الصلاة", "Namaz vakitleri"),
   "footer.sync": message("Синхронизация и закладки", "Sync and bookmarks", "المزامنة والعلامات", "Senkronizasyon ve yer imleri"),
   "footer.developers": message("Разработчикам", "Developers", "للمطورين", "Geliştiriciler"),
+  "footer.account": message("Аккаунт", "Account", "الحساب", "Hesap"),
   "footer.session": message("Управление сессией", "Session management", "إدارة الجلسة", "Oturum yönetimi"),
   "footer.copyright": message(
     "© 2026 Quran Platform. Издание Мадинского Мусхафа (Хафс ‘ан ‘Асым).",
@@ -278,6 +279,18 @@ export const MESSAGES = {
   "quran.bookmarkLabel": message("Сура {surah}:{ayah} (стр. {page})", "Surah {surah}:{ayah} (p. {page})", "السورة {surah}:{ayah} (ص {page})", "Sure {surah}:{ayah} (s. {page})"),
   "quran.bookmarkAdded": message("Закладка добавлена в личный кабинет.", "Bookmark added to your profile.", "أُضيفت العلامة إلى حسابك.", "Yer imi profilinize eklendi."),
   "quran.eyebrow": message("Чтение Священного Писания", "Reading the Holy Quran", "قراءة القرآن الكريم", "Kur'an-ı Kerim okuma"),
+  "quran.title": message(
+    "Читать Коран — Мадинский Мусхаф Хафс",
+    "Read the Quran — Madani Mushaf Hafs",
+    "قراءة القرآن — مصحف المدينة برواية حفص",
+    "Kur'an oku — Medine Mushafı Hafs",
+  ),
+  "quran.description": message(
+    "Читайте 114 сур Священного Корана по аятам или страницам Мадинского Мусхафа, переходите по джузам, хизбам и четвертям.",
+    "Read all 114 surahs of the Holy Quran by ayah or Madani Mushaf page, with navigation by juz, hizb, and quarter.",
+    "اقرأ سور القرآن الكريم الـ114 حسب الآيات أو صفحات مصحف المدينة، وتنقّل بين الأجزاء والأحزاب والأرباع.",
+    "Kur'an-ı Kerim'in 114 suresini ayet veya Medine Mushafı sayfasına göre okuyun; cüz, hizb ve rubular arasında gezinin.",
+  ),
   "quran.ayahsMeta": message("Аятов: {count} · {revelation} · страница {page}", "Ayahs: {count} · {revelation} · page {page}", "الآيات: {count} · {revelation} · الصفحة {page}", "Ayet: {count} · {revelation} · sayfa {page}"),
   "quran.textView": message("📜 Текст", "📜 Text", "📜 النص", "📜 Metin"),
   "quran.mushafView": message("📖 Мусхаф (стр. {page})", "📖 Mushaf (p. {page})", "📖 المصحف (ص {page})", "📖 Mushaf (s. {page})"),

@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { localizedPath, stripLocalePrefix } from "../lib/routing";
 
 export function Header() {
   const pathname = usePathname();
   const { session, logout, isLoading } = useAuth();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const routePathname = stripLocalePrefix(pathname);
   const isActiveAccount = session?.user.status === "active";
   const isPendingDeletion = session?.user.status === "pending_deletion";
   const statusClassName = isPendingDeletion
@@ -29,22 +31,23 @@ export function Header() {
   return (
     <header className="app-header">
       <div className="brand-block">
-        <Link href="/" className="brand-link">
+        <Link href={localizedPath(locale, "/")} className="brand-link">
           <span className="brand-mark">Q</span>
           <div>
             <p className="eyebrow">Quran Platform</p>
-            <h1 className="brand-title">{t("brand.subtitle")}</h1>
+            <p className="brand-title">{t("brand.subtitle")}</p>
           </div>
         </Link>
       </div>
 
       <nav className="app-menu" aria-label={t("nav.aria")}>
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = routePathname === item.href
+            || (item.href !== "/" && routePathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={localizedPath(locale, item.href)}
               className={`menu-link ${isActive ? "menu-link-active" : ""}`}
               aria-label={item.label}
               title={item.label}

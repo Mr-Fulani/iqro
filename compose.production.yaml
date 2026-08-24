@@ -198,6 +198,7 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: "3000"
+      SITE_URL: ${SITE_URL:?Set SITE_URL in the production env file}
     tmpfs:
       - /tmp:size=64m,mode=1777
       - /app/.next/cache:size=128m,mode=0755

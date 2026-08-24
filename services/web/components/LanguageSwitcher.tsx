@@ -1,14 +1,22 @@
 "use client";
 
 import { ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "../lib/i18n-context";
 import { Locale, SUPPORTED_LOCALES } from "../lib/i18n";
+import { localizedPath } from "../lib/routing";
 
 export function LanguageSwitcher() {
+  const router = useRouter();
   const { locale, setLocale, t } = useI18n();
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setLocale(event.target.value as Locale);
+    const nextLocale = event.target.value as Locale;
+    setLocale(nextLocale);
+    router.push(localizedPath(
+      nextLocale,
+      `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    ));
   };
 
   return (

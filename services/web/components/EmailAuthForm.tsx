@@ -7,10 +7,11 @@ import { generateUuidV7 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { consumePostAuthReturnPath } from "../lib/auth-navigation";
 import { useI18n } from "../lib/i18n-context";
+import { localizedPath } from "../lib/routing";
 
 export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const {
     session,
     isLoggedIn,
@@ -54,7 +55,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
         ? t("authForm.merged")
         : t("authForm.activated"),
     );
-    router.replace(consumePostAuthReturnPath());
+    router.replace(consumePostAuthReturnPath(locale));
   }
 
   return (
@@ -62,7 +63,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
       <div className="surface-head" style={{ marginBottom: 16 }}>
         <div>
           <p className="eyebrow">Quran Platform Auth</p>
-          <h2 className="surface-title">{title}</h2>
+          <h1 className="surface-title">{title}</h1>
         </div>
       </div>
 
@@ -79,7 +80,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
             {t("authForm.signedInAsLabel")} {session.user.email && <strong>{session.user.email}</strong>}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/profile" className="btn btn-primary" style={{ flex: 1 }}>
+            <Link href={localizedPath(locale, "/profile")} className="btn btn-primary" style={{ flex: 1 }}>
               {t("authForm.profile")}
             </Link>
             <button onClick={() => void logout()} className="btn btn-secondary">
@@ -140,7 +141,9 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
               type="button"
               className="btn btn-secondary"
               disabled={isLoading}
-              onClick={() => void loginGuest().then((result) => result && router.push("/profile"))}
+              onClick={() => void loginGuest().then(
+                (result) => result && router.push(localizedPath(locale, "/profile")),
+              )}
             >
               {t("authForm.continueWithoutEmail")}
             </button>
@@ -155,10 +158,10 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}>
-        <Link href={mode === "register" ? "/login" : "/register"} className="kpi-desc" style={{ color: "var(--primary)" }}>
+        <Link href={localizedPath(locale, mode === "register" ? "/login" : "/register")} className="kpi-desc" style={{ color: "var(--primary)" }}>
           {mode === "register" ? t("authForm.hasAccount") : t("authForm.firstLogin")}
         </Link>
-        <Link href="/" className="kpi-desc">{t("authForm.home")}</Link>
+        <Link href={localizedPath(locale, "/")} className="kpi-desc">{t("authForm.home")}</Link>
       </div>
     </div>
   );

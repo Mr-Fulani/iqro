@@ -134,7 +134,7 @@ export default function AudioPage() {
         <div className="surface-head">
           <div>
             <p className="eyebrow">{t("audio.eyebrow")}</p>
-            <h2 className="surface-title">{t("audio.title")}</h2>
+            <h1 className="surface-title">{t("audio.title")}</h1>
             <p className="surface-subtitle">{t("audio.description")}</p>
           </div>
         </div>

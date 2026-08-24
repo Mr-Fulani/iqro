@@ -6,6 +6,7 @@ import { ReciterAvatar } from "../components/ReciterAvatar";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+import { localizedPath } from "../lib/routing";
 
 const RECITER_PORTRAITS: Record<string, string> = {
   "qf-159-maher-al-muaiqly": "/reciters/maher-al-muaiqly.webp",
@@ -18,13 +19,6 @@ export default function HomePage() {
   const { locale, t, formatDate } = useI18n();
   const isActiveAccount = session?.user.status === "active";
 
-  const [liveStatus, setLiveStatus] = useState<{ loading: boolean; ok?: boolean; error?: string }>({
-    loading: true,
-  });
-  const [readyStatus, setReadyStatus] = useState<{ loading: boolean; ok?: boolean; error?: string }>({
-    loading: true,
-  });
-
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [featuredSurahs, setFeaturedSurahs] = useState<Surah[]>([]);
   const [featuredReciters, setFeaturedReciters] = useState<Reciter[]>([]);
@@ -32,17 +26,6 @@ export default function HomePage() {
   const [todayPrayer, setTodayPrayer] = useState<PrayerCalculationResponse | null>(null);
 
   useEffect(() => {
-    // Check backend health
-    api
-      .getHealthLive()
-      .then((res) => setLiveStatus({ loading: false, ok: res.status === "ok" }))
-      .catch((err) => setLiveStatus({ loading: false, ok: false, error: api.normalizeError(err) }));
-
-    api
-      .getHealthReady()
-      .then((res) => setReadyStatus({ loading: false, ok: res.status === "ok" }))
-      .catch((err) => setReadyStatus({ loading: false, ok: false, error: api.normalizeError(err) }));
-
     // Load initial Quran editions
     api
       .getEditions()
@@ -106,48 +89,22 @@ export default function HomePage() {
           <p className="eyebrow" style={{ color: "#a7f3d0" }}>
             {t("home.eyebrow")}
           </p>
-          <h2>{t("home.title")}</h2>
+          <h1>{t("home.title")}</h1>
           <p>{t("home.description")}</p>
         </div>
 
         <div className="hero-actions">
-          <Link href="/quran" className="btn btn-primary btn-lg" style={{ background: "#ffffff", color: "#065f46" }}>
+          <Link href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg" style={{ background: "#ffffff", color: "#065f46" }}>
             {t("home.readQuran")}
           </Link>
-          <Link href="/prayer" className="btn btn-outline-primary btn-lg" style={{ borderColor: "#a7f3d0", color: "#ffffff" }}>
+          <Link href={localizedPath(locale, "/prayer")} className="btn btn-outline-primary btn-lg" style={{ borderColor: "#a7f3d0", color: "#ffffff" }}>
             {t("home.prayerTimes")}
           </Link>
         </div>
       </section>
 
-      {/* Backend Health & Connection Status */}
+      {/* Reader and Quran catalog summary */}
       <section className="kpi-grid">
-        <article className="kpi-card">
-          <div className="kpi-header">
-            <span className="kpi-label">{t("home.backendApi")} (Liveness)</span>
-            <span className="kpi-icon">{liveStatus.ok ? "🟢" : liveStatus.loading ? "⏳" : "🔴"}</span>
-          </div>
-          <div className="kpi-value">
-            {liveStatus.loading ? t("common.checking") : liveStatus.ok ? t("home.connected") : t("home.disconnected")}
-          </div>
-          <div className="kpi-desc">
-            {liveStatus.ok ? t("home.liveOk") : liveStatus.error || t("home.waitingBackend")}
-          </div>
-        </article>
-
-        <article className="kpi-card">
-          <div className="kpi-header">
-            <span className="kpi-label">{t("home.servicesReady")} (Readiness)</span>
-            <span className="kpi-icon">{readyStatus.ok ? "🟢" : readyStatus.loading ? "⏳" : "🔴"}</span>
-          </div>
-          <div className="kpi-value">
-            {readyStatus.loading ? t("common.checking") : readyStatus.ok ? t("home.ready") : t("home.unavailable")}
-          </div>
-          <div className="kpi-desc">
-            {readyStatus.ok ? t("home.readyOk") : t("home.checkingDependencies")}
-          </div>
-        </article>
-
         <article className="kpi-card">
           <div className="kpi-header">
             <span className="kpi-label">{t("home.userMode")}</span>
@@ -186,7 +143,7 @@ export default function HomePage() {
               <p className="surface-subtitle">{t("home.upgradeDescription")}</p>
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/login" className="btn btn-primary">
+              <Link href={localizedPath(locale, "/login")} className="btn btn-primary">
                 {t("auth.emailLogin")}
               </Link>
               {!isLoggedIn && (
@@ -211,7 +168,7 @@ export default function HomePage() {
             <h3 className="surface-title">{t("home.recitersTitle")}</h3>
             <p className="surface-subtitle">{t("home.recitersDescription")}</p>
           </div>
-          <Link href="/audio" className="btn btn-outline-primary btn-sm">
+          <Link href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-sm">
             {t("home.allReciters")}
           </Link>
         </div>
@@ -223,7 +180,7 @@ export default function HomePage() {
               return (
                 <Link
                   key={reciter.id}
-                  href={`/audio?reciter=${encodeURIComponent(reciter.id)}`}
+                  href={localizedPath(locale, `/audio?reciter=${encodeURIComponent(reciter.id)}`)}
                   className="reciter-card"
                   aria-label={t("home.listenReciter", { name })}
                   data-testid="featured-reciter"
@@ -260,7 +217,7 @@ export default function HomePage() {
                 <p className="eyebrow">{t("home.todaySchedule")}</p>
                 <h3 className="surface-title">{t("home.prayers")}</h3>
               </div>
-              <Link href="/prayer" className="btn btn-secondary btn-sm">
+              <Link href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
                 {t("home.configurePrayer")}
               </Link>
             </div>
@@ -308,7 +265,7 @@ export default function HomePage() {
             <p className="eyebrow">{t("home.surahCatalog")}</p>
             <h3 className="surface-title">{t("home.surahTitle")}</h3>
           </div>
-          <Link href="/quran" className="btn btn-outline-primary btn-sm">
+          <Link href={localizedPath(locale, "/quran")} className="btn btn-outline-primary btn-sm">
             {t("home.allSurahs")}
           </Link>
         </div>
@@ -318,7 +275,7 @@ export default function HomePage() {
             featuredSurahs.map((surah) => (
               <Link
                 key={surah.id}
-                href={`/quran?surah=${surah.number}`}
+                href={localizedPath(locale, `/quran?surah=${surah.number}`)}
                 className="track-row"
                 style={{ textDecoration: "none", color: "inherit" }}
               >

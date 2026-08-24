@@ -8,9 +8,9 @@
 | Тип системы | Многоклиентская исламская контентная платформа |
 | Основной предмет ТЗ | Backend на Django и контракты интеграции клиентских приложений |
 | Клиенты | Flutter iOS/Android, веб-сайт Next.js, Telegram Mini App на Next.js |
-| Версия документа | 1.0 |
-| Дата | 9 августа 2026 года |
-| Статус | Утверждённая спецификация для оценки и планирования реализации |
+| Версия документа | 1.1 |
+| Дата | 24 августа 2026 года |
+| Статус | Утверждённая спецификация с дополнением по функциональному и нагрузочному росту |
 | Backend | Django 6.1, Python 3.14 |
 | Языки MVP | Арабский, английский, русский |
 | Возрастная аудитория | 16+ |
@@ -55,7 +55,8 @@ Quran Platform должна предоставить единое, уважит�
 6. Ввести проверяемый редакционный процесс и полную трассируемость контента.
 7. Обеспечить безопасное администрирование рекламы без вторжения в чтение и поклонение.
 8. Собирать структурированную обратную связь, особенно сообщения об ошибках религиозного контента.
-9. Заложить модульную основу для хадисов, дуа, книг и видео без необходимости переписывать ядро.
+9. Заложить модульную основу для хадисов, дуа, книг, видео, карточек заучивания слов и аятов
+   без необходимости переписывать Quran-ядро или клиентские контракты.
 
 ### 2.3. Измеримые показатели успеха после запуска
 
@@ -130,6 +131,8 @@ Quran Platform должна предоставить единое, уважит�
 
 - Полные переводы и тафсиры после лицензирования и редакционной проверки.
 - Хадисы, сборники дуа и другие книги как отдельные домены.
+- Карточки заучивания слов, аятов и диапазонов, интервальное повторение и синхронизация
+  учебного прогресса.
 - Полноценное видео и образовательные подборки.
 - Telegram Stars для пожертвований после отдельной правовой и платформенной проверки.
 - Полный азан там, где это допускают ОС и настройки пользователя.
@@ -150,6 +153,12 @@ Quran Platform должна предоставить единое, уважит�
 
 Backend реализуется как **модульный монолит** с чёткими границами доменов. Это не набор микросервисов на этапе MVP. Один репозиторий и основной deployment упрощают транзакции, миграции, наблюдаемость и эксплуатацию, но доменная логика не должна зависеть от внутренних моделей другого приложения напрямую.
 
+Архитектура поддерживает две независимые оси роста: горизонтальное увеличение мощности до
+100 000 DAU и добавление новых функциональных доменов. Рост нагрузки не должен требовать
+декомпозиции на микросервисы, а добавление дуа или карточек не должно изменять канонические
+Quran/audio таблицы. Детальные правила закреплены в
+[архитектуре расширения и масштабирования](../../../docs/architecture-and-scaling.md).
+
 Разрешённые способы взаимодействия модулей:
 
 - публичные Python-сервисы/интерфейсы доменного приложения;
@@ -168,25 +177,28 @@ Backend реализуется как **модульный монолит** с �
 
 ```mermaid
 flowchart LR
-    F["Flutter iOS/Android"] --> G["API Gateway / CDN"]
+    F["Flutter iOS/Android"] --> G["Edge / API load balancer"]
     W["Next.js Web"] --> G
     T["Next.js Telegram Mini App"] --> G
     B["Telegram Bot"] --> G
-    G --> A["Django ASGI API"]
-    A --> P[("PostgreSQL")]
+    F --> D["Global CDN"]
+    W --> D
+    T --> D
+    D --> S["S3-compatible storage"]
+    G --> A["Django ASGI replicas"]
+    G --> N["Next.js replicas"]
+    A --> L["DB connection pool"]
+    L --> P[("PostgreSQL")]
     A --> R[("Redis")]
-    A --> S["S3-compatible storage"]
     A --> O["Transactional Outbox"]
-    C["Celery Workers / Beat"] --> P
+    C["Celery worker replicas"] --> P
     C --> R
     C --> S
-    C --> N["Push / Email providers"]
-    S --> D["Global CDN"]
-    D --> F
-    D --> W
-    D --> T
-    A --> M["Metrics, logs, traces, error tracking"]
+    H["Singleton scheduler"] --> C
+    C --> X["Push / Email providers"]
+    A --> M["Metrics, logs, traces, cost"]
     C --> M
+    D --> M
 ```
 
 ### 5.3. Django-приложения
@@ -198,8 +210,11 @@ flowchart LR
 | `quran` | Издания, суры, аяты, страницы, координаты, навигация |
 | `translations` | Переводы, тафсиры, языковые версии и лицензии |
 | `media` | Медиаобъекты, CDN-ключи, метаданные, checksum |
-| `recitations` | Чтецы, наборы чтения, аудиосегменты, тайминги |
-| `library` | Абстракции каталога; расширение для книг, хадисов, дуа и видео |
+| `audio` / `recitations` | Чтецы, логические треки, варианты качества, аудиосегменты, тайминги |
+| `dua` | Сборники дуа, источники, переводы, категории и publication lifecycle |
+| `hadith` | Сборники, главы, хадисы, grading и источники после отдельного P1 spike |
+| `memorization` | Колоды, карточки слов/аятов, алгоритмы повторения и прогресс пользователя |
+| `library` | Типизированная витрина и поиск по опубликованным read-моделям доменов |
 | `reading` | Позиция, закладки, история, цели, серии, пользовательские коллекции |
 | `downloads` | Манифесты офлайн-пакетов, версии, зависимости, отзыв пакетов |
 | `prayer_times` | Методы расчёта, профили, справочники, серверная проверка |
@@ -213,7 +228,7 @@ flowchart LR
 | `audit` | Неизменяемый журнал привилегированных действий |
 | `integrations` | Telegram, push, email, object storage и внешние адаптеры |
 
-Каждое приложение должно содержать по необходимости: `models`, `services`, `selectors`, `api`, `tasks`, `events`, `admin`, `tests`, `management/commands`. Общие абстракции не переносятся в `core`, пока не возникнут минимум два реальных потребителя.
+Каждое приложение должно содержать по необходимости: `models`, `services`, `selectors`, `api`, `tasks`, `events`, `admin`, `tests`, `management/commands`. Общие абстракции не переносятся в `core`, пока не возникнут минимум два реальных потребителя. Новые домены взаимодействуют через public services, события и типизированные ссылки `{domain, entity_type, public_id, content_version}`; неограниченный `GenericForeignKey` и универсальная таблица религиозного контента запрещены.
 
 ### 5.4. Технологический стек backend
 
@@ -452,7 +467,7 @@ Telegram Mini App предоставляет аудио только пока We
 - Отозванный из-за критической ошибки пакет блокируется от новой установки; уже установленный получает предупреждение и безопасную замену.
 - Личные закладки и прогресс не входят в удаляемые контентные пакеты.
 
-## 12. Переводы, тафсиры и библиотека
+## 12. Переводы, тафсиры, обучение и библиотека
 
 В MVP API и схема полностью готовы, но пользовательский контент может быть представлен утверждёнными заглушками «готовится к публикации».
 
@@ -461,12 +476,21 @@ Telegram Mini App предоставляет аудио только пока We
 - `TextEdition`: тип, язык, название, автор/организация, лицензия, источник, версия.
 - `AyahTranslation`: edition, ayah, text, footnotes, content version.
 - `TafsirEntry`: edition, диапазон аятов, rich text в безопасном формате, references.
-- `LibraryItem`: тип (`hadith_collection`, `dua_collection`, `book`, `video_series`), metadata, publication state.
-- `LibrarySection` и `LibraryEntry`: иерархия и содержимое будущих модулей.
+- `DuaCollection` и `DuaEntry`: сборник, источник, язык, транслитерация, перевод, категория,
+  версия и publication state.
+- `MemorizationDeck`, `MemorizationCard`, `ReviewSchedule` и `ReviewAttempt`: учебный материал,
+  versioned content reference, стратегия повторения и пользовательский прогресс.
+- `LibraryItem`: типизированная read-модель опубликованного материала домена, metadata и
+  стабильная ссылка на источник истины.
 
 HTML от редакторов проходит allowlist sanitization. Предпочтительный внутренний формат — структурированный JSON/rich text с контролируемыми узлами; произвольные scripts, inline event handlers и iframe запрещены.
 
-Модули хадисов, дуа, книг и видео получают отдельные Django apps либо доменные пакеты при начале P1; `library` не должен превращаться в универсальную таблицу без типизированных ограничений.
+Модули хадисов, дуа, книг, видео и обучения получают отдельные Django apps либо доменные
+пакеты при начале P1; `library` не должен превращаться в универсальную таблицу без
+типизированных ограничений. Карточка слова или аята не копирует и не изменяет канонический
+текст: она ссылается на точную content version, а prompt, расписание и попытки принадлежат
+`memorization`. Новый домен обязан реализовать source/license provenance, publication,
+withdrawal, rollback, API cache policy, offline/sync policy и audit.
 
 ## 13. Время намаза
 
@@ -659,6 +683,8 @@ HTML от редакторов проходит allowlist sanitization. Пред
 ### 19.1. Общие правила
 
 - Базовый путь: `/api/v1/`.
+- API является client-independent: Flutter, web и Telegram Mini App используют одинаковые
+  бизнес-контракты; cookie/BFF и Telegram `initData` остаются transport/auth adapters.
 - JSON в `snake_case`, UTF-8.
 - Время: ISO 8601 UTC с `Z`; локальная дата — `YYYY-MM-DD`; timezone — IANA.
 - Идентификаторы внешних сущностей — UUID; канонические номера сур/аятов также доступны как числа.
@@ -669,11 +695,15 @@ HTML от редакторов проходит allowlist sanitization. Пред
 - API не возвращает локализованный текст как единственный способ определить ошибку; клиенты используют `code`.
 - OpenAPI schema, примеры и сгенерированные SDK проверяются в CI на breaking changes.
 - Breaking change требует `/v2` либо периода совместимости и deprecation headers.
+- Клиентские возможности передаются отдельным capability contract и не создают разные
+  канонические модели данных для Flutter, web и Telegram Mini App.
 
 ### 19.2. Кэширование
 
 - Публичный канонический контент: `Cache-Control: public, immutable` для versioned URLs.
 - Индексы/конфигурация: `ETag` и `If-None-Match`, короткий `max-age`, `stale-while-revalidate`.
+- Публичные Quran/audio/library запросы не отправляют `Authorization`, если представление не
+  зависит от пользователя; edge cache не фрагментируется по device/session.
 - Персональные ответы: `private, no-store` либо корректный private cache; CDN не кэширует Authorization responses.
 - Подписанные media URLs не включаются в аналитические логи целиком.
 - Purge CDN выполняется только для mutable aliases; versioned assets не перезаписываются.
@@ -754,6 +784,23 @@ HTML от редакторов проходит allowlist sanitization. Пред
 - `GET /api/v1/download-packages/{id}`
 - `GET /api/v1/download-packages/{id}/manifest`
 - `GET /api/v1/download-packages/updates?installed=`
+
+#### Обучение и карточки
+
+- `GET /api/v1/memorization/decks`
+- `GET /api/v1/memorization/decks/{id}`
+- `POST /api/v1/me/memorization/decks`
+- `GET /api/v1/me/memorization/reviews/due`
+- `POST /api/v1/me/memorization/reviews/{card_id}/attempts`
+- `GET /api/v1/me/memorization/progress`
+
+#### Дуа и библиотека
+
+- `GET /api/v1/dua/collections`
+- `GET /api/v1/dua/collections/{id}`
+- `GET /api/v1/dua/entries/{id}`
+- `GET /api/v1/library?domain=&locale=&cursor=`
+- `GET /api/v1/search?q=&domain=&locale=&cursor=`
 
 #### Намаз и напоминания
 
@@ -842,6 +889,11 @@ Full resync является авторитетной заменой локал�
 При регистрации клиент отправляет guest sync до link. Затем backend выполняет идемпотентное слияние гостевого пользователя с целевым аккаунтом, применяя правила конфликтов, переводит устройства и отзывает guest credentials. Операция имеет audit record и может безопасно повториться после сетевого сбоя.
 
 ## 21. Требования к клиентам
+
+Все три клиента используют одну OpenAPI schema, общий набор стабильных error codes и один
+sync protocol. Повторное использование domain/UI пакетов допускается, но platform adapters
+для storage, background audio, notifications, deep links и Telegram security не смешиваются
+с бизнес-моделью.
 
 ### 21.1. Flutter iOS/Android
 
@@ -979,14 +1031,29 @@ Full resync является авторитетной заменой локал�
 
 ## 25. Производительность и масштабирование
 
-### 25.1. Проектная нагрузка MVP
+### 25.1. Стартовая и целевая нагрузка
 
-- 100 000 зарегистрированных аккаунтов.
-- 10 000 DAU.
-- До 1 000 одновременно активных клиентов.
-- Кратковременный пик до 300 API RPS.
-- Медиа-трафик обслуживается CDN и не входит в пропускную способность Django.
-- Архитектура допускает горизонтальное масштабирование stateless API и workers.
+Стартовая capacity для MVP и целевой архитектурный предел разделяются. Ресурсы под целевой
+предел не резервируются до появления фактической нагрузки.
+
+**Стартовый профиль S1:**
+
+- до 100 000 зарегистрированных аккаунтов;
+- до 10 000 DAU;
+- до 1 000 одновременно активных клиентов;
+- кратковременный пик до 300 origin API RPS.
+
+**Целевой профиль S3:**
+
+- до 1 000 000 зарегистрированных аккаунтов;
+- до 100 000 DAU;
+- проверочная модель до 10 000 одновременно активных клиентов;
+- кратковременный пик до 1 500 origin API RPS после edge cache;
+- до 5 000 одновременных managed audio sessions через CDN, не через Django.
+
+Это capacity envelopes для stage/load/soak тестов, а не обещание постоянно оплачивать
+максимальную мощность. DAU не пересчитывается в RPS линейно: переходы опираются на реальные
+requests/user, sync operations/day, audio minutes/day и peak factor каждого клиента.
 
 ### 25.2. SLO
 
@@ -1011,6 +1078,27 @@ Full resync является авторитетной заменой локал�
 - DB connections ограничены; применяется connection pooling.
 - Тяжёлые exports/imports выполняются асинхронно.
 - Нагрузочное тестирование включает cache-cold, cache-warm и CDN-bypass сценарии.
+- API/web/workers stateless и масштабируются независимо; Beat/scheduler остаётся singleton.
+- Публичные Quran/audio/library reads сначала снимаются edge cache, затем Redis/read-models;
+  read replica не заменяет кэширование и оптимизацию запросов.
+- Redis roles имеют отдельные configuration URLs, хотя на старте могут указывать на один
+  экземпляр.
+- Append-only sync/audit/event таблицы измеряются в rows/day и bytes/day; retention,
+  partitioning и archival включаются до непредсказуемого роста maintenance window.
+
+### 25.4. Профили расширения мощности
+
+| Профиль | Ориентир | Изменение инфраструктуры |
+|---|---|---|
+| S0 beta | До 1 000 DAU | Один application-host допустим, media уже через CDN |
+| S1 launch | До 10 000 DAU | Managed DB/Redis, pool, 1–2 API/web replicas по SLO |
+| S2 growth | До 50 000 DAU | Autoscaling API/workers, разделение Redis roles по метрикам |
+| S3 target | До 100 000 DAU | Multi-AZ replicas, PostgreSQL HA, selective partitioning/replicas |
+
+Переход выполняется при устойчивом нарушении SLO, pool/memory saturation, росте queue age,
+Redis evictions, падении CDN byte hit ratio или прогнозе storage/egress budget. Подробный
+план и запрещённое преждевременное усложнение описаны в
+[архитектуре масштабирования](../../../docs/architecture-and-scaling.md).
 
 ## 26. Надёжность, резервное копирование и DR
 
@@ -1032,10 +1120,13 @@ Full resync является авторитетной заменой локал�
 - DB connections, slow queries, locks, replica lag.
 - Redis hit ratio, memory, evictions.
 - Celery queue depth, age, duration, retries, failures, dead letters.
-- CDN hit ratio, egress, 4xx/5xx, Range success.
+- CDN request/byte hit ratio, total/origin egress, стоимость на DAU, 4xx/5xx и Range success.
+- Audio startup P75, buffering ratio, playback failures, minutes и bytes по rendition/чтецу.
 - Auth failures, token reuse, OTP abuse.
 - Sync conflicts, full resync, cursor expiry.
 - Download manifest/checksum failures.
+- Рост строк/байтов по крупным sync/audit/event таблицам.
+- Memorization reviews due/completed и sync failures без хранения текста ответов в labels/logs.
 - Feedback SLA breaches.
 - Рекламные показы в разрезе placement; отдельный invariant counter запрещённой зоны должен всегда быть нулём.
 
@@ -1060,6 +1151,10 @@ Full resync является авторитетной заменой локал�
 - `stage`: production-like, обезличенные/синтетические данные.
 - `production`: отдельные аккаунты, secrets, buckets, DB и домены.
 
+Production Compose является односерверным стартовым профилем, а не целевой topology S2/S3.
+Внешний deployment обязан позволять независимо изменять число API, web и worker replicas;
+локальный filesystem контейнера не содержит пользовательских или канонических media.
+
 ### 28.2. Pipeline
 
 1. Форматирование и lint.
@@ -1074,6 +1169,10 @@ Full resync является авторитетной заменой локал�
 10. Manual approval production для MVP.
 11. Миграции по expand/contract.
 12. Rolling/canary deploy и автоматический rollback по health/SLO.
+
+Миграции выполняются отдельной release-job до переключения совместимого кода. Scheduler/Beat
+запускается в одном экземпляре либо защищается распределённым lease; увеличение числа worker
+replicas не должно дублировать расписание.
 
 ### 28.3. Миграции
 
@@ -1205,6 +1304,9 @@ Full resync является авторитетной заменой локал�
 
 ## 32. Этапы реализации
 
+Детальный актуальный порядок, критерии выхода и профили S0–S3 ведутся в
+[плане и roadmap](../../../docs/roadmap.md). Этапы ниже сохраняют верхнеуровневую структуру ТЗ.
+
 ### Этап 0. Подготовка и spikes
 
 - Проверка совместимости Django/Python/DRF/Celery.
@@ -1220,6 +1322,8 @@ Full resync является авторитетной заменой локал�
 - Accounts, devices, consent, auth и audit.
 - API conventions, OpenAPI и client generation.
 - S3/CDN media pipeline.
+- Stateless application topology, DB connection pool и раздельная конфигурация Redis roles.
+- Capacity/FinOps baseline для API и media egress.
 
 ### Этап 2. Quran reading vertical slice
 
@@ -1227,10 +1331,11 @@ Full resync является авторитетной заменой локал�
 - Quran API, страницы, области, навигация.
 - Flutter reading UI, web/Mini App basic reading.
 - Reading position и bookmarks с offline sync.
+- Единые contract tests и generated SDK для Flutter, web и Telegram Mini App.
 
 ### Этап 3. Audio и downloads
 
-- Reciters/tracks/timings.
+- Reciters/logical tracks/bitrate renditions/timings.
 - Streaming/CDN и Flutter background player.
 - Download manifests, resume, checksum, package UI.
 - Playback sync и repetition modes.
@@ -1257,6 +1362,20 @@ Full resync является авторитетной заменой локал�
 - Store/web/Telegram release preparation.
 - Canary launch, мониторинг KPI и rollback readiness.
 
+### Этап 7. Learning и расширение библиотеки
+
+- Карточки слов, аятов и диапазонов, интервальное повторение и offline review queue.
+- Отдельный домен дуа с источниками, переводами, публикацией и offline manifests.
+- Типизированная library/search read-model для подключения хадисов, книг и подборок.
+- Cross-client parity согласно capability matrix, а не ложное выравнивание возможностей ОС.
+
+### Этап 8. Рост до 100 000 DAU
+
+- Переход S1 → S2 → S3 только по capacity/soak tests и production saturation metrics.
+- Autoscaling API/workers, PostgreSQL HA, разделение Redis roles и selective partitioning.
+- Регулярный cost review audio egress; никаких постоянно оплачиваемых ресурсов целевого
+  профиля S3 заранее.
+
 ## 33. Риски и меры снижения
 
 | Риск | Последствие | Мера |
@@ -1267,6 +1386,8 @@ Full resync является авторитетной заменой локал�
 | Ограничения фонового аудио ОС | Остановка воспроизведения | Native audio service Flutter, documented platform behavior, device testing |
 | Ограничения Telegram WebView | Потеря состояния/аудио | Server sync, local storage, не обещать background guarantee |
 | Большой media egress | Высокая стоимость | CDN, immutable caching, bitrate variants, budget alerts |
+| Новый домен размывает Quran-ядро | Связность, опасные миграции, замедление релизов | Отдельный app, типизированные ссылки, extension contract и contract tests |
+| Разные клиенты получают несовместимые API | Потеря sync и дорогая поддержка | Единая OpenAPI, generated SDK, capability matrix и compatibility gate |
 | Потеря офлайн-изменений | Потеря доверия | Operation log, cursor sync, tombstones, conflict tests |
 | Неподходящая реклама | Репутационный ущерб | Placement allowlist, ручная модерация, kill switch, аудит |
 | Нарушение лицензий | Удаление контента/юридический риск | Source/license registry, publication gate, expiry alerts |
@@ -1284,6 +1405,10 @@ Full resync является авторитетной заменой локал�
 6. Способ web auth: Django session через BFF или эквивалентная безопасная схема.
 7. Конкретная проверенная библиотека расчёта намаза либо собственная реализация.
 8. Формат page assets и набор resolution variants после замеров качества/размера.
+9. Схема logical `AudioTrack`/`AudioRendition` и политика качества/egress budget.
+10. Connection pooling, Redis role separation и orchestration профилей S1–S3.
+11. Типизированный cross-domain content reference и extension contract для
+    `memorization`, `dua`, `hadith` и `library`.
 
 ## 35. Definition of Done
 

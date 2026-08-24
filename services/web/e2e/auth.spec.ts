@@ -117,7 +117,7 @@ test("verified email login returns to the previous page without persisting token
   await page.getByLabel("Код из письма").fill("123456");
   await page.getByRole("button", { name: "Подтвердить и войти" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/ru$/);
   await expect(page.locator(".app-header").getByText("Аккаунт", { exact: true })).toBeVisible();
   const storageDump = await page.evaluate(() => JSON.stringify({ ...localStorage }));
   expect(storageDump).not.toContain("guest-access-token");
@@ -209,7 +209,7 @@ test("guest session keeps the email login CTA in main content, not the header", 
   await expect(page.locator(".app-header").getByRole("link", { name: "Войти по email" })).toHaveCount(0);
   const emailLogin = page.locator("main").getByRole("link", { name: "Войти по email" }).first();
   await expect(emailLogin).toBeVisible();
-  await expect(emailLogin).toHaveAttribute("href", "/login");
+  await expect(emailLogin).toHaveAttribute("href", "/ru/login");
   await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
 });
 

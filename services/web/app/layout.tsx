@@ -1,31 +1,19 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "../lib/auth-context";
 import { I18nProvider } from "../lib/i18n-context";
 import {
   directionFor,
-  isLocale,
-  LOCALE_COOKIE_NAME,
-  localeFromAcceptLanguage,
-  translate,
 } from "../lib/i18n";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { AudioPlayerProvider } from "../lib/audio-player-context";
-
-async function requestLocale() {
-  const stored = (await cookies()).get(LOCALE_COOKIE_NAME)?.value;
-  if (isLocale(stored)) return stored;
-  return localeFromAcceptLanguage((await headers()).get("accept-language"));
-}
+import { requestLocale } from "../lib/server-locale";
+import { createRootMetadata } from "../lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();
-  return {
-    title: translate(locale, "meta.title"),
-    description: translate(locale, "meta.description"),
-  };
+  return createRootMetadata(locale);
 }
 
 export default async function RootLayout({

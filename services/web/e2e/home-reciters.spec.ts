@@ -49,6 +49,6 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
 
   await section.getByRole("link", { name: "Слушать чтение: Мишари Рашид аль-Афаси" }).click();
 
-  await expect(page).toHaveURL(`/audio?reciter=${reciters[1].id}`, { timeout: 15_000 });
+  await expect(page).toHaveURL(`/ru/audio?reciter=${reciters[1].id}`, { timeout: 15_000 });
   await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[1].id);
 });

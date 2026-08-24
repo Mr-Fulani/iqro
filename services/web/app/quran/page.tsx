@@ -294,9 +294,9 @@ function QuranContent() {
         <div className="surface-head" style={{ marginBottom: 16 }}>
           <div>
             <p className="eyebrow">{t("quran.eyebrow")}</p>
-            <h2 className="surface-title">
+            <h1 className="surface-title">
               {currentSurahObj ? `${currentSurahObj.number}. ${surahName(currentSurahObj)} (${currentSurahObj.name_ar})` : t("nav.quran")}
-            </h2>
+            </h1>
             {currentSurahObj && (
               <p className="surface-subtitle">
                 {t("quran.ayahsMeta", {

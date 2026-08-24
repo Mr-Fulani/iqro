@@ -230,7 +230,7 @@ export default function PrayerPage() {
         <div className="surface-head">
           <div>
             <p className="eyebrow">{t("prayer.eyebrow")}</p>
-            <h2 className="surface-title">{t("prayer.title")}</h2>
+            <h1 className="surface-title">{t("prayer.title")}</h1>
             <p className="surface-subtitle">{t("prayer.description")}</p>
           </div>
 

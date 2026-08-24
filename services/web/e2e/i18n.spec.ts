@@ -27,9 +27,10 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expectSingleRowHeader(page);
 
   await language.selectOption("en");
+  await expect(page).toHaveURL("/en/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await expect(page).toHaveTitle("Quran Platform — read and listen to the Quran");
+  await expect(page).toHaveTitle("Account sign-in | Quran Platform");
   await expect(page.getByRole("heading", { name: "Account sign-in" })).toBeVisible();
   await expectSingleRowHeader(page);
 
@@ -38,13 +39,15 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expect(page.getByRole("heading", { name: "Account sign-in" })).toBeVisible();
 
   await page.getByTestId("language-switcher").selectOption("ar");
+  await expect(page).toHaveURL("/ar/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page).toHaveTitle("منصة القرآن — قراءة القرآن والاستماع إليه");
+  await expect(page).toHaveTitle("تسجيل الدخول | Quran Platform");
   await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
   await expectSingleRowHeader(page);
 
   await page.getByTestId("language-switcher").selectOption("tr");
+  await expect(page).toHaveURL("/tr/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "tr");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByRole("heading", { name: "Hesaba giriş" })).toBeVisible();

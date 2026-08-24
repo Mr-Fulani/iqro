@@ -31,10 +31,6 @@ export function I18nProvider({ initialLocale, children }: { initialLocale: Local
     api.setLocale(locale);
     document.documentElement.lang = locale;
     document.documentElement.dir = direction;
-    document.title = translate(locale, "meta.title");
-    document
-      .querySelector<HTMLMetaElement>('meta[name="description"]')
-      ?.setAttribute("content", translate(locale, "meta.description"));
   }, [direction, locale]);
 
   const setLocale = useCallback((nextLocale: Locale) => {

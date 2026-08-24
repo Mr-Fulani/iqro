@@ -508,7 +508,7 @@ input:focus, select:focus, textarea:focus {
   pointer-events: none;
 }
 
-.hero-content h2 {
+.hero-content h1 {
   font-size: 28px;
   font-weight: 700;
   line-height: 1.25;

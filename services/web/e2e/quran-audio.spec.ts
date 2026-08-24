@@ -362,9 +362,9 @@ test("audio widget survives route navigation and pauses at the current position"
     (element as HTMLAudioElement).currentTime = 12.5;
   });
 
-  await page.locator('.app-menu a[href="/"]').click();
+  await page.locator('.app-menu a[href="/ru"]').click();
 
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/ru");
   await expect(player).toBeVisible();
   const compactPlayerBox = await player.boundingBox();
   expect(compactPlayerBox).not.toBeNull();
@@ -411,8 +411,8 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
-  await page.locator('.app-menu a[href="/"]').click();
-  await expect(page).toHaveURL("/");
+  await page.locator('.app-menu a[href="/ru"]').click();
+  await expect(page).toHaveURL("/ru");
   expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(220);

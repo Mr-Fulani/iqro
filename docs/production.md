@@ -5,6 +5,12 @@
 gateway. Исходный код не монтируется в контейнеры, наружу публикуется только gateway,
 а миграция должна успешно завершиться до запуска приложения.
 
+Это односерверный профиль S0/beta и воспроизводимая production-проверка, а не целевая
+topology для 50 000–100 000 DAU. Целевая схема сохраняет те же образы, но запускает
+stateless API/web/worker replicas за load balancer, подключает managed PostgreSQL/Redis
+через connection pool и отдаёт managed media из object storage через CDN. Подробности:
+[архитектура расширения и масштабирования](architecture-and-scaling.md).
+
 Домен/TLS, внешний мониторинг и offsite-хранилище резервных копий пока намеренно не
 включены. До публичного запуска они остаются обязательными инфраструктурными задачами.
 
@@ -21,10 +27,12 @@ chmod 600 services/backend/.env.production
 значение; секреты development-среды переиспользовать нельзя. Проверьте как минимум:
 
 - `DJANGO_ALLOWED_HOSTS`, CSRF/CORS origins и публичные HTTPS URL;
+- `SITE_URL`: один канонический HTTPS origin web-приложения без path/query/hash;
 - пароль PostgreSQL и все Django/Quran hash keys;
 - `QURAN_OPERATIONS_TOKEN`;
 - Quran.Foundation credentials, если синхронизация включена;
-- `QURAN_MEDIA_DIR`: каталог с импортированным dataset и 604 страницами Мусхафа.
+- `QURAN_MEDIA_DIR`: каталог с импортированным dataset и 604 страницами Мусхафа для
+  текущего single-host профиля. В масштабируемом production это не источник managed audio.
 
 Файл `.env.production` игнорируется Git. В контейнеры он передаётся через `env_file`,
 но не копируется в образы.
@@ -72,6 +80,21 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 Лимиты ресурсов задаются в `compose.production.yaml`. Перед размещением на маленьком
 сервере сравните их сумму с доступной RAM; Docker применяет лимит каждому сервису
 отдельно.
+
+### 3.1. Граница horizontal scale
+
+До добавления второй application-реплики необходимо:
+
+- перенести канонические media и audio renditions в object storage/CDN;
+- подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию;
+- убедиться, что cache/throttle/Celery используют внешние Redis endpoints;
+- запускать migrations отдельной release-job;
+- оставить Beat/scheduler singleton;
+- включить общий metrics/logging backend и проверку capacity profile.
+
+Количество API, web и worker replicas после этого меняется независимо. PostgreSQL read
+replica, отдельные Redis-кластеры и партиционирование добавляются только при измеренной
+saturation; они не являются условием небольшого публичного запуска.
 
 ## 4. Обновление и откат
 

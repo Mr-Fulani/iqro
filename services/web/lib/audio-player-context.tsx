@@ -15,6 +15,7 @@ import {
 } from "../components/SegmentedAudioPlayer";
 import type { AudioPlaybackRequest } from "../components/SegmentedAudioPlayer";
 import { useI18n } from "./i18n-context";
+import { localizedPath, stripLocalePrefix } from "./routing";
 
 type AudioPlayerContextValue = {
   request: AudioPlaybackRequest | null;
@@ -27,7 +28,7 @@ const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -48,7 +49,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     clearPlayback,
   }), [clearPlayback, isPlaying, request, startPlayback]);
 
-  const isAudioPage = pathname === "/audio";
+  const isAudioPage = stripLocalePrefix(pathname) === "/audio";
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
   const modeActionLabel = expanded
@@ -110,7 +111,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
                 </button>
                 {!isAudioPage && (
                   <Link
-                    href="/audio"
+                    href={localizedPath(locale, "/audio")}
                     className="btn btn-secondary btn-sm global-audio-player-link"
                     aria-label={t("player.openAudio")}
                     title={t("player.openAudio")}
