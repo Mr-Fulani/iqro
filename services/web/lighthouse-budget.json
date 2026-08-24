@@ -1,0 +1,49 @@
+{
+  "routes": [
+    { "path": "/ru", "locale": "ru", "direction": "ltr", "template": "landing" },
+    { "path": "/en", "locale": "en", "direction": "ltr", "template": "landing" },
+    { "path": "/ar", "locale": "ar", "direction": "rtl", "template": "landing" },
+    { "path": "/tr", "locale": "tr", "direction": "ltr", "template": "landing" },
+    {
+      "path": "/ru/quran/madani-hafs/surah/1",
+      "locale": "ru",
+      "direction": "ltr",
+      "template": "published-surah"
+    },
+    {
+      "path": "/ar/quran/madani-hafs/surah/1",
+      "locale": "ar",
+      "direction": "rtl",
+      "template": "published-surah"
+    }
+  ],
+  "categories": {
+    "performance": 0.75,
+    "accessibility": 0.95,
+    "best-practices": 0.9,
+    "seo": 0.95
+  },
+  "metricsMs": {
+    "first-contentful-paint": 2500,
+    "largest-contentful-paint": 4000,
+    "total-blocking-time": 500
+  },
+  "metricsUnitless": {
+    "cumulative-layout-shift": 0.1
+  },
+  "resourceSizesKiB": {
+    "total": 900,
+    "script": 450,
+    "stylesheet": 150,
+    "image": 400,
+    "font": 250
+  },
+  "resourceCounts": {
+    "total": 60,
+    "script": 20,
+    "stylesheet": 10,
+    "image": 24,
+    "font": 10,
+    "third-party": 10
+  }
+}

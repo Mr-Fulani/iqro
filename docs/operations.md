@@ -50,7 +50,7 @@ Authorization: Bearer <QURAN_OPERATIONS_TOKEN>
 Последние три порога подходят текущему Madani Hafs dataset. При подключении другого издания
 их нужно пересмотреть.
 
-## ISR и content sitemap
+## Content cache и sitemap
 
 Каталог и глубокие web-маршруты Quran, чтецов и декламаций получают данные server-to-server
 через `BACKEND_INTERNAL_URL`. В production Compose это `http://backend:8000`; публичный browser
@@ -58,11 +58,14 @@ API по-прежнему идёт через gateway. В запрос не пе
 selectors являются единственной границей, решающей, какие Quran edition/version и полные
 streamable audio releases доступны поисковому индексу.
 
-Next.js fetch cache обновляет опубликованный Quran/audio-контент не реже одного раза в час и
-помечает запросы тегами edition/surah/ayah или reciter/recitation/track. Публикация, активация и
-отзыв версии после commit автоматически ставят Celery-задачу
+Data-driven страницы рендерятся сервером по запросу: общий layout читает request locale из
+proxy header/cookie, поэтому страницы намеренно не объявляются on-demand ISR через пустой
+`generateStaticParams`. Next.js fetch cache обновляет опубликованный Quran/audio-контент не
+реже одного раза в час и помечает запросы тегами edition/surah/ayah или
+reciter/recitation/track. Публикация,
+активация и отзыв версии после commit автоматически ставят Celery-задачу
 `core.notify_web_content_change`. Она подписанным внутренним POST инвалидирует соответствующие
-data tags, ISR pages и versioned sitemap. Временные сетевые/5xx ошибки повторяются с backoff;
+data tags, route cache и versioned sitemap. Временные сетевые/5xx ошибки повторяются с backoff;
 4xx считается ошибкой конфигурации или контракта и требует вмешательства. Часовой TTL остаётся
 страховочной границей, если webhook исчерпал retry. Персональные маршруты в этот кэш не входят.
 
@@ -140,12 +143,35 @@ HSTS начинает защищать пользователя только п�
 `includeSubDomains` убедитесь, что все поддомены обслуживаются по TLS; preload намеренно не
 добавлен на gateway без отдельного решения владельца домена.
 
+## Web Lighthouse budgets
+
+Web CI запускает официальный Lighthouse на том же standalone entrypoint, который используется
+в production-образе. Runner сам собирает bundle с детерминированным mock publication API и
+проверяет шесть маршрутов: landing RU/EN/AR/TR и опубликованную суру RU/AR. До измерения он
+отдельно подтверждает ожидаемые `lang` и `dir`, поэтому арабский RTL входит в blocking gate, а
+не остаётся визуальной договорённостью.
+
+Пороги находятся в `services/web/lighthouse-budget.json` и ограничивают категории performance,
+accessibility, best practices и SEO, FCP/LCP/TBT/CLS, размеры ресурсов и число запросов.
+Локальный полный запуск:
+
+```bash
+cd services/web
+npm run test:lighthouse
+```
+
+Для диагностики одного шаблона задайте точный route, например
+`LIGHTHOUSE_ROUTE=/ar/quran/madani-hafs/surah/1 npm run test:lighthouse`. Скрипт выполняет
+production build сам; предварительный `npm run build` не требуется. Это лабораторный regression
+gate, а не доказательство полевых Core Web Vitals: после deployment остаются обязательными
+RUM/Search Console и проверка реального CDN, TLS и backend latency.
+
 ## Dependency и container security gate
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и
-проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает production
-`npm audit --omit=dev --audit-level=high`. Production Compose CI после сборки проверяет Trivy
-все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
+проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает полный
+`npm audit --audit-level=high`, включая build/test tooling. Production Compose CI после сборки
+проверяет Trivy все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
 `HIGH`/`CRITICAL` уязвимость блокирует gate, в том числе пока не имеющая исправления.
 Backend и web runtime не содержат package managers; PostgreSQL wrapper flatten'ит финальный
 filesystem после замены `gosu` на `su-exec`, поэтому Trivy проверяет реально исполняемые

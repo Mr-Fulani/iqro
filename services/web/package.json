@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || ^22.13.0 || >=24"
+    "node": "^22.19.0 || >=24"
   },
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:lighthouse": "node scripts/lighthouse-budget.mjs"
   },
   "dependencies": {
     "next": "16.3.2",
@@ -24,8 +25,10 @@
     "@types/node": "22.13.8",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "chrome-launcher": "1.2.1",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.2",
+    "lighthouse": "13.4.1",
     "typescript": "5.7.3"
   }
 }

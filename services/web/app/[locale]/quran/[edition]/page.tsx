@@ -14,10 +14,6 @@ import { createContentMetadata } from "@/lib/seo";
 
 export const revalidate = 3_600;
 
-export function generateStaticParams() {
-  return [];
-}
-
 type RouteParams = { locale: string; edition: string };
 
 function parseParams(params: RouteParams): { locale: Locale; edition: string } {

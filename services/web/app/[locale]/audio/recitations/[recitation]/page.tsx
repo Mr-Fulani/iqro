@@ -21,10 +21,6 @@ import { serializeJsonLd } from "@/lib/json-ld";
 
 export const revalidate = 3_600;
 
-export function generateStaticParams() {
-  return [];
-}
-
 type RouteParams = { locale: string; recitation: string };
 
 function parseParams(params: RouteParams): { locale: Locale; recitation: string } {

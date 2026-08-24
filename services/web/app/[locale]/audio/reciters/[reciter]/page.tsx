@@ -21,10 +21,6 @@ import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
 
 export const revalidate = 3_600;
 
-export function generateStaticParams() {
-  return [];
-}
-
 type RouteParams = { locale: string; reciter: string };
 
 function parseParams(params: RouteParams): { locale: Locale; reciter: string } {

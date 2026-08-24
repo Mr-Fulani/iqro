@@ -48,6 +48,14 @@ make production-up
 make production-ps
 ```
 
+Перед release локальный web performance gate можно повторить отдельно; он сам создаёт
+standalone production build и запускает детерминированный mock API:
+
+```bash
+cd services/web
+npm run test:lighthouse
+```
+
 По умолчанию gateway слушает только `127.0.0.1:3000`. Это безопасная настройка для
 reverse proxy на том же сервере. Для публичного запуска TLS-proxy должен передавать
 `Host`, `X-Forwarded-For` и `X-Forwarded-Proto: https`. Не выставляйте gateway на

@@ -17,27 +17,27 @@ export function Footer() {
         </div>
 
         <div className="footer-links">
-          <div className="footer-column">
-            <h4>{t("footer.sections")}</h4>
+          <nav className="footer-column" aria-label={t("footer.sections")}>
+            <p className="footer-column-title">{t("footer.sections")}</p>
             <Link href={localizedPath(locale, "/quran")}>{t("footer.quran")}</Link>
             <Link href={localizedPath(locale, "/audio/reciters")}>{t("footer.reciters")}</Link>
             <Link href={localizedPath(locale, "/prayer")}>{t("footer.prayer")}</Link>
             <Link href={localizedPath(locale, "/profile")}>{t("footer.sync")}</Link>
-          </div>
+          </nav>
 
-          <div className="footer-column">
-            <h4>{t("footer.account")}</h4>
+          <nav className="footer-column" aria-label={t("footer.account")}>
+            <p className="footer-column-title">{t("footer.account")}</p>
             <Link href={localizedPath(locale, "/login")}>{t("footer.session")}</Link>
             <Link href={localizedPath(locale, "/profile")}>{t("nav.profile")}</Link>
-          </div>
+          </nav>
 
-          <div className="footer-column">
-            <h4>{t("footer.legal")}</h4>
+          <nav className="footer-column" aria-label={t("footer.legal")}>
+            <p className="footer-column-title">{t("footer.legal")}</p>
             <Link href={localizedPath(locale, "/privacy")}>{t("footer.privacy")}</Link>
             <Link href={localizedPath(locale, "/terms")}>{t("footer.terms")}</Link>
             <Link href={localizedPath(locale, "/sources")}>{t("footer.sources")}</Link>
             <Link href={localizedPath(locale, "/contacts")}>{t("footer.contacts")}</Link>
-          </div>
+          </nav>
         </div>
       </div>
 

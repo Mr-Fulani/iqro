@@ -16,8 +16,9 @@ ESLint, TypeScript и 47 Playwright-сценариев проходят. Это 
   server-rendered HTML; интерактивные reader и audio player остаются client surfaces;
 - locale-prefixed RU/EN/AR/TR routes, legacy redirects, canonical/hreflang, `robots.txt`,
   sitemap, page-specific metadata, manifest и social preview уже добавлены;
-- финальный legal/license/religious sign-off и полный Lighthouse/SEO gate
-  ещё не закрыты;
+- Lighthouse/SEO regression gate для RU/EN/AR/TR, арабского RTL и опубликованной суры
+  закрыт; field Core Web Vitals и финальный legal/license/religious sign-off проверяются
+  после deployment;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
 - capacity/soak test ещё не даёт права обещать конкретное количество одновременных
@@ -128,11 +129,13 @@ flowchart LR
 - [ ] Подключить внешний uptime/error monitoring, dashboards/alerts и offsite backup с
   проверенным restore.
 - [x] Добавить SEO/metadata/robots/sitemap regression tests.
-- [ ] Добавить Lighthouse budgets для ключевых шаблонов RU/EN/AR/TR и RTL.
+- [x] Добавить блокирующие Lighthouse budgets для landing RU/EN/AR/TR и опубликованной суры
+  RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
+  transfer size и request count на standalone production build.
 - [ ] Прогнать browser E2E против production build и интеграционный smoke против реального
   staging API; mocked contract tests сохранить как быстрый CI-слой.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
-  `pip-audit`, web production `npm audit` и Trivy-проверка всех пяти production-образов уже
+  `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
   commit после GitHub CI.
 - [ ] Провести capacity/soak test web workload mix и записать доказанную ёмкость S0/S1;

@@ -17,7 +17,7 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: services/web
@@ -40,5 +40,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser regression tests
         run: npm run test:e2e
-      - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+      - name: Lighthouse budgets
+        run: npm run test:lighthouse
+      - name: Dependency audit
+        run: npm audit --audit-level=high

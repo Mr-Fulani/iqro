@@ -9,10 +9,6 @@ import { createContentMetadata } from "@/lib/seo";
 
 export const revalidate = 3_600;
 
-export function generateStaticParams() {
-  return [];
-}
-
 type RouteParams = { locale: string };
 
 function localeParam(value: string): Locale {

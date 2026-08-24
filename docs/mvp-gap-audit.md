@@ -156,6 +156,7 @@ runtime. Основной незакрытый объём находится в 
 | SLO доказаны на проектном пике | ❌ | Есть bounded 120-request smoke, но это не capacity/soak test |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
+| Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
 | Runbooks, dashboards и alerts доступны | 🟡 | Runbooks/metrics есть; dashboards/alerts отложены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 
@@ -190,7 +191,8 @@ runtime. Основной незакрытый объём находится в 
   и устройства, SSR выбирает язык из cookie или `Accept-Language`, переключатель сохраняет выбор,
   а арабский режим задаёт `lang=ar`, `dir=rtl` и логическое RTL-выравнивание. Flutter/TMA parity
   остаётся отдельной клиентской задачей.
-- Web публикует стабильные locale-prefixed ISR-маршруты суры и аята. Server Component получает
+- Web публикует стабильные locale-prefixed server-rendered маршруты суры и аята с часовым
+  revalidated data cache. Server Component получает
   только активную опубликованную edition/version через внутренний public API, основной арабский
   текст и ссылки присутствуют в исходном HTML, а versioned Quran sitemap строится из того же
   backend publication boundary. По той же схеме опубликованы список сур, каталог чтецов,
