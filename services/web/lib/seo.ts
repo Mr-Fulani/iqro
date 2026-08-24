@@ -25,6 +25,13 @@ type PageMetadataOptions = {
   index?: boolean;
 };
 
+type ContentMetadataOptions = {
+  title: string;
+  description: string;
+  path: string;
+  index?: boolean;
+};
+
 export function siteUrl(): URL {
   const configuredUrl = process.env.SITE_URL?.trim() || LOCAL_SITE_URL;
   const url = new URL(configuredUrl);
@@ -99,8 +106,18 @@ export function createPageMetadata(
   locale: Locale,
   { titleKey, descriptionKey, path, index = true }: PageMetadataOptions,
 ): Metadata {
-  const title = translate(locale, titleKey);
-  const description = translate(locale, descriptionKey);
+  return createContentMetadata(locale, {
+    title: translate(locale, titleKey),
+    description: translate(locale, descriptionKey),
+    path,
+    index,
+  });
+}
+
+export function createContentMetadata(
+  locale: Locale,
+  { title, description, path, index = true }: ContentMetadataOptions,
+): Metadata {
   const canonical = localizedPath(locale, path);
 
   return {

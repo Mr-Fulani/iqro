@@ -9,15 +9,15 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 37 Playwright-сценариев проходят. Это ещё не означает готовность
+ESLint, TypeScript и 39 Playwright-сценариев проходят. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
-- текущие публичные страницы получают основной Quran/audio-контент после hydration, а не
-  отдают его как полноценный server-rendered/ISR HTML;
+- страницы опубликованных сур и отдельных аятов уже отдают Quran-текст и ссылки как ISR HTML;
+  интерактивный общий reader, список чтецов и audio-контент пока загружаются после hydration;
 - locale-prefixed RU/EN/AR/TR routes, legacy redirects, canonical/hreflang, `robots.txt`,
   sitemap, page-specific metadata, manifest и social preview уже добавлены;
-- юридические страницы, глубокие маршруты сур/аятов/чтецов, server-rendered Quran content и
-  полный Lighthouse/SEO gate ещё не закрыты;
+- юридические страницы, глубокие маршруты чтецов, server-rendered audio content и полный
+  Lighthouse/SEO gate ещё не закрыты;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
 - capacity/soak test ещё не даёт права обещать конкретное количество одновременных
@@ -79,21 +79,25 @@ flowchart LR
 
 - [x] Ввести стабильные locale-prefixed URL для RU/EN/AR/TR и определить redirect policy для
   старых URL и query parameters.
-- [ ] Создать отдельные индексируемые маршруты главной, списка сур, суры/аята, списка чтецов
-  и чтеца/декламации; интерактивный плеер оставить client island.
-- [ ] Перенести первичную загрузку публичного Quran/audio-контента в Server Components с
-  SSR/ISR, чтобы основной текст и ссылки присутствовали в HTML без JavaScript.
+- [x] Добавить глубокие индексируемые ISR-маршруты опубликованной суры и отдельного аята;
+  интерактивный reader оставить отдельной client surface.
+- [ ] Создать server-rendered список сур, список чтецов и маршрут чтеца/декламации;
+  интерактивный плеер оставить client island.
+- [x] Отдавать основной текст и ссылки опубликованной суры/аята в Server Components без
+  зависимости от JavaScript.
+- [ ] Перенести первичную загрузку публичного audio-каталога в Server Components с SSR/ISR.
 - [x] Добавить `metadataBase`, уникальные title/description, canonical, hreflang для всех
   опубликованных языков, Open Graph/Twitter metadata и preview images.
 - [x] Добавить локализованные sitemap и `robots.txt` для текущего набора публичных разделов.
-- [ ] Добавить versioned content sitemap index и автоматическую проверку, что только
-  опубликованные суры/чтецы/content versions попадают в content sitemaps.
+- [x] Добавить versioned Quran content sitemap index и автоматическую проверку, что только
+  активные опубликованные edition/content version, суры и аяты попадают в sitemap.
+- [ ] Добавить опубликованных чтецов/декламации в отдельный versioned audio sitemap.
 - [x] Явно установить `noindex, nofollow` для login/register/profile и других персональных или
   технических страниц.
 - [ ] Определить ISR/edge-cache policy и invalidation по content version; персональные ответы
   оставить `private, no-store`.
-- [ ] Добавить только уместные structured data: `WebSite`, breadcrumbs и `AudioObject` для
-  опубликованных лицензированных записей.
+- [x] Добавить `BreadcrumbList` для глубоких маршрутов сур и аятов.
+- [ ] Добавить `WebSite` и `AudioObject` только для опубликованных лицензированных записей.
 
 ### Публичная поверхность продукта
 

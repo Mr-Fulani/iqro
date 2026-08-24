@@ -45,7 +45,7 @@ runtime. Основной незакрытый объём находится в 
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 482 passed, 7 skipped; суммарное покрытие 84,99%.
-- Web имеет 37 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 39 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,
@@ -53,7 +53,9 @@ runtime. Основной незакрытый объём находится в 
   device revoke, grace-period account deletion/cancel, переключение RU/EN/AR/TR, сохранение
   locale, browser-language negotiation, locale-prefixed RU/EN/AR/TR routes, арабский RTL,
   canonical/hreflang/page metadata, private `noindex`, robots/localized sitemap/manifest/social
-  assets и переход с иллюстративного аватара чтеца на выбранный аудиокаталог.
+  assets, server-rendered глубокие страницы опубликованных сур/аятов, versioned Quran content
+  sitemap с отсечением draft/stale versions и переход с иллюстративного аватара чтеца на
+  выбранный аудиокаталог.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
@@ -187,6 +189,10 @@ runtime. Основной незакрытый объём находится в 
   и устройства, SSR выбирает язык из cookie или `Accept-Language`, переключатель сохраняет выбор,
   а арабский режим задаёт `lang=ar`, `dir=rtl` и логическое RTL-выравнивание. Flutter/TMA parity
   остаётся отдельной клиентской задачей.
+- Web публикует стабильные locale-prefixed ISR-маршруты суры и аята. Server Component получает
+  только активную опубликованную edition/version через внутренний public API, основной арабский
+  текст и ссылки присутствуют в исходном HTML, а versioned Quran sitemap строится из того же
+  backend publication boundary. Списки сур/чтецов и audio detail ещё требуют такого же переноса.
 
 ## Приоритетный backlog
 

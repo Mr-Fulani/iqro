@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const baseURL = externalBaseUrl || "http://127.0.0.1:3100";
+const mockPublicApiUrl = "http://127.0.0.1:3199";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,15 +26,26 @@ export default defineConfig({
   ],
   webServer: externalBaseUrl
     ? undefined
-    : {
-        command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
-        url: baseURL,
-        env: {
-          SITE_URL: baseURL,
+    : [
+        {
+          command: "node e2e/mock-public-api.mjs",
+          url: `${mockPublicApiUrl}/api/v1/quran/editions`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 30_000,
+          stdout: "ignore",
+          stderr: "pipe",
         },
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-        stdout: "ignore",
-        stderr: "pipe",
-      },
+        {
+          command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+          url: baseURL,
+          env: {
+            SITE_URL: baseURL,
+            BACKEND_INTERNAL_URL: mockPublicApiUrl,
+          },
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+          stdout: "ignore",
+          stderr: "pipe",
+        },
+      ],
 });

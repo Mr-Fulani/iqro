@@ -74,6 +74,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(robots).toContain("Disallow: /profile");
   expect(robots).toContain("Disallow: /ru/profile");
   expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemap.xml");
+  expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemaps/quran/sitemap.xml");
 
   const sitemapResponse = await request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBe(true);
@@ -86,6 +87,63 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(sitemap).not.toContain("/login");
   expect(sitemap).not.toContain("/register");
   expect(sitemap).not.toContain("/profile");
+});
+
+test("published surah and ayah routes render indexable Quran text on the server", async ({ page, request }) => {
+  const surahPath = "/ru/quran/madani-hafs/surah/1";
+  const serverResponse = await request.get(surahPath);
+  expect(serverResponse.ok()).toBe(true);
+  const html = await serverResponse.text();
+  expect(html).toContain("Сура 1: Аль-Фатиха");
+  expect(html).toContain("بِسْمِ اللَّهِ");
+  expect(html).toContain("/ru/quran/madani-hafs/surah/1/ayah/1");
+
+  await page.goto(surahPath);
+  await expect(page).toHaveTitle("Сура 1: Аль-Фатиха | Quran Platform");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Сура 1: Аль-Фатиха");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `http://127.0.0.1:3100${surahPath}`,
+  );
+  expect(
+    await page.locator('script[type="application/ld+json"]').evaluate(
+      (element) => element.textContent,
+    ),
+  ).toContain("BreadcrumbList");
+
+  await page.goto(`${surahPath}/ayah/1`);
+  await expect(page).toHaveTitle("Сура 1, аят 1: Аль-Фатиха | Quran Platform");
+  await expect(page.locator(".seo-single-ayah")).toContainText("بِسْمِ اللَّهِ");
+});
+
+test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {
+  const indexResponse = await request.get("/sitemaps/quran/sitemap.xml");
+  expect(indexResponse.ok()).toBe(true);
+  const index = await indexResponse.text();
+  expect(index).toContain(
+    "http://127.0.0.1:3100/sitemaps/quran/madani-hafs/1.0.0/sitemap.xml",
+  );
+  expect(index).not.toContain("draft");
+
+  const contentResponse = await request.get(
+    "/sitemaps/quran/madani-hafs/1.0.0/sitemap.xml",
+  );
+  expect(contentResponse.ok()).toBe(true);
+  const content = await contentResponse.text();
+  expect(content).toContain(
+    "<loc>http://127.0.0.1:3100/ru/quran/madani-hafs/surah/1</loc>",
+  );
+  expect(content).toContain(
+    "<loc>http://127.0.0.1:3100/ar/quran/madani-hafs/surah/1/ayah/2</loc>",
+  );
+  expect(content).not.toContain("draft");
+
+  const staleVersion = await request.get(
+    "/sitemaps/quran/madani-hafs/0.9.0/sitemap.xml",
+  );
+  expect(staleVersion.status()).toBe(404);
+  const draftPage = await request.get("/ru/quran/draft/surah/1");
+  expect(draftPage.status()).toBe(404);
 });
 
 test("web manifest and generated share assets are available", async ({ request }) => {

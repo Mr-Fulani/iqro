@@ -50,6 +50,32 @@ Authorization: Bearer <QURAN_OPERATIONS_TOKEN>
 Последние три порога подходят текущему Madani Hafs dataset. При подключении другого издания
 их нужно пересмотреть.
 
+## ISR и content sitemap
+
+Глубокие web-маршруты `/{locale}/quran/{edition}/surah/{number}` и отдельные аяты получают
+данные server-to-server через `BACKEND_INTERNAL_URL`. В production Compose это
+`http://backend:8000`; публичный browser API по-прежнему идёт через gateway. В ответ не
+передаётся `Authorization`: backend publication selectors являются единственной границей,
+решающей, какие edition/version доступны поисковому индексу.
+
+Next.js fetch cache обновляет опубликованный Quran-контент не чаще одного раза в час и помечает
+запросы тегами edition/surah/ayah. После появления редакционного publish webhook эти теги нужно
+инвалидировать on demand; до этого максимальное штатное окно обновления — 60 минут. Персональные
+маршруты в этот кэш не входят.
+
+`/sitemaps/quran/sitemap.xml` — индекс, который ссылается на child sitemap с edition и активной
+content version в URL. Child sitemap перечисляет только суры и аяты, доступные через public API,
+и возвращает 404 для draft, снятой или уже неактивной версии. Оба sitemap указаны в
+`robots.txt`. После публикации или отзыва dataset проверьте:
+
+```bash
+curl --fail https://example.org/sitemaps/quran/sitemap.xml
+curl --fail https://example.org/ru/quran/madani-hafs/surah/1
+```
+
+Ошибка upstream не подменяется пустым успешным sitemap: endpoint отвечает 503, чтобы crawler
+повторил запрос позднее и не счёл исчезновение контента штатным удалением.
+
 ## PostgreSQL backup
 
 Скрипт создаёт custom-format dump, записывает SHA-256, проверяет, что `pg_restore` читает

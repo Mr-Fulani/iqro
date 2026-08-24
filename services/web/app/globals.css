@@ -824,6 +824,88 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700;
 }
 
+.seo-quran-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.breadcrumbs ol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbs li:not(:last-child)::after {
+  content: "/";
+  margin-inline-start: 8px;
+  color: var(--border-strong);
+}
+
+.seo-quran-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.seo-quran-hero h1 {
+  margin: 4px 0 10px;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.2;
+}
+
+.seo-quran-hero > div > p:not(.eyebrow, .seo-content-version) {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.seo-content-version {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.seo-ayah-section {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.seo-ayah-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.seo-ayah-reference {
+  font-weight: 700;
+}
+
+.seo-single-ayah {
+  padding: clamp(20px, 4vw, 38px);
+}
+
+.seo-single-ayah .quran-arabic-text {
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 2.4;
+}
+
+.seo-ayah-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .mushaf-page-container {
   display: flex;
   justify-content: center;
@@ -1449,6 +1531,18 @@ input:focus, select:focus, textarea:focus {
 
   .hero-actions button {
     width: 100%;
+  }
+
+  .seo-quran-hero {
+    flex-direction: column;
+  }
+
+  .seo-quran-hero .btn {
+    width: 100%;
+  }
+
+  .seo-ayah-section {
+    padding: 18px;
   }
 
   .ayah-header {

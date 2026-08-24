@@ -7,6 +7,7 @@ import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "..
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
+import { quranSurahPath } from "../lib/quran-content";
 
 const RECITER_PORTRAITS: Record<string, string> = {
   "qf-159-maher-al-muaiqly": "/reciters/maher-al-muaiqly.webp",
@@ -275,7 +276,10 @@ export default function HomePage() {
             featuredSurahs.map((surah) => (
               <Link
                 key={surah.id}
-                href={localizedPath(locale, `/quran?surah=${surah.number}`)}
+                href={localizedPath(
+                  locale,
+                  quranSurahPath(editions[0]?.code || "madani-hafs", surah.number),
+                )}
                 className="track-row"
                 style={{ textDecoration: "none", color: "inherit" }}
               >

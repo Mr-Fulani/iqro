@@ -59,6 +59,8 @@ reverse proxy на том же сервере. Для публичного за�
 curl --fail http://127.0.0.1:3000/healthz
 curl --fail --header 'X-Forwarded-Proto: https' \
   http://127.0.0.1:3000/api/v1/health/ready
+curl --fail http://127.0.0.1:3000/sitemaps/quran/sitemap.xml
+curl --fail http://127.0.0.1:3000/ru/quran/madani-hafs/surah/1
 python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 ```
 
