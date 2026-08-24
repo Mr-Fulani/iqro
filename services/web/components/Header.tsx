@@ -12,6 +12,11 @@ export function Header() {
   const { t } = useI18n();
   const isActiveAccount = session?.user.status === "active";
   const isPendingDeletion = session?.user.status === "pending_deletion";
+  const statusClassName = isPendingDeletion
+    ? "muted"
+    : isActiveAccount
+      ? "ok"
+      : "guest-online";
 
   const navItems = [
     { href: "/", label: t("nav.home"), icon: "🏠" },
@@ -51,8 +56,8 @@ export function Header() {
 
       <div className="header-actions">
         <LanguageSwitcher />
-        <div className={`status-chip ${isActiveAccount ? "ok" : "muted"}`}>
-          <span className="status-dot"></span>
+        <div className={`status-chip ${statusClassName}`}>
+          <span className="status-dot" aria-hidden="true"></span>
           {isPendingDeletion
             ? t("auth.deletionScheduled")
             : isActiveAccount

@@ -291,11 +291,40 @@ a:hover {
   color: #166534;
 }
 
+.status-chip.guest-online {
+  background: rgba(20, 184, 166, 0.1);
+  border-color: rgba(13, 148, 136, 0.34);
+  color: #0f766e;
+  box-shadow: 0 0 16px rgba(20, 184, 166, 0.16);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: currentColor;
+}
+
+.status-chip.guest-online .status-dot {
+  background: #14b8a6;
+  animation: guest-online-pulse 2s ease-out infinite;
+}
+
+@keyframes guest-online-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(20, 184, 166, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-chip.guest-online .status-dot {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+  }
 }
 
 /* -------------------------------------------------------------------------
