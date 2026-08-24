@@ -361,7 +361,7 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
-test("persistent player actions adapt without horizontal overflow on mobile", async ({ page }) => {
+test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
@@ -388,6 +388,23 @@ test("persistent player actions adapt without horizontal overflow on mobile", as
   const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
   await expect(audioLink).toBeVisible();
   expect((await audioLink.boundingBox())!.width).toBeLessThanOrEqual(40);
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const tabletPlayerBox = await player.boundingBox();
+  const tabletAudioBox = await audio.boundingBox();
+  const tabletSettingsBox = await settingsButton.boundingBox();
+  const tabletAudioLinkBox = await audioLink.boundingBox();
+  expect(tabletPlayerBox).not.toBeNull();
+  expect(tabletAudioBox).not.toBeNull();
+  expect(tabletSettingsBox).not.toBeNull();
+  expect(tabletAudioLinkBox).not.toBeNull();
+  expect(tabletPlayerBox!.height).toBeLessThan(110);
+  expect(tabletAudioBox!.width).toBeGreaterThan(250);
+  expect(Math.abs(tabletSettingsBox!.y - tabletAudioBox!.y)).toBeLessThan(12);
+  expect(Math.abs(tabletAudioLinkBox!.y - tabletAudioBox!.y)).toBeLessThan(12);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
 });
 
 test("mushaf selects every fragment of an ayah and starts ayah playback", async ({ page }) => {
