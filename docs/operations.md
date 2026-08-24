@@ -532,6 +532,57 @@ production-like topology и временным рядом server-side метри
 Gunicorn/DB pool saturation, PostgreSQL query/lock latency, Redis latency/evictions и 5xx.
 Локальный или mock-прогон проверяет сам инструмент, но не закрывает S0/S1 capacity gate.
 
+### Bounded audio CDN/origin capacity test
+
+`ops/load/audio_capacity.py` проверяет самый дорогой контур отдельно от API. Он использует
+версионированный media manifest, keep-alive соединение на виртуального пользователя и смесь
+`HEAD`, startup `Range` от нулевого байта и seek `Range` из середины объекта. Полные аудиофайлы
+не скачиваются. По умолчанию один Range ограничен 256 KiB, concurrency — максимум 200,
+стадия — 100 000 запросами и 512 MiB transfer; жёсткий верхний предел явно заданного transfer
+cap — 20 GiB. Запускать его против production без отдельного разрешения владельца среды нельзя.
+
+Сначала контракт конкретного релиза должен пройти обычную bounded-проверку:
+
+```bash
+python3 ops/media/contract.py \
+  --manifest /secure/path/recitation-release.json \
+  --json-report /tmp/quran-media-contract-release-abc1234.json
+```
+
+Пример warm CDN-прогона. `warm` выполняет по одному startup Range на asset до измеряемых
+стадий; warmup записывается в отчёт отдельно:
+
+```bash
+python3 ops/load/audio_capacity.py \
+  --manifest /secure/path/recitation-release.json \
+  --target-role cdn \
+  --cache-mode warm \
+  --stage 5:60 \
+  --stage 20:300 \
+  --range-bytes 262144 \
+  --max-transfer-bytes-per-stage 536870912 \
+  --min-p50-throughput-kbps 640 \
+  --label release-abc1234-s0-audio-warm \
+  --json-report /tmp/quran-capacity-release-abc1234-s0-audio-warm.json
+```
+
+То же можно вызвать через `make ops-audio-capacity AUDIO_CAPACITY_ARGS='...'`. Значение
+минимального throughput задаётся из bitrate тестируемой rendition с согласованным QoE-запасом,
+а не копируется из примера вслепую. Базовый mix — 10% `HEAD`, 70% startup и 20% seek;
+в отчёте фиксируются p95 TTFB, p50 transfer throughput, delivered bytes, ошибки и нормализованные
+`hit`/`miss`/`bypass`/`revalidated`/`unknown` cache outcomes.
+
+`--cache-mode cold-start` сам не очищает provider cache: оператор выполняет purge перед одним
+коротким прогоном и сохраняет provider evidence. Несколько стадий под этим label уже не являются
+полностью cold. Для прямого origin-теста нужен отдельный manifest с origin asset URLs и
+`--target-role origin`; флаг только маркирует evidence и намеренно не переписывает hostname.
+Origin-прогон требует отдельного окна и меньших лимитов, потому что создаёт реальный egress.
+
+Client bytes и cache outcome нельзя считать точным origin egress: CDN может забрать или
+перевалидировать больше данных, чем получил harness. Origin egress, byte hit ratio и стоимость
+берутся из provider telemetry за то же окно. TTFB/throughput являются transport proxy для QoE,
+но не заменяют browser/mobile telemetry startup и buffering по rendition.
+
 Перед каждым изменением числа API/worker replicas сначала обновите topology/runtime-переменные
 `DATABASE_API_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER`,
 `DATABASE_WORKER_REPLICAS` и `CELERY_WORKER_CONCURRENCY`. Затем сохраните отчёт рядом с
@@ -562,7 +613,8 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
   нужны public library reads и отдельные cache-cold/cache-warm прогоны;
 - авторизация, token refresh, reading writes и sync push/pull;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
-- CDN `HEAD`, `Range`, `206`, `416`, CORS/ETag и origin-failure;
+- bounded CDN/origin `HEAD`, startup/seek `Range`, TTFB, throughput и cache outcomes уже
+  автоматизированы; production-like cold/warm/origin evidence, `416` и origin-failure остаются;
 - audio startup/buffering для экономной, стандартной и высокой rendition;
 - graceful degradation при недоступности Redis, provider API и worker queue.
 
