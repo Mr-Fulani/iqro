@@ -30,6 +30,14 @@ export function Footer() {
             <Link href={localizedPath(locale, "/login")}>{t("footer.session")}</Link>
             <Link href={localizedPath(locale, "/profile")}>{t("nav.profile")}</Link>
           </div>
+
+          <div className="footer-column">
+            <h4>{t("footer.legal")}</h4>
+            <Link href={localizedPath(locale, "/privacy")}>{t("footer.privacy")}</Link>
+            <Link href={localizedPath(locale, "/terms")}>{t("footer.terms")}</Link>
+            <Link href={localizedPath(locale, "/sources")}>{t("footer.sources")}</Link>
+            <Link href={localizedPath(locale, "/contacts")}>{t("footer.contacts")}</Link>
+          </div>
         </div>
       </div>
 

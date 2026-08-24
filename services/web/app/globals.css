@@ -1485,6 +1485,81 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* -------------------------------------------------------------------------
+   Legal, contacts, and provenance
+------------------------------------------------------------------------- */
+.legal-document {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.legal-section {
+  display: grid;
+  gap: 14px;
+}
+
+.legal-section p,
+.legal-section li,
+.legal-contact-grid p,
+.legal-license-list dd {
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.legal-section ul {
+  display: grid;
+  gap: 8px;
+  padding-inline-start: 24px;
+}
+
+.legal-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.legal-contact-grid > div {
+  min-width: 0;
+}
+
+.legal-contact-grid a,
+.legal-license-list a {
+  overflow-wrap: anywhere;
+}
+
+.legal-license-list {
+  display: grid;
+  gap: 18px;
+}
+
+.legal-license-list article {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+
+.legal-license-list h3 {
+  margin-bottom: 12px;
+  font-size: 17px;
+}
+
+.legal-license-list dl {
+  display: grid;
+  gap: 10px;
+}
+
+.legal-license-list dl > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.3fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.legal-license-list dt {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* -------------------------------------------------------------------------
    Footer
 ------------------------------------------------------------------------- */
 .app-footer {

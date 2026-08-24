@@ -96,7 +96,16 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(sitemapResponse.ok()).toBe(true);
   const sitemap = await sitemapResponse.text();
   for (const locale of ["ru", "en", "ar", "tr"]) {
-    for (const path of ["", "/quran", "/audio", "/prayer"]) {
+    for (const path of [
+      "",
+      "/quran",
+      "/audio",
+      "/prayer",
+      "/privacy",
+      "/terms",
+      "/contacts",
+      "/sources",
+    ]) {
       expect(sitemap).toContain(`<loc>http://127.0.0.1:3100/${locale}${path}</loc>`);
     }
   }
@@ -169,6 +178,37 @@ test("root layout publishes WebSite structured data", async ({ request }) => {
   const html = await response.text();
   expect(html).toContain('"@type":"WebSite"');
   expect(html).toContain('"@id":"http://127.0.0.1:3100/#website"');
+});
+
+test("legal and contact pages are localized, canonical, and linked from the footer", async ({ page, request }) => {
+  const privacyResponse = await request.get("/tr/privacy");
+  expect(privacyResponse.ok()).toBe(true);
+  const privacyHtml = await privacyResponse.text();
+  expect(privacyHtml).toContain("Gizlilik Politikası");
+  expect(privacyHtml).toContain("İşlediğimiz veriler");
+
+  await page.goto("/ru/contacts");
+  await expect(page).toHaveTitle("Контакты и обратная связь | Quran Platform");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "http://127.0.0.1:3100/ru/contacts",
+  );
+  await expect(page.getByRole("link", { name: "Открыть кабинет и feedback" })).toHaveAttribute(
+    "href",
+    "/ru/profile#feedback",
+  );
+  await expect(page.locator('.app-footer a[href="/ru/privacy"]')).toBeVisible();
+  await expect(page.locator('.app-footer a[href="/ru/sources"]')).toBeVisible();
+});
+
+test("sources page renders published provenance without exposing media URLs", async ({ request }) => {
+  const response = await request.get("/ru/sources");
+  expect(response.ok()).toBe(true);
+  const html = await response.text();
+  expect(html).toContain("Approved test source");
+  expect(html).toContain("Test streaming license");
+  expect(html).toContain("Test rights holder");
+  expect(html).not.toContain("audio.example.test");
 });
 
 test("content revalidation accepts only authenticated allowlisted events", async ({ request }) => {

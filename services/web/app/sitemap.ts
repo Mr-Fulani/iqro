@@ -10,13 +10,17 @@ const PRIORITY: Record<(typeof PUBLIC_INDEXABLE_PATHS)[number], number> = {
   "/quran": 0.9,
   "/audio": 0.8,
   "/prayer": 0.7,
+  "/privacy": 0.3,
+  "/terms": 0.3,
+  "/contacts": 0.4,
+  "/sources": 0.6,
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return PUBLIC_INDEXABLE_PATHS.flatMap((path) =>
     SUPPORTED_LOCALES.map((locale) => ({
       url: absoluteSiteUrl(localizedPath(locale, path)),
-      changeFrequency: path === "/" ? "weekly" as const : "daily" as const,
+      changeFrequency: path === "/" ? "weekly" as const : path === "/quran" || path === "/audio" ? "daily" as const : "monthly" as const,
       priority: PRIORITY[path],
       alternates: {
         languages: Object.fromEntries(

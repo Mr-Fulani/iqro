@@ -101,6 +101,27 @@ curl --fail https://example.org/ru/audio/reciters
 Ошибка upstream не подменяется пустым успешным sitemap: endpoint отвечает 503, чтобы crawler
 повторил запрос позднее и не счёл исчезновение контента штатным удалением.
 
+## Legal и public contacts
+
+Web публикует locale-prefixed `/privacy`, `/terms`, `/contacts` и `/sources`. Последний маршрут
+строит актуальный список только из опубликованных Quran editions и streamable audio releases,
+показывает content version, источник, правообладателя и лицензию, но не раскрывает media URL.
+Footer и основной sitemap ссылаются на все четыре страницы.
+
+Production Compose не стартует без заполненных `LEGAL_ENTITY_NAME`, `LEGAL_CONTACT_EMAIL`,
+`SECURITY_CONTACT_EMAIL`, `LEGAL_POSTAL_ADDRESS`, `LEGAL_JURISDICTION` и
+`LEGAL_EFFECTIVE_DATE`. Значения-заглушки из `.env.production.example` запрещены для staging
+sign-off и production. Перед публичным запуском юрист должен сверить фактического оператора,
+правовые основания, поставщиков/страны обработки и трансграничные механизмы с реальным
+deployment; тексты в репозитории не заменяют такую проверку. Privacy notice построен так, чтобы
+явно перечислить оператора и контакты, категории данных, цели/основания, получателей,
+передачи, сроки и права пользователя — по структуре
+[GDPR Article 13](https://eur-lex.europa.eu/eli/reg/2016/679/) и официального перечня
+[KVKK Aydınlatma Yükümlülüğü](https://www.kvkk.gov.tr/Icerik/2033/Aydinlatma-Yukumlulugu-).
+
+После rollout проверьте четыре локали, рабочие `mailto:`, якорь `/profile#feedback`, а также что
+`/sources` совпадает с public API и не содержит прямых audio URLs.
+
 ## PostgreSQL backup
 
 Скрипт создаёт custom-format dump, записывает SHA-256, проверяет, что `pg_restore` читает

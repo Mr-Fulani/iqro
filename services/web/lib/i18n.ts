@@ -124,6 +124,11 @@ export const MESSAGES = {
   "footer.developers": message("Разработчикам", "Developers", "للمطورين", "Geliştiriciler"),
   "footer.account": message("Аккаунт", "Account", "الحساب", "Hesap"),
   "footer.session": message("Управление сессией", "Session management", "إدارة الجلسة", "Oturum yönetimi"),
+  "footer.legal": message("Документы", "Legal", "المعلومات القانونية", "Yasal"),
+  "footer.privacy": message("Конфиденциальность", "Privacy", "الخصوصية", "Gizlilik"),
+  "footer.terms": message("Условия использования", "Terms of Use", "شروط الاستخدام", "Kullanım Koşulları"),
+  "footer.sources": message("Источники и лицензии", "Sources and licenses", "المصادر والتراخيص", "Kaynaklar ve lisanslar"),
+  "footer.contacts": message("Контакты и feedback", "Contact and feedback", "التواصل والملاحظات", "İletişim ve geri bildirim"),
   "footer.copyright": message(
     "© 2026 Quran Platform. Издание Мадинского Мусхафа (Хафс ‘ан ‘Асым).",
     "© 2026 Quran Platform. Madani Mushaf edition (Hafs ‘an ‘Asim).",

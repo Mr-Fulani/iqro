@@ -9,14 +9,14 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 44 Playwright-сценария проходят. Это ещё не означает готовность
+ESLint, TypeScript и 46 Playwright-сценариев проходят. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
 - каталог и страницы опубликованных сур/аятов, чтецов и декламаций уже отдают содержательный
   server-rendered HTML; интерактивные reader и audio player остаются client surfaces;
 - locale-prefixed RU/EN/AR/TR routes, legacy redirects, canonical/hreflang, `robots.txt`,
   sitemap, page-specific metadata, manifest и social preview уже добавлены;
-- юридические страницы и полный Lighthouse/SEO gate
+- финальный legal/license/religious sign-off и полный Lighthouse/SEO gate
   ещё не закрыты;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
@@ -109,7 +109,9 @@ flowchart LR
 
 - [x] Удалить из пользовательского UI backend liveness/readiness KPI и ссылки на `localhost`;
   технические endpoints оставить в операционном контуре.
-- [ ] Добавить Privacy Policy, Terms, контакты/feedback, сведения об источниках и лицензиях.
+- [x] Добавить локализованные Privacy Policy, Terms, контакты/feedback и динамические сведения
+  об источниках/лицензиях; production требует реальное имя и адрес оператора, юридическую
+  юрисдикцию и рабочие legal/security email из secret/config store.
 - [x] Добавить app icon, web manifest и social preview assets.
 - [x] Добавить локализованную пользовательскую 404, route error boundary с retry и
   независимый global 500 fallback без раскрытия серверной ошибки.

@@ -666,7 +666,7 @@ export default function ProfilePage() {
       <ReminderManager key={syncVersion} />
 
       {/* Feedback & Support Section */}
-      <section className="surface">
+      <section className="surface" id="feedback">
         <div className="surface-head">
           <div>
             <h3 className="surface-title">{t("feedback.title")}</h3>
