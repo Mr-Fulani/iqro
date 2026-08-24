@@ -40,6 +40,8 @@ type SegmentedAudioPlayerProps = {
   className?: string;
   onActiveAyahChange?: (ayahKey: string | null) => void;
   onPlayingChange?: (isPlaying: boolean) => void;
+  pauseOnNavigationKey?: string;
+  compact?: boolean;
 };
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -105,6 +107,8 @@ export function SegmentedAudioPlayer({
   className = "",
   onActiveAyahChange,
   onPlayingChange,
+  pauseOnNavigationKey,
+  compact = false,
 }: SegmentedAudioPlayerProps) {
   const { t, formatNumber } = useI18n();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -119,8 +123,10 @@ export function SegmentedAudioPlayer({
   const playbackRateRef = useRef(1);
   const pauseMsRef = useRef(0);
   const sleepModeRef = useRef<SleepMode>("off");
+  const pendingPauseStatusRef = useRef<StatusMessage | null>(null);
   const onActiveAyahChangeRef = useRef(onActiveAyahChange);
   const onPlayingChangeRef = useRef(onPlayingChange);
+  const navigationKeyRef = useRef(pauseOnNavigationKey);
 
   const [activeRequest, setActiveRequest] = useState<AudioPlaybackRequest | null>(null);
   const [activePlan, setActivePlan] = useState<RuntimePlan | null>(null);
@@ -148,12 +154,16 @@ export function SegmentedAudioPlayer({
   }, [onPlayingChange]);
 
   useEffect(() => {
+    if (compact) {
+      setSettingsOpen(false);
+      return;
+    }
     const mediaQuery = window.matchMedia("(max-width: 640px)");
     const syncForViewport = () => setSettingsOpen(!mediaQuery.matches);
     syncForViewport();
     mediaQuery.addEventListener("change", syncForViewport);
     return () => mediaQuery.removeEventListener("change", syncForViewport);
-  }, []);
+  }, [compact]);
 
   const updateActiveSegment = useCallback((
     segment: AyahAudioSegment | null,
@@ -225,6 +235,7 @@ export function SegmentedAudioPlayer({
   const stopAtCurrentPosition = useCallback((nextStatus: StatusMessage) => {
     clearTransition();
     const audio = audioRef.current;
+    pendingPauseStatusRef.current = nextStatus;
     if (audio) audio.pause();
     setIsPlaying(false);
     onPlayingChangeRef.current?.(false);
@@ -233,11 +244,20 @@ export function SegmentedAudioPlayer({
     updateMediaPosition();
   }, [clearTransition, updateMediaPosition]);
 
+  useEffect(() => {
+    if (navigationKeyRef.current === pauseOnNavigationKey) return;
+    navigationKeyRef.current = pauseOnNavigationKey;
+    if (requestRef.current) {
+      stopAtCurrentPosition({ key: "player.status.pausedNavigation" });
+    }
+  }, [pauseOnNavigationKey, stopAtCurrentPosition]);
+
   const finishPlayback = useCallback((nextStatus: StatusMessage) => {
     clearTransition();
     const audio = audioRef.current;
     const plan = planRef.current;
     if (audio) {
+      pendingPauseStatusRef.current = nextStatus;
       audio.pause();
       if (plan) audio.currentTime = plan.endMs / 1000;
     }
@@ -633,6 +653,7 @@ export function SegmentedAudioPlayer({
           preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
           onPlay={() => {
+            pendingPauseStatusRef.current = null;
             hasStartedRef.current = true;
             setHasStarted(true);
             setIsPlaying(true);
@@ -650,7 +671,11 @@ export function SegmentedAudioPlayer({
           onPause={() => {
             setIsPlaying(false);
             onPlayingChangeRef.current?.(false);
-            if (!boundaryTransitionRef.current) {
+            const pendingStatus = pendingPauseStatusRef.current;
+            pendingPauseStatusRef.current = null;
+            if (pendingStatus) {
+              setStatus(pendingStatus);
+            } else if (!boundaryTransitionRef.current) {
               setStatus({
                 key: hasStartedRef.current ? "player.status.paused" : "player.status.ready",
               });

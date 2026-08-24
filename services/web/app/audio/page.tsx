@@ -8,16 +8,15 @@ import {
   Recitation,
   Reciter,
 } from "../../lib/api";
-import {
-  AudioPlaybackRequest,
-  SegmentedAudioPlayer,
-} from "../../components/SegmentedAudioPlayer";
+import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
+import { useAudioPlayer } from "../../lib/audio-player-context";
 import { useI18n } from "../../lib/i18n-context";
 
 export default function AudioPage() {
   const searchParams = useSearchParams();
   const requestedReciterId = searchParams.get("reciter");
   const { locale, t, formatNumber } = useI18n();
+  const { request: playerRequest, isPlaying, startPlayback } = useAudioPlayer();
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [selectedReciterId, setSelectedReciterId] = useState<string>("");
   const [recitations, setRecitations] = useState<Recitation[]>([]);
@@ -26,8 +25,6 @@ export default function AudioPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [playerRequest, setPlayerRequest] = useState<AudioPlaybackRequest | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const playerSectionRef = useRef<HTMLElement | null>(null);
@@ -77,8 +74,6 @@ export default function AudioPage() {
   // Load tracks when recitation changes
   useEffect(() => {
     if (!selectedRecitationId) return;
-    setPlayerRequest(null);
-    setIsPlaying(false);
     setLoading(true);
     api
       .getTracks(selectedRecitationId, { scope: "surah", page_size: 114 })
@@ -104,7 +99,7 @@ export default function AudioPage() {
     try {
       const playback = await api.getSurahPlayback(selectedRecitation.id, track.surah_number);
       requestIdRef.current += 1;
-      setPlayerRequest({
+      const request: AudioPlaybackRequest = {
         requestId: requestIdRef.current,
         track: playback.track,
         segments: playback.segments || [],
@@ -113,7 +108,8 @@ export default function AudioPage() {
         artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
         album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
         autoPlay: true,
-      });
+      };
+      startPlayback(request);
       window.setTimeout(() => {
         playerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 0);
@@ -222,11 +218,9 @@ export default function AudioPage() {
           </div>
           {!playerRequest && <span className="status-chip">{t("audio.chooseSurah")}</span>}
         </div>
-        <SegmentedAudioPlayer
-          request={playerRequest}
-          className="audio-player-bar"
-          onPlayingChange={setIsPlaying}
-        />
+        <div className="alert alert-info audio-global-player-hint">
+          {playerRequest ? t("audio.playerPersistentHint") : t("audio.playerIdleHint")}
+        </div>
       </section>
 
       {/* Tracks List */}

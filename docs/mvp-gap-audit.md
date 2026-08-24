@@ -41,10 +41,11 @@ runtime. Основной незакрытый объём находится в 
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
 - Полный backend test suite: 482 passed, 7 skipped; суммарное покрытие 84,99%.
-- Web имеет 28 Playwright cases, включая verified-email merge без credentials в
+- Web имеет 29 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,
+  persistent dock с паузой и сохранением позиции при route navigation,
   device revoke, grace-period account deletion/cancel, переключение RU/EN/AR/TR, сохранение
   locale, browser-language negotiation, арабский RTL и переход с иллюстративного аватара
   чтеца на выбранный аудиокаталог.
@@ -65,7 +66,7 @@ runtime. Основной незакрытый объём находится в 
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
 | 6 | Позиции, закладки, история, цели, серии | 🟡 | Position, bookmarks, revisions, tombstones и sync | Нет reading sessions/history, goals и streaks |
 | 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable recitations, 114 surah tracks, ayah timings, streaming, web-витрина чтецов с локальными иллюстративными аватарами и deep link в аудиокаталог | Не доказаны три полностью лицензированных релиза; нет управляемой offline-установки и redistribution pipeline |
-| 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут | — |
+| 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут; persistent dock сохраняет трек и позицию, ставя playback на паузу при route navigation | — |
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
 | 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |

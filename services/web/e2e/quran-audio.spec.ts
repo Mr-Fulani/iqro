@@ -311,6 +311,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await page.goto("/audio");
 
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toBeVisible();
+  await page.getByRole("button", { name: "Повтор, диапазон и таймер" }).click();
   await expect(page.getByLabel("Режим повтора")).toBeVisible();
   await expect(page.getByLabel("Режим повтора")).toBeDisabled();
   await expect(page.getByLabel("Скорость воспроизведения")).toBeVisible();
@@ -328,6 +329,30 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
     tracks[0].asset.url,
   );
   await expect(page.getByRole("button", { name: "▶ Играет", exact: true })).toBeVisible();
+});
+
+test("audio widget survives route navigation and pauses at the current position", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const audio = player.locator("audio");
+  await expect(player).toBeVisible();
+  await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await audio.evaluate((element) => {
+    (element as HTMLAudioElement).currentTime = 12.5;
+  });
+
+  await page.locator('.app-menu a[href="/"]').click();
+
+  await expect(page).toHaveURL("/");
+  await expect(player).toBeVisible();
+  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+  await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await player.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
 test("mushaf selects every fragment of an ayah and starts ayah playback", async ({ page }) => {
@@ -464,6 +489,7 @@ test("minute sleep timer stops playback without losing the current position", as
   });
 
   await page.clock.install();
+  await page.getByRole("button", { name: "Повтор, диапазон и таймер" }).click();
   await page.getByLabel("Таймер сна").selectOption("5");
   await expect(page.getByText("Осталось 5:00", { exact: true })).toBeVisible();
   await page.clock.fastForward("05:00");

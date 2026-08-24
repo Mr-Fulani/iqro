@@ -12,6 +12,7 @@ import {
 } from "../lib/i18n";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { AudioPlayerProvider } from "../lib/audio-player-context";
 
 async function requestLocale() {
   const stored = (await cookies()).get(LOCALE_COOKIE_NAME)?.value;
@@ -42,11 +43,13 @@ export default async function RootLayout({
       <body>
         <I18nProvider initialLocale={locale}>
           <AuthProvider>
-            <div className="app-container">
-              <Header />
-              <main>{children}</main>
-              <Footer />
-            </div>
+            <AudioPlayerProvider>
+              <div className="app-container">
+                <Header />
+                <main>{children}</main>
+                <Footer />
+              </div>
+            </AudioPlayerProvider>
           </AuthProvider>
         </I18nProvider>
       </body>
