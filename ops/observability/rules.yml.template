@@ -1,0 +1,178 @@
+groups:
+  - name: quran-platform-recording
+    interval: 15s
+    rules:
+      - record: quran:api:request_rate5m
+        expr: sum(rate(quran_http_requests_total[5m]))
+      - record: quran:api:error_ratio5m
+        expr: sum(rate(quran_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(quran_http_requests_total[5m])), 0.001)
+      - record: quran:api:latency_p95_seconds5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(quran_http_request_duration_seconds_bucket[5m])))
+      - record: quran:postgres:connection_utilization
+        expr: sum(pg_stat_database_numbackends) / clamp_min(max(pg_settings_max_connections), 1)
+      - record: quran:redis:memory_utilization
+        expr: redis_memory_used_bytes / clamp_min(redis_memory_max_bytes, 1)
+      - record: quran:cdn:byte_hit_ratio24h
+        expr: sum(increase(quran_media_cdn_egress_bytes_total{source="edge"}[24h])) / clamp_min(sum(increase(quran_media_cdn_egress_bytes_total[24h])), 1)
+      - record: quran:budget:monthly_usd
+        expr: vector(@@MONTHLY_BUDGET_USD@@)
+      - record: quran:budget:monthly_origin_egress_bytes
+        expr: vector(@@MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES@@)
+
+  - name: quran-platform-service-alerts
+    rules:
+      - alert: QuranBackendMetricsDown
+        expr: up{job="quran-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Quran backend metrics target is unavailable
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranApiHighErrorRate
+        expr: quran:api:error_ratio5m > 0.02
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: API 5xx ratio is above 2%
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranApiHighLatency
+        expr: quran:api:latency_p95_seconds5m > 0.75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency is above 750 ms
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranPublishedCatalogIncomplete
+        expr: quran_platform_catalog_items{kind="mushaf_pages"} < 604 or quran_platform_catalog_items{kind="ayahs"} < 6236 or quran_platform_catalog_items{kind="audio_recitations"} < 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Published Quran or audio catalog is incomplete
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranPostgresExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL exporter is unavailable
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranPostgresConnectionsHigh
+        expr: quran:postgres:connection_utilization > 0.70
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: PostgreSQL connection utilization is above 70%
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranRedisExporterDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis exporter is unavailable
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranRedisMemoryHigh
+        expr: redis_memory_max_bytes > 0 and quran:redis:memory_utilization > 0.70
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis memory utilization is above 70%
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranRedisMemoryLimitMissing
+        expr: redis_memory_max_bytes == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis maxmemory is not declared to the exporter
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranRedisEvictions
+        expr: increase(redis_evicted_keys_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis evicted keys during the last 10 minutes
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranCeleryExporterDown
+        expr: up{job="celery"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Celery exporter is unavailable
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranCeleryWorkersMissing
+        expr: absent(celery_workers) or sum(celery_workers) < 1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: No Celery worker heartbeat is visible
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranCeleryQueueBacklog
+        expr: sum(celery_queue_length) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Celery queue depth is above the S0 baseline
+          runbook: docs/operations.md#alert-triage
+      - alert: QuranCeleryTaskFailures
+        expr: sum(increase(celery_tasks_total{state="FAILURE"}[10m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Celery tasks failed during the last 10 minutes
+          runbook: docs/operations.md#alert-triage
+
+  - name: quran-platform-media-finops-alerts
+    rules:
+      - alert: QuranMediaCdnTelemetryMissing
+        expr: absent(quran_media_cdn_egress_bytes_total)
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: CDN byte and origin-egress telemetry is not being ingested
+          runbook: docs/operations.md#cdn-and-finops-metric-contract
+      - alert: QuranMediaCdnHitRatioLow
+        expr: quran:cdn:byte_hit_ratio24h < 0.90
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Managed media CDN byte hit ratio is below 90%
+          runbook: docs/operations.md#cdn-and-finops-metric-contract
+      - alert: QuranMediaOriginEgressBudgetHigh
+        expr: sum(increase(quran_media_cdn_egress_bytes_total{source="origin"}[30d])) > 0.80 * scalar(quran:budget:monthly_origin_egress_bytes)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Rolling 30-day origin egress is above 80% of budget
+          runbook: docs/operations.md#cdn-and-finops-metric-contract
+      - alert: QuranFinopsTelemetryMissing
+        expr: absent(quran_finops_month_to_date_cost_usd)
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: Month-to-date infrastructure cost telemetry is missing
+          runbook: docs/operations.md#cdn-and-finops-metric-contract
+      - alert: QuranMonthlyBudgetHigh
+        expr: sum(quran_finops_month_to_date_cost_usd) > 0.80 * scalar(quran:budget:monthly_usd)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Month-to-date infrastructure cost is above 80% of budget
+          runbook: docs/operations.md#cdn-and-finops-metric-contract

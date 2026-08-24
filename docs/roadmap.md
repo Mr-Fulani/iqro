@@ -81,7 +81,10 @@ flowchart LR
 - [x] Сделать API/workers stateless и независимо реплицируемыми: runtime не использует
   локальные media/schedule-файлы, worker prefetch управляется конфигурацией, а Beat защищён
   token-safe Redis lease и прекращает работу при его потере.
-- [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts.
+- [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts: versioned opt-in
+  Prometheus/Grafana/Alertmanager baseline, bounded multi-worker API metrics, exporters, S0
+  rules и budget rendering готовы; остаются provider CDN/billing/QoE ingestion, внешний uptime,
+  production alert routing и доказательство синтетической доставки.
 - [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
   остаются auth/sync, cache-cold/warm, library API и audio Range/origin/QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам.

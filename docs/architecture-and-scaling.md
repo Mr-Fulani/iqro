@@ -247,6 +247,12 @@ managed audio sessions через CDN. Это проверочная нагру�
 - продукт: requests per active user, sync operations/day, audio minutes/day;
 - FinOps: стоимость на DAU, дневной egress и отклонение от бюджета.
 
+Repository baseline уже нормализует API route metrics и содержит versioned dashboard/alerts для
+API/PostgreSQL/Redis/Celery. CDN/billing adapter обязан публиковать bounded provider-neutral
+series из operations runbook; `absent()` alert не позволяет трактовать отсутствие внешней
+телеметрии как нулевую нагрузку или стоимость. Локальный observability overlay остаётся opt-in
+и может быть заменён managed Prometheus/Grafana без изменения metric contract.
+
 Примеры триггеров: pool или memory выше 70% в рабочий пик, ненулевая eviction, нарушение
 SLO в двух последовательных окнах, очередь старше допустимого времени либо прогноз заполнения
 storage раньше установленного горизонта. Точные пороги фиксируются после baseline stage test.

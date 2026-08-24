@@ -64,7 +64,8 @@ jobs:
           python -m unittest \
             ops.load.test_smoke \
             ops.load.test_capacity \
-            ops.media.test_contract
+            ops.media.test_contract \
+            ops.observability.test_render_config
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.28"

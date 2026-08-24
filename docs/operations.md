@@ -17,8 +17,10 @@ Liveness и readiness остаются публичными:
 - `/api/v1/metrics` — Prometheus text exposition.
 
 Формат генерируется официальным
-[Prometheus Python client](https://prometheus.github.io/client_python/), без process-local
-счётчиков, поэтому он одинаково работает с несколькими Gunicorn workers.
+[Prometheus Python client](https://prometheus.github.io/client_python/). Durable catalog/sync
+gauges читаются из PostgreSQL, а HTTP counter/histogram в production используют multiprocess
+storage Gunicorn в container-local tmpfs. Метка `route` берётся только из Django route template:
+raw URL, query, user ID и request ID в labels не попадают.
 
 Создайте независимый секрет и добавьте его в production secret store как
 `QURAN_OPERATIONS_TOKEN`:
@@ -49,6 +51,89 @@ Authorization: Bearer <QURAN_OPERATIONS_TOKEN>
 
 Последние три порога подходят текущему Madani Hafs dataset. При подключении другого издания
 их нужно пересмотреть.
+
+## Versioned observability baseline
+
+`compose.observability.yaml` — opt-in overlay над S0 production Compose. Он добавляет
+Prometheus, Alertmanager, Grafana и exporters PostgreSQL/Redis/Celery; обычный
+`make production-up` их не запускает и поэтому не резервирует ресурсы заранее. Образы
+закреплены по версиям, Prometheus rules и Grafana dashboard хранятся в
+`ops/observability/`, а runtime-конфиг и файлы секретов создаёт одноразовый init-контейнер.
+Пароли и webhook URL в сгенерированные несекретные YAML не подставляются.
+
+Перед запуском задайте реальные положительные значения, соответствующие принятому бюджету:
+
+```dotenv
+GRAFANA_ADMIN_PASSWORD=<independent-random-password>
+OBSERVABILITY_MONTHLY_BUDGET_USD=<monthly-budget>
+OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES=<monthly-origin-egress-budget>
+OBSERVABILITY_ALERT_WEBHOOK_URL=https://alerts.example.com/quran
+```
+
+Пустой `OBSERVABILITY_ALERT_WEBHOOK_URL` разрешён для локальной проверки dashboard, но в этом
+режиме Alertmanager использует receiver без доставки. Публичный release требует HTTPS webhook
+или замену receiver на одобренный PagerDuty/Slack/Telegram/on-call канал и успешную доставку
+синтетического alert.
+
+Проверка и запуск:
+
+```bash
+make observability-config
+make observability-up
+make observability-logs
+```
+
+Grafana, Prometheus и Alertmanager по умолчанию слушают только loopback на портах 3001, 9090
+и 9093. Не публикуйте эти UI напрямую: используйте SSH tunnel, VPN или отдельный SSO-proxy.
+Retention Prometheus по умолчанию ограничен одновременно 15 днями и 2 GB. У overlay есть
+resource limits, но это не reservations; перед включением на маленьком S0 host всё равно
+сверьте фактическую свободную RAM. При переходе на managed observability сохраняются те же
+metric names, rules и dashboard queries, а локальные stateful сервисы можно не запускать.
+
+### Alert triage
+
+Versioned rules покрывают target availability, API p95/5xx, полноту опубликованного каталога,
+PostgreSQL connection budget, Redis memory/evictions, Celery worker/queue/failures и
+media/FinOps telemetry. Порог — сигнал расследования, а не команда немедленно покупать
+серверы. Для каждого firing alert:
+
+1. зафиксируйте начало, release version и затронутые маршруты/очереди;
+2. проверьте target и соседние панели, затем логи по request ID без вывода credentials;
+3. остановите rollout либо примените документированный rollback, если нарушен SLO;
+4. масштабируйте конкретный насыщенный слой только после подтверждения устойчивого тренда;
+5. сохраните ссылку на incident/capacity evidence и скорректируйте baseline после разбора.
+
+`QuranCeleryQueueBacklog > 100`, API p95 750 ms и utilization 70% являются начальными S0
+порогами. После первого production-like load/soak прогона их заменяют измеренными SLO, не
+ослабляя alert только ради зелёного dashboard.
+
+Если provider не публикует Redis memory limit, срабатывает `QuranRedisMemoryLimitMissing`:
+задайте managed plan limit либо явный `maxmemory` ниже container/cgroup limit. Для общего
+cache+broker S0 используйте `noeviction`; смена eviction policy или разделение ролей требует
+отдельного load/failure теста, потому что broker/result keys нельзя терять как обычный cache.
+S0 exporter читает `REDIS_CACHE_URL`, поскольку все role URL указывают на один endpoint. После
+физического разделения запускайте отдельный scrape target/exporter на каждый уникальный
+cache/throttle/broker/result/web-cache endpoint с bounded `role` label; один зелёный cache
+target не доказывает здоровье остальных ролей.
+
+### CDN and FinOps metric contract
+
+Provider adapter или managed monitoring должен нормализовать Cloudflare R2/CDN и billing
+telemetry в следующие bounded series:
+
+- `quran_media_cdn_egress_bytes_total{source="edge|origin"}` — counter фактически отданных
+  байтов; `source` — единственная обязательная label;
+- `quran_media_audio_range_requests_total{status="206|200|416|error"}` — bounded Range outcome;
+- `quran_media_audio_start_duration_seconds_bucket` и
+  `quran_media_audio_buffering_ratio` — агрегированная QoE без user/device identifiers;
+- `quran_finops_month_to_date_cost_usd{category="compute|database|redis|storage|cdn|other"}` —
+  gauge month-to-date стоимости по ограниченному набору категорий.
+
+В репозитории ingestion provider credentials намеренно отсутствуют. Пока adapter не подключён,
+`QuranMediaCdnTelemetryMissing` и `QuranFinopsTelemetryMissing` должны срабатывать: отсутствие
+данных не считается нулевым egress или нулевой стоимостью. Monthly cost и rolling 30-day origin
+egress предупреждают на 80% operator-defined budget. Данные CDN/billing сверяются с invoice,
+а QoE sampling и retention проходят privacy review до включения в clients.
 
 Перед rollout и после любого разделения Redis roles сохраните redacted topology report:
 

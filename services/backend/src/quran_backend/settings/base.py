@@ -208,6 +208,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "quran_backend.modules.core.middleware.RequestIdMiddleware",
+    "quran_backend.modules.core.middleware.RequestMetricsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -493,6 +494,8 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = positive_env_int("CELERY_WORKER_PREFETCH_MULTIPLIER", 1)
+CELERY_WORKER_SEND_TASK_EVENTS = env_bool("CELERY_WORKER_SEND_TASK_EVENTS", False)
+CELERY_TASK_SEND_SENT_EVENT = env_bool("CELERY_TASK_SEND_SENT_EVENT", False)
 CELERY_BEAT_LOCK_KEY = os.getenv("CELERY_BEAT_LOCK_KEY", "quran-platform:celery-beat:lease").strip()
 if not CELERY_BEAT_LOCK_KEY:
     raise ImproperlyConfigured("CELERY_BEAT_LOCK_KEY must not be empty")

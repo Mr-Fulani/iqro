@@ -44,7 +44,7 @@ runtime. Основной незакрытый объём находится в 
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 485 passed, 6 skipped; суммарное покрытие 84,89%.
+- Полный backend test suite: 531 passed, 6 skipped; суммарное покрытие 84,76%.
 - Web имеет 47 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
@@ -84,7 +84,7 @@ runtime. Основной незакрытый объём находится в 
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
-| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat и общий Next.js Redis cache/tag coordination | Нет production-like capacity/soak proof, CDN/egress/QoE metrics, централизованных dashboard/alerts, фактического multi-replica deployment и offsite backup |
+| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness, bounded multi-worker API metrics, versioned opt-in Prometheus/Grafana/Alertmanager dashboard/rules, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat и общий Next.js Redis cache/tag coordination | Нет production-like capacity/soak proof, provider CDN/billing/QoE ingestion, внешнего uptime и проверенной alert delivery, фактического multi-replica deployment и offsite backup |
 
 ## Критерии приёмки
 
@@ -158,7 +158,7 @@ runtime. Основной незакрытый объём находится в 
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
 | Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev server и standalone production bundle; интеграционный smoke против реального staging API ещё не выполнен |
-| Runbooks, dashboards и alerts доступны | 🟡 | Runbooks/metrics есть; dashboards/alerts отложены |
+| Runbooks, dashboards и alerts доступны | 🟡 | Versioned dashboard/rules и runbook готовы; production deployment, provider telemetry, on-call ownership и synthetic delivery ещё не подтверждены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 
 ## Исправления по итогам аудита
@@ -244,8 +244,8 @@ runtime. Основной незакрытый объём находится в 
 1. Зелёный dependency/image gate на release commit и expanded browser/device matrix.
 2. Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
 3. Server/domain/TLS, privacy/license/religious sign-off.
-4. Monitoring/dashboard/alerts и offsite bucket остаются отложенными по текущему решению,
-   но блокируют широкий production launch.
+4. Развернуть готовый monitoring baseline, подключить внешний uptime/provider telemetry,
+   проверить alert delivery; offsite bucket также блокирует широкий production launch.
 
 ### P0-F — scalable platform foundation
 
@@ -278,5 +278,6 @@ runtime. Основной незакрытый объём находится в 
 - Verified email, guest merge и device/deletion lifecycle не закрывают безопасную смену/unlink
   identity и дополнительные OAuth providers.
 - Хранение reminder rules без локального scheduler не означает работающие уведомления.
-- Наличие metrics endpoint без dashboards/alerts не означает operational monitoring.
+- Наличие versioned metrics/dashboard/rules без deployment, внешней телеметрии и проверенной
+  доставки alert не означает operational monitoring.
 - Отсутствие ads/payments code не доказывает безопасность ещё не реализованного flow.

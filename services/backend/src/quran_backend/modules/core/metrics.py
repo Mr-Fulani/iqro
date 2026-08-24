@@ -5,6 +5,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Gauge, gen
 from quran_backend.modules.audio.models import AudioTrack
 from quran_backend.modules.audio.operations import QuranFoundationOperationalSummary
 from quran_backend.modules.audio.selectors import public_recitation_base
+from quran_backend.modules.core.runtime_metrics import register_runtime_collectors
 from quran_backend.modules.quran.models import (
     Ayah,
     MushafPage,
@@ -21,6 +22,7 @@ def render_platform_metrics(
     """Render bounded, process-independent metrics from durable database state."""
 
     registry = CollectorRegistry()
+    register_runtime_collectors(registry)
     build_info = Gauge(
         "quran_platform_build_info",
         "Static build information for the Quran Platform backend.",

@@ -12,8 +12,9 @@ stateless API/web/worker replicas за load balancer, подключает manag
 через connection pool и отдаёт managed media из object storage через CDN. Подробности:
 [архитектура расширения и масштабирования](architecture-and-scaling.md).
 
-Домен/TLS, внешний мониторинг и offsite-хранилище резервных копий пока намеренно не
-включены. До публичного запуска они остаются обязательными инфраструктурными задачами.
+Домен/TLS, внешний uptime/error monitoring, доставляемый on-call и offsite-хранилище резервных
+копий пока намеренно не включены. В репозитории есть opt-in Prometheus/Grafana/Alertmanager
+baseline, но его фактический deployment не заменяет эти launch evidence.
 
 ## 1. Окружение и секреты
 
@@ -33,6 +34,8 @@ chmod 600 services/backend/.env.production
 - пять Redis role URL, включая `WEB_CACHE_REDIS_URL`; для S0 они могут указывать на один
   внутренний Redis endpoint;
 - `QURAN_OPERATIONS_TOKEN`;
+- независимый `GRAFANA_ADMIN_PASSWORD`, месячный денежный и origin-egress budget; alert webhook
+  можно оставить пустым только для локальной проверки dashboard;
 - Quran.Foundation credentials, если синхронизация включена;
 - `MEDIA_OBJECT_STORAGE_ENDPOINT_URL`, bucket, scoped access/secret key, region/addressing style;
 - `MEDIA_CDN_REQUIRED_ORIGINS`: точные origins публичного web, staging и Telegram Mini App,
@@ -55,6 +58,17 @@ make production-build
 make production-up
 make production-ps
 ```
+
+Observability overlay включается отдельно и не увеличивает стартовый S0 footprint без явного
+решения оператора:
+
+```bash
+make observability-config
+make observability-up
+```
+
+Его UI остаются на loopback; порядок настройки budget, alert delivery и provider metrics
+описан в [operations runbook](operations.md#versioned-observability-baseline).
 
 Перед release локальный web performance gate можно повторить отдельно; он сам создаёт
 standalone production build и запускает детерминированный mock API:

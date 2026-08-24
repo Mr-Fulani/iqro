@@ -1,0 +1,125 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [{"expr": "quran:api:request_rate5m", "refId": "A"}],
+      "title": "API request rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"max": 1, "min": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "red", "value": 0.02}]}, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "targets": [{"expr": "quran:api:error_ratio5m", "refId": "A"}],
+      "title": "API 5xx ratio",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "targets": [{"expr": "quran:api:latency_p95_seconds5m", "refId": "A"}],
+      "title": "API p95 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"max": 1, "min": 0, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "targets": [{"expr": "quran:postgres:connection_utilization", "refId": "A"}],
+      "title": "PostgreSQL connection utilization",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"max": 1, "min": 0, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 6},
+      "id": 5,
+      "targets": [{"expr": "quran:redis:memory_utilization", "legendFormat": "{{instance}}", "refId": "A"}],
+      "title": "Redis memory utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 6},
+      "id": 6,
+      "targets": [{"expr": "sum(celery_queue_length)", "refId": "A"}],
+      "title": "Celery queue depth",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 6},
+      "id": 7,
+      "targets": [{"expr": "sum(celery_workers)", "refId": "A"}, {"expr": "sum(rate(celery_tasks_total{state=\"FAILURE\"}[5m]))", "refId": "B"}],
+      "title": "Celery workers and failures",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"max": 1, "min": 0, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 13},
+      "id": 8,
+      "targets": [{"expr": "quran:cdn:byte_hit_ratio24h", "refId": "A"}],
+      "title": "Media CDN byte hit ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 13},
+      "id": 9,
+      "targets": [{"expr": "sum(increase(quran_media_cdn_egress_bytes_total{source=\"origin\"}[24h]))", "refId": "A"}, {"expr": "sum(increase(quran_media_cdn_egress_bytes_total{source=\"edge\"}[24h]))", "refId": "B"}],
+      "title": "Media egress over 24h",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 13},
+      "id": 10,
+      "targets": [{"expr": "sum(quran_finops_month_to_date_cost_usd)", "refId": "A"}, {"expr": "quran:budget:monthly_usd", "refId": "B"}],
+      "title": "Month-to-date cost and budget",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 20},
+      "id": 11,
+      "targets": [{"expr": "quran_platform_catalog_items", "legendFormat": "{{kind}}", "refId": "A"}],
+      "title": "Published catalog",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 20},
+      "id": 12,
+      "targets": [{"expr": "ALERTS{alertstate=\"firing\"}", "legendFormat": "{{severity}}: {{alertname}}", "refId": "A"}],
+      "title": "Firing alerts",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": ["quran-platform", "s0"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "Quran Platform Overview",
+  "uid": "quran-platform-overview",
+  "version": 1
+}

@@ -71,6 +71,7 @@ def test_operational_health_is_degraded_without_tracked_recitations(
     QURAN_QF_AUDIO_SYNC_ENABLED=False,
 )
 def test_metrics_are_prometheus_text_and_do_not_expose_token(api_client: APIClient) -> None:
+    api_client.get(reverse("core:health-live"))
     response = api_client.get(
         reverse("core:metrics"),
         headers={"Authorization": f"Bearer {OPERATIONS_TOKEN}"},
@@ -80,6 +81,8 @@ def test_metrics_are_prometheus_text_and_do_not_expose_token(api_client: APIClie
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("text/plain")
     assert "quran_platform_build_info" in body
+    assert "quran_http_requests_total" in body
+    assert 'route="api/v1/health/live"' in body
     assert "quran_foundation_audio_sync_enabled 0.0" in body
     assert OPERATIONS_TOKEN not in body
     assert response.headers["Cache-Control"] == "private, no-store"

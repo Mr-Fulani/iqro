@@ -1,0 +1,180 @@
+services:
+  backend:
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp
+
+  worker:
+    environment:
+      CELERY_WORKER_SEND_TASK_EVENTS: "true"
+      CELERY_TASK_SEND_SENT_EVENT: "true"
+
+  observability-init:
+    image: ${BACKEND_IMAGE:-quran-platform-backend:${APP_VERSION:-local}}
+    user: "0:0"
+    restart: "no"
+    command: ["python", "/ops/observability/render_config.py", "--output", "/runtime"]
+    environment:
+      QURAN_OPERATIONS_TOKEN: ${QURAN_OPERATIONS_TOKEN:?Set QURAN_OPERATIONS_TOKEN in the production env file}
+      OBSERVABILITY_MONTHLY_BUDGET_USD: ${OBSERVABILITY_MONTHLY_BUDGET_USD:?Set OBSERVABILITY_MONTHLY_BUDGET_USD in the production env file}
+      OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES: ${OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES:?Set OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES in the production env file}
+      OBSERVABILITY_ALERT_WEBHOOK_URL: ${OBSERVABILITY_ALERT_WEBHOOK_URL:-}
+    volumes:
+      - ./ops:/ops:ro
+      - observability-runtime:/runtime
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: ${DATABASE_HOST:-postgres}:${DATABASE_PORT:-5432}/${DATABASE_NAME:?Set DATABASE_NAME in the production env file}?sslmode=${OBSERVABILITY_POSTGRES_SSLMODE:-disable}
+      DATA_SOURCE_USER: ${DATABASE_USER:?Set DATABASE_USER in the production env file}
+      DATA_SOURCE_PASS: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in the production env file}
+      PG_EXPORTER_COLLECTION_TIMEOUT: 10s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+  redis-exporter:
+    image: quay.io/oliver006/redis_exporter:v1.89.0
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: ${REDIS_CACHE_URL:?Set REDIS_CACHE_URL in the production env file}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      redis:
+        condition: service_healthy
+    cpus: 0.25
+    mem_limit: 96m
+    pids_limit: 64
+
+  celery-exporter:
+    image: ${CELERY_EXPORTER_IMAGE:-grafana/celery-exporter@sha256:8e30fdaa49ad3c99ec2524f066b7b92d4d2026b45b9dcd17ce2751317f99c3c7}
+    restart: unless-stopped
+    command: ["--queues=celery"]
+    environment:
+      CELERY_EXPORTER_BROKER_URL: ${CELERY_BROKER_URL:?Set CELERY_BROKER_URL in the production env file}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      worker:
+        condition: service_started
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.0
+    user: "65534:65534"
+    restart: unless-stopped
+    command:
+      - --config.file=/runtime/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "${ALERTMANAGER_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - observability-runtime:/runtime:ro
+      - alertmanager-data:/alertmanager
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      observability-init:
+        condition: service_completed_successfully
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    user: "65534:65534"
+    restart: unless-stopped
+    command:
+      - --config.file=/runtime/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-2GB}
+    ports:
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - observability-runtime:/runtime:ro
+      - prometheus-data:/prometheus
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      observability-init:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+      alertmanager:
+        condition: service_started
+      postgres-exporter:
+        condition: service_started
+      redis-exporter:
+        condition: service_started
+      celery-exporter:
+        condition: service_started
+    cpus: 0.5
+    mem_limit: 384m
+    pids_limit: 128
+
+  grafana:
+    image: grafana/grafana:13.2.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in the production env file}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_METRICS_ENABLED: "true"
+    ports:
+      - "${GRAFANA_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./ops/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      prometheus:
+        condition: service_started
+    cpus: 0.5
+    mem_limit: 384m
+    pids_limit: 128
+
+volumes:
+  observability-runtime:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:

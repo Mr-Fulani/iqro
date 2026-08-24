@@ -3,7 +3,7 @@ WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check ops-backup ops-backup-verify ops-restore-check ops-load-smoke
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke
 
 # Запуск с сохранением данных базы данных
 up:
@@ -82,6 +82,19 @@ production-backup-verify:
 
 production-restore-check:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm db-restore-check
+
+observability-config:
+	$(PRODUCTION_COMPOSE) -f compose.observability.yaml config --quiet
+
+observability-up:
+	$(PRODUCTION_COMPOSE) -f compose.observability.yaml up --detach --wait
+
+observability-down:
+	$(PRODUCTION_COMPOSE) -f compose.observability.yaml stop prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter
+	$(PRODUCTION_COMPOSE) -f compose.observability.yaml rm --force prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter observability-init
+
+observability-logs:
+	$(PRODUCTION_COMPOSE) -f compose.observability.yaml logs --tail=200 prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter
 
 ops-backup:
 	docker compose --profile ops run --rm db-backup

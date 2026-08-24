@@ -4,20 +4,26 @@ on:
   pull_request:
     paths:
       - "compose.production.yaml"
+      - "compose.observability.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
       - "ops/postgres/**"
+      - "ops/observability/**"
+      - "Makefile"
       - "docs/production.md"
       - ".github/workflows/production.yml"
   push:
     branches: [master, main]
     paths:
       - "compose.production.yaml"
+      - "compose.observability.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
       - "ops/postgres/**"
+      - "ops/observability/**"
+      - "Makefile"
       - "docs/production.md"
       - ".github/workflows/production.yml"
 
@@ -39,6 +45,25 @@ jobs:
           --env-file services/backend/.env.production.example
           -f compose.production.yaml
           config --quiet
+      - name: Validate observability model and rules
+        run: |
+          docker compose \
+            --env-file services/backend/.env.production.example \
+            -f compose.production.yaml \
+            -f compose.observability.yaml \
+            config --quiet
+          mkdir -p "$RUNNER_TEMP/quran-observability"
+          QURAN_OPERATIONS_TOKEN=0000000000000000000000000000000000000000 \
+          OBSERVABILITY_MONTHLY_BUDGET_USD=100 \
+          OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES=107374182400 \
+            python ops/observability/render_config.py \
+              --output "$RUNNER_TEMP/quran-observability"
+          docker run --rm --entrypoint /bin/promtool \
+            -v "$RUNNER_TEMP/quran-observability:/runtime:ro" \
+            prom/prometheus:v3.14.0 check config /runtime/prometheus.yml
+          docker run --rm --entrypoint /bin/amtool \
+            -v "$RUNNER_TEMP/quran-observability:/runtime:ro" \
+            prom/alertmanager:v0.34.0 check-config /runtime/alertmanager.yml
       - name: Build production images
         run: >-
           docker compose
