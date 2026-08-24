@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   api,
@@ -14,6 +15,8 @@ import {
 import { useI18n } from "../../lib/i18n-context";
 
 export default function AudioPage() {
+  const searchParams = useSearchParams();
+  const requestedReciterId = searchParams.get("reciter");
   const { locale, t, formatNumber } = useI18n();
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [selectedReciterId, setSelectedReciterId] = useState<string>("");
@@ -35,9 +38,11 @@ export default function AudioPage() {
     api
       .getReciters()
       .then((res) => {
-        setReciters(res.results || []);
-        if (res.results && res.results.length > 0) {
-          setSelectedReciterId(res.results[0].id);
+        const availableReciters = res.results || [];
+        setReciters(availableReciters);
+        if (availableReciters.length > 0) {
+          const requestedReciter = availableReciters.find((item) => item.id === requestedReciterId);
+          setSelectedReciterId(requestedReciter?.id || availableReciters[0].id);
         }
         setLoading(false);
       })
@@ -45,7 +50,7 @@ export default function AudioPage() {
         setError(api.normalizeError(err));
         setLoading(false);
       });
-  }, []);
+  }, [requestedReciterId]);
 
   // Load recitations when reciter changes
   useEffect(() => {
@@ -142,8 +147,9 @@ export default function AudioPage() {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t("audio.reciter")}</label>
+            <label className="form-label" htmlFor="audio-reciter-select">{t("audio.reciter")}</label>
             <select
+              id="audio-reciter-select"
               value={selectedReciterId}
               onChange={(e) => setSelectedReciterId(e.target.value)}
               disabled={reciters.length === 0}
@@ -157,8 +163,9 @@ export default function AudioPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t("audio.editionStyle")}</label>
+            <label className="form-label" htmlFor="audio-recitation-select">{t("audio.editionStyle")}</label>
             <select
+              id="audio-recitation-select"
               value={selectedRecitationId}
               onChange={(e) => setSelectedRecitationId(e.target.value)}
               disabled={recitations.length === 0}

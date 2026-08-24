@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, PrayerCalculationResponse, QuranEdition, Surah } from "../lib/api";
+import { ReciterAvatar } from "../components/ReciterAvatar";
+import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+
+const RECITER_PORTRAITS: Record<string, string> = {
+  "qf-159-maher-al-muaiqly": "/reciters/maher-al-muaiqly.webp",
+  "qf-7-mishari-rashid-al-afasy": "/reciters/mishari-rashid-al-afasy.webp",
+  "qf-174-yasser-ad-dussary": "/reciters/yasser-ad-dussary.webp",
+};
 
 export default function HomePage() {
   const { session, isLoggedIn, loginGuest, isLoading: authLoading } = useAuth();
@@ -20,6 +27,8 @@ export default function HomePage() {
 
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [featuredSurahs, setFeaturedSurahs] = useState<Surah[]>([]);
+  const [featuredReciters, setFeaturedReciters] = useState<Reciter[]>([]);
+  const [recitersLoading, setRecitersLoading] = useState(true);
   const [todayPrayer, setTodayPrayer] = useState<PrayerCalculationResponse | null>(null);
 
   useEffect(() => {
@@ -45,6 +54,12 @@ export default function HomePage() {
         }
       })
       .catch(() => {});
+
+    api
+      .getReciters()
+      .then((res) => setFeaturedReciters((res.results || []).slice(0, 6)))
+      .catch(() => setFeaturedReciters([]))
+      .finally(() => setRecitersLoading(false));
 
     // Load prayer times preview for today
     api
@@ -75,6 +90,13 @@ export default function HomePage() {
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
     locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
+  const reciterName = (reciter: Reciter) =>
+    locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
+  const reciterSecondaryName = (reciter: Reciter) => {
+    const primary = reciterName(reciter);
+    const secondary = locale === "ar" ? reciter.name_en : reciter.name_ar;
+    return secondary && secondary !== primary ? secondary : t("home.reciterSubtitle");
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -180,6 +202,53 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Featured Reciters */}
+      <section className="surface reciter-showcase" data-testid="featured-reciters">
+        <div className="surface-head">
+          <div>
+            <p className="eyebrow">{t("home.recitersEyebrow")}</p>
+            <h3 className="surface-title">{t("home.recitersTitle")}</h3>
+            <p className="surface-subtitle">{t("home.recitersDescription")}</p>
+          </div>
+          <Link href="/audio" className="btn btn-outline-primary btn-sm">
+            {t("home.allReciters")}
+          </Link>
+        </div>
+
+        {featuredReciters.length > 0 ? (
+          <div className="reciter-grid">
+            {featuredReciters.map((reciter, index) => {
+              const name = reciterName(reciter);
+              return (
+                <Link
+                  key={reciter.id}
+                  href={`/audio?reciter=${encodeURIComponent(reciter.id)}`}
+                  className="reciter-card"
+                  aria-label={t("home.listenReciter", { name })}
+                  data-testid="featured-reciter"
+                >
+                  <ReciterAvatar
+                    name={name || reciter.name_en}
+                    portraitUrl={reciter.portrait_url || RECITER_PORTRAITS[reciter.slug]}
+                    tone={index}
+                  />
+                  <span className="reciter-card-copy">
+                    <strong>{name || reciter.name_en}</strong>
+                    <span lang={locale === "ar" ? "en" : "ar"} dir={locale === "ar" ? "ltr" : "rtl"}>
+                      {reciterSecondaryName(reciter)}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="reciter-empty" aria-live="polite">
+            {recitersLoading ? t("home.loadingReciters") : t("home.recitersEmpty")}
+          </div>
+        )}
+      </section>
 
       {/* Today's Prayer Times Preview */}
       {todayPrayer && (todayPrayer.times || todayPrayer.prayer_times) && (() => {

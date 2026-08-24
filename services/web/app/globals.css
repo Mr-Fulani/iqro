@@ -548,6 +548,144 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* -------------------------------------------------------------------------
+   Featured Reciters
+------------------------------------------------------------------------- */
+.reciter-showcase {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.12), transparent 32%),
+    linear-gradient(145deg, #ffffff 0%, #f8fffc 100%);
+}
+
+.reciter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.reciter-card {
+  min-width: 0;
+  padding: 22px 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.reciter-card:hover {
+  color: var(--text-primary);
+  transform: translateY(-4px);
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+.reciter-card:focus-visible {
+  outline: 3px solid rgba(16, 185, 129, 0.24);
+  outline-offset: 3px;
+}
+
+.reciter-avatar {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  flex: 0 0 112px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  border: 4px solid #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.2);
+  isolation: isolate;
+}
+
+.reciter-avatar-tone-0 {
+  background: linear-gradient(145deg, #047857, #0f766e);
+}
+
+.reciter-avatar-tone-1 {
+  background: linear-gradient(145deg, #075985, #2563eb);
+}
+
+.reciter-avatar-tone-2 {
+  background: linear-gradient(145deg, #92400e, #d97706);
+}
+
+.reciter-avatar-tone-3 {
+  background: linear-gradient(145deg, #5b21b6, #7c3aed);
+}
+
+.reciter-avatar-initials {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.reciter-avatar-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.reciter-avatar-play {
+  position: absolute;
+  inset-inline-end: -2px;
+  bottom: 4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding-inline-start: 2px;
+  color: #ffffff;
+  background: var(--primary);
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(4, 120, 87, 0.26);
+  font-size: 11px;
+  z-index: 2;
+}
+
+.reciter-card-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.reciter-card-copy strong {
+  max-width: 100%;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.reciter-card-copy span {
+  color: var(--text-muted);
+  font-family: var(--font-arabic);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.reciter-empty {
+  padding: 28px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* -------------------------------------------------------------------------
    Quran Text & Mushaf Viewer
 ------------------------------------------------------------------------- */
 .quran-arabic-text {
