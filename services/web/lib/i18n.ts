@@ -264,6 +264,8 @@ export const MESSAGES = {
   "player.mediaNote": message("Управление Media Session доступно в поддерживаемых браузерах; воспроизведение после закрытия вкладки или приложения не гарантируется.", "Media Session controls are available in supported browsers; playback after closing the tab or app is not guaranteed.", "تتوفر عناصر تحكم Media Session في المتصفحات المدعومة؛ ولا نضمن التشغيل بعد إغلاق علامة التبويب أو التطبيق.", "Media Session kontrolleri desteklenen tarayıcılarda kullanılabilir; sekme veya uygulama kapatıldıktan sonra oynatma garanti edilmez."),
   "player.dockAria": message("Закреплённый аудиоплеер Корана", "Docked Quran audio player", "مشغل القرآن الصوتي المثبت", "Sabit Kur'an ses oynatıcısı"),
   "player.dockEyebrow": message("Сейчас в плеере", "Now in player", "الآن في المشغل", "Şimdi oynatıcıda"),
+  "player.expandWidget": message("Развернуть плеер", "Expand player", "توسيع المشغل", "Oynatıcıyı genişlet"),
+  "player.collapseWidget": message("Свернуть плеер", "Collapse player", "طي المشغل", "Oynatıcıyı daralt"),
   "player.openAudio": message("Открыть аудио", "Open audio", "فتح الصوت", "Sesi aç"),
   "mushafAudio.reciter": message("Чтец Quran.Foundation", "Quran.Foundation reciter", "قارئ Quran.Foundation", "Quran.Foundation kârisi"),
   "mushafAudio.coverage": message("{count}/114 сур", "{count}/114 surahs", "{count}/114 سورة", "{count}/114 sure"),

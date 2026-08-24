@@ -322,12 +322,22 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
 
   await listenButtons.first().click();
 
-  await expect(page.locator(".audio-player-bar")).toBeVisible();
-  await expect(page.locator(".audio-player-bar audio")).toHaveAttribute(
+  const player = page.getByTestId("global-audio-player");
+  await expect(player.locator(".audio-player-bar")).toBeVisible();
+  await expect(player.locator(".audio-player-bar audio")).toHaveAttribute(
     "src",
     tracks[0].asset.url,
   );
   await expect(page.getByRole("button", { name: "▶ Играет", exact: true })).toBeVisible();
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  expect((await player.boundingBox())!.height).toBeLessThan(130);
+  await expect(player.getByRole("button", { name: "Развернуть плеер", exact: true })).toBeVisible();
+  await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  await expect(player.getByLabel("Режим повтора")).toBeVisible();
+  expect((await player.boundingBox())!.height).toBeGreaterThan(200);
 });
 
 test("audio widget survives route navigation and pauses at the current position", async ({ page }) => {
@@ -356,6 +366,15 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
   expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  await expect(player.getByLabel("Режим повтора")).toBeVisible();
+  expect((await player.boundingBox())!.height).toBeGreaterThan(200);
+  await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  expect((await player.boundingBox())!.height).toBeLessThan(130);
+  await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toBeVisible();
 
   await player.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();

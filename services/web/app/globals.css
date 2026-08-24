@@ -1015,13 +1015,30 @@ input:focus, select:focus, textarea:focus {
 
 .global-audio-player-dock.is-compact .segmented-audio-native-controls .btn,
 .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
-.global-audio-player-link {
+.global-audio-player-actions .btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   white-space: nowrap;
+}
+
+.global-audio-player-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.global-audio-player-dock.is-compact .global-audio-player-size-toggle-label {
+  display: none;
+}
+
+.global-audio-player-dock.is-compact .global-audio-player-size-toggle {
+  width: 36px;
+  min-width: 36px;
+  padding-inline: 8px;
 }
 
 .global-audio-player-dock.is-compact .segmented-audio-native-controls audio {
@@ -1345,13 +1362,13 @@ input:focus, select:focus, textarea:focus {
 
   .global-audio-player-dock.is-compact .segmented-audio-resume,
   .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
-  .global-audio-player-link {
+  .global-audio-player-actions .btn {
     width: 36px;
     min-width: 36px;
     padding-inline: 8px;
   }
 
-  .global-audio-player-link {
+  .global-audio-player-actions {
     grid-column: 2;
     justify-self: end;
   }
@@ -1388,9 +1405,10 @@ input:focus, select:focus, textarea:focus {
     gap: 6px;
   }
 
-  .global-audio-player-link {
+  .global-audio-player-actions {
     grid-column: 2;
     grid-row: 1 / span 2;
     align-self: center;
+    flex-direction: column;
   }
 }

@@ -30,6 +30,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
 
   const startPlayback = useCallback((nextRequest: AudioPlaybackRequest) => {
     setRequest(nextRequest);
@@ -48,8 +49,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }), [clearPlayback, isPlaying, request, startPlayback]);
 
   const isAudioPage = pathname === "/audio";
-  const compact = !isAudioPage;
+  const expanded = expandedOverride ?? isAudioPage;
+  const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
+  const modeActionLabel = expanded
+    ? t("player.collapseWidget")
+    : t("player.expandWidget");
 
   return (
     <AudioPlayerContext.Provider value={value}>
@@ -70,6 +75,19 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
                 <p className="eyebrow">{t("player.dockEyebrow")}</p>
                 <strong>{t("audio.playerTitle")}</strong>
               </div>
+              {expanded && (
+                <button
+                  className="btn btn-secondary btn-sm global-audio-player-size-toggle"
+                  type="button"
+                  aria-expanded="true"
+                  aria-label={modeActionLabel}
+                  title={modeActionLabel}
+                  onClick={() => setExpandedOverride(false)}
+                >
+                  <span aria-hidden="true">▾</span>
+                  <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
+                </button>
+              )}
             </div>
             <SegmentedAudioPlayer
               request={request}
@@ -79,15 +97,30 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
               compact={compact}
             />
             {compact && (
-              <Link
-                href="/audio"
-                className="btn btn-secondary btn-sm global-audio-player-link"
-                aria-label={t("player.openAudio")}
-                title={t("player.openAudio")}
-              >
-                <span aria-hidden="true">🎵</span>
-                <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
-              </Link>
+              <div className="global-audio-player-actions">
+                <button
+                  className="btn btn-secondary btn-sm global-audio-player-size-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-label={modeActionLabel}
+                  title={modeActionLabel}
+                  onClick={() => setExpandedOverride(true)}
+                >
+                  <span aria-hidden="true">⤢</span>
+                  <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
+                </button>
+                {!isAudioPage && (
+                  <Link
+                    href="/audio"
+                    className="btn btn-secondary btn-sm global-audio-player-link"
+                    aria-label={t("player.openAudio")}
+                    title={t("player.openAudio")}
+                  >
+                    <span aria-hidden="true">🎵</span>
+                    <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
+                  </Link>
+                )}
+              </div>
             )}
           </aside>
         </>
