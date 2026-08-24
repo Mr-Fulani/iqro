@@ -51,6 +51,40 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expectSingleRowHeader(page);
 });
 
+test("authenticated Russian header stays on one row with the logout action", async ({ page }) => {
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({
+    json: {
+      token_type: "Bearer",
+      access_token: "active-access-token",
+      expires_in: 900,
+      access_expires_at: "2026-08-24T15:00:00Z",
+      user: {
+        id: "00000000-0000-7000-8000-000000000102",
+        status: "active",
+        preferred_locale: "ru",
+        email: "reader@example.com",
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+      },
+      device: {
+        id: "00000000-0000-7000-8000-000000000201",
+        platform: "web",
+        locale: "ru",
+        app_version: "1.0.0",
+        bootstrap_generation: 1,
+      },
+    },
+  }));
+  await page.setViewportSize({ width: 875, height: 900 });
+
+  await page.goto("/login");
+
+  await expect(page.getByTestId("language-switcher")).toHaveValue("ru");
+  await expect(page.locator(".app-header").getByRole("button", { name: "Выйти" })).toBeVisible();
+  await expectSingleRowHeader(page);
+});
+
 test.describe("browser language negotiation", () => {
   test.use({ locale: "tr-TR" });
 

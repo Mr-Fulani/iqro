@@ -46,9 +46,11 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={`menu-link ${isActive ? "menu-link-active" : ""}`}
+              aria-label={item.label}
+              title={item.label}
             >
               <span className="menu-icon">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="menu-label">{item.label}</span>
             </Link>
           );
         })}

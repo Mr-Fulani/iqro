@@ -116,12 +116,13 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .brand-block {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .brand-link {
@@ -171,8 +172,11 @@ a:hover {
 .app-menu {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .menu-link {
@@ -186,6 +190,8 @@ a:hover {
   color: var(--text-secondary);
   border: 1px solid transparent;
   transition: all 0.15s ease;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .menu-link:hover {
@@ -208,6 +214,8 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .language-switcher {
@@ -1294,6 +1302,60 @@ input:focus, select:focus, textarea:focus {
 /* -------------------------------------------------------------------------
    Responsive Breakpoints
 ------------------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 1000px) {
+  .app-header {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .app-menu {
+    gap: 2px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .brand-link {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .brand-title {
+    font-size: 16px;
+  }
+
+  .menu-link {
+    padding-inline: 8px;
+  }
+
+  .menu-label {
+    display: none;
+  }
+
+  .language-switcher {
+    padding-inline: 6px;
+  }
+
+  .language-switcher select {
+    min-width: 74px;
+    padding-inline: 4px 22px;
+  }
+
+  .header-actions .status-chip {
+    padding-inline: 9px;
+  }
+
+  .header-actions .btn-sm {
+    padding-inline: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .app-container {
     width: calc(100% - 24px);
@@ -1309,6 +1371,7 @@ input:focus, select:focus, textarea:focus {
 
   .app-menu {
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .header-actions {
