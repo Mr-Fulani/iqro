@@ -1,7 +1,7 @@
 # Production operations
 
-Этот runbook покрывает наблюдаемость backend, резервные копии PostgreSQL и ограниченный
-нагрузочный smoke-тест. Команды выполняются из корня репозитория.
+Этот runbook покрывает наблюдаемость backend, резервные копии PostgreSQL, ограниченный
+нагрузочный smoke-тест и staged capacity harness. Команды выполняются из корня репозитория.
 
 ## Operational health и Prometheus
 
@@ -290,6 +290,37 @@ python3 ops/load/smoke.py \
 проводится на staging с production-подобными PostgreSQL/Redis и наблюдением CPU, RAM,
 connection pools и database latency.
 
+## Staged public-read capacity test
+
+`ops/load/capacity.py` создаёт отдельное keep-alive соединение на виртуального пользователя и
+держит заданную concurrency в течение каждой стадии. Встроенный workload смешивает
+server-rendered RU/AR web routes, опубликованную суру и публичные Quran/audio API. Он отправляет
+только `GET`, не принимает credential headers и ограничивает concurrency, длительность,
+количество запросов и размер ответа. Поэтому этот сценарий подходит для согласованного
+read-only запуска против staging, но не заменяет отдельные auth/sync/audio-origin сценарии.
+
+Первичная проверка S0 с машиночитаемым evidence report:
+
+```bash
+python3 ops/load/capacity.py \
+  --base-url https://staging.example.org \
+  --stage 10:60 \
+  --stage 25:300 \
+  --label release-abc1234-s0 \
+  --json-report /tmp/quran-capacity-release-abc1234-s0.json
+```
+
+Стадия считается неуспешной, если не выдержана заявленная длительность, превышены error-rate,
+p95 или p99. Значения по умолчанию: не более 1% ошибок, p95 ≤ 750 ms и p99 ≤ 1500 ms. Перед
+запуском согласуйте concurrency и окно со staging owner; для другого профиля явно задайте
+пороги CLI и сохраните их в отчёте. Не направляйте harness на production без отдельного
+разрешения владельца среды.
+
+JSON-файл становится доказательством ёмкости только вместе с deployment/version label,
+production-like topology и временным рядом server-side метрик: CPU/RAM, API RPS и latency,
+Gunicorn/DB pool saturation, PostgreSQL query/lock latency, Redis latency/evictions и 5xx.
+Локальный или mock-прогон проверяет сам инструмент, но не закрывает S0/S1 capacity gate.
+
 ## Capacity profiles и рост
 
 Проект использует профили S0–S3 из
@@ -299,7 +330,8 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
 
 Минимальный набор сценариев capacity/soak:
 
-- публичные Quran/audio/library reads при cache-cold и cache-warm;
+- встроенный public-read workload для web, Quran/audio API уже автоматизирован; дополнительно
+  нужны public library reads и отдельные cache-cold/cache-warm прогоны;
 - авторизация, token refresh, reading writes и sync push/pull;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
 - CDN `HEAD`, `Range`, `206`, `416`, CORS/ETag и origin-failure;

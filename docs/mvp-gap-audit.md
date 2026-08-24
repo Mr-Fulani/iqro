@@ -84,7 +84,7 @@ runtime. Основной незакрытый объём находится в 
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
-| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke | Нет capacity/soak proof, CDN/egress/QoE metrics, централизованных dashboard/alerts, stateless multi-replica deployment, backend/container security gate и offsite backup |
+| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness/metrics, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API capacity harness, dependency/container security gates | Нет production-like capacity/soak proof, CDN/egress/QoE metrics, централизованных dashboard/alerts, stateless multi-replica deployment и offsite backup |
 
 ## Критерии приёмки
 
@@ -153,7 +153,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | ❌ | Есть bounded 120-request smoke, но это не capacity/soak test |
+| SLO доказаны на проектном пике | ❌ | Staged public-read keep-alive harness с p95/p99/error/RPS и JSON report готов, но production-like staging capacity/soak evidence ещё нет |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |

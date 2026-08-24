@@ -11,7 +11,8 @@
 
 - `services/backend` — Django API и фоновые задачи;
 - `services/web` — Next.js-клиент для Корана, Мусхафа, аудио и личного кабинета;
-- `ops` — проверяемые сценарии мониторинга, резервного копирования и load-smoke;
+- `ops` — проверяемые сценарии мониторинга, резервного копирования, load-smoke и staged
+  capacity checks;
 - `thoughts/shared/specs` — утверждённые продуктовые и технические спецификации;
 - мобильный Flutter-клиент будет добавлен отдельным workspace-пакетом;
 - Telegram Mini App будет использовать общий API и типизированные web/domain пакеты, но
@@ -39,8 +40,9 @@ docker compose -f services/backend/compose.yaml up --build
 - OpenAPI: `http://localhost:8000/api/schema`;
 - Swagger UI: `http://localhost:8000/api/docs`.
 
-Production-наблюдаемость, резервные копии PostgreSQL, restore drill и безопасный
-нагрузочный smoke-тест описаны в [операционном runbook](docs/operations.md).
+Production-наблюдаемость, резервные копии PostgreSQL, restore drill, безопасный нагрузочный
+smoke и staged read-only capacity harness описаны в
+[операционном runbook](docs/operations.md).
 Production Compose без hot reload и bind-mount исходников описан в
 [руководстве по production-запуску](docs/production.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в

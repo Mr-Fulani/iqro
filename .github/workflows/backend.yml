@@ -61,7 +61,7 @@ jobs:
           sh -n ops/postgres/verify.sh
           sh -n ops/postgres/restore-check.sh
           sh -n ops/postgres/restore.sh
-          python -m unittest ops.load.test_smoke
+          python -m unittest ops.load.test_smoke ops.load.test_capacity
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.28"

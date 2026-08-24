@@ -22,8 +22,9 @@ production bundle. Это ещё не означает готовность
   после deployment;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
-- capacity/soak test ещё не даёт права обещать конкретное количество одновременных
-  пользователей.
+- staged public-read harness уже воспроизводит смешанный web/API workload и пишет JSON evidence,
+  но без прогона на production-like staging всё ещё нельзя обещать конкретное количество
+  одновременных пользователей.
 
 Поэтому закрытая web beta и публичный Web MVP являются двумя разными milestones. Публичный
 запуск web не ждёт Flutter и Telegram Mini App, но и не закрывает полный multi-client MVP.
@@ -66,7 +67,8 @@ flowchart LR
 - [ ] Разделить конфигурационные URL Redis roles с сохранением одного экземпляра на старте.
 - [ ] Сделать web/API/workers stateless и независимо реплицируемыми; Beat — singleton.
 - [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts.
-- [ ] Расширить load harness: public/auth/sync, cache-cold/warm и audio Range.
+- [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
+  остаются auth/sync, cache-cold/warm, library API и audio Range/origin/QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/worker-реплики
@@ -140,8 +142,10 @@ flowchart LR
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
   commit после GitHub CI.
-- [ ] Провести capacity/soak test web workload mix и записать доказанную ёмкость S0/S1;
-  до этого не публиковать числовую гарантию по concurrent users.
+- [ ] Провести staged public-read capacity/soak test на production-like staging и записать
+  доказанную ёмкость S0/S1; bounded keep-alive harness и JSON report уже добавлены, но до
+  реального прогона с server-side метриками не публиковать числовую гарантию по concurrent
+  users.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза.
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,

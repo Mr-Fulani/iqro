@@ -1,0 +1,62 @@
+{
+  "name": "web-public-read",
+  "version": 1,
+  "endpoints": [
+    {
+      "name": "landing-ru",
+      "path": "/ru",
+      "weight": 20,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "landing-ar-rtl",
+      "path": "/ar",
+      "weight": 8,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "quran-reader-shell",
+      "path": "/ru/quran",
+      "weight": 15,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "published-surah",
+      "path": "/ru/quran/madani-hafs/surah/1",
+      "weight": 12,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "quran-editions-api",
+      "path": "/api/v1/quran/editions",
+      "weight": 20,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "reciters-api",
+      "path": "/api/v1/reciters?page_size=10",
+      "weight": 12,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "recitations-api",
+      "path": "/api/v1/recitations?page_size=10",
+      "weight": 12,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "liveness",
+      "path": "/api/v1/health/live",
+      "weight": 1,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    }
+  ]
+}
