@@ -338,6 +338,9 @@ test("audio widget survives route navigation and pauses at the current position"
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
   await expect(player).toBeVisible();
+  const playerBox = await player.boundingBox();
+  expect(playerBox).not.toBeNull();
+  expect(playerBox!.height).toBeLessThan(130);
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
   await audio.evaluate((element) => {
     (element as HTMLAudioElement).currentTime = 12.5;

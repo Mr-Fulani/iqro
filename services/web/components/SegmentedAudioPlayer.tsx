@@ -620,6 +620,7 @@ export function SegmentedAudioPlayer({
     : activePlan?.kind === "ayah" && activeAyah
       ? t("common.ayah", { ayah: `${activeAyah.surah_number}:${activeAyah.ayah_number}` })
       : activeRequest?.title || t("player.noAudio");
+  const statusLabel = t(status.key, status.variables);
 
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
@@ -631,8 +632,12 @@ export function SegmentedAudioPlayer({
             {activeAyah ? ` · ${t("player.activeAyah", { surah: activeAyah.surah_number, ayah: activeAyah.ayah_number })}` : ""}
           </p>
         </div>
-        <span className={`status-chip${isPlaying ? " ok" : ""}`} aria-live="polite">
-          {t(status.key, status.variables)}
+        <span
+          className={`status-chip${isPlaying ? " ok" : ""}`}
+          aria-live="polite"
+          title={compact ? statusLabel : undefined}
+        >
+          {statusLabel}
         </span>
       </div>
 

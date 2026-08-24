@@ -65,11 +65,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
                 <p className="eyebrow">{t("player.dockEyebrow")}</p>
                 <strong>{t("audio.playerTitle")}</strong>
               </div>
-              {pathname !== "/audio" && (
-                <Link href="/audio" className="btn btn-secondary btn-sm">
-                  {t("player.openAudio")}
-                </Link>
-              )}
             </div>
             <SegmentedAudioPlayer
               request={request}
@@ -78,6 +73,11 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
               pauseOnNavigationKey={pathname}
               compact
             />
+            {pathname !== "/audio" && (
+              <Link href="/audio" className="btn btn-secondary btn-sm global-audio-player-link">
+                {t("player.openAudio")}
+              </Link>
+            )}
           </aside>
         </>
       )}
