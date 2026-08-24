@@ -3,7 +3,8 @@ WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
 STAGING_ENV ?= ops/staging/staging.env
-STAGING_APP_VERSION ?= staging-$(shell git rev-parse --short HEAD)
+STAGING_REVISION ?= $(shell git rev-parse --short HEAD 2>/dev/null || cut -c1-7 .deployed-commit 2>/dev/null || printf unknown)
+STAGING_APP_VERSION ?= staging-$(STAGING_REVISION)
 STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
 STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.staging.budget.yaml
 
