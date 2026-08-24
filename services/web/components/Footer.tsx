@@ -20,7 +20,7 @@ export function Footer() {
           <div className="footer-column">
             <h4>{t("footer.sections")}</h4>
             <Link href={localizedPath(locale, "/quran")}>{t("footer.quran")}</Link>
-            <Link href={localizedPath(locale, "/audio")}>{t("footer.reciters")}</Link>
+            <Link href={localizedPath(locale, "/audio/reciters")}>{t("footer.reciters")}</Link>
             <Link href={localizedPath(locale, "/prayer")}>{t("footer.prayer")}</Link>
             <Link href={localizedPath(locale, "/profile")}>{t("footer.sync")}</Link>
           </div>

@@ -906,6 +906,76 @@ input:focus, select:focus, textarea:focus {
   gap: 12px;
 }
 
+.seo-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.seo-catalog-card {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.seo-catalog-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seo-catalog-copy > span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.seo-catalog-arabic {
+  font-family: var(--font-arabic);
+  color: var(--primary);
+  font-size: 20px;
+}
+
+.seo-reciter-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+}
+
+.seo-reciter-copy h1 {
+  margin: 4px 0 10px;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.2;
+}
+
+.seo-reciter-copy > p:not(.eyebrow, .seo-content-version) {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.seo-license-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.seo-license-grid > div {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.seo-license-grid a {
+  display: block;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
 .mushaf-page-container {
   display: flex;
   justify-content: center;
@@ -1543,6 +1613,15 @@ input:focus, select:focus, textarea:focus {
 
   .seo-ayah-section {
     padding: 18px;
+  }
+
+  .seo-reciter-hero {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .seo-reciter-hero .btn {
+    width: 100%;
   }
 
   .ayah-header {

@@ -227,9 +227,23 @@ export type Recitation = {
     content_version: string;
     riwayah: string;
   };
+  source: {
+    name: string;
+    url: string;
+    version: string;
+    checksum_sha256: string;
+  };
+  license: {
+    rights_holder: string;
+    name: string;
+    url: string;
+    spdx_id: string;
+    attribution: string;
+  };
   rights: { stream: boolean; offline_download: boolean };
   coverage: { track_count: number; surah_count: number; complete: boolean };
   timings: { available: boolean; segment_count: number };
+  published_at: string;
 };
 
 export type AudioTrack = {

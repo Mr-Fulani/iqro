@@ -7,7 +7,7 @@ import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "..
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
-import { quranSurahPath } from "../lib/quran-content";
+import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
 
 const RECITER_PORTRAITS: Record<string, string> = {
   "qf-159-maher-al-muaiqly": "/reciters/maher-al-muaiqly.webp",
@@ -266,7 +266,13 @@ export default function HomePage() {
             <p className="eyebrow">{t("home.surahCatalog")}</p>
             <h3 className="surface-title">{t("home.surahTitle")}</h3>
           </div>
-          <Link href={localizedPath(locale, "/quran")} className="btn btn-outline-primary btn-sm">
+          <Link
+            href={localizedPath(
+              locale,
+              editions[0] ? quranEditionPath(editions[0].code) : "/quran",
+            )}
+            className="btn btn-outline-primary btn-sm"
+          >
             {t("home.allSurahs")}
           </Link>
         </div>

@@ -1,10 +1,9 @@
 import { getPublishedEditions } from "@/lib/public-content";
 import {
   quranVersionSitemapPath,
-  xmlEscape,
-  xmlResponse,
 } from "@/lib/quran-sitemap";
 import { absoluteSiteUrl } from "@/lib/seo";
+import { xmlEscape, xmlResponse } from "@/lib/sitemap-xml";
 
 export const revalidate = 3_600;
 

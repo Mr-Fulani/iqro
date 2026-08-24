@@ -14,7 +14,11 @@ export function surahName(surah: Surah, locale: Locale): string {
 }
 
 export function quranSurahPath(edition: string, surah: number): string {
-  return `/quran/${encodeURIComponent(edition)}/surah/${surah}`;
+  return `${quranEditionPath(edition)}/surah/${surah}`;
+}
+
+export function quranEditionPath(edition: string): string {
+  return `/quran/${encodeURIComponent(edition)}`;
 }
 
 export function quranAyahPath(edition: string, surah: number, ayah: number): string {

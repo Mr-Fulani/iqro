@@ -4,7 +4,8 @@ import {
   isEditionCode,
   PublicContentNotFoundError,
 } from "@/lib/public-content";
-import { quranSurahSitemapEntries, xmlResponse } from "@/lib/quran-sitemap";
+import { quranSurahSitemapEntries } from "@/lib/quran-sitemap";
+import { xmlResponse } from "@/lib/sitemap-xml";
 
 export const revalidate = 3_600;
 
@@ -39,7 +40,7 @@ export async function GET(
 
     const urlCount = surahs.reduce(
       (total, surah) => total + (surah.ayah_count + 1) * 4,
-      0,
+      4,
     );
     if (urlCount > 50_000) {
       throw new Error("Quran content sitemap exceeds the 50,000 URL limit");

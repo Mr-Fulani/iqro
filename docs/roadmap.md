@@ -9,15 +9,15 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 39 Playwright-сценариев проходят. Это ещё не означает готовность
+ESLint, TypeScript и 41 Playwright-сценарий проходят. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
-- страницы опубликованных сур и отдельных аятов уже отдают Quran-текст и ссылки как ISR HTML;
-  интерактивный общий reader, список чтецов и audio-контент пока загружаются после hydration;
+- каталог и страницы опубликованных сур/аятов, чтецов и декламаций уже отдают содержательный
+  server-rendered HTML; интерактивные reader и audio player остаются client surfaces;
 - locale-prefixed RU/EN/AR/TR routes, legacy redirects, canonical/hreflang, `robots.txt`,
   sitemap, page-specific metadata, manifest и social preview уже добавлены;
-- юридические страницы, глубокие маршруты чтецов, server-rendered audio content и полный
-  Lighthouse/SEO gate ещё не закрыты;
+- юридические страницы, `WebSite`/`AudioObject` structured data и полный Lighthouse/SEO gate
+  ещё не закрыты;
 - домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
   открытыми release gates;
 - capacity/soak test ещё не даёт права обещать конкретное количество одновременных
@@ -81,17 +81,19 @@ flowchart LR
   старых URL и query parameters.
 - [x] Добавить глубокие индексируемые ISR-маршруты опубликованной суры и отдельного аята;
   интерактивный reader оставить отдельной client surface.
-- [ ] Создать server-rendered список сур, список чтецов и маршрут чтеца/декламации;
+- [x] Создать server-rendered список сур, список чтецов и маршрут чтеца/декламации;
   интерактивный плеер оставить client island.
 - [x] Отдавать основной текст и ссылки опубликованной суры/аята в Server Components без
   зависимости от JavaScript.
-- [ ] Перенести первичную загрузку публичного audio-каталога в Server Components с SSR/ISR.
+- [x] Перенести опубликованный список чтецов, метаданные декламации и список треков в
+  Server Components с hourly data cache/ISR; прямые media URL не включать в HTML.
 - [x] Добавить `metadataBase`, уникальные title/description, canonical, hreflang для всех
   опубликованных языков, Open Graph/Twitter metadata и preview images.
 - [x] Добавить локализованные sitemap и `robots.txt` для текущего набора публичных разделов.
 - [x] Добавить versioned Quran content sitemap index и автоматическую проверку, что только
   активные опубликованные edition/content version, суры и аяты попадают в sitemap.
-- [ ] Добавить опубликованных чтецов/декламации в отдельный versioned audio sitemap.
+- [x] Добавить опубликованных чтецов/декламации в отдельный versioned audio sitemap,
+  отсекающий withdrawn, non-streaming, incomplete и stale-version releases через public API.
 - [x] Явно установить `noindex, nofollow` для login/register/profile и других персональных или
   технических страниц.
 - [ ] Определить ISR/edge-cache policy и invalidation по content version; персональные ответы

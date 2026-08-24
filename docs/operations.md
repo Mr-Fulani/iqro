@@ -52,25 +52,28 @@ Authorization: Bearer <QURAN_OPERATIONS_TOKEN>
 
 ## ISR и content sitemap
 
-Глубокие web-маршруты `/{locale}/quran/{edition}/surah/{number}` и отдельные аяты получают
-данные server-to-server через `BACKEND_INTERNAL_URL`. В production Compose это
-`http://backend:8000`; публичный browser API по-прежнему идёт через gateway. В ответ не
-передаётся `Authorization`: backend publication selectors являются единственной границей,
-решающей, какие edition/version доступны поисковому индексу.
+Каталог и глубокие web-маршруты Quran, чтецов и декламаций получают данные server-to-server
+через `BACKEND_INTERNAL_URL`. В production Compose это `http://backend:8000`; публичный browser
+API по-прежнему идёт через gateway. В запрос не передаётся `Authorization`: backend publication
+selectors являются единственной границей, решающей, какие Quran edition/version и полные
+streamable audio releases доступны поисковому индексу.
 
 Next.js fetch cache обновляет опубликованный Quran-контент не чаще одного раза в час и помечает
 запросы тегами edition/surah/ayah. После появления редакционного publish webhook эти теги нужно
 инвалидировать on demand; до этого максимальное штатное окно обновления — 60 минут. Персональные
 маршруты в этот кэш не входят.
 
-`/sitemaps/quran/sitemap.xml` — индекс, который ссылается на child sitemap с edition и активной
-content version в URL. Child sitemap перечисляет только суры и аяты, доступные через public API,
-и возвращает 404 для draft, снятой или уже неактивной версии. Оба sitemap указаны в
-`robots.txt`. После публикации или отзыва dataset проверьте:
+`/sitemaps/quran/sitemap.xml` ссылается на child sitemap с edition и активной content version в
+URL. `/sitemaps/audio/sitemap.xml` делает то же для каждой опубликованной декламации. Child
+sitemap перечисляют только доступные через public API сущности и возвращают 404 для draft,
+withdrawn, non-streaming, incomplete или уже неактивной версии. Индексы указаны в `robots.txt`.
+После публикации или отзыва контента проверьте:
 
 ```bash
 curl --fail https://example.org/sitemaps/quran/sitemap.xml
 curl --fail https://example.org/ru/quran/madani-hafs/surah/1
+curl --fail https://example.org/sitemaps/audio/sitemap.xml
+curl --fail https://example.org/ru/audio/reciters
 ```
 
 Ошибка upstream не подменяется пустым успешным sitemap: endpoint отвечает 503, чтобы crawler
