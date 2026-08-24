@@ -59,7 +59,9 @@ flowchart LR
 
 Цель: устранить дорогие для поздней миграции ограничения, не увеличивая стартовые серверы.
 
-- [ ] Выбрать object storage/CDN и оформить ADR с Range/CORS/ETag contract.
+- [x] Выбрать Cloudflare R2 Standard + CDN custom domain как pay-as-you-go стартовый provider,
+  оформить переносимый S3-compatible [ADR](adr/0001-managed-media-object-storage-cdn.md) и
+  bounded автоматическую проверку Range/CORS/ETag/cache contract.
 - [ ] Перенести managed media с локального диска на immutable object keys.
 - [ ] Разделить логический audio track и bitrate/codec renditions.
 - [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`.

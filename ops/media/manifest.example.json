@@ -1,0 +1,17 @@
+{
+  "name": "recitation-release-1.0.0",
+  "version": 1,
+  "origins": [
+    "https://www.example.org",
+    "https://mini.example.org"
+  ],
+  "assets": [
+    {
+      "name": "example-reciter-surah-001-standard",
+      "url": "https://media.example.org/audio/example-reciter/1.0.0/surah-001/standard.mp3",
+      "bytes": 1234567,
+      "content_type": "audio/mpeg",
+      "etag": "\"replace-with-observed-strong-etag\""
+    }
+  ]
+}

@@ -172,6 +172,29 @@ Playwright также имеет два независимых режима. `np
 расхождений build-time rewrites, static asset packaging, SSR/404 и metadata между `next dev` и
 реальным deployable artifact. Он не заменяет smoke против настоящего staging API.
 
+## Managed media CDN contract
+
+Решение по provider и переносимости описано в
+[ADR 0001](adr/0001-managed-media-object-storage-cdn.md). Перед публикацией managed audio или
+другого крупного immutable asset скопируйте `ops/media/manifest.example.json`, перечислите
+точные production/staging origins и заполните URL, размер, MIME type и при наличии уже
+зафиксированный strong ETag. Проверка выполняет только `HEAD` и bounded `GET`: два Range-запроса
+читают не более 64 байт, полное содержимое не скачивается.
+
+```bash
+python3 ops/media/contract.py \
+  --manifest /tmp/quran-media-release.json \
+  --json-report /tmp/quran-media-contract-report.json
+```
+
+Первый прогон может не указывать `etag`: наблюдаемое значение попадёт в report. Перед release
+его следует зафиксировать в manifest и повторить прогон, чтобы обнаружить неожиданную замену
+объекта. Gate проверяет `HEAD 200`, `206`, `416`, `304`, размер/MIME, strong ETag, CORS для
+каждого клиента и годовой `public, immutable` cache. `--allow-http` предназначен только для
+локального эмулятора; production manifest принимает исключительно стабильные HTTPS URL без
+credentials/query. Contract report прикладывается к content acceptance record, но не заменяет
+лицензионный review и проверку checksum в upload pipeline.
+
 ## Dependency и container security gate
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и

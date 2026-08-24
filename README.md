@@ -11,8 +11,8 @@
 
 - `services/backend` — Django API и фоновые задачи;
 - `services/web` — Next.js-клиент для Корана, Мусхафа, аудио и личного кабинета;
-- `ops` — проверяемые сценарии мониторинга, резервного копирования, load-smoke и staged
-  capacity checks;
+- `ops` — проверяемые сценарии мониторинга, резервного копирования, load/capacity и managed
+  media CDN contracts;
 - `thoughts/shared/specs` — утверждённые продуктовые и технические спецификации;
 - мобильный Flutter-клиент будет добавлен отдельным workspace-пакетом;
 - Telegram Mini App будет использовать общий API и типизированные web/domain пакеты, но

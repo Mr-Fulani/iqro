@@ -23,6 +23,9 @@ dist/
 build/
 staticfiles/
 media/
+!ops/media/
+!ops/media/*.py
+!ops/media/*.json
 tmp/
 /backups/*
 !/backups/.gitkeep

@@ -238,8 +238,10 @@ storage раньше установленного горизонта. Точны
 
 ## 10. Обязательные ADR и доказательства
 
-До широкого production launch нужны ADR по object storage/CDN, process management и pool,
-разделению Redis roles, схеме `AudioRendition`, API auth/BFF и локальному storage Flutter.
+ADR по object storage/CDN принят в
+[ADR 0001](adr/0001-managed-media-object-storage-cdn.md). До широкого production launch ещё
+нужны ADR по process management и pool, разделению Redis roles, схеме `AudioRendition`, API
+auth/BFF и локальному storage Flutter.
 
 Переход между профилями S0–S3 подтверждается capacity/soak отчётом с workload mix для
 Flutter, web и Telegram Mini App, cache-cold/cache-warm/CDN-bypass сценариями, стоимостью
