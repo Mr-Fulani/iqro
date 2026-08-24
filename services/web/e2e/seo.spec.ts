@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+const siteUrl =
+  process.env.PLAYWRIGHT_BASE_URL ||
+  `http://127.0.0.1:${process.env.PLAYWRIGHT_PRODUCTION === "1" ? 3101 : 3100}`;
+
 // These tests intentionally cold-compile many dynamic App Router segments. Running them
 // serially avoids Turbopack development artifacts being read while another worker rewrites them.
 test.describe.configure({ mode: "serial", timeout: 60_000 });
@@ -21,19 +25,19 @@ test("public Quran page exposes page-specific canonical and social metadata", as
   );
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/ru/quran",
+    `${siteUrl}/ru/quran`,
   );
   await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/en/quran",
+    `${siteUrl}/en/quran`,
   );
   await expect(page.locator('link[rel="alternate"][hreflang="ar"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/ar/quran",
+    `${siteUrl}/ar/quran`,
   );
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/ru/quran",
+    `${siteUrl}/ru/quran`,
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
@@ -54,7 +58,7 @@ test("account routes are explicitly excluded from indexing", async ({ page }) =>
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /nofollow/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/ru/login",
+    `${siteUrl}/ru/login`,
   );
 });
 
@@ -88,9 +92,9 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Disallow: /profile");
   expect(robots).toContain("Disallow: /ru/profile");
-  expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemap.xml");
-  expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemaps/quran/sitemap.xml");
-  expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemaps/audio/sitemap.xml");
+  expect(robots).toContain(`Sitemap: ${siteUrl}/sitemap.xml`);
+  expect(robots).toContain(`Sitemap: ${siteUrl}/sitemaps/quran/sitemap.xml`);
+  expect(robots).toContain(`Sitemap: ${siteUrl}/sitemaps/audio/sitemap.xml`);
 
   const sitemapResponse = await request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBe(true);
@@ -106,7 +110,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
       "/contacts",
       "/sources",
     ]) {
-      expect(sitemap).toContain(`<loc>http://127.0.0.1:3100/${locale}${path}</loc>`);
+      expect(sitemap).toContain(`<loc>${siteUrl}/${locale}${path}</loc>`);
     }
   }
   expect(sitemap).not.toContain("/login");
@@ -134,7 +138,7 @@ test("published surah and ayah routes render indexable Quran text on the server"
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Сура 1: Аль-Фатиха");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    `http://127.0.0.1:3100${surahPath}`,
+    `${siteUrl}${surahPath}`,
   );
   expect(
     (await page.locator('script[type="application/ld+json"]').allTextContents()).join("\n"),
@@ -177,7 +181,7 @@ test("root layout publishes WebSite structured data", async ({ request }) => {
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain('"@type":"WebSite"');
-  expect(html).toContain('"@id":"http://127.0.0.1:3100/#website"');
+  expect(html).toContain(`"@id":"${siteUrl}/#website"`);
 });
 
 test("public responses include the defense-in-depth security policy", async ({ request }) => {
@@ -206,7 +210,7 @@ test("legal and contact pages are localized, canonical, and linked from the foot
   await expect(page).toHaveTitle("Контакты и обратная связь | Quran Platform");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/ru/contacts",
+    `${siteUrl}/ru/contacts`,
   );
   await expect(page.getByRole("link", { name: "Открыть кабинет и feedback" })).toHaveAttribute(
     "href",
@@ -253,7 +257,7 @@ test("versioned Quran sitemap contains only routes from the published API catalo
   expect(indexResponse.ok()).toBe(true);
   const index = await indexResponse.text();
   expect(index).toContain(
-    "http://127.0.0.1:3100/sitemaps/quran/madani-hafs/1.0.0/sitemap.xml",
+    `${siteUrl}/sitemaps/quran/madani-hafs/1.0.0/sitemap.xml`,
   );
   expect(index).not.toContain("draft");
 
@@ -263,10 +267,10 @@ test("versioned Quran sitemap contains only routes from the published API catalo
   expect(contentResponse.ok()).toBe(true);
   const content = await contentResponse.text();
   expect(content).toContain(
-    "<loc>http://127.0.0.1:3100/ru/quran/madani-hafs/surah/1</loc>",
+    `<loc>${siteUrl}/ru/quran/madani-hafs/surah/1</loc>`,
   );
   expect(content).toContain(
-    "<loc>http://127.0.0.1:3100/ar/quran/madani-hafs/surah/1/ayah/2</loc>",
+    `<loc>${siteUrl}/ar/quran/madani-hafs/surah/1/ayah/2</loc>`,
   );
   expect(content).not.toContain("draft");
 
@@ -284,7 +288,7 @@ test("versioned audio sitemap contains only the current streamable recitation", 
   expect(indexResponse.ok()).toBe(true);
   const index = await indexResponse.text();
   expect(index).toContain(
-    `http://127.0.0.1:3100/sitemaps/audio/${recitationId}/1.0.0/sitemap.xml`,
+    `${siteUrl}/sitemaps/audio/${recitationId}/1.0.0/sitemap.xml`,
   );
 
   const contentResponse = await request.get(
@@ -293,10 +297,10 @@ test("versioned audio sitemap contains only the current streamable recitation", 
   expect(contentResponse.ok()).toBe(true);
   const content = await contentResponse.text();
   expect(content).toContain(
-    `<loc>http://127.0.0.1:3100/ru/audio/recitations/${recitationId}</loc>`,
+    `<loc>${siteUrl}/ru/audio/recitations/${recitationId}</loc>`,
   );
   expect(content).toContain(
-    "<loc>http://127.0.0.1:3100/ar/audio/reciters/00000000-0000-7000-8000-000000000159</loc>",
+    `<loc>${siteUrl}/ar/audio/reciters/00000000-0000-7000-8000-000000000159</loc>`,
   );
 
   const staleVersion = await request.get(

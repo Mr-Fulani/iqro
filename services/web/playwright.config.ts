@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
-const baseURL = externalBaseUrl || "http://127.0.0.1:3100";
+const productionMode = process.env.PLAYWRIGHT_PRODUCTION === "1";
+const baseURL = externalBaseUrl || `http://127.0.0.1:${productionMode ? 3101 : 3100}`;
 const mockPublicApiUrl = "http://127.0.0.1:3199";
 
 export default defineConfig({
@@ -38,15 +39,19 @@ export default defineConfig({
           stderr: "pipe",
         },
         {
-          command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+          command: productionMode
+            ? "node scripts/production-test-server.mjs"
+            : "npm run dev -- --hostname 127.0.0.1 --port 3100",
           url: baseURL,
           env: {
             SITE_URL: baseURL,
             BACKEND_INTERNAL_URL: mockPublicApiUrl,
+            HOSTNAME: "127.0.0.1",
+            PORT: productionMode ? "3101" : "3100",
             WEB_CONTENT_REVALIDATION_SECRET: "test-only-content-revalidation-secret-0001",
           },
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
+          reuseExistingServer: !productionMode && !process.env.CI,
+          timeout: productionMode ? 180_000 : 120_000,
           stdout: "ignore",
           stderr: "pipe",
         },

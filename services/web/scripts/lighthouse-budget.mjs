@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { cp, readFile } from "node:fs/promises";
+import { cp, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { launch } from "chrome-launcher";
@@ -153,12 +153,18 @@ async function run() {
     SITE_URL: baseUrl,
     NODE_ENV: "production",
   };
+  const nextEnvPath = fileURLToPath(new URL("../next-env.d.ts", import.meta.url));
+  const nextEnvContents = await readFile(nextEnvPath, "utf8");
   const build = startProcess(
     process.execPath,
     ["node_modules/next/dist/bin/next", "build"],
     productionEnvironment,
   );
-  await waitForProcess(build, "Next.js production build");
+  try {
+    await waitForProcess(build, "Next.js production build");
+  } finally {
+    await writeFile(nextEnvPath, nextEnvContents);
+  }
 
   await cp("public", ".next/standalone/public", { recursive: true });
   await cp(".next/static", ".next/standalone/.next/static", { recursive: true });

@@ -53,6 +53,7 @@ standalone production build и запускает детерминированн
 
 ```bash
 cd services/web
+npm run test:e2e:production
 npm run test:lighthouse
 ```
 

@@ -166,6 +166,12 @@ production build сам; предварительный `npm run build` не т�
 gate, а не доказательство полевых Core Web Vitals: после deployment остаются обязательными
 RUM/Search Console и проверка реального CDN, TLS и backend latency.
 
+Playwright также имеет два независимых режима. `npm run test:e2e` проверяет быстрый dev server;
+`npm run test:e2e:production` пересобирает и запускает standalone bundle с тем же mock API и
+повторяет все browser-сценарии. Оба режима блокируют Web CI. Production режим защищает от
+расхождений build-time rewrites, static asset packaging, SSR/404 и metadata между `next dev` и
+реальным deployable artifact. Он не заменяет smoke против настоящего staging API.
+
 ## Dependency и container security gate
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и

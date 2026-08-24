@@ -9,7 +9,8 @@ Roadmap объединяет развитие клиентов, функцион
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 47 Playwright-сценариев проходят. Это ещё не означает готовность
+ESLint, TypeScript и 47 Playwright-сценариев проходят как на dev server, так и на standalone
+production bundle. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
 - каталог и страницы опубликованных сур/аятов, чтецов и декламаций уже отдают содержательный
@@ -132,8 +133,9 @@ flowchart LR
 - [x] Добавить блокирующие Lighthouse budgets для landing RU/EN/AR/TR и опубликованной суры
   RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
   transfer size и request count на standalone production build.
-- [ ] Прогнать browser E2E против production build и интеграционный smoke против реального
-  staging API; mocked contract tests сохранить как быстрый CI-слой.
+- [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
+  проходит те же 47 сценариев, что быстрый dev/mock слой; остаётся интеграционный smoke против
+  реального staging API без подмены его mock contracts.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release

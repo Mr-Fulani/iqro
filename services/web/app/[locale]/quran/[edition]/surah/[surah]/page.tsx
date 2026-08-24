@@ -40,6 +40,7 @@ async function publishedSurah(edition: string, surah: number) {
     return await Promise.all([
       getPublishedEdition(edition),
       getPublishedSurah(edition, surah),
+      getPublishedAyahs(edition, surah),
     ]);
   } catch (error) {
     if (error instanceof PublicContentNotFoundError) notFound();
@@ -78,10 +79,7 @@ export default async function PublishedSurahPage({
   params: Promise<RouteParams>;
 }) {
   const route = parseParams(await params);
-  const [[edition, surah], ayahs] = await Promise.all([
-    publishedSurah(route.edition, route.surah),
-    getPublishedAyahs(route.edition, route.surah),
-  ]);
+  const [edition, surah, ayahs] = await publishedSurah(route.edition, route.surah);
   const name = surahName(surah, route.locale);
   const contentPath = quranSurahPath(route.edition, route.surah);
   const localizedContentPath = localizedPath(route.locale, contentPath);
