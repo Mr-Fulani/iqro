@@ -1,5 +1,10 @@
 # Production-запуск
 
+Если публичной среды ещё нет, сначала пройдите пошаговый [staging runbook](staging.md). Staging
+использует тот же production Compose как основу, но отдельные secrets/data, автоматический TLS,
+запрет индексации и тестовую почту. Непроверенный staging нельзя заменять прямым первым запуском
+production.
+
 `compose.production.yaml` запускает отдельный production-стек: PostgreSQL, Redis,
 одноразовую миграцию, Django/Gunicorn, Celery worker/beat, Next.js standalone и Nginx
 gateway. Исходный код не монтируется в контейнеры, наружу публикуется только gateway,

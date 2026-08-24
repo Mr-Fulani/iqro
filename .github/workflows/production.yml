@@ -5,26 +5,32 @@ on:
     paths:
       - "compose.production.yaml"
       - "compose.observability.yaml"
+      - "compose.staging.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/staging/**"
       - "Makefile"
       - "docs/production.md"
+      - "docs/staging.md"
       - ".github/workflows/production.yml"
   push:
     branches: [master, main]
     paths:
       - "compose.production.yaml"
       - "compose.observability.yaml"
+      - "compose.staging.yaml"
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/staging/**"
       - "Makefile"
       - "docs/production.md"
+      - "docs/staging.md"
       - ".github/workflows/production.yml"
 
 permissions:
@@ -45,6 +51,27 @@ jobs:
           --env-file services/backend/.env.production.example
           -f compose.production.yaml
           config --quiet
+      - name: Validate staging bootstrap and Compose model
+        run: |
+          python -m ops.staging.test_config
+          STAGING_R2_ACCESS_KEY_ID=ci-access-key \
+          STAGING_R2_SECRET_ACCESS_KEY=ci-secret-key \
+            python ops/staging/init.py \
+              --host staging.example.test \
+              --media-host media.staging.example.test \
+              --acme-email ops@example.test \
+              --r2-account-id 0123456789abcdef0123456789abcdef \
+              --r2-bucket quran-staging \
+              --output "$RUNNER_TEMP/quran-staging.env"
+          python ops/staging/preflight.py \
+            --env-file "$RUNNER_TEMP/quran-staging.env" \
+            --require-media
+          PRODUCTION_ENV_FILE="$RUNNER_TEMP/quran-staging.env" \
+            docker compose \
+              --env-file "$RUNNER_TEMP/quran-staging.env" \
+              -f compose.production.yaml \
+              -f compose.staging.yaml \
+              config --quiet
       - name: Validate observability model and rules
         run: |
           docker compose \

@@ -1,0 +1,28 @@
+{
+	email {$STAGING_ACME_EMAIL}
+	admin off
+	http_port 8080
+	https_port 8443
+}
+
+{$STAGING_HOST} {
+	encode zstd gzip
+
+	# Staging must never compete with the production domain in search results.
+	header X-Robots-Tag "noindex, nofollow, noarchive"
+	@robots path /robots.txt
+	header @robots Content-Type "text/plain; charset=utf-8"
+	respond @robots "User-agent: *\nDisallow: /\n" 200
+
+	reverse_proxy gateway:8080 {
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 30s
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

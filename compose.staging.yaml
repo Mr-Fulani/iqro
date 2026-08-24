@@ -1,0 +1,74 @@
+x-staging-backend-environment: &staging-backend-environment
+  DJANGO_SETTINGS_MODULE: quran_backend.settings.staging
+
+services:
+  migrate:
+    environment: *staging-backend-environment
+
+  static-init:
+    environment: *staging-backend-environment
+
+  backend:
+    environment: *staging-backend-environment
+    depends_on:
+      mailpit:
+        condition: service_started
+
+  worker:
+    environment: *staging-backend-environment
+
+  beat:
+    environment: *staging-backend-environment
+
+  mailpit:
+    image: axllent/mailpit:v1.30.7
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /tmp/mailpit.db
+      MP_MAX_MESSAGES: "500"
+      MP_UI_BIND_ADDR: 0.0.0.0:8025
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+    ports:
+      - "${MAILPIT_BIND_ADDRESS:-127.0.0.1}:${MAILPIT_PORT:-8025}:8025"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+  tls-proxy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    environment:
+      STAGING_HOST: ${STAGING_HOST:?Set STAGING_HOST in the staging env file}
+      STAGING_ACME_EMAIL: ${STAGING_ACME_EMAIL:?Set STAGING_ACME_EMAIL in the staging env file}
+    ports:
+      - "80:8080/tcp"
+      - "443:8443/tcp"
+      - "443:8443/udp"
+    volumes:
+      - ./ops/staging/Caddyfile:/etc/caddy/Caddyfile:ro
+      - staging-caddy-data:/data
+      - staging-caddy-config:/config
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    depends_on:
+      gateway:
+        condition: service_healthy
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+volumes:
+  staging-caddy-data:
+  staging-caddy-config:

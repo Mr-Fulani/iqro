@@ -45,6 +45,8 @@ smoke и staged read-only capacity harness описаны в
 [операционном runbook](docs/operations.md).
 Production Compose без hot reload и bind-mount исходников описан в
 [руководстве по production-запуску](docs/production.md).
+Создание первой публичной тестовой среды от пустого VPS до DNS/TLS/R2 описано в
+[пошаговом staging runbook](docs/staging.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
 [P0/MVP gap audit](docs/mvp-gap-audit.md).
 Правила расширения функций и мощности до 100 000 DAU описаны в

@@ -2,8 +2,11 @@ BACKEND_DIR := services/backend
 WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
+STAGING_ENV ?= ops/staging/staging.env
+STAGING_APP_VERSION ?= staging-$(shell git rev-parse --short HEAD)
+STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -82,6 +85,64 @@ production-backup-verify:
 
 production-restore-check:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm db-restore-check
+
+staging-init:
+	python3 ops/staging/init.py \
+		--output "$(STAGING_ENV)" \
+		--host "$(STAGING_HOST)" \
+		--media-host "$(STAGING_MEDIA_HOST)" \
+		--acme-email "$(STAGING_ACME_EMAIL)" \
+		--r2-account-id "$(STAGING_R2_ACCOUNT_ID)" \
+		--r2-bucket "$(STAGING_R2_BUCKET)"
+
+staging-preflight:
+	python3 ops/staging/preflight.py --env-file "$(STAGING_ENV)"
+
+staging-media-configure:
+	python3 ops/staging/configure_media.py \
+		--env-file "$(STAGING_ENV)" \
+		--account-id "$(STAGING_R2_ACCOUNT_ID)" \
+		--bucket "$(STAGING_R2_BUCKET)"
+
+staging-media-preflight:
+	python3 ops/staging/preflight.py --env-file "$(STAGING_ENV)" --require-media
+
+staging-config: staging-preflight
+	$(STAGING_COMPOSE) config --quiet
+
+staging-build: staging-config
+	$(STAGING_COMPOSE) build backend web gateway postgres
+
+staging-up: staging-config
+	$(STAGING_COMPOSE) up --build --detach --wait
+
+staging-down:
+	$(STAGING_COMPOSE) down --remove-orphans
+
+staging-ps:
+	$(STAGING_COMPOSE) ps
+
+staging-logs:
+	$(STAGING_COMPOSE) logs --tail=200
+
+staging-backup:
+	$(STAGING_COMPOSE) --profile ops run --rm db-backup
+
+staging-backup-verify:
+	$(STAGING_COMPOSE) --profile ops run --rm db-backup-verify
+
+staging-restore-check:
+	$(STAGING_COMPOSE) --profile ops run --rm db-restore-check
+
+staging-observability-config: staging-preflight
+	$(STAGING_COMPOSE) -f compose.observability.yaml config --quiet
+
+staging-observability-up: staging-observability-config
+	$(STAGING_COMPOSE) -f compose.observability.yaml up --detach --wait
+
+staging-observability-down:
+	$(STAGING_COMPOSE) -f compose.observability.yaml stop prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter
+	$(STAGING_COMPOSE) -f compose.observability.yaml rm --force prometheus alertmanager grafana postgres-exporter redis-exporter celery-exporter observability-init
 
 observability-config:
 	$(PRODUCTION_COMPOSE) -f compose.observability.yaml config --quiet

@@ -65,6 +65,10 @@ flowchart LR
 - [x] Убрать production runtime-зависимость от локального media-диска: provider-neutral
   S3 adapter выполняет create-only upload с SHA-256/metadata/HEAD verification, команды аудио
   и Мусхафа используют immutable keys, а gateway больше не раздаёт `/media/`.
+- [x] Подготовить воспроизводимый staging bootstrap поверх production topology: отдельные
+  secrets/data, Caddy automatic HTTPS, noindex/robots isolation, закрытый Mailpit, безопасная
+  R2 credential/CORS настройка, preflight, backup/observability Make-команды и пошаговый
+  [runbook](staging.md). Внешний VPS/DNS/R2 ещё не provisioned, поэтому deployment gate открыт.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.
@@ -149,7 +153,8 @@ flowchart LR
 ### Web launch gates
 
 - [ ] Развернуть staging и production на публичном домене с TLS, redirects HTTP→HTTPS,
-  и проверенной proxy-конфигурацией.
+  и проверенной proxy-конфигурацией. Repo-side staging overlay/generator/preflight/runbook готовы;
+  остаются фактический VPS, DNS, R2 и runtime evidence.
 - [x] Добавить defense-in-depth security headers в Next.js и gateway: CSP без `unsafe-eval`
   в production, clickjacking/MIME/referrer/permissions policy и HSTS; отдельный Telegram Mini
   App origin должен получить собственный `frame-ancestors`, а не ослаблять web policy.
