@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17.11-alpine3.24
         env:
           POSTGRES_DB: quran
           POSTGRES_USER: quran
@@ -37,7 +37,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
       redis:
-        image: redis:7.4-alpine
+        image: redis:7.4.11-alpine3.21
         ports:
           - 6379:6379
         options: >-
@@ -71,6 +71,21 @@ jobs:
         working-directory: services/backend
       - name: Install dependencies
         run: uv sync --frozen --all-groups
+        working-directory: services/backend
+      - name: Production dependency audit
+        run: |
+          uv export \
+            --frozen \
+            --no-dev \
+            --no-emit-project \
+            --format requirements-txt \
+            --output-file "$RUNNER_TEMP/quran-backend-audit-requirements.txt"
+          uvx --from pip-audit==2.10.1 pip-audit \
+            --requirement "$RUNNER_TEMP/quran-backend-audit-requirements.txt" \
+            --require-hashes \
+            --disable-pip \
+            --strict \
+            --progress-spinner off
         working-directory: services/backend
       - name: Ruff
         run: uv run ruff check . && uv run ruff format --check .

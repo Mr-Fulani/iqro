@@ -131,7 +131,10 @@ flowchart LR
 - [ ] Добавить Lighthouse budgets для ключевых шаблонов RU/EN/AR/TR и RTL.
 - [ ] Прогнать browser E2E против production build и интеграционный smoke против реального
   staging API; mocked contract tests сохранить как быстрый CI-слой.
-- [ ] Получить актуальный зелёный dependency/security gate на release commit.
+- [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
+  `pip-audit`, web production `npm audit` и Trivy-проверка всех пяти production-образов уже
+  являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
+  commit после GitHub CI.
 - [ ] Провести capacity/soak test web workload mix и записать доказанную ёмкость S0/S1;
   до этого не публиковать числовую гарантию по concurrent users.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran

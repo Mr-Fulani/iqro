@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.14-slim AS builder
+FROM python:3.14.7-alpine3.24 AS python-base
+
+FROM python-base AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
@@ -28,7 +30,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     DJANGO_SETTINGS_MODULE=quran_backend.settings.test
 CMD ["pytest"]
 
-FROM python:3.14-slim AS runtime-foundation
+FROM alpine:3.24.1 AS runtime-foundation
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH=/app/src \
@@ -36,29 +38,61 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=quran_backend.settings.production
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN apk add --no-cache \
+        ca-certificates \
+        gdbm \
+        libbz2 \
+        libffi \
+        libncursesw \
+        libpanelw \
+        libuuid \
+        ncurses-terminfo-base \
+        readline \
+        sqlite-libs \
+        tzdata \
+        xz-libs \
+        zstd-libs \
+    && addgroup --system app \
+    && adduser --system --ingroup app app
+COPY --from=python-base /usr/local /usr/local
+RUN rm -rf \
+        /usr/local/bin/pip \
+        /usr/local/bin/pip3 \
+        /usr/local/bin/pip3.14 \
+        /usr/local/lib/python3.14/ensurepip \
+        /usr/local/lib/python3.14/site-packages/pip \
+        /usr/local/lib/python3.14/site-packages/pip-*.dist-info
 WORKDIR /app
 
 FROM runtime-foundation AS asset-tooling
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-        poppler-utils \
-        webp
+RUN apk add --no-cache \
+        libwebp-tools \
+        poppler-utils
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
 COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
 USER app
 
-FROM runtime-foundation AS runtime
+FROM runtime-foundation AS runtime-files
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
 COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
+
+FROM scratch AS runtime
+
+COPY --from=runtime-files / /
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app/src \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=quran_backend.settings.production
+
+WORKDIR /app
 USER app
 
 EXPOSE 8000

@@ -140,6 +140,41 @@ HSTS начинает защищать пользователя только п�
 `includeSubDomains` убедитесь, что все поддомены обслуживаются по TLS; preload намеренно не
 добавлен на gateway без отдельного решения владельца домена.
 
+## Dependency и container security gate
+
+Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и
+проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает production
+`npm audit --omit=dev --audit-level=high`. Production Compose CI после сборки проверяет Trivy
+все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
+`HIGH`/`CRITICAL` уязвимость блокирует gate, в том числе пока не имеющая исправления.
+Backend и web runtime не содержат package managers; PostgreSQL wrapper flatten'ит финальный
+filesystem после замены `gosu` на `su-exec`, поэтому Trivy проверяет реально исполняемые
+артефакты, а не удалённые builder/base layers. На момент локальной проверки все пять образов
+имели ноль `HIGH`/`CRITICAL` findings без ignore-list.
+
+Локальная проверка backend без изменения lock-файла:
+
+```bash
+cd services/backend
+uv export \
+  --frozen \
+  --no-dev \
+  --no-emit-project \
+  --format requirements-txt \
+  --output-file /tmp/quran-backend-audit-requirements.txt
+uvx --from pip-audit==2.10.1 pip-audit \
+  --requirement /tmp/quran-backend-audit-requirements.txt \
+  --require-hashes \
+  --disable-pip \
+  --strict \
+  --progress-spinner off
+```
+
+Не добавляйте advisory в ignore-list только ради зелёного релиза. Исключение допустимо после
+письменной оценки достижимости, компенсирующих мер, владельца риска и срока удаления; решение
+ссылается на конкретный advisory и release commit. Результат gate относится только к
+проверенному commit: после изменения lock-файла или Dockerfile проверку нужно пройти заново.
+
 ## PostgreSQL backup
 
 Скрипт создаёт custom-format dump, записывает SHA-256, проверяет, что `pg_restore` читает

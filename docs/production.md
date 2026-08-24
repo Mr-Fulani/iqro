@@ -73,6 +73,11 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 ## 3. Что обеспечивает Compose
 
 - backend и web собираются в production targets и работают без hot reload;
+- runtime-образы backend/web не содержат package managers (`pip`, `npm`, `yarn`): установка
+  зависимостей остаётся только в builder-слоях;
+- PostgreSQL собирается как локальный wrapper над закреплённым official image: финальный
+  filesystem использует `su-exec` вместо уязвимого Go-based `gosu`, сохраняя контракт
+  официального entrypoint;
 - контейнеры приложения имеют read-only root filesystem, `no-new-privileges`,
   ограничение процессов, CPU и RAM;
 - healthchecks проверяют PostgreSQL, Redis, Django readiness, Next.js и gateway;
@@ -117,8 +122,9 @@ make production-restore-check
 
 Затем обновите checkout/образы и повторите `make production-up`. Чтобы откат был
 воспроизводимым, в production задавайте неизменяемые `BACKEND_IMAGE`, `WEB_IMAGE` и
-`GATEWAY_IMAGE` (version tag или digest), а предыдущие значения сохраняйте в журнале
-релиза. Миграции должны быть обратно совместимыми с предыдущей версией приложения.
+`GATEWAY_IMAGE`, а для single-host database — также `POSTGRES_IMAGE` (version tag или
+digest). Предыдущие значения сохраняйте в журнале релиза. Миграции должны быть обратно
+совместимыми с предыдущей версией приложения.
 
 Остановка без удаления данных:
 

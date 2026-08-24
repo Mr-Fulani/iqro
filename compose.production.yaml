@@ -50,7 +50,9 @@ x-backend-service: &backend-service
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
+    build:
+      context: ./ops/postgres
     restart: unless-stopped
     init: true
     environment:
@@ -74,7 +76,7 @@ services:
     logging: *default-logging
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:7.4.11-alpine3.21
     restart: unless-stopped
     init: true
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
@@ -257,7 +259,7 @@ services:
     logging: *default-logging
 
   db-backup:
-    image: postgres:17-alpine
+    image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
     profiles: ["ops"]
     restart: "no"
     init: true
@@ -285,7 +287,7 @@ services:
     logging: *default-logging
 
   db-backup-verify:
-    image: postgres:17-alpine
+    image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
     profiles: ["ops"]
     restart: "no"
     init: true
@@ -303,7 +305,7 @@ services:
     logging: *default-logging
 
   db-restore-check:
-    image: postgres:17-alpine
+    image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
     profiles: ["ops"]
     restart: "no"
     init: true
@@ -327,7 +329,7 @@ services:
     logging: *default-logging
 
   db-restore:
-    image: postgres:17-alpine
+    image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
     profiles: ["dangerous-restore"]
     restart: "no"
     init: true

@@ -60,7 +60,7 @@ production-config:
 	$(PRODUCTION_COMPOSE) config --quiet
 
 production-build:
-	$(PRODUCTION_COMPOSE) build backend web gateway
+	$(PRODUCTION_COMPOSE) build backend web gateway postgres
 
 production-up:
 	$(PRODUCTION_COMPOSE) up --build --detach --wait

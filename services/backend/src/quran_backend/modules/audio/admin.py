@@ -115,9 +115,7 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         previous_status = None
         if change:
             previous_status = (
-                RecitationEdition.objects.filter(pk=obj.pk)
-                .values_list("status", flat=True)
-                .first()
+                RecitationEdition.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
             )
         super().save_model(request, obj, form, change)
         if previous_status != obj.status and obj.status in {

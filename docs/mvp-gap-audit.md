@@ -155,7 +155,7 @@ runtime. Основной незакрытый объём находится в 
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
 | SLO доказаны на проектном пике | ❌ | Есть bounded 120-request smoke, но это не capacity/soak test |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
-| Нет critical/high vulnerabilities | 🟡 | Web production `npm audit` есть; полного backend/container SCA/image scan gate нет |
+| Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Runbooks, dashboards и alerts доступны | 🟡 | Runbooks/metrics есть; dashboards/alerts отложены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 
@@ -238,7 +238,7 @@ runtime. Основной незакрытый объём находится в 
 
 ### P0-E — launch hardening
 
-1. Backend/container dependency and image scanning, expanded browser/device matrix.
+1. Зелёный dependency/image gate на release commit и expanded browser/device matrix.
 2. Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
 3. Server/domain/TLS, privacy/license/religious sign-off.
 4. Monitoring/dashboard/alerts и offsite bucket остаются отложенными по текущему решению,

@@ -7,6 +7,7 @@ on:
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
+      - "ops/postgres/**"
       - "docs/production.md"
       - ".github/workflows/production.yml"
   push:
@@ -16,6 +17,7 @@ on:
       - "services/backend/**"
       - "services/web/**"
       - "ops/gateway/**"
+      - "ops/postgres/**"
       - "docs/production.md"
       - ".github/workflows/production.yml"
 
@@ -25,8 +27,9 @@ permissions:
 jobs:
   compose:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
+      APP_VERSION: ci-${{ github.sha }}
       PRODUCTION_ENV_FILE: ./services/backend/.env.production.example
     steps:
       - uses: actions/checkout@v4
@@ -41,4 +44,53 @@ jobs:
           docker compose
           --env-file services/backend/.env.production.example
           -f compose.production.yaml
-          build backend web gateway
+          build backend web gateway postgres
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: quran-platform-backend:ci-${{ github.sha }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+      - name: Scan web image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: quran-platform-web:ci-${{ github.sha }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          skip-setup-trivy: true
+      - name: Scan gateway image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: quran-platform-gateway:ci-${{ github.sha }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          skip-setup-trivy: true
+      - name: Scan PostgreSQL image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: quran-platform-postgres:ci-${{ github.sha }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          skip-setup-trivy: true
+      - name: Scan Redis image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: redis:7.4.11-alpine3.21
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          skip-setup-trivy: true
