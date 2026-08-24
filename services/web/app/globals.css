@@ -1040,6 +1040,7 @@ input:focus, select:focus, textarea:focus {
 
 .global-audio-player-dock.is-compact .segmented-audio-settings-toggle {
   display: inline-flex;
+  align-self: center;
 }
 
 .audio-global-player-hint {

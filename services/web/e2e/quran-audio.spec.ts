@@ -405,6 +405,14 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  const compactDesktopAudioBox = await audio.boundingBox();
+  const compactDesktopSettingsBox = await settingsButton.boundingBox();
+  expect(compactDesktopAudioBox).not.toBeNull();
+  expect(compactDesktopSettingsBox).not.toBeNull();
+  expect(compactDesktopSettingsBox!.width).toBeGreaterThan(100);
+  expect(Math.abs(compactDesktopSettingsBox!.y - compactDesktopAudioBox!.y)).toBeLessThan(12);
 });
 
 test("mushaf selects every fragment of an ayah and starts ayah playback", async ({ page }) => {
