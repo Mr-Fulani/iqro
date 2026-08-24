@@ -75,7 +75,9 @@ flowchart LR
 - [x] Подготовить PgBouncer-compatible DB configuration и connection budget: ASGI не держит
   persistent connections, transaction mode отключает server-side cursors/автоподготовку
   statements, а startup и operator-команда отклоняют превышение PostgreSQL/client pool budget.
-- [ ] Разделить конфигурационные URL Redis roles с сохранением одного экземпляра на старте.
+- [x] Разделить Redis roles: default cache и atomic throttling используют разные Django aliases,
+  Celery broker/result имеют независимые URL, startup валидирует endpoints, а S0 сохраняет один
+  экземпляр Redis через одинаковые role URLs.
 - [ ] Сделать web/API/workers stateless и независимо реплицируемыми; Beat — singleton.
 - [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts.
 - [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;

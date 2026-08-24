@@ -3,7 +3,7 @@ from __future__ import annotations
 import secrets
 
 from django.conf import settings
-from django.core.cache import cache
+from django.core.cache import caches
 from django.db import connection
 from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -53,7 +53,8 @@ class ReadyHealthView(APIView):
     def get(self, request: Request) -> Response:  # noqa: ARG002
         components = {
             "database": self._database_ready(),
-            "cache": self._cache_ready(),
+            "cache": self._cache_ready("default"),
+            "throttling": self._cache_ready("throttling"),
         }
         ready = all(components.values())
         response = Response(
@@ -74,12 +75,13 @@ class ReadyHealthView(APIView):
         return bool(row) and int(row[0]) == 1
 
     @staticmethod
-    def _cache_ready() -> bool:
-        key = "health:ready"
+    def _cache_ready(alias: str) -> bool:
+        role_cache = caches[alias]
+        key = f"health:ready:{alias}"
         try:
-            cache.set(key, "ok", timeout=5)
-            ready = cache.get(key) == "ok"
-            cache.delete(key)
+            role_cache.set(key, "ok", timeout=5)
+            ready = role_cache.get(key) == "ok"
+            role_cache.delete(key)
         except Exception:
             return False
         return bool(ready)

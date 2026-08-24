@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from django.core.cache import cache
+from django.core.cache import caches
 from rest_framework.request import Request
 
 from quran_backend.modules.core.throttling import AtomicFixedWindowRateThrottle
@@ -20,7 +20,8 @@ class _TestAtomicThrottle(AtomicFixedWindowRateThrottle):
 
 
 def test_atomic_throttle_caps_a_concurrent_burst() -> None:
-    cache.clear()
+    throttle_cache = caches["throttling"]
+    throttle_cache.clear()
 
     def attempt(_index: int) -> bool:
         return _TestAtomicThrottle().allow_request(None, None)  # type: ignore[arg-type]
@@ -28,5 +29,5 @@ def test_atomic_throttle_caps_a_concurrent_burst() -> None:
     with ThreadPoolExecutor(max_workers=20) as executor:
         accepted = list(executor.map(attempt, range(100)))
 
-    cache.clear()
+    throttle_cache.clear()
     assert sum(accepted) == 10

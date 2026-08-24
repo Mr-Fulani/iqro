@@ -9,6 +9,7 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.database_budget import DatabaseBudgetError, DatabaseConnectionBudget
+from quran_backend.redis_roles import RedisRoleConfig, RedisRoleConfigError
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 
@@ -343,14 +344,27 @@ DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "Quran Platform <nor
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+try:
+    REDIS_ROLE_CONFIG = RedisRoleConfig.from_environ(os.environ)
+except RedisRoleConfigError as exc:
+    raise ImproperlyConfigured(str(exc)) from exc
+
+REDIS_URL = REDIS_ROLE_CONFIG.legacy_url
+REDIS_CACHE_URL = REDIS_ROLE_CONFIG.cache_url
+REDIS_THROTTLE_URL = REDIS_ROLE_CONFIG.throttle_url
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
+        "LOCATION": REDIS_CACHE_URL,
         "TIMEOUT": 300,
         "KEY_PREFIX": "quran-platform",
-    }
+    },
+    "throttling": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_THROTTLE_URL,
+        "TIMEOUT": None,
+        "KEY_PREFIX": "quran-platform-throttling",
+    },
 }
 
 SESSION_COOKIE_HTTPONLY = True
@@ -468,8 +482,8 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_BROKER_URL = REDIS_ROLE_CONFIG.broker_url
+CELERY_RESULT_BACKEND = REDIS_ROLE_CONFIG.result_url
 CELERY_TASK_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_RESULT_SERIALIZER = "json"

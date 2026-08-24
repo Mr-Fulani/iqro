@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from django.core.cache import caches
 from rest_framework.request import Request
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -16,6 +17,7 @@ class AtomicFixedWindowRateThrottle(SimpleRateThrottle):
     """
 
     _wait_seconds: float | None = None
+    cache = caches["throttling"]
     duration: int
     num_requests: int
 

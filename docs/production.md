@@ -30,6 +30,7 @@ chmod 600 services/backend/.env.production
 - `DJANGO_ALLOWED_HOSTS`, CSRF/CORS origins и публичные HTTPS URL;
 - `SITE_URL`: один канонический HTTPS origin web-приложения без path/query/hash;
 - пароль PostgreSQL и все Django/Quran hash keys;
+- четыре Redis role URL; для S0 они могут указывать на один внутренний Redis endpoint;
 - `QURAN_OPERATIONS_TOKEN`;
 - Quran.Foundation credentials, если синхронизация включена;
 - `MEDIA_OBJECT_STORAGE_ENDPOINT_URL`, bucket, scoped access/secret key, region/addressing style;
@@ -158,6 +159,28 @@ uv run python manage.py database_connection_budget
 доступный бюджет PostgreSQL, PgBouncer server pool выходит за него либо max clients меньше
 объявленной topology. После миграций выполняйте PgBouncer `RECONNECT`, если pooler настроен
 с поддержкой prepared statements; текущая безопасная конфигурация их не использует.
+
+### 3.3. Redis roles
+
+Production явно требует четыре URL: `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`,
+`CELERY_BROKER_URL` и `CELERY_RESULT_BACKEND`. В S0 они указывают на один Redis, поэтому
+дополнительные серверы не нужны. При росте каждый URL можно перевести на отдельный database,
+instance или managed endpoint без изменения приложения. Обычный cache и security-critical
+throttling используют разные Django aliases и key prefixes; readiness проверяет оба.
+
+До deploy проверьте разрешённые endpoints без вывода credentials:
+
+```bash
+cd services/backend
+uv run python manage.py redis_role_config
+```
+
+Cache можно вынести на evictable instance. Для throttle и broker нельзя допускать произвольное
+вытеснение ключей: потеря throttle counters ослабляет лимиты, а потеря broker keys удаляет
+необработанные задачи. Переключение cache/throttle не требует переноса данных; текущие rate
+windows могут начаться заново. Перед сменой broker остановите Beat и producers, дождитесь
+пустой старой очереди, переключите workers и producers одной rollout-группой, затем возобновите
+постановку задач. Старый result backend удаляется только после истечения нужных результатов.
 
 ## 4. Обновление и откат
 

@@ -24,7 +24,7 @@ def test_ready_health_checks_database_and_cache(api_client: APIClient) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
-        "components": {"database": True, "cache": True},
+        "components": {"database": True, "cache": True, "throttling": True},
     }
     assert response.headers["Cache-Control"] == "no-store"
 

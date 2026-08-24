@@ -188,9 +188,11 @@ API не должен предполагать, что запрос пришёл
 
 ### Redis
 
-- На старте один экземпляр может обслуживать cache, throttle и Celery.
-- URL ролей конфигурируются отдельно, чтобы cache/throttle и broker/result можно было
-  разделить без изменения бизнес-кода.
+- На старте один экземпляр может обслуживать cache, throttle и Celery: четыре role URL указывают
+  на один endpoint, но cache и throttle уже изолированы alias/key prefix.
+- `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`, `CELERY_BROKER_URL` и
+  `CELERY_RESULT_BACKEND` конфигурируются отдельно, поэтому роли разделяются без изменения
+  бизнес-кода; legacy `REDIS_URL` остаётся fallback только для local/CI.
 - Redis не является источником истины; eviction cache не ломает данные и авторизацию.
 - Переход к HA или разделению выполняется при memory pressure, evictions, latency либо
   конфликте queue/cache workloads.

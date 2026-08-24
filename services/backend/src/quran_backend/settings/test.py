@@ -19,7 +19,13 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "quran-platform-tests",
-    }
+        "KEY_PREFIX": "quran-platform",
+    },
+    "throttling": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "quran-platform-tests",
+        "KEY_PREFIX": "quran-platform-throttling",
+    },
 }
 MAILERS = {
     "default": {

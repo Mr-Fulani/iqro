@@ -8,7 +8,7 @@
 Liveness и readiness остаются публичными:
 
 - `/api/v1/health/live` проверяет процесс;
-- `/api/v1/health/ready` проверяет PostgreSQL и Redis.
+- `/api/v1/health/ready` проверяет PostgreSQL, обычный Redis cache и отдельный throttle alias.
 
 Состояние внешней Quran.Foundation намеренно вынесено отдельно: её временный сбой не должен
 выключать уже загруженный каталог. Защищённые endpoint'ы:
@@ -49,6 +49,19 @@ Authorization: Bearer <QURAN_OPERATIONS_TOKEN>
 
 Последние три порога подходят текущему Madani Hafs dataset. При подключении другого издания
 их нужно пересмотреть.
+
+Перед rollout и после любого разделения Redis roles сохраните redacted topology report:
+
+```bash
+cd services/backend
+uv run python manage.py redis_role_config \
+  > /tmp/quran-redis-roles-release-abc1234.json
+```
+
+Команда валидирует только URL/configuration contract. Readiness подтверждает cache/throttle;
+Celery broker и result backend дополнительно контролируются по worker heartbeat, queue depth,
+oldest message age, task failures и Redis memory/evictions. Ни один отчёт не содержит Redis
+username, password или query parameters.
 
 ## Content cache и sitemap
 
