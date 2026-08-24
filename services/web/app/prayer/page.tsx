@@ -9,28 +9,31 @@ import {
   PrayerProfile,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
+import { useI18n } from "../../lib/i18n-context";
+import { MessageKey } from "../../lib/i18n";
 
 const PRESET_CITIES = [
-  { name: "Мекка (Саудовская Аравия)", lat: "21.4225", lng: "39.8262", tz: "Asia/Riyadh" },
-  { name: "Медина (Саудовская Аравия)", lat: "24.4672", lng: "39.6111", tz: "Asia/Riyadh" },
-  { name: "Москва (Россия)", lat: "55.7558", lng: "37.6173", tz: "Europe/Moscow" },
-  { name: "Казань (Россия)", lat: "55.7887", lng: "49.1221", tz: "Europe/Moscow" },
-  { name: "Ташкент (Узбекистан)", lat: "41.2995", lng: "69.2401", tz: "Asia/Tashkent" },
-  { name: "Стамбул (Турция)", lat: "41.0082", lng: "28.9784", tz: "Europe/Istanbul" },
-  { name: "Лондон (Великобритания)", lat: "51.5074", lng: "-0.1278", tz: "Europe/London" },
+  { label: "prayer.city.makkah" as MessageKey, lat: "21.4225", lng: "39.8262", tz: "Asia/Riyadh" },
+  { label: "prayer.city.madinah" as MessageKey, lat: "24.4672", lng: "39.6111", tz: "Asia/Riyadh" },
+  { label: "prayer.city.moscow" as MessageKey, lat: "55.7558", lng: "37.6173", tz: "Europe/Moscow" },
+  { label: "prayer.city.kazan" as MessageKey, lat: "55.7887", lng: "49.1221", tz: "Europe/Moscow" },
+  { label: "prayer.city.tashkent" as MessageKey, lat: "41.2995", lng: "69.2401", tz: "Asia/Tashkent" },
+  { label: "prayer.city.istanbul" as MessageKey, lat: "41.0082", lng: "28.9784", tz: "Europe/Istanbul" },
+  { label: "prayer.city.london" as MessageKey, lat: "51.5074", lng: "-0.1278", tz: "Europe/London" },
 ];
 
-const ADJUSTMENT_LABELS: Array<[keyof PrayerAdjustments, string]> = [
-  ["fajr", "Фаджр"],
-  ["sunrise", "Восход"],
-  ["dhuhr", "Зухр"],
-  ["asr", "Аср"],
-  ["maghrib", "Магриб"],
-  ["isha", "Иша"],
+const ADJUSTMENT_LABELS: Array<[keyof PrayerAdjustments, MessageKey]> = [
+  ["fajr", "prayer.fajr"],
+  ["sunrise", "prayer.sunrise"],
+  ["dhuhr", "prayer.dhuhr"],
+  ["asr", "prayer.asr"],
+  ["maghrib", "prayer.maghrib"],
+  ["isha", "prayer.isha"],
 ];
 
 export default function PrayerPage() {
   const { isLoggedIn, loginGuest } = useAuth();
+  const { locale, t, formatDate } = useI18n();
   const [methods, setMethods] = useState<PrayerMethod[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("");
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -100,8 +103,8 @@ export default function PrayerPage() {
         setProfileRevision(profile.revision);
         setProfileMessage(
           profile.method_available
-            ? `Профиль загружен, ревизия ${profile.revision}.`
-            : "Сохранённый метод больше недоступен — выберите новый.",
+            ? t("prayer.profileLoaded", { revision: profile.revision })
+            : t("prayer.methodUnavailable"),
         );
       })
       .catch(() => {
@@ -110,7 +113,7 @@ export default function PrayerPage() {
     return () => {
       active = false;
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, t]);
 
   const handleCitySelect = (cityIndex: number) => {
     const city = PRESET_CITIES[cityIndex];
@@ -135,7 +138,7 @@ export default function PrayerPage() {
           }
         },
         () => {
-          setError("Не удалось определить геопозицию автоматически. Выберите город из списка.");
+          setError(t("prayer.locationError"));
         },
       );
     }
@@ -194,7 +197,7 @@ export default function PrayerPage() {
         ...(profileTimezoneMode === "fixed" ? { fixed_timezone: fixedTimezone } : {}),
       });
       setProfileRevision(profile.revision);
-      setProfileMessage(`Настройки сохранены, ревизия ${profile.revision}.`);
+      setProfileMessage(t("prayer.profileSaved", { revision: profile.revision }));
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -214,8 +217,7 @@ export default function PrayerPage() {
   const formatPrayerTime = (isoString?: string) => {
     if (!isoString) return "--:--";
     try {
-      const d = new Date(isoString);
-      return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+      return formatDate(isoString, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
     } catch {
       return "--:--";
     }
@@ -227,11 +229,9 @@ export default function PrayerPage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Точный астрономический расчет</p>
-            <h2 className="surface-title">Расписание времени намаза</h2>
-            <p className="surface-subtitle">
-              Расчет времени обязательных молитв по каноническим мировым методикам (Всемирная Исламская Лига, Умм аль-Кура, ISNA и др.).
-            </p>
+            <p className="eyebrow">{t("prayer.eyebrow")}</p>
+            <h2 className="surface-title">{t("prayer.title")}</h2>
+            <p className="surface-subtitle">{t("prayer.description")}</p>
           </div>
 
           <button
@@ -239,7 +239,7 @@ export default function PrayerPage() {
             onClick={handleDetectLocation}
             type="button"
           >
-            📍 Мое местоположение
+            {t("prayer.myLocation")}
           </button>
         </div>
 
@@ -254,18 +254,18 @@ export default function PrayerPage() {
         >
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Быстрый выбор города</label>
+              <label className="form-label">{t("prayer.quickCity")}</label>
               <select onChange={(e) => handleCitySelect(Number(e.target.value))}>
                 {PRESET_CITIES.map((city, idx) => (
-                  <option key={city.name} value={idx}>
-                    {city.name}
+                  <option key={city.label} value={idx}>
+                    {t(city.label)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Метод расчета</label>
+              <label className="form-label">{t("prayer.method")}</label>
               <select
                 value={selectedMethodId}
                 onChange={(e) => setSelectedMethodId(e.target.value)}
@@ -273,14 +273,14 @@ export default function PrayerPage() {
               >
                 {methods.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name.ru || m.code} ({m.code})
+                    {(locale === "ar" ? m.name.ar : locale === "ru" ? m.name.ru : m.name.en) || m.code} ({m.code})
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Дата расчета</label>
+              <label className="form-label">{t("prayer.date")}</label>
               <input
                 type="date"
                 value={date}
@@ -291,7 +291,7 @@ export default function PrayerPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Широта (Latitude)</label>
+              <label className="form-label">{t("prayer.latitude")}</label>
               <input
                 type="text"
                 value={latitude}
@@ -300,7 +300,7 @@ export default function PrayerPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Долгота (Longitude)</label>
+              <label className="form-label">{t("prayer.longitude")}</label>
               <input
                 type="text"
                 value={longitude}
@@ -309,7 +309,7 @@ export default function PrayerPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Часовой пояс (IANA)</label>
+              <label className="form-label">{t("prayer.timezone")}</label>
               <input
                 type="text"
                 value={timezone}
@@ -318,13 +318,13 @@ export default function PrayerPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Мазхаб для времени Аср</label>
+              <label className="form-label">{t("prayer.asrSchool")}</label>
               <select
                 value={asrMethod}
                 onChange={(e) => setAsrMethod(e.target.value as "standard" | "hanafi")}
               >
-                <option value="standard">Стандартный (Шафии, Малики, Ханбали)</option>
-                <option value="hanafi">Ханафитский (тень x2)</option>
+                <option value="standard">{t("prayer.standardSchool")}</option>
+                <option value="hanafi">{t("prayer.hanafiSchool")}</option>
               </select>
             </div>
           </div>
@@ -339,14 +339,14 @@ export default function PrayerPage() {
             }}
           >
             <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-              Профиль расчёта и ручные настройки
+              {t("prayer.profileSettings")}
             </summary>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
               {profileMessage && <div className="alert alert-info">{profileMessage}</div>}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="high-latitude-rule">
-                    Высокие широты
+                    {t("prayer.highLatitude")}
                   </label>
                   <select
                     id="high-latitude-rule"
@@ -357,14 +357,14 @@ export default function PrayerPage() {
                       )
                     }
                   >
-                    <option value="middle_of_night">Середина ночи</option>
-                    <option value="seventh_of_night">Одна седьмая ночи</option>
-                    <option value="twilight_angle">Угол сумерек</option>
+                    <option value="middle_of_night">{t("prayer.middleNight")}</option>
+                    <option value="seventh_of_night">{t("prayer.seventhNight")}</option>
+                    <option value="twilight_angle">{t("prayer.twilightAngle")}</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="polar-resolution">
-                    Полярная зона
+                    {t("prayer.polar")}
                   </label>
                   <select
                     id="polar-resolution"
@@ -375,14 +375,14 @@ export default function PrayerPage() {
                       )
                     }
                   >
-                    <option value="unresolved">Без подстановки</option>
-                    <option value="aqrab_balad">Ближайшая широта</option>
-                    <option value="aqrab_yaum">Ближайший день</option>
+                    <option value="unresolved">{t("prayer.unresolved")}</option>
+                    <option value="aqrab_balad">{t("prayer.nearestLatitude")}</option>
+                    <option value="aqrab_yaum">{t("prayer.nearestDay")}</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="profile-timezone-mode">
-                    Часовой пояс профиля
+                    {t("prayer.profileTimezone")}
                   </label>
                   <select
                     id="profile-timezone-mode"
@@ -393,14 +393,14 @@ export default function PrayerPage() {
                       )
                     }
                   >
-                    <option value="device_local">Часовой пояс устройства</option>
-                    <option value="fixed">Фиксированный IANA timezone</option>
+                    <option value="device_local">{t("prayer.deviceTimezone")}</option>
+                    <option value="fixed">{t("prayer.fixedTimezoneMode")}</option>
                   </select>
                 </div>
                 {profileTimezoneMode === "fixed" && (
                   <div className="form-group">
                     <label className="form-label" htmlFor="profile-fixed-timezone">
-                      Фиксированный timezone
+                      {t("prayer.fixedTimezone")}
                     </label>
                     <input
                       id="profile-fixed-timezone"
@@ -414,13 +414,13 @@ export default function PrayerPage() {
 
               <div>
                 <p className="form-label" style={{ marginBottom: 8 }}>
-                  Ручные поправки, минуты (−120…120)
+                  {t("prayer.adjustments")}
                 </p>
                 <div className="form-row">
                   {ADJUSTMENT_LABELS.map(([key, label]) => (
                     <div className="form-group" key={key}>
                       <label className="form-label" htmlFor={`adjustment-${key}`}>
-                        {label}
+                        {t(label)}
                       </label>
                       <input
                         id={`adjustment-${key}`}
@@ -444,7 +444,7 @@ export default function PrayerPage() {
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Рассчитываем..." : "Рассчитать расписание"}
+              {loading ? t("prayer.calculating") : t("prayer.calculate")}
             </button>
             <button
               type="button"
@@ -452,7 +452,7 @@ export default function PrayerPage() {
               disabled={savingProfile || !selectedMethodId}
               onClick={() => void handleSaveProfile()}
             >
-              {savingProfile ? "Сохранение..." : "Сохранить профиль"}
+              {savingProfile ? t("common.saving") : t("prayer.saveProfile")}
             </button>
           </div>
         </form>
@@ -465,55 +465,55 @@ export default function PrayerPage() {
           <section className="surface">
             <div className="surface-head">
               <div>
-                <p className="eyebrow">Результаты расчета на {result.date}</p>
+                <p className="eyebrow">{t("prayer.results", { date: result.date })}</p>
                 <h3 className="surface-title">
-                  {result.method?.name?.ru || result.method?.code || "Расписание намаза"}
+                  {(locale === "ar" ? result.method?.name?.ar : locale === "ru" ? result.method?.name?.ru : result.method?.name?.en) || result.method?.code || t("prayer.schedule")}
                 </h3>
               </div>
-              <span className="status-chip ok">Часовой пояс: {result.timezone}</span>
+              <span className="status-chip ok">{t("prayer.timezoneValue", { timezone: result.timezone })}</span>
             </div>
 
             <div className="prayer-grid">
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الفجر</span>
-                <span className="prayer-name-ru">Фаджр (Утренний)</span>
+                <span className="prayer-name-ru">{t("prayer.fajrFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.fajr?.local)}</span>
-                <span className="kpi-desc">Начало рассвета</span>
+                <span className="kpi-desc">{t("prayer.fajrStart")}</span>
               </div>
 
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الشروق</span>
-                <span className="prayer-name-ru">Восход солнца</span>
+                <span className="prayer-name-ru">{t("prayer.sunriseFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.sunrise?.local)}</span>
-                <span className="kpi-desc">Конец Фаджра</span>
+                <span className="kpi-desc">{t("prayer.fajrEnd")}</span>
               </div>
 
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الظهر</span>
-                <span className="prayer-name-ru">Зухр (Полуденный)</span>
+                <span className="prayer-name-ru">{t("prayer.dhuhrFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.dhuhr?.local)}</span>
-                <span className="kpi-desc">После зенита</span>
+                <span className="kpi-desc">{t("prayer.afterZenith")}</span>
               </div>
 
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">العصر</span>
-                <span className="prayer-name-ru">Аср (Послеполуденный)</span>
+                <span className="prayer-name-ru">{t("prayer.asrFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.asr?.local)}</span>
-                <span className="kpi-desc">{asrMethod === "hanafi" ? "Ханафи" : "Стандарт"}</span>
+                <span className="kpi-desc">{asrMethod === "hanafi" ? t("prayer.hanafi") : t("prayer.standard")}</span>
               </div>
 
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">المغرب</span>
-                <span className="prayer-name-ru">Магриб (Вечерний)</span>
+                <span className="prayer-name-ru">{t("prayer.maghribFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.maghrib?.local)}</span>
-                <span className="kpi-desc">Заход солнца / Ифтар</span>
+                <span className="kpi-desc">{t("prayer.sunsetIftar")}</span>
               </div>
 
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">العشاء</span>
-                <span className="prayer-name-ru">Иша (Ночной)</span>
+                <span className="prayer-name-ru">{t("prayer.ishaFull")}</span>
                 <span className="prayer-time">{formatPrayerTime(pTimes?.isha?.local)}</span>
-                <span className="kpi-desc">Наступление ночи</span>
+                <span className="kpi-desc">{t("prayer.nightfall")}</span>
               </div>
             </div>
           </section>

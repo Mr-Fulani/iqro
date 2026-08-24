@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from quran_backend.modules.accounts.models import DevicePlatform
 
-SUPPORTED_LOCALES = ("ar", "en", "ru")
+SUPPORTED_LOCALES = ("ar", "en", "ru", "tr")
 
 
 class GuestBootstrapRequestSerializer(serializers.Serializer[dict[str, object]]):
@@ -120,6 +120,10 @@ class EmailChallengeVerifyResponseSerializer(GuestBootstrapResponseSerializer):
 class CurrentSessionResponseSerializer(serializers.Serializer[dict[str, object]]):
     user = UserSummarySerializer()
     device = DeviceSummarySerializer()
+
+
+class CurrentSessionUpdateSerializer(serializers.Serializer[dict[str, str]]):
+    locale = serializers.ChoiceField(choices=SUPPORTED_LOCALES)
 
 
 class DeviceInventorySerializer(serializers.Serializer[dict[str, object]]):

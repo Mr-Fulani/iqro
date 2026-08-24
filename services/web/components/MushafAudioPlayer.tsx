@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Recitation, SurahPlayback } from "../lib/api";
+import { useI18n } from "../lib/i18n-context";
 import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
@@ -21,21 +22,13 @@ function parseAyahKey(value: string | null): { surah: number; ayah: number } | n
   return { surah, ayah };
 }
 
-function recitationLabel(recitation: Recitation): string {
-  const style = recitation.style === "muallim"
-    ? "Муаллим"
-    : recitation.style === "mujawwad"
-      ? "Муджаввад"
-      : "Мурратталь";
-  return `${recitation.reciter.name_ru || recitation.reciter.name_en} · ${style}`;
-}
-
 export function MushafAudioPlayer({
   editionCode,
   selectedSurah,
   selectedAyahKey,
   onActiveAyahChange,
 }: MushafAudioPlayerProps) {
+  const { locale, t } = useI18n();
   const [recitations, setRecitations] = useState<Recitation[]>([]);
   const [selectedRecitationId, setSelectedRecitationId] = useState("");
   const [preparedPlayback, setPreparedPlayback] = useState<SurahPlayback | null>(null);
@@ -47,6 +40,19 @@ export function MushafAudioPlayer({
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
+  const recitationLabel = useCallback((recitation: Recitation): string => {
+    const style = recitation.style === "muallim"
+      ? t("audio.style.muallim")
+      : recitation.style === "mujawwad"
+        ? t("audio.style.mujawwad")
+        : t("audio.style.murattal");
+    const reciter = locale === "ar"
+      ? recitation.reciter.name_ar
+      : locale === "ru"
+        ? recitation.reciter.name_ru
+        : recitation.reciter.name_en;
+    return `${reciter || recitation.reciter.name_en} · ${style}`;
+  }, [locale, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,9 +107,9 @@ export function MushafAudioPlayer({
           track: playback.track,
           segments: playback.segments || [],
           kind: "surah",
-          title: `Сура ${selectedSurah}`,
-          artist: recitation ? recitationLabel(recitation) : "Чтец Quran.Foundation",
-          album: "Quran Platform · Мусхаф",
+          title: t("common.surah", { surah: selectedSurah }),
+          artist: recitation ? recitationLabel(recitation) : t("audio.qfReciter"),
+          album: t("audio.mushafAlbum"),
           autoPlay: false,
         });
       })
@@ -116,7 +122,7 @@ export function MushafAudioPlayer({
     return () => {
       cancelled = true;
     };
-  }, [recitations, selectedRecitationId, selectedSurah]);
+  }, [recitationLabel, recitations, selectedRecitationId, selectedSurah, t]);
 
   const startPlayback = async (kind: "surah" | "ayah") => {
     if (!selectedRecitationId) return;
@@ -138,12 +144,12 @@ export function MushafAudioPlayer({
         startAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
         endAyah: kind === "ayah" ? selectedAyah?.ayah : undefined,
         title: kind === "ayah" && selectedAyah
-          ? `Аят ${selectedAyah.surah}:${selectedAyah.ayah}`
-          : `Сура ${selectedSurah}`,
+          ? t("common.ayah", { ayah: `${selectedAyah.surah}:${selectedAyah.ayah}` })
+          : t("common.surah", { surah: selectedSurah }),
         artist: selectedRecitation
           ? recitationLabel(selectedRecitation)
-          : "Чтец Quran.Foundation",
-        album: "Quran Platform · Мусхаф",
+          : t("audio.qfReciter"),
+        album: t("audio.mushafAlbum"),
         autoPlay: true,
       });
     } catch (reason) {
@@ -158,7 +164,7 @@ export function MushafAudioPlayer({
       <div className="mushaf-audio-controls">
         <div className="form-group mushaf-reciter-select">
           <label className="form-label" htmlFor="mushaf-recitation">
-            Чтец Quran.Foundation
+            {t("mushafAudio.reciter")}
           </label>
           <select
             id="mushaf-recitation"
@@ -168,7 +174,7 @@ export function MushafAudioPlayer({
           >
             {recitations.map((recitation) => (
               <option key={recitation.id} value={recitation.id}>
-                {recitationLabel(recitation)} · {recitation.coverage.surah_count}/114 сур
+                {recitationLabel(recitation)} · {t("mushafAudio.coverage", { count: recitation.coverage.surah_count })}
               </option>
             ))}
           </select>
@@ -180,7 +186,7 @@ export function MushafAudioPlayer({
           onClick={() => void startPlayback("surah")}
           disabled={playbackLoading || !preparedPlayback}
         >
-          {playbackLoading ? "Загрузка…" : `▶ Сура ${selectedSurah}`}
+          {playbackLoading ? t("common.loading") : `▶ ${t("common.surah", { surah: selectedSurah })}`}
         </button>
         <button
           className="btn btn-secondary"
@@ -188,13 +194,13 @@ export function MushafAudioPlayer({
           onClick={() => void startPlayback("ayah")}
           disabled={playbackLoading || !preparedPlayback || !selectedAyah}
         >
-          ▶ {selectedAyahKey ? `Аят ${selectedAyahKey}` : "Выберите аят"}
+          ▶ {selectedAyahKey ? t("common.ayah", { ayah: selectedAyahKey }) : t("mushafAudio.chooseAyah")}
         </button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {recitations.length === 0 && !catalogLoading && !error && (
-        <div className="alert alert-info">Для этого издания пока нет опубликованных аудиозаписей.</div>
+        <div className="alert alert-info">{t("mushafAudio.none")}</div>
       )}
 
       <SegmentedAudioPlayer

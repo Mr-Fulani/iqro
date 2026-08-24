@@ -11,6 +11,7 @@ import {
   loadLegacyStoredIdentity,
 } from "./api";
 import { clearSyncState } from "./sync-state";
+import { useI18n } from "./i18n-context";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -33,6 +34,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { locale, t } = useI18n();
   const [session, setSession] = useState<GuestBootstrapResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await api.bootstrapGuest("ru");
+      const res = await api.bootstrapGuest(locale);
       setSession(res);
       return res;
     } catch (err) {
@@ -84,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   const startEmailChallenge = useCallback(
     async (email: string): Promise<EmailChallenge | null> => {
@@ -96,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Re-bootstrap guests from the HttpOnly installation identity before
           // binding a challenge. This keeps the access token and installation
           // credential on the same device even after a legacy-cookie migration.
-          currentSession = await api.bootstrapGuest("ru");
+          currentSession = await api.bootstrapGuest(locale);
           setSession(currentSession);
         }
         if (!currentSession) return null;
@@ -108,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [],
+    [locale],
   );
 
   const verifyEmailChallenge = useCallback(
@@ -180,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const next = await api.requestAccountDeletion(challengeId);
       sessionStorage.setItem(
         ACCOUNT_LIFECYCLE_NOTICE_KEY,
-        "Удаление аккаунта запланировано. До указанной даты его можно отменить.",
+        t("auth.deletionScheduledNotice"),
       );
       setSession(next);
       return true;
@@ -190,14 +192,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const cancelAccountDeletion = useCallback(async (challengeId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
       const next = await api.cancelAccountDeletion(challengeId);
-      sessionStorage.setItem(ACCOUNT_LIFECYCLE_NOTICE_KEY, "Удаление аккаунта отменено.");
+      sessionStorage.setItem(ACCOUNT_LIFECYCLE_NOTICE_KEY, t("auth.deletionCancelledNotice"));
       setSession(next);
       return true;
     } catch (err) {
@@ -206,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   return (
     <AuthContext.Provider

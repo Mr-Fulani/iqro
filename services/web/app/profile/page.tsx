@@ -13,32 +13,34 @@ import { useAuth } from "../../lib/auth-context";
 import { ReminderManager } from "../../components/ReminderManager";
 import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
 import { SYNC_STATE_EVENT } from "../../lib/sync-state";
+import { useI18n } from "../../lib/i18n-context";
+import { MessageKey } from "../../lib/i18n";
 
 const FEEDBACK_CATEGORIES = [
-  ["religious_content", "Религиозное содержание"],
-  ["page_layout", "Страница Мусхафа или область аята"],
-  ["audio", "Аудио, таймкод или чтец"],
-  ["advertisement", "Жалоба на рекламу"],
-  ["technical", "Техническая проблема"],
-  ["account_sync", "Аккаунт или синхронизация"],
-  ["donation_link", "Ссылка на пожертвование"],
-  ["accessibility_localization", "Доступность или локализация"],
-  ["general", "Общий вопрос или предложение"],
-  ["other", "Другое"],
+  ["religious_content", "feedback.category.religious"],
+  ["page_layout", "feedback.category.layout"],
+  ["audio", "feedback.category.audio"],
+  ["advertisement", "feedback.category.ad"],
+  ["technical", "feedback.category.technical"],
+  ["account_sync", "feedback.category.account"],
+  ["donation_link", "feedback.category.donation"],
+  ["accessibility_localization", "feedback.category.accessibility"],
+  ["general", "feedback.category.general"],
+  ["other", "feedback.category.other"],
 ] as const;
 
-const FEEDBACK_STATUS_LABELS: Record<string, string> = {
-  new: "Новое",
-  triaged: "Распределено",
-  in_progress: "В работе",
-  waiting_for_user: "Ожидает ответа",
-  resolved: "Решено",
-  rejected: "Отклонено",
-  duplicate: "Дубликат",
-  closed: "Закрыто",
+const FEEDBACK_STATUS_LABELS: Record<string, MessageKey> = {
+  new: "feedback.status.new",
+  triaged: "feedback.status.triaged",
+  in_progress: "feedback.status.progress",
+  waiting_for_user: "feedback.status.waiting",
+  resolved: "feedback.status.resolved",
+  rejected: "feedback.status.rejected",
+  duplicate: "feedback.status.duplicate",
+  closed: "feedback.status.closed",
 };
 
-const FEEDBACK_CATEGORY_LABELS = Object.fromEntries(FEEDBACK_CATEGORIES);
+const FEEDBACK_CATEGORY_LABELS = Object.fromEntries(FEEDBACK_CATEGORIES) as Record<string, MessageKey>;
 
 export default function ProfilePage() {
   const {
@@ -49,6 +51,7 @@ export default function ProfilePage() {
     logoutAll,
     isLoading: authLoading,
   } = useAuth();
+  const { t } = useI18n();
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -63,7 +66,7 @@ export default function ProfilePage() {
 
   // New Bookmark form state
   const [newBookmarkPage, setNewBookmarkPage] = useState<number>(1);
-  const [newBookmarkLabel, setNewBookmarkLabel] = useState<string>("Любимый аят");
+  const [newBookmarkLabel, setNewBookmarkLabel] = useState<string>(() => t("profile.defaultBookmark"));
   const [newBookmarkColor, setNewBookmarkColor] = useState<string>("emerald");
   const [newBookmarkNote, setNewBookmarkNote] = useState<string>("");
   const [bookmarkDraft, setBookmarkDraft] = useState<{
@@ -146,7 +149,7 @@ export default function ProfilePage() {
         color_key: newBookmarkColor,
         note: newBookmarkNote,
       });
-      setSuccessMsg("Закладка успешно создана!");
+      setSuccessMsg(t("profile.bookmarkCreated"));
       setNewBookmarkNote("");
       await loadBookmarksData();
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -159,7 +162,7 @@ export default function ProfilePage() {
     try {
       await api.deleteBookmark(id, revision);
       setBookmarks((prev) => prev.filter((b) => b.id !== id));
-      setSuccessMsg("Закладка удалена.");
+      setSuccessMsg(t("profile.bookmarkDeleted"));
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(api.normalizeError(err));
@@ -181,7 +184,7 @@ export default function ProfilePage() {
         previous.map((bookmark) => (bookmark.id === updated.id ? updated : bookmark)),
       );
       setBookmarkDraft(null);
-      setSuccessMsg("Закладка обновлена.");
+      setSuccessMsg(t("profile.bookmarkUpdated"));
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(api.normalizeError(err));
@@ -194,13 +197,15 @@ export default function ProfilePage() {
     try {
       const result = await api.syncNow();
       const details = [
-        result.pushed ? `отправлено: ${result.pushed}` : null,
-        result.changes ? `получено изменений: ${result.changes}` : null,
-        result.full_resync ? `полная сверка: ${result.snapshot_entities} объектов` : null,
-        result.conflicts ? `конфликтов: ${result.conflicts}` : null,
+        result.pushed ? t("profile.syncPushed", { count: result.pushed }) : null,
+        result.changes ? t("profile.syncChanges", { count: result.changes }) : null,
+        result.full_resync ? t("profile.syncFull", { count: result.snapshot_entities }) : null,
+        result.conflicts ? t("profile.syncConflicts", { count: result.conflicts }) : null,
       ].filter(Boolean);
       setSuccessMsg(
-        `Синхронизация завершена${details.length ? ` (${details.join(", ")})` : ": данные актуальны"}.`,
+        details.length
+          ? t("profile.syncComplete", { details: details.join(", ") })
+          : t("profile.syncCurrent"),
       );
       await loadBookmarksData();
       await loadReadingData();
@@ -218,7 +223,7 @@ export default function ProfilePage() {
     setError(null);
     const succeeded = await logoutAll();
     if (!succeeded) {
-      setError("Не удалось завершить все сессии. Повторите попытку.");
+      setError(t("profile.logoutAllError"));
       setConfirmLogoutAll(false);
     }
   };
@@ -233,7 +238,7 @@ export default function ProfilePage() {
         subject: feedbackSubject,
         message: feedbackMessage,
       });
-      setSuccessMsg("Обращение отправлено! Редакционная команда рассмотрит его.");
+      setSuccessMsg(t("profile.feedbackSent"));
       setShowFeedbackModal(false);
       setFeedbackSubject("");
       setFeedbackMessage("");
@@ -292,7 +297,7 @@ export default function ProfilePage() {
       setFeedbackTickets((previous) =>
         previous.map((ticket) => (ticket.public_id === updated.public_id ? updated : ticket)),
       );
-      setSuccessMsg(action === "close" ? "Обращение закрыто." : "Обращение открыто повторно.");
+      setSuccessMsg(action === "close" ? t("profile.feedbackClosed") : t("profile.feedbackReopened"));
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(api.normalizeError(err));
@@ -305,10 +310,9 @@ export default function ProfilePage() {
     return (
       <div className="surface" style={{ maxWidth: 640, margin: "24px auto", textAlign: "center" }}>
         <span className="brand-mark sm" style={{ margin: "0 auto 16px" }}>👤</span>
-        <h2 className="surface-title" style={{ marginBottom: 8 }}>Личный кабинет читателя</h2>
+        <h2 className="surface-title" style={{ marginBottom: 8 }}>{t("profile.readerProfile")}</h2>
         <p className="kpi-desc" style={{ marginBottom: 24 }}>
-          Войдите по одноразовому коду из email либо продолжите как гость, чтобы просматривать
-          закладки, историю чтения и синхронизировать данные между устройствами.
+          {t("profile.loginDescription")}
         </p>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
@@ -319,7 +323,7 @@ export default function ProfilePage() {
           disabled={authLoading}
           style={{ width: "100%" }}
         >
-          {authLoading ? "Создание гостевой сессии..." : "Войти как гость"}
+          {authLoading ? t("profile.creatingGuest") : t("profile.loginGuest")}
         </button>
       </div>
     );
@@ -337,11 +341,14 @@ export default function ProfilePage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Персональный профиль</p>
-            <h2 className="surface-title">Личный кабинет</h2>
+            <p className="eyebrow">{t("profile.eyebrow")}</p>
+            <h2 className="surface-title">{t("profile.title")}</h2>
             <p className="surface-subtitle">
-              {session?.user.email ? `${session.user.email} · ` : ""}ID пользователя: {" "}
-              <code>{session?.user.id}</code> · Устройство: <code>{session?.device.id}</code>
+              {session?.user.email ? `${session.user.email} · ` : ""}
+              {t("profile.identity", {
+                userId: session?.user.id || "—",
+                deviceId: session?.device.id || "—",
+              })}
             </p>
           </div>
 
@@ -351,12 +358,12 @@ export default function ProfilePage() {
               onClick={() => void handleSyncPull()}
               disabled={loadingSync}
             >
-              {loadingSync ? "Синхронизация..." : "🔄 Офлайн-синхронизация"}
+              {loadingSync ? t("profile.syncing") : t("profile.offlineSync")}
               {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
             </button>
             {isGuest ? (
               <Link href="/login" className="btn btn-primary btn-sm">
-                Войти по email
+                {t("auth.emailLogin")}
               </Link>
             ) : (
               <>
@@ -364,13 +371,13 @@ export default function ProfilePage() {
                   className="btn btn-secondary btn-sm"
                   onClick={() => void logout()}
                 >
-                  Выйти
+                  {t("auth.logout")}
                 </button>
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={() => setConfirmLogoutAll(true)}
                 >
-                  Выйти на всех устройствах
+                  {t("profile.logoutAll")}
                 </button>
               </>
             )}
@@ -381,11 +388,8 @@ export default function ProfilePage() {
         {successMsg && <div className="alert alert-success" style={{ marginBottom: 14 }}>{successMsg}</div>}
         {confirmLogoutAll && (
           <div className="alert alert-error" style={{ marginBottom: 14 }}>
-            <strong>Завершить все сессии?</strong>
-            <p style={{ marginTop: 6 }}>
-              Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения
-              потребуется снова получить код по email.
-            </p>
+            <strong>{t("profile.logoutAllTitle")}</strong>
+            <p style={{ marginTop: 6 }}>{t("profile.logoutAllDescription")}</p>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <button
                 className="btn btn-danger btn-sm"
@@ -393,7 +397,7 @@ export default function ProfilePage() {
                 disabled={authLoading}
                 onClick={() => void handleLogoutAll()}
               >
-                {authLoading ? "Завершение сессий..." : "Подтвердить выход везде"}
+                {authLoading ? t("profile.endingSessions") : t("profile.confirmLogoutAll")}
               </button>
               <button
                 className="btn btn-secondary btn-sm"
@@ -401,57 +405,56 @@ export default function ProfilePage() {
                 disabled={authLoading}
                 onClick={() => setConfirmLogoutAll(false)}
               >
-                Отмена
+                {t("common.cancel")}
               </button>
             </div>
           </div>
         )}
         {isGuest && (
           <div className="alert alert-info" style={{ marginBottom: 14 }}>
-            Сейчас данные привязаны только к этому устройству. Войдите по email, чтобы сохранить
-            их в аккаунте и синхронизировать между устройствами.
+            {t("profile.guestNotice")}
           </div>
         )}
 
         <div className="kpi-grid" style={{ marginTop: 8 }}>
           <div className="kpi-card">
-            <span className="kpi-label">Статус профиля</span>
-            <span className="kpi-value">{session?.user.status === "guest" ? "Гость" : "Активен"}</span>
+            <span className="kpi-label">{t("profile.status")}</span>
+            <span className="kpi-value">{session?.user.status === "guest" ? t("profile.guest") : t("profile.active")}</span>
             <span className="kpi-desc">
-              {session?.user.email || `Платформа: ${session?.device.platform}`}
+              {session?.user.email || t("profile.platform", { platform: session?.device.platform || "web" })}
             </span>
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">Очередь синхронизации</span>
+            <span className="kpi-label">{t("profile.syncQueue")}</span>
             <span className="kpi-value">{pendingSync}</span>
             <span className="kpi-desc">
-              {pendingSync ? "Изменения ожидают отправки" : "Локальных изменений нет"}
+              {pendingSync ? t("profile.pendingChanges") : t("profile.noLocalChanges")}
             </span>
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">Сохраненных закладок</span>
+            <span className="kpi-label">{t("profile.savedBookmarks")}</span>
             <span className="kpi-value">{bookmarks.length}</span>
-            <span className="kpi-desc">Издание: Мадинский Мусхаф</span>
+            <span className="kpi-desc">{t("profile.editionMadani")}</span>
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">Позиция чтения</span>
+            <span className="kpi-label">{t("profile.readingPosition")}</span>
             <span className="kpi-value">
-              {reading ? `Стр. ${reading.page_number}` : "Не сохранено"}
+              {reading ? t("common.page", { page: reading.page_number }) : t("profile.notSaved")}
             </span>
             <span className="kpi-desc">
               {reading?.ayah
-                ? `Сура ${reading.ayah.surah_number}:${reading.ayah.ayah_number}`
-                : "Начните чтение"}
+                ? t("common.surah", { surah: `${reading.ayah.surah_number}:${reading.ayah.ayah_number}` })
+                : t("profile.startReading")}
             </span>
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">Обращений в поддержку</span>
+            <span className="kpi-label">{t("profile.supportRequests")}</span>
             <span className="kpi-value">{feedbackTickets.length}</span>
-            <span className="kpi-desc">Редакционный аудит</span>
+            <span className="kpi-desc">{t("profile.editorialAudit")}</span>
           </div>
         </div>
       </section>
@@ -462,8 +465,8 @@ export default function ProfilePage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <h3 className="surface-title">Ваши закладки</h3>
-            <p className="surface-subtitle">Быстрый переход к сохраненным аятам и страницам.</p>
+            <h3 className="surface-title">{t("profile.bookmarksTitle")}</h3>
+            <p className="surface-subtitle">{t("profile.bookmarksDescription")}</p>
           </div>
         </div>
 
@@ -482,7 +485,7 @@ export default function ProfilePage() {
         >
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Страница (1-604)</label>
+              <label className="form-label">{t("profile.pageInput")}</label>
               <input
                 type="number"
                 min={1}
@@ -493,42 +496,42 @@ export default function ProfilePage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Название закладки</label>
+              <label className="form-label">{t("profile.bookmarkName")}</label>
               <input
                 type="text"
                 value={newBookmarkLabel}
                 onChange={(e) => setNewBookmarkLabel(e.target.value)}
-                placeholder="Например: Утреннее чтение"
+                placeholder={t("profile.bookmarkExample")}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Цветовая метка</label>
+              <label className="form-label">{t("profile.colorLabel")}</label>
               <select
                 value={newBookmarkColor}
                 onChange={(e) => setNewBookmarkColor(e.target.value)}
               >
-                <option value="emerald">Изумрудный (Emerald)</option>
-                <option value="gold">Золотой (Gold)</option>
-                <option value="sapphire">Сапфировый (Sapphire)</option>
-                <option value="ruby">Рубиновый (Ruby)</option>
+                <option value="emerald">{t("profile.color.emerald")}</option>
+                <option value="gold">{t("profile.color.gold")}</option>
+                <option value="sapphire">{t("profile.color.sapphire")}</option>
+                <option value="ruby">{t("profile.color.ruby")}</option>
               </select>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Заметка (необязательно)</label>
+            <label className="form-label">{t("profile.noteOptional")}</label>
             <input
               type="text"
               value={newBookmarkNote}
               onChange={(e) => setNewBookmarkNote(e.target.value)}
-              placeholder="Дополнительный комментарий или цель повторения"
+              placeholder={t("profile.notePlaceholder")}
             />
           </div>
 
           <div>
             <button type="submit" className="btn btn-primary btn-sm">
-              ➕ Добавить закладку
+              {t("profile.addBookmark")}
             </button>
           </div>
         </form>
@@ -536,7 +539,7 @@ export default function ProfilePage() {
         {/* Bookmarks List */}
         {loadingBookmarks ? (
           <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
-            Загрузка закладок...
+            {t("profile.loadingBookmarks")}
           </div>
         ) : bookmarks.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -550,7 +553,7 @@ export default function ProfilePage() {
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label" htmlFor={`bookmark-label-${bm.id}`}>
-                          Название
+                          {t("profile.name")}
                         </label>
                         <input
                           id={`bookmark-label-${bm.id}`}
@@ -563,7 +566,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="form-group">
                         <label className="form-label" htmlFor={`bookmark-color-${bm.id}`}>
-                          Цвет
+                          {t("profile.color")}
                         </label>
                         <select
                           id={`bookmark-color-${bm.id}`}
@@ -572,16 +575,16 @@ export default function ProfilePage() {
                             setBookmarkDraft({ ...bookmarkDraft, color_key: event.target.value })
                           }
                         >
-                          <option value="emerald">Изумрудный</option>
-                          <option value="gold">Золотой</option>
-                          <option value="sapphire">Сапфировый</option>
-                          <option value="ruby">Рубиновый</option>
+                          <option value="emerald">{t("profile.color.emerald")}</option>
+                          <option value="gold">{t("profile.color.gold")}</option>
+                          <option value="sapphire">{t("profile.color.sapphire")}</option>
+                          <option value="ruby">{t("profile.color.ruby")}</option>
                         </select>
                       </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label" htmlFor={`bookmark-note-${bm.id}`}>
-                        Заметка
+                        {t("profile.note")}
                       </label>
                       <textarea
                         id={`bookmark-note-${bm.id}`}
@@ -595,14 +598,14 @@ export default function ProfilePage() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button className="btn btn-primary btn-sm" type="submit">
-                        Сохранить
+                        {t("common.save")}
                       </button>
                       <button
                         className="btn btn-secondary btn-sm"
                         type="button"
                         onClick={() => setBookmarkDraft(null)}
                       >
-                        Отмена
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </form>
@@ -615,9 +618,9 @@ export default function ProfilePage() {
                       <div>
                         <strong>{bm.label}</strong>
                         <p className="kpi-desc">
-                          {bm.page_number ? `Страница ${bm.page_number}` : ""}
+                          {bm.page_number ? t("common.page", { page: bm.page_number }) : ""}
                           {bm.ayah
-                            ? ` · Сура ${bm.ayah.surah_number}:${bm.ayah.ayah_number}`
+                            ? ` · ${t("common.surah", { surah: `${bm.ayah.surah_number}:${bm.ayah.ayah_number}` })}`
                             : ""}
                           {bm.note ? ` · «${bm.note}»` : ""}
                         </p>
@@ -637,14 +640,14 @@ export default function ProfilePage() {
                           })
                         }
                       >
-                        Изменить
+                        {t("common.edit")}
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => void handleDeleteBookmark(bm.id, bm.revision)}
-                        title="Удалить закладку"
+                        title={t("profile.deleteBookmarkTitle")}
                       >
-                        Удалить
+                        {t("common.delete")}
                       </button>
                     </div>
                   </>
@@ -654,7 +657,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
-            У вас пока нет закладок. Добавьте закладку во время чтения Корана.
+            {t("profile.noBookmarks")}
           </div>
         )}
       </section>
@@ -665,17 +668,15 @@ export default function ProfilePage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <h3 className="surface-title">Обратная связь и религиозный аудит</h3>
-            <p className="surface-subtitle">
-              Сообщите о неточности в тексте, таймкодах или расчетах молитв напрямую религиозной редакции.
-            </p>
+            <h3 className="surface-title">{t("feedback.title")}</h3>
+            <p className="surface-subtitle">{t("feedback.description")}</p>
           </div>
 
           <button
             className="btn btn-outline-primary btn-sm"
             onClick={() => setShowFeedbackModal(true)}
           >
-            ✉️ Создать обращение
+            {t("feedback.create")}
           </button>
         </div>
 
@@ -695,7 +696,7 @@ export default function ProfilePage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="feedback-category">
-                  Категория обращения
+                  {t("feedback.category")}
                 </label>
                 <select
                   id="feedback-category"
@@ -704,33 +705,33 @@ export default function ProfilePage() {
                 >
                   {FEEDBACK_CATEGORIES.map(([value, label]) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(label)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="feedback-subject">Тема</label>
+                <label className="form-label" htmlFor="feedback-subject">{t("feedback.subject")}</label>
                 <input
                   id="feedback-subject"
                   type="text"
                   value={feedbackSubject}
                   onChange={(e) => setFeedbackSubject(e.target.value)}
-                  placeholder="Краткое описание"
+                  placeholder={t("feedback.subjectPlaceholder")}
                   required
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="feedback-message">Сообщение</label>
+              <label className="form-label" htmlFor="feedback-message">{t("feedback.message")}</label>
               <textarea
                 id="feedback-message"
                 value={feedbackMessage}
                 onChange={(e) => setFeedbackMessage(e.target.value)}
                 rows={3}
-                placeholder="Подробное описание вопроса или замечания..."
+                placeholder={t("feedback.messagePlaceholder")}
                 required
               />
             </div>
@@ -741,14 +742,14 @@ export default function ProfilePage() {
                 className="btn btn-primary btn-sm"
                 disabled={sendingFeedback}
               >
-                {sendingFeedback ? "Отправка..." : "Отправить обращение"}
+                {sendingFeedback ? t("common.sending") : t("feedback.send")}
               </button>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={() => setShowFeedbackModal(false)}
               >
-                Отмена
+                {t("common.cancel")}
               </button>
             </div>
           </form>
@@ -756,26 +757,30 @@ export default function ProfilePage() {
 
         {feedbackTickets.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {feedbackTickets.map((t) => (
-              <div key={t.public_id} className="track-row">
+            {feedbackTickets.map((ticket) => (
+              <div key={ticket.public_id} className="track-row">
                 <div>
-                  <strong>{t.subject}</strong>
+                  <strong>{ticket.subject}</strong>
                   <p className="kpi-desc">
-                    Номер: <code>{t.public_id}</code> · Категория:{" "}
-                    {FEEDBACK_CATEGORY_LABELS[t.category] || t.category}
+                    {t("feedback.numberCategory", {
+                      id: ticket.public_id,
+                      category: FEEDBACK_CATEGORY_LABELS[ticket.category]
+                        ? t(FEEDBACK_CATEGORY_LABELS[ticket.category])
+                        : ticket.category,
+                    })}
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className={`status-chip ${t.status === "resolved" ? "ok" : ""}`}>
-                    {FEEDBACK_STATUS_LABELS[t.status] || t.status}
+                  <span className={`status-chip ${ticket.status === "resolved" ? "ok" : ""}`}>
+                    {FEEDBACK_STATUS_LABELS[ticket.status] ? t(FEEDBACK_STATUS_LABELS[ticket.status]) : ticket.status}
                   </span>
                   <button
                     className="btn btn-secondary btn-sm"
                     type="button"
                     disabled={feedbackActionLoading}
-                    onClick={() => void openFeedbackTicket(t.public_id)}
+                    onClick={() => void openFeedbackTicket(ticket.public_id)}
                   >
-                    Открыть
+                    {t("common.open")}
                   </button>
                 </div>
               </div>
@@ -783,7 +788,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="kpi-desc" style={{ padding: 12 }}>
-            Активных обращений нет.
+            {t("feedback.none")}
           </div>
         )}
 
@@ -801,25 +806,29 @@ export default function ProfilePage() {
           >
             <div className="surface-head" style={{ marginBottom: 0 }}>
               <div>
-                <p className="eyebrow">Обращение {selectedFeedback.public_id}</p>
+                <p className="eyebrow">{t("feedback.ticket", { id: selectedFeedback.public_id })}</p>
                 <h4 className="surface-title">{selectedFeedback.subject}</h4>
                 <p className="surface-subtitle">
-                  {FEEDBACK_CATEGORY_LABELS[selectedFeedback.category] || selectedFeedback.category}
-                  {selectedFeedback.team ? ` · Команда: ${selectedFeedback.team}` : ""}
+                  {FEEDBACK_CATEGORY_LABELS[selectedFeedback.category]
+                    ? t(FEEDBACK_CATEGORY_LABELS[selectedFeedback.category])
+                    : selectedFeedback.category}
+                  {selectedFeedback.team ? ` · ${t("feedback.team", { team: selectedFeedback.team })}` : ""}
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span
                   className={`status-chip ${selectedFeedback.status === "resolved" ? "ok" : ""}`}
                 >
-                  {FEEDBACK_STATUS_LABELS[selectedFeedback.status] || selectedFeedback.status}
+                  {FEEDBACK_STATUS_LABELS[selectedFeedback.status]
+                    ? t(FEEDBACK_STATUS_LABELS[selectedFeedback.status])
+                    : selectedFeedback.status}
                 </span>
                 <button
                   className="btn btn-secondary btn-sm"
                   type="button"
                   onClick={() => setSelectedFeedback(null)}
                 >
-                  Скрыть
+                  {t("feedback.hide")}
                 </button>
               </div>
             </div>
@@ -832,10 +841,10 @@ export default function ProfilePage() {
                 >
                   <strong>
                     {message.author_type === "operator"
-                      ? "Поддержка"
+                      ? t("feedback.support")
                       : message.author_type === "system"
-                        ? "Система"
-                        : "Вы"}
+                        ? t("feedback.system")
+                        : t("feedback.you")}
                   </strong>
                   <p style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{message.body}</p>
                 </div>
@@ -848,7 +857,7 @@ export default function ProfilePage() {
                 style={{ display: "flex", flexDirection: "column", gap: 8 }}
               >
                 <label className="form-label" htmlFor="feedback-reply">
-                  Добавить сообщение
+                  {t("feedback.addMessage")}
                 </label>
                 <textarea
                   id="feedback-reply"
@@ -856,14 +865,14 @@ export default function ProfilePage() {
                   maxLength={4000}
                   value={feedbackReply}
                   onChange={(event) => setFeedbackReply(event.target.value)}
-                  placeholder="Ваш ответ редакции или поддержке"
+                  placeholder={t("feedback.replyPlaceholder")}
                 />
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
                     className="btn btn-primary btn-sm"
                     disabled={feedbackActionLoading || !feedbackReply.trim()}
                   >
-                    Отправить сообщение
+                    {t("feedback.sendMessage")}
                   </button>
                   {selectedFeedback.status === "closed" || selectedFeedback.status === "resolved" ? (
                     <button
@@ -872,7 +881,7 @@ export default function ProfilePage() {
                       disabled={feedbackActionLoading}
                       onClick={() => void transitionFeedbackTicket("reopen")}
                     >
-                      Открыть повторно
+                      {t("feedback.reopen")}
                     </button>
                   ) : (
                     <button
@@ -881,7 +890,7 @@ export default function ProfilePage() {
                       disabled={feedbackActionLoading}
                       onClick={() => void transitionFeedbackTicket("close")}
                     >
-                      Закрыть обращение
+                      {t("feedback.closeTicket")}
                     </button>
                   )}
                 </div>

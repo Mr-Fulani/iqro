@@ -236,6 +236,7 @@ def test_openapi_declares_device_inventory_and_deletion_lifecycle() -> None:
     )
 
     paths = schema["paths"]
+    assert set(paths["/api/v1/me"]) == {"get", "patch"}
     assert set(paths["/api/v1/me/devices"]) == {"get"}
     assert set(paths["/api/v1/me/devices/{device_id}"]) == {"delete"}
     assert set(paths["/api/v1/me/deletion-request"]) == {"post"}

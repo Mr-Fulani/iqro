@@ -84,6 +84,15 @@ def test_guest_bootstrap_is_identity_idempotent_and_rotates_session(api_client: 
     assert device.installation_credential_hash != "A" * 43
 
 
+def test_guest_bootstrap_accepts_turkish_locale(api_client: APIClient) -> None:
+    response = _bootstrap(api_client, _payload(locale="tr"))
+
+    assert response["user"]["preferred_locale"] == "tr"
+    assert response["device"]["locale"] == "tr"
+    assert User.objects.get().preferred_locale == "tr"
+    assert Device.objects.get().locale == "tr"
+
+
 def test_access_authentication_resolves_bound_device_and_session(api_client: APIClient) -> None:
     auth_data = _bootstrap(api_client, _payload())
     factory = APIRequestFactory()

@@ -11,8 +11,10 @@ import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
 } from "../../components/SegmentedAudioPlayer";
+import { useI18n } from "../../lib/i18n-context";
 
 export default function AudioPage() {
+  const { locale, t, formatNumber } = useI18n();
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [selectedReciterId, setSelectedReciterId] = useState<string>("");
   const [recitations, setRecitations] = useState<Recitation[]>([]);
@@ -87,6 +89,8 @@ export default function AudioPage() {
 
   const selectedReciter = reciters.find((r) => r.id === selectedReciterId);
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
+  const reciterName = (reciter: Reciter) =>
+    locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
 
   const handlePlayTrack = async (track: AudioTrack) => {
     if (!track.surah_number || !selectedRecitation) return;
@@ -100,8 +104,8 @@ export default function AudioPage() {
         track: playback.track,
         segments: playback.segments || [],
         kind: "surah",
-        title: `Сура ${track.surah_number}`,
-        artist: selectedReciter?.name_ru || selectedReciter?.name_en || "Чтец",
+        title: t("common.surah", { surah: track.surah_number }),
+        artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
         album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
         autoPlay: true,
       });
@@ -128,12 +132,9 @@ export default function AudioPage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Аудиозаписи Священного Корана</p>
-            <h2 className="surface-title">Каталог чтецов и декламаций</h2>
-            <p className="surface-subtitle">
-              Выбирайте признанных чтецов, стили чтения (Хафс, Мурраттал) и слушайте с разбивкой по
-              сурам и аятам.
-            </p>
+            <p className="eyebrow">{t("audio.eyebrow")}</p>
+            <h2 className="surface-title">{t("audio.title")}</h2>
+            <p className="surface-subtitle">{t("audio.description")}</p>
           </div>
         </div>
 
@@ -141,7 +142,7 @@ export default function AudioPage() {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Чтец (Кари)</label>
+            <label className="form-label">{t("audio.reciter")}</label>
             <select
               value={selectedReciterId}
               onChange={(e) => setSelectedReciterId(e.target.value)}
@@ -149,14 +150,14 @@ export default function AudioPage() {
             >
               {reciters.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.name_ru} — {r.name_ar}
+                  {reciterName(r)} — {r.name_ar}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Издание и стиль чтения</label>
+            <label className="form-label">{t("audio.editionStyle")}</label>
             <select
               value={selectedRecitationId}
               onChange={(e) => setSelectedRecitationId(e.target.value)}
@@ -164,7 +165,7 @@ export default function AudioPage() {
             >
               {recitations.map((rec) => (
                 <option key={rec.id} value={rec.id}>
-                  {rec.style.toUpperCase()} · {rec.quran_edition.riwayah} ({rec.coverage.track_count} трек.)
+                  {rec.style.toUpperCase()} · {rec.quran_edition.riwayah} ({t("audio.tracksShort", { count: rec.coverage.track_count })})
                 </option>
               ))}
             </select>
@@ -186,18 +187,18 @@ export default function AudioPage() {
             }}
           >
             <div>
-              <strong>{selectedReciter.name_ru}</strong> ({selectedReciter.name_ar})
+              <strong>{reciterName(selectedReciter)}</strong> ({selectedReciter.name_ar})
               <p className="kpi-desc">
-                Код: {selectedReciter.slug} · Страна: {selectedReciter.country_code || "SA"}
+                {t("audio.codeCountry", { code: selectedReciter.slug, country: selectedReciter.country_code || "SA" })}
               </p>
             </div>
             {selectedRecitation && (
               <div style={{ display: "flex", gap: 8 }}>
                 <span className="status-chip ok">
-                  {selectedRecitation.coverage.complete ? "Полный Коран (114 сур)" : `${selectedRecitation.coverage.surah_count} сур`}
+                  {selectedRecitation.coverage.complete ? t("audio.complete") : t("audio.surahCoverage", { count: selectedRecitation.coverage.surah_count })}
                 </span>
                 <span className="status-chip">
-                  Таймкоды аятов: {selectedRecitation.timings.available ? "Доступны" : "В обработке"}
+                  {t("audio.timings", { status: selectedRecitation.timings.available ? t("common.available") : t("common.processing") })}
                 </span>
               </div>
             )}
@@ -208,13 +209,11 @@ export default function AudioPage() {
       <section ref={playerSectionRef} className="surface audio-player-section">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Настройки прослушивания</p>
-            <h3 className="surface-title">Расширенный аудиоплеер</h3>
-            <p className="surface-subtitle">
-              Повторяйте аят или диапазон, меняйте скорость и учебные паузы, задавайте таймер сна.
-            </p>
+            <p className="eyebrow">{t("audio.settingsEyebrow")}</p>
+            <h3 className="surface-title">{t("audio.playerTitle")}</h3>
+            <p className="surface-subtitle">{t("audio.playerDescription")}</p>
           </div>
-          {!playerRequest && <span className="status-chip">Сначала выберите суру</span>}
+          {!playerRequest && <span className="status-chip">{t("audio.chooseSurah")}</span>}
         </div>
         <SegmentedAudioPlayer
           request={playerRequest}
@@ -226,13 +225,13 @@ export default function AudioPage() {
       {/* Tracks List */}
       <section className="surface">
         <div className="surface-head">
-          <h3 className="surface-title">Список аудиодорожек</h3>
-          <span className="kpi-desc">Найдено треков: {tracks.length}</span>
+          <h3 className="surface-title">{t("audio.trackList")}</h3>
+          <span className="kpi-desc">{t("audio.foundTracks", { count: tracks.length })}</span>
         </div>
 
         {loading ? (
           <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
-            Загрузка списка аудиодорожек...
+            {t("audio.loadingTracks")}
           </div>
         ) : tracks.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -253,10 +252,10 @@ export default function AudioPage() {
                     </span>
                     <div>
                       <strong>
-                        {track.surah_number ? `Сура ${track.surah_number}` : track.scope}
+                        {track.surah_number ? t("common.surah", { surah: track.surah_number }) : track.scope}
                       </strong>
                       <p className="kpi-desc">
-                        {track.asset.codec.toUpperCase()} · {track.asset.bitrate_kbps} кбит/с ·{" "}
+                        {track.asset.codec.toUpperCase()} · {t("audio.bitrate", { value: formatNumber(track.asset.bitrate_kbps) })} ·{" "}
                         {formatDuration(track.duration_ms)}
                       </p>
                     </div>
@@ -269,12 +268,12 @@ export default function AudioPage() {
                       disabled={loadingTrackId === track.id}
                     >
                       {loadingTrackId === track.id
-                        ? "Загрузка…"
+                        ? t("audio.trackLoading")
                         : isSelected && isPlaying
-                          ? "▶ Играет"
+                          ? t("audio.playingButton")
                           : isSelected
-                            ? "Продолжить в плеере"
-                            : "Слушать"}
+                            ? t("audio.continuePlayer")
+                            : t("audio.listen")}
                     </button>
                     {track.offline_download_allowed && (
                       <a
@@ -282,7 +281,7 @@ export default function AudioPage() {
                         target="_blank"
                         rel="noreferrer"
                         className="btn btn-secondary btn-sm"
-                        title="Скачать трек для офлайн-прослушивания"
+                        title={t("audio.downloadTitle")}
                       >
                         ⬇
                       </a>
@@ -294,7 +293,7 @@ export default function AudioPage() {
           </div>
         ) : (
           <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
-            Аудиодорожки не найдены для выбранной конфигурации.
+            {t("audio.noTracks")}
           </div>
         )}
       </section>

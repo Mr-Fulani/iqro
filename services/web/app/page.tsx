@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, PrayerCalculationResponse, QuranEdition, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
 
 export default function HomePage() {
   const { session, isLoggedIn, loginGuest, isLoading: authLoading } = useAuth();
+  const { locale, t, formatDate } = useI18n();
   const isActiveAccount = session?.user.status === "active";
 
   const [liveStatus, setLiveStatus] = useState<{ loading: boolean; ok?: boolean; error?: string }>({
@@ -66,9 +68,13 @@ export default function HomePage() {
 
   const formatTime = (isoString?: string) => {
     if (!isoString) return "--:--";
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+    return formatDate(isoString, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
   };
+
+  const editionName = (edition: QuranEdition) =>
+    locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
+  const surahName = (surah: Surah) =>
+    locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -76,21 +82,18 @@ export default function HomePage() {
       <section className="hero-card">
         <div className="hero-content">
           <p className="eyebrow" style={{ color: "#a7f3d0" }}>
-            Мадинский Мусхаф Хафс · 604 страницы
+            {t("home.eyebrow")}
           </p>
-          <h2>Единая исламская платформа для чтения, прослушивания и планирования</h2>
-          <p>
-            Читайте текст Священного Корана с точной постраничной версткой, слушайте признанных
-            чтецов, рассчитывайте времена намаза для любой точки мира и синхронизируйте свои закладки.
-          </p>
+          <h2>{t("home.title")}</h2>
+          <p>{t("home.description")}</p>
         </div>
 
         <div className="hero-actions">
           <Link href="/quran" className="btn btn-primary btn-lg" style={{ background: "#ffffff", color: "#065f46" }}>
-            📖 Читать Коран
+            {t("home.readQuran")}
           </Link>
           <Link href="/prayer" className="btn btn-outline-primary btn-lg" style={{ borderColor: "#a7f3d0", color: "#ffffff" }}>
-            🕌 Время намаза
+            {t("home.prayerTimes")}
           </Link>
         </div>
       </section>
@@ -99,55 +102,55 @@ export default function HomePage() {
       <section className="kpi-grid">
         <article className="kpi-card">
           <div className="kpi-header">
-            <span className="kpi-label">API Бэкенда (Liveness)</span>
+            <span className="kpi-label">{t("home.backendApi")} (Liveness)</span>
             <span className="kpi-icon">{liveStatus.ok ? "🟢" : liveStatus.loading ? "⏳" : "🔴"}</span>
           </div>
           <div className="kpi-value">
-            {liveStatus.loading ? "Проверка..." : liveStatus.ok ? "Подключено" : "Нет связи"}
+            {liveStatus.loading ? t("common.checking") : liveStatus.ok ? t("home.connected") : t("home.disconnected")}
           </div>
           <div className="kpi-desc">
-            {liveStatus.ok ? "Django ASGI сервис активен (/health/live)" : liveStatus.error || "Ожидание запуска"}
+            {liveStatus.ok ? t("home.liveOk") : liveStatus.error || t("home.waitingBackend")}
           </div>
         </article>
 
         <article className="kpi-card">
           <div className="kpi-header">
-            <span className="kpi-label">Готовность служб (Readiness)</span>
+            <span className="kpi-label">{t("home.servicesReady")} (Readiness)</span>
             <span className="kpi-icon">{readyStatus.ok ? "🟢" : readyStatus.loading ? "⏳" : "🔴"}</span>
           </div>
           <div className="kpi-value">
-            {readyStatus.loading ? "Проверка..." : readyStatus.ok ? "Готов к работе" : "Недоступно"}
+            {readyStatus.loading ? t("common.checking") : readyStatus.ok ? t("home.ready") : t("home.unavailable")}
           </div>
           <div className="kpi-desc">
-            {readyStatus.ok ? "БД PostgreSQL и Redis в норме (/health/ready)" : "Проверка зависимостей..."}
+            {readyStatus.ok ? t("home.readyOk") : t("home.checkingDependencies")}
           </div>
         </article>
 
         <article className="kpi-card">
           <div className="kpi-header">
-            <span className="kpi-label">Режим пользователя</span>
+            <span className="kpi-label">{t("home.userMode")}</span>
             <span className="kpi-icon">{isActiveAccount ? "👤" : "🛡️"}</span>
           </div>
           <div className="kpi-value">
-            {isActiveAccount ? "Подтверждённый аккаунт" : "Гостевой режим"}
+            {isActiveAccount ? t("home.verifiedAccount") : t("auth.guest")}
           </div>
           <div className="kpi-desc">
             {isActiveAccount
               ? session.user.email
               : isLoggedIn && session
-                ? `Данные пока привязаны только к устройству · ID: ${session.user.id.slice(0, 8)}...`
-                : "Можно читать без регистрации или войти по email"}
+                ? t("home.deviceOnly", { id: session.user.id.slice(0, 8) })
+                : t("home.readWithoutRegistration")}
           </div>
         </article>
 
         <article className="kpi-card">
           <div className="kpi-header">
-            <span className="kpi-label">Каталог Корана</span>
+            <span className="kpi-label">{t("home.quranCatalog")}</span>
             <span className="kpi-icon">📚</span>
           </div>
-          <div className="kpi-value">{editions.length > 0 ? `${editions.length} изд.` : "Мадинский Хафс"}</div>
+          <div className="kpi-value">{editions.length > 0 ? t("home.editions", { count: editions.length }) : t("home.madaniHafs")}</div>
           <div className="kpi-desc">
-            {editions.length > 0 ? editions.map((e) => e.name_ru).join(", ") : "604 страницы, 114 сур"}
+            {editions.length > 0 ? editions.map(editionName).join(", ") : t("home.catalogFallback")}
           </div>
         </article>
       </section>
@@ -157,15 +160,12 @@ export default function HomePage() {
         <section className="surface" style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)" }}>
           <div className="surface-head">
             <div>
-              <h3 className="surface-title">Войдите по email и сохраните прогресс</h3>
-              <p className="surface-subtitle">
-                Гостевые закладки и позиция чтения сохранятся и будут объединены с аккаунтом
-                после подтверждения одноразового кода.
-              </p>
+              <h3 className="surface-title">{t("home.upgradeTitle")}</h3>
+              <p className="surface-subtitle">{t("home.upgradeDescription")}</p>
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href="/login" className="btn btn-primary">
-                Войти по email
+                {t("auth.emailLogin")}
               </Link>
               {!isLoggedIn && (
                 <button
@@ -173,7 +173,7 @@ export default function HomePage() {
                   className="btn btn-secondary"
                   disabled={authLoading}
                 >
-                  {authLoading ? "Подготовка..." : "Продолжить как гость"}
+                  {authLoading ? t("home.preparing") : t("home.continueGuest")}
                 </button>
               )}
             </div>
@@ -188,43 +188,43 @@ export default function HomePage() {
           <section className="surface">
             <div className="surface-head">
               <div>
-                <p className="eyebrow">Расписание на сегодня (Мекка / MWL)</p>
-                <h3 className="surface-title">Времена молитвы</h3>
+                <p className="eyebrow">{t("home.todaySchedule")}</p>
+                <h3 className="surface-title">{t("home.prayers")}</h3>
               </div>
               <Link href="/prayer" className="btn btn-secondary btn-sm">
-                Настроить город и метод →
+                {t("home.configurePrayer")}
               </Link>
             </div>
 
             <div className="prayer-grid">
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الفجر</span>
-                <span className="prayer-name-ru">Фаджр</span>
+                <span className="prayer-name-ru">{t("prayer.fajr")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.fajr?.local)}</span>
               </div>
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الشروق</span>
-                <span className="prayer-name-ru">Восход</span>
+                <span className="prayer-name-ru">{t("prayer.sunrise")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.sunrise?.local)}</span>
               </div>
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">الظهر</span>
-                <span className="prayer-name-ru">Зухр</span>
+                <span className="prayer-name-ru">{t("prayer.dhuhr")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.dhuhr?.local)}</span>
               </div>
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">العصر</span>
-                <span className="prayer-name-ru">Аср</span>
+                <span className="prayer-name-ru">{t("prayer.asr")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.asr?.local)}</span>
               </div>
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">المغرب</span>
-                <span className="prayer-name-ru">Магриб</span>
+                <span className="prayer-name-ru">{t("prayer.maghrib")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.maghrib?.local)}</span>
               </div>
               <div className="prayer-time-card">
                 <span className="prayer-name-ar">العشاء</span>
-                <span className="prayer-name-ru">Иша</span>
+                <span className="prayer-name-ru">{t("prayer.isha")}</span>
                 <span className="prayer-time">{formatTime(pTimes?.isha?.local)}</span>
               </div>
             </div>
@@ -236,11 +236,11 @@ export default function HomePage() {
       <section className="surface">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Каталог сур</p>
-            <h3 className="surface-title">Суры Священного Корана</h3>
+            <p className="eyebrow">{t("home.surahCatalog")}</p>
+            <h3 className="surface-title">{t("home.surahTitle")}</h3>
           </div>
           <Link href="/quran" className="btn btn-outline-primary btn-sm">
-            Все 114 сур →
+            {t("home.allSurahs")}
           </Link>
         </div>
 
@@ -256,9 +256,9 @@ export default function HomePage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span className="ayah-badge">{surah.number}</span>
                   <div>
-                    <strong>{surah.name_ru}</strong>
+                    <strong>{surahName(surah)}</strong>
                     <p className="kpi-desc">
-                      {surah.ayah_count} аятов · {surah.revelation_type === "meccan" ? "Мекканская" : "Мединская"}
+                      {t("home.ayahCount", { count: surah.ayah_count })} · {surah.revelation_type === "meccan" ? t("home.meccan") : t("home.medinan")}
                     </p>
                   </div>
                 </div>
@@ -269,7 +269,7 @@ export default function HomePage() {
             ))
           ) : (
             <div className="kpi-desc" style={{ padding: 16 }}>
-              Загрузка каталога сур...
+              {t("home.loadingSurahs")}
             </div>
           )}
         </div>

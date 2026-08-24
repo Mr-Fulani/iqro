@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Header() {
   const pathname = usePathname();
   const { session, logout, isLoading } = useAuth();
+  const { t } = useI18n();
   const isActiveAccount = session?.user.status === "active";
   const isPendingDeletion = session?.user.status === "pending_deletion";
 
   const navItems = [
-    { href: "/", label: "Главная", icon: "🏠" },
-    { href: "/quran", label: "Коран", icon: "📖" },
-    { href: "/audio", label: "Аудио", icon: "🎵" },
-    { href: "/prayer", label: "Намаз", icon: "🕌" },
-    { href: "/profile", label: "Кабинет", icon: "👤" },
+    { href: "/", label: t("nav.home"), icon: "🏠" },
+    { href: "/quran", label: t("nav.quran"), icon: "📖" },
+    { href: "/audio", label: t("nav.audio"), icon: "🎵" },
+    { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
+    { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];
 
   return (
@@ -25,12 +28,12 @@ export function Header() {
           <span className="brand-mark">Q</span>
           <div>
             <p className="eyebrow">Quran Platform</p>
-            <h1 className="brand-title">Исламская платформа</h1>
+            <h1 className="brand-title">{t("brand.subtitle")}</h1>
           </div>
         </Link>
       </div>
 
-      <nav className="app-menu" aria-label="Навигация по приложению">
+      <nav className="app-menu" aria-label={t("nav.aria")}>
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
@@ -47,9 +50,14 @@ export function Header() {
       </nav>
 
       <div className="header-actions">
+        <LanguageSwitcher />
         <div className={`status-chip ${isActiveAccount ? "ok" : "muted"}`}>
           <span className="status-dot"></span>
-          {isPendingDeletion ? "Удаление запланировано" : isActiveAccount ? "Аккаунт" : "Гостевой режим"}
+          {isPendingDeletion
+            ? t("auth.deletionScheduled")
+            : isActiveAccount
+              ? t("auth.account")
+              : t("auth.guest")}
         </div>
 
         {isActiveAccount || isPendingDeletion ? (
@@ -57,18 +65,18 @@ export function Header() {
             onClick={() => void logout()}
             className="btn btn-secondary btn-sm"
             disabled={isLoading}
-            title="Выйти из аккаунта"
+            title={t("auth.logoutTitle")}
           >
-            Выйти
+            {t("auth.logout")}
           </button>
         ) : (
           <Link
             href="/login"
             className="btn btn-primary btn-sm"
             aria-disabled={isLoading}
-            title="Войти по одноразовому коду из email"
+            title={t("auth.emailLoginTitle")}
           >
-            Войти по email
+            {t("auth.emailLogin")}
           </Link>
         )}
       </div>

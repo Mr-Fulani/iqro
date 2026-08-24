@@ -16,6 +16,7 @@ import {
   replaceSyncOperation,
   setSyncCursor,
 } from "./sync-state";
+import { Locale, MessageKey, translate } from "./i18n";
 
 export type RequestState<T = unknown> = {
   loading?: boolean;
@@ -29,7 +30,7 @@ export const ACCOUNT_LIFECYCLE_NOTICE_KEY = "quran_platform_account_lifecycle_no
 // Authentication Types
 // ---------------------------------------------------------------------------
 export type DevicePlatform = "web" | "ios" | "android" | "telegram";
-export type SupportedLocale = "ar" | "en" | "ru";
+export type SupportedLocale = Locale;
 
 export type GuestBootstrapRequest = {
   locale: SupportedLocale;
@@ -612,19 +613,19 @@ export function generateUuidV7(): string {
 const STORAGE_IDENTITY = "quran_platform_identity_v1";
 const STORAGE_SESSION = "quran_platform_session_v1";
 
-const API_ERROR_MESSAGES: Record<string, string> = {
-  email_challenge_invalid: "Код неверен или сессия изменилась. Запросите новый код.",
-  email_challenge_expired: "Срок действия кода истёк. Запросите новый код.",
-  email_delivery_failed: "Не удалось отправить код. Попробуйте ещё раз позже.",
-  auth_rate_limited: "Слишком много попыток. Повторите позже.",
-  installation_identity_missing: "Сессия устройства потеряна. Запросите новый код.",
-  account_link_unavailable: "Этот вход нельзя завершить в текущей сессии.",
-  identity_already_linked: "Этот email уже привязан к другому аккаунту.",
-  account_reauthentication_required: "Нужен новый код из email для этого действия.",
-  account_lifecycle_unavailable: "Это действие с аккаунтом сейчас недоступно.",
-  current_device_revoke_conflict: "Для текущего устройства используйте обычный выход.",
-  device_not_found: "Устройство уже отключено или недоступно.",
-  sync_cursor_expired: "История синхронизации устарела. Выполняется полная сверка данных.",
+const API_ERROR_MESSAGES: Record<string, MessageKey> = {
+  email_challenge_invalid: "error.emailInvalid",
+  email_challenge_expired: "error.emailExpired",
+  email_delivery_failed: "error.emailDelivery",
+  auth_rate_limited: "error.rateLimited",
+  installation_identity_missing: "error.installationMissing",
+  account_link_unavailable: "error.linkUnavailable",
+  identity_already_linked: "error.identityLinked",
+  account_reauthentication_required: "error.reauthRequired",
+  account_lifecycle_unavailable: "error.lifecycleUnavailable",
+  current_device_revoke_conflict: "error.currentDevice",
+  device_not_found: "error.deviceNotFound",
+  sync_cursor_expired: "error.cursorExpired",
 };
 
 export class ApiError extends Error {
@@ -645,8 +646,8 @@ export class ApiError extends Error {
 }
 
 export class OfflineMutationQueuedError extends Error {
-  constructor() {
-    super("Сеть недоступна. Изменение сохранено на устройстве и будет отправлено при синхронизации.");
+  constructor(message: string) {
+    super(message);
     this.name = "OfflineMutationQueuedError";
   }
 }
@@ -684,6 +685,7 @@ export class ApiClient {
   private base: string;
   private session: GuestBootstrapResponse | null = null;
   private refreshingPromise: Promise<string | null> | null = null;
+  private locale: SupportedLocale = "ru";
 
   constructor() {
     this.base = "";
@@ -695,6 +697,18 @@ export class ApiClient {
 
   public getBase(): string {
     return this.base;
+  }
+
+  public setLocale(locale: SupportedLocale): void {
+    this.locale = locale;
+  }
+
+  public getLocale(): SupportedLocale {
+    return this.locale;
+  }
+
+  private message(key: MessageKey): string {
+    return translate(this.locale, key);
   }
 
   public setSession(session: GuestBootstrapResponse | null) {
@@ -710,7 +724,7 @@ export class ApiClient {
     const userId = this.session?.user.id;
     if (!userId) throw error;
     enqueueSyncOperation(userId, operation);
-    throw new OfflineMutationQueuedError();
+    throw new OfflineMutationQueuedError(this.message("error.offlineQueued"));
   }
 
   private clearQueuedEntity(entityType: SyncEntityType, entityId: string): void {
@@ -730,7 +744,7 @@ export class ApiClient {
       if (Array.isArray(firstVal)) return firstVal.join(", ");
       if (typeof firstVal === "string") return firstVal;
     }
-    return "Неизвестная ошибка";
+    return this.message("error.unknown");
   }
 
   public async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -790,7 +804,7 @@ export class ApiClient {
         const p = payload as Record<string, unknown>;
         const localizedMessage =
           typeof p.code === "string" ? API_ERROR_MESSAGES[p.code] : undefined;
-        if (localizedMessage) message = localizedMessage;
+        if (localizedMessage) message = this.message(localizedMessage);
         else if (p.detail) message = String(p.detail);
         else if (p.non_field_errors && Array.isArray(p.non_field_errors)) {
           message = p.non_field_errors.join(", ");
@@ -870,7 +884,7 @@ export class ApiClient {
     });
   }
 
-  public async bootstrapGuest(locale: SupportedLocale = "ru"): Promise<GuestBootstrapResponse> {
+  public async bootstrapGuest(locale: SupportedLocale = this.locale): Promise<GuestBootstrapResponse> {
     const payload: GuestBootstrapRequest = {
       locale,
       app_version: "1.0.0",
@@ -900,13 +914,26 @@ export class ApiClient {
     return this.request<DeviceInventory[]>("/api/v1/me/devices");
   }
 
+  public async updateSessionLocale(locale: SupportedLocale): Promise<GuestBootstrapResponse | null> {
+    this.locale = locale;
+    const current = this.session;
+    if (!current) return null;
+    const summary = await this.request<CurrentSessionSummary>("/api/v1/me", {
+      method: "PATCH",
+      body: JSON.stringify({ locale }),
+    });
+    const next = { ...current, ...summary };
+    this.setSession(next);
+    return next;
+  }
+
   public async revokeDevice(deviceId: string): Promise<void> {
     await this.request<void>(`/api/v1/me/devices/${deviceId}`, { method: "DELETE" });
   }
 
   public async requestAccountDeletion(challengeId: string): Promise<GuestBootstrapResponse> {
     const current = this.session;
-    if (!current) throw new Error("Активная сессия не найдена.");
+    if (!current) throw new Error(this.message("error.sessionMissing"));
     const summary = await this.request<CurrentSessionSummary>("/api/v1/me/deletion-request", {
       method: "POST",
       body: JSON.stringify({ reauth_challenge_id: challengeId }),
@@ -918,7 +945,7 @@ export class ApiClient {
 
   public async cancelAccountDeletion(challengeId: string): Promise<GuestBootstrapResponse> {
     const current = this.session;
-    if (!current) throw new Error("Активная сессия не найдена.");
+    if (!current) throw new Error(this.message("error.sessionMissing"));
     const summary = await this.request<CurrentSessionSummary>("/api/v1/me/deletion-cancel", {
       method: "POST",
       body: JSON.stringify({ reauth_challenge_id: challengeId }),
@@ -1175,7 +1202,7 @@ export class ApiClient {
     const body: Record<string, unknown> = {
       id: entityId,
       edition_code: data.edition_code,
-      label: data.label || "Закладка",
+      label: data.label || this.message("api.defaultBookmark"),
       color_key: data.color_key || "teal",
       client_updated_at: now,
     };
@@ -1295,7 +1322,7 @@ export class ApiClient {
 
   public async syncNow(limit = 100): Promise<SyncRunResult> {
     const userId = this.session?.user.id;
-    if (!userId) throw new Error("Для синхронизации требуется активная сессия.");
+    if (!userId) throw new Error(this.message("error.syncSession"));
 
     let pushed = 0;
     let conflicts = 0;
@@ -1375,7 +1402,7 @@ export class ApiClient {
         removeSyncOperations(userId, terminalIds);
         if (!rebased && terminalIds.length === 0) return;
       }
-      throw new Error("Очередь синхронизации не сошлась после повторных попыток.");
+      throw new Error(this.message("error.syncQueue"));
     };
 
     const pullIncremental = async () => {
@@ -1383,7 +1410,7 @@ export class ApiClient {
       while (true) {
         const response = await this.syncPull({ cursor, limit });
         if (response.mode !== "incremental") {
-          throw new Error("Сервер вернул неожиданный режим синхронизации.");
+          throw new Error(this.message("error.syncMode"));
         }
         changes += response.changes.length;
         cursor = response.next_cursor;
@@ -1405,11 +1432,11 @@ export class ApiClient {
               ...(pageToken ? { page_token: pageToken } : {}),
             });
             if (response.mode !== "full_resync") {
-              throw new Error("Сервер не вернул полный снимок синхронизации.");
+              throw new Error(this.message("error.snapshotMissing"));
             }
             if (page === 0) snapshotCursor = response.snapshot_cursor;
             else if (snapshotCursor !== response.snapshot_cursor) {
-              throw new Error("Курсор полного снимка изменился во время загрузки.");
+              throw new Error(this.message("error.snapshotCursor"));
             }
             entities.push(...response.entities);
             pageToken = response.next_page_token || undefined;
@@ -1420,7 +1447,7 @@ export class ApiClient {
               return;
             }
             if (!pageToken) {
-              throw new Error("Сервер не вернул токен следующей страницы снимка.");
+              throw new Error(this.message("error.snapshotToken"));
             }
           }
         } catch (error) {
@@ -1430,7 +1457,7 @@ export class ApiClient {
           throw error;
         }
       }
-      throw new Error("Полный снимок превысил допустимое число страниц.");
+      throw new Error(this.message("error.snapshotLimit"));
     };
 
     await flushOutbox();
@@ -1593,7 +1620,7 @@ export class ApiClient {
         ...payload,
         client_request_id: generateUuidV7(),
         client_message_id: generateUuidV7(),
-        locale: "ru",
+        locale: this.locale,
         context: {
           route: payload.context?.route || "/profile",
           app_version: payload.context?.app_version || "1.0.0",
@@ -1619,21 +1646,21 @@ export class ApiClient {
 
   public async closeFeedbackTicket(
     publicId: string,
-    reason = "Закрыто пользователем",
+    reason?: string,
   ): Promise<FeedbackTicketDetail> {
     return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/close`, {
       method: "POST",
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason: reason || this.message("api.closedByUser") }),
     });
   }
 
   public async reopenFeedbackTicket(
     publicId: string,
-    reason = "Повторно открыто пользователем",
+    reason?: string,
   ): Promise<FeedbackTicketDetail> {
     return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/reopen`, {
       method: "POST",
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason: reason || this.message("api.reopenedByUser") }),
     });
   }
 }

@@ -46,7 +46,7 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
                 name="accounts_user_email_ci_unique",
             ),
             models.CheckConstraint(
-                condition=models.Q(preferred_locale__in=["ar", "en", "ru"]),
+                condition=models.Q(preferred_locale__in=["ar", "en", "ru", "tr"]),
                 name="accounts_user_supported_locale",
             ),
             models.CheckConstraint(
@@ -252,7 +252,7 @@ class Device(BaseModel):
         db_table = "accounts_device"
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(locale__in=["ar", "en", "ru"]),
+                condition=models.Q(locale__in=["ar", "en", "ru", "tr"]),
                 name="accounts_device_supported_locale",
             )
         ]

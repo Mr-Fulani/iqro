@@ -9,33 +9,36 @@ import {
   Surah,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
+import { MessageKey } from "../lib/i18n";
 
 const WEEKDAYS = [
-  [1, "Пн"],
-  [2, "Вт"],
-  [4, "Ср"],
-  [8, "Чт"],
-  [16, "Пт"],
-  [32, "Сб"],
-  [64, "Вс"],
+  [1, "reminder.weekday.mon"],
+  [2, "reminder.weekday.tue"],
+  [4, "reminder.weekday.wed"],
+  [8, "reminder.weekday.thu"],
+  [16, "reminder.weekday.fri"],
+  [32, "reminder.weekday.sat"],
+  [64, "reminder.weekday.sun"],
 ] as const;
 
-const PRAYER_LABELS: Record<string, string> = {
-  fajr: "Фаджр",
-  dhuhr: "Зухр",
-  asr: "Аср",
-  maghrib: "Магриб",
-  isha: "Иша",
+const PRAYER_LABELS: Record<string, MessageKey> = {
+  fajr: "prayer.fajr",
+  dhuhr: "prayer.dhuhr",
+  asr: "prayer.asr",
+  maghrib: "prayer.maghrib",
+  isha: "prayer.isha",
 };
 
-const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], string> = {
-  prayer: "Намаз",
-  quran_reading: "Чтение Корана",
-  quran_review: "Повторение аятов",
+const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], MessageKey> = {
+  prayer: "reminder.type.prayer",
+  quran_reading: "reminder.type.reading",
+  quran_review: "reminder.type.review",
 };
 
 export function ReminderManager() {
   const { isLoggedIn } = useAuth();
+  const { locale, t } = useI18n();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -160,11 +163,11 @@ export function ReminderManager() {
   const saveReminder = async (event: FormEvent) => {
     event.preventDefault();
     if (weekdaysMask === 0) {
-      setError("Выберите хотя бы один день недели.");
+      setError(t("reminder.chooseWeekday"));
       return;
     }
     if (reminderType === "quran_review" && (!reviewStartId || !reviewEndId)) {
-      setError("Выберите начало и конец диапазона аятов.");
+      setError(t("reminder.chooseRange"));
       return;
     }
     setSaving(true);
@@ -207,7 +210,7 @@ export function ReminderManager() {
         const withoutSaved = previous.filter((item) => item.id !== saved.id);
         return [saved, ...withoutSaved];
       });
-      setSuccess(editing ? "Напоминание обновлено." : "Напоминание создано.");
+      setSuccess(editing ? t("reminder.updated") : t("reminder.created"));
       resetForm();
     } catch (reason) {
       setError(api.normalizeError(reason));
@@ -239,7 +242,7 @@ export function ReminderManager() {
         previous.map((item) => (item.id === deleted.id ? deleted : item)),
       );
       if (editing?.id === reminder.id) resetForm();
-      setSuccess("Напоминание удалено.");
+      setSuccess(t("reminder.deleted"));
     } catch (reason) {
       setError(api.normalizeError(reason));
     }
@@ -255,13 +258,10 @@ export function ReminderManager() {
     <section className="surface">
       <div className="surface-head">
         <div>
-          <h3 className="surface-title">Напоминания</h3>
-          <p className="surface-subtitle">
-            Правила синхронизируются между устройствами. В web они работают как настройки;
-            системное расписание уведомлений будет исполнять мобильный клиент.
-          </p>
+          <h3 className="surface-title">{t("reminder.title")}</h3>
+          <p className="surface-subtitle">{t("reminder.description")}</p>
         </div>
-        <span className="status-chip">Активных: {activeReminders.length}</span>
+        <span className="status-chip">{t("reminder.activeCount", { count: activeReminders.length })}</span>
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
@@ -281,7 +281,7 @@ export function ReminderManager() {
       >
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label" htmlFor="reminder-type">Тип</label>
+            <label className="form-label" htmlFor="reminder-type">{t("reminder.type")}</label>
             <select
               id="reminder-type"
               value={reminderType}
@@ -289,16 +289,16 @@ export function ReminderManager() {
                 setReminderType(event.target.value as Reminder["reminder_type"])
               }
             >
-              <option value="prayer">Намаз</option>
-              <option value="quran_reading">Чтение Корана</option>
-              <option value="quran_review">Повторение аятов</option>
+              <option value="prayer">{t("reminder.type.prayer")}</option>
+              <option value="quran_reading">{t("reminder.type.reading")}</option>
+              <option value="quran_review">{t("reminder.type.review")}</option>
             </select>
           </div>
 
           {reminderType === "prayer" ? (
             <>
               <div className="form-group">
-                <label className="form-label" htmlFor="reminder-prayer">Молитва</label>
+                <label className="form-label" htmlFor="reminder-prayer">{t("reminder.prayerEvent")}</label>
                 <select
                   id="reminder-prayer"
                   value={prayerEvent}
@@ -307,12 +307,12 @@ export function ReminderManager() {
                   }
                 >
                   {Object.entries(PRAYER_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>{t(label)}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="reminder-offset">Смещение, минут</label>
+                <label className="form-label" htmlFor="reminder-offset">{t("reminder.offset")}</label>
                 <input
                   id="reminder-offset"
                   type="number"
@@ -325,7 +325,7 @@ export function ReminderManager() {
             </>
           ) : (
             <div className="form-group">
-              <label className="form-label" htmlFor="reminder-time">Локальное время</label>
+              <label className="form-label" htmlFor="reminder-time">{t("reminder.localTime")}</label>
               <input
                 id="reminder-time"
                 type="time"
@@ -336,15 +336,15 @@ export function ReminderManager() {
           )}
 
           <div className="form-group">
-            <label className="form-label" htmlFor="reminder-signal">Сигнал</label>
+            <label className="form-label" htmlFor="reminder-signal">{t("reminder.signal")}</label>
             <select
               id="reminder-signal"
               value={signal}
               onChange={(event) => setSignal(event.target.value as Reminder["signal"])}
             >
-              <option value="sound">Короткий звук</option>
-              <option value="vibration">Вибрация</option>
-              <option value="silent">Без звука</option>
+              <option value="sound">{t("reminder.sound")}</option>
+              <option value="vibration">{t("reminder.vibration")}</option>
+              <option value="silent">{t("reminder.silent")}</option>
             </select>
           </div>
         </div>
@@ -352,7 +352,7 @@ export function ReminderManager() {
         {reminderType === "quran_review" && (
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="review-surah">Сура</label>
+              <label className="form-label" htmlFor="review-surah">{t("reminder.surah")}</label>
               <select
                 id="review-surah"
                 value={reviewSurah}
@@ -360,13 +360,13 @@ export function ReminderManager() {
               >
                 {surahs.map((surah) => (
                   <option key={surah.id} value={surah.number}>
-                    {surah.number}. {surah.name_ru}
+                    {surah.number}. {locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en}
                   </option>
                 ))}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="review-start">Начальный аят</label>
+              <label className="form-label" htmlFor="review-start">{t("reminder.startAyah")}</label>
               <select
                 id="review-start"
                 value={reviewStartId}
@@ -378,7 +378,7 @@ export function ReminderManager() {
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="review-end">Конечный аят</label>
+              <label className="form-label" htmlFor="review-end">{t("reminder.endAyah")}</label>
               <select
                 id="review-end"
                 value={reviewEndId}
@@ -393,7 +393,7 @@ export function ReminderManager() {
         )}
 
         <div>
-          <p className="form-label" style={{ marginBottom: 8 }}>Дни недели</p>
+          <p className="form-label" style={{ marginBottom: 8 }}>{t("reminder.weekdays")}</p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {WEEKDAYS.map(([bit, label]) => (
               <label key={bit} style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -402,7 +402,7 @@ export function ReminderManager() {
                   checked={Boolean(weekdaysMask & bit)}
                   onChange={() => toggleWeekday(bit)}
                 />
-                {label}
+                {t(label)}
               </label>
             ))}
           </div>
@@ -410,7 +410,7 @@ export function ReminderManager() {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label" htmlFor="reminder-timezone-mode">Timezone</label>
+            <label className="form-label" htmlFor="reminder-timezone-mode">{t("reminder.timezone")}</label>
             <select
               id="reminder-timezone-mode"
               value={timezoneMode}
@@ -418,13 +418,13 @@ export function ReminderManager() {
                 setTimezoneMode(event.target.value as ReminderTimezone["mode"])
               }
             >
-              <option value="device_local">Timezone устройства</option>
-              <option value="fixed">Фиксированный</option>
+              <option value="device_local">{t("reminder.deviceTimezone")}</option>
+              <option value="fixed">{t("reminder.fixed")}</option>
             </select>
           </div>
           {timezoneMode === "fixed" && (
             <div className="form-group">
-              <label className="form-label" htmlFor="reminder-fixed-timezone">IANA timezone</label>
+              <label className="form-label" htmlFor="reminder-fixed-timezone">{t("reminder.ianaTimezone")}</label>
               <input
                 id="reminder-fixed-timezone"
                 value={fixedTimezone}
@@ -438,50 +438,50 @@ export function ReminderManager() {
               checked={isEnabled}
               onChange={(event) => setIsEnabled(event.target.checked)}
             />
-            Включено
+            {t("reminder.enabled")}
           </label>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn btn-primary btn-sm" disabled={saving}>
-            {saving ? "Сохранение..." : editing ? "Сохранить изменения" : "Создать напоминание"}
+            {saving ? t("common.saving") : editing ? t("reminder.saveChanges") : t("reminder.create")}
           </button>
           {editing && (
             <button className="btn btn-secondary btn-sm" type="button" onClick={resetForm}>
-              Отмена
+              {t("common.cancel")}
             </button>
           )}
         </div>
       </form>
 
       {loading ? (
-        <p className="kpi-desc">Загрузка напоминаний...</p>
+        <p className="kpi-desc">{t("reminder.loading")}</p>
       ) : activeReminders.length === 0 ? (
-        <p className="kpi-desc">Напоминаний пока нет.</p>
+        <p className="kpi-desc">{t("reminder.none")}</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {activeReminders.map((reminder) => (
             <div className="track-row" key={reminder.id}>
               <div>
-                <strong>{REMINDER_TYPE_LABELS[reminder.reminder_type]}</strong>
-                <p className="kpi-desc">{formatSchedule(reminder)}</p>
+                <strong>{t(REMINDER_TYPE_LABELS[reminder.reminder_type])}</strong>
+                <p className="kpi-desc">{formatSchedule(reminder, t)}</p>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span className={`status-chip ${reminder.is_enabled ? "ok" : ""}`}>
-                  {reminder.is_enabled ? "Включено" : "Выключено"}
+                  {reminder.is_enabled ? t("reminder.enabled") : t("reminder.disabled")}
                 </span>
                 <button
                   className="btn btn-secondary btn-sm"
                   type="button"
                   onClick={() => void toggleReminder(reminder)}
                 >
-                  {reminder.is_enabled ? "Отключить" : "Включить"}
+                  {reminder.is_enabled ? t("reminder.disable") : t("reminder.enable")}
                 </button>
                 <button className="btn btn-secondary btn-sm" type="button" onClick={() => beginEdit(reminder)}>
-                  Изменить
+                  {t("common.edit")}
                 </button>
                 <button className="btn btn-danger btn-sm" type="button" onClick={() => void removeReminder(reminder)}>
-                  Удалить
+                  {t("common.delete")}
                 </button>
               </div>
             </div>
@@ -492,21 +492,25 @@ export function ReminderManager() {
   );
 }
 
-function formatSchedule(reminder: Reminder): string {
-  if (!reminder.schedule) return "Удалено";
+type Translate = ReturnType<typeof useI18n>["t"];
+
+function formatSchedule(reminder: Reminder, t: Translate): string {
+  if (!reminder.schedule) return t("reminder.removed");
   const schedule =
     reminder.schedule.kind === "prayer"
-      ? `${PRAYER_LABELS[reminder.schedule.prayer_event]} ${formatOffset(reminder.schedule.prayer_offset_minutes)}`
+      ? `${t(PRAYER_LABELS[reminder.schedule.prayer_event])} ${formatOffset(reminder.schedule.prayer_offset_minutes, t)}`
       : reminder.schedule.local_time.slice(0, 5);
   const timezone =
-    reminder.timezone.mode === "fixed" ? reminder.timezone.name : "timezone устройства";
+    reminder.timezone.mode === "fixed" ? reminder.timezone.name : t("reminder.deviceTimezone");
   const review = reminder.review_target
     ? ` · ${reminder.review_target.start.surah_number}:${reminder.review_target.start.ayah_number}–${reminder.review_target.end.surah_number}:${reminder.review_target.end.ayah_number}`
     : "";
   return `${schedule}${review} · ${timezone}`;
 }
 
-function formatOffset(minutes: number): string {
-  if (minutes === 0) return "точно по времени";
-  return minutes > 0 ? `через ${minutes} мин.` : `за ${Math.abs(minutes)} мин.`;
+function formatOffset(minutes: number, t: Translate): string {
+  if (minutes === 0) return t("reminder.exact");
+  return minutes > 0
+    ? t("reminder.after", { minutes })
+    : t("reminder.before", { minutes: Math.abs(minutes) });
 }

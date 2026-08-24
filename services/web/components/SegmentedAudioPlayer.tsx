@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AudioTrack, AyahAudioSegment } from "../lib/api";
+import { useI18n } from "../lib/i18n-context";
+import { MessageKey, TranslationVariables } from "../lib/i18n";
 
 export type AudioPlaybackRequest = {
   requestId: number;
@@ -26,6 +28,11 @@ type RuntimePlan = {
   currentIndex: number;
   startMs: number;
   endMs: number;
+};
+
+type StatusMessage = {
+  key: MessageKey;
+  variables?: TranslationVariables;
 };
 
 type SegmentedAudioPlayerProps = {
@@ -86,12 +93,6 @@ function buildPlan(
   };
 }
 
-function formatSeconds(milliseconds: number): string {
-  if (milliseconds === 0) return "Без паузы";
-  const seconds = milliseconds / 1000;
-  return `${seconds.toLocaleString("ru-RU")} с`;
-}
-
 function formatRemaining(milliseconds: number): string {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -105,6 +106,7 @@ export function SegmentedAudioPlayer({
   onActiveAyahChange,
   onPlayingChange,
 }: SegmentedAudioPlayerProps) {
+  const { t, formatNumber } = useI18n();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const requestRef = useRef<AudioPlaybackRequest | null>(null);
   const segmentsRef = useRef<AyahAudioSegment[]>([]);
@@ -124,7 +126,7 @@ export function SegmentedAudioPlayer({
   const [activePlan, setActivePlan] = useState<RuntimePlan | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [status, setStatus] = useState("Аудио не запущено");
+  const [status, setStatus] = useState<StatusMessage>({ key: "player.status.idle" });
   const [error, setError] = useState<string | null>(null);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -198,10 +200,10 @@ export function SegmentedAudioPlayer({
     void audio.play().catch(() => {
       setIsPlaying(false);
       onPlayingChangeRef.current?.(false);
-      setStatus("Позиция сохранена — нажмите «Продолжить»");
-      setError("Браузер заблокировал автозапуск аудио.");
+      setStatus({ key: "player.status.resumePrompt" });
+      setError(t("player.autoplayBlocked"));
     });
-  }, []);
+  }, [t]);
 
   const setPlanPosition = useCallback((
     plan: RuntimePlan,
@@ -220,7 +222,7 @@ export function SegmentedAudioPlayer({
     updateMediaPosition();
   }, [updateActiveSegment, updateMediaPosition]);
 
-  const stopAtCurrentPosition = useCallback((nextStatus: string) => {
+  const stopAtCurrentPosition = useCallback((nextStatus: StatusMessage) => {
     clearTransition();
     const audio = audioRef.current;
     if (audio) audio.pause();
@@ -231,7 +233,7 @@ export function SegmentedAudioPlayer({
     updateMediaPosition();
   }, [clearTransition, updateMediaPosition]);
 
-  const finishPlayback = useCallback((nextStatus: string) => {
+  const finishPlayback = useCallback((nextStatus: StatusMessage) => {
     clearTransition();
     const audio = audioRef.current;
     const plan = planRef.current;
@@ -254,10 +256,10 @@ export function SegmentedAudioPlayer({
     setError(null);
     setPlanPosition(nextPlan, nextPlan.currentIndex, autoPlay);
     if (autoPlay) {
-      setStatus("Запуск воспроизведения…");
+      setStatus({ key: "player.status.starting" });
       attemptPlay();
     } else {
-      setStatus("Готово к воспроизведению");
+      setStatus({ key: "player.status.ready" });
       onActiveAyahChangeRef.current?.(null);
     }
   }, [attemptPlay, clearTransition, setPlanPosition]);
@@ -275,7 +277,7 @@ export function SegmentedAudioPlayer({
       hasStartedRef.current = false;
       setRangeStartAyah(null);
       setRangeEndAyah(null);
-      setStatus("Аудио не запущено");
+      setStatus({ key: "player.status.idle" });
       updateActiveSegment(null);
       if (audio) {
         audio.pause();
@@ -343,7 +345,7 @@ export function SegmentedAudioPlayer({
         setSleepDeadline(null);
         setSleepMode("off");
         sleepModeRef.current = "off";
-        stopAtCurrentPosition("Таймер сна остановил воспроизведение · позиция сохранена");
+        stopAtCurrentPosition({ key: "player.status.sleepPosition" });
       }
     };
     updateRemaining();
@@ -361,7 +363,14 @@ export function SegmentedAudioPlayer({
     onPlayingChangeRef.current?.(false);
 
     const delay = pauseMsRef.current;
-    setStatus(delay > 0 ? `Пауза между аятами · ${formatSeconds(delay)}` : "Переход к аяту…");
+    setStatus(delay > 0
+      ? {
+          key: "player.status.pauseBetween",
+          variables: {
+            pause: t("player.seconds", { value: formatNumber(delay / 1000) }),
+          },
+        }
+      : { key: "player.status.moving" });
     transitionTimerRef.current = setTimeout(() => {
       transitionTimerRef.current = null;
       boundaryTransitionRef.current = false;
@@ -370,7 +379,7 @@ export function SegmentedAudioPlayer({
       setPlanPosition(currentPlan, nextIndex);
       attemptPlay();
     }, delay);
-  }, [attemptPlay, setPlanPosition]);
+  }, [attemptPlay, formatNumber, setPlanPosition, t]);
 
   const handleBoundary = useCallback(() => {
     const plan = planRef.current;
@@ -379,7 +388,7 @@ export function SegmentedAudioPlayer({
     if (sleepModeRef.current === "ayah") {
       setSleepMode("off");
       sleepModeRef.current = "off";
-      stopAtCurrentPosition("Таймер сна остановил воспроизведение после аята");
+      stopAtCurrentPosition({ key: "player.status.sleepAyah" });
       updateActiveSegment(null);
       return;
     }
@@ -399,7 +408,7 @@ export function SegmentedAudioPlayer({
       return;
     }
 
-    finishPlayback("Воспроизведение завершено");
+    finishPlayback({ key: "player.status.finished" });
   }, [finishPlayback, scheduleBoundaryTransition, stopAtCurrentPosition, updateActiveSegment]);
 
   const handleTimeUpdate = useCallback(() => {
@@ -454,10 +463,10 @@ export function SegmentedAudioPlayer({
     playWhenReadyRef.current = false;
     setPlanPosition(plan, plan.currentIndex, shouldPlay);
     if (shouldPlay) {
-      setStatus("Запуск воспроизведения…");
+      setStatus({ key: "player.status.starting" });
       attemptPlay();
     } else {
-      setStatus("Готово к воспроизведению");
+      setStatus({ key: "player.status.ready" });
       onActiveAyahChangeRef.current?.(null);
     }
   }, [attemptPlay, setPlanPosition]);
@@ -472,7 +481,7 @@ export function SegmentedAudioPlayer({
       setPlanPosition(plan, plan.startIndex);
     }
     setError(null);
-    setStatus("Возобновление с сохранённой позиции…");
+    setStatus({ key: "player.status.resuming" });
     attemptPlay();
   }, [attemptPlay, clearTransition, setPlanPosition]);
 
@@ -516,8 +525,8 @@ export function SegmentedAudioPlayer({
     ];
     const handlers: Partial<Record<MediaSessionAction, MediaSessionActionHandler>> = {
       play: resumePlayback,
-      pause: () => stopAtCurrentPosition("Пауза · позиция сохранена"),
-      stop: () => finishPlayback("Воспроизведение остановлено"),
+      pause: () => stopAtCurrentPosition({ key: "player.status.paused" }),
+      stop: () => finishPlayback({ key: "player.status.stopped" }),
       seekbackward: (details) => seekBy(-(details.seekOffset || 10)),
       seekforward: (details) => seekBy(details.seekOffset || 10),
       previoustrack: () => moveToAdjacentAyah(-1),
@@ -583,10 +592,14 @@ export function SegmentedAudioPlayer({
   };
 
   const currentSelectionLabel = activePlan?.kind === "range"
-    ? `Диапазон ${activeRequest?.track.surah_number}:${activeRequest?.segments[activePlan.startIndex]?.ayah_number}–${activeRequest?.track.surah_number}:${activeRequest?.segments[activePlan.endIndex]?.ayah_number}`
+    ? t("player.rangeLabel", {
+        surah: activeRequest?.track.surah_number || "—",
+        start: activeRequest?.segments[activePlan.startIndex]?.ayah_number || "—",
+        end: activeRequest?.segments[activePlan.endIndex]?.ayah_number || "—",
+      })
     : activePlan?.kind === "ayah" && activeAyah
-      ? `Аят ${activeAyah.surah_number}:${activeAyah.ayah_number}`
-      : activeRequest?.title || "Аудио не выбрано";
+      ? t("common.ayah", { ayah: `${activeAyah.surah_number}:${activeAyah.ayah_number}` })
+      : activeRequest?.title || t("player.noAudio");
 
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
@@ -594,12 +607,12 @@ export function SegmentedAudioPlayer({
         <div>
           <strong>{currentSelectionLabel}</strong>
           <p className="kpi-desc">
-            {activeRequest?.artist || "Выберите запись"}
-            {activeAyah ? ` · аят ${activeAyah.surah_number}:${activeAyah.ayah_number}` : ""}
+            {activeRequest?.artist || t("player.chooseRecording")}
+            {activeAyah ? ` · ${t("player.activeAyah", { surah: activeAyah.surah_number, ayah: activeAyah.ayah_number })}` : ""}
           </p>
         </div>
         <span className={`status-chip${isPlaying ? " ok" : ""}`} aria-live="polite">
-          {status}
+          {t(status.key, status.variables)}
         </span>
       </div>
 
@@ -612,7 +625,7 @@ export function SegmentedAudioPlayer({
           onClick={resumePlayback}
           disabled={!activeRequest || isPlaying}
         >
-          ▶ {hasStarted ? "Продолжить" : "Воспроизвести"}
+          ▶ {hasStarted ? t("player.continue") : t("player.play")}
         </button>
         <audio
           ref={audioRef}
@@ -624,7 +637,7 @@ export function SegmentedAudioPlayer({
             setHasStarted(true);
             setIsPlaying(true);
             onPlayingChangeRef.current?.(true);
-            setStatus("Воспроизводится");
+            setStatus({ key: "player.status.playing" });
             setError(null);
             if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
             handleTimeUpdate();
@@ -632,25 +645,25 @@ export function SegmentedAudioPlayer({
           onPlaying={() => {
             setIsPlaying(true);
             onPlayingChangeRef.current?.(true);
-            setStatus("Воспроизводится");
+            setStatus({ key: "player.status.playing" });
           }}
           onPause={() => {
             setIsPlaying(false);
             onPlayingChangeRef.current?.(false);
             if (!boundaryTransitionRef.current) {
-              setStatus(hasStartedRef.current
-                ? "Пауза · позиция сохранена"
-                : "Готово к воспроизведению");
+              setStatus({
+                key: hasStartedRef.current ? "player.status.paused" : "player.status.ready",
+              });
             }
             if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
             updateMediaPosition();
           }}
-          onWaiting={() => setStatus("Буферизация · позиция сохранена")}
+          onWaiting={() => setStatus({ key: "player.status.buffering" })}
           onCanPlay={() => {
             if (!isPlaying) {
-              setStatus(hasStartedRef.current
-                ? "Готово к продолжению с сохранённой позиции"
-                : "Готово к воспроизведению");
+              setStatus({
+                key: hasStartedRef.current ? "player.status.readyResume" : "player.status.ready",
+              });
             }
           }}
           onEnded={handleBoundary}
@@ -664,7 +677,7 @@ export function SegmentedAudioPlayer({
         aria-expanded={settingsOpen}
         onClick={() => setSettingsOpen((current) => !current)}
       >
-        {settingsOpen ? "Скрыть расширенные настройки" : "Повтор, диапазон и таймер"}
+        {settingsOpen ? t("player.hideSettings") : t("player.showSettings")}
       </button>
 
       {settingsOpen && (
@@ -672,87 +685,91 @@ export function SegmentedAudioPlayer({
           <div className="segmented-audio-settings">
         <div className="form-group">
           <label className="form-label" htmlFor={`repeat-mode-${activeRequest?.track.id || "empty"}`}>
-            Повтор
+            {t("player.repeat")}
           </label>
           <select
             id={`repeat-mode-${activeRequest?.track.id || "empty"}`}
-            aria-label="Режим повтора"
+            aria-label={t("player.repeatAria")}
             value={repeatMode}
             onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}
             disabled={!activeRequest}
           >
-            <option value="off">Без повтора</option>
-            <option value="ayah" disabled={availableAyahs.length === 0}>Повтор аята</option>
-            <option value="selection">Повтор суры / диапазона</option>
+            <option value="off">{t("player.repeatOff")}</option>
+            <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.repeatAyah")}</option>
+            <option value="selection">{t("player.repeatSelection")}</option>
           </select>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor={`playback-rate-${activeRequest?.track.id || "empty"}`}>
-            Скорость
+            {t("player.speed")}
           </label>
           <select
             id={`playback-rate-${activeRequest?.track.id || "empty"}`}
-            aria-label="Скорость воспроизведения"
+            aria-label={t("player.speedAria")}
             value={playbackRate}
             onChange={(event) => setPlaybackRate(Number(event.target.value))}
             disabled={!activeRequest}
           >
             {SPEED_OPTIONS.map((speed) => (
-              <option key={speed} value={speed}>{speed.toLocaleString("ru-RU")}×</option>
+              <option key={speed} value={speed}>{formatNumber(speed)}×</option>
             ))}
           </select>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor={`ayah-pause-${activeRequest?.track.id || "empty"}`}>
-            Пауза между аятами
+            {t("player.pause")}
           </label>
           <select
             id={`ayah-pause-${activeRequest?.track.id || "empty"}`}
-            aria-label="Пауза между аятами"
+            aria-label={t("player.pause")}
             value={pauseMs}
             onChange={(event) => setPauseMs(Number(event.target.value))}
             disabled={!activeRequest || availableAyahs.length === 0}
           >
             {PAUSE_OPTIONS.map((milliseconds) => (
-              <option key={milliseconds} value={milliseconds}>{formatSeconds(milliseconds)}</option>
+              <option key={milliseconds} value={milliseconds}>
+                {milliseconds === 0
+                  ? t("player.noPause")
+                  : t("player.seconds", { value: formatNumber(milliseconds / 1000) })}
+              </option>
             ))}
           </select>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor={`sleep-timer-${activeRequest?.track.id || "empty"}`}>
-            Таймер сна
+            {t("player.sleep")}
           </label>
           <select
             id={`sleep-timer-${activeRequest?.track.id || "empty"}`}
-            aria-label="Таймер сна"
+            aria-label={t("player.sleep")}
             value={sleepMode}
             onChange={(event) => handleSleepModeChange(event.target.value as SleepMode)}
             disabled={!activeRequest}
           >
-            <option value="off">Выключен</option>
-            <option value="ayah" disabled={availableAyahs.length === 0}>После текущего аята</option>
-            <option value="5">Через 5 минут</option>
-            <option value="15">Через 15 минут</option>
-            <option value="30">Через 30 минут</option>
-            <option value="60">Через 60 минут</option>
+            <option value="off">{t("player.off")}</option>
+            <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.afterAyah")}</option>
+            <option value="5">{t("player.afterMinutes", { count: 5 })}</option>
+            <option value="15">{t("player.afterMinutes", { count: 15 })}</option>
+            <option value="30">{t("player.afterMinutes", { count: 30 })}</option>
+            <option value="60">{t("player.afterMinutes", { count: 60 })}</option>
           </select>
           {sleepRemainingMs !== null && (
             <span className="kpi-desc" aria-live="polite">
-              Осталось {formatRemaining(sleepRemainingMs)}
+              {t("player.remaining", { time: formatRemaining(sleepRemainingMs) })}
             </span>
           )}
         </div>
           </div>
 
-          <div className="segmented-audio-range" aria-label="Воспроизведение диапазона аятов">
+          <div className="segmented-audio-range" aria-label={t("player.rangeAria")}>
               <div className="form-group">
-                <label className="form-label" htmlFor={`range-start-${activeRequest?.track.id || "empty"}`}>С аята</label>
+                <label className="form-label" htmlFor={`range-start-${activeRequest?.track.id || "empty"}`}>{t("player.fromAyah")}</label>
                 <select
                   id={`range-start-${activeRequest?.track.id || "empty"}`}
-                  aria-label="Начало диапазона аятов"
+                  aria-label={t("player.rangeStartAria")}
                   value={rangeStartAyah ?? ""}
                   disabled={availableAyahs.length === 0}
                   onChange={(event) => {
@@ -766,10 +783,10 @@ export function SegmentedAudioPlayer({
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor={`range-end-${activeRequest?.track.id || "empty"}`}>По аят</label>
+                <label className="form-label" htmlFor={`range-end-${activeRequest?.track.id || "empty"}`}>{t("player.toAyah")}</label>
                 <select
                   id={`range-end-${activeRequest?.track.id || "empty"}`}
-                  aria-label="Конец диапазона аятов"
+                  aria-label={t("player.rangeEndAria")}
                   value={rangeEndAyah ?? ""}
                   disabled={availableAyahs.length === 0}
                   onChange={(event) => {
@@ -788,13 +805,12 @@ export function SegmentedAudioPlayer({
                 onClick={startRange}
                 disabled={availableAyahs.length === 0}
               >
-                ▶ Воспроизвести диапазон
+                {t("player.playRange")}
               </button>
           </div>
 
           <p className="segmented-audio-browser-note">
-            Управление Media Session доступно в поддерживаемых браузерах; воспроизведение после
-            закрытия вкладки или приложения не гарантируется.
+            {t("player.mediaNote")}
           </p>
         </>
       )}

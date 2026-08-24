@@ -1,8 +1,8 @@
 # P0/MVP gap audit
 
-Дата аудита: 23 августа 2026 года
+Дата аудита: 24 августа 2026 года
 
-Аудируемый baseline: репозиторий после технического среза P0-A от 23 августа 2026 года
+Аудируемый baseline: репозиторий после backend+web среза локализации от 24 августа 2026 года
 
 Источник требований: [утверждённое ТЗ](../thoughts/shared/specs/2026-08-09-quran-platform-backend.md)
 
@@ -22,16 +22,15 @@
 
 | Срез | Готово | Частично | Нет | Внешний gate |
 |---|---:|---:|---:|---:|
-| 18 P0-групп | 2 | 12 | 4 | 0 |
-| 36 критериев приёмки | 10 | 13 | 11 | 2 |
+| 18 P0-групп | 3 | 11 | 4 | 0 |
+| 36 критериев приёмки | 10 | 14 | 10 | 2 |
 
 Сильная часть текущего baseline — канонический Quran dataset, публичное Quran/audio API,
 гостевая и verified-email сессии, transactional guest merge, позиции/закладки, надёжная
 offline-синхронизация серверного состояния, prayer engine/profile, local-only reminder rules,
-feedback и production runtime. Основной незакрытый объём находится в Flutter, расширенном
-account lifecycle, offline packages, расширенном плеере, локальном планировщике уведомлений,
-локализации и отсутствующих
-контентных/коммерческих доменах.
+feedback, account lifecycle, расширенный web-аудиоплеер, четырёхъязычный web UI и production
+runtime. Основной незакрытый объём находится в Flutter, offline packages, локальном планировщике
+уведомлений, клиентском i18n parity и отсутствующих контентных/коммерческих доменах.
 
 ## Доказательная база
 
@@ -41,12 +40,13 @@ account lifecycle, offline packages, расширенном плеере, лок
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 479 passed, 7 skipped; суммарное покрытие 87,87%.
-- Web имеет 25 Playwright cases, включая verified-email merge без credentials в
+- Полный backend test suite: 482 passed, 7 skipped; суммарное покрытие 84,99%.
+- Web имеет 27 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,
-  device revoke и grace-period account deletion/cancel.
+  device revoke, grace-period account deletion/cancel, переключение RU/EN/AR/TR, сохранение
+  locale, browser-language negotiation и арабский RTL.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
@@ -58,7 +58,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 | # | Требование P0 | Статус | Реализовано | Для полного P0 не хватает |
 |---:|---|:---:|---|---|
 | 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF, session restore, device inventory/selective revoke, logout-all и self-service deletion с grace period | Identity unlink/change safeguards и дополнительные OAuth providers |
-| 2 | RU/EN/AR и RTL | 🟡 | Многоязычные имена контента, locale constraints, арабский RTL-текст | Web зафиксирован на `lang=ru`; нет i18n routing/catalog, language switch и полного RTL UI |
+| 2 | RU/EN/AR и RTL | 🟡 | Backend и web поддерживают RU/EN/AR/TR: типизированный каталог, browser-language negotiation, cookie/account persistence, language switch, динамические `lang`/`dir`, арабский RTL и локализованные product/error flows | Нет Flutter и Telegram Mini App parity |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
@@ -176,6 +176,10 @@ account lifecycle, offline packages, расширенном плеере, лок
 - Web-аудиоплеер использует единый segment state machine в каталоге и Мусхафе: repeat ayah/
   selection, диапазоны, учебные паузы, скорость, sleep timer, сохранение позиции при browser
   interruption и Media Session actions. Это не заявляет OS background playback.
+- Backend и web локализованы на RU/EN/AR/TR: locale валидируется и сохраняется для пользователя
+  и устройства, SSR выбирает язык из cookie или `Accept-Language`, переключатель сохраняет выбор,
+  а арабский режим задаёт `lang=ar`, `dir=rtl` и логическое RTL-выравнивание. Flutter/TMA parity
+  остаётся отдельной клиентской задачей.
 
 ## Приоритетный backlog
 
@@ -210,7 +214,7 @@ account lifecycle, offline packages, расширенном плеере, лок
 
 ### P0-D — продуктовые домены
 
-1. RU/EN/AR i18n и полный RTL UI.
+1. ✅ Backend+web RU/EN/AR/TR i18n и полный RTL UI; Flutter/TMA parity остаётся в client backlog.
 2. Translation/tafsir placeholder schema/API/UI.
 3. Reading sessions, goals, streaks и playback-state sync.
 4. Safe feedback attachments, user notifications и editorial approvals.

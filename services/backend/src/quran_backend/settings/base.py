@@ -384,6 +384,7 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_PATCH": False,
     "SCHEMA_PATH_PREFIX": r"/api/v1",
     "ENUM_NAME_OVERRIDES": {
+        "InterfaceLocaleEnum": ["ar", "en", "ru", "tr"],
         "ReadingPositionEntityTypeEnum": ["reading_position"],
         "BookmarkEntityTypeEnum": ["bookmark"],
         "ReminderEntityTypeEnum": ["reminder"],

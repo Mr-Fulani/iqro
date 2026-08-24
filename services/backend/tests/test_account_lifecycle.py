@@ -166,6 +166,43 @@ def test_device_inventory_and_selective_revoke_are_user_scoped(api_client: APICl
     assert rejected_refresh.status_code == 401
 
 
+def test_current_session_locale_updates_user_and_device(api_client: APIClient) -> None:
+    user, device, credentials = _active_session()
+
+    response = api_client.patch(
+        reverse("account_user:me"),
+        {"locale": "tr"},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {credentials['access_token']}",
+    )
+
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    assert response.json()["user"]["preferred_locale"] == "tr"
+    assert response.json()["device"]["locale"] == "tr"
+    user.refresh_from_db()
+    device.refresh_from_db()
+    assert user.preferred_locale == "tr"
+    assert device.locale == "tr"
+
+
+def test_current_session_locale_rejects_unknown_locale(api_client: APIClient) -> None:
+    user, device, credentials = _active_session()
+
+    response = api_client.patch(
+        reverse("account_user:me"),
+        {"locale": "de"},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {credentials['access_token']}",
+    )
+
+    assert response.status_code == 400
+    user.refresh_from_db()
+    device.refresh_from_db()
+    assert user.preferred_locale == "ru"
+    assert device.locale == "ru"
+
+
 def test_deletion_request_blocks_product_apis_but_can_be_cancelled_after_reauth(
     api_client: APIClient,
 ) -> None:

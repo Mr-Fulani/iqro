@@ -8,25 +8,23 @@ import {
   generateUuidV7,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
+import { MessageKey } from "../lib/i18n";
 
-const PLATFORM_LABELS: Record<DeviceInventory["platform"], string> = {
-  web: "Web-браузер",
-  ios: "iPhone / iPad",
-  android: "Android",
-  telegram: "Telegram",
+const PLATFORM_LABELS: Record<DeviceInventory["platform"], MessageKey> = {
+  web: "account.platform.web",
+  ios: "account.platform.ios",
+  android: "account.platform.android",
+  telegram: "account.platform.telegram",
 };
 
 type LifecycleAction = "request" | "cancel";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("ru-RU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 export function AccountSecurityPanel() {
+  const { t, formatDate: formatLocalizedDate } = useI18n();
+  const formatDate = (value: string | null | undefined) => value
+    ? formatLocalizedDate(value, { dateStyle: "medium", timeStyle: "short" })
+    : "—";
   const {
     session,
     error: authError,
@@ -82,7 +80,7 @@ export function AccountSecurityPanel() {
       await api.revokeDevice(deviceId);
       setDevices((current) => current.filter((device) => device.id !== deviceId));
       setConfirmDeviceId(null);
-      setSuccess("Сессии выбранного устройства завершены.");
+      setSuccess(t("account.deviceRevoked"));
     } catch (error) {
       setLocalError(api.normalizeError(error));
     } finally {
@@ -103,7 +101,7 @@ export function AccountSecurityPanel() {
     setLocalError(null);
     const challenge = await startEmailChallenge(session.user.email);
     if (!challenge) {
-      setLocalError("Не удалось отправить код. Повторите попытку.");
+      setLocalError(t("account.codeSendError"));
       return;
     }
     setChallengeId(challenge.challenge_id);
@@ -115,7 +113,7 @@ export function AccountSecurityPanel() {
     setLocalError(null);
     const verified = await verifyEmailChallenge(challengeId, code, generateUuidV7());
     if (!verified) {
-      setLocalError("Не удалось подтвердить код.");
+      setLocalError(t("account.codeVerifyError"));
       return;
     }
     const completed =
@@ -123,7 +121,7 @@ export function AccountSecurityPanel() {
         ? await requestAccountDeletion(challengeId)
         : await cancelAccountDeletion(challengeId);
     if (!completed) {
-      setLocalError("Не удалось завершить действие с аккаунтом.");
+      setLocalError(t("account.actionError"));
       return;
     }
     setAction(null);
@@ -131,20 +129,20 @@ export function AccountSecurityPanel() {
     setCode("");
     setSuccess(
       action === "request"
-        ? "Удаление аккаунта запланировано. До указанной даты его можно отменить."
-        : "Удаление аккаунта отменено.",
+        ? t("auth.deletionScheduledNotice")
+        : t("auth.deletionCancelledNotice"),
     );
   };
 
   const lifecycleForm = action ? (
     <div className={action === "request" ? "alert alert-error" : "alert alert-info"}>
       <strong>
-        {action === "request" ? "Запланировать удаление аккаунта?" : "Отменить удаление?"}
+        {action === "request" ? t("account.requestTitle") : t("account.cancelTitle")}
       </strong>
       <p style={{ marginTop: 6 }}>
         {action === "request"
-          ? "Обычный доступ будет заблокирован сразу. Через 7 дней синхронизируемые данные будут удалены, а аккаунт — анонимизирован."
-          : "Для восстановления аккаунта подтвердите владение email новым одноразовым кодом."}
+          ? t("account.requestDescription")
+          : t("account.cancelDescription")}
       </p>
       {!challengeId ? (
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
@@ -154,7 +152,7 @@ export function AccountSecurityPanel() {
             disabled={authLoading}
             onClick={() => void sendLifecycleCode()}
           >
-            {authLoading ? "Отправка..." : `Получить код на ${session?.user.email}`}
+            {authLoading ? t("common.sending") : t("account.getCode", { email: session?.user.email || "" })}
           </button>
           <button
             className="btn btn-secondary btn-sm"
@@ -162,14 +160,14 @@ export function AccountSecurityPanel() {
             disabled={authLoading}
             onClick={() => setAction(null)}
           >
-            Назад
+            {t("common.back")}
           </button>
         </div>
       ) : (
         <form onSubmit={(event) => void submitLifecycleAction(event)} style={{ marginTop: 12 }}>
           <div className="form-group" style={{ maxWidth: 320 }}>
             <label className="form-label" htmlFor="account-lifecycle-code">
-              Код из письма
+              {t("authForm.emailCode")}
             </label>
             <input
               id="account-lifecycle-code"
@@ -188,10 +186,10 @@ export function AccountSecurityPanel() {
               disabled={authLoading || code.length !== 6}
             >
               {authLoading
-                ? "Проверка..."
+                ? t("common.checking")
                 : action === "request"
-                  ? "Подтвердить удаление"
-                  : "Восстановить аккаунт"}
+                  ? t("account.confirmDeletion")
+                  : t("account.restore")}
             </button>
             <button
               className="btn btn-secondary btn-sm"
@@ -199,7 +197,7 @@ export function AccountSecurityPanel() {
               disabled={authLoading}
               onClick={() => beginLifecycleAction(action)}
             >
-              Запросить новый код
+              {t("account.newCode")}
             </button>
           </div>
         </form>
@@ -210,14 +208,12 @@ export function AccountSecurityPanel() {
   if (isPendingDeletion) {
     return (
       <section className="surface" aria-labelledby="pending-deletion-title">
-        <p className="eyebrow">Безопасность аккаунта</p>
+        <p className="eyebrow">{t("account.security")}</p>
         <h2 className="surface-title" id="pending-deletion-title">
-          Удаление аккаунта запланировано
+          {t("account.pendingTitle")}
         </h2>
         <p className="surface-subtitle" style={{ marginBottom: 16 }}>
-          Аккаунт и синхронизируемые данные будут удалены после {" "}
-          <strong>{formatDate(session.user.deletion_scheduled_for)}</strong>. До этого момента
-          удаление можно отменить после повторной проверки email.
+          {t("account.pendingDescription", { date: formatDate(session.user.deletion_scheduled_for) })}
         </p>
         {(localError || authError) && (
           <div className="alert alert-error" style={{ marginBottom: 14 }}>
@@ -233,10 +229,10 @@ export function AccountSecurityPanel() {
               type="button"
               onClick={() => beginLifecycleAction("cancel")}
             >
-              Отменить удаление
+              {t("account.cancelDeletion")}
             </button>
             <button className="btn btn-secondary" type="button" onClick={() => void logout()}>
-              Выйти
+              {t("auth.logout")}
             </button>
           </div>
         )}
@@ -251,11 +247,9 @@ export function AccountSecurityPanel() {
       <section className="surface" aria-labelledby="devices-title">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">Безопасность аккаунта</p>
-            <h3 className="surface-title" id="devices-title">Устройства и сессии</h3>
-            <p className="surface-subtitle">
-              Завершайте доступ на устройствах, которыми больше не пользуетесь.
-            </p>
+            <p className="eyebrow">{t("account.security")}</p>
+            <h3 className="surface-title" id="devices-title">{t("account.devicesTitle")}</h3>
+            <p className="surface-subtitle">{t("account.devicesDescription")}</p>
           </div>
           <button
             className="btn btn-secondary btn-sm"
@@ -263,7 +257,7 @@ export function AccountSecurityPanel() {
             disabled={loadingDevices}
             onClick={() => void loadDevices()}
           >
-            {loadingDevices ? "Обновление..." : "Обновить"}
+            {loadingDevices ? t("account.refreshing") : t("common.refresh")}
           </button>
         </div>
         {localError && <div className="alert alert-error" style={{ marginBottom: 14 }}>{localError}</div>}
@@ -272,11 +266,14 @@ export function AccountSecurityPanel() {
           {devices.map((device) => (
             <div className="track-row" key={device.id}>
               <div>
-                <strong>{PLATFORM_LABELS[device.platform]}</strong>
-                {device.is_current && <span className="status-chip ok" style={{ marginLeft: 8 }}>Текущее</span>}
+                <strong>{t(PLATFORM_LABELS[device.platform])}</strong>
+                {device.is_current && <span className="status-chip ok" style={{ marginInlineStart: 8 }}>{t("account.current")}</span>}
                 <p className="kpi-desc">
-                  Версия {device.app_version || "не указана"} · язык {device.locale.toUpperCase()} ·
-                  последний доступ {formatDate(device.last_seen_at)}
+                  {t("account.deviceMeta", {
+                    version: device.app_version || t("common.notSpecified"),
+                    locale: device.locale.toUpperCase(),
+                    date: formatDate(device.last_seen_at),
+                  })}
                 </p>
               </div>
               {!device.is_current && (
@@ -288,7 +285,7 @@ export function AccountSecurityPanel() {
                       disabled={revokingDeviceId === device.id}
                       onClick={() => void revokeDevice(device.id)}
                     >
-                      {revokingDeviceId === device.id ? "Отключение..." : "Подтвердить отключение"}
+                      {revokingDeviceId === device.id ? t("account.disconnecting") : t("account.confirmDisconnect")}
                     </button>
                     <button
                       className="btn btn-secondary btn-sm"
@@ -296,7 +293,7 @@ export function AccountSecurityPanel() {
                       disabled={revokingDeviceId === device.id}
                       onClick={() => setConfirmDeviceId(null)}
                     >
-                      Отмена
+                      {t("common.cancel")}
                     </button>
                   </div>
                 ) : (
@@ -305,25 +302,22 @@ export function AccountSecurityPanel() {
                     type="button"
                     onClick={() => setConfirmDeviceId(device.id)}
                   >
-                    Завершить сессии
+                    {t("account.endSessions")}
                   </button>
                 )
               )}
             </div>
           ))}
           {!loadingDevices && devices.length === 0 && (
-            <p className="kpi-desc">Активные устройства не найдены.</p>
+            <p className="kpi-desc">{t("account.noDevices")}</p>
           )}
         </div>
       </section>
 
       <section className="surface" aria-labelledby="danger-zone-title">
-        <p className="eyebrow">Опасная зона</p>
-        <h3 className="surface-title" id="danger-zone-title">Удаление аккаунта</h3>
-        <p className="surface-subtitle" style={{ marginBottom: 16 }}>
-          После повторной проверки email начнётся 7-дневный период отмены. До его окончания
-          безвозвратное удаление не выполняется.
-        </p>
+        <p className="eyebrow">{t("account.dangerZone")}</p>
+        <h3 className="surface-title" id="danger-zone-title">{t("account.deletionTitle")}</h3>
+        <p className="surface-subtitle" style={{ marginBottom: 16 }}>{t("account.deletionDescription")}</p>
         {(localError || authError) && (
           <div className="alert alert-error" style={{ marginBottom: 14 }}>
             {localError || authError}
@@ -336,7 +330,7 @@ export function AccountSecurityPanel() {
             type="button"
             onClick={() => beginLifecycleAction("request")}
           >
-            Удалить аккаунт
+            {t("account.delete")}
           </button>
         )}
       </section>

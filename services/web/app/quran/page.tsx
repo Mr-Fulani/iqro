@@ -15,12 +15,14 @@ import {
   Surah,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
+import { useI18n } from "../../lib/i18n-context";
 
 function QuranContent() {
   const searchParams = useSearchParams();
   const initialSurahParam = searchParams.get("surah");
 
   const { isLoggedIn, loginGuest } = useAuth();
+  const { locale, t } = useI18n();
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);
@@ -121,6 +123,10 @@ function QuranContent() {
   }, [selectedEdition, currentPage, viewMode]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
+  const editionName = (edition: QuranEdition) =>
+    locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
+  const surahName = (surah: Surah) =>
+    locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
   const mushafRegions = useMemo(() => {
     const unique = new Map<string, MushafPage["regions"][number]>();
     for (const region of mushafPage?.regions || []) {
@@ -167,7 +173,7 @@ function QuranContent() {
     if (!isLoggedIn) {
       const res = await loginGuest();
       if (!res) {
-        setFeedbackMessage({ text: "Не удалось войти для сохранения позиции.", type: "err" });
+        setFeedbackMessage({ text: t("quran.savePositionLoginError"), type: "err" });
         return;
       }
     }
@@ -182,7 +188,7 @@ function QuranContent() {
         base_revision: 0,
       });
       setFeedbackMessage({
-        text: `Позиция чтения сохранена: Сура ${selectedSurah}, страница ${currentPage}`,
+        text: t("quran.positionSaved", { surah: selectedSurah, page: currentPage }),
         type: "ok",
       });
       setTimeout(() => setFeedbackMessage(null), 4000);
@@ -195,7 +201,7 @@ function QuranContent() {
     if (!isLoggedIn) {
       const res = await loginGuest();
       if (!res) {
-        setFeedbackMessage({ text: "Не удалось войти для добавления закладки.", type: "err" });
+        setFeedbackMessage({ text: t("quran.bookmarkLoginError"), type: "err" });
         return;
       }
     }
@@ -206,10 +212,14 @@ function QuranContent() {
         page_number: currentPage,
         surah_number: selectedSurah,
         ayah_number: ayahNumber || undefined,
-        label: `Сура ${selectedSurah}:${ayahNumber || 1} (стр. ${currentPage})`,
+        label: t("quran.bookmarkLabel", {
+          surah: selectedSurah,
+          ayah: ayahNumber || 1,
+          page: currentPage,
+        }),
         color_key: "emerald",
       });
-      setFeedbackMessage({ text: "Закладка успешно добавлена в личный кабинет!", type: "ok" });
+      setFeedbackMessage({ text: t("quran.bookmarkAdded"), type: "ok" });
       setTimeout(() => setFeedbackMessage(null), 4000);
     } catch (err) {
       setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
@@ -222,13 +232,17 @@ function QuranContent() {
       <section className="surface">
         <div className="surface-head" style={{ marginBottom: 16 }}>
           <div>
-            <p className="eyebrow">Чтение Священного Писания</p>
+            <p className="eyebrow">{t("quran.eyebrow")}</p>
             <h2 className="surface-title">
-              {currentSurahObj ? `${currentSurahObj.number}. ${currentSurahObj.name_ru} (${currentSurahObj.name_ar})` : "Коран"}
+              {currentSurahObj ? `${currentSurahObj.number}. ${surahName(currentSurahObj)} (${currentSurahObj.name_ar})` : t("nav.quran")}
             </h2>
             {currentSurahObj && (
               <p className="surface-subtitle">
-                {currentSurahObj.ayah_count} аятов · {currentSurahObj.revelation_type === "meccan" ? "Мекканская" : "Мединская"} · Страница {currentPage}
+                {t("quran.ayahsMeta", {
+                  count: currentSurahObj.ayah_count,
+                  revelation: currentSurahObj.revelation_type === "meccan" ? t("home.meccan") : t("home.medinan"),
+                  page: currentPage,
+                })}
               </p>
             )}
           </div>
@@ -238,20 +252,20 @@ function QuranContent() {
               className={`btn ${viewMode === "text" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setViewMode("text")}
             >
-              📜 Текст
+              {t("quran.textView")}
             </button>
             <button
               className={`btn ${viewMode === "mushaf" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setViewMode("mushaf")}
             >
-              📖 Мусхаф (стр. {currentPage})
+              {t("quran.mushafView", { page: currentPage })}
             </button>
             <button
               className="btn btn-outline-primary"
               onClick={() => void handleSavePosition(1)}
-              title="Сохранить текущую позицию"
+              title={t("quran.savePositionTitle")}
             >
-              📍 Сохранить позицию
+              {t("quran.savePosition")}
             </button>
           </div>
         </div>
@@ -264,7 +278,7 @@ function QuranContent() {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Издание Корана</label>
+            <label className="form-label">{t("quran.edition")}</label>
             <select
               value={selectedEdition}
               onChange={(e) => setSelectedEdition(e.target.value)}
@@ -272,14 +286,14 @@ function QuranContent() {
             >
               {editions.map((ed) => (
                 <option key={ed.id} value={ed.code}>
-                  {ed.name_ru} ({ed.riwayah})
+                  {editionName(ed)} ({ed.riwayah})
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Выбор суры (1-114)</label>
+            <label className="form-label">{t("quran.surahSelect")}</label>
             <select
               value={selectedSurah}
               onChange={(e) => setSelectedSurah(Number(e.target.value))}
@@ -287,21 +301,21 @@ function QuranContent() {
             >
               {surahs.map((s) => (
                 <option key={s.id} value={s.number}>
-                  {s.number}. {s.name_ru} — {s.name_ar} ({s.ayah_count} аят.)
+                  {s.number}. {surahName(s)} — {s.name_ar} ({t("quran.ayahsShort", { count: s.ayah_count })})
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Страница Мусхафа (1-604)</label>
+            <label className="form-label">{t("quran.mushafPage")}</label>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
               >
-                ◀ Назад
+                ◀ {t("common.back")}
               </button>
               <input
                 type="number"
@@ -316,7 +330,7 @@ function QuranContent() {
                 onClick={() => setCurrentPage((p) => Math.min(604, p + 1))}
                 disabled={currentPage >= 604}
               >
-                Вперед ▶
+                {t("common.next")} ▶
               </button>
             </div>
           </div>
@@ -324,7 +338,7 @@ function QuranContent() {
 
         <div className="form-row" style={{ marginTop: 14 }}>
           <div className="form-group">
-            <label className="form-label" htmlFor="juz-navigation">Джуз (1-30)</label>
+            <label className="form-label" htmlFor="juz-navigation">{t("quran.juz")}</label>
             <select
               id="juz-navigation"
               value=""
@@ -334,17 +348,17 @@ function QuranContent() {
               }}
               disabled={juz.length === 0}
             >
-              <option value="">Перейти к джузу…</option>
+              <option value="">{t("quran.goJuz")}</option>
               {juz.map((item) => (
                 <option key={item.id} value={item.number}>
-                  {item.number}. {item.start_ayah.surah}:{item.start_ayah.number} · стр. {item.start_page}
+                  {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="hizb-navigation">Хизб (1-60)</label>
+            <label className="form-label" htmlFor="hizb-navigation">{t("quran.hizb")}</label>
             <select
               id="hizb-navigation"
               value=""
@@ -354,17 +368,17 @@ function QuranContent() {
               }}
               disabled={hizb.length === 0}
             >
-              <option value="">Перейти к хизбу…</option>
+              <option value="">{t("quran.goHizb")}</option>
               {hizb.map((item) => (
                 <option key={item.id} value={item.number}>
-                  {item.number}. {item.start_ayah.surah}:{item.start_ayah.number} · стр. {item.start_page}
+                  {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="rub-navigation">Руб аль-хизб (1-240)</label>
+            <label className="form-label" htmlFor="rub-navigation">{t("quran.rub")}</label>
             <select
               id="rub-navigation"
               value=""
@@ -376,10 +390,10 @@ function QuranContent() {
               }}
               disabled={rubElHizb.length === 0}
             >
-              <option value="">Перейти к четверти…</option>
+              <option value="">{t("quran.goRub")}</option>
               {rubElHizb.map((item) => (
                 <option key={item.id} value={item.number}>
-                  {item.number}. Хизб {item.hizb_number}, ¼ {item.quarter_number} · {item.start_ayah.surah}:{item.start_ayah.number}
+                  {t("quran.rubOption", { number: item.number, hizb: item.hizb_number, quarter: item.quarter_number, surah: item.start_ayah.surah, ayah: item.start_ayah.number })}
                 </option>
               ))}
             </select>
@@ -387,7 +401,7 @@ function QuranContent() {
 
           <div className="form-group">
             <label className="form-label" htmlFor="ayah-navigation">
-              Аят суры (1-{currentSurahObj?.ayah_count || "—"})
+              {t("quran.surahAyah", { count: currentSurahObj?.ayah_count || "—" })}
             </label>
             <select
               id="ayah-navigation"
@@ -395,10 +409,10 @@ function QuranContent() {
               onChange={(event) => navigateToAyah(Number(event.target.value))}
               disabled={ayahs.length === 0}
             >
-              <option value="">Перейти к аяту…</option>
+              <option value="">{t("quran.goAyah")}</option>
               {ayahs.map((ayah) => (
                 <option key={ayah.id} value={ayah.number}>
-                  {selectedSurah}:{ayah.number} · стр. {ayah.pages.join(", ")}
+                  {t("quran.ayahOption", { surah: selectedSurah, ayah: ayah.number, pages: ayah.pages.join(", ") })}
                 </option>
               ))}
             </select>
@@ -420,7 +434,7 @@ function QuranContent() {
 
           {loading ? (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
-              Загрузка аятов суры...
+              {t("quran.loadingAyahs")}
             </div>
           ) : ayahs.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
@@ -430,7 +444,7 @@ function QuranContent() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span className="ayah-badge">{ayah.number}</span>
                       <span className="kpi-desc">
-                        Аят {ayah.number} · Джуз {ayah.juz_number}
+                        {t("quran.ayahMeta", { ayah: ayah.number, juz: ayah.juz_number })}
                       </span>
                     </div>
 
@@ -438,16 +452,16 @@ function QuranContent() {
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => void handleSavePosition(ayah.number)}
-                        title="Отметить как прочитанное"
+                        title={t("quran.markReadTitle")}
                       >
-                        📍 Отметка
+                        {t("quran.mark")}
                       </button>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => void handleAddBookmark(ayah.number)}
-                        title="Добавить в закладки"
+                        title={t("quran.bookmarkTitle")}
                       >
-                        🔖 Закладка
+                        {t("quran.bookmark")}
                       </button>
                     </div>
                   </div>
@@ -458,7 +472,7 @@ function QuranContent() {
             </div>
           ) : (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
-              Аяты для выбранной суры не найдены в каталоге.
+              {t("quran.noAyahs")}
             </div>
           )}
         </section>
@@ -477,7 +491,7 @@ function QuranContent() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mushafPage.assets[0].url}
-                  alt={`Страница Мусхафа ${currentPage}`}
+                  alt={t("quran.mushafAlt", { page: currentPage })}
                   className="mushaf-image"
                   data-page-number={currentPage}
                 />
@@ -485,7 +499,7 @@ function QuranContent() {
                   className="mushaf-regions"
                   viewBox="0 0 1 1"
                   preserveAspectRatio="none"
-                  aria-label={`Интерактивные области аятов страницы ${currentPage}`}
+                  aria-label={t("quran.regionsAria", { page: currentPage })}
                   data-page-number={currentPage}
                 >
                   {mushafRegions.map((region) => {
@@ -497,7 +511,7 @@ function QuranContent() {
                         className={`mushaf-region${selectedMushafAyah === key ? " is-selected" : ""}${playingMushafAyah === key ? " is-playing" : ""}`}
                         role="button"
                         tabIndex={0}
-                        aria-label={`Аят ${key}`}
+                        aria-label={t("common.ayah", { ayah: key })}
                         onClick={() => setSelectedMushafAyah(key)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
@@ -506,21 +520,23 @@ function QuranContent() {
                           }
                         }}
                       >
-                        <title>Аят {key}</title>
+                        <title>{t("common.ayah", { ayah: key })}</title>
                       </polygon>
                     );
                   })}
                 </svg>
                 {selectedMushafAyah && (
                   <div className="mushaf-selection-label">
-                    {playingMushafAyah === selectedMushafAyah ? "Звучит" : "Выбран"} аят {selectedMushafAyah}
+                    {playingMushafAyah === selectedMushafAyah
+                      ? t("quran.playingAyah", { ayah: selectedMushafAyah })
+                      : t("quran.selectedAyah", { ayah: selectedMushafAyah })}
                   </div>
                 )}
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: 40 }}>
                 <p className="eyebrow" style={{ marginBottom: 12 }}>
-                  Мадинский Мусхаф · Страница {currentPage}
+                  {t("quran.madaniPage", { page: currentPage })}
                 </p>
                 <div
                   style={{
@@ -546,17 +562,17 @@ function QuranContent() {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
             >
-              ◀ Предыдущая страница ({currentPage - 1})
+              {t("quran.previousPage", { page: currentPage - 1 })}
             </button>
             <span style={{ fontWeight: 600, alignSelf: "center" }}>
-              Страница {currentPage} из 604
+              {t("quran.pageOf", { page: currentPage })}
             </span>
             <button
               className="btn btn-secondary"
               onClick={() => setCurrentPage((p) => Math.min(604, p + 1))}
               disabled={currentPage >= 604}
             >
-              Следующая страница ({currentPage + 1}) ▶
+              {t("quran.nextPage", { page: currentPage + 1 })}
             </button>
           </div>
         </section>
@@ -566,8 +582,9 @@ function QuranContent() {
 }
 
 export default function QuranPage() {
+  const { t } = useI18n();
   return (
-    <Suspense fallback={<div style={{ padding: 32, textAlign: "center" }}>Загрузка Корана...</div>}>
+    <Suspense fallback={<div style={{ padding: 32, textAlign: "center" }}>{t("quran.loading")}</div>}>
       <QuranContent />
     </Suspense>
   );

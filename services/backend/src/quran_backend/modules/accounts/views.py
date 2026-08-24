@@ -31,6 +31,7 @@ from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.accounts.serializers import (
     AccountDeletionRequestSerializer,
     CurrentSessionResponseSerializer,
+    CurrentSessionUpdateSerializer,
     DeviceInventorySerializer,
     EmailChallengeStartRequestSerializer,
     EmailChallengeStartResponseSerializer,
@@ -51,6 +52,7 @@ from quran_backend.modules.accounts.services import (
     revoke_access_session,
     revoke_all_user_sessions,
     rotate_refresh_token,
+    update_session_locale,
 )
 from quran_backend.modules.accounts.throttling import (
     EmailStartThrottle,
@@ -212,6 +214,25 @@ class CurrentSessionView(PrivateNoStoreResponseMixin, APIView):
                 "user": _user_summary(request.user),
                 "device": _device_summary(request.auth.device),
             },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=CurrentSessionUpdateSerializer,
+        responses={status.HTTP_200_OK: CurrentSessionResponseSerializer},
+    )
+    def patch(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        serializer = CurrentSessionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, device = update_session_locale(
+            user=request.user,
+            device=request.auth.device,
+            locale=serializer.validated_data["locale"],
+        )
+        return Response(
+            {"user": _user_summary(user), "device": _device_summary(device)},
             status=status.HTTP_200_OK,
         )
 

@@ -184,6 +184,21 @@ def replace_device_credentials(*, user: User, device: Device) -> IssuedCredentia
         return _issue_credentials(session=session, now=now)
 
 
+@transaction.atomic
+def update_session_locale(*, user: User, device: Device, locale: str) -> tuple[User, Device]:
+    """Persist the selected locale for the signed-in user and current installation."""
+
+    locked_user = User.objects.select_for_update().get(id=user.id)
+    locked_device = Device.objects.select_for_update().get(id=device.id, user=locked_user)
+    if locked_user.preferred_locale != locale:
+        locked_user.preferred_locale = locale
+        locked_user.save(update_fields=["preferred_locale", "updated_at"])
+    if locked_device.locale != locale:
+        locked_device.locale = locale
+        locked_device.save(update_fields=["locale", "updated_at"])
+    return locked_user, locked_device
+
+
 def rotate_refresh_token(raw_token: str) -> IssuedCredentials:
     token_id, supplied_secret = _parse_refresh_token(raw_token)
     locator = (

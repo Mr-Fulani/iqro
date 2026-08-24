@@ -12,6 +12,7 @@ export default defineConfig({
   reporter: process.env.CI ? "line" : "list",
   use: {
     baseURL,
+    locale: "ru-RU",
     screenshot: "only-on-failure",
     trace: "on-first-retry",
     video: "retain-on-failure",

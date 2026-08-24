@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { generateUuidV7 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
 
 export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     session,
     isLoggedIn,
@@ -25,7 +27,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   const [success, setSuccess] = useState<string | null>(null);
 
   const isActiveAccount = session?.user.status === "active";
-  const title = mode === "register" ? "Создание аккаунта" : "Вход в аккаунт";
+  const title = mode === "register" ? t("authForm.registerTitle") : t("authForm.loginTitle");
 
   async function handleStart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,7 +36,10 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
     if (!challenge) return;
     setChallengeId(challenge.challenge_id);
     setVerificationKey(generateUuidV7());
-    setSuccess(`Код отправлен на ${email}. Он действует ${Math.ceil(challenge.expires_in / 60)} мин.`);
+    setSuccess(t("authForm.codeSent", {
+      email,
+      minutes: Math.ceil(challenge.expires_in / 60),
+    }));
   }
 
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
@@ -44,8 +49,8 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
     if (!result) return;
     setSuccess(
       result.merged_guest
-        ? "Вход выполнен, гостевые данные объединены с аккаунтом."
-        : "Email подтверждён, аккаунт активирован.",
+        ? t("authForm.merged")
+        : t("authForm.activated"),
     );
   }
 
@@ -59,8 +64,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
 
       <p className="kpi-desc" style={{ marginBottom: 20 }}>
-        Вход без пароля: мы отправим одноразовый код на email. Если на устройстве уже есть
-        гостевые закладки и позиция чтения, они сохранятся после входа.
+        {t("authForm.description")}
       </p>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
@@ -69,20 +73,20 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
       {isActiveAccount ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="alert alert-info">
-            Вы вошли как <strong>{session.user.email}</strong>
+            {t("authForm.signedInAsLabel")} {session.user.email && <strong>{session.user.email}</strong>}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <Link href="/profile" className="btn btn-primary" style={{ flex: 1 }}>
-              В личный кабинет
+              {t("authForm.profile")}
             </Link>
             <button onClick={() => void logout()} className="btn btn-secondary">
-              Выйти
+              {t("auth.logout")}
             </button>
           </div>
         </div>
       ) : challengeId ? (
         <form onSubmit={(event) => void handleVerify(event)} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <label className="form-label" htmlFor="email-code">Код из письма</label>
+          <label className="form-label" htmlFor="email-code">{t("authForm.emailCode")}</label>
           <input
             id="email-code"
             type="text"
@@ -97,7 +101,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
             required
           />
           <button className="btn btn-primary btn-lg" disabled={isLoading || code.length !== 6}>
-            {isLoading ? "Проверка…" : "Подтвердить и войти"}
+            {isLoading ? t("common.checking") : t("authForm.verify")}
           </button>
           <button
             type="button"
@@ -109,7 +113,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
               setSuccess(null);
             }}
           >
-            Изменить email
+            {t("authForm.changeEmail")}
           </button>
         </form>
       ) : (
@@ -126,7 +130,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
             required
           />
           <button className="btn btn-primary btn-lg" disabled={isLoading}>
-            {isLoading ? "Отправка…" : "Получить код"}
+            {isLoading ? t("common.sending") : t("authForm.getCode")}
           </button>
           {!isLoggedIn && (
             <button
@@ -135,7 +139,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
               disabled={isLoading}
               onClick={() => void loginGuest().then((result) => result && router.push("/profile"))}
             >
-              Продолжить без email
+              {t("authForm.continueWithoutEmail")}
             </button>
           )}
         </form>
@@ -143,16 +147,15 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
 
       <div style={{ marginTop: 18, padding: 14, background: "var(--bg-subtle)", borderRadius: "var(--radius-md)" }}>
         <p className="kpi-desc">
-          Refresh-сессия и ключ установки хранятся в защищённых HttpOnly cookies и недоступны
-          JavaScript-коду страницы.
+          {t("authForm.cookieNotice")}
         </p>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}>
         <Link href={mode === "register" ? "/login" : "/register"} className="kpi-desc" style={{ color: "var(--primary)" }}>
-          {mode === "register" ? "Уже есть аккаунт? Войти" : "Первый вход? Создать аккаунт"}
+          {mode === "register" ? t("authForm.hasAccount") : t("authForm.firstLogin")}
         </Link>
-        <Link href="/" className="kpi-desc">На главную</Link>
+        <Link href="/" className="kpi-desc">{t("authForm.home")}</Link>
       </div>
     </div>
   );
