@@ -81,6 +81,9 @@ def _create_audio_aggregate(
         size_bytes=160_000,
         checksum_sha256="c" * 64,
         object_key=f"audio/admin/{suffix}/001.mp3",
+        origin_etag='"origin-admin-etag"',
+        etag='"edge-admin-etag"',
+        cdn_contract_verified_at=timezone.now(),
     )
     segment = AyahAudioSegment.objects.create(
         track=track,
@@ -150,4 +153,7 @@ def test_audio_admin_allows_individual_draft_cleanup_and_preloads_display_relati
     assert "quran_edition_version__edition" in admin_objects[0].list_select_related
     assert "timing_version__recitation_edition" in admin_objects[2].list_select_related
     assert "track__recitation_edition" in admin_objects[3].list_select_related
+    assert "origin_etag" in admin_objects[3].get_readonly_fields(request, draft[3])
+    assert "etag" in admin_objects[3].get_readonly_fields(request, draft[3])
+    assert "cdn_contract_verified_at" in admin_objects[3].get_readonly_fields(request, draft[3])
     assert "ayah__surah__edition_version__edition" in admin_objects[4].list_select_related

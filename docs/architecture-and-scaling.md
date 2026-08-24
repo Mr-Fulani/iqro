@@ -151,10 +151,14 @@ API не должен предполагать, что запрос пришёл
   представляют codec, bitrate, размер, checksum и object key.
 - Это разделение реализовано в schema/API: у трека есть ровно один default rendition для
   обратной совместимости и любое число уникальных quality-вариантов; checksum контента и
-  фактически наблюдаемый CDN ETag хранятся отдельно.
+  ETag origin и фактически наблюдаемый CDN ETag хранятся раздельно.
 - Клиент выбирает одну rendition: экономную, стандартную или высокую. Высокое качество не
   загружается автоматически на мобильной сети.
 - Versioned object key никогда не перезаписывается; исправление создаёт новую content version.
+- Production runtime не монтирует media volume: operator pipeline делает условный S3
+  `PutObject If-None-Match: *`, повторно сверяет размер/MIME/cache/checksum через `HeadObject`,
+  а приложение публикует только CDN URL. Поэтому новая API/web/worker replica не требует
+  копирования media на application host.
 - CDN обязан поддерживать `HEAD`, byte `Range`, `206`, `416`, strong ETag, CORS и immutable
   cache. Contract проверяется автоматически до публикации.
 - Внешний provider URL не получает гарантий managed asset. Его Range/CORS/availability
@@ -243,8 +247,8 @@ storage раньше установленного горизонта. Точны
 
 ADR по object storage/CDN принят в
 [ADR 0001](adr/0001-managed-media-object-storage-cdn.md). До широкого production launch ещё
-нужны ADR по process management и pool, разделению Redis roles, API auth/BFF и локальному
-storage Flutter.
+нужно provision'ить выбранный bucket/custom domain и загрузить принятый corpus; также нужны ADR
+по process management и pool, разделению Redis roles, API auth/BFF и локальному storage Flutter.
 
 Переход между профилями S0–S3 подтверждается capacity/soak отчётом с workload mix для
 Flutter, web и Telegram Mini App, cache-cold/cache-warm/CDN-bypass сценариями, стоимостью

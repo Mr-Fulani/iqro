@@ -197,6 +197,49 @@ python3 ops/media/contract.py \
 credentials/query. Contract report прикладывается к content acceptance record, но не заменяет
 лицензионный review и проверку checksum в upload pipeline.
 
+### Immutable upload и фиксация evidence
+
+Production использует переносимые S3-compatible переменные `MEDIA_OBJECT_STORAGE_*` и не имеет
+локального `/media/` fallback. Upload выполняется только оператором/release job: uploader сначала
+сверяет локальные bytes и SHA-256, затем делает create-only `PutObject` с `If-None-Match: *` и
+`ChecksumSHA256`, после чего проверяет объект через `HeadObject`. Повтор совпадающего объекта
+безопасен; тот же key с другой metadata никогда не перезаписывается.
+
+Одна подготовленная managed audio rendition загружается по UUID:
+
+```bash
+cd services/backend
+python manage.py upload_audio_rendition \
+  019c0000-0000-7000-8000-000000000001 \
+  /data/audio/surah-001-standard.mp3
+```
+
+Команда сохраняет `origin_etag`, но ещё не считает публичный CDN проверенным. В manifest для
+`ops/media/contract.py` имя каждого аудио asset задаётся строго как
+`audio-rendition:<uuid>`. После успешной проверки JSON-report импортируется:
+
+```bash
+python manage.py record_audio_media_contract \
+  /data/reports/audio-release-media-contract.json
+```
+
+Importer принимает только общий `passed=true`, годовой immutable cache, strong ETag, совпадающие
+URL/размер/MIME и присутствие всех `MEDIA_CDN_REQUIRED_ORIGINS`. Он сохраняет edge `etag` отдельно
+от origin ETag и время evidence. Managed recitation не публикуется, пока хотя бы у одной rendition
+нет origin upload или CDN evidence.
+
+Подготовленные 604 страницы Мусхафа загружаются и только затем активируются одной идемпотентной
+командой:
+
+```bash
+python manage.py publish_mushaf_pages \
+  /data/mushaf/madani-hafs/1.0.0/manifest.json \
+  --upload --activate
+```
+
+В production `--activate` без `--upload` блокируется. Флаг проверяет каждую manifest-запись, но
+не заменяет выборочный public-CDN contract report и визуальную/лицензионную приёмку.
+
 ## Dependency и container security gate
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и

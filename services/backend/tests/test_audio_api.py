@@ -94,7 +94,9 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         size_bytes=72_000,
         checksum_sha256="a" * 64,
         object_key="audio/test-recitation/1.0.0/surah-001-economy.opus",
+        origin_etag=f'"origin-{"a" * 64}"',
         etag=f'"{"a" * 64}"',
+        cdn_contract_verified_at=timezone.now(),
     )
     high_rendition = AudioRendition.objects.create(
         track=track,
@@ -105,7 +107,9 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         size_bytes=384_000,
         checksum_sha256="f" * 64,
         object_key="audio/test-recitation/1.0.0/surah-001-high.mp3",
+        origin_etag=f'"origin-{"f" * 64}"',
         etag=f'"{"f" * 64}"',
+        cdn_contract_verified_at=timezone.now(),
     )
     _complete_surah_catalog(recitation)
     first_segment = AyahAudioSegment.objects.create(
@@ -181,7 +185,9 @@ def _create_track(
         size_bytes=192_000,
         checksum_sha256="d" * 64,
         object_key=object_key,
+        origin_etag=f'"origin-{"d" * 64}"',
         etag=f'"{"d" * 64}"',
+        cdn_contract_verified_at=timezone.now(),
     )
     return track
 
@@ -213,7 +219,9 @@ def _complete_surah_catalog(recitation: RecitationEdition) -> None:
                     f"audio/{recitation.code}/{recitation.version}/"
                     f"surah-{track.surah_number:03d}.mp3"
                 ),
+                origin_etag=f'"origin-{track.surah_number:064x}"',
                 etag=f'"{track.surah_number:064x}"',
+                cdn_contract_verified_at=timezone.now(),
             )
             for track in tracks
         ]

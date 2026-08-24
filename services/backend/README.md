@@ -43,7 +43,7 @@ MVP обратной связи с пользовательскими тикет
 на этом этапе намеренно не принимаются: небезопасного локального upload fallback нет.
 
 Публичный каталог чтецов, version-pinned логические аудиотреки с bitrate/codec renditions,
-проверенные таймкоды аятов, immutable CDN contract и безопасная загрузка отдельной суры описаны в
+проверенные таймкоды аятов, create-only S3 upload и immutable CDN evidence contract описаны в
 [docs/audio-api.md](docs/audio-api.md).
 
 Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar
@@ -73,6 +73,15 @@ uv run python manage.py prepare_mushaf_pages \
 uv run python manage.py publish_mushaf_pages \
   media/quran/madani-hafs/1.0.0/manifest.json \
   --activate
+```
+
+В production к команде обязательно добавляется `--upload`, чтобы до записи в БД
+создать/сверить immutable S3 objects:
+
+```bash
+uv run python manage.py publish_mushaf_pages \
+  media/quran/madani-hafs/1.0.0/manifest.json \
+  --upload --activate
 ```
 
 Команда публикации идемпотентна и перед записью в БД сверяет `manifest.sha256`, наличие,

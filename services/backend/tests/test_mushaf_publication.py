@@ -9,7 +9,22 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
 
+from quran_backend.modules.core.object_storage import ImmutableObjectSpec, StoredObject
 from quran_backend.modules.quran.models import MushafPage, PublicationStatus, QuranEdition
+from quran_backend.modules.quran.mushaf_publication import (
+    load_prepared_mushaf_catalog,
+    upload_prepared_mushaf_catalog,
+)
+
+
+class FakeMushafUploader:
+    def __init__(self) -> None:
+        self.specs: list[ImmutableObjectSpec] = []
+
+    def upload_path(self, source_path: Path, spec: ImmutableObjectSpec) -> StoredObject:
+        assert source_path.read_bytes()
+        self.specs.append(spec)
+        return StoredObject(key=spec.key, etag=f'"etag-{len(self.specs)}"', created=True)
 
 
 def _prepared_assets(media_root: Path) -> Path:
@@ -90,5 +105,38 @@ def test_publish_mushaf_pages_rejects_corrupt_asset(tmp_path: Path) -> None:
     with (
         override_settings(MEDIA_ROOT=media_root),
         pytest.raises(CommandError, match="integrity check failed"),
+    ):
+        call_command("publish_mushaf_pages", manifest, "--activate")
+
+
+def test_prepared_mushaf_catalog_uploads_all_assets_immutably(tmp_path: Path) -> None:
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    manifest = _prepared_assets(media_root)
+    catalog = load_prepared_mushaf_catalog(manifest, media_root=media_root)
+    uploader = FakeMushafUploader()
+
+    result = upload_prepared_mushaf_catalog(
+        catalog,
+        media_root=media_root,
+        uploader=uploader,
+    )
+
+    assert result.assets == 604
+    assert result.created == 604
+    assert result.verified_existing == 0
+    assert uploader.specs[0].key == ("quran/madani-hafs/1.0.0/pages/001/page-001-w0900.webp")
+    assert uploader.specs[-1].content_type == "image/webp"
+
+
+@override_settings(MEDIA_OBJECT_STORAGE_REQUIRED=True)
+def test_production_activation_requires_object_upload(tmp_path: Path) -> None:
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    manifest = _prepared_assets(media_root)
+
+    with (
+        override_settings(MEDIA_ROOT=media_root),
+        pytest.raises(CommandError, match="requires --upload"),
     ):
         call_command("publish_mushaf_pages", manifest, "--activate")

@@ -36,8 +36,8 @@ query string не участвует, потому что public object URL по
 - upload/list/delete идут только через аутентифицированный S3-compatible endpoint из worker или
   release pipeline; credentials никогда не попадают в API response и клиенты;
 - публичное чтение идёт только через `https://media.<production-domain>`;
-- Django хранит metadata, object key, checksum и наблюдаемый strong ETag, но не проксирует
-  media bytes;
+- Django хранит metadata, object key, checksum, origin ETag и отдельно наблюдаемый public-CDN
+  strong ETag, но не проксирует media bytes;
 - provider adapter принимает S3 endpoint/bucket/credentials из secret store, поэтому перенос
   в AWS S3, Backblaze B2 или другой совместимый origin не меняет доменные модели и public URL
   contract;
@@ -53,7 +53,11 @@ audio/{recitation-code}/{content-version}/{scope}-{number}/{rendition}.{extensio
 
 Исправление создаёт новую content version или rendition key. Удаление опубликованного объекта
 запрещено до завершения withdrawal/retention window. Для каждого объекта upload pipeline
-устанавливает корректный `Content-Type` и `Cache-Control: public, max-age=31536000, immutable`.
+атомарно использует `If-None-Match: *`, передаёт S3 `ChecksumSHA256`, устанавливает
+`Content-Type`, `Content-Disposition: inline`, SHA-256 metadata и `Cache-Control: public,
+max-age=31536000, immutable`, затем сверяет результат через `HeadObject`. Совпадающий
+существующий объект считается идемпотентным успехом;
+несовпадающая metadata блокирует release без перезаписи ключа.
 
 Перед публикацией `ops/media/contract.py` проверяет для каждого origin web/Mini App:
 
@@ -85,10 +89,13 @@ access token scope и rollback проходят отдельный deployment re
 
 - `AudioTrack` уже является логическим таймлайном, а codec/bitrate/size/checksum/object key и
   реальный ETag хранятся в отдельных `AudioRendition` economy/standard/high.
+- Provider-neutral boto3 adapter, create-only upload для audio/Mushaf, production system check и
+  импорт CDN contract evidence реализованы; production gateway больше не имеет локального
+  `/media/` fallback.
 - API сохраняет один default asset для обратной совместимости и отдаёт список renditions;
   автоматический выбор качества клиентом по сети/настройке ещё не реализован.
-- Upload/import pipeline обязан формировать manifest и сохранять contract evidence до смены
-  recitation status на published.
+- До deployment остаётся provision R2 bucket/custom domain/CORS и фактическая загрузка принятого
+  media corpus; managed recitation publication блокируется без origin upload и CDN evidence.
 - Для disaster recovery нужен inventory/versioning policy и независимая проверка восстановления;
   PostgreSQL dump не является резервной копией media.
 

@@ -62,7 +62,12 @@ flowchart LR
 - [x] Выбрать Cloudflare R2 Standard + CDN custom domain как pay-as-you-go стартовый provider,
   оформить переносимый S3-compatible [ADR](adr/0001-managed-media-object-storage-cdn.md) и
   bounded автоматическую проверку Range/CORS/ETag/cache contract.
-- [ ] Перенести managed media с локального диска на immutable object keys.
+- [x] Убрать production runtime-зависимость от локального media-диска: provider-neutral
+  S3 adapter выполняет create-only upload с SHA-256/metadata/HEAD verification, команды аудио
+  и Мусхафа используют immutable keys, а gateway больше не раздаёт `/media/`.
+- [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
+  приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
+  заранее не требуется.
 - [x] Разделить логический `AudioTrack`/таймлайн и физические `AudioRendition` вариантов
   economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
   default `asset` и отдаёт типизированный список renditions.

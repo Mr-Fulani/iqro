@@ -3,7 +3,8 @@
 `compose.production.yaml` запускает отдельный production-стек: PostgreSQL, Redis,
 одноразовую миграцию, Django/Gunicorn, Celery worker/beat, Next.js standalone и Nginx
 gateway. Исходный код не монтируется в контейнеры, наружу публикуется только gateway,
-а миграция должна успешно завершиться до запуска приложения.
+а миграция должна успешно завершиться до запуска приложения. Managed media не монтируется
+и не раздаётся с application host: публичные URL ведут в отдельный CDN/object storage.
 
 Это односерверный профиль S0/beta и воспроизводимая production-проверка, а не целевая
 topology для 50 000–100 000 DAU. Целевая схема сохраняет те же образы, но запускает
@@ -31,8 +32,13 @@ chmod 600 services/backend/.env.production
 - пароль PostgreSQL и все Django/Quran hash keys;
 - `QURAN_OPERATIONS_TOKEN`;
 - Quran.Foundation credentials, если синхронизация включена;
-- `QURAN_MEDIA_DIR`: каталог с импортированным dataset и 604 страницами Мусхафа для
-  текущего single-host профиля. В масштабируемом production это не источник managed audio.
+- `MEDIA_OBJECT_STORAGE_ENDPOINT_URL`, bucket, scoped access/secret key, region/addressing style;
+- `MEDIA_CDN_REQUIRED_ORIGINS`: точные origins публичного web, staging и Telegram Mini App,
+  которые обязаны присутствовать в CDN contract report;
+- `PUBLIC_MEDIA_BASE_URL` и `PUBLIC_AUDIO_BASE_URL`: HTTPS custom-domain CDN, а не API/gateway.
+
+Production settings и `docker compose config` fail closed без этих значений. Credentials должны
+иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.
 
 Файл `.env.production` игнорируется Git. В контейнеры он передаётся через `env_file`,
 но не копируется в образы.
@@ -92,7 +98,8 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 - healthchecks проверяют PostgreSQL, Redis, Django readiness, Next.js и gateway;
 - логи Docker ротируются по размеру и количеству файлов;
 - только успешная `migrate --noinput` открывает запуск backend/worker/beat;
-- Nginx раздаёт `/media/` и собранный Django `/static/`, а `/api/` проксирует в backend;
+- Nginx раздаёт только собранный Django `/static/`, а `/api/` проксирует в backend; `/media/`
+  локально отсутствует, чтобы потеря application-host не уничтожала канонические assets;
 - данные PostgreSQL/Redis и собранная статика находятся в именованных volumes.
 
 Лимиты ресурсов задаются в `compose.production.yaml`. Перед размещением на маленьком
@@ -103,7 +110,8 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 
 До добавления второй application-реплики необходимо:
 
-- перенести канонические media и audio renditions в object storage/CDN;
+- provision'ить production bucket/CDN и загрузить канонические media через готовый immutable
+  pipeline; runtime-код и Compose уже не зависят от локального media volume;
 - подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию;
 - убедиться, что cache/throttle/Celery используют внешние Redis endpoints;
 - запускать migrations отдельной release-job;

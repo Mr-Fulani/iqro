@@ -99,8 +99,24 @@ Endpoint суры возвращает один трек и все его сег
    object key либо внешним URL, размером, codec/bitrate и SHA-256 для managed asset; ровно одна
    rendition должна быть default; модель разрешает операторский пилот от одной суры, но
    публичная выдача требует все 114 уникальных треков уровня суры;
-5. для выделения аятов создать проверенную `AudioTimingVersion` и непересекающиеся сегменты;
-6. проверить реальное соответствие аудио каноническому тексту и правам распространения.
+5. managed rendition загрузить create-only командой `upload_audio_rendition`, затем прогнать
+   public CDN contract для всех `MEDIA_CDN_REQUIRED_ORIGINS` и импортировать report командой
+   `record_audio_media_contract`; origin ETag и public edge ETag сохраняются раздельно;
+6. для выделения аятов создать проверенную `AudioTimingVersion` и непересекающиеся сегменты;
+7. проверить реальное соответствие аудио каноническому тексту и правам распространения.
+
+Пример операторского flow для уже созданной draft rendition:
+
+```bash
+python manage.py upload_audio_rendition <rendition-uuid> /data/audio/surah-001-standard.mp3
+python3 ../../ops/media/contract.py \
+  --manifest /data/reports/audio-release-manifest.json \
+  --json-report /data/reports/audio-release-contract.json
+python manage.py record_audio_media_contract /data/reports/audio-release-contract.json
+```
+
+В contract manifest поле `name` имеет формат `audio-rendition:<rendition-uuid>`, а URL должен
+совпадать с `PUBLIC_AUDIO_BASE_URL` и object key. Managed публикация без обоих этапов блокируется.
 
 После публикации метаданные, timing version, треки, renditions и сегменты неизменяемы. Исправление
 оформляется новой версией с новым object key. Разрешён только переход

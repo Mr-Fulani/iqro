@@ -230,20 +230,31 @@ class AudioRenditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "codec",
         "bitrate_kbps",
         "size_bytes",
+        "cdn_contract_verified_at",
     )
     list_filter = (
         "quality",
         "codec",
         "is_default",
+        "cdn_contract_verified_at",
         "track__recitation_edition__status",
     )
     search_fields = (
         "object_key",
         "checksum_sha256",
+        "origin_etag",
+        "etag",
         "track__recitation_edition__code",
     )
     list_select_related = ("track__recitation_edition",)
-    readonly_fields = ("id", "created_at", "updated_at")
+    readonly_fields = (
+        "id",
+        "origin_etag",
+        "etag",
+        "cdn_contract_verified_at",
+        "created_at",
+        "updated_at",
+    )
 
     def get_readonly_fields(
         self,

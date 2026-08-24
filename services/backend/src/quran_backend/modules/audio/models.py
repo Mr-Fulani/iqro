@@ -295,6 +295,23 @@ class RecitationEdition(BaseModel):
             raise ValidationError(
                 {"status": ("Every track requires at least one rendition and exactly one default.")}
             )
+        unverified_managed_renditions = AudioRendition.objects.filter(
+            track__recitation_edition_id=self.pk,
+            object_key__isnull=False,
+        ).filter(
+            models.Q(origin_etag="")
+            | models.Q(etag="")
+            | models.Q(cdn_contract_verified_at__isnull=True)
+        )
+        if unverified_managed_renditions.exists():
+            raise ValidationError(
+                {
+                    "status": (
+                        "Every managed rendition must have origin upload and public CDN "
+                        "contract evidence before publication."
+                    )
+                }
+            )
         if (
             self.offline_download_allowed
             and AudioRendition.objects.filter(track__recitation_edition_id=self.pk)
@@ -821,6 +838,11 @@ class AudioRendition(BaseModel):
         validators=[validate_relative_object_key],
     )
     external_url = models.URLField(max_length=1000, blank=True)
+    origin_etag = models.CharField(
+        max_length=255,
+        blank=True,
+        validators=[validate_strong_etag],
+    )
     etag = models.CharField(
         max_length=255,
         blank=True,

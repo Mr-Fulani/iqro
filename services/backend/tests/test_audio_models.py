@@ -127,6 +127,9 @@ def _create_rendition(  # noqa: PLR0913
         checksum_sha256="b" * 64 if object_key else "",
         object_key=object_key,
         external_url=external_url,
+        origin_etag='"origin-etag"' if object_key else "",
+        etag='"edge-etag"' if object_key else "",
+        cdn_contract_verified_at=timezone.now() if object_key else None,
     )
 
 
@@ -973,6 +976,26 @@ def test_track_without_default_rendition_cannot_be_published(
 
     assert "status" in error.value.message_dict
     assert "exactly one default" in error.value.message_dict["status"][0]
+
+
+@pytest.mark.django_db
+def test_managed_rendition_requires_origin_and_cdn_evidence_before_publication(
+    draft_recitation: RecitationEdition,
+) -> None:
+    track = _create_track(draft_recitation)
+    track.renditions.update(
+        origin_etag="",
+        etag="",
+        cdn_contract_verified_at=None,
+    )
+    draft_recitation.stream_allowed = True
+    draft_recitation.offline_download_allowed = True
+    draft_recitation.publish()
+
+    with pytest.raises(ValidationError) as error:
+        draft_recitation.save()
+
+    assert "origin upload and public CDN contract evidence" in str(error.value)
 
 
 @pytest.mark.django_db

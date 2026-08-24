@@ -9,6 +9,11 @@ from typing import Any
 from django.db import transaction
 
 from quran_backend.modules.core.content_revalidation import enqueue_quran_content_change
+from quran_backend.modules.core.object_storage import (
+    ImmutableObjectSpec,
+    ObjectUploader,
+    configured_object_uploader,
+)
 from quran_backend.modules.quran.models import (
     MushafPage,
     PublicationStatus,
@@ -46,6 +51,13 @@ class PublicationResult:
     version: QuranEditionVersion
     created: bool
     activated: bool
+
+
+@dataclass(frozen=True, slots=True)
+class MushafUploadResult:
+    assets: int
+    created: int
+    verified_existing: int
 
 
 def load_prepared_mushaf_catalog(
@@ -108,6 +120,55 @@ def load_prepared_mushaf_catalog(
         manifest_path=manifest,
         checksum_sha256=manifest_checksum,
         pages=pages,
+    )
+
+
+def upload_prepared_mushaf_catalog(
+    catalog: PreparedMushafCatalog,
+    *,
+    media_root: Path,
+    uploader: ObjectUploader | None = None,
+) -> MushafUploadResult:
+    try:
+        resolved_media_root = media_root.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise MushafPublicationError("MEDIA_ROOT cannot be resolved.") from exc
+    actual_uploader = uploader or configured_object_uploader()
+    created = 0
+    verified_existing = 0
+    assets = 0
+    for page in catalog.pages:
+        for variant in page.asset_variants:
+            key = str(variant["path"])
+            try:
+                source = (resolved_media_root / Path(*PurePosixPath(key).parts)).resolve(
+                    strict=True
+                )
+                size_bytes = int(str(variant["bytes"]))
+            except (KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
+                raise MushafPublicationError(
+                    f"Prepared asset cannot be resolved for upload: {key}."
+                ) from exc
+            if not source.is_relative_to(resolved_media_root):
+                raise MushafPublicationError(f"Prepared asset escaped MEDIA_ROOT: {key}.")
+            stored = actual_uploader.upload_path(
+                source,
+                ImmutableObjectSpec(
+                    key=key,
+                    content_type="image/webp",
+                    size_bytes=size_bytes,
+                    checksum_sha256=str(variant["sha256"]),
+                ),
+            )
+            assets += 1
+            if stored.created:
+                created += 1
+            else:
+                verified_existing += 1
+    return MushafUploadResult(
+        assets=assets,
+        created=created,
+        verified_existing=verified_existing,
     )
 
 

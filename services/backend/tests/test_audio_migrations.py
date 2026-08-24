@@ -8,6 +8,7 @@ from django.db.migrations.executor import MigrationExecutor
 
 PREVIOUS_MIGRATION = "0003_quranfoundationsyncstate"
 RENDITION_MIGRATION = "0004_audio_rendition"
+LATEST_MIGRATION = "0005_audio_rendition_origin_etag"
 
 
 def _executor() -> MigrationExecutor:
@@ -97,4 +98,4 @@ def test_audio_rendition_migration_backfills_and_reverses_default_asset() -> Non
         assert restored.object_key == "audio/migration/1.0.0/surah-001.mp3"
     finally:
         executor = _executor()
-        executor.migrate(_targets(executor, RENDITION_MIGRATION))
+        executor.migrate(_targets(executor, LATEST_MIGRATION))
