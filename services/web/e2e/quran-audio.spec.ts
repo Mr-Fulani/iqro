@@ -311,7 +311,6 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await page.goto("/audio");
 
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toBeVisible();
-  await page.getByRole("button", { name: "Повтор, диапазон и таймер" }).click();
   await expect(page.getByLabel("Режим повтора")).toBeVisible();
   await expect(page.getByLabel("Режим повтора")).toBeDisabled();
   await expect(page.getByLabel("Скорость воспроизведения")).toBeVisible();
@@ -338,9 +337,10 @@ test("audio widget survives route navigation and pauses at the current position"
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
   await expect(player).toBeVisible();
-  const playerBox = await player.boundingBox();
-  expect(playerBox).not.toBeNull();
-  expect(playerBox!.height).toBeLessThan(130);
+  await expect(page.getByLabel("Режим повтора")).toBeVisible();
+  const expandedPlayerBox = await player.boundingBox();
+  expect(expandedPlayerBox).not.toBeNull();
+  expect(expandedPlayerBox!.height).toBeGreaterThan(200);
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
   await audio.evaluate((element) => {
     (element as HTMLAudioElement).currentTime = 12.5;
@@ -350,6 +350,9 @@ test("audio widget survives route navigation and pauses at the current position"
 
   await expect(page).toHaveURL("/");
   await expect(player).toBeVisible();
+  const compactPlayerBox = await player.boundingBox();
+  expect(compactPlayerBox).not.toBeNull();
+  expect(compactPlayerBox!.height).toBeLessThan(130);
   await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
   expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
@@ -370,14 +373,18 @@ test("persistent player actions adapt without horizontal overflow on mobile", as
   await expect(player).toBeVisible();
   await expect(resumeButton).toBeVisible();
   await expect(settingsButton).toBeVisible();
-  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
-  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
-  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
+  expect((await resumeButton.boundingBox())!.width).toBeGreaterThan(40);
+  expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
+  expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
 
   await page.locator('.app-menu a[href="/"]').click();
+  await expect(page).toHaveURL("/");
+  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
   await expect(audioLink).toBeVisible();
   expect((await audioLink.boundingBox())!.width).toBeLessThanOrEqual(40);
@@ -517,7 +524,6 @@ test("minute sleep timer stops playback without losing the current position", as
   });
 
   await page.clock.install();
-  await page.getByRole("button", { name: "Повтор, диапазон и таймер" }).click();
   await page.getByLabel("Таймер сна").selectOption("5");
   await expect(page.getByText("Осталось 5:00", { exact: true })).toBeVisible();
   await page.clock.fastForward("05:00");

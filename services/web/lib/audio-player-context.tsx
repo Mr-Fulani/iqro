@@ -47,16 +47,21 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     clearPlayback,
   }), [clearPlayback, isPlaying, request, startPlayback]);
 
-  const showPlayer = pathname === "/audio" || request !== null;
+  const isAudioPage = pathname === "/audio";
+  const compact = !isAudioPage;
+  const showPlayer = isAudioPage || request !== null;
 
   return (
     <AudioPlayerContext.Provider value={value}>
       {children}
       {showPlayer && (
         <>
-          <div className="global-audio-player-spacer" aria-hidden="true" />
+          <div
+            className={`global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}`}
+            aria-hidden="true"
+          />
           <aside
-            className="global-audio-player-dock"
+            className={`global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}`}
             aria-label={t("player.dockAria")}
             data-testid="global-audio-player"
           >
@@ -71,9 +76,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
               className="audio-player-bar global-audio-player-bar"
               onPlayingChange={setIsPlaying}
               pauseOnNavigationKey={pathname}
-              compact
+              compact={compact}
             />
-            {pathname !== "/audio" && (
+            {compact && (
               <Link
                 href="/audio"
                 className="btn btn-secondary btn-sm global-audio-player-link"
