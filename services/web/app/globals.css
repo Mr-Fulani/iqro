@@ -976,6 +976,49 @@ input:focus, select:focus, textarea:focus {
   font-size: 13px;
 }
 
+.system-state {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.12), transparent 36%),
+    var(--panel);
+}
+
+.system-state-code {
+  color: var(--primary);
+  font-size: clamp(48px, 12vw, 96px);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.system-state h1 {
+  margin-bottom: 10px;
+  font-size: clamp(26px, 5vw, 38px);
+}
+
+.system-state p {
+  max-width: 680px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.system-state-reference {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.system-state-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .mushaf-page-container {
   display: flex;
   justify-content: center;

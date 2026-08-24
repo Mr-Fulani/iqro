@@ -58,6 +58,17 @@ test("account routes are explicitly excluded from indexing", async ({ page }) =>
   );
 });
 
+test("unknown routes return the localized 404 surface and stay out of the index", async ({ page }) => {
+  const response = await page.goto("/ru/this-page-does-not-exist");
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Страница не найдена");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.getByRole("link", { name: "Вернуться на главную" })).toHaveAttribute(
+    "href",
+    "/ru",
+  );
+});
+
 test("locale-prefixed routes drive language, direction, and localized navigation", async ({ page }) => {
   await page.goto("/ar/quran");
 
