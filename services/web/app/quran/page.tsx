@@ -6,7 +6,10 @@ import {
   MushafAudioPlayer,
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
-import type { AudioPlaybackSettings } from "../../components/SegmentedAudioPlayer";
+import type {
+  AudioPlayerControlRequest,
+  AudioPlaybackSettings,
+} from "../../components/SegmentedAudioPlayer";
 import {
   api,
   Ayah,
@@ -39,13 +42,16 @@ function QuranContent() {
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [playAyahRequest, setPlayAyahRequest] = useState<AyahPlaybackTrigger | null>(null);
+  const [playerControlRequest, setPlayerControlRequest] = useState<AudioPlayerControlRequest | null>(null);
   const [audioSettings, setAudioSettings] = useState<AudioPlaybackSettings>({
     repeatMode: "off",
     playbackRate: 1,
   });
   const pendingNavigationPage = useRef<number | null>(null);
   const ayahPlaybackRequestId = useRef(0);
+  const playerControlRequestId = useRef(0);
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
   const [loading, setLoading] = useState<boolean>(true);
@@ -189,11 +195,40 @@ function QuranContent() {
     });
   }, [selectedSurah]);
 
-  const repeatModeLabel = audioSettings.repeatMode === "ayah"
-    ? t("player.repeatAyah")
-    : audioSettings.repeatMode === "selection"
-      ? t("player.repeatSelection")
-      : t("player.repeatOff");
+  const sendPlayerControl = useCallback((action: AudioPlayerControlRequest["action"]) => {
+    playerControlRequestId.current += 1;
+    setPlayerControlRequest({
+      requestId: playerControlRequestId.current,
+      action,
+    });
+  }, []);
+
+  const handleToggleAyahPlayback = useCallback((ayahNumber: number) => {
+    const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    if (playingMushafAyah === ayahKey) {
+      sendPlayerControl("toggle-playback");
+      return;
+    }
+    handlePlayAyah(ayahNumber);
+  }, [handlePlayAyah, playingMushafAyah, selectedSurah, sendPlayerControl]);
+
+  const handleToggleAyahRepeat = useCallback((ayahNumber: number) => {
+    const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    if (playingMushafAyah !== ayahKey) {
+      handlePlayAyah(ayahNumber);
+      if (audioSettings.repeatMode !== "ayah") {
+        sendPlayerControl("toggle-ayah-repeat");
+      }
+      return;
+    }
+    sendPlayerControl("toggle-ayah-repeat");
+  }, [
+    audioSettings.repeatMode,
+    handlePlayAyah,
+    playingMushafAyah,
+    selectedSurah,
+    sendPlayerControl,
+  ]);
 
   const handleSavePosition = async (ayahNumber?: number) => {
     if (!isLoggedIn) {
@@ -452,7 +487,9 @@ function QuranContent() {
           selectedSurah={selectedSurah}
           selectedAyahKey={selectedMushafAyah}
           playAyahRequest={playAyahRequest}
+          controlRequest={playerControlRequest}
           onActiveAyahChange={handleActiveAyahChange}
+          onPlayingChange={setIsAudioPlaying}
           onSettingsChange={setAudioSettings}
         />
       </section>
@@ -477,6 +514,14 @@ function QuranContent() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
               {ayahs.map((ayah) => {
                 const ayahKey = `${selectedSurah}:${ayah.number}`;
+                const isAyahActive = playingMushafAyah === ayahKey;
+                const isAyahPlaying = isAyahActive && isAudioPlaying;
+                const isAyahRepeating = isAyahActive && audioSettings.repeatMode === "ayah";
+                const playbackActionLabel = isAyahPlaying
+                  ? t("player.pausePlayback")
+                  : isAyahActive
+                    ? t("player.continue")
+                    : t("player.play");
                 return (
                   <article
                     key={ayah.id}
@@ -491,45 +536,56 @@ function QuranContent() {
                       </div>
 
                       <div className="ayah-actions">
-                        <div className="ayah-playback-indicators">
-                          <span
-                            className="status-chip"
-                            aria-label={`${t("player.repeat")}: ${repeatModeLabel}`}
-                            title={t("player.repeatAria")}
-                          >
-                            🔁 {repeatModeLabel}
-                          </span>
-                          <span
-                            className="status-chip"
-                            aria-label={`${t("player.speed")}: ${formatNumber(audioSettings.playbackRate)}×`}
-                            title={t("player.speedAria")}
-                          >
-                            ⚡ {formatNumber(audioSettings.playbackRate)}×
-                          </span>
-                        </div>
                         <div className="ayah-action-buttons">
                           <button
-                            className="btn btn-primary btn-sm"
+                            className={`btn btn-sm ayah-icon-button ayah-play-button${isAyahPlaying ? " is-active" : ""}`}
                             type="button"
-                            onClick={() => handlePlayAyah(ayah.number)}
-                            aria-label={`▶ ${t("player.play")} ${t("common.ayah", { ayah: ayahKey })}`}
-                            title={t("common.ayah", { ayah: ayahKey })}
+                            onClick={() => handleToggleAyahPlayback(ayah.number)}
+                            aria-label={`${playbackActionLabel}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={playbackActionLabel}
                           >
-                            ▶ {t("player.play")}
+                            <span aria-hidden="true">{isAyahPlaying ? "⏸" : "▶"}</span>
                           </button>
                           <button
-                            className="btn btn-secondary btn-sm"
+                            className={`btn btn-sm ayah-icon-button${isAyahRepeating ? " is-active" : ""}`}
+                            type="button"
+                            onClick={() => handleToggleAyahRepeat(ayah.number)}
+                            aria-pressed={isAyahRepeating}
+                            aria-label={isAyahRepeating
+                              ? `${t("player.repeatAria")}: ${t("player.repeatOff")}`
+                              : `${t("player.repeatAyah")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={isAyahRepeating
+                              ? `${t("player.repeatAria")}: ${t("player.repeatOff")}`
+                              : `${t("player.repeatAyah")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                          >
+                            <span aria-hidden="true">🔁</span>
+                          </button>
+                          <button
+                            className="btn btn-sm ayah-icon-button ayah-speed-button"
+                            type="button"
+                            onClick={() => sendPlayerControl("cycle-speed")}
+                            aria-label={`${t("player.speedAria")}: ${formatNumber(audioSettings.playbackRate)}×`}
+                            title={`${t("player.speedAria")}: ${formatNumber(audioSettings.playbackRate)}×`}
+                          >
+                            {formatNumber(audioSettings.playbackRate)}×
+                          </button>
+                          <button
+                            className="btn btn-sm ayah-icon-button"
+                            type="button"
                             onClick={() => void handleSavePosition(ayah.number)}
+                            aria-label={t("quran.markReadTitle")}
                             title={t("quran.markReadTitle")}
                           >
-                            {t("quran.mark")}
+                            <span aria-hidden="true">📍</span>
                           </button>
                           <button
-                            className="btn btn-secondary btn-sm"
+                            className="btn btn-sm ayah-icon-button"
+                            type="button"
                             onClick={() => void handleAddBookmark(ayah.number)}
+                            aria-label={t("quran.bookmarkTitle")}
                             title={t("quran.bookmarkTitle")}
                           >
-                            {t("quran.bookmark")}
+                            <span aria-hidden="true">🔖</span>
                           </button>
                         </div>
                       </div>

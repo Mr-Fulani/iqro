@@ -6,6 +6,7 @@ import { useI18n } from "../lib/i18n-context";
 import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
+  type AudioPlayerControlRequest,
   type AudioPlaybackSettings,
 } from "./SegmentedAudioPlayer";
 
@@ -19,7 +20,9 @@ type MushafAudioPlayerProps = {
   selectedSurah: number;
   selectedAyahKey: string | null;
   playAyahRequest?: AyahPlaybackTrigger | null;
+  controlRequest?: AudioPlayerControlRequest | null;
   onActiveAyahChange: (ayahKey: string | null) => void;
+  onPlayingChange?: (isPlaying: boolean) => void;
   onSettingsChange?: (settings: AudioPlaybackSettings) => void;
 };
 
@@ -35,7 +38,9 @@ export function MushafAudioPlayer({
   selectedSurah,
   selectedAyahKey,
   playAyahRequest,
+  controlRequest,
   onActiveAyahChange,
+  onPlayingChange,
   onSettingsChange,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
@@ -250,7 +255,9 @@ export function MushafAudioPlayer({
       <SegmentedAudioPlayer
         request={playerRequest}
         className="mushaf-audio-now-playing"
+        controlRequest={controlRequest}
         onActiveAyahChange={onActiveAyahChange}
+        onPlayingChange={onPlayingChange}
         onSettingsChange={onSettingsChange}
       />
     </div>

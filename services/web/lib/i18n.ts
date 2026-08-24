@@ -239,6 +239,7 @@ export const MESSAGES = {
   "player.activeAyah": message("аят {surah}:{ayah}", "ayah {surah}:{ayah}", "الآية {surah}:{ayah}", "ayet {surah}:{ayah}"),
   "player.continue": message("Продолжить", "Continue", "متابعة", "Devam et"),
   "player.play": message("Воспроизвести", "Play", "تشغيل", "Oynat"),
+  "player.pausePlayback": message("Поставить на паузу", "Pause", "إيقاف مؤقت", "Duraklat"),
   "player.hideSettings": message("Скрыть расширенные настройки", "Hide advanced settings", "إخفاء الإعدادات المتقدمة", "Gelişmiş ayarları gizle"),
   "player.showSettings": message("Повтор, диапазон и таймер", "Repeat, range, and timer", "التكرار والنطاق والمؤقت", "Tekrar, aralık ve zamanlayıcı"),
   "player.settingsShort": message("Настройки", "Settings", "الإعدادات", "Ayarlar"),

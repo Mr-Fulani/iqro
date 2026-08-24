@@ -23,6 +23,10 @@ export type AudioPlaybackSettings = {
   repeatMode: RepeatMode;
   playbackRate: number;
 };
+export type AudioPlayerControlRequest = {
+  requestId: number;
+  action: "toggle-playback" | "toggle-ayah-repeat" | "cycle-speed";
+};
 type SleepMode = "off" | "ayah" | "5" | "15" | "30" | "60";
 
 type RuntimePlan = {
@@ -45,6 +49,7 @@ type SegmentedAudioPlayerProps = {
   onActiveAyahChange?: (ayahKey: string | null) => void;
   onPlayingChange?: (isPlaying: boolean) => void;
   onSettingsChange?: (settings: AudioPlaybackSettings) => void;
+  controlRequest?: AudioPlayerControlRequest | null;
   pauseOnNavigationKey?: string;
   compact?: boolean;
 };
@@ -113,6 +118,7 @@ export function SegmentedAudioPlayer({
   onActiveAyahChange,
   onPlayingChange,
   onSettingsChange,
+  controlRequest,
   pauseOnNavigationKey,
   compact = false,
 }: SegmentedAudioPlayerProps) {
@@ -133,6 +139,7 @@ export function SegmentedAudioPlayer({
   const onActiveAyahChangeRef = useRef(onActiveAyahChange);
   const onPlayingChangeRef = useRef(onPlayingChange);
   const navigationKeyRef = useRef(pauseOnNavigationKey);
+  const handledControlRequestRef = useRef<number | null>(null);
 
   const [activeRequest, setActiveRequest] = useState<AudioPlaybackRequest | null>(null);
   const [activePlan, setActivePlan] = useState<RuntimePlan | null>(null);
@@ -149,7 +156,7 @@ export function SegmentedAudioPlayer({
   const [rangeStartAyah, setRangeStartAyah] = useState<number | null>(null);
   const [rangeEndAyah, setRangeEndAyah] = useState<number | null>(null);
   const [activeAyah, setActiveAyah] = useState<AyahAudioSegment | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(!compact);
 
   useEffect(() => {
     onActiveAyahChangeRef.current = onActiveAyahChange;
@@ -535,6 +542,33 @@ export function SegmentedAudioPlayer({
     audio.currentTime = nextMs / 1000;
     handleTimeUpdate();
   }, [handleTimeUpdate]);
+
+  useEffect(() => {
+    if (
+      !controlRequest ||
+      handledControlRequestRef.current === controlRequest.requestId
+    ) {
+      return;
+    }
+    handledControlRequestRef.current = controlRequest.requestId;
+
+    if (controlRequest.action === "toggle-playback") {
+      if (isPlaying) {
+        stopAtCurrentPosition({ key: "player.status.paused" });
+      } else {
+        resumePlayback();
+      }
+      return;
+    }
+    if (controlRequest.action === "toggle-ayah-repeat") {
+      setRepeatMode((current) => current === "ayah" ? "off" : "ayah");
+      return;
+    }
+    setPlaybackRate((current) => {
+      const currentIndex = SPEED_OPTIONS.indexOf(current);
+      return SPEED_OPTIONS[(currentIndex + 1) % SPEED_OPTIONS.length];
+    });
+  }, [controlRequest, isPlaying, resumePlayback, stopAtCurrentPosition]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !activeRequest) return;

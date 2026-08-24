@@ -379,7 +379,7 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toHaveCount(0);
 
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
-  expect((await player.boundingBox())!.height).toBeLessThan(130);
+  await expect.poll(async () => (await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toBeVisible();
 
   await player.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
@@ -480,20 +480,49 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(recitationSelect.locator("option")).toHaveCount(1);
 
   const firstAyah = page.locator(".ayah-card").first();
-  await expect(firstAyah.getByRole("button", { name: "▶ Воспроизвести Аят 6:1" })).toBeVisible();
-  await expect(firstAyah.getByLabel("Повтор: Без повтора")).toBeVisible();
-  await expect(firstAyah.getByLabel("Скорость: 1×")).toBeVisible();
+  const secondAyah = page.locator(".ayah-card").nth(1);
+  const playButton = firstAyah.getByRole("button", { name: "Воспроизвести: Аят 6:1" });
+  const repeatButton = firstAyah.getByRole("button", { name: "Повтор аята: Аят 6:1" });
+  const speedButton = firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1×" });
+  await expect(playButton).toHaveText("▶");
+  await expect(repeatButton).toHaveText("🔁");
+  await expect(speedButton).toHaveText("1×");
+  await expect(firstAyah.getByRole("button", { name: "Отметить как прочитанное" })).toHaveText("📍");
+  await expect(firstAyah.getByRole("button", { name: "Добавить в закладки" })).toHaveText("🔖");
 
-  await firstAyah.getByRole("button", { name: "▶ Воспроизвести Аят 6:1" }).click();
+  await speedButton.click();
+  await expect(page.getByLabel("Скорость воспроизведения", { exact: true })).toHaveValue("1.25");
+  await expect(firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,25×" })).toHaveText("1,25×");
+
+  await playButton.click();
   const audio = page.locator(".mushaf-audio-now-playing audio");
   await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
   await expect(firstAyah).toHaveClass(/is-audio-active/);
   await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:1/)).toBeVisible();
+  const pauseButton = firstAyah.getByRole("button", { name: "Поставить на паузу: Аят 6:1" });
+  await expect(pauseButton).toHaveText("⏸");
 
-  await page.getByLabel("Режим повтора").selectOption("ayah");
-  await page.getByLabel("Скорость воспроизведения").selectOption("1.5");
-  await expect(firstAyah.getByLabel("Повтор: Повтор аята")).toBeVisible();
-  await expect(firstAyah.getByLabel("Скорость: 1,5×")).toBeVisible();
+  await pauseButton.click();
+  await expect(page.getByText("Пауза · позиция сохранена", { exact: true })).toBeVisible();
+  const continueButton = firstAyah.getByRole("button", { name: "Продолжить: Аят 6:1" });
+  await expect(continueButton).toHaveText("▶");
+  await continueButton.click();
+  await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  await repeatButton.click();
+  await expect(page.getByLabel("Режим повтора", { exact: true })).toHaveValue("ayah");
+  await expect(firstAyah.getByRole("button", { name: "Режим повтора: Без повтора" })).toHaveAttribute("aria-pressed", "true");
+
+  await secondAyah.getByRole("button", { name: "Повтор аята: Аят 6:2" }).click();
+  await expect(secondAyah).toHaveClass(/is-audio-active/);
+  await expect(secondAyah.getByRole("button", { name: "Режим повтора: Без повтора" })).toHaveAttribute("aria-pressed", "true");
+  await expect(firstAyah.getByRole("button", { name: "Повтор аята: Аят 6:1" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
+
+  await secondAyah.getByRole("button", { name: "Режим повтора: Без повтора" }).click();
+  await expect(page.getByLabel("Режим повтора", { exact: true })).toHaveValue("off");
+  await page.getByLabel("Скорость воспроизведения", { exact: true }).selectOption("1.5");
+  await expect(firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,5×" })).toBeVisible();
 });
 
 test("advanced player handles ranges, repeat, learning pauses, speed and sleep", async ({ page }) => {
