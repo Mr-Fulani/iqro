@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 
+from quran_backend.database_budget import DatabaseBudgetError, DatabaseConnectionBudget
+
 BASE_DIR = Path(__file__).resolve().parents[3]
 
 
@@ -30,6 +32,16 @@ def positive_env_int(name: str, default: int) -> int:
         raise ImproperlyConfigured(f"{name} must be a positive integer") from exc
     if value <= 0:
         raise ImproperlyConfigured(f"{name} must be a positive integer")
+    return value
+
+
+def non_negative_env_int(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} must be a non-negative integer") from exc
+    if value < 0:
+        raise ImproperlyConfigured(f"{name} must be a non-negative integer")
     return value
 
 
@@ -224,6 +236,21 @@ TEMPLATES = [
     },
 ]
 
+try:
+    DATABASE_CONNECTION_BUDGET = DatabaseConnectionBudget.from_environ(os.environ)
+except DatabaseBudgetError as exc:
+    raise ImproperlyConfigured(str(exc)) from exc
+
+DATABASE_POOL_MODE = DATABASE_CONNECTION_BUDGET.pool_mode
+DATABASE_CONN_MAX_AGE = non_negative_env_int("DATABASE_CONN_MAX_AGE", 0)
+if DATABASE_POOL_MODE == "transaction" and DATABASE_CONN_MAX_AGE != 0:
+    raise ImproperlyConfigured("DATABASE_CONN_MAX_AGE must be 0 with transaction pooling")
+DATABASE_OPTIONS: dict[str, object] = {
+    "connect_timeout": positive_env_int("DATABASE_CONNECT_TIMEOUT_SECONDS", 5),
+}
+if DATABASE_POOL_MODE == "transaction":
+    DATABASE_OPTIONS["prepare_threshold"] = None
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -232,9 +259,10 @@ DATABASES = {
         "NAME": os.getenv("DATABASE_NAME", "quran"),
         "USER": os.getenv("DATABASE_USER", "quran"),
         "PASSWORD": os.getenv("DATABASE_PASSWORD", "quran-local-only"),
-        "CONN_MAX_AGE": int(os.getenv("DATABASE_CONN_MAX_AGE", "60")),
+        "CONN_MAX_AGE": DATABASE_CONN_MAX_AGE,
         "CONN_HEALTH_CHECKS": True,
-        "OPTIONS": {"connect_timeout": 5},
+        "DISABLE_SERVER_SIDE_CURSORS": DATABASE_POOL_MODE == "transaction",
+        "OPTIONS": DATABASE_OPTIONS,
     }
 }
 

@@ -112,7 +112,7 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 
 - provision'ить production bucket/CDN и загрузить канонические media через готовый immutable
   pipeline; runtime-код и Compose уже не зависят от локального media volume;
-- подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию;
+- подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию из раздела ниже;
 - убедиться, что cache/throttle/Celery используют внешние Redis endpoints;
 - запускать migrations отдельной release-job;
 - оставить Beat/scheduler singleton;
@@ -121,6 +121,43 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 Количество API, web и worker replicas после этого меняется независимо. PostgreSQL read
 replica, отдельные Redis-кластеры и партиционирование добавляются только при измеренной
 saturation; они не являются условием небольшого публичного запуска.
+
+### 3.2. PostgreSQL/PgBouncer connection budget
+
+Стартовый S0 работает напрямую с PostgreSQL (`DATABASE_POOL_MODE=direct`) и объявляет максимум
+100 соединений, из которых 20 зарезервированы для администратора, мониторинга и аварийных
+операций. Текущая topology оценивается в 19 application clients: API ограничен как
+`GUNICORN_WORKERS=2` × `API_MAX_CONCURRENT_REQUESTS_PER_WORKER=5`, Celery —
+`CELERY_WORKER_CONCURRENCY=4`, ещё один client выделен Beat и по два — release-job и
+operations. Production ASGI всегда требует `DATABASE_CONN_MAX_AGE=0`.
+
+Перед добавлением реплик направьте `DATABASE_HOST`/`DATABASE_PORT` на PgBouncer и установите
+`DATABASE_POOL_MODE=transaction`. Настройки автоматически отключат server-side cursors и
+автоматические prepared statements. У PgBouncer настройте тот же бюджет:
+
+```ini
+[pgbouncer]
+pool_mode = transaction
+default_pool_size = 40
+max_db_connections = 40
+max_db_client_connections = 100
+```
+
+Значения `DATABASE_PGBOUNCER_SERVER_CONNECTIONS` и
+`DATABASE_PGBOUNCER_CLIENT_CONNECTIONS` должны совпадать с фактическими ограничениями pooler.
+При каждом scale измените `DATABASE_API_REPLICAS`, `DATABASE_WORKER_REPLICAS`, число Gunicorn
+workers и runtime concurrency. Валидатор считает бюджет из этих же исполняемых переменных;
+отдельного декларативного лимита, способного разойтись с runtime, нет. До deploy выполните:
+
+```bash
+cd services/backend
+uv run python manage.py database_connection_budget
+```
+
+Команда завершится ошибкой уже при загрузке production settings, если direct clients превышают
+доступный бюджет PostgreSQL, PgBouncer server pool выходит за него либо max clients меньше
+объявленной topology. После миграций выполняйте PgBouncer `RECONNECT`, если pooler настроен
+с поддержкой prepared statements; текущая безопасная конфигурация их не использует.
 
 ## 4. Обновление и откат
 

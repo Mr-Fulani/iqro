@@ -389,6 +389,23 @@ production-like topology и временным рядом server-side метри
 Gunicorn/DB pool saturation, PostgreSQL query/lock latency, Redis latency/evictions и 5xx.
 Локальный или mock-прогон проверяет сам инструмент, но не закрывает S0/S1 capacity gate.
 
+Перед каждым изменением числа API/worker replicas сначала обновите topology/runtime-переменные
+`DATABASE_API_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER`,
+`DATABASE_WORKER_REPLICAS` и `CELERY_WORKER_CONCURRENCY`. Затем сохраните отчёт рядом с
+capacity evidence:
+
+```bash
+cd services/backend
+uv run python manage.py database_connection_budget \
+  > /tmp/quran-database-budget-release-abc1234-s0.json
+```
+
+В direct-режиме отчёт обязан оставлять PostgreSQL headroom внутри
+`max_connections - reserved_connections`. В transaction-режиме дополнительно сверяйте
+`configured_server_connection_limit` и `configured_client_connection_limit` с фактическими
+`SHOW DATABASES`/`SHOW CONFIG` PgBouncer. Расхождение означает, что deployment нельзя
+масштабировать до исправления конфигурации.
+
 ## Capacity profiles и рост
 
 Проект использует профили S0–S3 из

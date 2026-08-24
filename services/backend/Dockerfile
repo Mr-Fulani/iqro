@@ -97,4 +97,4 @@ USER app
 
 EXPOSE 8000
 
-CMD ["gunicorn", "quran_backend.asgi:application", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["gunicorn", "quran_backend.asgi:application", "--config", "python:quran_backend.gunicorn_config"]

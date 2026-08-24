@@ -6,12 +6,18 @@ from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.settings.base import *  # noqa: F403
 from quran_backend.settings.base import (
+    DATABASES,
     REST_FRAMEWORK,
     env_bool,
     env_list,
     required_env,
     validate_https_base_url,
 )
+
+if DATABASES["default"]["CONN_MAX_AGE"] != 0:
+    raise ImproperlyConfigured(
+        "DATABASE_CONN_MAX_AGE must be 0 because the production backend runs under ASGI"
+    )
 
 SECRET_KEY = required_env("DJANGO_SECRET_KEY")
 QURAN_INSTALLATION_HASH_KEY = required_env("QURAN_INSTALLATION_HASH_KEY")

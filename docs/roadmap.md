@@ -72,7 +72,9 @@ flowchart LR
   economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
   default `asset` и отдаёт типизированный список renditions.
 - [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`.
-- [ ] Подготовить PgBouncer-compatible DB configuration и connection budget.
+- [x] Подготовить PgBouncer-compatible DB configuration и connection budget: ASGI не держит
+  persistent connections, transaction mode отключает server-side cursors/автоподготовку
+  statements, а startup и operator-команда отклоняют превышение PostgreSQL/client pool budget.
 - [ ] Разделить конфигурационные URL Redis roles с сохранением одного экземпляра на старте.
 - [ ] Сделать web/API/workers stateless и независимо реплицируемыми; Beat — singleton.
 - [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts.

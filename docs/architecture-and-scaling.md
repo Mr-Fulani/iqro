@@ -170,8 +170,14 @@ API не должен предполагать, что запрос пришёл
 
 ### PostgreSQL
 
-- Все реплики подключаются через ограниченный pool; PgBouncer предусматривается до роста
-  числа API/worker-процессов.
+- Все реплики подключаются через ограниченный pool; режим `DATABASE_POOL_MODE=transaction`
+  включает PgBouncer-safe настройки Django/Psycopg, а topology-переменные формально считают
+  client/server budget до запуска новой конфигурации.
+- Production ASGI использует `CONN_MAX_AGE=0`: долгоживущие Django connections не умножаются
+  на thread/request concurrency, переиспользование server connections выполняет PgBouncer.
+- Gunicorn/Uvicorn применяет явный per-process concurrency limit, Celery — явную concurrency;
+  connection budget вычисляется из тех же runtime-переменных, поэтому backpressure наступает
+  до исчерпания PostgreSQL, а не после него.
 - Индексы подтверждаются production-подобным `EXPLAIN ANALYZE`.
 - Большие append-only журналы имеют метрики rows/day и bytes/day, bounded retention и batch
   cleanup. Партиционирование добавляется до того, как размер таблицы делает обычное удаление
