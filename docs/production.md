@@ -30,7 +30,8 @@ chmod 600 services/backend/.env.production
 - `DJANGO_ALLOWED_HOSTS`, CSRF/CORS origins и публичные HTTPS URL;
 - `SITE_URL`: один канонический HTTPS origin web-приложения без path/query/hash;
 - пароль PostgreSQL и все Django/Quran hash keys;
-- четыре Redis role URL; для S0 они могут указывать на один внутренний Redis endpoint;
+- пять Redis role URL, включая `WEB_CACHE_REDIS_URL`; для S0 они могут указывать на один
+  внутренний Redis endpoint;
 - `QURAN_OPERATIONS_TOKEN`;
 - Quran.Foundation credentials, если синхронизация включена;
 - `MEDIA_OBJECT_STORAGE_ENDPOINT_URL`, bucket, scoped access/secret key, region/addressing style;
@@ -114,16 +115,17 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 - provision'ить production bucket/CDN и загрузить канонические media через готовый immutable
   pipeline; runtime-код и Compose уже не зависят от локального media volume;
 - подключить внешний PostgreSQL через PgBouncer-совместимую конфигурацию из раздела ниже;
-- убедиться, что cache/throttle/Celery используют внешние Redis endpoints;
+- убедиться, что backend cache/throttle/Celery и общий web cache используют доступные всем
+  репликам Redis endpoints;
 - запускать migrations отдельной release-job;
 - оставить желаемое число Beat-процессов равным одному; Redis lease блокирует случайный дубль
   и позволяет безопасный failover после TTL;
 - включить общий metrics/logging backend и проверку capacity profile.
 
-Количество API и worker replicas после этого меняется независимо. Вторая web-реплика требует
-общего Next.js cache handler из roadmap A.1. PostgreSQL read replica, отдельные Redis-кластеры
-и партиционирование добавляются только при измеренной saturation; они не являются условием
-небольшого публичного запуска.
+Количество API, web и worker replicas после этого меняется независимо за внешним
+load balancer/orchestrator; single-host gateway остаётся стартовым S0-профилем. PostgreSQL read
+replica, отдельные Redis-кластеры и партиционирование добавляются только при измеренной
+saturation; они не являются условием небольшого публичного запуска.
 
 ### 3.2. PostgreSQL/PgBouncer connection budget
 
@@ -164,11 +166,12 @@ uv run python manage.py database_connection_budget
 
 ### 3.3. Redis roles
 
-Production явно требует четыре URL: `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`,
-`CELERY_BROKER_URL` и `CELERY_RESULT_BACKEND`. В S0 они указывают на один Redis, поэтому
-дополнительные серверы не нужны. При росте каждый URL можно перевести на отдельный database,
-instance или managed endpoint без изменения приложения. Обычный cache и security-critical
-throttling используют разные Django aliases и key prefixes; readiness проверяет оба.
+Production явно требует пять URL: `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`,
+`CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` и `WEB_CACHE_REDIS_URL`. В S0 они указывают на
+один Redis, поэтому дополнительные серверы не нужны. При росте каждый URL можно перевести на
+отдельный database, instance или managed endpoint без изменения приложения. Обычный cache,
+web cache и security-critical throttling используют разные aliases/key prefixes; backend
+readiness проверяет первые два backend aliases, web cache контролируется отдельно.
 
 До deploy проверьте разрешённые endpoints без вывода credentials:
 
@@ -212,6 +215,33 @@ workers, затем запустите один Beat с новым broker URL. �
 он исчезнет по TTL. Если требуется аварийная проверка, сначала убедитесь, что старый Beat
 остановлен, и только затем смотрите TTL ключа; удаление ключа при живом владельце может создать
 двух активных scheduler'ов.
+
+### 3.5. Общий Next.js cache
+
+Web использует custom `cacheHandler` для fetch/ISR/route entries и отдельный Next.js handler
+для tag coordination. Оба работают через `WEB_CACHE_REDIS_URL`; production Compose передаёт
+`WEB_CACHE_REQUIRED=true`, поэтому отсутствующий URL отклоняется при создании handler. Build и
+локальная разработка без URL используют только process-local memory fallback.
+
+`WEB_CACHE_KEY_PREFIX=quran-platform:web-cache:v1` изолирует keyspace. Все реплики одного
+deployment используют одинаковый prefix; разные environments на общем Redis — разные prefixes.
+При несовместимом изменении формата увеличьте суффикс версии вместо
+`KEYS`/`SCAN`/массового удаления. Entries имеют hard TTL
+`WEB_CACHE_ENTRY_TTL_SECONDS=86400`, tag timestamps —
+`WEB_CACHE_TAG_TTL_SECONDS=172800`; startup отклоняет tag TTL короче entry TTL. Размер одной
+записи ограничен `WEB_CACHE_MAX_ENTRY_BYTES=8388608`. Fetch content дополнительно сохраняет
+свой hourly `revalidate`, поэтому hard TTL не заменяет продуктовую freshness policy.
+
+Redis read error превращается в cache miss, write error не ломает пользовательский ответ.
+Ошибка записи invalidation timestamp, напротив, возвращает 5xx из внутреннего revalidation
+endpoint, чтобы Celery повторил событие. В S0 web cache указывает на тот же Redis. При росте его
+можно первым перенести на отдельный evictable endpoint: эти записи не являются источником
+истины. Не переносите вместе с ним throttle или broker без отдельной процедуры из 3.3.
+
+Перед второй web-репликой дополнительно обеспечьте load balancing и одинаковые
+`WEB_CACHE_KEY_PREFIX`, `WEB_CONTENT_REVALIDATION_SECRET`, build/image version на всех
+инстансах. CDN не должен кэшировать HTML/RSC/public JSON до появления purge adapter; media CDN
+остаётся независимым immutable-контуром.
 
 ## 4. Обновление и откат
 

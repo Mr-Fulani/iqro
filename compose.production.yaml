@@ -243,6 +243,14 @@ services:
       PORT: "3000"
       SITE_URL: ${SITE_URL:?Set SITE_URL in the production env file}
       BACKEND_INTERNAL_URL: http://backend:8000
+      WEB_CACHE_REQUIRED: "true"
+      WEB_CACHE_REDIS_URL: ${WEB_CACHE_REDIS_URL:?Set WEB_CACHE_REDIS_URL in the production env file}
+      WEB_CACHE_KEY_PREFIX: ${WEB_CACHE_KEY_PREFIX:-quran-platform:web-cache:v1}
+      WEB_CACHE_ENTRY_TTL_SECONDS: ${WEB_CACHE_ENTRY_TTL_SECONDS:-86400}
+      WEB_CACHE_TAG_TTL_SECONDS: ${WEB_CACHE_TAG_TTL_SECONDS:-172800}
+      WEB_CACHE_MAX_ENTRY_BYTES: ${WEB_CACHE_MAX_ENTRY_BYTES:-8388608}
+      WEB_CACHE_CONNECT_TIMEOUT_MS: ${WEB_CACHE_CONNECT_TIMEOUT_MS:-2000}
+      WEB_CACHE_RETRY_DELAY_MS: ${WEB_CACHE_RETRY_DELAY_MS:-5000}
       WEB_CONTENT_REVALIDATION_SECRET: ${WEB_CONTENT_REVALIDATION_SECRET:?Set WEB_CONTENT_REVALIDATION_SECRET in the production env file}
       LEGAL_ENTITY_NAME: ${LEGAL_ENTITY_NAME:?Set LEGAL_ENTITY_NAME in the production env file}
       LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:?Set LEGAL_CONTACT_EMAIL in the production env file}
@@ -256,6 +264,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
       interval: 10s

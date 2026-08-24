@@ -121,13 +121,25 @@ backend/worker и web через secret store; в логах и URL его бы�
 произвольные cache tags/paths: только allowlisted Quran/audio события с валидными edition,
 content version и UUID. Без корректного секрета он отвечает 404.
 
-Текущий single-web профиль использует стандартный filesystem cache Next.js. Перед запуском
-второй web-реплики необходимо подключить общий cache handler и Redis-backed координацию tag
-timestamps (`updateTags`/`refreshTags`/`getExpiration`): стандартная on-demand invalidation
-локальна для одного инстанса. Если CDN начнёт кэшировать HTML/RSC или public JSON поверх
-Next.js, тот же publication event обязан purge'ить CDN-варианты; до появления purge adapter
-gateway не должен добавлять для них независимый edge TTL. Immutable media кэшируется отдельно
-в media CDN и не зависит от ISR webhook.
+Production web использует общий Redis-backed handler для fetch/ISR/route entries и общий
+timestamp каждого invalidated tag. `updateTags` пишет timestamp, `getExpiration` и cache reads
+сверяют его без обхода keyspace; `refreshTags` не делает сетевой `SCAN`, потому что локального
+tag manifest нет. `WEB_CACHE_TAG_TTL_SECONDS` обязан быть не короче
+`WEB_CACHE_ENTRY_TTL_SECONDS`, иначе старая запись могла бы снова стать доступной после
+исчезновения tag marker. Одинаковые URL/key prefix обязательны для всех web-реплик.
+
+При недоступности web-cache Redis чтение становится cache miss и страница получает свежие
+данные из backend; неуспешная cache write только логируется. Неуспешная запись invalidation
+возвращает 5xx, поэтому `core.notify_web_content_change` повторяет событие. Алерты: сообщения
+`[web-cache]`, Redis latency/evictions/memory pressure, рост backend public reads и окончательно
+failed revalidation task. Для проверки нового deployment выполните `npm run test:cache` сначала
+без URL, затем против временного Redis с отдельным `WEB_CACHE_KEY_PREFIX`; production keyspace
+тестом не очищайте.
+
+Если CDN начнёт кэшировать HTML/RSC или public JSON поверх Next.js, тот же publication event
+обязан purge'ить CDN-варианты; до появления purge adapter gateway не должен добавлять для них
+независимый edge TTL. Immutable media кэшируется отдельно в media CDN и не зависит от ISR
+webhook.
 
 `/sitemaps/quran/sitemap.xml` ссылается на child sitemap с edition и активной content version в
 URL. `/sitemaps/audio/sitemap.xml` делает то же для каждой опубликованной декламации. Child

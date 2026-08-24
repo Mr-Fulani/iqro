@@ -12,11 +12,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:cache": "node --test cache/*.test.cjs",
     "test:e2e": "playwright test",
     "test:e2e:production": "PLAYWRIGHT_PRODUCTION=1 playwright test",
     "test:lighthouse": "node scripts/lighthouse-budget.mjs"
   },
   "dependencies": {
+    "@redis/client": "6.2.1",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"

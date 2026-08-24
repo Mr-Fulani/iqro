@@ -1,6 +1,6 @@
 # План и roadmap Quran Platform
 
-Дата обновления: 24 августа 2026 года
+Дата обновления: 25 августа 2026 года
 
 Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Текущий
 статус реализации по P0 остаётся в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
@@ -86,7 +86,7 @@ flowchart LR
   остаются auth/sync, cache-cold/warm, library API и audio Range/origin/QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам.
 
-Критерий выхода: потеря application-host не уничтожает media; добавление API/worker-реплики
+Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики
 не требует изменения кода или копирования локального состояния; S1 нагрузка подтверждена.
 
 ## Этап A.1. Публичный Web MVP и SEO
@@ -118,8 +118,11 @@ flowchart LR
 - [x] Определить ISR policy и автоматическую invalidation по content version через защищённое
   backend → Celery → web событие; персональные ответы оставить `private, no-store`, а gateway
   не должен независимо кэшировать HTML/RSC/JSON до появления CDN purge adapter.
-- [ ] Перед второй web-репликой подключить общий Next.js cache handler и Redis-координацию
-  tag invalidation; при edge-cache HTML/RSC/JSON добавить purge adapter к тому же событию.
+- [x] Подключить общий Redis-backed Next.js cache handler для fetch/ISR/route entries и
+  распределённые tag timestamps через `updateTags`/`getExpiration`; production без общего
+  cache URL запускается fail-closed, а dev/build сохраняют memory fallback.
+- [ ] При edge-cache HTML/RSC/public JSON добавить purge adapter к publication event; до этого
+  gateway/CDN не должны независимо кэшировать эти ответы.
 - [x] Добавить `BreadcrumbList` для глубоких маршрутов сур и аятов.
 - [x] Добавить `WebSite` и `AudioObject` только для опубликованных лицензированных записей,
   не раскрывая прямые media URL в server-rendered HTML.

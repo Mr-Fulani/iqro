@@ -1,3 +1,7 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+
 /** @type {import('next').NextConfig} */
 const backendUrl =
   process.env.BACKEND_INTERNAL_URL ||
@@ -36,6 +40,12 @@ const securityHeaders = [
 
 const nextConfig = {
   output: "standalone",
+  cacheHandler: require.resolve("./cache/incremental-cache-handler.cjs"),
+  cacheHandlers: {
+    default: require.resolve("./cache/use-cache-handler.cjs"),
+    remote: require.resolve("./cache/use-cache-handler.cjs"),
+  },
+  cacheMaxMemorySize: 0,
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {

@@ -16,5 +16,13 @@ export default defineConfig([
       "react-hooks/immutability": "off",
     },
   },
+  {
+    files: ["cache/**/*.cjs"],
+    rules: {
+      // Next.js loads custom cache handlers from CommonJS paths in both build workers and the
+      // standalone server. Keeping this boundary as CJS also mirrors the upstream handler API.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);

@@ -1,6 +1,6 @@
 # Архитектура расширения и масштабирования
 
-Дата фиксации: 24 августа 2026 года
+Дата фиксации: 25 августа 2026 года
 
 Этот документ дополняет [техническое задание](../thoughts/shared/specs/2026-08-09-quran-platform-backend.md)
 и определяет, как Quran Platform должна расти по двум независимым направлениям:
@@ -18,9 +18,9 @@
   отдельного сервиса.
 - Flutter iOS/Android, web и Telegram Mini App используют один версионированный API и одну
   модель пользователя, но имеют отдельные platform adapters и разные offline-возможности.
-- API и Celery workers не хранят runtime-состояние на локальном диске и могут запускаться
-  в нескольких репликах. Web не хранит пользовательские данные локально, но до второй
-  реплики его Next.js cache должен быть вынесен в общий handler.
+- API, web и Celery workers не хранят каноническое runtime-состояние на локальном диске и
+  могут запускаться в нескольких репликах; Next.js server cache и tag coordination используют
+  общий Redis handler.
 - PostgreSQL является источником истины для транзакционных данных; Redis и CDN можно очистить
   и восстановить без потери канонического состояния.
 - Публичный контент и media публикуются immutable-версиями. Аудиобайты, страницы Мусхафа,
@@ -189,17 +189,19 @@ API не должен предполагать, что запрос пришёл
 
 ### Redis
 
-- На старте один экземпляр может обслуживать cache, throttle и Celery: четыре role URL указывают
-  на один endpoint, но cache и throttle уже изолированы alias/key prefix.
+- На старте один экземпляр может обслуживать backend cache, throttle, Celery и web cache:
+  пять role URL указывают на один endpoint, но роли изолированы alias/key prefix.
 - `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`, `CELERY_BROKER_URL` и
-  `CELERY_RESULT_BACKEND` конфигурируются отдельно, поэтому роли разделяются без изменения
-  бизнес-кода; legacy `REDIS_URL` остаётся fallback только для local/CI.
+  `CELERY_RESULT_BACKEND` конфигурируются отдельно в backend, `WEB_CACHE_REDIS_URL` — в web,
+  поэтому роли разделяются без изменения бизнес-кода; legacy `REDIS_URL` остаётся fallback
+  только для local/CI backend.
 - Redis не является источником истины; eviction cache не ломает данные и авторизацию.
 - Переход к HA или разделению выполняется при memory pressure, evictions, latency либо
   конфликте queue/cache workloads.
-- Стандартный Next.js filesystem cache допустим только для одной web-реплики. Перед второй
-  репликой cache entries и timestamps tag invalidation выносятся в общий handler; publication
-  event пишет инвалидирование централизованно, а каждый инстанс refresh'ит его до request.
+- Next.js fetch/ISR/route entries вынесены в общий Redis handler, локальный memory cache отключён.
+  Tag invalidation хранит timestamp без `SCAN`: publication event пишет его централизованно,
+  а каждый инстанс сверяет timestamp при чтении. Tag TTL не может быть короче entry TTL, поэтому
+  старая запись не «воскресает» после удаления маркера.
 - CDN HTML/RSC/public JSON вводится только вместе с purge adapter. Без него edge TTL может
   пережить Next.js `revalidateTag`; immutable audio/image media остаётся отдельным CDN-контуром.
 
