@@ -1,11 +1,11 @@
 # Quran audio API and publication contract
 
-Модуль `audio` хранит каталог чтецов, версии чтения, метаданные файлов и проверенные
-таймкоды аятов. Django никогда не проксирует аудиобайты: клиенты получают immutable
-CDN URL и читают/скачивают файл напрямую.
+Модуль `audio` хранит каталог чтецов, версии чтения, логические `AudioTrack` с проверенными
+таймкодами аятов и физические `AudioRendition` economy/standard/high. Django никогда не
+проксирует аудиобайты: клиенты получают CDN URL и читают/скачивают файл напрямую.
 
 Для внешних Quran.Foundation assets API возвращает исходный HTTPS URL напрямую. Такие
-треки всегда имеют `offline_download_allowed=false`, `immutable=false`,
+renditions всегда имеют `offline_download_allowed=false`, `immutable=false`,
 `range_supported=false`, а `sha256` и `etag` равны `null`: backend не должен заявлять
 гарантии собственного object storage для файла провайдера.
 
@@ -44,19 +44,41 @@ Django Admin, но не создают дубли чтецов и не дают 
     "verified_at": "2026-08-09T00:00:00Z"
   },
   "asset": {
-    "url": "https://cdn.example/audio/reader/v1/001.mp3",
+    "url": "https://cdn.example/audio/reader/v1/001-standard.mp3",
     "content_type": "audio/mpeg",
     "codec": "mp3",
     "bitrate_kbps": 128,
     "bytes": 1462272,
     "sha256": "...",
-    "etag": "\"...\"",
+    "etag": "\"edge-observed-value\"",
     "range_supported": true,
     "immutable": true
   },
+  "renditions": [
+    {
+      "id": "019c...",
+      "quality": "standard",
+      "is_default": true,
+      "asset": {
+        "url": "https://cdn.example/audio/reader/v1/001-standard.mp3",
+        "content_type": "audio/mpeg",
+        "codec": "mp3",
+        "bitrate_kbps": 128,
+        "bytes": 1462272,
+        "sha256": "...",
+        "etag": "\"edge-observed-value\"",
+        "range_supported": true,
+        "immutable": true
+      }
+    }
+  ],
   "offline_download_allowed": true
 }
 ```
+
+`asset` всегда повторяет rendition с `is_default=true` и сохраняет совместимость старых
+клиентов. Новые Flutter/web/Telegram Mini App клиенты выбирают элемент `renditions` по quality,
+сети и настройке пользователя; таймлайн и segment IDs при этом не дублируются.
 
 Endpoint суры возвращает один трек и все его сегменты в порядке воспроизведения. Endpoint
 аята возвращает тот же asset и один диапазон `start_ms`/`end_ms`; отдельный файл аята не
@@ -73,13 +95,14 @@ Endpoint суры возвращает один трек и все его сег
 2. выбрать стиль (`murattal`, `mujawwad` или `muallim`) и заполнить источник, версию,
    SHA-256, правообладателя, лицензию и публичные URL при их наличии;
 3. явно зафиксировать решения по streaming и offline redistribution;
-4. создать треки только с безопасными относительными object keys, размером и SHA-256;
-   модель разрешает операторский пилот от одной суры, но публичная выдача требует все
-   114 уникальных треков уровня суры;
+4. создать логические треки и для каждого хотя бы одну rendition с безопасным относительным
+   object key либо внешним URL, размером, codec/bitrate и SHA-256 для managed asset; ровно одна
+   rendition должна быть default; модель разрешает операторский пилот от одной суры, но
+   публичная выдача требует все 114 уникальных треков уровня суры;
 5. для выделения аятов создать проверенную `AudioTimingVersion` и непересекающиеся сегменты;
 6. проверить реальное соответствие аудио каноническому тексту и правам распространения.
 
-После публикации метаданные, timing version, треки и сегменты неизменяемы. Исправление
+После публикации метаданные, timing version, треки, renditions и сегменты неизменяемы. Исправление
 оформляется новой версией с новым object key. Разрешён только переход
 `published → withdrawn`; withdrawn и неразрешённый для streaming контент перестают
 выдаваться origin API. Обычный withdrawal учитывает публичный cache и не является
@@ -143,15 +166,16 @@ python manage.py refresh_quran_foundation_audio --force
 
 - `GET`, `HEAD`, `Accept-Ranges: bytes`;
 - `206 Content-Range` и `416` для некорректного диапазона;
-- strong `ETag`, равный заключённому в кавычки SHA-256 из API, а также `Last-Modified`,
-  `Content-Length` и сохранённый в метаданных audio MIME;
+- фактически наблюдаемый strong `ETag`, сохранённый отдельно от SHA-256, а также
+  `Last-Modified`, `Content-Length` и сохранённый в rendition audio MIME;
 - `Cache-Control: public, max-age=31536000, immutable` для versioned assets;
 - CORS для web origins и expose headers `Accept-Ranges`, `Content-Length`,
   `Content-Range`, `ETag`, `Last-Modified`;
 - `Content-Disposition: inline` и `X-Content-Type-Options: nosniff`.
 
 API-флаги `range_supported` и `immutable` описывают обязательный delivery contract, а не
-результат runtime-пробы CDN. Этот contract отдельно проверяется в staging перед публикацией.
+результат runtime-пробы CDN. `ops/media/contract.py` отдельно проверяет этот contract в staging
+перед публикацией и фиксирует наблюдаемый ETag в JSON evidence.
 
 ## Офлайн-загрузка клиента
 

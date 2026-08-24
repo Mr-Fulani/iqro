@@ -246,6 +246,25 @@ export type Recitation = {
   published_at: string;
 };
 
+export type AudioAsset = {
+  url: string;
+  content_type: string;
+  codec: "mp3" | "opus" | "aac" | "flac" | string;
+  bitrate_kbps: number;
+  bytes: number;
+  sha256: string | null;
+  etag: string | null;
+  range_supported: boolean;
+  immutable: boolean;
+};
+
+export type AudioRendition = {
+  id: string;
+  quality: "economy" | "standard" | "high";
+  is_default: boolean;
+  asset: AudioAsset;
+};
+
 export type AudioTrack = {
   id: string;
   recitation_id: string;
@@ -254,17 +273,8 @@ export type AudioTrack = {
   juz_number: number | null;
   duration_ms: number;
   offline_download_allowed: boolean;
-  asset: {
-    url: string;
-    content_type: string;
-    codec: "mp3" | "opus" | "aac" | string;
-    bitrate_kbps: number;
-    bytes: number;
-    sha256: string | null;
-    etag: string | null;
-    range_supported: boolean;
-    immutable: boolean;
-  };
+  asset: AudioAsset;
+  renditions: AudioRendition[];
 };
 
 export type AyahAudioSegment = {

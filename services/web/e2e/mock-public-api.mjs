@@ -110,15 +110,8 @@ const recitation = {
   published_at: publishedAt,
 };
 
-const tracks = Array.from({ length: 114 }, (_, index) => ({
-  id: `00000000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`,
-  recitation_id: recitation.id,
-  scope: "surah",
-  surah_number: index + 1,
-  juz_number: null,
-  duration_ms: 60_000 + index * 1_000,
-  offline_download_allowed: false,
-  asset: {
+const tracks = Array.from({ length: 114 }, (_, index) => {
+  const asset = {
     url: `https://audio.example.test/${recitation.id}/${index + 1}.mp3`,
     content_type: "audio/mpeg",
     codec: "mp3",
@@ -128,8 +121,26 @@ const tracks = Array.from({ length: 114 }, (_, index) => ({
     etag: null,
     range_supported: true,
     immutable: true,
-  },
-}));
+  };
+  return {
+    id: `00000000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`,
+    recitation_id: recitation.id,
+    scope: "surah",
+    surah_number: index + 1,
+    juz_number: null,
+    duration_ms: 60_000 + index * 1_000,
+    offline_download_allowed: false,
+    asset,
+    renditions: [
+      {
+        id: `00000000-0000-7000-8200-${String(index + 1).padStart(12, "0")}`,
+        quality: "standard",
+        is_default: true,
+        asset,
+      },
+    ],
+  };
+});
 
 function sendJson(response, status, body) {
   response.writeHead(status, {

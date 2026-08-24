@@ -5,7 +5,12 @@ from typing import Any
 import pytest
 from django.core.exceptions import ValidationError
 
-from quran_backend.modules.audio.models import AudioTrack, RecitationPublicationStatus
+from quran_backend.modules.audio.models import (
+    AudioRendition,
+    AudioRenditionQuality,
+    AudioTrack,
+    RecitationPublicationStatus,
+)
 from quran_backend.modules.audio.quran_foundation import QuranFoundationEnvironment
 from quran_backend.modules.audio.quran_foundation_importer import (
     import_quran_foundation_recitation,
@@ -106,9 +111,12 @@ def test_imports_external_quran_foundation_audio_as_streaming_only(
     assert result.recitation.stream_allowed is True
     assert result.recitation.offline_download_allowed is False
     track = AudioTrack.objects.get(recitation_edition=result.recitation)
-    assert track.object_key is None
-    assert track.checksum_sha256 == ""
-    assert track.external_url.endswith("/qdc/test/murattal/1.mp3")
+    rendition = AudioRendition.objects.get(track=track)
+    assert rendition.quality == AudioRenditionQuality.STANDARD
+    assert rendition.is_default is True
+    assert rendition.object_key is None
+    assert rendition.checksum_sha256 == ""
+    assert rendition.external_url.endswith("/qdc/test/murattal/1.mp3")
     assert track.segments.count() == 2
 
 
@@ -133,7 +141,7 @@ def test_external_audio_cannot_be_published_for_offline_download(
     result.recitation.offline_download_allowed = True
     result.recitation.publish()
 
-    with pytest.raises(ValidationError, match="External provider tracks"):
+    with pytest.raises(ValidationError, match="External provider renditions"):
         result.recitation.save()
 
 

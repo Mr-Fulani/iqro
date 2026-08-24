@@ -149,6 +149,9 @@ API не должен предполагать, что запрос пришёл
 - Object storage является origin, CDN — единственным публичным каналом managed media.
 - `AudioTrack` представляет логический материал и тайминги; физические `AudioRendition`
   представляют codec, bitrate, размер, checksum и object key.
+- Это разделение реализовано в schema/API: у трека есть ровно один default rendition для
+  обратной совместимости и любое число уникальных quality-вариантов; checksum контента и
+  фактически наблюдаемый CDN ETag хранятся отдельно.
 - Клиент выбирает одну rendition: экономную, стандартную или высокую. Высокое качество не
   загружается автоматически на мобильной сети.
 - Versioned object key никогда не перезаписывается; исправление создаёт новую content version.
@@ -240,8 +243,8 @@ storage раньше установленного горизонта. Точны
 
 ADR по object storage/CDN принят в
 [ADR 0001](adr/0001-managed-media-object-storage-cdn.md). До широкого production launch ещё
-нужны ADR по process management и pool, разделению Redis roles, схеме `AudioRendition`, API
-auth/BFF и локальному storage Flutter.
+нужны ADR по process management и pool, разделению Redis roles, API auth/BFF и локальному
+storage Flutter.
 
 Переход между профилями S0–S3 подтверждается capacity/soak отчётом с workload mix для
 Flutter, web и Telegram Mini App, cache-cold/cache-warm/CDN-bypass сценариями, стоимостью

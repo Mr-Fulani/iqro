@@ -188,8 +188,10 @@ python3 ops/media/contract.py \
 ```
 
 Первый прогон может не указывать `etag`: наблюдаемое значение попадёт в report. Перед release
-его следует зафиксировать в manifest и повторить прогон, чтобы обнаружить неожиданную замену
-объекта. Gate проверяет `HEAD 200`, `206`, `416`, `304`, размер/MIME, strong ETag, CORS для
+его следует зафиксировать в manifest и соответствующем `AudioRendition.etag`, затем повторить
+прогон, чтобы обнаружить неожиданную замену объекта. SHA-256 проверяет содержимое, а ETag
+фиксирует фактический HTTP validator CDN; одно значение не подменяет другое. Gate проверяет
+`HEAD 200`, `206`, `416`, `304`, размер/MIME, strong ETag, `Last-Modified`, inline/nosniff и CORS для
 каждого клиента и годовой `public, immutable` cache. `--allow-http` предназначен только для
 локального эмулятора; production manifest принимает исключительно стабильные HTTPS URL без
 credentials/query. Contract report прикладывается к content acceptance record, но не заменяет

@@ -8,6 +8,8 @@ import pytest
 from quran_backend.modules.audio.models import (
     AudioCodec,
     AudioContentType,
+    AudioRendition,
+    AudioRenditionQuality,
     AudioTrack,
     AudioTrackScope,
     QuranFoundationSyncState,
@@ -270,22 +272,34 @@ def _complete_qf_recitation(
         stream_allowed=True,
         offline_download_allowed=False,
     )
-    AudioTrack.objects.bulk_create(
+    tracks = AudioTrack.objects.bulk_create(
         [
             AudioTrack(
                 recitation_edition=recitation,
                 scope=AudioTrackScope.SURAH,
                 surah_number=surah,
                 duration_ms=1_000,
+            )
+            for surah in range(1, 115)
+        ]
+    )
+    AudioRendition.objects.bulk_create(
+        [
+            AudioRendition(
+                track=track,
+                quality=AudioRenditionQuality.STANDARD,
+                is_default=True,
                 codec=AudioCodec.MP3,
                 content_type=AudioContentType.MPEG,
                 bitrate_kbps=128,
                 size_bytes=16_000,
                 checksum_sha256="",
                 object_key=None,
-                external_url=f"https://download.quranicaudio.com/test/{source_id}/{surah}.mp3",
+                external_url=(
+                    f"https://download.quranicaudio.com/test/{source_id}/{track.surah_number}.mp3"
+                ),
             )
-            for surah in range(1, 115)
+            for track in tracks
         ]
     )
     recitation.publish()

@@ -2,9 +2,21 @@ from __future__ import annotations
 
 import uuid
 
-from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
+from django.db.models import (
+    Case,
+    Count,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Prefetch,
+    Q,
+    QuerySet,
+    When,
+)
 
 from quran_backend.modules.audio.models import (
+    AudioRendition,
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
@@ -22,6 +34,7 @@ def public_recitation_base() -> QuerySet[RecitationEdition]:
         AudioTrack.objects.filter(
             recitation_edition_id=OuterRef("pk"),
             scope=AudioTrackScope.SURAH,
+            renditions__is_default=True,
         )
         .values("recitation_edition_id")
         .annotate(surah_count=Count("surah_number", distinct=True))
@@ -85,6 +98,7 @@ def public_tracks(recitation_id: uuid.UUID) -> QuerySet[AudioTrack]:
         AudioTrack.objects.filter(
             recitation_edition__in=public_recitation_base(),
             recitation_edition_id=recitation_id,
+            renditions__is_default=True,
         )
         .select_related(
             "recitation_edition",
@@ -92,8 +106,26 @@ def public_tracks(recitation_id: uuid.UUID) -> QuerySet[AudioTrack]:
             "recitation_edition__quran_edition_version__edition",
             "timing_version",
         )
+        .prefetch_related(
+            Prefetch(
+                "renditions",
+                queryset=ordered_renditions(),
+                to_attr="public_renditions",
+            )
+        )
         .order_by("scope", "surah_number", "juz_number", "id")
     )
+
+
+def ordered_renditions() -> QuerySet[AudioRendition]:
+    quality_order = Case(
+        When(quality="economy", then=0),
+        When(quality="standard", then=1),
+        When(quality="high", then=2),
+        default=99,
+        output_field=IntegerField(),
+    )
+    return AudioRendition.objects.order_by(quality_order, "id")
 
 
 def public_surah_tracks(recitation_id: uuid.UUID, surah_number: int) -> QuerySet[AudioTrack]:
@@ -154,6 +186,13 @@ def public_ayah_segments(
             "ayah__surah__edition_version",
             "track__timing_version",
             "track__recitation_edition__quran_edition_version__edition",
+        )
+        .prefetch_related(
+            Prefetch(
+                "track__renditions",
+                queryset=ordered_renditions(),
+                to_attr="public_renditions",
+            )
         )
         .order_by("start_ms", "id")
     )

@@ -33,16 +33,21 @@ class FakeClient:
         response_headers = {
             "accept-ranges": "bytes",
             "access-control-allow-origin": origin,
-            "access-control-expose-headers": "Accept-Ranges, Content-Range, ETag",
+            "access-control-expose-headers": (
+                "Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified"
+            ),
             "cache-control": (
                 f"public, max-age={DEFAULT_MIN_CACHE_SECONDS}, immutable"
                 if self.immutable
                 else f"public, max-age={DEFAULT_MIN_CACHE_SECONDS}"
             ),
             "content-length": "10",
+            "content-disposition": "inline",
             "content-type": "audio/mpeg",
             "etag": etag,
+            "last-modified": "Mon, 24 Aug 2026 12:00:00 GMT",
             "vary": "Origin",
+            "x-content-type-options": "nosniff",
         }
         if method == "HEAD":
             return HttpResponse(200, response_headers, b"")

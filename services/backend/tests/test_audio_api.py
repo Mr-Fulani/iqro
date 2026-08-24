@@ -14,6 +14,9 @@ from rest_framework.test import APIClient
 
 from quran_backend.modules.audio.models import (
     AudioCodec,
+    AudioContentType,
+    AudioRendition,
+    AudioRenditionQuality,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -81,6 +84,29 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         verified_at=timezone.now(),
     )
     track = _create_track(recitation, timing_version=timing_version)
+    standard_rendition = track.renditions.get()
+    economy_rendition = AudioRendition.objects.create(
+        track=track,
+        quality=AudioRenditionQuality.ECONOMY,
+        codec=AudioCodec.OPUS,
+        content_type=AudioContentType.OGG,
+        bitrate_kbps=48,
+        size_bytes=72_000,
+        checksum_sha256="a" * 64,
+        object_key="audio/test-recitation/1.0.0/surah-001-economy.opus",
+        etag=f'"{"a" * 64}"',
+    )
+    high_rendition = AudioRendition.objects.create(
+        track=track,
+        quality=AudioRenditionQuality.HIGH,
+        codec=AudioCodec.MP3,
+        content_type=AudioContentType.MPEG,
+        bitrate_kbps=256,
+        size_bytes=384_000,
+        checksum_sha256="f" * 64,
+        object_key="audio/test-recitation/1.0.0/surah-001-high.mp3",
+        etag=f'"{"f" * 64}"',
+    )
     _complete_surah_catalog(recitation)
     first_segment = AyahAudioSegment.objects.create(
         track=track,
@@ -100,6 +126,9 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         "recitation": recitation,
         "timing_version": timing_version,
         "track": track,
+        "rendition": standard_rendition,
+        "economy_rendition": economy_rendition,
+        "high_rendition": high_rendition,
         "first_segment": first_segment,
         "second_segment": second_segment,
     }
@@ -135,35 +164,58 @@ def _create_track(
     timing_version: AudioTimingVersion | None = None,
     object_key: str = "audio/test-recitation/1.0.0/surah-001.mp3",
 ) -> AudioTrack:
-    return AudioTrack.objects.create(
+    track = AudioTrack.objects.create(
         recitation_edition=recitation,
         timing_version=timing_version,
         scope=AudioTrackScope.SURAH,
         surah_number=1,
         duration_ms=12_000,
+    )
+    AudioRendition.objects.create(
+        track=track,
+        quality=AudioRenditionQuality.STANDARD,
+        is_default=True,
         codec=AudioCodec.MP3,
+        content_type=AudioContentType.MPEG,
         bitrate_kbps=128,
         size_bytes=192_000,
         checksum_sha256="d" * 64,
         object_key=object_key,
+        etag=f'"{"d" * 64}"',
     )
+    return track
 
 
 def _complete_surah_catalog(recitation: RecitationEdition) -> None:
-    AudioTrack.objects.bulk_create(
+    tracks = AudioTrack.objects.bulk_create(
         [
             AudioTrack(
                 recitation_edition=recitation,
                 scope=AudioTrackScope.SURAH,
                 surah_number=surah_number,
                 duration_ms=12_000,
-                codec=AudioCodec.MP3,
-                bitrate_kbps=128,
-                size_bytes=192_000,
-                checksum_sha256=f"{surah_number:064x}",
-                object_key=f"audio/{recitation.code}/{recitation.version}/surah-{surah_number:03d}.mp3",
             )
             for surah_number in range(2, 115)
+        ]
+    )
+    AudioRendition.objects.bulk_create(
+        [
+            AudioRendition(
+                track=track,
+                quality=AudioRenditionQuality.STANDARD,
+                is_default=True,
+                codec=AudioCodec.MP3,
+                content_type=AudioContentType.MPEG,
+                bitrate_kbps=128,
+                size_bytes=192_000,
+                checksum_sha256=f"{track.surah_number:064x}",
+                object_key=(
+                    f"audio/{recitation.code}/{recitation.version}/"
+                    f"surah-{track.surah_number:03d}.mp3"
+                ),
+                etag=f'"{track.surah_number:064x}"',
+            )
+            for track in tracks
         ]
     )
 
@@ -353,6 +405,20 @@ def test_track_response_exposes_cdn_asset_contract_without_storage_fields(
         "range_supported": True,
         "immutable": True,
     }
+    assert [item["quality"] for item in track["renditions"]] == [
+        "economy",
+        "standard",
+        "high",
+    ]
+    assert [item["is_default"] for item in track["renditions"]] == [False, True, False]
+    assert track["renditions"][1] == {
+        "id": str(published_audio_dataset["rendition"].id),
+        "quality": "standard",
+        "is_default": True,
+        "asset": track["asset"],
+    }
+    assert track["renditions"][0]["asset"]["bitrate_kbps"] == 48
+    assert track["renditions"][2]["asset"]["bitrate_kbps"] == 256
     assert track["offline_download_allowed"] is True
     assert reciter_response.json()["portrait_url"] == (
         "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
@@ -390,11 +456,12 @@ def test_external_track_exposes_non_immutable_streaming_asset(
     api_client: APIClient,
     published_audio_dataset: dict[str, Any],
 ) -> None:
-    track = published_audio_dataset["track"]
-    AudioTrack.objects.filter(pk=track.pk).update(
+    rendition = published_audio_dataset["rendition"]
+    AudioRendition.objects.filter(pk=rendition.pk).update(
         object_key=None,
         external_url="https://download.quranicaudio.com/qdc/test/1.mp3",
         checksum_sha256="",
+        etag="",
     )
 
     response = api_client.get(
@@ -510,6 +577,7 @@ def test_audio_api_supports_conditional_etag(
         "withdrawn_quran_version",
         "inactive_quran_version",
         "incomplete_recitation",
+        "missing_default_rendition",
         "empty_recitation",
     ],
 )
@@ -556,6 +624,11 @@ def test_non_public_recitations_and_reciters_are_hidden(
         AudioTrack.objects.filter(
             recitation_edition=recitation,
             surah_number__gt=1,
+        ).delete()
+    elif hidden_state == "missing_default_rendition":
+        AudioRendition.objects.filter(
+            track=published_audio_dataset["track"],
+            is_default=True,
         ).delete()
     else:
         AudioTrack.objects.filter(recitation_edition=recitation).delete()

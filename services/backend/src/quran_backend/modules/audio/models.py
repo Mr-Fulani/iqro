@@ -9,6 +9,7 @@ from django.utils import timezone
 from quran_backend.modules.audio.validators import (
     validate_relative_object_key,
     validate_sha256,
+    validate_strong_etag,
     validate_version_identifier,
 )
 from quran_backend.modules.core.models import BaseModel
@@ -45,6 +46,12 @@ class AudioContentType(models.TextChoices):
     AAC = "audio/aac", "audio/aac"
     OGG = "audio/ogg", "audio/ogg"
     FLAC = "audio/flac", "audio/flac"
+
+
+class AudioRenditionQuality(models.TextChoices):
+    ECONOMY = "economy", "Economy"
+    STANDARD = "standard", "Standard"
+    HIGH = "high", "High"
 
 
 CODEC_CONTENT_TYPES: dict[str, str] = {
@@ -277,11 +284,27 @@ class RecitationEdition(BaseModel):
             raise ValidationError(
                 {"status": "At least one surah audio track is required for publication."}
             )
-        if self.offline_download_allowed and tracks.exclude(external_url="").exists():
+        invalid_rendition_count = tracks.annotate(
+            rendition_count=models.Count("renditions"),
+            default_rendition_count=models.Count(
+                "renditions",
+                filter=models.Q(renditions__is_default=True),
+            ),
+        ).filter(models.Q(rendition_count=0) | ~models.Q(default_rendition_count=1))
+        if invalid_rendition_count.exists():
+            raise ValidationError(
+                {"status": ("Every track requires at least one rendition and exactly one default.")}
+            )
+        if (
+            self.offline_download_allowed
+            and AudioRendition.objects.filter(track__recitation_edition_id=self.pk)
+            .exclude(external_url="")
+            .exists()
+        ):
             raise ValidationError(
                 {
                     "offline_download_allowed": (
-                        "External provider tracks cannot be offered for offline download."
+                        "External provider renditions cannot be offered for offline download."
                     )
                 }
             )
@@ -410,8 +433,11 @@ class RecitationEdition(BaseModel):
         self.status = RecitationPublicationStatus.WITHDRAWN
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        self.full_clean()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            if not self._state.adding:
+                type(self).objects.select_for_update().filter(pk=self.pk).exists()
+            self.full_clean()
+            super().save(*args, **kwargs)
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         with transaction.atomic():
@@ -591,27 +617,6 @@ class AudioTrack(BaseModel):
     surah_number = models.PositiveSmallIntegerField(null=True, blank=True)
     juz_number = models.PositiveSmallIntegerField(null=True, blank=True)
     duration_ms = models.PositiveBigIntegerField()
-    codec = models.CharField(max_length=16, choices=AudioCodec)
-    content_type = models.CharField(
-        max_length=32,
-        choices=AudioContentType,
-        default=AudioContentType.MPEG,
-    )
-    bitrate_kbps = models.PositiveIntegerField()
-    size_bytes = models.PositiveBigIntegerField()
-    checksum_sha256 = models.CharField(
-        max_length=64,
-        blank=True,
-        validators=[validate_sha256],
-    )
-    object_key = models.CharField(
-        max_length=512,
-        null=True,
-        blank=True,
-        unique=True,
-        validators=[validate_relative_object_key],
-    )
-    external_url = models.URLField(max_length=1000, blank=True)
 
     class Meta:
         db_table = "audio_track"
@@ -642,21 +647,6 @@ class AudioTrack(BaseModel):
             models.CheckConstraint(
                 condition=models.Q(duration_ms__gt=0),
                 name="audio_track_duration_positive",
-            ),
-            models.CheckConstraint(
-                condition=models.Q(bitrate_kbps__gt=0, bitrate_kbps__lte=100_000),
-                name="audio_track_bitrate_valid",
-            ),
-            models.CheckConstraint(
-                condition=models.Q(size_bytes__gt=0),
-                name="audio_track_size_positive",
-            ),
-            models.CheckConstraint(
-                condition=(
-                    models.Q(object_key__isnull=False, external_url="")
-                    | (models.Q(object_key__isnull=True) & ~models.Q(external_url=""))
-                ),
-                name="audio_track_delivery_source_valid",
             ),
             models.UniqueConstraint(
                 fields=["recitation_edition", "surah_number"],
@@ -690,16 +680,6 @@ class AudioTrack(BaseModel):
         super().clean()
         self._assert_parent_is_mutable()
         self._validate_segment_bound_fields()
-        has_object_key = bool(self.object_key)
-        has_external_url = bool(self.external_url)
-        if has_object_key == has_external_url:
-            raise ValidationError(
-                "Exactly one managed object key or external provider URL is required."
-            )
-        if has_object_key and not self.checksum_sha256:
-            raise ValidationError(
-                {"checksum_sha256": "Managed audio assets require a SHA-256 checksum."}
-            )
         timing_version_id = self.__dict__.get("timing_version_id")
         if timing_version_id is not None:
             timing_recitation_id = (
@@ -730,11 +710,6 @@ class AudioTrack(BaseModel):
             self.surah_number is not None or self.juz_number is not None
         ):
             raise ValidationError("Full-Quran tracks cannot have a surah or juz target.")
-        expected_content_type = CODEC_CONTENT_TYPES.get(self.codec)
-        if expected_content_type is not None and self.content_type != expected_content_type:
-            raise ValidationError(
-                {"content_type": "The audio MIME type must match the declared codec."}
-            )
 
     def _validate_segment_bound_fields(self) -> None:
         if self._state.adding or not self.segments.exists():
@@ -746,9 +721,6 @@ class AudioTrack(BaseModel):
             "surah_number",
             "juz_number",
             "duration_ms",
-            "object_key",
-            "external_url",
-            "checksum_sha256",
         )
         persisted = type(self).objects.filter(pk=self.pk).values(*fields).first()
         if persisted is None:
@@ -812,6 +784,157 @@ class AudioTrack(BaseModel):
             if persisted_id is not None:
                 recitation_ids.add(persisted_id)
         return recitation_ids
+
+
+class AudioRendition(BaseModel):
+    """One physical delivery variant for a logical audio timeline."""
+
+    track = models.ForeignKey(
+        AudioTrack,
+        on_delete=models.CASCADE,
+        related_name="renditions",
+    )
+    quality = models.CharField(
+        max_length=16,
+        choices=AudioRenditionQuality,
+        default=AudioRenditionQuality.STANDARD,
+    )
+    is_default = models.BooleanField(default=False)
+    codec = models.CharField(max_length=16, choices=AudioCodec)
+    content_type = models.CharField(
+        max_length=32,
+        choices=AudioContentType,
+        default=AudioContentType.MPEG,
+    )
+    bitrate_kbps = models.PositiveIntegerField()
+    size_bytes = models.PositiveBigIntegerField()
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        validators=[validate_sha256],
+    )
+    object_key = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        unique=True,
+        validators=[validate_relative_object_key],
+    )
+    external_url = models.URLField(max_length=1000, blank=True)
+    etag = models.CharField(
+        max_length=255,
+        blank=True,
+        validators=[validate_strong_etag],
+    )
+    cdn_contract_verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "audio_rendition"
+        ordering = ["track", "quality", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(bitrate_kbps__gt=0, bitrate_kbps__lte=100_000),
+                name="audio_rendition_bitrate_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(size_bytes__gt=0),
+                name="audio_rendition_size_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(object_key__isnull=False, external_url="")
+                    | (models.Q(object_key__isnull=True) & ~models.Q(external_url=""))
+                ),
+                name="audio_rendition_delivery_valid",
+            ),
+            models.UniqueConstraint(
+                fields=["track", "quality"],
+                name="audio_rendition_track_quality_uq",
+            ),
+            models.UniqueConstraint(
+                fields=["track"],
+                condition=models.Q(is_default=True),
+                name="audio_rendition_default_uq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["track", "is_default", "quality"],
+                name="audio_rendition_track_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        default = ":default" if self.is_default else ""
+        return f"{self.track}:{self.quality}{default}"
+
+    def clean(self) -> None:
+        super().clean()
+        self._assert_parent_is_mutable()
+        has_object_key = bool(self.object_key)
+        has_external_url = bool(self.external_url)
+        if has_object_key == has_external_url:
+            raise ValidationError(
+                "Exactly one managed object key or external provider URL is required."
+            )
+        if has_object_key and not self.checksum_sha256:
+            raise ValidationError(
+                {"checksum_sha256": "Managed audio renditions require a SHA-256 checksum."}
+            )
+        if self.cdn_contract_verified_at is not None and (not has_object_key or not self.etag):
+            raise ValidationError(
+                {
+                    "cdn_contract_verified_at": (
+                        "CDN contract evidence requires a managed object and observed ETag."
+                    )
+                }
+            )
+        expected_content_type = CODEC_CONTENT_TYPES.get(self.codec)
+        if expected_content_type is not None and self.content_type != expected_content_type:
+            raise ValidationError(
+                {"content_type": "The audio MIME type must match the declared codec."}
+            )
+
+    def _assert_parent_is_mutable(self) -> None:
+        statuses = RecitationEdition.objects.filter(
+            pk__in=self._related_recitation_ids()
+        ).values_list("status", flat=True)
+        if any(
+            status
+            in {
+                RecitationPublicationStatus.PUBLISHED,
+                RecitationPublicationStatus.WITHDRAWN,
+            }
+            for status in statuses
+        ):
+            raise ValidationError("Renditions in a published recitation edition are immutable.")
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        with transaction.atomic():
+            _lock_recitation_rows(self._related_recitation_ids())
+            self._assert_parent_is_mutable()
+            self.full_clean()
+            super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        with transaction.atomic():
+            _lock_recitation_rows(self._related_recitation_ids())
+            self._assert_parent_is_mutable()
+            return super().delete(*args, **kwargs)
+
+    def _related_recitation_ids(self) -> set[Any]:
+        track_ids = {self.track_id}
+        if not self._state.adding:
+            persisted_track_id = (
+                type(self).objects.filter(pk=self.pk).values_list("track_id", flat=True).first()
+            )
+            if persisted_track_id is not None:
+                track_ids.add(persisted_track_id)
+        return set(
+            AudioTrack.objects.filter(pk__in=track_ids).values_list(
+                "recitation_edition_id", flat=True
+            )
+        )
 
 
 class AyahAudioSegment(BaseModel):

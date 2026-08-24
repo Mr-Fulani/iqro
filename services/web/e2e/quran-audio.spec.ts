@@ -28,6 +28,17 @@ const recitation = {
 
 const tracks = Array.from({ length: 114 }, (_, index) => {
   const surah = index + 1;
+  const asset = {
+    url: `https://audio.example.test/${String(surah).padStart(3, "0")}.mp3`,
+    content_type: "audio/mpeg",
+    codec: "mp3",
+    bitrate_kbps: 96,
+    bytes: 720_000,
+    sha256: null,
+    etag: null,
+    range_supported: false,
+    immutable: false,
+  };
   return {
     id: `00000000-0000-7000-8100-${String(surah).padStart(12, "0")}`,
     recitation_id: recitation.id,
@@ -36,17 +47,15 @@ const tracks = Array.from({ length: 114 }, (_, index) => {
     juz_number: null,
     duration_ms: 60_000,
     offline_download_allowed: false,
-    asset: {
-      url: `https://audio.example.test/${String(surah).padStart(3, "0")}.mp3`,
-      content_type: "audio/mpeg",
-      codec: "mp3",
-      bitrate_kbps: 96,
-      bytes: 720_000,
-      sha256: null,
-      etag: null,
-      range_supported: false,
-      immutable: false,
-    },
+    asset,
+    renditions: [
+      {
+        id: `00000000-0000-7000-8200-${String(surah).padStart(12, "0")}`,
+        quality: "standard",
+        is_default: true,
+        asset,
+      },
+    ],
   };
 });
 

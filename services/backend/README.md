@@ -42,8 +42,8 @@ MVP обратной связи с пользовательскими тикет
 контента и операторским workflow описан в [docs/feedback.md](docs/feedback.md). Вложения
 на этом этапе намеренно не принимаются: небезопасного локального upload fallback нет.
 
-Публичный каталог чтецов, version-pinned аудиотреки, проверенные таймкоды аятов,
-immutable CDN contract и безопасная загрузка отдельной суры описаны в
+Публичный каталог чтецов, version-pinned логические аудиотреки с bitrate/codec renditions,
+проверенные таймкоды аятов, immutable CDN contract и безопасная загрузка отдельной суры описаны в
 [docs/audio-api.md](docs/audio-api.md).
 
 Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar

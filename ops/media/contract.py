@@ -10,6 +10,7 @@ import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -18,7 +19,13 @@ MAX_ASSETS = 100
 MAX_ORIGINS = 10
 MAX_RESPONSE_BYTES = 64
 DEFAULT_MIN_CACHE_SECONDS = 31_536_000
-REQUIRED_EXPOSED_HEADERS = {"accept-ranges", "content-range", "etag"}
+REQUIRED_EXPOSED_HEADERS = {
+    "accept-ranges",
+    "content-length",
+    "content-range",
+    "etag",
+    "last-modified",
+}
 STRONG_ETAG_PATTERN = re.compile(r'"[^"\r\n]+"\Z')
 CONTENT_TYPE_PATTERN = re.compile(r"[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+\Z")
 
@@ -368,6 +375,22 @@ def verify_asset(
             )
         if head.headers.get("accept-ranges", "").lower() != "bytes":
             failures.append("Accept-Ranges must be bytes")
+        last_modified = head.headers.get("last-modified")
+        try:
+            parsed_last_modified = (
+                parsedate_to_datetime(last_modified)
+                if last_modified is not None
+                else None
+            )
+        except (TypeError, ValueError):
+            parsed_last_modified = None
+        if parsed_last_modified is None or parsed_last_modified.utcoffset() is None:
+            failures.append("Last-Modified must be a valid timezone-aware HTTP date")
+        content_disposition = head.headers.get("content-disposition", "")
+        if content_disposition.split(";", 1)[0].strip().lower() != "inline":
+            failures.append("Content-Disposition must be inline")
+        if head.headers.get("x-content-type-options", "").lower() != "nosniff":
+            failures.append("X-Content-Type-Options must be nosniff")
         observed_etag = head.headers.get("etag")
         if (
             observed_etag is None

@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 VERSION_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 OBJECT_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,511}\Z")
+STRONG_ETAG_PATTERN = re.compile(r'"[^"\r\n]+"\Z')
 
 
 def validate_sha256(value: str) -> None:
@@ -34,3 +35,9 @@ def validate_relative_object_key(value: str) -> None:
     parts = value.split("/")
     if any(part in {"", ".", ".."} for part in parts):
         raise ValidationError("Object keys must not contain empty, current, or parent segments.")
+
+
+def validate_strong_etag(value: str) -> None:
+    """Store the exact quoted strong ETag observed at the public CDN edge."""
+    if STRONG_ETAG_PATTERN.fullmatch(value) is None:
+        raise ValidationError("Enter a quoted strong ETag without the W/ prefix.")

@@ -73,7 +73,7 @@ runtime. Основной незакрытый объём находится в 
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
 | 6 | Позиции, закладки, история, цели, серии | 🟡 | Position, bookmarks, revisions, tombstones и sync | Нет reading sessions/history, goals и streaks |
-| 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable recitations, 114 surah tracks, ayah timings, streaming, web-витрина чтецов, принятый R2/CDN ADR и автоматический HTTP media-contract checker | Не доказаны три полностью лицензированных релиза; нет управляемой offline-установки, bitrate renditions, provisioned object-storage/upload pipeline и redistribution pipeline |
+| 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable logical tracks и отдельные economy/standard/high renditions, default-asset API compatibility, 114 surah tracks, ayah timings, streaming, R2/CDN ADR и HTTP contract checker | Не доказаны три полностью лицензированных multi-quality релиза; нет управляемой offline-установки, provisioned object-storage/upload/transcoding pipeline, клиентского quality policy и redistribution pipeline |
 | 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут; persistent dock сохраняет трек и позицию, ставя playback на паузу при route navigation | — |
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
@@ -251,8 +251,8 @@ runtime. Основной незакрытый объём находится в 
 
 1. Object storage/CDN pipeline для managed media с автоматическим Range/CORS/ETag contract
    test; production Compose остаётся только S0 single-host профилем.
-2. Разделить logical audio track и bitrate/codec renditions, добавить выбор качества и
-   egress budget alerts.
+2. Schema/API logical track и bitrate/codec renditions уже разделены; добавить реальные
+   transcoded/лицензированные варианты, клиентский выбор качества и egress budget alerts.
 3. Edge-cache публичных Quran/audio/library endpoint'ов без `Authorization`; персональные
    ответы остаются `private, no-store`.
 4. PgBouncer-compatible connection budget, stateless API/web/workers, singleton Beat и

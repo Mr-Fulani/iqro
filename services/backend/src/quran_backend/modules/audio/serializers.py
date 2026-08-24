@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from quran_backend.modules.audio.models import (
     AudioCodec,
+    AudioRendition,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -182,6 +183,39 @@ class AudioAssetSerializer(serializers.Serializer[Any]):
     immutable = serializers.BooleanField()
 
 
+def audio_asset_payload(rendition: AudioRendition) -> dict[str, Any]:
+    checksum = rendition.checksum_sha256 or None
+    if rendition.object_key is not None:
+        url = public_audio_url(rendition.object_key)
+        is_managed = True
+    else:
+        url = rendition.external_url
+        is_managed = False
+    return {
+        "url": url,
+        "content_type": rendition.content_type,
+        "codec": rendition.codec,
+        "bitrate_kbps": rendition.bitrate_kbps,
+        "bytes": rendition.size_bytes,
+        "sha256": checksum,
+        "etag": rendition.etag or None,
+        "range_supported": is_managed,
+        "immutable": is_managed,
+    }
+
+
+class AudioRenditionSerializer(serializers.ModelSerializer[AudioRendition]):
+    asset = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AudioRendition
+        fields = ("id", "quality", "is_default", "asset")
+
+    @extend_schema_field(AudioAssetSerializer)
+    def get_asset(self, obj: AudioRendition) -> dict[str, Any]:
+        return audio_asset_payload(obj)
+
+
 class AudioTimingVersionSerializer(serializers.ModelSerializer[AudioTimingVersion]):
     class Meta:
         model = AudioTimingVersion
@@ -198,6 +232,7 @@ class AudioTimingVersionSerializer(serializers.ModelSerializer[AudioTimingVersio
 class AudioTrackSerializer(serializers.ModelSerializer[AudioTrack]):
     recitation_id = serializers.UUIDField(source="recitation_edition_id", read_only=True)
     asset = serializers.SerializerMethodField()
+    renditions = serializers.SerializerMethodField()
     offline_download_allowed = serializers.BooleanField(
         source="recitation_edition.offline_download_allowed",
         read_only=True,
@@ -215,29 +250,30 @@ class AudioTrackSerializer(serializers.ModelSerializer[AudioTrack]):
             "duration_ms",
             "timing_version",
             "asset",
+            "renditions",
             "offline_download_allowed",
         )
 
-    @extend_schema_field(AudioAssetSerializer)
-    def get_asset(self, obj: AudioTrack) -> dict[str, Any]:
-        checksum = obj.checksum_sha256 or None
-        if obj.object_key is not None:
-            url = public_audio_url(obj.object_key)
-            is_managed = True
-        else:
-            url = obj.external_url
-            is_managed = False
-        return {
-            "url": url,
-            "content_type": obj.content_type,
-            "codec": obj.codec,
-            "bitrate_kbps": obj.bitrate_kbps,
-            "bytes": obj.size_bytes,
-            "sha256": checksum,
-            "etag": f'"{checksum}"' if checksum else None,
-            "range_supported": is_managed,
-            "immutable": is_managed,
-        }
+    def _renditions(self, obj: AudioTrack) -> list[AudioRendition]:
+        prefetched = getattr(obj, "public_renditions", None)
+        renditions = list(prefetched if prefetched is not None else obj.renditions.all())
+        quality_rank = {"economy": 0, "standard": 1, "high": 2}
+        return sorted(
+            renditions,
+            key=lambda item: (quality_rank.get(item.quality, 99), str(item.id)),
+        )
+
+    @extend_schema_field(AudioAssetSerializer(allow_null=True))
+    def get_asset(self, obj: AudioTrack) -> dict[str, Any] | None:
+        default = next(
+            (rendition for rendition in self._renditions(obj) if rendition.is_default),
+            None,
+        )
+        return audio_asset_payload(default) if default is not None else None
+
+    @extend_schema_field(AudioRenditionSerializer(many=True))
+    def get_renditions(self, obj: AudioTrack) -> Any:
+        return AudioRenditionSerializer(self._renditions(obj), many=True).data
 
 
 class AyahAudioSegmentSerializer(serializers.ModelSerializer[AyahAudioSegment]):

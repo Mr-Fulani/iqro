@@ -63,7 +63,9 @@ flowchart LR
   оформить переносимый S3-compatible [ADR](adr/0001-managed-media-object-storage-cdn.md) и
   bounded автоматическую проверку Range/CORS/ETag/cache contract.
 - [ ] Перенести managed media с локального диска на immutable object keys.
-- [ ] Разделить логический audio track и bitrate/codec renditions.
+- [x] Разделить логический `AudioTrack`/таймлайн и физические `AudioRendition` вариантов
+  economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
+  default `asset` и отдаёт типизированный список renditions.
 - [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`.
 - [ ] Подготовить PgBouncer-compatible DB configuration и connection budget.
 - [ ] Разделить конфигурационные URL Redis roles с сохранением одного экземпляра на старте.

@@ -57,13 +57,14 @@ audio/{recitation-code}/{content-version}/{scope}-{number}/{rendition}.{extensio
 
 Перед публикацией `ops/media/contract.py` проверяет для каждого origin web/Mini App:
 
-- `HEAD 200`, точные `Content-Length`/`Content-Type`, `Accept-Ranges: bytes`;
+- `HEAD 200`, точные `Content-Length`/`Content-Type`, `Accept-Ranges: bytes`, валидный
+  `Last-Modified`, `Content-Disposition: inline` и `X-Content-Type-Options: nosniff`;
 - quoted strong `ETag`, одинаковый для HEAD, Range и conditional response;
 - `GET Range: bytes=0-0` → `206` и точный `Content-Range`;
 - unsatisfied range → `416` и `Content-Range: bytes */<size>`;
 - `If-None-Match` → `304`;
 - CORS allow-origin, `Vary: Origin` для origin-specific ответа и exposure заголовков
-  `Accept-Ranges`, `Content-Range`, `ETag`;
+  `Accept-Ranges`, `Content-Length`, `Content-Range`, `ETag`, `Last-Modified`;
 - immutable public cache не короче одного года.
 
 R2 CORS настраивается на точные production/staging origins по официальному
@@ -82,10 +83,10 @@ access token scope и rollback проходят отдельный deployment re
 
 ## Последствия и открытые работы
 
-- `AudioTrack` должен остаться логическим таймлайном, а codec/bitrate/size/checksum/object key и
-  реальный ETag переехать в отдельные `AudioRendition`.
-- API сохраняет один default asset для обратной совместимости и добавляет список renditions;
-  выбор качества выполняет клиент по сети/настройке, не backend proxy.
+- `AudioTrack` уже является логическим таймлайном, а codec/bitrate/size/checksum/object key и
+  реальный ETag хранятся в отдельных `AudioRendition` economy/standard/high.
+- API сохраняет один default asset для обратной совместимости и отдаёт список renditions;
+  автоматический выбор качества клиентом по сети/настройке ещё не реализован.
 - Upload/import pipeline обязан формировать manifest и сохранять contract evidence до смены
   recitation status на published.
 - Для disaster recovery нужен inventory/versioning policy и независимая проверка восстановления;

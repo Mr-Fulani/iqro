@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.audio.admin import (
+    AudioRenditionAdmin,
     AudioTimingVersionAdmin,
     AudioTrackAdmin,
     AyahAudioSegmentAdmin,
@@ -16,6 +17,8 @@ from quran_backend.modules.audio.admin import (
 )
 from quran_backend.modules.audio.models import (
     AudioCodec,
+    AudioRendition,
+    AudioRenditionQuality,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -30,7 +33,13 @@ def _create_audio_aggregate(
     *,
     suffix: str,
     publish: bool,
-) -> tuple[RecitationEdition, AudioTimingVersion, AudioTrack, AyahAudioSegment]:
+) -> tuple[
+    RecitationEdition,
+    AudioTimingVersion,
+    AudioTrack,
+    AudioRendition,
+    AyahAudioSegment,
+]:
     reciter = Reciter.objects.create(
         code=f"admin-reciter-{suffix}",
         name_ar="قارئ الإدارة",
@@ -62,6 +71,11 @@ def _create_audio_aggregate(
         scope=AudioTrackScope.SURAH,
         surah_number=1,
         duration_ms=10_000,
+    )
+    rendition = AudioRendition.objects.create(
+        track=track,
+        quality=AudioRenditionQuality.STANDARD,
+        is_default=True,
         codec=AudioCodec.MP3,
         bitrate_kbps=128,
         size_bytes=160_000,
@@ -79,7 +93,7 @@ def _create_audio_aggregate(
         recitation.offline_download_allowed = True
         recitation.publish()
         recitation.save()
-    return recitation, timing, track, segment
+    return recitation, timing, track, rendition, segment
 
 
 @pytest.mark.django_db
@@ -100,6 +114,7 @@ def test_audio_admin_disables_bulk_delete_and_protects_published_aggregate(
         RecitationEditionAdmin(RecitationEdition, admin.site),
         AudioTimingVersionAdmin(AudioTimingVersion, admin.site),
         AudioTrackAdmin(AudioTrack, admin.site),
+        AudioRenditionAdmin(AudioRendition, admin.site),
         AyahAudioSegmentAdmin(AyahAudioSegment, admin.site),
     )
     for model_admin, obj in zip(admin_objects, published, strict=True):
@@ -125,6 +140,7 @@ def test_audio_admin_allows_individual_draft_cleanup_and_preloads_display_relati
         RecitationEditionAdmin(RecitationEdition, admin.site),
         AudioTimingVersionAdmin(AudioTimingVersion, admin.site),
         AudioTrackAdmin(AudioTrack, admin.site),
+        AudioRenditionAdmin(AudioRendition, admin.site),
         AyahAudioSegmentAdmin(AyahAudioSegment, admin.site),
     )
 
@@ -133,4 +149,5 @@ def test_audio_admin_allows_individual_draft_cleanup_and_preloads_display_relati
 
     assert "quran_edition_version__edition" in admin_objects[0].list_select_related
     assert "timing_version__recitation_edition" in admin_objects[2].list_select_related
-    assert "ayah__surah__edition_version__edition" in admin_objects[3].list_select_related
+    assert "track__recitation_edition" in admin_objects[3].list_select_related
+    assert "ayah__surah__edition_version__edition" in admin_objects[4].list_select_related

@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.http import HttpRequest
 
 from quran_backend.modules.audio.models import (
+    AudioRendition,
     AudioTimingVersion,
     AudioTrack,
     AyahAudioSegment,
@@ -184,11 +185,9 @@ class AudioTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "surah_number",
         "juz_number",
         "duration_ms",
-        "codec",
-        "bitrate_kbps",
     )
-    list_filter = ("scope", "codec", "recitation_edition__status")
-    search_fields = ("object_key", "checksum_sha256", "recitation_edition__code")
+    list_filter = ("scope", "recitation_edition__status")
+    search_fields = ("recitation_edition__code",)
     list_select_related = (
         "recitation_edition",
         "timing_version__recitation_edition",
@@ -218,6 +217,54 @@ class AudioTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             super().has_delete_permission(request, obj)
             and obj is not None
             and obj.recitation_edition.status == RecitationPublicationStatus.DRAFT
+        )
+
+
+@admin.register(AudioRendition)
+class AudioRenditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    actions = None
+    list_display = (
+        "track",
+        "quality",
+        "is_default",
+        "codec",
+        "bitrate_kbps",
+        "size_bytes",
+    )
+    list_filter = (
+        "quality",
+        "codec",
+        "is_default",
+        "track__recitation_edition__status",
+    )
+    search_fields = (
+        "object_key",
+        "checksum_sha256",
+        "track__recitation_edition__code",
+    )
+    list_select_related = ("track__recitation_edition",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+    def get_readonly_fields(
+        self,
+        request: HttpRequest,
+        obj: AudioRendition | None = None,
+    ) -> tuple[str, ...]:
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if obj and obj.track.recitation_edition.status != RecitationPublicationStatus.DRAFT:
+            immutable = tuple(field.name for field in obj._meta.fields)
+            return tuple(dict.fromkeys((*fields, *immutable)))
+        return fields
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: AudioRendition | None = None,
+    ) -> bool:
+        return bool(
+            super().has_delete_permission(request, obj)
+            and obj is not None
+            and obj.track.recitation_edition.status == RecitationPublicationStatus.DRAFT
         )
 
 

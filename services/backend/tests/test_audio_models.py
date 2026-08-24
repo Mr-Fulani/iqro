@@ -9,6 +9,9 @@ from django.utils import timezone
 
 from quran_backend.modules.audio.models import (
     AudioCodec,
+    AudioContentType,
+    AudioRendition,
+    AudioRenditionQuality,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -91,18 +94,39 @@ def _create_track(  # noqa: PLR0913
     object_key: str = "audio/test-recitation/1.0.0/surah-001.mp3",
     duration_ms: int = 10_000,
 ) -> AudioTrack:
-    return AudioTrack.objects.create(
+    track = AudioTrack.objects.create(
         recitation_edition=recitation,
         timing_version=timing_version,
         scope=scope,
         surah_number=surah_number,
         juz_number=juz_number,
         duration_ms=duration_ms,
-        codec=AudioCodec.MP3,
+    )
+    _create_rendition(track, object_key=object_key)
+    return track
+
+
+def _create_rendition(  # noqa: PLR0913
+    track: AudioTrack,
+    *,
+    quality: str = AudioRenditionQuality.STANDARD,
+    is_default: bool = True,
+    object_key: str | None = "audio/test-recitation/1.0.0/surah-001.mp3",
+    external_url: str = "",
+    codec: str = AudioCodec.MP3,
+    content_type: str = AudioContentType.MPEG,
+) -> AudioRendition:
+    return AudioRendition.objects.create(
+        track=track,
+        quality=quality,
+        is_default=is_default,
+        codec=codec,
+        content_type=content_type,
         bitrate_kbps=128,
         size_bytes=160_000,
-        checksum_sha256="b" * 64,
+        checksum_sha256="b" * 64 if object_key else "",
         object_key=object_key,
+        external_url=external_url,
     )
 
 
@@ -497,11 +521,6 @@ def test_track_scope_requires_exactly_the_matching_canonical_target(
         surah_number=surah_number,
         juz_number=juz_number,
         duration_ms=10_000,
-        codec=AudioCodec.MP3,
-        bitrate_kbps=128,
-        size_bytes=160_000,
-        checksum_sha256="b" * 64,
-        object_key="audio/invalid-scope.mp3",
     )
 
     with pytest.raises(ValidationError):
@@ -537,7 +556,7 @@ def test_all_track_scopes_accept_only_their_valid_target(
     "object_key",
     ["/audio/001.mp3", "audio/../001.mp3", "https://cdn.example/001.mp3"],
 )
-def test_track_rejects_unsafe_object_keys(
+def test_rendition_rejects_unsafe_object_keys(
     draft_recitation: RecitationEdition,
     object_key: str,
 ) -> None:
@@ -548,26 +567,78 @@ def test_track_rejects_unsafe_object_keys(
 
 
 @pytest.mark.django_db
-def test_track_content_type_must_match_codec(
+def test_rendition_content_type_must_match_codec(
     draft_recitation: RecitationEdition,
 ) -> None:
-    track = AudioTrack(
+    track = AudioTrack.objects.create(
         recitation_edition=draft_recitation,
         scope=AudioTrackScope.SURAH,
         surah_number=1,
         duration_ms=10_000,
-        codec=AudioCodec.MP3,
-        bitrate_kbps=128,
-        size_bytes=160_000,
-        checksum_sha256="b" * 64,
-        object_key="audio/001.mp3",
-        content_type="audio/ogg",
     )
 
     with pytest.raises(ValidationError) as error:
-        track.save()
+        _create_rendition(
+            track,
+            object_key="audio/001.mp3",
+            content_type=AudioContentType.OGG,
+        )
 
     assert "content_type" in error.value.message_dict
+
+
+@pytest.mark.django_db
+def test_track_supports_quality_renditions_with_one_default(
+    draft_recitation: RecitationEdition,
+) -> None:
+    track = _create_track(draft_recitation)
+    economy = _create_rendition(
+        track,
+        quality=AudioRenditionQuality.ECONOMY,
+        is_default=False,
+        object_key="audio/test-recitation/1.0.0/surah-001-economy.mp3",
+    )
+
+    assert track.renditions.count() == 2
+    assert track.renditions.get(is_default=True).quality == AudioRenditionQuality.STANDARD
+    assert economy.quality == AudioRenditionQuality.ECONOMY
+
+    with pytest.raises(ValidationError):
+        _create_rendition(
+            track,
+            quality=AudioRenditionQuality.ECONOMY,
+            is_default=False,
+            object_key="audio/test-recitation/1.0.0/surah-001-economy-duplicate.mp3",
+        )
+    with pytest.raises(ValidationError):
+        _create_rendition(
+            track,
+            quality=AudioRenditionQuality.HIGH,
+            is_default=True,
+            object_key="audio/test-recitation/1.0.0/surah-001-high.mp3",
+        )
+
+
+@pytest.mark.django_db
+def test_rendition_etag_must_be_the_observed_strong_value(
+    draft_recitation: RecitationEdition,
+) -> None:
+    rendition = _create_track(draft_recitation).renditions.get()
+    rendition.etag = 'W/"weak"'
+
+    with pytest.raises(ValidationError) as error:
+        rendition.save()
+
+    assert "etag" in error.value.message_dict
+
+    rendition.etag = ""
+    rendition.cdn_contract_verified_at = timezone.now()
+    with pytest.raises(ValidationError) as evidence_error:
+        rendition.save()
+    assert "cdn_contract_verified_at" in evidence_error.value.message_dict
+
+    rendition.etag = '"edge-observed-etag"'
+    rendition.save()
 
 
 @pytest.mark.django_db
@@ -789,6 +860,31 @@ def test_tracks_cannot_be_created_changed_or_deleted_after_publication(
 
 
 @pytest.mark.django_db
+def test_renditions_cannot_be_created_changed_or_deleted_after_publication(
+    draft_recitation: RecitationEdition,
+    surah_track: AudioTrack,
+) -> None:
+    rendition = surah_track.renditions.get()
+    _publish(draft_recitation)
+
+    rendition.bitrate_kbps += 1
+    with pytest.raises(ValidationError, match="immutable"):
+        rendition.save()
+    rendition.refresh_from_db()
+
+    with pytest.raises(ValidationError, match="immutable"):
+        _create_rendition(
+            surah_track,
+            quality=AudioRenditionQuality.HIGH,
+            is_default=False,
+            object_key="audio/test-recitation/1.0.0/surah-001-high.mp3",
+        )
+
+    with pytest.raises(ValidationError, match="immutable"):
+        rendition.delete()
+
+
+@pytest.mark.django_db
 def test_timing_versions_and_track_binding_are_immutable_after_publication(
     draft_recitation: RecitationEdition,
     surah_track: AudioTrack,
@@ -856,6 +952,27 @@ def test_empty_recitation_cannot_be_published(draft_recitation: RecitationEditio
 
     assert "status" in error.value.message_dict
     assert "At least one surah audio track" in error.value.message_dict["status"][0]
+
+
+@pytest.mark.django_db
+def test_track_without_default_rendition_cannot_be_published(
+    draft_recitation: RecitationEdition,
+) -> None:
+    AudioTrack.objects.create(
+        recitation_edition=draft_recitation,
+        scope=AudioTrackScope.SURAH,
+        surah_number=1,
+        duration_ms=10_000,
+    )
+    draft_recitation.stream_allowed = True
+    draft_recitation.offline_download_allowed = True
+    draft_recitation.publish()
+
+    with pytest.raises(ValidationError) as error:
+        draft_recitation.save()
+
+    assert "status" in error.value.message_dict
+    assert "exactly one default" in error.value.message_dict["status"][0]
 
 
 @pytest.mark.django_db

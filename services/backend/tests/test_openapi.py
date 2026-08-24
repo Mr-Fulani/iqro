@@ -225,6 +225,10 @@ def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
 
     timing_schema = schema["components"]["schemas"]["AudioTrack"]["properties"]["timing_version"]
     assert timing_schema["oneOf"][1] == {"type": "null"}
+    track_properties = schema["components"]["schemas"]["AudioTrack"]["properties"]
+    assert track_properties["renditions"]["type"] == "array"
+    rendition_properties = schema["components"]["schemas"]["AudioRendition"]["properties"]
+    assert {"id", "quality", "is_default", "asset"} <= rendition_properties.keys()
     asset_properties = schema["components"]["schemas"]["AudioAsset"]["properties"]
     assert {"url", "content_type", "bytes", "sha256", "etag"} <= asset_properties.keys()
 

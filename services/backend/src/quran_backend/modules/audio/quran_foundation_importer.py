@@ -13,6 +13,8 @@ from django.utils.text import slugify
 from quran_backend.modules.audio.models import (
     AudioCodec,
     AudioContentType,
+    AudioRendition,
+    AudioRenditionQuality,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -210,6 +212,11 @@ def import_quran_foundation_recitation(
             scope=AudioTrackScope.SURAH,
             surah_number=prepared_track.surah_number,
             duration_ms=prepared_track.duration_ms,
+        )
+        AudioRendition.objects.create(
+            track=track,
+            quality=AudioRenditionQuality.STANDARD,
+            is_default=True,
             codec=AudioCodec.MP3,
             content_type=AudioContentType.MPEG,
             bitrate_kbps=prepared_track.bitrate_kbps,
