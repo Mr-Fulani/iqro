@@ -21,6 +21,13 @@ stateless API/web/worker replicas за load balancer, подключает manag
 копий пока намеренно не включены. В репозитории есть opt-in Prometheus/Grafana/Alertmanager
 baseline, но его фактический deployment не заменяет эти launch evidence.
 
+Для ограниченного Web MVP существующие staging capacity reports приняты как нижняя измеренная
+граница; дополнительные production-sized/load/soak исследования перенесены post-MVP. Это не
+разрешает массовое привлечение трафика и не снимает monitoring, offsite backup, security,
+content sign-off или rollback smoke. Перед production deploy заполните
+[fast-track release plan](release/web-mvp-fast-track-2026-08-25.md) и
+[sign-off package](sign-offs/README.md).
+
 ## 1. Окружение и секреты
 
 Создайте production-файл из шаблона:

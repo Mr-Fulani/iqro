@@ -9,6 +9,12 @@
 Целевая архитектура роста: [architecture and scaling](architecture-and-scaling.md).
 Последовательность работ: [план и roadmap](roadmap.md).
 
+Для ограниченного публичного Web MVP 25 августа 2026 года принят fast-track: дополнительные
+production-sized/load/soak исследования перенесены после релиза, поскольку budget S0 уже имеет
+нижнюю измеренную границу. Это решение не меняет оценку полного multi-client MVP и не снимает
+content/license/religious, monitoring, offsite backup, security и rollback gates. Scope,
+компенсирующие меры и стоп-условия: [Web MVP fast-track](release/web-mvp-fast-track-2026-08-25.md).
+
 ## Правила оценки
 
 - ✅ **Готово** — требование реализовано и подтверждается кодом, данными и тестом/проверкой.

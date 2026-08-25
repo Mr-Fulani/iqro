@@ -41,8 +41,10 @@ Quran.Foundation importer больше не доверяет `file_size` без 
 track он выполняет bounded `HEAD` на allowlisted HTTPS audio host и сохраняет фактически
 наблюдаемый `Content-Length`. Это не копирует запись и не разрешает offline download.
 
-Публикация всё равно остаётся заблокированной до полного 114-surah pilot, актуального
-content/license решения, religious/editorial и product sign-off. Согласно
+Публикация всё равно остаётся заблокированной до проверки целостности каталога всех 114 сур,
+актуального content/license решения, religious/editorial и product sign-off. Эта проверка
+целостности не является нагрузочным тестом. Полный real-audio performance/soak решением
+владельца перенесён после ограниченного Web MVP. Согласно
 [Quran.Foundation Developer Terms](https://api-docs.quran.foundation/legal/developer-terms/),
 QF Content показывается только внутри приложения, не превращается в наш распространяемый
 пакет и не копируется в R2 без отдельного письменного разрешения.
@@ -56,6 +58,7 @@ QF Content показывается только внутри приложени
   background playback, глобальную доступность или provider capacity;
 - реальный capacity test на инфраструктуре Quran.Foundation не проводится: это чужой сервис.
 
-Следующий безопасный шаг — проверить ограниченный 114-surah draft catalog без публикации,
-зафиксировать все metadata/origin расхождения и получить внешние sign-off. Только после этого
-можно включать чтецов в публичный staging UI и проводить browser/mobile playback journey.
+Следующий безопасный шаг — проверить 114-surah draft catalog без публикации и без нагрузочного
+профиля, зафиксировать metadata/origin расхождения и получить внешние sign-off по
+[подготовленному пакету](../sign-offs/README.md). Только после этого можно включать конкретного
+чтеца в публичный UI. Полный browser/mobile playback QoE и soak остаются post-MVP задачами.

@@ -34,7 +34,11 @@ production bundle. Это ещё не означает готовность
   production-sized multi-region прогон и real audio ещё не закрыты. Новый registered email
   account + sync подтвердил 4 active users, а 6/8 превысили latency gate;
   [evidence](capacity/staging-cx23-registered-user-2026-08-25.md). Existing-account merge и
-  multi-device identity journey остаются.
+  multi-device identity journey остаются. Для ускоренного ограниченного Web MVP владелец
+  решил не продолжать полный load/soak цикл до релиза: уже собранные S0 evidence принимаются
+  как нижняя проверенная граница, а дополнительные performance-прогоны перенесены после MVP.
+  Обязательные content/security/backup/monitoring gates не снимаются; решение и стоп-условия
+  зафиксированы в [fast-track release plan](release/web-mvp-fast-track-2026-08-25.md).
 
 Поэтому закрытая web beta и публичный Web MVP являются двумя разными milestones. Публичный
 запуск web не ждёт Flutter и Telegram Mini App, но и не закрывает полный multi-client MVP.
@@ -117,7 +121,7 @@ flowchart LR
   Prometheus/Grafana/Alertmanager baseline, bounded multi-worker API metrics, exporters, S0
   rules и budget rendering готовы; остаются provider CDN/billing/QoE ingestion, внешний uptime,
   production alert routing и доказательство синтетической доставки.
-- [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
+- [ ] **Post-MVP:** расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
   bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence,
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
   gateway cache regression на CX23 прошёл 200 запросов при concurrency 10 без ошибок и
@@ -127,9 +131,11 @@ flowchart LR
   превысили p95 gate. Mixed harness и изолированный прогон подтвердили `20 readers + 4 sync
   users`. Registered harness подтвердил 4 new-account active users и boundary на 6/8. Bounded
   real-audio probe подтвердил startup/seek delivery 3/3 внешних QF assets и metadata consistency
-  2/3; остаются library API, existing-account merge/multi-device journey, полный multi-surah
-  catalog, client startup/buffering QoE и production-controlled cache-cold/warm/origin.
-- [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
+  2/3. Полный multi-surah performance/soak, library API, existing-account merge/multi-device
+  journey, client startup/buffering QoE и production-controlled cache-cold/warm/origin
+  осознанно перенесены после ограниченного Web MVP; content-integrity validation не считается
+  нагрузочным тестом и остаётся обязательной перед публикацией.
+- [ ] **Post-MVP:** зафиксировать полный S0/S1 capacity report и runbook перехода к нескольким репликам;
   [strict budget CX23 evidence](capacity/staging-cx23-quran-budget-2026-08-25.md) уже
   доказывает 10 saturated Quran read clients и boundary на 12, а
   [synthetic audio evidence](capacity/staging-r2-synthetic-audio-2026-08-25.md) — 25 warm-CDN
@@ -224,17 +230,20 @@ flowchart LR
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
   commit после GitHub CI.
-- [ ] Провести staged public-read capacity/soak test на production-like staging и записать
-  доказанную ёмкость S0/S1. Quran HTML/API часть на budget CX23 подтверждена
+- [x] Принять существующее staged capacity evidence как достаточную нижнюю границу для
+  ограниченного S0 Web MVP и перенести production-sized/soak/S1 исследования после релиза.
+  Quran HTML/API часть на budget CX23 подтверждена
   [strict budget отчётом](capacity/staging-cx23-quran-budget-2026-08-25.md): 10 saturated
   clients, 4 612 запросов за две минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95.
-  Checkbox остаётся открытым до
-  полного разрешённого multi-reciter audio release, existing-account/multi-device identity и
-  повтора на production-sized профиле. Synthetic R2 Range и изолированный guest sync измерены:
+  Это не прогноз DAU и не разрешение на массовое привлечение трафика. Synthetic R2 Range и
+  изолированный guest sync измерены:
   соответственно 25 playback-клиентов и 8 тяжёлых stateful-клиентов с boundary на 10;
   реалистичный mixed-профиль подтвердил `20 readers + 4 sync users`, а новый registered email
   account + sync — 4 active users с boundary на 6/8. Bounded real-audio probe подтвердил
-  доставку трёх QF assets, но один metadata drift оставил release gate открытым.
+  доставку трёх QF assets; metadata drift исправлен в importer. Полный real-audio soak,
+  existing-account/multi-device identity, mobile/Telegram QoE и production-sized повтор
+  остаются post-MVP работами. Soft-launch limits, мониторинг и stop/rollback conditions описаны
+  в [fast-track release plan](release/web-mvp-fast-track-2026-08-25.md).
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза. `1.0.2` и 604 WebP технически проверены и временно
   активированы только на noindex staging для нагрузочного теста; provenance audit обнаружил,
@@ -243,6 +252,9 @@ flowchart LR
   официального King Fahd Complex page source, после чего повторяются checksums,
   geometry/manual review и все три sign-off. Подробности — в
   [source provenance audit](quran-source-provenance-audit.md).
+- [x] Подготовить единый Web MVP sign-off package: границы релиза, готовый запрос в
+  Quran.Foundation, per-reciter religious/editorial review и product release decision.
+  [Пакет и порядок заполнения](sign-offs/README.md).
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,
   hreflang, отсутствие индексирования приватных маршрутов и реальные Core Web Vitals.
 
