@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T04:53:30.201413+00:00",
+  "label": "staging-a5117cb-cx23-isolated-sync-c10-20260825",
+  "run_tag": "5e62fbb0",
+  "target": "http://127.0.0.1:18000",
+  "journey": "guest-auth-reading-sync",
+  "edition": "madani-hafs",
+  "operations_per_push": 1,
+  "refresh_every_cycles": 20,
+  "think_time_ms": 500.0,
+  "safety_caps": {
+    "max_concurrency": 100,
+    "max_stage_seconds": 900.0,
+    "max_cycles_per_user": 200,
+    "max_sync_operations_per_stage": 2500,
+    "max_response_bytes": 1048576
+  },
+  "thresholds": {
+    "max_error_rate": 0.01,
+    "max_p95_ms": 750.0,
+    "max_p99_ms": 1500.0
+  },
+  "persistent_test_data": {
+    "guest_users_created_at_most": 10,
+    "reading_positions_per_user_at_most": 1,
+    "device_app_version_marker": "load.5e62fbb0"
+  },
+  "stages": [
+    {
+      "concurrency": 10,
+      "requested_duration_seconds": 90.0,
+      "elapsed_seconds": 91.363,
+      "stop_reason": "duration",
+      "requests": 1370,
+      "requests_per_second": 15.0,
+      "error_rate": 0.0,
+      "p50_ms": 373.87,
+      "p95_ms": 832.72,
+      "p99_ms": 978.24,
+      "bytes_received": 982010,
+      "users_bootstrapped": 10,
+      "cycles_completed": 655,
+      "sync_operations_completed": 655,
+      "refreshes_completed": 30,
+      "passed": false,
+      "failures": [
+        "p95 832.7ms exceeds 750.0ms"
+      ],
+      "steps": {
+        "current-session": {
+          "requests": 10,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 3080,
+          "p50_ms": 477.68,
+          "p95_ms": 683.8,
+          "p99_ms": 683.8,
+          "statuses": {
+            "200": 10
+          },
+          "errors_by_reason": {}
+        },
+        "guest-bootstrap": {
+          "requests": 10,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 9150,
+          "p50_ms": 809.26,
+          "p95_ms": 905.8,
+          "p99_ms": 905.8,
+          "statuses": {
+            "200": 10
+          },
+          "errors_by_reason": {}
+        },
+        "logout": {
+          "requests": 10,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 0,
+          "p50_ms": 129.05,
+          "p95_ms": 306.26,
+          "p99_ms": 306.26,
+          "statuses": {
+            "204": 10
+          },
+          "errors_by_reason": {}
+        },
+        "sync-pull": {
+          "requests": 655,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 515680,
+          "p50_ms": 287.45,
+          "p95_ms": 528.08,
+          "p99_ms": 715.52,
+          "statuses": {
+            "200": 655
+          },
+          "errors_by_reason": {}
+        },
+        "sync-push": {
+          "requests": 655,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 435860,
+          "p50_ms": 551.58,
+          "p95_ms": 918.26,
+          "p99_ms": 1049.5,
+          "statuses": {
+            "200": 655
+          },
+          "errors_by_reason": {}
+        },
+        "token-refresh": {
+          "requests": 30,
+          "errors": 0,
+          "error_rate": 0.0,
+          "bytes_received": 18240,
+          "p50_ms": 356.82,
+          "p95_ms": 663.24,
+          "p99_ms": 685.67,
+          "statuses": {
+            "200": 30
+          },
+          "errors_by_reason": {}
+        }
+      }
+    }
+  ],
+  "passed": false
+}

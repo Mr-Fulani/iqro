@@ -24,6 +24,10 @@ staging переключён с временного `r2.dev` на custom domain
 Отдельный synthetic audio Range-прогон через R2/CDN подтвердил 25 playback-клиентов и границу
 деградации на 30; доказательства и ограничения находятся в
 [audio CDN отчёте](capacity/staging-r2-synthetic-audio-2026-08-25.md).
+Изолированный guest auth/token refresh/reading sync прогон подтвердил 8 постоянно активных
+stateful-клиентов и latency boundary на 10; рабочая staging-БД осталась без test-маркеров.
+Методика и машинные отчёты находятся в
+[stateful sync отчёте](capacity/staging-cx23-stateful-sync-2026-08-25.md).
 
 Среда ещё не является production: `madani-hafs@1.0.2` временно активирован только на закрытом от
 индексации staging для технического content-backed/load test, а 604 проверенных WebP загружены в
@@ -366,7 +370,9 @@ staging, не из DAU и не из лимитов Docker Compose.
 активных read-only клиентов в течение пяти минут: 26 510 запросов, 88.34 RPS, 0% ошибок,
 p95 359 ms. Полный отчёт и ограничения результата: [Quran content-backed capacity evidence](capacity/staging-cx23-quran-content-2026-08-25.md).
 Synthetic warm audio CDN часть подтвердила 25 playback-клиентов при 256 kbps request profile;
-реальный разрешённый multi-reciter audio release, cache-cold и auth/sync gates ещё открыты.
+изолированный guest auth/sync профиль подтвердил 8 тяжёлых stateful-клиентов, а 10 не уложились
+в p95 750 ms. Реальный разрешённый multi-reciter audio release, cache-cold,
+registered-user/mixed workload и production-sized repeat ещё открыты.
 
 ## 8. Обновление и откат
 

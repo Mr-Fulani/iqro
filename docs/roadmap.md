@@ -26,8 +26,10 @@ production bundle. Это ещё не означает готовность
 - content-backed Quran read workload прошёл на бюджетном CX23 при 14 непрерывно активных
   виртуальных клиентах: 26 510 запросов за пять минут, 0% ошибок, p95 359 ms;
   [evidence](capacity/staging-cx23-quran-content-2026-08-25.md). Synthetic warm R2 audio
-  подтвердил 25 playback-клиентов и деградацию с 30; реальный audio release, auth/sync и
-  production-sized multi-region workload ещё не закрыты.
+  подтвердил 25 playback-клиентов и деградацию с 30. Изолированный guest auth/reading sync
+  профиль подтвердил 8 постоянно активных stateful-клиентов и выход за p95 на 10;
+  [evidence](capacity/staging-cx23-stateful-sync-2026-08-25.md). Реальный audio release,
+  registered-user/mixed workload и production-sized multi-region прогон ещё не закрыты.
 
 Поэтому закрытая web beta и публичный Web MVP являются двумя разными milestones. Публичный
 запуск web не ждёт Flutter и Telegram Mini App, но и не закрывает полный multi-client MVP.
@@ -113,13 +115,17 @@ flowchart LR
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
   gateway cache regression на CX23 прошёл 200 запросов при concurrency 10 без ошибок и
   подтвердил `MISS/HIT/BYPASS/PURGE`; synthetic warm R2 audio прогон подтвердил 25 playback
-  clients и отсутствие audio egress через VPS. Остаются library API, registered-user journey,
-  реальный multi-reciter cache-cold/warm/origin и client startup/buffering QoE.
+  clients и отсутствие audio egress через VPS. Изолированный stateful-прогон на том же CX23
+  подтвердил guest auth/token refresh/reading sync при 8 постоянно активных клиентах, а 10
+  превысили p95 gate. Остаются library API, registered-user и mixed journey, реальный
+  multi-reciter cache-cold/warm/origin и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
   [content-backed CX23 evidence](capacity/staging-cx23-quran-content-2026-08-25.md) уже
   доказывает 14 saturated Quran read clients, а
   [synthetic audio evidence](capacity/staging-r2-synthetic-audio-2026-08-25.md) — 25 warm-CDN
-  playback clients на одном тестовом маршруте. Single-host API/web scale автоматизирован через
+  playback clients на одном тестовом маршруте; отдельный
+  [stateful sync evidence](capacity/staging-cx23-stateful-sync-2026-08-25.md) подтверждает 8
+  тяжёлых guest sync-клиентов и latency boundary на 10. Single-host API/web scale автоматизирован через
   bounded preflight, DB budget и dynamic Docker DNS; временный профиль `2 API + 2 web`
   фактически проверил равномерное API-распределение, service-level failover и возврат к `1+1`
   на CX23. Полный S1 multi-region/real-audio report и внешний load-balancer/HA runbook ещё не
@@ -209,7 +215,9 @@ flowchart LR
   доказанную ёмкость S0/S1. Quran HTML/API часть на budget CX23 подтверждена
   [content-backed отчётом](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
   clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Checkbox остаётся открытым до
-  отдельного R2 audio Range, guest/registered sync и повтора на production-sized профиле.
+  реального multi-reciter audio release, registered-user/mixed sync и повтора на
+  production-sized профиле. Synthetic R2 Range и изолированный guest sync уже измерены:
+  соответственно 25 playback-клиентов и 8 тяжёлых stateful-клиентов с boundary на 10.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза. `1.0.2` и 604 WebP технически проверены и временно
   активированы только на noindex staging для нагрузочного теста; provenance audit обнаружил,

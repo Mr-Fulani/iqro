@@ -724,7 +724,8 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
 - встроенный public-read workload для web, Quran/audio API уже автоматизирован; дополнительно
   нужны public library reads и отдельные cache-cold/cache-warm прогоны;
 - bounded guest auth, token refresh, reading writes и sync push/pull автоматизированы;
-  production-like evidence и сценарий зарегистрированного пользователя остаются;
+  budget CX23 evidence подтвердил 8 постоянно активных тяжёлых guest sync-клиентов и p95
+  boundary на 10; realistic mixed profile и сценарий зарегистрированного пользователя остаются;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
 - bounded CDN/origin `HEAD`, startup/seek `Range`, TTFB, throughput и cache outcomes уже
   автоматизированы; production-like cold/warm/origin evidence, `416` и origin-failure остаются;
