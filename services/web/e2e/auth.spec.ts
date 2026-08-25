@@ -210,7 +210,20 @@ test("guest session keeps the email login CTA in main content, not the header", 
   const emailLogin = page.locator("main").getByRole("link", { name: "Войти по email" }).first();
   await expect(emailLogin).toBeVisible();
   await expect(emailLogin).toHaveAttribute("href", "/ru/login");
+  await expect(page.getByRole("button", { name: "Продолжить как гость" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Выйти" })).toHaveCount(0);
+});
+
+test("signed-out profile offers email login without a redundant guest action", async ({ page }) => {
+  await installAuthMocks(page);
+
+  await page.goto("/profile");
+
+  await expect(page.getByRole("heading", { name: "Личный кабинет читателя" })).toBeVisible();
+  const emailLogin = page.getByRole("link", { name: "Войти по email" });
+  await expect(emailLogin).toBeVisible();
+  await expect(emailLogin).toHaveAttribute("href", "/ru/login");
+  await expect(page.getByRole("button", { name: "Войти как гость" })).toHaveCount(0);
 });
 
 test("logout all sessions requires confirmation and clears the web session", async ({ page }) => {

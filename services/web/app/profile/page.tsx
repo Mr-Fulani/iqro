@@ -47,7 +47,6 @@ export default function ProfilePage() {
   const {
     session,
     isLoggedIn,
-    loginGuest,
     logout,
     logoutAll,
     isLoading: authLoading,
@@ -318,14 +317,13 @@ export default function ProfilePage() {
 
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-        <button
-          onClick={() => void loginGuest()}
+        <Link
+          href={localizedPath(locale, "/login")}
           className="btn btn-primary btn-lg"
-          disabled={authLoading}
           style={{ width: "100%" }}
         >
-          {authLoading ? t("profile.creatingGuest") : t("profile.loginGuest")}
-        </button>
+          {t("auth.emailLogin")}
+        </Link>
       </div>
     );
   }

@@ -12,7 +12,7 @@ import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
 
 export default function HomePage() {
-  const { session, isLoggedIn, loginGuest, isLoading: authLoading } = useAuth();
+  const { session, isLoggedIn } = useAuth();
   const { locale, t, formatDate } = useI18n();
   const isActiveAccount = session?.user.status === "active";
 
@@ -143,15 +143,6 @@ export default function HomePage() {
               <Link href={localizedPath(locale, "/login")} className="btn btn-primary">
                 {t("auth.emailLogin")}
               </Link>
-              {!isLoggedIn && (
-                <button
-                  onClick={() => void loginGuest()}
-                  className="btn btn-secondary"
-                  disabled={authLoading}
-                >
-                  {authLoading ? t("home.preparing") : t("home.continueGuest")}
-                </button>
-              )}
             </div>
           </div>
         </section>
