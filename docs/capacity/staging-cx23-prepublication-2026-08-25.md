@@ -20,10 +20,12 @@ staging, а не S0/S1 или DAU-гарантия production.
 
 ## Browser/HTTP smoke
 
-- RU Quran, audio, prayer, login и локализованная 404 отрендерились без `HTTP 503`;
+- RU, EN и TR landing/Quran/audio/prayer/login и локализованная 404 отрендерились без
+  `HTTP 503`; EN/TR отдали `lang=en|tr`, `dir=ltr` и locale-specific canonical;
 - AR Quran отдал `lang=ar`, `dir=rtl` и правильный canonical;
-- login отдал `noindex, nofollow`, неизвестный маршрут — HTTP 404 и `noindex`;
-- `robots.txt` и `sitemap.xml` вернули HTTP 200; staging закрыт `Disallow: /`;
+- EN/TR login отдали `noindex, nofollow`, неизвестные маршруты — HTTP 404 и `noindex`;
+- `robots.txt` и `sitemap.xml` вернули HTTP 200; sitemap содержит EN/TR locale/hreflang links,
+  а staging закрыт `Disallow: /`;
 - readiness после всех прогонов: database/cache/throttling `true`.
 
 Обычный cold-load reader раньше превышал лимит из четырёх API-запросов. В budget overlay лимит

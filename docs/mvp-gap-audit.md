@@ -157,7 +157,7 @@ runtime. Основной незакрытый объём находится в 
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
-| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev/standalone; реальный staging smoke прошёл для RU/AR Quran shell, audio/prayer/login/404 и SEO, но content-backed journey ждёт активации dataset |
+| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev/standalone; реальный staging smoke подтвердил RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404 и SEO, но content-backed journey ждёт активации dataset |
 | Runbooks, dashboards и alerts доступны | 🟡 | Versioned dashboard/rules и runbook готовы; production deployment, provider telemetry, on-call ownership и synthetic delivery ещё не подтверждены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 

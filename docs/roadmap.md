@@ -172,8 +172,9 @@ flowchart LR
   transfer size и request count на standalone production build.
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
   проходит те же 47 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
-  RU/AR Quran shell, audio, prayer, login, 404, canonical/RTL/noindex без mock contracts;
-  content-backed journey остаётся до активации согласованного dataset.
+  RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
+  RTL/noindex и sitemap без mock contracts; content-backed journey остаётся до активации
+  согласованного dataset.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
