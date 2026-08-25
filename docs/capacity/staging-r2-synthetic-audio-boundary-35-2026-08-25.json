@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T04:27:07.663397+00:00",
+  "label": "staging-r2-synthetic-audio-boundary-35",
+  "manifest": {
+    "name": "staging-r2-synthetic-audio-v1",
+    "version": 1
+  },
+  "target_role": "cdn",
+  "cache_mode": "warm",
+  "cors_origin": "https://staging.iqro.forum",
+  "assets": 1,
+  "range_bytes": 65536,
+  "operation_weights": {
+    "head": 1,
+    "startup": 7,
+    "seek": 2
+  },
+  "safety_caps": {
+    "max_requests_per_stage": 100000,
+    "max_transfer_bytes_per_stage": 536870912
+  },
+  "thresholds": {
+    "max_error_rate": 0.01,
+    "max_p95_ttfb_ms": 750.0,
+    "min_p50_throughput_kbps": 0.0
+  },
+  "warmup": {
+    "requests": 1,
+    "errors": 0,
+    "errors_by_reason": {},
+    "bytes_received": 65536,
+    "cache_outcomes": {
+      "hit": 1
+    }
+  },
+  "stages": [
+    {
+      "concurrency": 35,
+      "requested_duration_seconds": 180.0,
+      "elapsed_seconds": 182.99,
+      "stop_reason": "duration",
+      "requests": 2173,
+      "requests_per_second": 11.87,
+      "error_rate": 0.00046,
+      "p95_ms": 1868.16,
+      "p95_ttfb_ms": 816.5,
+      "p50_throughput_kbps": 836.34,
+      "bytes_received": 128057344,
+      "reserved_transfer_bytes": 128122880,
+      "cache_outcomes": {
+        "bypass": 218,
+        "hit": 1954,
+        "unknown": 1
+      },
+      "errors_by_reason": {
+        "TimeoutError": 1
+      },
+      "statuses": {
+        "200": 218,
+        "206": 1954,
+        "None": 1
+      },
+      "passed": false,
+      "failures": [
+        "p95 TTFB 816.5ms exceeds 750.0ms"
+      ],
+      "samples": {
+        "synthetic-zero-8m-v1:head": {
+          "requests": 218,
+          "errors": 0,
+          "errors_by_reason": {},
+          "statuses": {
+            "200": 218
+          },
+          "bytes_received": 0,
+          "p95_ms": 286.77,
+          "p95_ttfb_ms": 286.75,
+          "p50_throughput_kbps": null,
+          "cache_outcomes": {
+            "bypass": 218
+          }
+        },
+        "synthetic-zero-8m-v1:seek": {
+          "requests": 435,
+          "errors": 0,
+          "errors_by_reason": {},
+          "statuses": {
+            "206": 435
+          },
+          "bytes_received": 28508160,
+          "p95_ms": 1904.96,
+          "p95_ttfb_ms": 972.22,
+          "p50_throughput_kbps": 789.73,
+          "cache_outcomes": {
+            "hit": 435
+          }
+        },
+        "synthetic-zero-8m-v1:startup": {
+          "requests": 1520,
+          "errors": 1,
+          "errors_by_reason": {
+            "TimeoutError": 1
+          },
+          "statuses": {
+            "206": 1519,
+            "None": 1
+          },
+          "bytes_received": 99549184,
+          "p95_ms": 1908.32,
+          "p95_ttfb_ms": 801.04,
+          "p50_throughput_kbps": 853.98,
+          "cache_outcomes": {
+            "hit": 1519,
+            "unknown": 1
+          }
+        }
+      }
+    }
+  ],
+  "passed": false
+}

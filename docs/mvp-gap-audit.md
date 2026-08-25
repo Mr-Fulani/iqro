@@ -156,7 +156,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | 🟡 | Budget CX23 content-backed Quran soak доказал 14 saturated read clients: 26 510 запросов за 5 минут, 0% ошибок, p95 359 ms; отдельные R2 audio Range, auth/sync и production-sized S0/S1 ещё не измерены |
+| SLO доказаны на проектном пике | 🟡 | Budget CX23 content-backed Quran soak доказал 14 saturated read clients: 26 510 запросов за 5 минут, 0% ошибок, p95 359 ms; synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; реальный multi-reciter audio, auth/sync и production-sized S0/S1 ещё не измерены |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
@@ -250,8 +250,9 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 2. 🟡 Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
    Quran HTML/API часть подтверждена
    [content-backed CX23 отчётом](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
-   clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Audio Range, auth/sync и
-   production-sized повтор остаются открыты.
+   clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Synthetic warm R2 audio
+   подтвердил 25 playback clients; реальный audio release, auth/sync и production-sized повтор
+   остаются открыты.
 3. Server/domain/TLS, privacy/license/religious sign-off.
    Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,
    backup drill и pre-publication evidence уже есть. Отдельный R2 staging bucket/scoped token/CORS,

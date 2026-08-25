@@ -21,6 +21,9 @@ staging переключён с временного `r2.dev` на custom domain
 [отчёте CX23](capacity/staging-cx23-quran-content-2026-08-25.md); исторический прогон до
 активации corpus сохранён в
 [pre-publication отчёте](capacity/staging-cx23-prepublication-2026-08-25.md).
+Отдельный synthetic audio Range-прогон через R2/CDN подтвердил 25 playback-клиентов и границу
+деградации на 30; доказательства и ограничения находятся в
+[audio CDN отчёте](capacity/staging-r2-synthetic-audio-2026-08-25.md).
 
 Среда ещё не является production: `madani-hafs@1.0.2` временно активирован только на закрытом от
 индексации staging для технического content-backed/load test, а 604 проверенных WebP загружены в
@@ -362,7 +365,8 @@ staging, не из DAU и не из лимитов Docker Compose.
 Фактический content-backed прогон 25 августа 2026 года подтвердил на CX23 14 непрерывно
 активных read-only клиентов в течение пяти минут: 26 510 запросов, 88.34 RPS, 0% ошибок,
 p95 359 ms. Полный отчёт и ограничения результата: [Quran content-backed capacity evidence](capacity/staging-cx23-quran-content-2026-08-25.md).
-Audio CDN и auth/sync gates ещё открыты.
+Synthetic warm audio CDN часть подтвердила 25 playback-клиентов при 256 kbps request profile;
+реальный разрешённый multi-reciter audio release, cache-cold и auth/sync gates ещё открыты.
 
 ## 8. Обновление и откат
 

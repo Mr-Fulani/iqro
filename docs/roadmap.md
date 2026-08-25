@@ -23,9 +23,11 @@ production bundle. Это ещё не означает готовность
 - staging-домен/TLS, noindex, локальный backup/restore drill и budget deployment уже проверены;
   внешний мониторинг, offsite backup и обязательные контентные sign-off остаются открытыми
   release gates;
-- pre-publication public-read workload прошёл на бюджетном CX23 при 14 непрерывно активных
-  виртуальных пользователях; [evidence](capacity/staging-cx23-prepublication-2026-08-25.md)
-  не включает Quran corpus и R2 audio, поэтому не является S0/S1 или DAU-гарантией.
+- content-backed Quran read workload прошёл на бюджетном CX23 при 14 непрерывно активных
+  виртуальных клиентах: 26 510 запросов за пять минут, 0% ошибок, p95 359 ms;
+  [evidence](capacity/staging-cx23-quran-content-2026-08-25.md). Synthetic warm R2 audio
+  подтвердил 25 playback-клиентов и деградацию с 30; реальный audio release, auth/sync и
+  production-sized multi-region workload ещё не закрыты.
 
 Поэтому закрытая web beta и публичный Web MVP являются двумя разными milestones. Публичный
 запуск web не ждёт Flutter и Telegram Mini App, но и не закрывает полный multi-client MVP.
@@ -80,7 +82,8 @@ flowchart LR
 - [x] Подключить к staging существующий Quran.Foundation production API-доступ без раскрытия
   credentials и проверить read-only авторизацию из backend: каталог доступен (21 chapter
   reciter на 25 августа 2026 года). Фоновая синхронизация намеренно оставлена выключенной;
-  импорт и публикация аудио ждут активной Quran edition и внешних content/license sign-off.
+  Quran edition технически активна только на noindex staging, а импорт/публикация реального
+  аудио ждут внешних content/license sign-off.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.
@@ -109,14 +112,18 @@ flowchart LR
   bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence,
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
   gateway cache regression на CX23 прошёл 200 запросов при concurrency 10 без ошибок и
-  подтвердил `MISS/HIT/BYPASS/PURGE`; остаются library API, registered-user journey,
-  production-like cache-cold/warm/origin прогоны и client startup/buffering QoE.
+  подтвердил `MISS/HIT/BYPASS/PURGE`; synthetic warm R2 audio прогон подтвердил 25 playback
+  clients и отсутствие audio egress через VPS. Остаются library API, registered-user journey,
+  реальный multi-reciter cache-cold/warm/origin и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
-  [pre-publication CX23 evidence](capacity/staging-cx23-prepublication-2026-08-25.md) уже
-  доказывает 14 saturated read clients. Single-host API/web scale автоматизирован через
+  [content-backed CX23 evidence](capacity/staging-cx23-quran-content-2026-08-25.md) уже
+  доказывает 14 saturated Quran read clients, а
+  [synthetic audio evidence](capacity/staging-r2-synthetic-audio-2026-08-25.md) — 25 warm-CDN
+  playback clients на одном тестовом маршруте. Single-host API/web scale автоматизирован через
   bounded preflight, DB budget и dynamic Docker DNS; временный профиль `2 API + 2 web`
   фактически проверил равномерное API-распределение, service-level failover и возврат к `1+1`
-  на CX23. Полный S1 report и внешний load-balancer/HA runbook ещё не закрыты.
+  на CX23. Полный S1 multi-region/real-audio report и внешний load-balancer/HA runbook ещё не
+  закрыты.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики
 не требует изменения кода или копирования локального состояния; S1 нагрузка подтверждена.

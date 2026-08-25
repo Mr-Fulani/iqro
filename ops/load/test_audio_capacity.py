@@ -9,6 +9,7 @@ from ops.load.audio_capacity import (
     AudioResult,
     AudioStageConfig,
     AudioStageSummary,
+    _validate_response,
     bounded_concurrency_stage,
     bounded_request_count,
     classify_cache_outcome,
@@ -153,6 +154,40 @@ class AudioCapacityTests(unittest.TestCase):
         self.assertEqual((method, target), ("GET", "/audio/surah-001.mp3"))
         self.assertEqual(headers["Range"], "bytes=0-999")
         self.assertEqual(headers["Accept-Encoding"], "identity")
+
+    def test_valid_206_does_not_require_repeated_accept_ranges_header(self) -> None:
+        _validate_response(
+            status=206,
+            headers={
+                "access-control-allow-origin": self.manifest.origins[0],
+                "content-range": "bytes 0-999/10000",
+                "content-type": "audio/mpeg",
+                "etag": '"asset-v1"',
+            },
+            body_bytes=1_000,
+            method="GET",
+            asset=self.asset,
+            expected_body_bytes=1_000,
+            expected_content_range="bytes 0-999/10000",
+            origin=self.manifest.origins[0],
+        )
+
+    def test_head_still_requires_accept_ranges_advertisement(self) -> None:
+        with self.assertRaisesRegex(ValueError, "missing_accept_ranges"):
+            _validate_response(
+                status=200,
+                headers={
+                    "access-control-allow-origin": self.manifest.origins[0],
+                    "content-type": "audio/mpeg",
+                    "etag": '"asset-v1"',
+                },
+                body_bytes=0,
+                method="HEAD",
+                asset=self.asset,
+                expected_body_bytes=0,
+                expected_content_range=None,
+                origin=self.manifest.origins[0],
+            )
 
     def test_audio_stage_stops_at_transfer_byte_cap(self) -> None:
         summary = run_audio_stage(

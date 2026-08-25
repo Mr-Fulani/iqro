@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T04:17:02.388044+00:00",
+  "manifest": {
+    "name": "staging-r2-synthetic-audio-v1",
+    "version": 1
+  },
+  "origins": [
+    "https://staging.iqro.forum"
+  ],
+  "min_cache_seconds": 31536000,
+  "passed": true,
+  "assets": [
+    {
+      "name": "synthetic-zero-8m-v1",
+      "url": "https://media.staging.iqro.forum/diagnostics/audio-capacity/synthetic-zero-8m-v1.mp3",
+      "passed": true,
+      "failures": [],
+      "observed_etag": "\"96995b58d4cbf6aaa9041b4f00c7f6ae\"",
+      "observed_bytes": 8388608,
+      "observed_content_type": "audio/mpeg"
+    }
+  ]
+}

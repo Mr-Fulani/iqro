@@ -1,0 +1,16 @@
+{
+  "name": "staging-r2-synthetic-audio-v1",
+  "version": 1,
+  "origins": [
+    "https://staging.iqro.forum"
+  ],
+  "assets": [
+    {
+      "name": "synthetic-zero-8m-v1",
+      "url": "https://media.staging.iqro.forum/diagnostics/audio-capacity/synthetic-zero-8m-v1.mp3",
+      "bytes": 8388608,
+      "content_type": "audio/mpeg",
+      "etag": "\"96995b58d4cbf6aaa9041b4f00c7f6ae\""
+    }
+  ]
+}

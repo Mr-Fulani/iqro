@@ -77,7 +77,7 @@ Quran HTML/API workload. Это существенно тяжелее 14 обы�
 напрямую переводить в DAU: для этого нужен профиль реального поведения, think time, доля кэша и
 распределение по клиентам.
 
-Полный S0/S1 gate остаётся открытым. Следующий шаг — импортировать один разрешённый staging
-аудиорелиз, проверить его manifest/Range и выполнить отдельный bounded audio CDN test. Затем
-нужны disposable guest/registered auth+sync test и повторный общий soak на выбранной
-production-sized машине.
+Полный S0/S1 gate остаётся открытым. Synthetic warm R2 Range-контур уже проверен отдельно и
+подтвердил 25 playback-клиентов; следующий шаг — импортировать один разрешённый staging
+аудиорелиз и повторить manifest/Range на реальных multi-surah объектах. Затем нужны disposable
+guest/registered auth+sync test и повторный общий soak на выбранной production-sized машине.

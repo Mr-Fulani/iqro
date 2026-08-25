@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T04:30:20.723390+00:00",
+  "label": "staging-r2-synthetic-audio-boundary-30",
+  "manifest": {
+    "name": "staging-r2-synthetic-audio-v1",
+    "version": 1
+  },
+  "target_role": "cdn",
+  "cache_mode": "warm",
+  "cors_origin": "https://staging.iqro.forum",
+  "assets": 1,
+  "range_bytes": 65536,
+  "operation_weights": {
+    "head": 1,
+    "startup": 7,
+    "seek": 2
+  },
+  "safety_caps": {
+    "max_requests_per_stage": 100000,
+    "max_transfer_bytes_per_stage": 536870912
+  },
+  "thresholds": {
+    "max_error_rate": 0.01,
+    "max_p95_ttfb_ms": 750.0,
+    "min_p50_throughput_kbps": 0.0
+  },
+  "warmup": {
+    "requests": 1,
+    "errors": 0,
+    "errors_by_reason": {},
+    "bytes_received": 65536,
+    "cache_outcomes": {
+      "hit": 1
+    }
+  },
+  "stages": [
+    {
+      "concurrency": 30,
+      "requested_duration_seconds": 180.0,
+      "elapsed_seconds": 184.193,
+      "stop_reason": "duration",
+      "requests": 1922,
+      "requests_per_second": 10.43,
+      "error_rate": 0.0,
+      "p95_ms": 1930.55,
+      "p95_ttfb_ms": 818.22,
+      "p50_throughput_kbps": 1006.84,
+      "bytes_received": 113377280,
+      "reserved_transfer_bytes": 113377280,
+      "cache_outcomes": {
+        "bypass": 192,
+        "hit": 1730
+      },
+      "errors_by_reason": {},
+      "statuses": {
+        "200": 192,
+        "206": 1730
+      },
+      "passed": false,
+      "failures": [
+        "p95 TTFB 818.2ms exceeds 750.0ms"
+      ],
+      "samples": {
+        "synthetic-zero-8m-v1:head": {
+          "requests": 192,
+          "errors": 0,
+          "errors_by_reason": {},
+          "statuses": {
+            "200": 192
+          },
+          "bytes_received": 0,
+          "p95_ms": 222.59,
+          "p95_ttfb_ms": 222.56,
+          "p50_throughput_kbps": null,
+          "cache_outcomes": {
+            "bypass": 192
+          }
+        },
+        "synthetic-zero-8m-v1:seek": {
+          "requests": 386,
+          "errors": 0,
+          "errors_by_reason": {},
+          "statuses": {
+            "206": 386
+          },
+          "bytes_received": 25296896,
+          "p95_ms": 1821.53,
+          "p95_ttfb_ms": 958.56,
+          "p50_throughput_kbps": 934.16,
+          "cache_outcomes": {
+            "hit": 386
+          }
+        },
+        "synthetic-zero-8m-v1:startup": {
+          "requests": 1344,
+          "errors": 0,
+          "errors_by_reason": {},
+          "statuses": {
+            "206": 1344
+          },
+          "bytes_received": 88080384,
+          "p95_ms": 2022.17,
+          "p95_ttfb_ms": 825.57,
+          "p50_throughput_kbps": 1025.92,
+          "cache_outcomes": {
+            "hit": 1344
+          }
+        }
+      }
+    }
+  ],
+  "passed": false
+}

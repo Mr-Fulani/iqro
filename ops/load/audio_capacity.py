@@ -242,7 +242,10 @@ def _validate_response(
         raise ValueError("truncated_response")
     if method == "GET" and headers.get("content-range") != expected_content_range:
         raise ValueError("unexpected_content_range")
-    if headers.get("accept-ranges", "").lower() != "bytes":
+    # A valid 206 response with the exact requested Content-Range already proves byte-range
+    # support. Some CDNs (including Cloudflare R2 custom domains) advertise Accept-Ranges on
+    # HEAD but omit it from otherwise valid 206 responses.
+    if method == "HEAD" and headers.get("accept-ranges", "").lower() != "bytes":
         raise ValueError("missing_accept_ranges")
     observed_type = headers.get("content-type", "").split(";", 1)[0].lower()
     if observed_type != asset.content_type.lower():
