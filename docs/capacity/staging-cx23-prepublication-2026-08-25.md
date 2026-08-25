@@ -118,3 +118,29 @@ readiness и RU/EN web вернули HTTP 200, в последних gateway/wo
 Каталоги staging пока пусты, поэтому эти числа доказывают корректность `MISS/HIT/BYPASS/PURGE`
 и отсутствие очевидной регрессии на CX23, но не производительность с полным Quran corpus,
 реальными audio manifests/Range, зарегистрированными пользователями или CDN cache-cold origin.
+
+## Временная проверка двух API и двух web-реплик
+
+На commit `a5117cb147e340c9586b52b96a7774c7b0173cb1` тем же CX23 без покупки второго
+сервера выполнен bounded scale drill. Budget-команда заранее отклонила профиль `3 API + 2 web`
+по лимиту среды, не меняя Docker topology. Разрешённый профиль `2+2` прошёл preflight:
+
+- database budget: 41 projected client connection из 80 доступных, headroom 39;
+- Compose поднял две healthy backend и две healthy web-реплики из одного release image;
+- gateway остался запущен и обнаружил новые адреса через dynamic Docker DNS;
+- 200 некэшируемых `health/live` запросов с concurrency 10 прошли без ошибок, p95 238.4 ms;
+- backend access logs зафиксировали 100 запросов на первой реплике и 101 на второй;
+- 100 HTML-запросов RU/EN с concurrency 10 прошли без ошибок, общий p95 458.3 ms;
+- при остановленной первой web-реплике `/ru` продолжил отвечать HTTP 200 через вторую;
+- при остановленной первой backend-реплике `health/live` продолжил отвечать HTTP 200;
+- остановленные реплики были запущены обратно и достигли healthy.
+
+После прогонов host имел около 2.5 GiB available RAM, swap использовал 1 MiB из 2 GiB, disk —
+28%. Затем той же проверяемой командой topology возвращена к постоянному профилю `1+1`:
+лишние контейнеры удалены, database budget вернулся к 25 из 80 с headroom 55, readiness
+ответил HTTP 200.
+
+Этот drill доказывает replica discovery, распределение API-запросов, service-level failover и
+безопасный scale-down на одном host. Он не превращает CX23 в HA: потеря VPS остановит все
+реплики. Он также не закрывает S1 capacity — для этого нужны полный corpus/R2 audio, профиль
+реального трафика, длительный soak и несколько hosts/зон с внешним load balancer.

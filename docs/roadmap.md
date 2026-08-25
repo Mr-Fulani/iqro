@@ -106,8 +106,9 @@ flowchart LR
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
   [pre-publication CX23 evidence](capacity/staging-cx23-prepublication-2026-08-25.md) уже
   доказывает 14 saturated read clients. Single-host API/web scale автоматизирован через
-  bounded preflight, DB budget и dynamic Docker DNS; полный S1 report и внешний
-  load-balancer/HA runbook ещё не закрыты.
+  bounded preflight, DB budget и dynamic Docker DNS; временный профиль `2 API + 2 web`
+  фактически проверил равномерное API-распределение, service-level failover и возврат к `1+1`
+  на CX23. Полный S1 report и внешний load-balancer/HA runbook ещё не закрыты.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики
 не требует изменения кода или копирования локального состояния; S1 нагрузка подтверждена.
