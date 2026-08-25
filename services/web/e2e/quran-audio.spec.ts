@@ -262,13 +262,16 @@ function foundationPage(sourceId: number, pageNumber: number) {
     first_verse_id: 1,
     last_verse_id: 2,
     first_word_id: 1,
-    last_word_id: 4,
+    last_word_id: 6,
     verses_count: 2,
     words: [
-      [1, 1, 1, 1, isUnicode ? "ٱلْحَمْدُ" : "ﱁ", "word"],
-      [2, 1, 1, 2, isUnicode ? "لِلَّهِ" : "ﱂ", "end"],
-      [3, 2, 2, 1, isUnicode ? "هُوَ" : "ﱃ", "word"],
-      [4, 2, 2, 2, isUnicode ? "ٱلَّذِى" : "ﱄ", "end"],
+      [1, 1, 3, 1, isUnicode ? "ٱلْحَمْدُ" : "ﱁ", "word"],
+      [2, 1, 3, 2, isUnicode ? "لِلَّهِ" : "ﱂ", "end"],
+      [3, 2, 3, 3, isUnicode ? "هُوَ" : "ﱃ", "word"],
+      // A continued ayah can wrap position_in_line while position_in_page remains canonical.
+      [4, 2, 4, 4, isUnicode ? "ٱلَّذِى" : "ﱄ", "word"],
+      [5, 2, 4, 1, isUnicode ? "خَلَقَكُم" : "ﱅ", "word"],
+      [6, 2, 4, 2, isUnicode ? "٢" : "ﱆ", "end"],
     ].map(([id, verseId, lineNumber, positionInLine, text, charType]) => ({
       id,
       word_id: id,
@@ -614,11 +617,17 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
     await expect(sheet).toHaveAttribute("lang", "ar");
     await expect(sheet).toHaveAttribute("translate", "no");
     await expect(sheet.locator(".qf-mushaf-line")).toHaveCount(15);
+    await expect(view.getByText("سُورَةُ الأنعام", { exact: true })).toBeVisible();
+    await expect(view.getByText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", { exact: true })).toBeVisible();
     const secondAyahWords = view.getByRole("button", { name: "Аят 6:2", exact: true });
     await expect(secondAyahWords).toHaveCount(2);
     await secondAyahWords.first().click();
     await expect(secondAyahWords.first()).toHaveClass(/is-selected/);
     await expect(secondAyahWords.last()).toHaveClass(/is-selected/);
+    if (sourceId === "5") {
+      await expect(sheet.locator('.qf-mushaf-line[data-line-number="4"] .qf-mushaf-word'))
+        .toHaveText(["ٱلَّذِى", "خَلَقَكُم", "٢"]);
+    }
   }
 
   await variant.selectOption("image");

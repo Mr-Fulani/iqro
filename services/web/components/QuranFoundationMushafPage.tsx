@@ -5,14 +5,33 @@ import type {
   QuranFoundationMushaf,
   QuranFoundationMushafPage,
   QuranFoundationMushafWord,
+  Surah,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 
 type FontState = "loading" | "ready" | "error";
+type SurahIdentity = Pick<Surah, "number" | "name_ar">;
+
+type AyahFragment = {
+  key: string;
+  ayahKey?: string;
+  words: QuranFoundationMushafWord[];
+};
+
+type ChapterIntro = {
+  surah: SurahIdentity;
+  gridRow: string;
+  compact: boolean;
+  showTitle: boolean;
+  showBismillah: boolean;
+};
+
+const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
 
 type QuranFoundationMushafPageProps = {
   mushaf: QuranFoundationMushaf;
   page: QuranFoundationMushafPage;
+  surahs: SurahIdentity[];
   selectedAyahKey: string | null;
   playingAyahKey: string | null;
   onSelectAyah: (ayahKey: string) => void;
@@ -75,23 +94,98 @@ function wordsByLine(
   lineCount: number,
 ): QuranFoundationMushafWord[][] {
   const lines = Array.from({ length: lineCount }, () => [] as QuranFoundationMushafWord[]);
-  for (const word of words) {
+  // position_in_line can wrap when an ayah continues on the next physical line.
+  // The snapshot's position_in_page is the canonical reading and display order.
+  for (const word of [...words].sort(
+    (left, right) => left.position_in_page - right.position_in_page || left.id - right.id,
+  )) {
     if (word.line_number < 1 || word.line_number > lineCount) continue;
     lines[word.line_number - 1].push(word);
   }
-  for (const line of lines) {
-    line.sort(
-      (left, right) =>
-        left.position_in_line - right.position_in_line ||
-        left.position_in_page - right.position_in_page,
-    );
-  }
   return lines;
+}
+
+function fragmentsForLine(
+  words: QuranFoundationMushafWord[],
+  verseKeys: Map<number, string>,
+): AyahFragment[] {
+  const fragments: AyahFragment[] = [];
+  for (const word of words) {
+    const ayahKey = word.verse_id === null ? undefined : verseKeys.get(word.verse_id);
+    const previous = fragments.at(-1);
+    if (previous && previous.ayahKey === ayahKey) {
+      previous.words.push(word);
+      continue;
+    }
+    fragments.push({
+      key: `${ayahKey || "unmapped"}-${word.id}`,
+      ayahKey,
+      words: [word],
+    });
+  }
+  return fragments;
+}
+
+function chapterIntros(
+  page: QuranFoundationMushafPage,
+  lines: QuranFoundationMushafWord[][],
+  verseKeys: Map<number, string>,
+  surahs: SurahIdentity[],
+): ChapterIntro[] {
+  const surahByNumber = new Map(surahs.map((surah) => [surah.number, surah]));
+  const occupiedLines = new Set(
+    lines.flatMap((line, index) => line.length > 0 ? [index + 1] : []),
+  );
+  const intros: ChapterIntro[] = [];
+
+  for (const [surahValue, rangeValue] of Object.entries(page.verse_mapping).sort(
+    ([left], [right]) => Number(left) - Number(right),
+  )) {
+    const match = /^(\d+)(?:-(\d+))?$/.exec(rangeValue.trim());
+    const surahNumber = Number(surahValue);
+    if (!match || Number(match[1]) !== 1) continue;
+    const surah = surahByNumber.get(surahNumber);
+    if (!surah) continue;
+
+    const firstVerseId = [...verseKeys.entries()].find(
+      ([, ayahKey]) => ayahKey === `${surahNumber}:1`,
+    )?.[0];
+    if (firstVerseId === undefined) continue;
+    const firstVerseLine = Math.min(
+      ...page.words
+        .filter((word) => word.verse_id === firstVerseId)
+        .map((word) => word.line_number),
+    );
+    if (!Number.isFinite(firstVerseLine) || firstVerseLine <= 1) continue;
+
+    let previousOccupiedLine = firstVerseLine - 1;
+    while (previousOccupiedLine > 0 && !occupiedLines.has(previousOccupiedLine)) {
+      previousOccupiedLine -= 1;
+    }
+    const availableRows = firstVerseLine - previousOccupiedLine - 1;
+    if (availableRows < 1) continue;
+    const showTitle = surahNumber > 2;
+    const showBismillah = surahNumber !== 1 && surahNumber !== 9;
+    const requiredRows = Number(showTitle) + Number(showBismillah);
+    if (requiredRows === 0) continue;
+    const usedRows = Math.min(requiredRows, availableRows);
+    const firstIntroLine = firstVerseLine - usedRows;
+    intros.push({
+      surah,
+      gridRow: `${firstIntroLine} / ${firstVerseLine}`,
+      compact: requiredRows > usedRows,
+      showTitle,
+      showBismillah,
+    });
+  }
+
+  return intros;
 }
 
 export function QuranFoundationMushafPageView({
   mushaf,
   page,
+  surahs,
   selectedAyahKey,
   playingAyahKey,
   onSelectAyah,
@@ -105,6 +199,10 @@ export function QuranFoundationMushafPageView({
   const [fontState, setFontState] = useState<FontState>("loading");
   const lines = useMemo(() => wordsByLine(page.words, lineCount), [lineCount, page.words]);
   const verseKeys = useMemo(() => verseKeyById(page), [page]);
+  const intros = useMemo(
+    () => chapterIntros(page, lines, verseKeys, surahs),
+    [lines, page, surahs, verseKeys],
+  );
 
   useEffect(() => {
     setFontState("loading");
@@ -164,6 +262,28 @@ export function QuranFoundationMushafPageView({
           {fontState === "loading" && (
             <div className="qf-mushaf-font-loading">{t("quran.mushafFontLoading")}</div>
           )}
+          {intros.map((intro) => (
+            <div
+              className={[
+                "qf-mushaf-chapter-intro",
+                intro.compact ? "is-compact" : "",
+                intro.showTitle ? "has-title" : "",
+                intro.showBismillah ? "has-bismillah" : "",
+              ].filter(Boolean).join(" ")}
+              style={{ gridRow: intro.gridRow }}
+              key={intro.surah.number}
+              data-surah-number={intro.surah.number}
+            >
+              {intro.showTitle && (
+                <div className="qf-mushaf-chapter-title">
+                  سُورَةُ {intro.surah.name_ar}
+                </div>
+              )}
+              {intro.showBismillah && (
+                <div className="qf-mushaf-bismillah">{BISMILLAH}</div>
+              )}
+            </div>
+          ))}
           {lines.map((line, lineIndex) => (
             <div
               className="qf-mushaf-line"
@@ -171,33 +291,42 @@ export function QuranFoundationMushafPageView({
               key={lineIndex + 1}
               aria-hidden={line.length === 0 ? "true" : undefined}
             >
-              {line.map((word) => {
-                const ayahKey = word.verse_id === null ? undefined : verseKeys.get(word.verse_id);
-                const className = [
-                  "qf-mushaf-word",
-                  word.char_type_name === "end" ? "is-ayah-end" : "",
+              {fragmentsForLine(line, verseKeys).map((fragment) => {
+                const { ayahKey } = fragment;
+                const fragmentClassName = [
+                  "qf-mushaf-ayah-fragment",
                   ayahKey && selectedAyahKey === ayahKey ? "is-selected" : "",
                   ayahKey && playingAyahKey === ayahKey ? "is-playing" : "",
                 ].filter(Boolean).join(" ");
                 const style = { fontFamily: `"${fontFamily}", serif` };
+                const content = fragment.words.map((word) => (
+                  <span
+                    className={`qf-mushaf-word${word.char_type_name === "end" ? " is-ayah-end" : ""}`}
+                    key={word.id}
+                    data-position-in-page={word.position_in_page}
+                  >
+                    {word.text}
+                  </span>
+                ));
                 if (!ayahKey) {
                   return (
-                    <span className={className} style={style} key={word.id}>
-                      {word.text}
+                    <span className={fragmentClassName} style={style} key={fragment.key}>
+                      {content}
                     </span>
                   );
                 }
                 return (
                   <button
-                    className={className}
+                    className={fragmentClassName}
                     style={style}
                     type="button"
-                    key={word.id}
+                    key={fragment.key}
                     onClick={() => onSelectAyah(ayahKey)}
                     aria-label={t("common.ayah", { ayah: ayahKey })}
                     title={t("common.ayah", { ayah: ayahKey })}
+                    data-ayah-key={ayahKey}
                   >
-                    {word.text}
+                    {content}
                   </button>
                 );
               })}

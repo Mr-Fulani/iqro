@@ -1168,7 +1168,8 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 8px 24px rgba(80, 60, 30, 0.12);
 }
 
-.qf-mushaf-sheet.is-font-loading .qf-mushaf-line {
+.qf-mushaf-sheet.is-font-loading .qf-mushaf-line,
+.qf-mushaf-sheet.is-font-loading .qf-mushaf-chapter-intro {
   visibility: hidden;
 }
 
@@ -1201,7 +1202,57 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.25;
 }
 
-.qf-mushaf-word {
+.qf-mushaf-chapter-intro {
+  z-index: 1;
+  display: grid;
+  grid-column: 1;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  min-width: 0;
+  color: #2f2417;
+  font-family: var(--font-arabic);
+  text-align: center;
+}
+
+.qf-mushaf-chapter-intro:not(.has-title),
+.qf-mushaf-chapter-intro:not(.has-bismillah) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.qf-mushaf-chapter-intro.is-compact {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.qf-mushaf-chapter-title,
+.qf-mushaf-bismillah {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.qf-mushaf-chapter-title {
+  align-self: center;
+  font-size: clamp(15px, 2.5vw, 27px);
+  font-weight: 700;
+}
+
+.qf-mushaf-bismillah {
+  font-size: clamp(17px, 2.9vw, 32px);
+}
+
+.qf-mushaf-chapter-intro.is-compact .qf-mushaf-chapter-title {
+  font-size: clamp(11px, 1.7vw, 18px);
+}
+
+.qf-mushaf-chapter-intro.is-compact .qf-mushaf-bismillah {
+  font-size: clamp(12px, 2vw, 21px);
+}
+
+.qf-mushaf-ayah-fragment {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1209,7 +1260,7 @@ input:focus, select:focus, textarea:focus {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 0 0.035em;
+  padding: 0;
   border: 0;
   border-radius: 0.12em;
   background: transparent;
@@ -1220,19 +1271,27 @@ input:focus, select:focus, textarea:focus {
   transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
-.qf-mushaf-word:hover,
-.qf-mushaf-word:focus-visible {
+.qf-mushaf-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 0.035em;
+}
+
+.qf-mushaf-ayah-fragment:hover,
+.qf-mushaf-ayah-fragment:focus-visible {
   outline: none;
   background: rgba(245, 196, 66, 0.25);
   box-shadow: 0 0 0 2px rgba(141, 98, 16, 0.32);
 }
 
-.qf-mushaf-word.is-selected {
+.qf-mushaf-ayah-fragment.is-selected {
   background: rgba(20, 145, 104, 0.22);
   box-shadow: 0 0 0 1px rgba(8, 94, 68, 0.36);
 }
 
-.qf-mushaf-word.is-playing {
+.qf-mushaf-ayah-fragment.is-playing {
   background: rgba(20, 145, 104, 0.4);
   color: #063d2d;
   box-shadow: 0 0 0 2px rgba(4, 75, 52, 0.48);
@@ -1273,6 +1332,14 @@ input:focus, select:focus, textarea:focus {
 
   .qf-mushaf-line {
     font-size: clamp(16px, 5.1vw, 24px);
+  }
+
+  .qf-mushaf-chapter-title {
+    font-size: clamp(12px, 3.8vw, 18px);
+  }
+
+  .qf-mushaf-bismillah {
+    font-size: clamp(14px, 4.4vw, 21px);
   }
 }
 

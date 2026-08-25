@@ -712,6 +712,7 @@ function QuranContent() {
                 <QuranFoundationMushafPageView
                   mushaf={selectedFoundationMushaf}
                   page={foundationMushafPage}
+                  surahs={surahs}
                   selectedAyahKey={selectedMushafAyah}
                   playingAyahKey={playingMushafAyah}
                   onSelectAyah={setSelectedMushafAyah}
