@@ -11,6 +11,8 @@ from quran_backend.modules.quran.models import (
     MushafPage,
     PublicationStatus,
     QuranEdition,
+    QuranFoundationMushaf,
+    QuranFoundationMushafPage,
     RubElHizb,
     Surah,
 )
@@ -75,6 +77,28 @@ def published_pages(edition_code: str) -> QuerySet[MushafPage]:
         .select_related("edition_version", "edition_version__edition")
         .prefetch_related("regions__ayah__surah")
         .order_by("number")
+    )
+
+
+def public_quran_foundation_mushafs(environment: str) -> QuerySet[QuranFoundationMushaf]:
+    return QuranFoundationMushaf.objects.filter(
+        environment=environment,
+        is_available=True,
+    ).order_by("source_id")
+
+
+def public_quran_foundation_mushaf_pages(
+    environment: str,
+    source_id: int,
+) -> QuerySet[QuranFoundationMushafPage]:
+    return (
+        QuranFoundationMushafPage.objects.filter(
+            mushaf__environment=environment,
+            mushaf__source_id=source_id,
+            mushaf__is_available=True,
+        )
+        .select_related("mushaf")
+        .order_by("page_number")
     )
 
 

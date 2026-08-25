@@ -46,6 +46,10 @@ MVP обратной связи с пользовательскими тикет
 проверенные таймкоды аятов, create-only S3 upload и immutable CDN evidence contract описаны в
 [docs/audio-api.md](docs/audio-api.md).
 
+Production Content Sync всех доступных Quran.Foundation Mushaf layout, локальный page cache,
+checkpoint refresh и полный возобновляемый chapter-reciter import описаны в
+[docs/quran-foundation-content.md](docs/quran-foundation-content.md).
+
 Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar
 правила, pinned tzdata и privacy contract для координат описаны в
 [docs/prayer-api.md](docs/prayer-api.md).

@@ -17,12 +17,14 @@ Sign-off — это воспроизводимое письменное реше
    [quran-content-acceptance.md](../quran-content-acceptance.md) показывает обнаруженный
    blocker: текущий
    `madani-hafs@1.0.2` заблокирован provenance page artwork и не является production candidate.
-4. Для полного разрешённого каталога Quran.Foundation audio отправить
-   [готовый запрос](quran-foundation-audio-confirmation-request.md) и сохранить безопасное
-   резюме ответа в
-   [license decision record](quran-foundation-audio-license-decision-template.md).
-5. Каталог провайдера синхронизировать в `draft`: наличие записи в API не является автоматическим
-   разрешением на публикацию и не доказывает совместимость с выбранным риваятом/мусхафом.
+4. Для стандартного first-party Quran.Foundation streaming отдельное письмо не требуется:
+   применимые Developer Terms и production-проверка зафиксированы в
+   [решении 25 августа 2026 года](quran-foundation-audio-license-decision-2026-08-25.md).
+   [Готовый запрос](quran-foundation-audio-confirmation-request.md) используется только для
+   rehosting, offline redistribution, отдельного feed/API или другого нестандартного сценария.
+5. Каталог провайдера сначала проходит техническую проверку совместимости с выбранным
+   риваятом/мусхафом. Валидная позиция может публиковаться по стандартным Terms; некорректная
+   позиция остаётся исключённой независимо от наличия в API.
 6. На каждого активируемого чтеца и вариант декламации скопировать и заполнить
    [religious/editorial review](quran-audio-editorial-review-template.md).
 7. Product owner подписывает release decision только после зелёного CI/security, monitoring
@@ -43,7 +45,7 @@ Sign-off — это воспроизводимое письменное реше
 ## Что означает отсутствие sign-off
 
 - Quran dataset без полного acceptance record не активируется в production.
-- Чтец без лицензионного и religious/editorial решения остаётся draft.
+- Чтец без применимой лицензии или с проваленной проверкой риваята/таймкодов остаётся draft.
 - Новый мусхаф/риваят без отдельной версии dataset, provenance и проверки соответствующего
   аудио остаётся draft; разные чтения не смешиваются внутри одной edition.
 - Audio может быть полностью выключено, не блокируя text-only Web MVP, если Quran dataset сам

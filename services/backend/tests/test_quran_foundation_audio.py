@@ -17,6 +17,7 @@ from quran_backend.modules.audio.quran_foundation import (
     QuranFoundationError,
 )
 from quran_backend.modules.audio.quran_foundation_importer import (
+    compatible_quran_foundation_reciter_ids,
     import_quran_foundation_recitation,
     prepare_quran_foundation_recitation,
 )
@@ -392,3 +393,43 @@ def test_rejects_audio_without_qirat_metadata(
             surah_numbers=[1],
             quran_version=quran_dataset["version"],
         )
+
+
+@pytest.mark.django_db
+def test_full_catalog_selection_keeps_only_edition_compatible_reciters(
+    quran_dataset: dict[str, Any],
+) -> None:
+    rows = [
+        {"id": 7, "qirat": {"name": "Hafs"}},
+        {"id": 8, "qirat": {"name": "Warsh"}},
+        {"id": 9, "qirat": {"name": "Hafs an Asim"}},
+    ]
+
+    assert compatible_quran_foundation_reciter_ids(
+        rows,
+        quran_version=quran_dataset["version"],
+    ) == [7, 9]
+
+
+@pytest.mark.django_db
+def test_bulk_prepare_reuses_prefetched_localized_catalogs(
+    quran_dataset: dict[str, Any],
+) -> None:
+    client = FakeQuranFoundationClient()
+    catalogs = {
+        language: client.list_chapter_reciters(language=language) for language in ("en", "ar", "ru")
+    }
+
+    class NoCatalogRequestsClient(FakeQuranFoundationClient):
+        def list_chapter_reciters(self, *, language: str = "en") -> list[dict[str, Any]]:
+            raise AssertionError(f"unexpected catalog request for {language}")
+
+    prepared = prepare_quran_foundation_recitation(
+        NoCatalogRequestsClient(),
+        reciter_id=7,
+        surah_numbers=[1],
+        quran_version=quran_dataset["version"],
+        localized_catalogs=catalogs,
+    )
+
+    assert prepared.name_en == "Test Reciter"

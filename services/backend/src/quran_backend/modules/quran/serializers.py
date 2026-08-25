@@ -13,8 +13,13 @@ from quran_backend.modules.quran.models import (
     MushafPage,
     QuranEdition,
     QuranEditionVersion,
+    QuranFoundationMushaf,
+    QuranFoundationMushafPage,
     RubElHizb,
     Surah,
+)
+from quran_backend.modules.quran.quran_foundation_rendering import (
+    quran_foundation_rendering,
 )
 
 
@@ -148,6 +153,70 @@ class MushafPageSerializer(serializers.ModelSerializer[MushafPage]):
             public_variant.pop("path", None)
             assets.append(public_variant)
         return assets
+
+
+class QuranFoundationMushafSerializer(serializers.ModelSerializer[QuranFoundationMushaf]):
+    source = serializers.SerializerMethodField()  # type: ignore[assignment]
+    rendering = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuranFoundationMushaf
+        fields = (
+            "source_id",
+            "name",
+            "description",
+            "qirat_name",
+            "pages_count",
+            "lines_per_page",
+            "default_font_name",
+            "mapping_mode",
+            "schema_version",
+            "sync_sequence",
+            "source_checksum_sha256",
+            "last_synced_at",
+            "rendering",
+            "source",
+        )
+
+    def get_rendering(self, obj: QuranFoundationMushaf) -> dict[str, Any]:
+        return quran_foundation_rendering(obj.source_id)
+
+    def get_source(self, obj: QuranFoundationMushaf) -> dict[str, str]:  # noqa: ARG002
+        return {
+            "name": "Quran.Foundation Content API",
+            "url": "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/resources-sync/",
+            "attribution": "Quran data provided by Quran Foundation.",
+        }
+
+
+class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFoundationMushafPage]):
+    mushaf_id = serializers.IntegerField(source="mushaf.source_id", read_only=True)
+    qirat_name = serializers.CharField(source="mushaf.qirat_name", read_only=True)
+    font_name = serializers.CharField(source="mushaf.default_font_name", read_only=True)
+    rendering = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuranFoundationMushafPage
+        fields = (
+            "mushaf_id",
+            "qirat_name",
+            "font_name",
+            "rendering",
+            "page_number",
+            "verse_mapping",
+            "first_verse_id",
+            "last_verse_id",
+            "first_word_id",
+            "last_word_id",
+            "verses_count",
+            "words",
+        )
+
+    def get_rendering(self, obj: QuranFoundationMushafPage) -> dict[str, Any]:
+        return quran_foundation_rendering(
+            obj.mushaf.source_id,
+            page_number=obj.page_number,
+        )
 
 
 class JuzSerializer(serializers.ModelSerializer[Juz]):

@@ -127,8 +127,11 @@ python manage.py record_audio_media_contract /data/reports/audio-release-contrac
 замену. До появления автоматизированного revocation workflow нельзя публиковать лицензию,
 которая требует гарантированного мгновенного отзыва уже выданного публичного URL.
 
-Реальные записи нельзя загружать или публиковать без документированного разрешения на
-мировой streaming и, отдельно, offline redistribution. Автотесты используют только
+Реальные записи нельзя загружать или публиковать без документированного права на выбранный
+режим. Для стандартного first-party streaming Quran.Foundation таким документом являются их
+актуальные Developer Terms; отдельное письмо не требуется. Эти Terms не разрешают нашему
+импортёру rehosting или offline redistribution, поэтому QF rendition всегда сохраняется как
+внешний streaming URL с `offline_download_allowed=false`. Автотесты используют только
 синтетические метаданные.
 
 ### Quran.Foundation import and refresh
@@ -144,6 +147,22 @@ python manage.py sync_quran_foundation_audio \
   --content-version 2026.08.21-production \
   --publish
 ```
+
+Полный каталог совместимых chapter-reciter выбирается автоматически. Команда выполняется
+последовательно, проверяет каждую суру и внешний `Content-Length`, не скачивает MP3 и может
+безопасно продолжиться после прерывания:
+
+```bash
+python manage.py sync_quran_foundation_audio \
+  --all-reciters --all-surahs --confirm-full-catalog --resume \
+  --edition madani-hafs \
+  --content-version 2026.08.25-production \
+  --publish
+```
+
+На production-проверке 25 августа 2026 года provider resource `173` был исключён: QF вернул
+для `1:1` нулевой диапазон `80..80 ms`. Остальные позиции не ослабляют проверку из-за этой
+upstream-ошибки.
 
 `--surah` можно повторять; `--all-surahs` импортирует все 114 сур. Если оба параметра
 отсутствуют, пилот импортирует только суру 1 и не показывается публичным клиентам.

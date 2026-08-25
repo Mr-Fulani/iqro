@@ -31,6 +31,13 @@ class QuranFoundationSyncResult:
     mutations: tuple[dict[str, Any], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class QuranFoundationMushafSyncResult:
+    next_sync_token: str
+    sync_until_sequence: int
+    mutations: tuple[dict[str, Any], ...]
+
+
 ENVIRONMENTS = {
     "prelive": QuranFoundationEnvironment(
         name="prelive",
@@ -139,6 +146,95 @@ class QuranFoundationClient:
             sync_until_sequence=sync_until_sequence,
             mutations=tuple(mutations),
         )
+
+    def sync_mushaf_catalog(
+        self,
+        *,
+        sync_token: str = "",
+    ) -> QuranFoundationMushafSyncResult:
+        query = {
+            "resources": "mushafs:*",
+            "per_page": "100",
+        }
+        if sync_token:
+            query["sync_token"] = sync_token
+        else:
+            query["bootstrap"] = "true"
+
+        mutations: list[dict[str, Any]] = []
+        final_token = ""
+        sync_until_sequence = 0
+        for _ in range(100):
+            payload = self._get_json("/content/api/v4/resources/sync", query=query)
+            page_sequence, page_mutations, has_more, next_page_url, next_token = (
+                self._parse_mushaf_sync_page(payload)
+            )
+            if sync_until_sequence and page_sequence != sync_until_sequence:
+                raise QuranFoundationError("Quran.Foundation changed sequence during sync paging.")
+            sync_until_sequence = page_sequence
+            mutations.extend(page_mutations)
+            if not has_more:
+                final_token = next_token
+                break
+            query = self._sync_cursor_query(next_page_url)
+        else:
+            raise QuranFoundationError("Quran.Foundation sync exceeded the page safety limit.")
+
+        mutations.sort(key=lambda row: int(row["sequence"]))
+        return QuranFoundationMushafSyncResult(
+            next_sync_token=final_token,
+            sync_until_sequence=sync_until_sequence,
+            mutations=tuple(mutations),
+        )
+
+    def get_mushaf_snapshot(self, resource_id: int) -> dict[str, Any]:
+        if resource_id <= 0:
+            raise QuranFoundationError("Quran.Foundation Mushaf IDs must be positive.")
+        payload = self._get_json(
+            f"/content/api/v4/resources/snapshots/mushafs/{resource_id}",
+            query={},
+        )
+        if payload.get("resource_group") != "mushafs":
+            raise QuranFoundationError("Quran.Foundation returned the wrong snapshot group.")
+        try:
+            returned_id = int(payload.get("resource_id", 0))
+            sync_sequence = int(payload.get("sync_sequence", -1))
+        except (TypeError, ValueError) as exc:
+            raise QuranFoundationError(
+                "Quran.Foundation returned an invalid Mushaf snapshot."
+            ) from exc
+        if (
+            returned_id != resource_id
+            or sync_sequence < 0
+            or not isinstance(payload.get("records"), list)
+        ):
+            raise QuranFoundationError("Quran.Foundation returned an invalid Mushaf snapshot.")
+        return payload
+
+    def _parse_mushaf_sync_page(
+        self,
+        payload: dict[str, Any],
+    ) -> tuple[int, list[dict[str, Any]], bool, object, str]:
+        sync = payload.get("sync")
+        if not isinstance(sync, dict):
+            raise QuranFoundationError("Quran.Foundation returned an invalid sync page.")
+        try:
+            page_sequence = int(sync["sync_until_sequence"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise QuranFoundationError(
+                "Quran.Foundation returned an invalid sync sequence."
+            ) from exc
+        raw_mutations = sync.get("mutations")
+        if not isinstance(raw_mutations, list):
+            raise QuranFoundationError("Quran.Foundation returned invalid sync mutations.")
+        mutations = [self._validate_mushaf_mutation(mutation) for mutation in raw_mutations]
+        has_more = sync.get("has_more")
+        if not isinstance(has_more, bool):
+            raise QuranFoundationError("Quran.Foundation returned invalid sync pagination.")
+        next_token = sync.get("next_sync_token")
+        if not has_more and (not isinstance(next_token, str) or not next_token):
+            raise QuranFoundationError("Quran.Foundation omitted the final sync token.")
+        return page_sequence, mutations, has_more, sync.get("next_page_url"), str(next_token or "")
 
     def _parse_sync_page(
         self,
@@ -304,6 +400,43 @@ class QuranFoundationClient:
         snapshot_url = mutation.get("snapshot_url")
         if snapshot_url is not None and not isinstance(snapshot_url, str):
             raise QuranFoundationError("Quran.Foundation returned an invalid snapshot reference.")
+        return dict(mutation)
+
+    @staticmethod
+    def _validate_mushaf_mutation(mutation: object) -> dict[str, Any]:
+        if not isinstance(mutation, dict):
+            raise QuranFoundationError("Quran.Foundation returned an invalid sync mutation.")
+        try:
+            sequence = int(mutation["sequence"])
+            resource_id = int(mutation["resource_id"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise QuranFoundationError(
+                "Quran.Foundation returned an invalid Mushaf mutation identity."
+            ) from exc
+        allowed_types = {
+            "RESOURCE_CREATE",
+            "RESOURCE_INVALIDATE",
+            "RESOURCE_DELETE",
+            "RESOURCE_UPDATE",
+            "ROW_CREATE",
+            "ROW_UPDATE",
+            "ROW_DELETE",
+        }
+        mutation_type = mutation.get("type")
+        if (
+            sequence < 0
+            or resource_id <= 0
+            or mutation.get("resource_group") != "mushafs"
+            or mutation_type not in allowed_types
+        ):
+            raise QuranFoundationError("Quran.Foundation returned an unrelated Mushaf mutation.")
+        snapshot_url = mutation.get("snapshot_url")
+        if snapshot_url is not None:
+            expected_path = f"/api/v4/resources/snapshots/mushafs/{resource_id}"
+            if snapshot_url != expected_path:
+                raise QuranFoundationError(
+                    "Quran.Foundation returned an invalid Mushaf snapshot reference."
+                )
         return dict(mutation)
 
     def _get_json(self, path: str, *, query: dict[str, str]) -> dict[str, Any]:

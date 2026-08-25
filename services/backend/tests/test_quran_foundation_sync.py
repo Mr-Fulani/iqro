@@ -115,6 +115,48 @@ def test_content_sync_rejects_untrusted_next_page_url(monkeypatch: Any) -> None:
         client.sync_recitation_content(7)
 
 
+def test_mushaf_catalog_sync_uses_wildcard_filter_and_checkpoint(monkeypatch: Any) -> None:
+    client = QuranFoundationClient(
+        client_id="test-client",
+        client_secret="test-secret",
+        environment=ENVIRONMENTS["production"],
+    )
+    calls: list[tuple[str, dict[str, str]]] = []
+
+    def fake_get_json(path: str, *, query: dict[str, str]) -> dict[str, Any]:
+        calls.append((path, query))
+        return {
+            "sync": {
+                "sync_until_sequence": 100,
+                "has_more": False,
+                "next_page_url": None,
+                "next_sync_token": "mushaf-checkpoint",
+                "mutations": [
+                    {
+                        "sequence": 100,
+                        "type": "RESOURCE_CREATE",
+                        "resource_group": "mushafs",
+                        "resource_id": 1,
+                        "snapshot_url": "/api/v4/resources/snapshots/mushafs/1",
+                    }
+                ],
+            }
+        }
+
+    monkeypatch.setattr(client, "_get_json", fake_get_json)
+
+    result = client.sync_mushaf_catalog()
+
+    assert result.next_sync_token == "mushaf-checkpoint"
+    assert result.mutations[0]["resource_id"] == 1
+    assert calls == [
+        (
+            "/content/api/v4/resources/sync",
+            {"resources": "mushafs:*", "per_page": "100", "bootstrap": "true"},
+        )
+    ]
+
+
 class SyncOnlyClient:
     environment = ENVIRONMENTS["production"]
 

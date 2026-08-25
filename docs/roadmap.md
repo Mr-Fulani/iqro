@@ -95,14 +95,18 @@ flowchart LR
   делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
   Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
   временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
-- [x] Подключить к staging существующий Quran.Foundation production API-доступ без раскрытия
-  credentials и проверить read-only авторизацию из backend: каталог доступен (21 chapter
-  reciter и 12 ayah-by-ayah recitation resources на 25 августа 2026 года; все 21 chapter
-  resource помечены провайдером как Hafs). Фоновая синхронизация намеренно оставлена выключенной;
-  Quran edition технически активна только на noindex staging, а импорт/публикация реального
-  аудио ждут внешних content/license sign-off. Bounded one-shot probe трёх реальных чтецов
-  подтвердил delivery, но обнаружил metadata size drift у source `7`; importer теперь всегда
-  сверяет внешний `Content-Length`. [Evidence](capacity/staging-qf-real-audio-2026-08-25.md).
+- [x] Подключить существующий Quran.Foundation production API-доступ без раскрытия credentials.
+  Стандартные Developer Terms приняты как достаточное разрешение для first-party streaming;
+  отдельный ответ по email не является release gate. Production-каталог содержит 21 Hafs
+  chapter-reciter и 12 ayah-by-ayah resources. Пилот всех chapter-reciter подтвердил 20
+  валидных источников; resource `173` fail-closed исключён из-за нулевого таймкода `1:1`.
+  Bounded probe подтвердил Range delivery и выявил metadata size drift у source `7`; importer
+  всегда сверяет реальный `Content-Length`. Полный импорт выбирает каталог автоматически,
+  поддерживает resume и хранит только streaming URL. Все четыре доступных QF Mushaf resource
+  (`1`, `5`, `11`, `19`) синхронизируются официальным Content Sync: локальный bootstrap
+  сохранил 2 416 страниц и 334 660 позиционированных слов, повторный checkpoint-sync не
+  скачивает snapshot повторно. [Audio evidence](capacity/staging-qf-real-audio-2026-08-25.md),
+  [license decision](sign-offs/quran-foundation-audio-license-decision-2026-08-25.md).
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.

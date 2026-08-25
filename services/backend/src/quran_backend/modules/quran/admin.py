@@ -10,6 +10,9 @@ from quran_backend.modules.quran.models import (
     MushafPage,
     QuranEdition,
     QuranEditionVersion,
+    QuranFoundationMushaf,
+    QuranFoundationMushafPage,
+    QuranFoundationMushafSyncState,
     RubElHizb,
     SourceManifest,
     Surah,
@@ -90,3 +93,37 @@ class RubElHizbAdmin(CanonicalReadOnlyAdmin):
 class SourceManifestAdmin(CanonicalReadOnlyAdmin):
     list_display = ("edition_version", "source_version", "expected_ayahs", "imported_at")
     list_filter = ("edition_version",)
+
+
+@admin.register(QuranFoundationMushafSyncState)
+class QuranFoundationMushafSyncStateAdmin(CanonicalReadOnlyAdmin):
+    list_display = (
+        "environment",
+        "resources_filter",
+        "last_sync_sequence",
+        "last_success_at",
+        "consecutive_failures",
+    )
+    list_filter = ("environment",)
+
+
+@admin.register(QuranFoundationMushaf)
+class QuranFoundationMushafAdmin(CanonicalReadOnlyAdmin):
+    list_display = (
+        "source_id",
+        "environment",
+        "name",
+        "qirat_name",
+        "pages_count",
+        "default_font_name",
+        "is_available",
+        "last_synced_at",
+    )
+    list_filter = ("environment", "qirat_name", "is_available")
+    search_fields = ("name", "description", "qirat_name")
+
+
+@admin.register(QuranFoundationMushafPage)
+class QuranFoundationMushafPageAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("mushaf", "page_number", "verses_count")
+    list_filter = ("mushaf",)

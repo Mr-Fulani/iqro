@@ -440,3 +440,122 @@ class SourceManifest(BaseModel):
                 name="quran_manifest_source_version_unique",
             )
         ]
+
+
+class QuranFoundationMushafSyncState(BaseModel):
+    """Checkpoint for the canonical Quran.Foundation Mushaf catalog filter."""
+
+    environment = models.CharField(max_length=16)
+    resources_filter = models.CharField(max_length=128, default="mushafs:*")
+    sync_token = models.TextField(blank=True)
+    last_sync_sequence = models.PositiveBigIntegerField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+    last_error_code = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = "quran_qf_mushaf_sync_state"
+        ordering = ["environment", "resources_filter"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["environment", "resources_filter"],
+                name="quran_qf_mushaf_sync_filter_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(environment__in=["prelive", "production"]),
+                name="quran_qf_mushaf_sync_env_valid",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"QF {self.environment} {self.resources_filter}"
+
+
+class QuranFoundationMushaf(BaseModel):
+    """Locally cached metadata for one public Quran.Foundation Mushaf resource."""
+
+    environment = models.CharField(max_length=16)
+    source_id = models.PositiveIntegerField()
+    resource_content_id = models.PositiveBigIntegerField(null=True, blank=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    qirat_id = models.PositiveIntegerField(null=True, blank=True)
+    qirat_name = models.CharField(max_length=128)
+    pages_count = models.PositiveSmallIntegerField()
+    lines_per_page = models.PositiveSmallIntegerField()
+    default_font_name = models.CharField(max_length=128)
+    mapping_mode = models.CharField(max_length=64)
+    schema_version = models.CharField(max_length=32)
+    sync_sequence = models.PositiveBigIntegerField()
+    source_checksum_sha256 = models.CharField(max_length=64)
+    is_available = models.BooleanField(default=True)
+    last_synced_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "quran_qf_mushaf"
+        ordering = ["source_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["environment", "source_id"],
+                name="quran_qf_mushaf_source_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(environment__in=["prelive", "production"]),
+                name="quran_qf_mushaf_env_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(pages_count__gt=0),
+                name="quran_qf_mushaf_pages_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(lines_per_page__gt=0),
+                name="quran_qf_mushaf_lines_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["environment", "is_available", "source_id"],
+                name="quran_qf_mushaf_public_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"QF {self.environment} mushaf {self.source_id}: {self.name}"
+
+
+class QuranFoundationMushafPage(BaseModel):
+    """One page of positioned words from a Quran.Foundation Mushaf snapshot."""
+
+    mushaf = models.ForeignKey(
+        QuranFoundationMushaf,
+        on_delete=models.CASCADE,
+        related_name="cached_pages",
+    )
+    source_id = models.PositiveBigIntegerField()
+    page_number = models.PositiveSmallIntegerField()
+    verse_mapping = models.JSONField(default=dict)
+    first_verse_id = models.PositiveBigIntegerField(null=True, blank=True)
+    last_verse_id = models.PositiveBigIntegerField(null=True, blank=True)
+    first_word_id = models.PositiveBigIntegerField(null=True, blank=True)
+    last_word_id = models.PositiveBigIntegerField(null=True, blank=True)
+    verses_count = models.PositiveSmallIntegerField()
+    words = models.JSONField(default=list)
+
+    class Meta:
+        db_table = "quran_qf_mushaf_page"
+        ordering = ["page_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mushaf", "page_number"],
+                name="quran_qf_mushaf_page_number_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(page_number__gt=0),
+                name="quran_qf_mushaf_page_positive",
+            ),
+        ]
+        indexes = [models.Index(fields=["mushaf", "page_number"], name="quran_qf_page_lookup_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.mushaf}: page {self.page_number}"

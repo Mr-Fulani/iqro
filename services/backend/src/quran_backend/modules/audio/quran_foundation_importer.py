@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit
@@ -87,16 +88,23 @@ def prepare_quran_foundation_recitation(
     reciter_id: int,
     surah_numbers: list[int],
     quran_version: QuranEditionVersion,
+    localized_catalogs: Mapping[str, list[dict[str, Any]]] | None = None,
 ) -> PreparedRecitation:
     if not surah_numbers or any(number < 1 or number > 114 for number in surah_numbers):
         raise QuranFoundationError("Surah numbers must be between 1 and 114.")
     if len(set(surah_numbers)) != len(surah_numbers):
         raise QuranFoundationError("Surah numbers must not be repeated.")
 
-    localized = {
-        language: _reciter_by_id(client.list_chapter_reciters(language=language), reciter_id)
-        for language in ("en", "ar", "ru")
+    catalogs = localized_catalogs or {
+        language: client.list_chapter_reciters(language=language) for language in ("en", "ar", "ru")
     }
+    try:
+        localized = {
+            language: _reciter_by_id(catalogs[language], reciter_id)
+            for language in ("en", "ar", "ru")
+        }
+    except KeyError as exc:
+        raise QuranFoundationError("Localized reciter catalogs are incomplete.") from exc
     english = localized["en"]
     style = _style_value(english)
     source_qirat = _nested_name(english, "qirat").strip()
@@ -147,6 +155,30 @@ def prepare_quran_foundation_recitation(
         timing_checksum_sha256=_checksum(canonical_timings),
         tracks=tuple(tracks),
     )
+
+
+def compatible_quran_foundation_reciter_ids(
+    rows: list[dict[str, Any]],
+    *,
+    quran_version: QuranEditionVersion,
+) -> list[int]:
+    compatible: list[int] = []
+    seen: set[int] = set()
+    for row in rows:
+        try:
+            source_id = int(row.get("id", 0))
+        except (TypeError, ValueError) as exc:
+            raise QuranFoundationError("Chapter reciter catalog has an invalid ID.") from exc
+        if source_id <= 0 or source_id in seen:
+            raise QuranFoundationError("Chapter reciter catalog has duplicate or invalid IDs.")
+        seen.add(source_id)
+        source_qirat = _nested_name(row, "qirat").strip()
+        try:
+            _ensure_riwayah_compatible(source_qirat, quran_version)
+        except QuranFoundationError:
+            continue
+        compatible.append(source_id)
+    return compatible
 
 
 @transaction.atomic

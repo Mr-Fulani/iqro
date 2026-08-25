@@ -164,6 +164,7 @@ QURAN_SYNC_FULL_RESYNC_TOKEN_MAX_AGE_SECONDS = os.getenv(
     "86400",
 )
 QURAN_QF_AUDIO_SYNC_ENABLED = env_bool("QF_AUDIO_SYNC_ENABLED", False)
+QURAN_QF_MUSHAF_SYNC_ENABLED = env_bool("QF_MUSHAF_SYNC_ENABLED", False)
 QURAN_QF_AUDIO_REFRESH_DAYS = positive_env_int("QF_AUDIO_REFRESH_DAYS", 5)
 if QURAN_QF_AUDIO_REFRESH_DAYS > 6:
     raise ImproperlyConfigured("QF_AUDIO_REFRESH_DAYS must be between 1 and 6")
@@ -513,6 +514,10 @@ CELERY_BEAT_MAX_LOOP_INTERVAL = positive_env_int("CELERY_BEAT_MAX_LOOP_INTERVAL_
 CELERY_BEAT_SCHEDULE = {
     "sync-quran-foundation-audio-daily": {
         "task": "audio.sync_quran_foundation",
+        "schedule": 86_400.0,
+    },
+    "sync-quran-foundation-mushafs-daily": {
+        "task": "quran.sync_quran_foundation_mushafs",
         "schedule": 86_400.0,
     },
     "prune-auth-sessions-hourly": {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.db.models import QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics
@@ -11,10 +12,14 @@ from quran_backend.modules.quran.models import (
     Juz,
     MushafPage,
     QuranEdition,
+    QuranFoundationMushaf,
+    QuranFoundationMushafPage,
     RubElHizb,
     Surah,
 )
 from quran_backend.modules.quran.selectors import (
+    public_quran_foundation_mushaf_pages,
+    public_quran_foundation_mushafs,
     published_ayahs,
     published_editions,
     published_hizb,
@@ -29,6 +34,8 @@ from quran_backend.modules.quran.serializers import (
     JuzSerializer,
     MushafPageSerializer,
     QuranEditionSerializer,
+    QuranFoundationMushafPageSerializer,
+    QuranFoundationMushafSerializer,
     RubElHizbSerializer,
     SurahSerializer,
 )
@@ -131,6 +138,40 @@ class MushafPageDetailView(PublicQuranViewMixin, generics.RetrieveAPIView[Mushaf
 
     def get_queryset(self) -> QuerySet[MushafPage]:
         return published_pages(self.kwargs["edition"])
+
+
+@extend_schema(tags=["quran"])
+class QuranFoundationMushafListView(
+    PublicQuranViewMixin,
+    generics.ListAPIView[QuranFoundationMushaf],
+):
+    serializer_class = QuranFoundationMushafSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[QuranFoundationMushaf]:
+        return public_quran_foundation_mushafs(settings.QURAN_QF_ENV)
+
+
+@extend_schema(
+    tags=["quran"],
+    parameters=[
+        OpenApiParameter("mushaf", int, OpenApiParameter.PATH),
+        OpenApiParameter("page", int, OpenApiParameter.PATH),
+    ],
+)
+class QuranFoundationMushafPageDetailView(
+    PublicQuranViewMixin,
+    generics.RetrieveAPIView[QuranFoundationMushafPage],
+):
+    serializer_class = QuranFoundationMushafPageSerializer
+    lookup_field = "page_number"
+    lookup_url_kwarg = "page"
+
+    def get_queryset(self) -> QuerySet[QuranFoundationMushafPage]:
+        return public_quran_foundation_mushaf_pages(
+            settings.QURAN_QF_ENV,
+            self.kwargs["mushaf"],
+        )
 
 
 @extend_schema(
