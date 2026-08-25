@@ -98,15 +98,17 @@ flowchart LR
 - [x] Подключить существующий Quran.Foundation production API-доступ без раскрытия credentials.
   Стандартные Developer Terms приняты как достаточное разрешение для first-party streaming;
   отдельный ответ по email не является release gate. Production-каталог содержит 21 Hafs
-  chapter-reciter и 12 ayah-by-ayah resources. Пилот всех chapter-reciter подтвердил 20
-  валидных источников; resource `173` fail-closed исключён из-за нулевого таймкода `1:1`.
+  chapter-reciter и 12 ayah-by-ayah resources. Полный проход всех 114 сур опубликовал 18
+  валидных chapter-reciter; resources `161`, `168` и `173` fail-closed исключены из-за
+  некорректных upstream-таймкодов.
   Bounded probe подтвердил Range delivery и выявил metadata size drift у source `7`; importer
   всегда сверяет реальный `Content-Length`. Полный импорт выбирает каталог автоматически,
   поддерживает resume и хранит только streaming URL. Все четыре доступных QF Mushaf resource
   (`1`, `5`, `11`, `19`) синхронизируются официальным Content Sync: локальный bootstrap
   сохранил 2 416 страниц и 334 660 позиционированных слов, повторный checkpoint-sync не
   скачивает snapshot повторно. [Audio evidence](capacity/staging-qf-real-audio-2026-08-25.md),
-  [license decision](sign-offs/quran-foundation-audio-license-decision-2026-08-25.md).
+  [license decision](sign-offs/quran-foundation-audio-license-decision-2026-08-25.md),
+  [full-catalog evidence](capacity/quran-foundation-production-catalog-2026-08-25.md).
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.

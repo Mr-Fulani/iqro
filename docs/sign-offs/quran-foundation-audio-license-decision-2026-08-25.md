@@ -28,8 +28,11 @@ Iqro Web, будущих iOS/Android клиентах и Telegram Mini App.
   Range работает; provider metadata `839808` bytes устарела относительно origin `793327`
   bytes. Импортёр использует наблюдаемый `Content-Length`.
 - Пилот с сурой 1 выполнен для всего chapter-reciter каталога: 20/21 прошли проверку.
-- Source `173` исключён fail-closed: для `1:1` provider вернул `timestamp_from=80` и
-  `timestamp_to=80`, то есть нулевую длительность.
+- Полная проверка всех 114 сур опубликовала 18/21 sources: 2 052 surah tracks, 112 248
+  ayah segments, 2 052 external renditions и ни одного локального audio object.
+- Sources `161`, `168` и `173` исключены fail-closed из-за некорректных upstream-таймкодов;
+  точные безопасные ошибки сохранены в
+  [full-catalog evidence](../capacity/quran-foundation-production-catalog-2026-08-25.md).
 - QF audio сохраняется только как внешний streaming URL; `offline_download_allowed=false`.
 - Content Sync вернул Mushaf IDs `1`, `5`, `11`, `19`, все с qira'ah `Hafs`.
 - Полный локальный Mushaf bootstrap: 4 resources, 2 416 страниц, 334 660 позиционированных
