@@ -296,7 +296,7 @@ services:
       - /var/cache/nginx:size=32m
       - /var/lib/nginx/tmp:size=24m
       - /var/log/nginx:size=8m
-      - /var/run:size=4m
+      - /run/nginx:size=4m
       - /tmp:size=16m
     depends_on:
       backend:
