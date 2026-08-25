@@ -208,7 +208,8 @@ runtime. Основной незакрытый объём находится в 
    matrix в Playwright и закреплённый многосегментный case 6:2.
 2. ✅ Hizb/rub‘ al-hizb добавлены в dataset/model/API; web переходит по juz/hizb/rub/ayah.
 3. 🟡 [Content acceptance record](quran-content-acceptance.md) создан с checksum и rollback;
-   религиозный, юридический и product sign-off остаются внешними release gates.
+   полный dataset импортирован на staging как непубличный draft, 604 приватных WebP повторно
+   проверены; религиозный, юридический и product sign-off остаются внешними release gates.
 
 Техническая часть блока закрыта. Публичная активация dataset остаётся заблокированной до
 трёх внешних sign-off, перечисленных в content acceptance record.
@@ -247,7 +248,8 @@ runtime. Основной незакрытый объём находится в 
    Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,
    backup drill и pre-publication evidence уже есть. Отдельный R2 staging bucket/scoped token/CORS,
    custom media hostname, edge TLS и hostname-scoped cache/security rules активны; CDN contract и
-   cache HIT доказаны. Принятый Quran/audio corpus и финальные content sign-off ещё отсутствуют.
+   cache HIT доказаны. Quran dataset подготовлен как непубличный draft, но принятый аудиорелиз и
+   финальные content sign-off ещё отсутствуют.
 4. Развернуть готовый monitoring baseline, подключить внешний uptime/provider telemetry,
    проверить alert delivery; offsite bucket также блокирует широкий production launch.
 

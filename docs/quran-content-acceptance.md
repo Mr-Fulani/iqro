@@ -30,6 +30,24 @@
 | Backend suite | 463 passed, 6 skipped; coverage 84,99% | 2026-08-23 |
 | Web lint/typecheck/build/E2E | Пройдено; 6 E2E cases | 2026-08-23 |
 
+## Техническая подготовка staging — не sign-off
+
+25 августа 2026 года на `staging.iqro.forum` выполнена подготовка без публичной активации:
+
+- pre-import и post-import PostgreSQL backup созданы и прошли checksum/archive verification;
+- `madani-hafs@1.0.2` повторно прошёл checksum validation внутри staging backend и импортирован
+  одной транзакцией со статусом `draft`;
+- staging БД содержит 114 сур, 6 236 аятов, 604 страницы и 12 346 региональных сегментов;
+- полный publication validator прошёл, но `active_version` намеренно остаётся пустым, а
+  публичный `GET /api/v1/quran/editions` возвращает `[]`;
+- в приватный каталог VPS переданы 604 WebP; проверка всех asset SHA-256 прошла с manifest
+  `2fb661457c5a1aba768e42fe731c814a42113057b0acacbe9ad6e619703ad6b2`;
+- загрузка этих страниц в публичный R2 bucket и команды publish/activate намеренно не
+  выполнялись до трёх внешних sign-off ниже.
+
+Этот результат доказывает техническую готовность и rollback path, но не является религиозной,
+юридической или продуктовой приёмкой.
+
 Повторяемая команда геометрического gate:
 
 ```bash

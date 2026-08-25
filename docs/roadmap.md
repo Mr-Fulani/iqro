@@ -172,9 +172,9 @@ flowchart LR
 
 ### Web launch gates
 
-- [ ] Развернуть staging и production на публичном домене с TLS, redirects HTTP→HTTPS,
-  и проверенной proxy-конфигурацией. Repo-side staging overlay/generator/preflight/runbook готовы;
-  остаются фактический VPS, DNS, R2 и runtime evidence.
+- [x] Развернуть staging на публичном домене с TLS, redirect HTTP→HTTPS и проверенной
+  proxy-конфигурацией: бюджетный CX23, `staging.iqro.forum`, Cloudflare R2 custom media domain,
+  backup/restore и runtime evidence готовы. Отдельный production deployment остаётся release gate.
 - [x] Добавить defense-in-depth security headers в Next.js и gateway: CSP без `unsafe-eval`
   в production, clickjacking/MIME/referrer/permissions policy и HSTS; отдельный Telegram Mini
   App origin должен получить собственный `frame-ancestors`, а не ослаблять web policy.
@@ -187,8 +187,8 @@ flowchart LR
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
   проходит те же 47 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
   RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
-  RTL/noindex и sitemap без mock contracts; content-backed journey остаётся до активации
-  согласованного dataset.
+  RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` уже импортирован как полный
+  непубличный draft; content-backed journey остаётся до внешнего sign-off и активации.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
@@ -199,7 +199,8 @@ flowchart LR
   clients прошли пятиминутный soak, 16 уже превысили latency gate; полный gate ждёт
   опубликованную суру, R2 audio и sync workload.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
-  dataset и каждого публичного аудиорелиза.
+  dataset и каждого публичного аудиорелиза. Staging draft и 604 приватных WebP технически
+  проверены; R2 upload/publish/activate намеренно остановлены на этом gate.
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,
   hreflang, отсутствие индексирования приватных маршрутов и реальные Core Web Vitals.
 

@@ -20,10 +20,13 @@ staging переключён с временного `r2.dev` на custom domain
 зафиксированный pre-publication capacity результат находится в
 [отчёте CX23](capacity/staging-cx23-prepublication-2026-08-25.md).
 
-Среда ещё не является production: согласованный media/Quran corpus не активирован; offsite backup
-и постоянный production-sized observability stack не закрыты. Инструкция ниже остаётся
-источником истины для пересоздания staging и последующего production rollout; секреты и
-IP-ограничения в документацию не записываются.
+Среда ещё не является production: `madani-hafs@1.0.2` импортирован в staging БД только как
+непубличный `draft`, а 604 проверенных WebP находятся только в приватном каталоге VPS. До трёх
+внешних sign-off они не загружаются в публичный R2 и не активируются. Лицензированного
+аудиорелиза и Quran.Foundation credentials в staging пока нет; offsite backup и постоянный
+production-sized observability stack также не закрыты. Инструкция ниже остаётся источником
+истины для пересоздания staging и последующего production rollout; секреты и IP-ограничения в
+документацию не записываются.
 
 ## Что уже автоматизировано
 
@@ -340,8 +343,9 @@ make staging-observability-down
 
 ```bash
 make staging-backup
-make staging-backup-verify
-make staging-restore-check
+# Первая команда печатает точный BACKUP_FILE; передайте его двум следующим:
+make staging-backup-verify BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
+make staging-restore-check BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 ```
 
 После этого по порядку запускаются public-read, audio-CDN и disposable auth/sync сценарии из
@@ -355,7 +359,8 @@ staging, не из DAU и не из лимитов Docker Compose.
 
 ```bash
 make staging-backup
-make staging-backup-verify
+# Использовать точный BACKUP_FILE из вывода предыдущей команды:
+make staging-backup-verify BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 ```
 
 Передать новый проверенный commit тем же `git archive`, затем на VPS:
