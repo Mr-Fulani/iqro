@@ -353,6 +353,37 @@ archive и сохраняются. `make` автоматически марки�
 commit. Для воспроизводимого отката нужно хранить номер ранее развёрнутого commit и развернуть
 его archive тем же способом; migration compatibility проверяется до rollout.
 
+### Временная проверка нескольких реплик на budget staging
+
+Это бесплатная проверка механизма горизонтального масштабирования на том же VPS, а не новый
+capacity-профиль и не high availability. Сначала должны быть собраны и запущены проверенные
+release images. Команда валидирует границы, подставляет реальное число API-реплик в database
+connection budget и только затем меняет topology без сборки образов:
+
+```bash
+cd /opt/quran
+make staging-budget-scale API_REPLICAS=2 WEB_REPLICAS=2
+make staging-budget-ps
+python3 ops/load/smoke.py \
+  --base-url https://staging.example.org \
+  --requests 200 \
+  --concurrency 10
+```
+
+Во время окна проверить, что видны ровно две healthy `backend` и две healthy `web` реплики,
+gateway распределяет некэшируемые probe-запросы между обоими backend, а 5xx, p95, host RAM,
+swap и database headroom остаются в пределах gate. На CX23 не оставлять `2+2` постоянно без
+измеренной необходимости: после доказательства вернуть экономный профиль той же безопасной
+командой:
+
+```bash
+make staging-budget-scale API_REPLICAS=1 WEB_REPLICAS=1
+make staging-budget-ps
+```
+
+Потеря единственного VPS по-прежнему остановит все реплики. Настоящая HA начинается только с
+нескольких hosts/зон и внешнего load balancer.
+
 ## 9. Definition of done
 
 Staging считается созданным, когда одновременно выполнено:
