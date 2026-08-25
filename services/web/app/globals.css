@@ -629,6 +629,22 @@ input:focus, select:focus, textarea:focus {
   outline-offset: 3px;
 }
 
+.audio-reciter-card {
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+}
+
+.audio-reciter-card.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  box-shadow: 0 0 0 2px var(--primary-border), var(--shadow-md);
+}
+
+.audio-reciter-card.is-selected .reciter-avatar {
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.16), 0 12px 28px rgba(15, 118, 110, 0.26);
+}
+
 .reciter-avatar {
   position: relative;
   width: 112px;

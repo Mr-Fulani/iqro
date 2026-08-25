@@ -8,6 +8,7 @@ import {
   Recitation,
   Reciter,
 } from "../../lib/api";
+import { ReciterAvatar } from "../../components/ReciterAvatar";
 import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
 import { useAudioPlayer } from "../../lib/audio-player-context";
 import { useI18n } from "../../lib/i18n-context";
@@ -17,6 +18,7 @@ import {
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../../lib/reciter-catalog";
+import { reciterPortraitUrl } from "../../lib/reciter-portraits";
 
 export default function AudioPage() {
   const searchParams = useSearchParams();
@@ -34,7 +36,6 @@ export default function AudioPage() {
 
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const playerSectionRef = useRef<HTMLElement | null>(null);
 
   // Load reciters on mount
   useEffect(() => {
@@ -114,6 +115,8 @@ export default function AudioPage() {
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
   const reciterName = (reciter: Reciter) =>
     locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
+  const reciterSecondaryName = (reciter: Reciter) =>
+    locale === "ar" ? reciter.name_en : reciter.name_ar;
 
   const handlePlayTrack = async (track: AudioTrack) => {
     if (!track.surah_number || !selectedRecitation) return;
@@ -133,9 +136,6 @@ export default function AudioPage() {
         autoPlay: true,
       };
       startPlayback(request);
-      window.setTimeout(() => {
-        playerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 0);
     } catch (reason) {
       setError(api.normalizeError(reason));
     } finally {
@@ -232,18 +232,53 @@ export default function AudioPage() {
         )}
       </section>
 
-      <section ref={playerSectionRef} className="surface audio-player-section">
+      <section className="surface reciter-showcase" data-testid="audio-reciter-catalog">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">{t("audio.settingsEyebrow")}</p>
-            <h3 className="surface-title">{t("audio.playerTitle")}</h3>
-            <p className="surface-subtitle">{t("audio.playerDescription")}</p>
+            <p className="eyebrow">{t("home.recitersEyebrow")}</p>
+            <h3 className="surface-title">{t("home.recitersTitle")}</h3>
+            <p className="surface-subtitle">{t("home.recitersDescription")}</p>
           </div>
-          {!playerRequest && <span className="status-chip">{t("audio.chooseSurah")}</span>}
         </div>
-        <div className="alert alert-info audio-global-player-hint">
-          {playerRequest ? t("audio.playerPersistentHint") : t("audio.playerIdleHint")}
-        </div>
+
+        {reciters.length > 0 ? (
+          <div className="reciter-grid">
+            {reciters.map((reciter, index) => {
+              const name = reciterName(reciter) || reciter.name_en;
+              const isSelected = reciter.id === selectedReciterId;
+              return (
+                <button
+                  className={`reciter-card audio-reciter-card${isSelected ? " is-selected" : ""}`}
+                  type="button"
+                  key={reciter.id}
+                  onClick={() => setSelectedReciterId(reciter.id)}
+                  aria-label={t("home.listenReciter", { name })}
+                  aria-pressed={isSelected}
+                  data-testid="audio-reciter"
+                >
+                  <ReciterAvatar
+                    name={name}
+                    portraitUrl={reciterPortraitUrl(reciter)}
+                    tone={index}
+                  />
+                  <span className="reciter-card-copy">
+                    <strong>{name}</strong>
+                    <span
+                      lang={locale === "ar" ? "en" : "ar"}
+                      dir={locale === "ar" ? "ltr" : "rtl"}
+                    >
+                      {reciterSecondaryName(reciter)}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="reciter-empty" aria-live="polite">
+            {loading ? t("home.loadingReciters") : t("home.recitersEmpty")}
+          </div>
+        )}
       </section>
 
       {/* Tracks List */}

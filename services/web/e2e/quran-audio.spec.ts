@@ -432,7 +432,12 @@ test.beforeEach(async ({ page }) => {
 test("catalog loads all 114 surahs and starts the first track on one click", async ({ page }) => {
   await page.goto("/audio");
 
-  await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toHaveCount(0);
+  const reciterCards = page.getByTestId("audio-reciter");
+  await expect(reciterCards).toHaveCount(1);
+  await expect(reciterCards.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(reciterCards.first().getByTestId("reciter-avatar")).toBeVisible();
   const player = page.getByTestId("global-audio-player");
   expect((await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("button", { name: "Развернуть плеер", exact: true })).toBeVisible();
