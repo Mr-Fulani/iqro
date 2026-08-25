@@ -13,11 +13,11 @@ function value(name: string, fallback: string): string {
 
 export function legalConfig(): LegalConfig {
   return {
-    entityName: value("LEGAL_ENTITY_NAME", "Mr.Fulani"),
+    entityName: value("LEGAL_ENTITY_NAME", "Mr.Fulani (Iqro-Forum project)"),
     contactEmail: value("LEGAL_CONTACT_EMAIL", "iqro.forum@gmail.com"),
     securityEmail: value("SECURITY_CONTACT_EMAIL", "iqro.forum@gmail.com"),
     postalAddress: value("LEGAL_POSTAL_ADDRESS", "Configure LEGAL_POSTAL_ADDRESS before launch"),
-    jurisdiction: value("LEGAL_JURISDICTION", "Configure LEGAL_JURISDICTION before launch"),
+    jurisdiction: value("LEGAL_JURISDICTION", "Türkiye"),
     effectiveDate: value("LEGAL_EFFECTIVE_DATE", "2026-08-24"),
   };
 }
