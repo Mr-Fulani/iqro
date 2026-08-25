@@ -193,9 +193,18 @@ test("public responses include the defense-in-depth security policy", async ({ r
   const response = await request.get("/ru");
   expect(response.ok()).toBe(true);
   const headers = response.headers();
-  expect(headers["content-security-policy"]).toContain("default-src 'self'");
-  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
-  expect(headers["content-security-policy"]).toContain("media-src 'self' blob: https:");
+  const contentSecurityPolicy = headers["content-security-policy"];
+  expect(contentSecurityPolicy).toContain("default-src 'self'");
+  expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
+  expect(contentSecurityPolicy).toContain("img-src 'self' blob: data: https:");
+  expect(contentSecurityPolicy).toContain("media-src 'self' blob: https:");
+  if (process.env.PLAYWRIGHT_PRODUCTION === "1") {
+    expect(contentSecurityPolicy).not.toContain("img-src 'self' blob: data: https: http:");
+    expect(contentSecurityPolicy).not.toContain("media-src 'self' blob: https: http:");
+  } else {
+    expect(contentSecurityPolicy).toContain("img-src 'self' blob: data: https: http:");
+    expect(contentSecurityPolicy).toContain("media-src 'self' blob: https: http:");
+  }
   expect(headers["permissions-policy"]).toContain("geolocation=(self)");
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(headers["strict-transport-security"]).toBe("max-age=31536000; includeSubDomains");
