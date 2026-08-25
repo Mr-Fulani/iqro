@@ -41,6 +41,17 @@ class CapacityHarnessTests(unittest.TestCase):
             sum(endpoint.name == "quran-editions-api" for endpoint in schedule), 20
         )
 
+    def test_prepublication_staging_workload_is_valid_and_omits_content_routes(self) -> None:
+        workload = load_workload(
+            Path(__file__).with_name("workloads")
+            / "web-staging-prepublication-read.json"
+        )
+        schedule = weighted_schedule(workload)
+
+        self.assertEqual(workload.name, "web-staging-prepublication-read")
+        self.assertEqual(len(schedule), 100)
+        self.assertNotIn("published-surah", {endpoint.name for endpoint in schedule})
+
     def test_workload_rejects_credential_headers(self) -> None:
         raw = {
             "name": "unsafe",

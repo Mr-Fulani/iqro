@@ -536,6 +536,20 @@ production-like topology и временным рядом server-side метри
 Gunicorn/DB pool saturation, PostgreSQL query/lock latency, Redis latency/evictions и 5xx.
 Локальный или mock-прогон проверяет сам инструмент, но не закрывает S0/S1 capacity gate.
 
+Пока Quran/audio corpus не активирован из-за незакрытых редакционных или лицензионных gate,
+используйте `ops/load/workloads/web-staging-prepublication-read.json`. Он проверяет публичную
+web/API оболочку и пустые каталоги, но намеренно не содержит опубликованную суру и не считается
+доказательством полной Quran/audio ёмкости:
+
+```bash
+python3 ops/load/capacity.py \
+  --base-url https://staging.example.org \
+  --workload ops/load/workloads/web-staging-prepublication-read.json \
+  --stage 5:30 --stage 10:60 \
+  --label release-abc1234-prepublication \
+  --json-report /tmp/quran-capacity-release-abc1234-prepublication.json
+```
+
 ### Bounded audio CDN/origin capacity test
 
 `ops/load/audio_capacity.py` проверяет самый дорогой контур отдельно от API. Он использует

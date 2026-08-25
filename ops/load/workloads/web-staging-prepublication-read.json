@@ -1,0 +1,69 @@
+{
+  "name": "web-staging-prepublication-read",
+  "version": 1,
+  "endpoints": [
+    {
+      "name": "landing-ru",
+      "path": "/ru",
+      "weight": 20,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "landing-ar-rtl",
+      "path": "/ar",
+      "weight": 8,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "quran-reader-shell",
+      "path": "/ru/quran",
+      "weight": 15,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "audio-catalog-shell",
+      "path": "/ru/audio",
+      "weight": 10,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "prayer-shell",
+      "path": "/ru/prayer",
+      "weight": 8,
+      "expected_statuses": [200],
+      "headers": { "Accept": "text/html" }
+    },
+    {
+      "name": "quran-editions-api",
+      "path": "/api/v1/quran/editions",
+      "weight": 16,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "reciters-api",
+      "path": "/api/v1/reciters?page_size=10",
+      "weight": 10,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "recitations-api",
+      "path": "/api/v1/recitations?page_size=10",
+      "weight": 10,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    },
+    {
+      "name": "liveness",
+      "path": "/api/v1/health/live",
+      "weight": 3,
+      "expected_statuses": [200],
+      "headers": { "Accept": "application/json" }
+    }
+  ]
+}
