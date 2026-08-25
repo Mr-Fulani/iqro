@@ -32,18 +32,21 @@
 
 ## Техническая подготовка staging — не sign-off
 
-25 августа 2026 года на `staging.iqro.forum` выполнена подготовка без публичной активации:
+25 августа 2026 года на `staging.iqro.forum` выполнена техническая подготовка и временная
+активация исключительно для noindex staging/load test:
 
 - pre-import и post-import PostgreSQL backup созданы и прошли checksum/archive verification;
 - `madani-hafs@1.0.2` повторно прошёл checksum validation внутри staging backend и импортирован
   одной транзакцией со статусом `draft`;
 - staging БД содержит 114 сур, 6 236 аятов, 604 страницы и 12 346 региональных сегментов;
-- полный publication validator прошёл, но `active_version` намеренно остаётся пустым, а
-  публичный `GET /api/v1/quran/editions` возвращает `[]`;
+- полный publication validator прошёл; после явного разрешения владельца `active_version`
+  временно установлен в `1.0.2` только на staging, чтобы проверить content-backed SSR/API;
 - в приватный каталог VPS переданы 604 WebP; проверка всех asset SHA-256 прошла с manifest
   `2fb661457c5a1aba768e42fe731c814a42113057b0acacbe9ad6e619703ad6b2`;
-- загрузка этих страниц в публичный R2 bucket и команды publish/activate намеренно не
-  выполнялись до трёх внешних sign-off ниже.
+- все 604 WebP идемпотентно загружены в отдельный `iqro-staging-media`, а выборочные CDN
+  проверки и content-backed capacity test прошли;
+- staging закрыт от индексации; эта техническая активация не является разрешением на
+  production-публикацию и должна быть заменена новым immutable кандидатом.
 
 Этот результат доказывает техническую готовность и rollback path, но не является религиозной,
 юридической или продуктовой приёмкой.
@@ -56,10 +59,11 @@ checksums, но page artwork имеет неполную release-цепочку:
 platform предоставляет цифровой Мусхаф для сайтов и приложений, но прямой официальный download
 artifact/terms evidence для наших WebP в source lock отсутствует.
 
-Поэтому `madani-hafs@1.0.2` остаётся непубличным draft и не активируется даже после простого
-заполнения таблицы sign-off. Выбран безопасный путь: собрать новую immutable-версию из прямо
-зафиксированного официального page source и повторить все проверки. Полная матрица и remediation
-plan: [Quran source provenance audit](quran-source-provenance-audit.md).
+Поэтому `madani-hafs@1.0.2` не является production release candidate. Его временная активация
+на noindex staging допустима только как технический тест и не может использоваться для обхода
+sign-off. Выбран безопасный путь: собрать новую immutable-версию из прямо зафиксированного
+официального page source и повторить все проверки. Полная матрица и remediation plan:
+[Quran source provenance audit](quran-source-provenance-audit.md).
 
 Повторяемая команда геометрического gate:
 
@@ -98,8 +102,10 @@ Reviewer должен сверять изображение, номер стра
 
 ## Активация и rollback
 
-Ниже сохранён общий пример процедуры. Для `1.0.2` активация запрещена обнаруженным provenance
-blocker; команды разрешены только для нового кандидата после его трёх внешних sign-off:
+Ниже сохранён общий пример процедуры. Для `1.0.2` production-активация запрещена обнаруженным
+provenance blocker. Зафиксированная временная noindex staging-активация является только
+техническим исключением; для production команды разрешены лишь новому кандидату после его трёх
+внешних sign-off:
 
 ```bash
 cd services/backend

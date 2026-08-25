@@ -4,8 +4,8 @@
 
 Объект проверки: `madani-hafs@1.0.2`.
 
-Итог: **версию 1.0.2 нельзя публично активировать до исправления provenance page artwork**.
-Dataset технически цел и остаётся полезным как непубличный staging draft, но его release evidence
+Итог: **версию 1.0.2 нельзя активировать в production до исправления provenance page artwork**.
+Dataset технически цел и остаётся полезным для закрытого от индексации staging, но его release evidence
 не позволяет без дополнительного юридического решения утверждать, что все 604 WebP получены
 непосредственно из зафиксированного официального источника.
 
@@ -32,7 +32,8 @@ masters, однако в source lock нет download URL, даты получе�
 
 ## Выбранный безопасный путь
 
-1. `madani-hafs@1.0.2` оставить непубличным staging draft и никогда не активировать.
+1. `madani-hafs@1.0.2` не выпускать в production. Временная активация на noindex staging
+   разрешена только для технического SSR/API/load test и не считается sign-off.
 2. Получить page artwork напрямую с официальной
    [King Fahd Complex developer platform](https://qurancomplex.gov.sa/en/techquran/dev/) или
    [официального digital-mushaf портала](https://dm.qurancomplex.gov.sa/).

@@ -191,23 +191,25 @@ flowchart LR
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
   проходит те же 47 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
   RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
-  RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` уже импортирован как полный
-  непубличный draft; content-backed journey остаётся до внешнего sign-off и активации.
+  RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` временно активирован только на
+  noindex staging; content-backed SSR/API и глубокая сура отвечают `200`. Полный browser journey
+  и production-кандидат остаются до нового provenance-safe dataset и внешних sign-off.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
   commit после GitHub CI.
 - [ ] Провести staged public-read capacity/soak test на production-like staging и записать
-  доказанную ёмкость S0/S1. На budget CX23 сохранён
-  [pre-publication отчёт](capacity/staging-cx23-prepublication-2026-08-25.md): 14 saturated
-  clients прошли пятиминутный soak, 16 уже превысили latency gate; полный gate ждёт
-  опубликованную суру, R2 audio и sync workload.
+  доказанную ёмкость S0/S1. Quran HTML/API часть на budget CX23 подтверждена
+  [content-backed отчётом](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
+  clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Checkbox остаётся открытым до
+  отдельного R2 audio Range, guest/registered sync и повтора на production-sized профиле.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
-  dataset и каждого публичного аудиорелиза. Staging draft и 604 приватных WebP технически
-  проверены; provenance audit обнаружил, что PDF фактически маркирован `quran.ws`, хотя manifest
-  называет его KFQC PDF. `1.0.2` остаётся непубличным и не активируется. Следующий кандидат должен
-  быть собран из прямо закреплённого официального King Fahd Complex page source, после чего
-  повторяются checksums, geometry/manual review и все три sign-off. Подробности — в
+  dataset и каждого публичного аудиорелиза. `1.0.2` и 604 WebP технически проверены и временно
+  активированы только на noindex staging для нагрузочного теста; provenance audit обнаружил,
+  что PDF фактически маркирован `quran.ws`, хотя manifest называет его KFQC PDF. Версия не
+  разрешена для production. Следующий кандидат должен быть собран из прямо закреплённого
+  официального King Fahd Complex page source, после чего повторяются checksums,
+  geometry/manual review и все три sign-off. Подробности — в
   [source provenance audit](quran-source-provenance-audit.md).
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,
   hreflang, отсутствие индексирования приватных маршрутов и реальные Core Web Vitals.

@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T04:04:43.280093+00:00",
+  "label": "staging-4ac230d-quran-sustained-12",
+  "target": "https://staging.iqro.forum",
+  "workload": {
+    "name": "web-public-read",
+    "version": 1
+  },
+  "thresholds": {
+    "max_error_rate": 0.01,
+    "max_p95_ms": 750.0,
+    "max_p99_ms": 1500.0
+  },
+  "stages": [
+    {
+      "concurrency": 12,
+      "requested_duration_seconds": 180.0,
+      "elapsed_seconds": 180.118,
+      "stop_reason": "duration",
+      "requests": 15388,
+      "requests_per_second": 85.43,
+      "error_rate": 0.0,
+      "p50_ms": 101.3,
+      "p95_ms": 327.2,
+      "p99_ms": 445.14,
+      "bytes_received": 54550824,
+      "passed": true,
+      "failures": [],
+      "endpoints": {
+        "landing-ar-rtl": {
+          "requests": 1232,
+          "errors": 0,
+          "bytes_received": 6868400,
+          "p50_ms": 172.98,
+          "p95_ms": 352.08,
+          "p99_ms": 434.75
+        },
+        "landing-ru": {
+          "requests": 3076,
+          "errors": 0,
+          "bytes_received": 17877712,
+          "p50_ms": 179.09,
+          "p95_ms": 365.82,
+          "p99_ms": 478.63
+        },
+        "liveness": {
+          "requests": 160,
+          "errors": 0,
+          "bytes_received": 12480,
+          "p50_ms": 74.97,
+          "p95_ms": 152.33,
+          "p99_ms": 261.25
+        },
+        "published-surah": {
+          "requests": 1846,
+          "errors": 0,
+          "bytes_received": 12582336,
+          "p50_ms": 211.22,
+          "p95_ms": 410.9,
+          "p99_ms": 543.88
+        },
+        "quran-editions-api": {
+          "requests": 3075,
+          "errors": 0,
+          "bytes_received": 1642050,
+          "p50_ms": 61.91,
+          "p95_ms": 101.58,
+          "p99_ms": 229.87
+        },
+        "quran-reader-shell": {
+          "requests": 2308,
+          "errors": 0,
+          "bytes_received": 15412824,
+          "p50_ms": 188.6,
+          "p95_ms": 365.59,
+          "p99_ms": 465.67
+        },
+        "recitations-api": {
+          "requests": 1846,
+          "errors": 0,
+          "bytes_received": 77532,
+          "p50_ms": 59.01,
+          "p95_ms": 100.84,
+          "p99_ms": 194.15
+        },
+        "reciters-api": {
+          "requests": 1845,
+          "errors": 0,
+          "bytes_received": 77490,
+          "p50_ms": 61.81,
+          "p95_ms": 100.93,
+          "p99_ms": 219.88
+        }
+      }
+    }
+  ],
+  "passed": true
+}

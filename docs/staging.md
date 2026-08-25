@@ -17,13 +17,16 @@ staging переключён с временного `r2.dev` на custom domain
 (HEAD/Range/416/CORS/ETag/cache headers) зелёный, а повторный Range-запрос подтверждён как
 `CF-Cache-Status: HIT`; машинный результат сохранён в
 [CDN contract report](capacity/staging-r2-media-contract-2026-08-25.json). Последний
-зафиксированный pre-publication capacity результат находится в
-[отчёте CX23](capacity/staging-cx23-prepublication-2026-08-25.md).
+зафиксированный Quran content-backed capacity результат находится в
+[отчёте CX23](capacity/staging-cx23-quran-content-2026-08-25.md); исторический прогон до
+активации corpus сохранён в
+[pre-publication отчёте](capacity/staging-cx23-prepublication-2026-08-25.md).
 
-Среда ещё не является production: `madani-hafs@1.0.2` импортирован в staging БД только как
-непубличный `draft`, а 604 проверенных WebP находятся только в приватном каталоге VPS. До трёх
-внешних sign-off они не загружаются в публичный R2 и не активируются. Лицензированного
-аудиорелиза в staging пока нет. Существующие Quran.Foundation production credentials безопасно
+Среда ещё не является production: `madani-hafs@1.0.2` временно активирован только на закрытом от
+индексации staging для технического content-backed/load test, а 604 проверенных WebP загружены в
+отдельный staging bucket. Это исключение не снимает provenance и три внешних sign-off; версия
+не разрешена для production-публикации. Лицензированного аудиорелиза в staging пока нет.
+Существующие Quran.Foundation production credentials безопасно
 перенесены из локального закрытого env без вывода значений; read-only запрос каталога из backend
 успешно прошёл 25 августа 2026 года и вернул 21 chapter reciter. Фоновая синхронизация остаётся
 выключенной (`QF_AUDIO_SYNC_ENABLED=false`), данные аудио не импортировались и не публиковались.
@@ -355,6 +358,11 @@ make staging-restore-check BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 [operations runbook](operations.md#staged-public-read-capacity-test). Число стабильных
 одновременных пользователей фиксируется только из JSON reports и server-side metrics реального
 staging, не из DAU и не из лимитов Docker Compose.
+
+Фактический content-backed прогон 25 августа 2026 года подтвердил на CX23 14 непрерывно
+активных read-only клиентов в течение пяти минут: 26 510 запросов, 88.34 RPS, 0% ошибок,
+p95 359 ms. Полный отчёт и ограничения результата: [Quran content-backed capacity evidence](capacity/staging-cx23-quran-content-2026-08-25.md).
+Audio CDN и auth/sync gates ещё открыты.
 
 ## 8. Обновление и откат
 

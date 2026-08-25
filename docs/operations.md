@@ -590,6 +590,11 @@ python3 ops/load/capacity.py \
 CPU/RAM evidence: [CX23, 25 августа 2026](capacity/staging-cx23-prepublication-2026-08-25.md).
 Он не закрывает полный S0/S1 gate по причинам, перечисленным в отчёте.
 
+После временной noindex-активации полного Quran corpus выполнен отдельный
+[content-backed CX23 прогон](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
+clients выдержали пять минут, 26 510 запросов прошли без ошибок, p95 составил 359 ms. Этот
+результат закрывает Quran HTML/API часть, но не audio Range и auth/sync gates.
+
 ### Bounded audio CDN/origin capacity test
 
 `ops/load/audio_capacity.py` проверяет самый дорогой контур отдельно от API. Он использует

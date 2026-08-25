@@ -156,11 +156,11 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | ❌ | Budget CX23 pre-publication soak доказал 14 saturated read clients: 12 853 запросов за 5 минут, 0.02% ошибок, p95 723 ms; Quran corpus, R2 audio, sync и production-like S0/S1 ещё не измерены |
+| SLO доказаны на проектном пике | 🟡 | Budget CX23 content-backed Quran soak доказал 14 saturated read clients: 26 510 запросов за 5 минут, 0% ошибок, p95 359 ms; отдельные R2 audio Range, auth/sync и production-sized S0/S1 ещё не измерены |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
-| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev/standalone; реальный staging smoke подтвердил RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404 и SEO, но content-backed journey ждёт активации dataset |
+| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev/standalone; реальный staging smoke подтвердил RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404 и SEO; временная noindex-активация dataset подтвердила content-backed SSR/API, но полный production browser journey ещё открыт |
 | Runbooks, dashboards и alerts доступны | 🟡 | Versioned dashboard/rules и runbook готовы; production deployment, provider telemetry, on-call ownership и synthetic delivery ещё не подтверждены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 
@@ -211,11 +211,12 @@ runtime. Основной незакрытый объём находится в 
    matrix в Playwright и закреплённый многосегментный case 6:2.
 2. ✅ Hizb/rub‘ al-hizb добавлены в dataset/model/API; web переходит по juz/hizb/rub/ayah.
 3. 🟡 [Content acceptance record](quran-content-acceptance.md) создан с checksum и rollback;
-   полный dataset импортирован на staging как непубличный draft, 604 приватных WebP повторно
-   проверены; религиозный, юридический и product sign-off остаются внешними release gates.
+   полный dataset и 604 WebP повторно проверены и временно активированы только на noindex staging
+   для content-backed load test; религиозный, юридический и product sign-off остаются внешними
+   production release gates.
 
-Техническая часть блока закрыта. Публичная активация dataset остаётся заблокированной до
-трёх внешних sign-off, перечисленных в content acceptance record.
+Техническая часть блока закрыта. Production-активация остаётся заблокированной до нового
+provenance-safe immutable кандидата и трёх внешних sign-off из content acceptance record.
 
 ### P0-B — account lifecycle и client foundation
 
@@ -246,13 +247,18 @@ runtime. Основной незакрытый объём находится в 
 ### P0-E — launch hardening
 
 1. Зелёный dependency/image gate на release commit и expanded browser/device matrix.
-2. Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
+2. 🟡 Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
+   Quran HTML/API часть подтверждена
+   [content-backed CX23 отчётом](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
+   clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Audio Range, auth/sync и
+   production-sized повтор остаются открыты.
 3. Server/domain/TLS, privacy/license/religious sign-off.
    Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,
    backup drill и pre-publication evidence уже есть. Отдельный R2 staging bucket/scoped token/CORS,
    custom media hostname, edge TLS и hostname-scoped cache/security rules активны; CDN contract и
-   cache HIT доказаны. Quran dataset подготовлен как непубличный draft, но принятый аудиорелиз и
-   финальные content sign-off ещё отсутствуют.
+   cache HIT доказаны. Quran dataset временно активирован только на noindex staging для
+   технического теста, но provenance-safe production candidate, принятый аудиорелиз и финальные
+   content sign-off ещё отсутствуют.
 4. Развернуть готовый monitoring baseline, подключить внешний uptime/provider telemetry,
    проверить alert delivery; offsite bucket также блокирует широкий production launch.
 
@@ -268,9 +274,11 @@ runtime. Основной незакрытый объём находится в 
    contract tests. Персональные ответы остаются `private, no-store`.
 4. PgBouncer-compatible connection budget, stateless API/workers, token-safe Redis lease для
    singleton Beat, отдельно конфигурируемые Redis roles и общий Next.js cache/tag coordination
-   готовы; остаются production-like multi-replica deployment и capacity evidence.
-5. Capacity harness и доказательство профиля S1 до 10 000 DAU; S2/S3 ресурсы не покупать
-   до фактических triggers.
+   готовы; budget single-host Quran capacity и временный `2+2` scale drill доказаны, остаётся
+   production-like multi-host deployment.
+5. Capacity harness готов; CX23 Quran read-only baseline доказан. До заявления профиля S1 для
+   10 000 DAU добавить реальную модель трафика, audio/auth/sync workload и production-sized soak;
+   S2/S3 ресурсы не покупать до фактических triggers.
 
 ### P1 — functional expansion после multi-client MVP
 
