@@ -5,9 +5,10 @@
 Назначение: получить письменное подтверждение конкретной streaming-схемы Iqro. В письмо нельзя
 вставлять client secret, access token, внутренние URL или другие credentials.
 
-Запрос отправляется через контакт, указанный в актуальных
-[Quran.Foundation Developer Terms](https://api-docs.quran.foundation/legal/developer-terms/)
-или Developer Console. API credentials и Connected Apps listing — разные процессы: credentials
+Запрос отправляется на `developers@quran.com` с email, связанного с Developer Console. Этот
+адрес опубликован в актуальных
+[Quran.Foundation Developer Terms](https://api-docs.quran.foundation/legal/developer-terms/).
+API credentials и Connected Apps listing — разные процессы: credentials
 управляются в Developer Console, а listing проходит отдельный ручной review по правилам
 [Connected Apps](https://api-docs.quran.foundation/docs/connected-apps/).
 
@@ -17,8 +18,8 @@
 
 - `[FULL LEGAL NAME / ORGANIZATION]`;
 - `[ACCOUNT EMAIL]` — email аккаунта в Developer Console;
-- `[PUBLIC PRIVACY URL]` и `[PUBLIC TERMS URL]`;
-- `[PRODUCTION URL]`, если он уже существует.
+- текущие публичные staging legal URL уже подставлены; после production deployment их нужно
+  заменить на production URL.
 
 Не заменять техническое описание более широкой формулировкой: ответ должен относиться именно к
 нашей ограниченной схеме без rehosting и offline redistribution.
@@ -31,7 +32,7 @@ Hello Quran.Foundation Developer Relations team,
 
 We are preparing the public Web MVP of **Iqro**, a Quran reading and learning application.
 Our current staging application is available at <https://staging.iqro.forum>. The planned
-production web origin is `[PRODUCTION URL]`. The same first-party backend API is designed to
+production web origin is <https://iqro.forum>. The same first-party backend API is designed to
 support our future iOS/Android application and Telegram Mini App.
 
 We would like written confirmation that the following use of Quran.Foundation chapter-reciter
@@ -69,8 +70,10 @@ without sharing secrets.
 
 - Developer/app owner: `[FULL LEGAL NAME / ORGANIZATION]`
 - Developer Console account: `[ACCOUNT EMAIL]`
-- Privacy Policy: `[PUBLIC PRIVACY URL]`
-- Terms of Use: `[PUBLIC TERMS URL]`
+- Privacy Policy: <https://staging.iqro.forum/en/privacy>
+- Terms of Use: <https://staging.iqro.forum/en/terms>
+- Providers: <https://staging.iqro.forum/en/providers>
+- Sources and licenses: <https://staging.iqro.forum/en/sources>
 
 Thank you.
 
