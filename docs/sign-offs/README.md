@@ -17,19 +17,23 @@ Sign-off — это воспроизводимое письменное реше
    [quran-content-acceptance.md](../quran-content-acceptance.md) показывает обнаруженный
    blocker: текущий
    `madani-hafs@1.0.2` заблокирован provenance page artwork и не является production candidate.
-4. Для Quran.Foundation audio отправить
+4. Для полного разрешённого каталога Quran.Foundation audio отправить
    [готовый запрос](quran-foundation-audio-confirmation-request.md) и сохранить безопасное
    резюме ответа в
    [license decision record](quran-foundation-audio-license-decision-template.md).
-5. На каждого активируемого чтеца скопировать и заполнить
+5. Каталог провайдера синхронизировать в `draft`: наличие записи в API не является автоматическим
+   разрешением на публикацию и не доказывает совместимость с выбранным риваятом/мусхафом.
+6. На каждого активируемого чтеца и вариант декламации скопировать и заполнить
    [religious/editorial review](quran-audio-editorial-review-template.md).
-6. Product owner подписывает release decision только после зелёного CI/security, monitoring
+7. Product owner подписывает release decision только после зелёного CI/security, monitoring
    alert test, offsite backup evidence и production rollback smoke.
 
 ## Что означает отсутствие sign-off
 
 - Quran dataset без полного acceptance record не активируется в production.
 - Чтец без лицензионного и religious/editorial решения остаётся draft.
+- Новый мусхаф/риваят без отдельной версии dataset, provenance и проверки соответствующего
+  аудио остаётся draft; разные чтения не смешиваются внутри одной edition.
 - Audio может быть полностью выключено, не блокируя text-only Web MVP, если Quran dataset сам
   имеет отдельную полную приёмку.
 - Дедлайн не превращает пустое поле reviewer в разрешение.

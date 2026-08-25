@@ -2,8 +2,9 @@
 
 Дата подготовки: 25 августа 2026 года.
 
-Назначение: получить письменное подтверждение конкретной streaming-схемы Iqro. В письмо нельзя
-вставлять client secret, access token, внутренние URL или другие credentials.
+Назначение: получить письменное подтверждение конкретной streaming-схемы Iqro для полного
+разрешённого каталога чтецов и декламаций, а не только для трёх тестовых записей. В письмо
+нельзя вставлять client secret, access token, внутренние URL или другие credentials.
 
 Запрос отправляется на `developers@quran.com` с email, связанного с Developer Console. Этот
 адрес опубликован в актуальных
@@ -26,7 +27,7 @@ API credentials и Connected Apps listing — разные процессы: cre
 
 ## Готовый текст
 
-**Subject:** Written confirmation request — Quran.Foundation recitation streaming in Iqro
+**Subject:** Written confirmation request — complete Quran.Foundation recitation catalog streaming in Iqro
 
 Hello Quran.Foundation Developer Relations team,
 
@@ -35,12 +36,15 @@ Our current staging application is available at <https://staging.iqro.forum>. Th
 production web origin is <https://iqro.forum>. The same first-party backend API is designed to
 support our future iOS/Android application and Telegram Mini App.
 
-We would like written confirmation that the following use of Quran.Foundation chapter-reciter
-audio is permitted under the current Developer Terms:
+We would like written confirmation that the following use of the complete Quran.Foundation
+chapter-reciter and ayah-by-ayah recitation catalog available to our production credentials is
+permitted under the current Developer Terms:
 
 1. Our backend uses production Content API credentials stored only in the server environment.
-2. The application displays reciter and chapter metadata and streams the official audio URL
-   only inside our first-party web, mobile and Telegram Mini App user experience.
+2. The application synchronizes the available reciter/recitation catalog, displays its metadata,
+   and streams the official audio URL only inside our first-party web, mobile and Telegram Mini
+   App user experience. We intend to support every resource permitted to our application,
+   including additional qira'at/riwayat if and when they appear in that catalog.
 3. We do not copy or rehost Quran.Foundation audio in Cloudflare R2 or on our application
    server.
 4. We do not offer offline download, redistribution, a dataset, data feed, content package or
@@ -63,10 +67,16 @@ Could you please confirm:
 - What exact attribution text and links should be shown for recitations and metadata?
 - Are there additional restrictions for Web, native mobile, or Telegram Mini App clients?
 - Is a five-day metadata refresh schedule acceptable for these chapter-reciter resources?
-- Do you require any additional review before we enable three reciters in production?
+- May we expose every chapter-reciter and ayah-by-ayah recitation resource available to our
+  production credentials, subject to per-resource source attribution and our editorial checks?
+- Does any resource, reciter, qira'ah or riwayah in the API have source-specific restrictions
+  that are not represented in the API metadata?
+- Do you require additional review before we progressively enable the full permitted catalog in
+  production?
 
-We can provide architecture diagrams, API endpoints used, screenshots and the exact reciter IDs
-without sharing secrets.
+We can provide architecture diagrams, API endpoints used, screenshots and the exact resource IDs
+without sharing secrets. We will initially ingest catalog entries as non-public drafts and publish
+them only after source, riwayah compatibility, attribution and playback checks pass.
 
 - Developer/app owner: `[FULL LEGAL NAME / ORGANIZATION]`
 - Developer Console account: `[ACCOUNT EMAIL]`

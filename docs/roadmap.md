@@ -53,6 +53,9 @@ production bundle. Это ещё не означает готовность
 - инфраструктура оплачивается по текущей нагрузке, но каждый этап сохраняет точки
   горизонтального масштабирования;
 - точность, лицензии и редакционный review религиозного контента являются release gate;
+- целевой каталог включает все официально доступные и разрешённые мусхафы/риваяты, чтецов,
+  переводы, тафсиры и связанные ресурсы; обнаружение ресурса не равно автоматической
+  публикации — новые позиции сначала поступают в `draft`;
 - новые домены подключаются отдельно и не усложняют Quran-модели;
 - общий API/OpenAPI и sync protocol важнее буквального повторного использования UI;
 - переход к следующему профилю мощности выполняется по capacity test и production-метрикам.
@@ -94,7 +97,8 @@ flowchart LR
   временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
 - [x] Подключить к staging существующий Quran.Foundation production API-доступ без раскрытия
   credentials и проверить read-only авторизацию из backend: каталог доступен (21 chapter
-  reciter на 25 августа 2026 года). Фоновая синхронизация намеренно оставлена выключенной;
+  reciter и 12 ayah-by-ayah recitation resources на 25 августа 2026 года; все 21 chapter
+  resource помечены провайдером как Hafs). Фоновая синхронизация намеренно оставлена выключенной;
   Quran edition технически активна только на noindex staging, а импорт/публикация реального
   аудио ждут внешних content/license sign-off. Bounded one-shot probe трёх реальных чтецов
   подтвердил delivery, но обнаружил metadata size drift у source `7`; importer теперь всегда
@@ -254,6 +258,15 @@ flowchart LR
   официального King Fahd Complex page source, после чего повторяются checksums,
   geometry/manual review и все три sign-off. Подробности — в
   [source provenance audit](quran-source-provenance-audit.md).
+- [ ] Расширить Quran.Foundation importer с текущей Hafs-only проверки до безопасного полного
+  каталога: синхронизировать chapter и ayah resource IDs в `draft`, сопоставлять qira'ah/riwayah
+  с конкретной `QuranEditionVersion`, запрещать несовместимые пары и публиковать каталог
+  порциями после rights/attribution/editorial/playback checks. Наличие ресурса в API не означает
+  разрешение копировать или rehost его файлы.
+- [ ] Импортировать каждый официальный KFGQPC риваят как отдельную versioned Quran edition.
+  Developer platform сейчас публикует как минимум Hafs, Warsh, Shu'bah, Qaloun, Al-Douri и
+  Al-Sousi text/font resources; точный доступный production catalog, page-art packages и права
+  на WebP/R2/CDN должны быть подтверждены официальным inventory/ответом KFGQPC.
 - [x] Подготовить единый Web MVP sign-off package: границы релиза, готовый запрос в
   Quran.Foundation, per-reciter religious/editorial review и product release decision.
   [Пакет и порядок заполнения](sign-offs/README.md).
@@ -286,10 +299,13 @@ multi-client MVP остаётся на этапах B–D.
 
 - [ ] Offline package domain, manifests, resume/checksum и quota/eviction policy.
 - [ ] Flutter background audio, audio focus, lock-screen controls и восстановление очереди.
-- [ ] Несколько лицензированных чтецов и проверенные bitrate renditions.
+- [ ] Полный разрешённый каталог чтецов и декламаций: автоматическое обнаружение новых ресурсов,
+  draft-first импорт, привязка к совместимому риваяту, проверенные bitrate renditions и
+  поэтапная публикация без необходимости выпускать новую версию приложения.
 - [ ] Playback state sync при сохранении device-local очереди.
 - [ ] Flutter local prayer calculation и notification scheduler с timezone/location reschedule.
-- [ ] Translation/tafsir placeholder schema/API/UI.
+- [ ] Versioned translation/tafsir schema/API/UI и provider catalog sync; каждый источник имеет
+  собственные права, attribution, locale и editorial status.
 - [ ] Reading sessions, goals и streaks.
 - [ ] Editorial approvals, safe feedback attachments и user notifications.
 

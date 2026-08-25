@@ -1,4 +1,4 @@
-# KFGQPC official production source package request
+# KFGQPC official production source catalog request
 
 Дата подготовки: 25 августа 2026 года.
 
@@ -14,22 +14,28 @@
 
 ## Что именно запрашивается
 
-Нужен не произвольный PDF из стороннего зеркала, а официальный immutable source package:
+Нужен не произвольный PDF из стороннего зеркала, а полный актуальный каталог официальных
+immutable source packages, доступных для web/mobile приложений:
 
 1. полный Madinah Mushaf, Hafs ʿan ʿAsim, 604-page vector artwork или другой официальный
    page-image master, разрешённый для приложений;
-2. официальный Uthmanic Hafs text/data package в JSON/CSV/SQL/XML и соответствующие fonts;
-3. page, surah, ayah, juz, hizb и line mapping, если он входит в официальный пакет;
-4. точное имя и номер версии, дата выпуска, исходный filename, размер и опубликованные
+2. все остальные официально доступные варианты/риваяты и их соответствующие text, font,
+   page artwork и mapping packages, включая опубликованные на developer platform Warsh,
+   Shu'bah, Qaloun, Al-Douri и Al-Sousi;
+3. официальный Uthmanic text/data package каждого варианта в JSON/CSV/SQL/XML или эквивалентном
+   формате и соответствующие fonts;
+4. page, surah, ayah, juz, hizb и line mapping, если он входит в соответствующий пакет;
+5. актуальный machine-readable inventory или способ узнавать о новых версиях и вариантах;
+6. точное имя и номер версии, дата выпуска, исходный filename, размер и опубликованные
    checksums;
-5. user manual, terms/license и требуемый attribution;
-6. письменное подтверждение допустимости неизменяющего технического преобразования page artwork
+7. user manual, terms/license и требуемый attribution отдельно для каждого пакета;
+8. письменное подтверждение допустимости неизменяющего технического преобразования page artwork
    в WebP, размещения immutable assets в Cloudflare R2/CDN и отображения в first-party Web,
    iOS/Android и Telegram Mini App.
 
 ## Готовое письмо
 
-**Subject:** Request for official Madinah Mushaf Hafs production source package and usage confirmation — Iqro
+**Subject:** Request for the complete official Mushaf production source catalog and usage confirmation — Iqro
 
 Hello King Fahd Glorious Qur'an Printing Complex Developer Team,
 
@@ -41,18 +47,25 @@ For our production release, we want to use only an official, verifiable source p
 directly by the King Fahd Glorious Qur'an Printing Complex. We do not want to rely on an
 unofficial mirror or a third-party PDF.
 
-Could you please provide the official download link or access procedure for the current
-**Madinah Mushaf, Hafs ʿan ʿAsim** production package containing, where available:
+Could you please provide the official download links or access procedure for the complete
+current catalog of Mushaf and riwayah production packages that the Complex permits in web and
+smart applications? We need **Madinah Mushaf, Hafs ʿan ʿAsim**, and all other officially
+available variants, including the Warsh, Shu'bah, Qaloun, Al-Douri and Al-Sousi resources
+currently described on the developer platform.
 
-1. the complete 604-page vector artwork or another official page-image master suitable for
-   websites and smart applications;
-2. the official Uthmanic Hafs Quran text/data package in JSON, CSV, SQL, XML, or equivalent
-   formats, together with the required fonts;
+For each available variant, could you please provide, where available:
+
+1. the complete vector artwork or another official page-image master suitable for websites and
+   smart applications;
+2. the corresponding official Uthmanic Quran text/data package in JSON, CSV, SQL, XML, or
+   equivalent formats, together with the required fonts;
 3. page, surah, ayah, juz, hizb, and line mapping data;
 4. the user manual, release/version identifier, original filenames, file sizes, and official
    checksums;
 5. the applicable license/terms and the exact attribution wording and links required in the
-   application.
+   application;
+6. a current catalog/inventory or notification method that lets us discover new variants,
+   corrections and releases without relying on unofficial mirrors.
 
 We also request written confirmation for this limited technical use:
 
@@ -89,5 +102,6 @@ Thank you.
 - точный attribution и любые ограничения;
 - решение: `approved`, `separate license required`, `changes required` или `rejected`.
 
-Файлы из ответа сначала сохраняются как неизменяемый upstream artifact. Из них создаётся новая
-версия dataset; существующий `madani-hafs@1.0.2` не перезаписывается.
+Файлы из ответа сначала сохраняются как неизменяемые upstream artifacts. Каждый риваят получает
+отдельные edition code и version; варианты никогда не объединяются в один dataset. Из официальных
+пакетов создаются новые datasets; существующий `madani-hafs@1.0.2` не перезаписывается.
