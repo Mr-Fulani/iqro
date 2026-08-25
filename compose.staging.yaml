@@ -42,7 +42,9 @@ services:
     pids_limit: 64
 
   tls-proxy:
-    image: caddy:2.11.4-alpine
+    image: ${STAGING_CADDY_IMAGE:-quran-platform-caddy:${APP_VERSION:-local}}
+    build:
+      context: ./ops/staging/caddy
     restart: unless-stopped
     environment:
       STAGING_HOST: ${STAGING_HOST:?Set STAGING_HOST in the staging env file}
