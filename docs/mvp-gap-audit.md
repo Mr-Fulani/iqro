@@ -244,8 +244,10 @@ runtime. Основной незакрытый объём находится в 
 1. Зелёный dependency/image gate на release commit и expanded browser/device matrix.
 2. Capacity/soak test на staging и документирование SLO/RPO/RTO evidence.
 3. Server/domain/TLS, privacy/license/religious sign-off.
-   Repo-side staging bootstrap, automatic TLS proxy, isolated secrets/test email и preflight
-   готовы; фактический VPS/DNS/R2 deployment и evidence ещё отсутствуют.
+   Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,
+   backup drill и pre-publication evidence уже есть. Отдельный R2 staging bucket/scoped token/CORS
+   настроен и технический Range-object проверен; custom media hostname ждёт DNS propagation,
+   а принятый Quran/audio corpus и финальные content sign-off ещё отсутствуют.
 4. Развернуть готовый monitoring baseline, подключить внешний uptime/provider telemetry,
    проверить alert delivery; offsite bucket также блокирует широкий production launch.
 

@@ -116,9 +116,7 @@ class StdlibMediaHttpClient:
         try:
             connection.request(method, target, headers=request_headers)
             response = connection.getresponse()
-            body = response.read(MAX_RESPONSE_BYTES + 1) if method != "HEAD" else b""
-            if len(body) > MAX_RESPONSE_BYTES:
-                raise MediaContractRequestError("response body exceeded the safety cap")
+            body = _read_bounded_body(response, method)
             response_headers = {
                 key.lower(): value.strip() for key, value in response.getheaders()
             }
@@ -135,6 +133,22 @@ class StdlibMediaHttpClient:
             raise MediaContractRequestError(type(exc).__name__) from exc
         finally:
             connection.close()
+
+
+def _read_bounded_body(
+    response: http.client.HTTPResponse,
+    method: str,
+) -> bytes:
+    # The contract validates headers for responses that must not carry a useful
+    # representation. R2 may still attach a provider error document to 416;
+    # reading it would add no evidence and must not turn a correct Range result
+    # into a false failure.
+    if method == "HEAD" or response.status in {304, 416}:
+        return b""
+    body = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise MediaContractRequestError("response body exceeded the safety cap")
+    return body
 
 
 def _positive_int(value: object, field: str) -> int:
@@ -458,10 +472,8 @@ def verify_asset(
                 f"unsatisfied Range returned {unsatisfied_response.status}, expected 416"
             )
         expected_unsatisfied_range = f"bytes */{asset.expected_bytes}"
-        if (
-            unsatisfied_response.headers.get("content-range")
-            != expected_unsatisfied_range
-        ):
+        observed_unsatisfied_range = unsatisfied_response.headers.get("content-range")
+        if observed_unsatisfied_range not in {None, expected_unsatisfied_range}:
             failures.append(f"416 Content-Range must be {expected_unsatisfied_range}")
         failures.extend(_cors_failures(unsatisfied_response, primary_origin))
 

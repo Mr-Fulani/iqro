@@ -1,0 +1,16 @@
+{
+  "name": "iqro-staging-r2-diagnostic",
+  "version": 1,
+  "origins": [
+    "https://staging.iqro.forum"
+  ],
+  "assets": [
+    {
+      "name": "staging-range-probe",
+      "url": "https://pub-bda21714632c41089bdc42dee0aa3042.r2.dev/diagnostics/staging-media-contract/1.0.0/range-probe.bin",
+      "bytes": 63488,
+      "content_type": "application/octet-stream",
+      "etag": "\"875686fa700a39c0f6316bda2e52f35a\""
+    }
+  ]
+}

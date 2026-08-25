@@ -9,6 +9,8 @@ from ops.media.contract import (
     DEFAULT_MIN_CACHE_SECONDS,
     AssetSpec,
     HttpResponse,
+    MediaContractRequestError,
+    _read_bounded_body,
     load_manifest,
     verify_asset,
 )
@@ -61,6 +63,32 @@ class FakeClient:
         if request_headers.get("If-None-Match") == etag:
             return HttpResponse(304, response_headers, b"")
         raise AssertionError("unexpected request")
+
+
+class FakeHttpResponse:
+    def __init__(self, status: int, body: bytes) -> None:
+        self.status = status
+        self.body = body
+        self.read_calls: list[int] = []
+
+    def read(self, amount: int) -> bytes:
+        self.read_calls.append(amount)
+        return self.body[:amount]
+
+
+class Missing416ContentRangeClient(FakeClient):
+    def request(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+    ) -> HttpResponse:
+        response = super().request(method, url, headers)
+        if response.status == 416:
+            mutable_headers = dict(response.headers)
+            mutable_headers.pop("content-range", None)
+            return HttpResponse(response.status, mutable_headers, response.body)
+        return response
 
 
 class MediaContractTests(unittest.TestCase):
@@ -159,6 +187,29 @@ class MediaContractTests(unittest.TestCase):
             path.write_text(json.dumps(raw), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "strong ETag"):
                 load_manifest(path)
+
+    def test_ignores_provider_error_document_for_unsatisfied_range(self) -> None:
+        response = FakeHttpResponse(416, b"provider error document" * 10)
+
+        body = _read_bounded_body(response, "GET")  # type: ignore[arg-type]
+
+        self.assertEqual(body, b"")
+        self.assertEqual(response.read_calls, [])
+
+    def test_still_rejects_oversized_success_body(self) -> None:
+        response = FakeHttpResponse(206, b"x" * 65)
+
+        with self.assertRaisesRegex(MediaContractRequestError, "safety cap"):
+            _read_bounded_body(response, "GET")  # type: ignore[arg-type]
+
+    def test_allows_provider_to_omit_content_range_on_416(self) -> None:
+        result = verify_asset(
+            self.asset,
+            self.origins,
+            Missing416ContentRangeClient(),
+        )
+
+        self.assertTrue(result.passed, result.failures)
 
 
 if __name__ == "__main__":

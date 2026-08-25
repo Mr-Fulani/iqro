@@ -7,13 +7,19 @@ Staging — отдельная публичная копия приложени�
 production-секреты или production-bucket.
 
 Фактический бюджетный staging проекта создан: `https://staging.iqro.forum` работает на Hetzner
-CX23 через budget overlay, TLS и запрет индексации активны, отдельный Cloudflare R2 bucket
-настроен, backup/verify/restore-check выполнен. Последний зафиксированный pre-publication
+CX23 через budget overlay, TLS и запрет индексации активны, backup/verify/restore-check выполнен.
+Для media создан отдельный Cloudflare R2 bucket `iqro-staging-media`, ограниченный этим bucket
+API token и CORS для `https://staging.iqro.forum`; public-read/Range проверен на отдельном
+диагностическом объекте. Делегирование `iqro.forum` на Cloudflare nameservers принято реестром
+25 августа 2026 года, но custom hostname `media.staging.iqro.forum` включается только после
+активации зоны и выпуска edge TLS certificate. Последний зафиксированный pre-publication
 capacity результат находится в
 [отчёте CX23](capacity/staging-cx23-prepublication-2026-08-25.md).
 
-Среда ещё не является production: R2 custom media domain и согласованный media/Quran corpus не
-активированы, offsite backup и постоянный production-sized observability stack не закрыты.
+Среда ещё не является production: R2 custom media domain ожидает DNS propagation, а
+согласованный media/Quran corpus не активирован; offsite backup и постоянный production-sized
+observability stack не закрыты. До статуса custom domain `Active` staging продолжает использовать
+временный rate-limited `r2.dev` только для технической диагностики, не для продуктового аудио.
 Инструкция ниже остаётся источником истины для пересоздания staging и последующего production
 rollout; секреты и IP-ограничения в документацию не записываются.
 
