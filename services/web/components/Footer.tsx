@@ -33,8 +33,13 @@ export function Footer() {
 
           <nav className="footer-column" aria-label={t("footer.legal")}>
             <p className="footer-column-title">{t("footer.legal")}</p>
+            <Link href={localizedPath(locale, "/legal")}>{t("footer.legalHub")}</Link>
             <Link href={localizedPath(locale, "/privacy")}>{t("footer.privacy")}</Link>
             <Link href={localizedPath(locale, "/terms")}>{t("footer.terms")}</Link>
+            <Link href={localizedPath(locale, "/cookies")}>{t("footer.cookies")}</Link>
+            <Link href={localizedPath(locale, "/data-rights")}>{t("footer.dataRights")}</Link>
+            <Link href={localizedPath(locale, "/providers")}>{t("footer.providers")}</Link>
+            <Link href={localizedPath(locale, "/security")}>{t("footer.security")}</Link>
             <Link href={localizedPath(locale, "/sources")}>{t("footer.sources")}</Link>
             <Link href={localizedPath(locale, "/contacts")}>{t("footer.contacts")}</Link>
           </nav>

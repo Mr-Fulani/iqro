@@ -10,8 +10,13 @@ const PRIORITY: Record<(typeof PUBLIC_INDEXABLE_PATHS)[number], number> = {
   "/quran": 0.9,
   "/audio": 0.8,
   "/prayer": 0.7,
+  "/legal": 0.4,
   "/privacy": 0.3,
   "/terms": 0.3,
+  "/cookies": 0.3,
+  "/data-rights": 0.4,
+  "/providers": 0.3,
+  "/security": 0.3,
   "/contacts": 0.4,
   "/sources": 0.6,
 };

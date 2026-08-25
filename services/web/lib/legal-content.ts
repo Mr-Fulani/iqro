@@ -5,9 +5,10 @@ export type LegalSection = {
   title: string;
   paragraphs: string[];
   bullets?: string[];
+  links?: Array<{ label: string; href: string }>;
 };
 
-type LegalDocument = {
+export type LegalDocumentCopy = {
   title: string;
   description: string;
   updated: string;
@@ -45,8 +46,8 @@ type SourcesCopy = {
 };
 
 export type LegalCopy = {
-  privacy: LegalDocument;
-  terms: LegalDocument;
+  privacy: LegalDocumentCopy;
+  terms: LegalDocumentCopy;
   contacts: ContactCopy;
   sources: SourcesCopy;
 };
@@ -92,14 +93,14 @@ const ru = (config: LegalConfig): LegalCopy => ({
         title: "5. Получатели и передача",
         paragraphs: [
           "Доступ получают только уполномоченные сотрудники и поставщики инфраструктуры, хостинга, email, мониторинга и поддержки в необходимом объёме. Аудио может загружаться с указанного правообладателем внешнего источника; такой запрос раскрывает источнику IP и технические заголовки.",
-          "Список поставщиков, страны обработки и механизм трансграничной передачи должны быть утверждены и опубликованы оператором до production-запуска.",
+          "Текущие поставщики, их роли и прямые ссылки на их правила опубликованы на странице «Поставщики и внешние сервисы». Новый поставщик, страна обработки и законный механизм трансграничной передачи должны быть проверены до включения соответствующей функции в production.",
         ],
       },
       {
         title: "6. Сроки хранения и удаление",
         paragraphs: [
           "Email-челленджи штатно очищаются через 24 часа, неактивные auth-сессии — через 90 дней, журналы sync-изменений и операций — через 180 дней. Tombstone закладок и напоминаний хранятся дольше окна офлайн-синхронизации, чтобы удалённые данные не восстановились на старом устройстве.",
-          "Удаление аккаунта запускается из кабинета после повторного подтверждения email, имеет 7-дневный период отмены, затем персональные настройки и идентификаторы удаляются или обезличиваются. Резервные копии и обязательные журналы могут исчезать по отдельному ограниченному циклу.",
+          "Удаление аккаунта запускается из кабинета после повторного подтверждения email и имеет 7-дневный период отмены. После него рабочая копия персональных данных удаляется или необратимо обезличивается не позднее 30 дней, а остаточные копии исчезают из ротационных backup не позднее 90 дней, кроме ограниченно хранимых данных, необходимых по закону или для безопасности.",
         ],
       },
       {
@@ -113,6 +114,13 @@ const ru = (config: LegalConfig): LegalCopy => ({
         paragraphs: [
           "Сервис не предназначен для самостоятельного предоставления персональных данных детьми младше возраста, установленного применимым законом; им нужна помощь родителя или опекуна. Мы применяем разграничение доступа, шифрование транспорта, ограниченные сроки хранения и журналирование безопасности, но ни один сервис не может обещать абсолютную защиту.",
           "При существенном изменении обработки мы обновим дату и предоставим дополнительное уведомление, когда этого требует закон.",
+        ],
+      },
+      {
+        title: "9. Quran.Foundation и ограничения использования",
+        paragraphs: [
+          "Iqro — независимый сервис, использующий Quran.Foundation Content API и ссылающийся на Quran.com; он не является официальным приложением Quran.Foundation. Сейчас вход через Quran.Foundation и доступ к его пользовательскому аккаунту не используются.",
+          "Мы не продаём персональные данные, не строим рекламные профили по религиозному поведению, не используем данные для добычи несвязанных выводов и не обучаем модели ИИ на пользовательском контенте без отдельного явного согласия.",
         ],
       },
     ],
@@ -149,10 +157,11 @@ const en = (config: LegalConfig): LegalCopy => {
         { title: "2. Data we process", paragraphs: ["The data depends on the features you use."], bullets: ["installation and device identifiers, app version, language, time zone, sessions, and security events;", "email and verification state for one-time-code sign-in;", "reading position, bookmarks, reminders, prayer settings, and sync state;", "support ticket subject, messages, and history;", "IP address, request ID, and minimal request logs for security, diagnostics, and abuse prevention."] },
         { title: "3. Purposes and legal bases", paragraphs: ["We process data to provide requested features, synchronize clients, authenticate users, provide support, secure the service, prevent abuse, and meet legal duties.", "Depending on the activity and applicable law, the basis is performance of the terms or steps you request, legitimate interests in a secure and reliable service, a legal obligation, or consent where required. The operator must confirm the exact basis for the launch jurisdiction."] },
         { title: "4. Cookies and local storage", paragraphs: ["Necessary HttpOnly cookies hold the refresh session and installation key; a locale cookie remembers language. localStorage holds the sync queue and operational state, while sessionStorage holds temporary return paths and notices. These mechanisms support requested functionality and are not used for advertising profiles."] },
-        { title: "5. Recipients and transfers", paragraphs: ["Access is limited to authorized staff and necessary infrastructure, hosting, email, monitoring, and support providers. Audio may load from a rights holder's external source, which receives your IP address and technical request headers.", "The operator must approve and publish the actual providers, processing countries, and transfer safeguards before production launch."] },
-        { title: "6. Retention and deletion", paragraphs: ["Email challenges are normally removed after 24 hours, inactive auth sessions after 90 days, and sync change/operation logs after 180 days. Bookmark and reminder tombstones outlive the offline-sync window so old devices cannot resurrect deleted records.", "Account deletion is requested in the profile after fresh email verification, has a 7-day cancellation period, and then deletes or de-identifies personal settings and identifiers. Backups and legally required logs may follow a separate, limited cycle."] },
+        { title: "5. Recipients and transfers", paragraphs: ["Access is limited to authorized staff and necessary infrastructure, hosting, email, monitoring, and support providers. Audio may load from a rights holder's external source, which receives your IP address and technical request headers.", "Current providers, their roles, and direct privacy links are published on Providers and external services. Every new provider, processing country, and lawful international-transfer safeguard must be reviewed before enabling the related production feature."] },
+        { title: "6. Retention and deletion", paragraphs: ["Email challenges are normally removed after 24 hours, inactive auth sessions after 90 days, and sync change/operation logs after 180 days. Bookmark and reminder tombstones outlive the offline-sync window so old devices cannot resurrect deleted records.", "Account deletion is requested in the profile after fresh email verification and has a seven-day cancellation period. The working copy of personal data is then deleted or irreversibly de-identified within 30 days, and residual copies age out of rotating backups within 90 days, except narrowly retained data required by law or security."] },
         { title: "7. Your rights", paragraphs: [`Subject to applicable law, you may request access, correction, deletion, restriction, objection, portability, or withdrawal of consent. Email ${config.contactEmail}; we may verify identity to protect the account. You may also complain to the competent supervisory authority.`] },
         { title: "8. Children, security, and changes", paragraphs: ["The service is not intended for children below the age at which they may independently provide personal data under applicable law; a parent or guardian should assist them. We use access controls, transport encryption, bounded retention, and security logging, but no service can promise absolute security.", "If processing changes materially, we will update the date and provide additional notice where required."] },
+        { title: "9. Quran.Foundation and use restrictions", paragraphs: ["Iqro is an independent service that uses the Quran.Foundation Content API and references Quran.com; it is not an official Quran.Foundation app. Quran.Foundation sign-in and user-account access are not currently used.", "We do not sell personal data, build advertising profiles from religious behavior, mine it for unrelated inferences, or train AI models on user content without separate explicit consent."] },
       ],
     },
     terms: {
@@ -184,10 +193,11 @@ const ar = (config: LegalConfig): LegalCopy => {
         { title: "2. البيانات التي نعالجها", paragraphs: ["تختلف البيانات بحسب الوظائف التي تستخدمها."], bullets: ["معرّفات التثبيت والجهاز وإصدار التطبيق واللغة والمنطقة الزمنية والجلسات وأحداث الأمن؛", "البريد الإلكتروني وحالة التحقق عند الدخول بالرمز المؤقت؛", "موضع القراءة والعلامات والتذكيرات وإعدادات الصلاة وحالة المزامنة؛", "موضوع رسائل الدعم ومحتواها وسجلها؛", "عنوان IP ومعرّف الطلب وسجلات تقنية محدودة للأمن والتشخيص ومنع الإساءة."] },
         { title: "3. الأغراض والأسس القانونية", paragraphs: ["نعالج البيانات لتقديم الوظائف المطلوبة ومزامنة العملاء والتحقق من الهوية والدعم وحماية الخدمة ومنع الإساءة والوفاء بالالتزامات القانونية.", "بحسب النشاط والقانون المنطبق، يستند ذلك إلى تنفيذ الشروط أو اتخاذ خطوات بطلبك أو المصلحة المشروعة في خدمة آمنة وموثوقة أو التزام قانوني أو الموافقة عند لزومها. يجب على المشغّل اعتماد الأساس المحدد في دولة الإطلاق."] },
         { title: "4. ملفات الارتباط والتخزين المحلي", paragraphs: ["تحفظ ملفات HttpOnly الضرورية جلسة التحديث ومفتاح التثبيت، ويحفظ ملف اللغة اختيارك. يحتفظ localStorage بطابور المزامنة والحالة التشغيلية، ويحتفظ sessionStorage بمسار الرجوع والإشعارات المؤقتة. تُستخدم هذه الوسائل للوظائف المطلوبة لا لبناء ملفات إعلانية."] },
-        { title: "5. المستلمون ونقل البيانات", paragraphs: ["يقتصر الوصول على الموظفين المخولين ومقدمي البنية التحتية والاستضافة والبريد والمراقبة والدعم بالقدر اللازم. قد يُحمّل الصوت من مصدر خارجي لصاحب الحقوق، فيتلقى المصدر عنوان IP وترويسات الطلب التقنية.", "يجب على المشغّل اعتماد ونشر المزوّدين الفعليين ودول المعالجة وضمانات النقل قبل الإطلاق الإنتاجي."] },
-        { title: "6. مدة الحفظ والحذف", paragraphs: ["تُحذف طلبات رمز البريد عادة بعد 24 ساعة، وجلسات الدخول غير النشطة بعد 90 يومًا، وسجلات تغييرات وعمليات المزامنة بعد 180 يومًا. تبقى علامات حذف العلامات والتذكيرات مدة تتجاوز نافذة المزامنة دون اتصال كي لا يعيد جهاز قديم بيانات محذوفة.", "يُطلب حذف الحساب من الملف الشخصي بعد تحقق جديد من البريد، مع مهلة إلغاء 7 أيام، ثم تُحذف الإعدادات والمعرّفات الشخصية أو تزال صلتها بالشخص. قد تتبع النسخ الاحتياطية والسجلات الإلزامية دورة منفصلة ومحدودة."] },
+        { title: "5. المستلمون ونقل البيانات", paragraphs: ["يقتصر الوصول على الموظفين المخولين ومقدمي البنية التحتية والاستضافة والبريد والمراقبة والدعم بالقدر اللازم. قد يُحمّل الصوت من مصدر خارجي لصاحب الحقوق، فيتلقى المصدر عنوان IP وترويسات الطلب التقنية.", "تنشر صفحة المزوّدين والخدمات الخارجية أسماء المزوّدين الحاليين وأدوارهم وروابط الخصوصية. يجب مراجعة كل مزوّد جديد ودولة المعالجة وضمان النقل القانوني قبل تشغيل الوظيفة في production."] },
+        { title: "6. مدة الحفظ والحذف", paragraphs: ["تُحذف طلبات رمز البريد عادة بعد 24 ساعة، وجلسات الدخول غير النشطة بعد 90 يومًا، وسجلات تغييرات وعمليات المزامنة بعد 180 يومًا. تبقى علامات حذف العلامات والتذكيرات مدة تتجاوز نافذة المزامنة دون اتصال كي لا يعيد جهاز قديم بيانات محذوفة.", "يُطلب حذف الحساب من الملف الشخصي بعد تحقق جديد من البريد مع مهلة إلغاء 7 أيام. ثم تُحذف النسخة العاملة أو تزال صلتها بالشخص نهائيًا خلال 30 يومًا، وتختفي البقايا من النسخ الاحتياطية الدورية خلال 90 يومًا، باستثناء الحد اللازم قانونًا أو أمنيًا."] },
         { title: "7. حقوقك", paragraphs: [`وفق القانون المنطبق، يمكنك طلب الوصول أو التصحيح أو الحذف أو التقييد أو الاعتراض أو نقل البيانات أو سحب الموافقة. راسل ${config.contactEmail}؛ وقد نتحقق من الهوية لحماية الحساب. ويمكنك الشكوى إلى الجهة الرقابية المختصة.`] },
         { title: "8. الأطفال والأمن والتغييرات", paragraphs: ["الخدمة غير مخصصة لأن يقدم طفل دون السن القانونية بياناته الشخصية مستقلًا؛ يجب أن يساعده والد أو ولي. نستخدم التحكم في الوصول وتشفير النقل ومدد حفظ محدودة وسجلات أمنية، لكن لا توجد خدمة تضمن أمنًا مطلقًا.", "عند تغير المعالجة بصورة جوهرية سنحدّث التاريخ ونقدم إشعارًا إضافيًا عندما يقتضي القانون."] },
+        { title: "9. Quran.Foundation وقيود الاستخدام", paragraphs: ["Iqro خدمة مستقلة تستخدم Quran.Foundation Content API وتشير إلى Quran.com، وليست تطبيقًا رسميًا للمؤسسة. لا نستخدم حاليًا تسجيل الدخول أو الوصول إلى حساب المستخدم في Quran.Foundation.", "لا نبيع البيانات ولا نبني ملفًا إعلانيًا من السلوك الديني ولا نستخرج استنتاجات غير مرتبطة ولا ندرب نماذج الذكاء الاصطناعي على محتوى المستخدم دون موافقة صريحة منفصلة."] },
       ],
     },
     terms: {
@@ -219,10 +229,11 @@ const tr = (config: LegalConfig): LegalCopy => {
         { title: "2. İşlediğimiz veriler", paragraphs: ["Veri kapsamı kullandığınız özelliklere göre değişir."], bullets: ["kurulum ve cihaz tanımlayıcıları, uygulama sürümü, dil, saat dilimi, oturumlar ve güvenlik olayları;", "tek kullanımlık kodla giriş için e-posta ve doğrulama durumu;", "okuma konumu, yer imleri, hatırlatıcılar, namaz ayarları ve senkronizasyon durumu;", "destek talebinin konusu, mesajları ve geçmişi;", "güvenlik, teşhis ve kötüye kullanımı önleme için IP adresi, istek kimliği ve sınırlı teknik kayıtlar."] },
         { title: "3. Amaçlar ve hukuki sebepler", paragraphs: ["Verileri istenen özellikleri sunmak, istemcileri eşitlemek, kimlik doğrulamak, destek vermek, hizmeti korumak, kötüye kullanımı önlemek ve hukuki yükümlülükleri yerine getirmek için işleriz.", "Faaliyete ve uygulanacak hukuka göre dayanak; koşulların ifası veya talebiniz üzerine işlem yapılması, güvenli ve güvenilir hizmete ilişkin meşru menfaat, hukuki yükümlülük ya da gerektiğinde açık rızadır. İşletmeci, yayına alınacak ülke için somut işleme şartını hukuk incelemesinde kesinleştirmelidir."] },
         { title: "4. Çerezler ve yerel depolama", paragraphs: ["Zorunlu HttpOnly çerezleri yenileme oturumunu ve kurulum anahtarını, dil çerezi ise seçiminizi saklar. localStorage senkronizasyon kuyruğunu ve işletim durumunu; sessionStorage geçici dönüş yolunu ve bildirimleri tutar. Bunlar istenen işlevler içindir, reklam profili oluşturmak için kullanılmaz."] },
-        { title: "5. Alıcılar ve aktarımlar", paragraphs: ["Erişim, yalnızca yetkili çalışanlar ile gerekli altyapı, barındırma, e-posta, izleme ve destek sağlayıcılarıyla sınırlıdır. Ses, hak sahibinin harici kaynağından yüklenebilir; bu durumda kaynak IP adresinizi ve teknik istek başlıklarını alır.", "İşletmeci, production yayını öncesinde gerçek sağlayıcıları, işleme ülkelerini ve yurt dışı aktarım güvencelerini onaylayıp yayımlamalıdır."] },
-        { title: "6. Saklama ve silme", paragraphs: ["E-posta doğrulama talepleri normalde 24 saat, etkin olmayan kimlik doğrulama oturumları 90 gün, senkronizasyon değişiklik ve işlem kayıtları 180 gün sonra temizlenir. Eski cihazların silinen verileri geri getirmemesi için yer imi ve hatırlatıcı silme kayıtları çevrimdışı senkronizasyon penceresinden daha uzun tutulur.", "Hesap silme, profilden yeni e-posta doğrulamasıyla istenir; 7 günlük iptal süresinden sonra kişisel ayarlar ve tanımlayıcılar silinir veya kimliksizleştirilir. Yedekler ve zorunlu kayıtlar ayrı ve sınırlı bir döngü izleyebilir."] },
+        { title: "5. Alıcılar ve aktarımlar", paragraphs: ["Erişim, yalnızca yetkili çalışanlar ile gerekli altyapı, barındırma, e-posta, izleme ve destek sağlayıcılarıyla sınırlıdır. Ses, hak sahibinin harici kaynağından yüklenebilir; bu durumda kaynak IP adresinizi ve teknik istek başlıklarını alır.", "Güncel sağlayıcılar, rolleri ve doğrudan gizlilik bağlantıları Sağlayıcılar ve harici hizmetler sayfasında yayımlanır. Her yeni sağlayıcı, işleme ülkesi ve hukuka uygun yurt dışı aktarım güvencesi, ilgili production özelliği açılmadan önce incelenir."] },
+        { title: "6. Saklama ve silme", paragraphs: ["E-posta doğrulama talepleri normalde 24 saat, etkin olmayan kimlik doğrulama oturumları 90 gün, senkronizasyon değişiklik ve işlem kayıtları 180 gün sonra temizlenir. Eski cihazların silinen verileri geri getirmemesi için yer imi ve hatırlatıcı silme kayıtları çevrimdışı senkronizasyon penceresinden daha uzun tutulur.", "Hesap silme profilden yeni e-posta doğrulamasıyla istenir ve yedi günlük iptal süresi vardır. Çalışan kişisel veri kopyası sonra en geç 30 günde silinir veya geri döndürülemez biçimde kimliksizleştirilir; kalıntılar dönen yedeklerden 90 gün içinde çıkar. Yasa veya güvenlik için dar kapsamlı veriler istisnadır."] },
         { title: "7. Haklarınız", paragraphs: [`Uygulanacak hukuk kapsamında erişim, düzeltme, silme, kısıtlama, itiraz, veri taşınabilirliği veya rızayı geri alma talebinde bulunabilirsiniz. ${config.contactEmail} adresine yazın; hesabı korumak için kimliğinizi doğrulayabiliriz. Yetkili denetim makamına başvurma hakkınız da vardır.`] },
         { title: "8. Çocuklar, güvenlik ve değişiklikler", paragraphs: ["Hizmet, uygulanacak hukuka göre kişisel verisini tek başına sunamayacak yaştaki çocuklar için bağımsız kullanıma yönelik değildir; ebeveyn veya vasi yardımcı olmalıdır. Erişim kontrolleri, aktarım şifrelemesi, sınırlı saklama ve güvenlik kayıtları kullanırız; ancak hiçbir hizmet mutlak güvenlik vaat edemez.", "İşleme esaslı biçimde değişirse tarihi günceller ve hukuken gerektiğinde ayrıca bildirim yaparız."] },
+        { title: "9. Quran.Foundation ve kullanım sınırları", paragraphs: ["Iqro, Quran.Foundation Content API kullanan ve Quran.com'a atıf yapan bağımsız bir hizmettir; resmî Quran.Foundation uygulaması değildir. Şu anda Quran.Foundation oturum açma veya kullanıcı hesabı erişimi kullanılmaz.", "Kişisel verileri satmayız, dinî davranıştan reklam profili oluşturmayız, ilgisiz çıkarımlar için veri madenciliği yapmayız ve ayrı açık rıza olmadan kullanıcı içeriğiyle yapay zekâ modeli eğitmeyiz."] },
       ],
     },
     terms: {

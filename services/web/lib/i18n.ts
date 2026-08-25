@@ -125,8 +125,13 @@ export const MESSAGES = {
   "footer.account": message("Аккаунт", "Account", "الحساب", "Hesap"),
   "footer.session": message("Управление сессией", "Session management", "إدارة الجلسة", "Oturum yönetimi"),
   "footer.legal": message("Документы", "Legal", "المعلومات القانونية", "Yasal"),
+  "footer.legalHub": message("Все документы", "All legal documents", "كل الوثائق", "Tüm yasal belgeler"),
   "footer.privacy": message("Конфиденциальность", "Privacy", "الخصوصية", "Gizlilik"),
   "footer.terms": message("Условия использования", "Terms of Use", "شروط الاستخدام", "Kullanım Koşulları"),
+  "footer.cookies": message("Cookies", "Cookies", "ملفات الارتباط", "Çerezler"),
+  "footer.dataRights": message("Удаление аккаунта и данных", "Account and data deletion", "حذف الحساب والبيانات", "Hesap ve veri silme"),
+  "footer.providers": message("Поставщики", "Providers", "المزوّدون", "Sağlayıcılar"),
+  "footer.security": message("Безопасность", "Security", "الأمن", "Güvenlik"),
   "footer.sources": message("Источники и лицензии", "Sources and licenses", "المصادر والتراخيص", "Kaynaklar ve lisanslar"),
   "footer.contacts": message("Контакты и feedback", "Contact and feedback", "التواصل والملاحظات", "İletişim ve geri bildirim"),
   "footer.copyright": message(

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LegalSection } from "@/lib/legal-content";
 
 export function LegalDocument({
@@ -28,6 +29,19 @@ export function LegalDocument({
           {section.bullets && (
             <ul>
               {section.bullets.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          )}
+          {section.links && (
+            <ul>
+              {section.links.map((item) => (
+                <li key={`${item.href}:${item.label}`}>
+                  {item.href.startsWith("/") ? (
+                    <Link href={item.href}>{item.label}</Link>
+                  ) : (
+                    <a href={item.href} rel="noreferrer" target="_blank">{item.label}</a>
+                  )}
+                </li>
+              ))}
             </ul>
           )}
         </section>

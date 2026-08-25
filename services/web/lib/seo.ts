@@ -14,8 +14,13 @@ export const PUBLIC_INDEXABLE_PATHS = [
   "/quran",
   "/audio",
   "/prayer",
+  "/legal",
   "/privacy",
   "/terms",
+  "/cookies",
+  "/data-rights",
+  "/providers",
+  "/security",
   "/contacts",
   "/sources",
 ] as const;

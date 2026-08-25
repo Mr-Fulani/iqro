@@ -105,8 +105,13 @@ test("robots and sitemap publish only the current public route set", async ({ re
       "/quran",
       "/audio",
       "/prayer",
+      "/legal",
       "/privacy",
       "/terms",
+      "/cookies",
+      "/data-rights",
+      "/providers",
+      "/security",
       "/contacts",
       "/sources",
     ]) {
@@ -217,7 +222,42 @@ test("legal and contact pages are localized, canonical, and linked from the foot
     "/ru/profile#feedback",
   );
   await expect(page.locator('.app-footer a[href="/ru/privacy"]')).toBeVisible();
+  await expect(page.locator('.app-footer a[href="/ru/data-rights"]')).toBeVisible();
+  await expect(page.locator('.app-footer a[href="/ru/security"]')).toBeVisible();
   await expect(page.locator('.app-footer a[href="/ru/sources"]')).toBeVisible();
+});
+
+test("localized legal suite exposes working deletion and provider disclosures", async ({ page, request }) => {
+  const languages = [
+    ["ru", "Права пользователя и удаление данных"],
+    ["en", "Data rights and account deletion"],
+    ["ar", "حقوق البيانات وحذف الحساب"],
+    ["tr", "Veri hakları ve hesap silme"],
+  ] as const;
+
+  for (const [locale, heading] of languages) {
+    const response = await request.get(`/${locale}/data-rights`);
+    expect(response.ok()).toBe(true);
+    expect(await response.text()).toContain(heading);
+  }
+
+  await page.goto("/ru/data-rights");
+  await expect(page).toHaveTitle("Права пользователя и удаление данных | Quran Platform");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${siteUrl}/ru/data-rights`,
+  );
+  await expect(page.getByRole("link", { name: "Открыть удаление аккаунта в профиле" })).toHaveAttribute(
+    "href",
+    "/ru/profile#danger-zone-title",
+  );
+
+  const providers = await request.get("/en/providers");
+  expect(providers.ok()).toBe(true);
+  const providersHtml = await providers.text();
+  expect(providersHtml).toContain("Hetzner Cloud");
+  expect(providersHtml).toContain("Cloudflare");
+  expect(providersHtml).toContain("Quran.Foundation");
 });
 
 test("sources page renders published provenance without exposing media URLs", async ({ request }) => {
