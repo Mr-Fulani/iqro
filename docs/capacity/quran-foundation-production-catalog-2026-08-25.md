@@ -78,6 +78,15 @@ positioned-word records. Повторный incremental request с сохран�
 ответили `200` с CORS и cache headers. ID `11` сохранён, но рендеринг отключён: snapshot даёт
 relative word-image keys без документированного публичного asset base URL.
 
+Локальная проверка web-reader на реальных production-данных подтвердила все три доступных
+renderer-а: QCF V2 (ID `1`), KFGQPC HAFS (ID `5`) и QCF V4 Tajweed (ID `19`). Для первой
+страницы каждый вариант отрисовал 15 строк и 36 слов; в QCF V4 отображается цветная tajweed-
+разметка. Выбор слова синхронизируется с аятом, а воспроизведение реального chapter audio
+подсвечивает все фрагменты текущего аята. В селекторе доступны локальный скан и IDs `1`, `5`,
+`19`; ID `11` скрыт по принципу fail closed, пока у него нет официального asset base URL.
+Все три варианта Quran.Foundation в текущем каталоге относятся к чтению Hafs и являются
+вариантами отображения, а не отдельными qira'at вроде Warsh или Qaloun.
+
 ## Проверки кода
 
 - Ruff check и format: passed.

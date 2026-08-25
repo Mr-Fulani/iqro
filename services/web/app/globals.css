@@ -1125,6 +1125,157 @@ input:focus, select:focus, textarea:focus {
   pointer-events: none;
 }
 
+.qf-mushaf-view {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.qf-mushaf-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.qf-mushaf-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qf-mushaf-meta strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.qf-mushaf-sheet {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(15, minmax(0, 1fr));
+  width: 100%;
+  aspect-ratio: 900 / 1380;
+  box-sizing: border-box;
+  padding: 8% 6% 7%;
+  overflow: hidden;
+  border: 1px solid #ded4c3;
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(rgba(255, 254, 248, 0.97), rgba(255, 254, 248, 0.97)),
+    radial-gradient(circle at center, rgba(211, 180, 112, 0.18), transparent 70%);
+  box-shadow: 0 8px 24px rgba(80, 60, 30, 0.12);
+}
+
+.qf-mushaf-sheet.is-font-loading .qf-mushaf-line {
+  visibility: hidden;
+}
+
+.qf-mushaf-font-loading,
+.qf-mushaf-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.qf-mushaf-font-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  min-height: 0;
+  background: rgba(255, 254, 248, 0.92);
+}
+
+.qf-mushaf-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  direction: rtl;
+  white-space: nowrap;
+  font-size: clamp(18px, 3.35vw, 38px);
+  line-height: 1.25;
+}
+
+.qf-mushaf-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.035em;
+  border: 0;
+  border-radius: 0.12em;
+  background: transparent;
+  color: #17130d;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.qf-mushaf-word:hover,
+.qf-mushaf-word:focus-visible {
+  outline: none;
+  background: rgba(245, 196, 66, 0.25);
+  box-shadow: 0 0 0 2px rgba(141, 98, 16, 0.32);
+}
+
+.qf-mushaf-word.is-selected {
+  background: rgba(20, 145, 104, 0.22);
+  box-shadow: 0 0 0 1px rgba(8, 94, 68, 0.36);
+}
+
+.qf-mushaf-word.is-playing {
+  background: rgba(20, 145, 104, 0.4);
+  color: #063d2d;
+  box-shadow: 0 0 0 2px rgba(4, 75, 52, 0.48);
+}
+
+.qf-mushaf-page-number {
+  position: absolute;
+  bottom: 2.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #786b57;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qf-mushaf-attribution {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.qf-mushaf-attribution a {
+  color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .mushaf-page-container {
+    padding: 8px;
+  }
+
+  .qf-mushaf-meta {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .qf-mushaf-line {
+    font-size: clamp(16px, 5.1vw, 24px);
+  }
+}
+
 /* -------------------------------------------------------------------------
    Prayer Timetable Cards
 ------------------------------------------------------------------------- */

@@ -6,6 +6,7 @@ import {
   MushafAudioPlayer,
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
+import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -18,6 +19,8 @@ import {
   MushafPage,
   QuranDivision,
   QuranEdition,
+  QuranFoundationMushaf,
+  QuranFoundationMushafPage,
   RubElHizb,
   Surah,
 } from "../../lib/api";
@@ -40,6 +43,10 @@ function QuranContent() {
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
+  const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
+  const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
+  const [foundationMushafPage, setFoundationMushafPage] = useState<QuranFoundationMushafPage | null>(null);
+  const [foundationPageLoading, setFoundationPageLoading] = useState(false);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -52,6 +59,11 @@ function QuranContent() {
   const pendingNavigationPage = useRef<number | null>(null);
   const ayahPlaybackRequestId = useRef(0);
   const playerControlRequestId = useRef(0);
+  const selectedFoundationMushaf = useMemo(
+    () => foundationMushafs.find((mushaf) => mushaf.source_id === selectedFoundationMushafId) || null,
+    [foundationMushafs, selectedFoundationMushafId],
+  );
+  const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
   const [loading, setLoading] = useState<boolean>(true);
@@ -70,6 +82,29 @@ function QuranContent() {
       })
       .catch((err) => {
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
+      });
+  }, []);
+
+  // Display variants are independent from the published Quran text edition.
+  useEffect(() => {
+    api
+      .getQuranFoundationMushafs()
+      .then((mushafs) => {
+        const renderable = mushafs.filter(
+          (mushaf) =>
+            mushaf.rendering.available &&
+            (mushaf.rendering.mode === "page-font" || mushaf.rendering.mode === "unicode-font"),
+        );
+        setFoundationMushafs(renderable);
+        setSelectedFoundationMushafId((sourceId) =>
+          sourceId !== null && renderable.some((mushaf) => mushaf.source_id === sourceId)
+            ? sourceId
+            : null,
+        );
+      })
+      .catch(() => {
+        setFoundationMushafs([]);
+        setSelectedFoundationMushafId(null);
       });
   }, []);
 
@@ -120,7 +155,15 @@ function QuranContent() {
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
-    if (viewMode !== "mushaf" || !selectedEdition || !currentPage) return;
+    if (
+      viewMode !== "mushaf" ||
+      !selectedEdition ||
+      !currentPage ||
+      selectedFoundationMushafId !== null
+    ) {
+      setMushafPage(null);
+      return;
+    }
     api
       .getPage(selectedEdition, currentPage)
       .then((pageData) => {
@@ -136,7 +179,39 @@ function QuranContent() {
       .catch(() => {
         setMushafPage(null);
       });
-  }, [selectedEdition, currentPage, viewMode]);
+  }, [selectedEdition, currentPage, selectedFoundationMushafId, viewMode]);
+
+  useEffect(() => {
+    if (
+      viewMode !== "mushaf" ||
+      selectedFoundationMushafId === null ||
+      !selectedFoundationMushaf ||
+      !currentPage
+    ) {
+      setFoundationMushafPage(null);
+      setFoundationPageLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setFoundationMushafPage(null);
+    setFoundationPageLoading(true);
+    api
+      .getQuranFoundationMushafPage(selectedFoundationMushafId, currentPage)
+      .then((pageData) => {
+        if (cancelled) return;
+        setFoundationMushafPage(pageData);
+        setFoundationPageLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFoundationMushafPage(null);
+        setFoundationPageLoading(false);
+        setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, selectedFoundationMushaf, selectedFoundationMushafId, viewMode]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
   const editionName = (edition: QuranEdition) =>
@@ -354,6 +429,28 @@ function QuranContent() {
           </div>
 
           <div className="form-group">
+            <label className="form-label" htmlFor="mushaf-variant">
+              {t("quran.mushafVariant")}
+            </label>
+            <select
+              id="mushaf-variant"
+              value={selectedFoundationMushafId === null ? "image" : String(selectedFoundationMushafId)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSelectedFoundationMushafId(value === "image" ? null : Number(value));
+                setSelectedMushafAyah(null);
+              }}
+            >
+              <option value="image">{t("quran.mushafVariantImage")}</option>
+              {foundationMushafs.map((mushaf) => (
+                <option value={mushaf.source_id} key={mushaf.source_id}>
+                  {mushaf.name} · {mushaf.qirat_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
             <label className="form-label">{t("quran.surahSelect")}</label>
             <select
               value={selectedSurah}
@@ -381,15 +478,17 @@ function QuranContent() {
               <input
                 type="number"
                 min={1}
-                max={604}
+                max={mushafPageCount}
                 value={currentPage}
-                onChange={(e) => setCurrentPage(Number(e.target.value))}
+                onChange={(e) =>
+                  setCurrentPage(Math.min(mushafPageCount, Math.max(1, Number(e.target.value))))
+                }
                 style={{ textAlign: "center", fontWeight: 700 }}
               />
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => setCurrentPage((p) => Math.min(604, p + 1))}
-                disabled={currentPage >= 604}
+                onClick={() => setCurrentPage((p) => Math.min(mushafPageCount, p + 1))}
+                disabled={currentPage >= mushafPageCount}
               >
                 {t("common.next")} ▶
               </button>
@@ -606,7 +705,19 @@ function QuranContent() {
         /* Mushaf Page View */
         <section className="surface">
           <div className="mushaf-page-container">
-            {mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
+            {selectedFoundationMushaf ? (
+              foundationPageLoading ? (
+                <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
+              ) : foundationMushafPage ? (
+                <QuranFoundationMushafPageView
+                  mushaf={selectedFoundationMushaf}
+                  page={foundationMushafPage}
+                  selectedAyahKey={selectedMushafAyah}
+                  playingAyahKey={playingMushafAyah}
+                  onSelectAyah={setSelectedMushafAyah}
+                />
+              ) : null
+            ) : mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
               <div className="mushaf-page-frame">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -685,12 +796,12 @@ function QuranContent() {
               {t("quran.previousPage", { page: currentPage - 1 })}
             </button>
             <span style={{ fontWeight: 600, alignSelf: "center" }}>
-              {t("quran.pageOf", { page: currentPage })}
+              {t("quran.pageOf", { page: currentPage, count: mushafPageCount })}
             </span>
             <button
               className="btn btn-secondary"
-              onClick={() => setCurrentPage((p) => Math.min(604, p + 1))}
-              disabled={currentPage >= 604}
+              onClick={() => setCurrentPage((p) => Math.min(mushafPageCount, p + 1))}
+              disabled={currentPage >= mushafPageCount}
             >
               {t("quran.nextPage", { page: currentPage + 1 })}
             </button>

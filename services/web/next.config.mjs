@@ -13,7 +13,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
   `img-src 'self' blob: data: https:${isDevelopment ? " http:" : ""}`,
   `media-src 'self' blob: https:${isDevelopment ? " http:" : ""}`,
   `connect-src 'self' https:${isDevelopment ? " http: ws: wss:" : ""}`,

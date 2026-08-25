@@ -107,7 +107,9 @@ flowchart LR
   поддерживает resume и хранит только streaming URL. Все четыре доступных QF Mushaf resource
   (`1`, `5`, `11`, `19`) синхронизируются официальным Content Sync: локальный bootstrap
   сохранил 2 416 страниц и 334 660 позиционированных слов, повторный checkpoint-sync не
-  скачивает snapshot повторно. [Audio evidence](capacity/staging-qf-real-audio-2026-08-25.md),
+  скачивает snapshot повторно. Web reader подключён к трём безопасно отображаемым вариантам:
+  QCF V2, KFGQPC Hafs и QCF V4 Tajweed; локальный scan остаётся четвёртым вариантом, а ID `11`
+  fail-closed скрыт. [Audio evidence](capacity/staging-qf-real-audio-2026-08-25.md),
   [license decision](sign-offs/quran-foundation-audio-license-decision-2026-08-25.md),
   [full-catalog evidence](capacity/quran-foundation-production-catalog-2026-08-25.md).
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,

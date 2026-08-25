@@ -1,4 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const reciter = {
   id: "00000000-0000-7000-8000-000000000159",
@@ -190,11 +191,110 @@ const page129 = {
   regions: page128.regions.filter((region) => region.ayah.number === 2),
 };
 
+const foundationMushafs = [
+  {
+    source_id: 1,
+    name: "QCF V2",
+    default_font_name: "v2",
+    rendering: {
+      available: true,
+      mode: "page-font",
+      font_format: "woff2",
+      font_url_template: "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p{page}.woff2",
+    },
+  },
+  {
+    source_id: 5,
+    name: "KFGQPC HAFS",
+    default_font_name: "qpc-hafs",
+    rendering: {
+      available: true,
+      mode: "unicode-font",
+      font_format: "woff2",
+      font_url: "https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2",
+    },
+  },
+  {
+    source_id: 19,
+    name: "QCF V4 Tajweed",
+    default_font_name: "v4-tajweed",
+    rendering: {
+      available: true,
+      mode: "page-font",
+      font_format: "woff2",
+      font_url_template: "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p{page}.woff2",
+      color_format: "COLRv1",
+    },
+  },
+].map((mushaf) => ({
+  ...mushaf,
+  description: `${mushaf.name} fixture`,
+  qirat_name: "Hafs",
+  pages_count: 604,
+  lines_per_page: 15,
+  mapping_mode: "reference",
+  schema_version: "1",
+  sync_sequence: 1,
+  source_checksum_sha256: "c".repeat(64),
+  last_synced_at: "2026-08-25T00:00:00Z",
+  source: {
+    name: "Quran.Foundation Content API",
+    url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/resources-sync/",
+    attribution: "Quran data provided by Quran Foundation.",
+  },
+}));
+
+function foundationPage(sourceId: number, pageNumber: number) {
+  const mushaf = foundationMushafs.find((item) => item.source_id === sourceId)!;
+  const isUnicode = sourceId === 5;
+  const fontUrl = sourceId === 1
+    ? `https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p${pageNumber}.woff2`
+    : sourceId === 19
+      ? `https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p${pageNumber}.woff2`
+      : mushaf.rendering.font_url;
+  return {
+    mushaf_id: sourceId,
+    qirat_name: "Hafs",
+    font_name: mushaf.default_font_name,
+    rendering: { ...mushaf.rendering, font_url: fontUrl },
+    page_number: pageNumber,
+    verse_mapping: { "6": "1-2" },
+    first_verse_id: 1,
+    last_verse_id: 2,
+    first_word_id: 1,
+    last_word_id: 4,
+    verses_count: 2,
+    words: [
+      [1, 1, 1, 1, isUnicode ? "ٱلْحَمْدُ" : "ﱁ", "word"],
+      [2, 1, 1, 2, isUnicode ? "لِلَّهِ" : "ﱂ", "end"],
+      [3, 2, 2, 1, isUnicode ? "هُوَ" : "ﱃ", "word"],
+      [4, 2, 2, 2, isUnicode ? "ٱلَّذِى" : "ﱄ", "end"],
+    ].map(([id, verseId, lineNumber, positionInLine, text, charType]) => ({
+      id,
+      word_id: id,
+      verse_id: verseId,
+      page_number: pageNumber,
+      line_number: lineNumber,
+      position_in_line: positionInLine,
+      position_in_page: id,
+      position_in_verse: positionInLine,
+      char_type_id: null,
+      char_type_name: charType,
+      text,
+      css_class: "",
+      css_style: "",
+    })),
+  };
+}
+
 function paginated<T>(results: T[]) {
   return { next: null, previous: null, results };
 }
 
 async function installApiMocks(page: Page) {
+  const testFont = await readFile(
+    new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
+  );
   await page.addInitScript(() => {
     const mediaSessionHandlers: Record<string, ((details?: { seekOffset?: number }) => void) | null> = {};
     Object.defineProperty(window, "__mediaSessionHandlers", {
@@ -248,6 +348,9 @@ async function installApiMocks(page: Page) {
   await page.route("https://audio.example.test/**", (route) =>
     route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
   );
+  await page.route("https://verses.quran.foundation/fonts/**", (route) =>
+    route.fulfill({ status: 200, contentType: "font/woff2", body: testFont }),
+  );
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -288,6 +391,13 @@ async function installApiMocks(page: Page) {
       });
     } else if (path === "/api/v1/quran/editions") {
       await route.fulfill({ json: [edition] });
+    } else if (path === "/api/v1/quran/foundation/mushafs") {
+      await route.fulfill({ json: foundationMushafs });
+    } else if (/^\/api\/v1\/quran\/foundation\/mushafs\/\d+\/pages\/\d+$/.test(path)) {
+      const parts = path.split("/");
+      const sourceId = Number(parts[6]);
+      const pageNumber = Number(parts[8]);
+      await route.fulfill({ json: foundationPage(sourceId, pageNumber) });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs") {
       await route.fulfill({ json: [surah] });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/6/ayahs") {
@@ -479,6 +589,40 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
   );
   await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
+});
+
+test("mushaf switcher renders all supported Quran.Foundation font variants", async ({ page }) => {
+  await page.goto("/quran?surah=6");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+
+  const variant = page.getByLabel("Вариант Мусхафа");
+  await expect(variant.locator("option")).toHaveCount(4);
+  await expect(variant.locator("option")).toHaveText([
+    "Скан страницы · Мединский Hafs",
+    "QCF V2 · Hafs",
+    "KFGQPC HAFS · Hafs",
+    "QCF V4 Tajweed · Hafs",
+  ]);
+
+  for (const sourceId of ["1", "5", "19"]) {
+    await variant.selectOption(sourceId);
+    const view = page.locator(`.qf-mushaf-view[data-mushaf-id="${sourceId}"]`);
+    await expect(view).toHaveAttribute("data-page-number", "128");
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const sheet = view.locator(".qf-mushaf-sheet");
+    await expect(sheet).toHaveAttribute("dir", "rtl");
+    await expect(sheet).toHaveAttribute("lang", "ar");
+    await expect(sheet).toHaveAttribute("translate", "no");
+    await expect(sheet.locator(".qf-mushaf-line")).toHaveCount(15);
+    const secondAyahWords = view.getByRole("button", { name: "Аят 6:2", exact: true });
+    await expect(secondAyahWords).toHaveCount(2);
+    await secondAyahWords.first().click();
+    await expect(secondAyahWords.first()).toHaveClass(/is-selected/);
+    await expect(secondAyahWords.last()).toHaveClass(/is-selected/);
+  }
+
+  await variant.selectOption("image");
+  await expect(page.locator(".mushaf-image")).toBeVisible();
 });
 
 test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {

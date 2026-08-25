@@ -183,6 +183,79 @@ export type MushafPage = {
   regions: AyahPageRegion[];
 };
 
+export type QuranFoundationMushafRendering =
+  | {
+      available: true;
+      mode: "page-font";
+      font_format: "woff2" | string;
+      font_url_template: string;
+      font_url?: string;
+      color_format?: string;
+    }
+  | {
+      available: true;
+      mode: "unicode-font";
+      font_format: "woff2" | string;
+      font_url: string;
+    }
+  | {
+      available: false;
+      mode: string;
+      reason: string;
+    };
+
+export type QuranFoundationMushaf = {
+  source_id: number;
+  name: string;
+  description: string;
+  qirat_name: string;
+  pages_count: number;
+  lines_per_page: number;
+  default_font_name: string;
+  mapping_mode: string;
+  schema_version: string;
+  sync_sequence: number;
+  source_checksum_sha256: string;
+  last_synced_at: string;
+  rendering: QuranFoundationMushafRendering;
+  source: {
+    name: string;
+    url: string;
+    attribution: string;
+  };
+};
+
+export type QuranFoundationMushafWord = {
+  id: number;
+  word_id: number | null;
+  verse_id: number | null;
+  page_number: number;
+  line_number: number;
+  position_in_line: number;
+  position_in_page: number;
+  position_in_verse: number | null;
+  char_type_id: number | null;
+  char_type_name: string;
+  text: string;
+  css_class: string;
+  css_style: string;
+};
+
+export type QuranFoundationMushafPage = {
+  mushaf_id: number;
+  qirat_name: string;
+  font_name: string;
+  rendering: QuranFoundationMushafRendering;
+  page_number: number;
+  verse_mapping: Record<string, string>;
+  first_verse_id: number | null;
+  last_verse_id: number | null;
+  first_word_id: number | null;
+  last_word_id: number | null;
+  verses_count: number;
+  words: QuranFoundationMushafWord[];
+};
+
 export type QuranDivision = {
   id: string;
   number: number;
@@ -1028,6 +1101,19 @@ export class ApiClient {
 
   public async getPage(edition: string, pageNumber: number): Promise<MushafPage> {
     return this.request<MushafPage>(`/api/v1/quran/editions/${edition}/pages/${pageNumber}`);
+  }
+
+  public async getQuranFoundationMushafs(): Promise<QuranFoundationMushaf[]> {
+    return this.request<QuranFoundationMushaf[]>("/api/v1/quran/foundation/mushafs");
+  }
+
+  public async getQuranFoundationMushafPage(
+    mushafId: number,
+    pageNumber: number,
+  ): Promise<QuranFoundationMushafPage> {
+    return this.request<QuranFoundationMushafPage>(
+      `/api/v1/quran/foundation/mushafs/${mushafId}/pages/${pageNumber}`,
+    );
   }
 
   public async getJuzList(edition: string): Promise<Juz[]> {

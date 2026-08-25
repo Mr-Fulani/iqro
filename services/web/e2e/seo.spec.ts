@@ -196,6 +196,7 @@ test("public responses include the defense-in-depth security policy", async ({ r
   const contentSecurityPolicy = headers["content-security-policy"];
   expect(contentSecurityPolicy).toContain("default-src 'self'");
   expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
+  expect(contentSecurityPolicy).toContain("font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation");
   expect(contentSecurityPolicy).toContain("img-src 'self' blob: data: https:");
   expect(contentSecurityPolicy).toContain("media-src 'self' blob: https:");
   if (process.env.PLAYWRIGHT_PRODUCTION === "1") {
