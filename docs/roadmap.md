@@ -204,7 +204,11 @@ flowchart LR
   опубликованную суру, R2 audio и sync workload.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза. Staging draft и 604 приватных WebP технически
-  проверены; R2 upload/publish/activate намеренно остановлены на этом gate.
+  проверены; provenance audit обнаружил, что PDF фактически маркирован `quran.ws`, хотя manifest
+  называет его KFQC PDF. `1.0.2` остаётся непубличным и не активируется. Следующий кандидат должен
+  быть собран из прямо закреплённого официального King Fahd Complex page source, после чего
+  повторяются checksums, geometry/manual review и все три sign-off. Подробности — в
+  [source provenance audit](quran-source-provenance-audit.md).
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,
   hreflang, отсутствие индексирования приватных маршрутов и реальные Core Web Vitals.
 

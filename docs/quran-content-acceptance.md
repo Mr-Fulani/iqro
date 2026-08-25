@@ -1,6 +1,6 @@
 # Quran content acceptance record — madani-hafs@1.0.2
 
-Статус: **release blocked до заполнения внешних sign-off**
+Статус: **release blocked: page-art provenance требует нового immutable кандидата**
 
 Дата технической подготовки: 23 августа 2026 года
 
@@ -48,6 +48,19 @@
 Этот результат доказывает техническую готовность и rollback path, но не является религиозной,
 юридической или продуктовой приёмкой.
 
+## Provenance audit 25 августа 2026 года
+
+Повторная проверка показала, что текст и polygon metadata закреплены по source commits и
+checksums, но page artwork имеет неполную release-цепочку: manifest называет его KFQC PDF, тогда
+как metadata конкретного PDF указывает `quran.ws`. Официальная King Fahd Complex developer
+platform предоставляет цифровой Мусхаф для сайтов и приложений, но прямой официальный download
+artifact/terms evidence для наших WebP в source lock отсутствует.
+
+Поэтому `madani-hafs@1.0.2` остаётся непубличным draft и не активируется даже после простого
+заполнения таблицы sign-off. Выбран безопасный путь: собрать новую immutable-версию из прямо
+зафиксированного официального page source и повторить все проверки. Полная матрица и remediation
+plan: [Quran source provenance audit](quran-source-provenance-audit.md).
+
 Повторяемая команда геометрического gate:
 
 ```bash
@@ -80,9 +93,13 @@ Reviewer должен сверять изображение, номер стра
 | Лицензия/юридический | — | — | **Ожидается** | — |
 | Product release owner | — | — | **Ожидается** | — |
 
+Эта таблица относится к `1.0.2` и не должна быть использована для обхода provenance blocker.
+Для нового кандидата создаётся отдельный acceptance record с его собственными hashes.
+
 ## Активация и rollback
 
-Активация разрешена только после трёх внешних sign-off:
+Ниже сохранён общий пример процедуры. Для `1.0.2` активация запрещена обнаруженным provenance
+blocker; команды разрешены только для нового кандидата после его трёх внешних sign-off:
 
 ```bash
 cd services/backend
