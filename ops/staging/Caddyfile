@@ -12,7 +12,10 @@
 	header X-Robots-Tag "noindex, nofollow, noarchive"
 	@robots path /robots.txt
 	header @robots Content-Type "text/plain; charset=utf-8"
-	respond @robots "User-agent: *\nDisallow: /\n" 200
+	respond @robots <<ROBOTS
+		User-agent: *
+		Disallow: /
+		ROBOTS 200
 
 	reverse_proxy gateway:8080 {
 		transport http {
