@@ -28,6 +28,18 @@ Sign-off — это воспроизводимое письменное реше
 7. Product owner подписывает release decision только после зелёного CI/security, monitoring
    alert test, offsite backup evidence и production rollback smoke.
 
+## Quran.Foundation: клиенты и домены
+
+- Текущий Content API использует `client_credentials` только на общем backend. Web, native
+  mobile и Telegram Mini App не получают QF secret и не регистрируются как Content API origins.
+- Добавление отдельного first-party frontend origin само по себе не создаёт новый Content API
+  credential: все клиенты получают только нужные данные через наш backend.
+- Если позднее подключаются Quran.Foundation OAuth/User APIs, каждый точный redirect URI и
+  post-logout URI добавляется отдельно в Developer Console; wildcard для этого не используется.
+- Новые OAuth scopes запрашиваются в Developer Console до релиза. Если приложение участвует в
+  Connected Apps review, новая platform link или иное material change также сообщается по их
+  актуальной процедуре до публикации.
+
 ## Что означает отсутствие sign-off
 
 - Quran dataset без полного acceptance record не активируется в production.

@@ -36,6 +36,13 @@ Our current staging application is available at <https://staging.iqro.forum>. Th
 production web origin is <https://iqro.forum>. The same first-party backend API is designed to
 support our future iOS/Android application and Telegram Mini App.
 
+These clients may use different first-party web origins or native deep-link identifiers, but
+none of them will call the Quran.Foundation Content API directly or contain Quran.Foundation
+credentials. All Content API access will originate from the same confidential backend/server
+integration. We are not requesting Quran.Foundation OAuth or User API access in this letter;
+if those features are added later, we will register every exact redirect URI and request the
+required production scopes separately in Developer Console.
+
 We would like written confirmation that the following use of the complete Quran.Foundation
 chapter-reciter and ayah-by-ayah recitation catalog available to our production credentials is
 permitted under the current Developer Terms:
@@ -66,6 +73,9 @@ Could you please confirm:
   playback URL be resolved in another way?
 - What exact attribution text and links should be shown for recitations and metadata?
 - Are there additional restrictions for Web, native mobile, or Telegram Mini App clients?
+- Does this server-side Content API architecture require separate Quran.Foundation apps or
+  credentials when we add these first-party clients, or may they all consume the same
+  backend-proxied content service?
 - Is a five-day metadata refresh schedule acceptable for these chapter-reciter resources?
 - May we expose every chapter-reciter and ayah-by-ayah recitation resource available to our
   production credentials, subject to per-resource source attribution and our editorial checks?
