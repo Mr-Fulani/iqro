@@ -5,6 +5,7 @@ from pathlib import Path
 
 CONFIG = Path(__file__).with_name("default.conf")
 DOCKERFILE = Path(__file__).with_name("Dockerfile")
+PRODUCTION_COMPOSE = CONFIG.parents[2] / "compose.production.yaml"
 
 
 class GatewayConfigTests(unittest.TestCase):
@@ -39,6 +40,11 @@ class GatewayConfigTests(unittest.TestCase):
         self.assertIn(
             "proxy_pass http://quran_backend/api/v1/internal/gateway-cache-purge-auth;",
             self.config,
+        )
+        self.assertIn("proxy_set_header X-Forwarded-Proto https;", self.config)
+        self.assertIn(
+            "DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in the production env file},gateway",
+            PRODUCTION_COMPOSE.read_text(encoding="utf-8"),
         )
 
     def test_generic_api_proxy_remains_uncached(self) -> None:
