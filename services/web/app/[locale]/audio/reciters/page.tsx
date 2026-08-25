@@ -5,6 +5,7 @@ import { ReciterAvatar } from "@/components/ReciterAvatar";
 import { reciterName, reciterPath } from "@/lib/audio-content";
 import { isLocale, translate } from "@/lib/i18n";
 import { getPublishedReciters } from "@/lib/public-content";
+import { groupRecitersByPerson } from "@/lib/reciter-catalog";
 import { reciterPortraitUrl } from "@/lib/reciter-portraits";
 import { localizedPath } from "@/lib/routing";
 import { createPageMetadata } from "@/lib/seo";
@@ -32,7 +33,7 @@ export default async function ReciterCatalogPage({
   await connection();
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const reciters = await getPublishedReciters();
+  const reciters = groupRecitersByPerson(await getPublishedReciters());
 
   return (
     <div className="seo-quran-page">

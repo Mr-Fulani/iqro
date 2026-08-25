@@ -1,6 +1,7 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { groupRecitersByPerson } from "../lib/reciter-catalog";
 import { RECITER_PORTRAITS } from "../lib/reciter-portraits";
 
 const productionReciterSlugs = [
@@ -81,6 +82,30 @@ const reciters = [
   },
 ];
 
+function recitation(
+  id: string,
+  reciter: (typeof reciters)[number],
+  style: "mujawwad" | "murattal",
+  publishedAt: string,
+) {
+  return {
+    id,
+    code: `${reciter.slug}-${style}`,
+    version: publishedAt.slice(0, 10),
+    style,
+    reciter,
+    quran_edition: {
+      id: "00000000-0000-7000-8000-000000000999",
+      code: "madani-hafs",
+      content_version: "1.0.1",
+      riwayah: "Hafs 'an Asim",
+    },
+    coverage: { track_count: 114, surah_count: 114, complete: true },
+    timings: { available: true, segment_count: 6236 },
+    published_at: publishedAt,
+  };
+}
+
 test("portrait manifest covers the full production reciter catalog", async () => {
   expect(Object.keys(RECITER_PORTRAITS).sort()).toEqual([...productionReciterSlugs].sort());
   expect(new Set(Object.values(RECITER_PORTRAITS)).size).toBe(16);
@@ -89,6 +114,11 @@ test("portrait manifest covers the full production reciter catalog", async () =>
     expect(portraitUrl).toMatch(/^\/reciters\/[a-z0-9-]+\.webp$/);
     await access(path.join(process.cwd(), "public", portraitUrl.slice(1)));
   }
+
+  const people = groupRecitersByPerson(reciters);
+  expect(people).toHaveLength(5);
+  expect(people.filter((reciter) => reciter.slug.includes("abdul-baset"))).toHaveLength(1);
+  expect(people[0].slug).toBe("qf-2-abdul-baset-abdul-samad");
 });
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {
@@ -104,20 +134,71 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
 
   const section = page.getByTestId("featured-reciters");
   await expect(section.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
-  await expect(section.getByTestId("featured-reciter")).toHaveCount(6);
-  await expect(section.getByTestId("reciter-avatar")).toHaveCount(6);
-  await expect(section.locator("img")).toHaveCount(6);
+  await expect(section.getByTestId("featured-reciter")).toHaveCount(5);
+  await expect(section.getByTestId("reciter-avatar")).toHaveCount(5);
+  await expect(section.locator("img")).toHaveCount(5);
   await expect(section.locator("img").nth(0)).toHaveAttribute(
     "src",
     /\/reciters\/abdul-baset-abdul-samad\.webp$/,
   );
-  await expect(section.locator("img").nth(1)).toHaveAttribute(
-    "src",
-    /\/reciters\/abdul-baset-abdul-samad\.webp$/,
+  const portraitSources = await section.locator("img").evaluateAll((images) =>
+    images.map((image) => image.getAttribute("src")),
   );
+  expect(new Set(portraitSources).size).toBe(5);
 
   await section.getByRole("link", { name: "Слушать чтение: Абдур-Рахман ас-Судайс" }).click();
 
   await expect(page).toHaveURL(`/ru/audio?reciter=${reciters[4].id}`, { timeout: 15_000 });
   await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[4].id);
+});
+
+test("one reciter exposes multiple reading styles without duplicate person options", async ({ page }) => {
+  const murattalOld = recitation(
+    "00000000-0000-7000-8000-000000001001",
+    reciters[0],
+    "murattal",
+    "2026-08-20T00:00:00Z",
+  );
+  const murattalCurrent = recitation(
+    "00000000-0000-7000-8000-000000001002",
+    reciters[0],
+    "murattal",
+    "2026-08-25T00:00:00Z",
+  );
+  const mujawwad = recitation(
+    "00000000-0000-7000-8000-000000001003",
+    reciters[1],
+    "mujawwad",
+    "2026-08-25T00:00:00Z",
+  );
+
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  await page.route("**/api/v1/reciters", (route) =>
+    route.fulfill({ json: { next: null, previous: null, results: reciters } }),
+  );
+  await page.route("**/api/v1/recitations?*", (route) => {
+    const reciterId = new URL(route.request().url()).searchParams.get("reciter_id");
+    const results = reciterId === reciters[0].id
+      ? [murattalOld, murattalCurrent]
+      : reciterId === reciters[1].id
+        ? [mujawwad]
+        : [];
+    return route.fulfill({ json: { next: null, previous: null, results } });
+  });
+  await page.route("**/api/v1/recitations/*/tracks?*", (route) =>
+    route.fulfill({ json: { next: null, previous: null, results: [] } }),
+  );
+
+  await page.goto(`/audio?reciter=${reciters[1].id}`);
+
+  const reciterSelect = page.getByLabel("Чтец (Кари)");
+  await expect(reciterSelect.locator("option")).toHaveCount(5);
+  await expect(reciterSelect).toHaveValue(reciters[0].id);
+
+  const readingSelect = page.getByLabel("Издание и стиль чтения");
+  await expect(readingSelect.locator("option")).toHaveCount(2);
+  await expect(readingSelect.locator("option")).toHaveText([
+    "MUJAWWAD · Hafs 'an Asim (Треков: 114)",
+    "MURATTAL · Hafs 'an Asim (Треков: 114)",
+  ]);
 });

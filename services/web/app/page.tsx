@@ -6,6 +6,7 @@ import { ReciterAvatar } from "../components/ReciterAvatar";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+import { groupRecitersByPerson } from "../lib/reciter-catalog";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
@@ -36,7 +37,7 @@ export default function HomePage() {
 
     api
       .getReciters()
-      .then((res) => setFeaturedReciters((res.results || []).slice(0, 6)))
+      .then((res) => setFeaturedReciters(groupRecitersByPerson(res.results || []).slice(0, 6)))
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 

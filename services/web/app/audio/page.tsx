@@ -11,12 +11,19 @@ import {
 import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
 import { useAudioPlayer } from "../../lib/audio-player-context";
 import { useI18n } from "../../lib/i18n-context";
+import {
+  groupRecitersByPerson,
+  latestRecitationsByVariant,
+  reciterPersonKey,
+  reciterSourcesForPerson,
+} from "../../lib/reciter-catalog";
 
 export default function AudioPage() {
   const searchParams = useSearchParams();
   const requestedReciterId = searchParams.get("reciter");
   const { locale, t, formatNumber } = useI18n();
   const { request: playerRequest, isPlaying, startPlayback } = useAudioPlayer();
+  const [reciterSources, setReciterSources] = useState<Reciter[]>([]);
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [selectedReciterId, setSelectedReciterId] = useState<string>("");
   const [recitations, setRecitations] = useState<Recitation[]>([]);
@@ -36,10 +43,15 @@ export default function AudioPage() {
       .getReciters()
       .then((res) => {
         const availableReciters = res.results || [];
-        setReciters(availableReciters);
-        if (availableReciters.length > 0) {
-          const requestedReciter = availableReciters.find((item) => item.id === requestedReciterId);
-          setSelectedReciterId(requestedReciter?.id || availableReciters[0].id);
+        const people = groupRecitersByPerson(availableReciters);
+        setReciterSources(availableReciters);
+        setReciters(people);
+        if (people.length > 0) {
+          const requestedSource = availableReciters.find((item) => item.id === requestedReciterId);
+          const requestedPerson = requestedSource
+            ? people.find((item) => reciterPersonKey(item) === reciterPersonKey(requestedSource))
+            : undefined;
+          setSelectedReciterId(requestedPerson?.id || people[0].id);
         }
         setLoading(false);
       })
@@ -52,13 +64,20 @@ export default function AudioPage() {
   // Load recitations when reciter changes
   useEffect(() => {
     if (!selectedReciterId) return;
+    const selected = reciters.find((reciter) => reciter.id === selectedReciterId);
+    if (!selected) return;
+    const sources = reciterSourcesForPerson(reciterSources, selected);
+    let cancelled = false;
     setLoading(true);
-    api
-      .getRecitations({ reciter_id: selectedReciterId })
-      .then((res) => {
-        setRecitations(res.results || []);
-        if (res.results && res.results.length > 0) {
-          setSelectedRecitationId(res.results[0].id);
+    Promise.all(sources.map((source) => api.getRecitations({ reciter_id: source.id })))
+      .then((responses) => {
+        if (cancelled) return;
+        const available = latestRecitationsByVariant(
+          responses.flatMap((response) => response.results || []),
+        );
+        setRecitations(available);
+        if (available.length > 0) {
+          setSelectedRecitationId(available[0].id);
         } else {
           setSelectedRecitationId("");
           setTracks([]);
@@ -66,10 +85,14 @@ export default function AudioPage() {
         setLoading(false);
       })
       .catch((err) => {
+        if (cancelled) return;
         setError(api.normalizeError(err));
         setLoading(false);
       });
-  }, [selectedReciterId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [reciterSources, reciters, selectedReciterId]);
 
   // Load tracks when recitation changes
   useEffect(() => {

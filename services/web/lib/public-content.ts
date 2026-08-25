@@ -8,6 +8,7 @@ import type {
   Reciter,
   Surah,
 } from "./api";
+import { latestRecitationsByVariant, reciterPersonKey } from "./reciter-catalog";
 
 export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
@@ -201,6 +202,16 @@ export const getPublishedRecitations = cache(
       ["audio:recitations", ...(reciter ? [`audio:reciter:${reciter}`] : [])],
       "recitation catalog",
       100,
+    );
+  },
+);
+
+export const getPublishedRecitationsForPerson = cache(
+  async (reciterSlug: string): Promise<Recitation[]> => {
+    const personKey = reciterPersonKey(reciterSlug);
+    const recitations = await getPublishedRecitations();
+    return latestRecitationsByVariant(
+      recitations.filter((recitation) => reciterPersonKey(recitation.reciter) === personKey),
     );
   },
 );

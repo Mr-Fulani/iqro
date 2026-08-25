@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Recitation, SurahPlayback } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
+import { latestRecitationsByVariant } from "../lib/reciter-catalog";
 import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
@@ -78,7 +79,7 @@ export function MushafAudioPlayer({
       .getRecitations({ quran_edition: editionCode })
       .then((response) => {
         if (cancelled) return;
-        const available = response.results || [];
+        const available = latestRecitationsByVariant(response.results || []);
         setRecitations(available);
         setSelectedRecitationId((current) => {
           if (available.some((item) => item.id === current)) return current;

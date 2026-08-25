@@ -11,7 +11,7 @@ import {
 } from "@/lib/audio-content";
 import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
 import {
-  getPublishedRecitations,
+  getPublishedRecitationsForPerson,
   getPublishedReciter,
   isUuid,
   PublicContentNotFoundError,
@@ -31,10 +31,8 @@ function parseParams(params: RouteParams): { locale: Locale; reciter: string } {
 
 async function publishedReciter(reciter: string) {
   try {
-    return await Promise.all([
-      getPublishedReciter(reciter),
-      getPublishedRecitations(reciter),
-    ]);
+    const published = await getPublishedReciter(reciter);
+    return [published, await getPublishedRecitationsForPerson(published.slug)] as const;
   } catch (error) {
     if (error instanceof PublicContentNotFoundError) notFound();
     throw error;
