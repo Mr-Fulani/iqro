@@ -659,6 +659,30 @@ Client bytes и cache outcome нельзя считать точным origin eg
 берутся из provider telemetry за то же окно. TTFB/throughput являются transport proxy для QoE,
 но не заменяют browser/mobile telemetry startup и buffering по rendition.
 
+### Bounded Quran.Foundation real-audio probe
+
+`ops/media/qf_audio_probe.py` выполняет обычную интеграционную проверку внешних
+Quran.Foundation assets, а не capacity test чужого CDN. На asset разрешены ровно `HEAD`, startup
+Range и seek Range; максимум — 5 чтецов × 3 суры. Допустимы только официальные HTTPS audio
+hosts. Контент, credentials и raw asset URLs в JSON не сохраняются, БД/R2 не меняются.
+
+```bash
+make ops-qf-audio-probe QF_AUDIO_PROBE_ARGS='\
+  --env-file services/backend/.env \
+  --reciter-id 7 --reciter-id 159 --reciter-id 174 \
+  --surah 1 \
+  --origin https://staging.example.org \
+  --range-bytes 65536 \
+  --confirm-bounded-provider-probe \
+  --json-report /tmp/qf-real-audio-probe.json'
+```
+
+Probe раздельно сообщает delivery и metadata consistency. Если `HEAD`/`Content-Range` дают
+другой полный размер, чем Content API, playback может работать, но release gate обязан упасть.
+Budget staging подтвердил delivery всех трёх выбранных записей; у Mishari source `7` обнаружен
+metadata size drift. Подробности — в
+[real-audio evidence](capacity/staging-qf-real-audio-2026-08-25.md).
+
 ### Stateful auth и reading sync capacity test
 
 `ops/load/sync_capacity.py` воспроизводит отдельного гостя на виртуального пользователя:

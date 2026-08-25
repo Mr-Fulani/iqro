@@ -384,7 +384,10 @@ gate. Новый registered email account + sync подтвердил 4 active u
 ошибок, но нарушили latency gate. Реальный разрешённый multi-reciter audio release, cache-cold,
 existing-account/multi-device identity и production-sized repeat ещё открыты. Подробности — в
 [mixed capacity evidence](capacity/staging-cx23-mixed-realistic-2026-08-25.md) и
-[registered-user evidence](capacity/staging-cx23-registered-user-2026-08-25.md).
+[registered-user evidence](capacity/staging-cx23-registered-user-2026-08-25.md). Отдельный
+[bounded real-audio probe](capacity/staging-qf-real-audio-2026-08-25.md) подтвердил обычный
+startup/seek delivery трёх QF-чтецов, но нашёл metadata size drift у source `7`; это не
+provider load test и не разрешение на публикацию.
 
 ## 8. Обновление и откат
 

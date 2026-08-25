@@ -61,6 +61,17 @@ class FakeQuranFoundationClient:
         return 192_000
 
 
+class StaleMetadataSizeClient(FakeQuranFoundationClient):
+    def get_chapter_audio(
+        self,
+        reciter_id: int,
+        chapter_number: int,
+    ) -> dict[str, Any]:
+        payload = super().get_chapter_audio(reciter_id, chapter_number)
+        payload["file_size"] = 999_999
+        return payload
+
+
 class OverlappingAyahClient(FakeQuranFoundationClient):
     def get_chapter_audio(
         self,
@@ -118,6 +129,20 @@ def test_imports_external_quran_foundation_audio_as_streaming_only(
     assert rendition.checksum_sha256 == ""
     assert rendition.external_url.endswith("/qdc/test/murattal/1.mp3")
     assert track.segments.count() == 2
+
+
+@pytest.mark.django_db
+def test_external_audio_uses_observed_size_when_provider_metadata_is_stale(
+    quran_dataset: dict[str, Any],
+) -> None:
+    prepared = prepare_quran_foundation_recitation(
+        StaleMetadataSizeClient(),
+        reciter_id=7,
+        surah_numbers=[1],
+        quran_version=quran_dataset["version"],
+    )
+
+    assert prepared.tracks[0].size_bytes == 192_000
 
 
 @pytest.mark.django_db

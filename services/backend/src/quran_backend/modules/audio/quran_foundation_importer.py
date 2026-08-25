@@ -114,11 +114,10 @@ def prepare_quran_foundation_recitation(
     canonical_timings: list[dict[str, Any]] = []
     for surah_number in sorted(surah_numbers):
         audio_file = client.get_chapter_audio(reciter_id, surah_number)
-        if audio_file.get("file_size") in {None, ""}:
-            audio_file = dict(audio_file)
-            audio_file["file_size"] = client.get_external_audio_size(
-                str(audio_file.get("audio_url", ""))
-            )
+        audio_file = dict(audio_file)
+        audio_file["file_size"] = client.get_external_audio_size(
+            str(audio_file.get("audio_url", ""))
+        )
         track, timing_payload = _prepare_track(audio_file, surah_number, ayahs)
         tracks.append(track)
         canonical_audio.append(

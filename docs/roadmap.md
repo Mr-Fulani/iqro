@@ -90,7 +90,9 @@ flowchart LR
   credentials и проверить read-only авторизацию из backend: каталог доступен (21 chapter
   reciter на 25 августа 2026 года). Фоновая синхронизация намеренно оставлена выключенной;
   Quran edition технически активна только на noindex staging, а импорт/публикация реального
-  аудио ждут внешних content/license sign-off.
+  аудио ждут внешних content/license sign-off. Bounded one-shot probe трёх реальных чтецов
+  подтвердил delivery, но обнаружил metadata size drift у source `7`; importer теперь всегда
+  сверяет внешний `Content-Length`. [Evidence](capacity/staging-qf-real-audio-2026-08-25.md).
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.
@@ -123,9 +125,10 @@ flowchart LR
   clients и отсутствие audio egress через VPS. Изолированный stateful-прогон на том же CX23
   подтвердил guest auth/token refresh/reading sync при 8 постоянно активных клиентах, а 10
   превысили p95 gate. Mixed harness и изолированный прогон подтвердили `20 readers + 4 sync
-  users`. Registered harness подтвердил 4 new-account active users и boundary на 6/8;
-  остаются library API, existing-account merge/multi-device journey, реальный multi-reciter
-  cache-cold/warm/origin и client startup/buffering QoE.
+  users`. Registered harness подтвердил 4 new-account active users и boundary на 6/8. Bounded
+  real-audio probe подтвердил startup/seek delivery 3/3 внешних QF assets и metadata consistency
+  2/3; остаются library API, existing-account merge/multi-device journey, полный multi-surah
+  catalog, client startup/buffering QoE и production-controlled cache-cold/warm/origin.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
   [strict budget CX23 evidence](capacity/staging-cx23-quran-budget-2026-08-25.md) уже
   доказывает 10 saturated Quran read clients и boundary на 12, а
@@ -226,11 +229,12 @@ flowchart LR
   [strict budget отчётом](capacity/staging-cx23-quran-budget-2026-08-25.md): 10 saturated
   clients, 4 612 запросов за две минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95.
   Checkbox остаётся открытым до
-  реального multi-reciter audio release, existing-account/multi-device identity и повтора на
-  production-sized профиле. Synthetic R2 Range и изолированный guest sync уже измерены:
+  полного разрешённого multi-reciter audio release, existing-account/multi-device identity и
+  повтора на production-sized профиле. Synthetic R2 Range и изолированный guest sync измерены:
   соответственно 25 playback-клиентов и 8 тяжёлых stateful-клиентов с boundary на 10;
   реалистичный mixed-профиль подтвердил `20 readers + 4 sync users`, а новый registered email
-  account + sync — 4 active users с boundary на 6/8.
+  account + sync — 4 active users с boundary на 6/8. Bounded real-audio probe подтвердил
+  доставку трёх QF assets, но один metadata drift оставил release gate открытым.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза. `1.0.2` и 604 WebP технически проверены и временно
   активированы только на noindex staging для нагрузочного теста; provenance audit обнаружил,

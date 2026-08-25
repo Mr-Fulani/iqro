@@ -149,6 +149,9 @@ python manage.py sync_quran_foundation_audio \
 отсутствуют, пилот импортирует только суру 1 и не показывается публичным клиентам.
 Параметры `--surah` и `--all-surahs` взаимоисключающие.
 Каждая повторная ручная публикация должна получать новую immutable `--content-version`.
+Перед сохранением внешнего track importer всегда сверяет `Content-Length` обычным bounded
+`HEAD` на allowlisted Quran.Foundation audio host. Наблюдаемый размер имеет приоритет над
+`file_size` metadata: реальный staging probe обнаружил такое расхождение для source reciter `7`.
 
 После полного импорта включите автоматическую проверку в backend environment:
 
