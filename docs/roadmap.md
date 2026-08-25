@@ -258,11 +258,15 @@ flowchart LR
   официального King Fahd Complex page source, после чего повторяются checksums,
   geometry/manual review и все три sign-off. Подробности — в
   [source provenance audit](quran-source-provenance-audit.md).
-- [ ] Расширить Quran.Foundation importer с текущей Hafs-only проверки до безопасного полного
-  каталога: синхронизировать chapter и ayah resource IDs в `draft`, сопоставлять qira'ah/riwayah
-  с конкретной `QuranEditionVersion`, запрещать несовместимые пары и публиковать каталог
-  порциями после rights/attribution/editorial/playback checks. Наличие ресурса в API не означает
-  разрешение копировать или rehost его файлы.
+- [x] Убрать временную Hafs-only заглушку из Quran.Foundation importer: qira'ah аудио теперь
+  обязательно сопоставляется с riwayah конкретной `QuranEditionVersion`, несовместимые и
+  неразмеченные пары отклоняются перед загрузкой и повторно перед импортом. Поддержаны все
+  стили текущего chapter-каталога провайдера, включая `Kids repeat`; локальные тесты покрывают
+  разрешённую пару Warsh→Warsh и запрет Warsh→Hafs.
+- [ ] Довести Quran.Foundation integration до полного каталога: синхронизировать chapter и ayah
+  resource IDs в `draft` и публиковать каталог порциями после
+  rights/attribution/editorial/playback checks. Наличие ресурса в API не означает разрешение
+  копировать или rehost его файлы.
 - [ ] Импортировать каждый официальный KFGQPC риваят как отдельную versioned Quran edition.
   Developer platform сейчас публикует как минимум Hafs, Warsh, Shu'bah, Qaloun, Al-Douri и
   Al-Sousi text/font resources; точный доступный production catalog, page-art packages и права

@@ -26,6 +26,7 @@ class RecitationStyle(models.TextChoices):
     MURATTAL = "murattal", "Murattal"
     MUJAWWAD = "mujawwad", "Mujawwad"
     MUALLIM = "muallim", "Muallim"
+    KIDS_REPEAT = "kids-repeat", "Kids repeat"
 
 
 class AudioTrackScope(models.TextChoices):

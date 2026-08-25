@@ -53,6 +53,7 @@ class PreparedTrack:
 @dataclass(frozen=True, slots=True)
 class PreparedRecitation:
     source_id: int
+    source_qirat: str
     name_ar: str
     name_en: str
     name_ru: str
@@ -98,9 +99,8 @@ def prepare_quran_foundation_recitation(
     }
     english = localized["en"]
     style = _style_value(english)
-    qirat = _nested_name(english, "qirat").lower()
-    if qirat and "hafs" not in qirat:
-        raise QuranFoundationError("The selected recitation is not marked as Hafs.")
+    source_qirat = _nested_name(english, "qirat").strip()
+    _ensure_riwayah_compatible(source_qirat, quran_version)
 
     ayahs = {
         (ayah.surah.number, ayah.number): ayah
@@ -132,11 +132,18 @@ def prepare_quran_foundation_recitation(
 
     return PreparedRecitation(
         source_id=reciter_id,
+        source_qirat=source_qirat,
         name_ar=_localized_name(localized["ar"]),
         name_en=_localized_name(english),
         name_ru=_localized_name(localized["ru"]),
         style=style,
-        source_checksum_sha256=_checksum(canonical_audio),
+        source_checksum_sha256=_checksum(
+            {
+                "qirat": source_qirat,
+                "style": style,
+                "audio": canonical_audio,
+            }
+        ),
         timing_checksum_sha256=_checksum(canonical_timings),
         tracks=tuple(tracks),
     )
@@ -151,6 +158,8 @@ def import_quran_foundation_recitation(
     environment_name: str,
     publish: bool,
 ) -> ImportResult:
+    _ensure_riwayah_compatible(prepared.source_qirat, quran_version)
+
     reciter_code = f"qf-{prepared.source_id}-{slugify(prepared.name_en)[:48]}"
     reciter, _ = Reciter.objects.get_or_create(
         code=reciter_code,
@@ -160,7 +169,8 @@ def import_quran_foundation_recitation(
             "name_ru": prepared.name_ru,
         },
     )
-    recitation_code = f"qf-{prepared.source_id}-{prepared.style}"
+    quran_version_key = str(quran_version.pk).replace("-", "")[:12]
+    recitation_code = f"qf-{prepared.source_id}-{prepared.style}-{quran_version_key}"
     existing = RecitationEdition.objects.filter(
         code=recitation_code,
         version=content_version,
@@ -185,7 +195,10 @@ def import_quran_foundation_recitation(
         rights_holder="Quran.Foundation and source rights holders",
         license_name="Quran Foundation Developer Terms",
         license_url=DEVELOPER_TERMS_URL,
-        license_attribution="Audio metadata and URLs supplied by Quran.Foundation.",
+        license_attribution=(
+            "Audio metadata and URLs supplied by Quran.Foundation; "
+            f"source qira'ah: {prepared.source_qirat}."
+        ),
         stream_allowed=True,
         offline_download_allowed=False,
     )
@@ -364,16 +377,59 @@ def _nested_name(row: dict[str, Any], field: str) -> str:
 
 
 def _style_value(row: dict[str, Any]) -> str:
-    value = _nested_name(row, "style").lower()
+    value = slugify(_nested_name(row, "style"))
     styles = {
         "murattal": RecitationStyle.MURATTAL,
         "mujawwad": RecitationStyle.MUJAWWAD,
         "muallim": RecitationStyle.MUALLIM,
+        "kids-repeat": RecitationStyle.KIDS_REPEAT,
     }
     try:
         return styles[value]
     except KeyError as exc:
         raise QuranFoundationError(f"Unsupported recitation style: {value or 'unknown'}.") from exc
+
+
+_RIWAYAH_ALIASES: dict[str, tuple[str, ...]] = {
+    "hafs": ("hafs",),
+    "warsh": ("warsh",),
+    "shubah": ("shubah", "shuba"),
+    "qalun": ("qalun", "qaloun"),
+    "al-douri": ("al douri", "al duri", "aldouri", "alduri"),
+    "al-sousi": ("al sousi", "al susi", "alsousi", "alsusi"),
+}
+
+
+def _ensure_riwayah_compatible(
+    source_qirat: str,
+    quran_version: QuranEditionVersion,
+) -> None:
+    if not source_qirat:
+        raise QuranFoundationError(
+            "The selected recitation has no qira'ah metadata and cannot be matched safely."
+        )
+    edition_riwayah = quran_version.edition.riwayah.strip()
+    source_family = _riwayah_family(source_qirat)
+    edition_family = _riwayah_family(edition_riwayah)
+    if source_family != edition_family:
+        raise QuranFoundationError(
+            f"Quran.Foundation qira'ah '{source_qirat}' is incompatible with "
+            f"Quran edition riwayah '{edition_riwayah}'."
+        )
+
+
+def _riwayah_family(value: str) -> str:
+    normalized = " ".join(slugify(value).replace("-", " ").split())
+    compact = normalized.replace(" ", "")
+    for family, aliases in _RIWAYAH_ALIASES.items():
+        for alias in aliases:
+            normalized_alias = alias.replace("-", " ")
+            compact_alias = normalized_alias.replace(" ", "")
+            if normalized == normalized_alias or normalized.startswith(f"{normalized_alias} "):
+                return family
+            if compact == compact_alias or compact.startswith(f"{compact_alias}an"):
+                return family
+    return normalized
 
 
 def _checksum(value: Any) -> str:
