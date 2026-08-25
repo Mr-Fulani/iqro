@@ -189,7 +189,7 @@ def build_overrides(
         "GATEWAY_PORT": "3000",
         "QURAN_MEDIA_DIR": "./media/staging",
         "QURAN_BACKUP_DIR": "./backups/staging",
-        "RESTORE_CHECK_DATABASE": "quran_staging_restore_check",
+        "RESTORE_CHECK_DATABASE": "quran_restore_check_staging",
         "STAGING_HOST": host,
         "STAGING_MEDIA_HOST": media_host,
         "STAGING_ACME_EMAIL": acme_email,

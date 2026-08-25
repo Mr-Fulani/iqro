@@ -75,6 +75,7 @@ def test_generated_config_passes_strict_media_preflight() -> None:
 
     assert errors == []
     assert warnings == []
+    assert values["RESTORE_CHECK_DATABASE"] == "quran_restore_check_staging"
 
 
 def test_strict_preflight_rejects_unconfigured_media() -> None:
