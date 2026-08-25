@@ -87,7 +87,7 @@ runtime. Основной незакрытый объём находится в 
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
-| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness, bounded multi-worker API metrics, versioned opt-in Prometheus/Grafana/Alertmanager dashboard/rules, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API, bounded audio Range и fail-closed auth/sync capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat, общий Next.js Redis cache/tag coordination, bounded gateway public-JSON cache с защищённым purge и временно проверенный single-host `2 API + 2 web` scale/failover | Нет production-like capacity/soak proof, provider CDN/billing/QoE ingestion, внешнего uptime и проверенной alert delivery, multi-host deployment/load balancer и offsite backup |
+| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness, bounded multi-worker API metrics, versioned opt-in Prometheus/Grafana/Alertmanager dashboard/rules, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API, bounded audio Range, fail-closed auth/sync и mixed capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat, общий Next.js Redis cache/tag coordination, bounded gateway public-JSON cache с защищённым purge и временно проверенный single-host `2 API + 2 web` scale/failover | Нет production-like capacity/soak proof, provider CDN/billing/QoE ingestion, внешнего uptime и проверенной alert delivery, multi-host deployment/load balancer и offsite backup |
 
 ## Критерии приёмки
 
@@ -156,7 +156,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | 🟡 | Strict budget CX23 Quran read подтвердил 10 saturated clients: 4 612 запросов за 2 минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95. Synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; изолированный guest auth/reading sync подтвердил 8 тяжёлых stateful clients и p95 boundary на 10. Реальный multi-reciter audio, registered/mixed workload и production-sized S0/S1 ещё не измерены |
+| SLO доказаны на проектном пике | 🟡 | Strict budget CX23 Quran read подтвердил 10 saturated clients: 4 612 запросов за 2 минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95. Synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; изолированный guest auth/reading sync подтвердил 8 тяжёлых stateful clients и p95 boundary на 10; realistic mixed — `20 readers + 4 sync users` без ошибок. Реальный multi-reciter audio, registered-user workload и production-sized S0/S1 ещё не измерены |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
@@ -254,7 +254,8 @@ provenance-safe immutable кандидата и трёх внешних sign-off
    Synthetic warm R2 audio
    подтвердил 25 playback clients; изолированный
    [guest sync отчёт](capacity/staging-cx23-stateful-sync-2026-08-25.md) — 8 тяжёлых stateful
-   clients и latency boundary на 10. Реальный audio release, registered/mixed workload и
+   clients и latency boundary на 10; [mixed отчёт](capacity/staging-cx23-mixed-realistic-2026-08-25.md)
+   — `20 readers + 4 sync users` без ошибок. Реальный audio release, registered-user workload и
    production-sized повтор остаются открыты.
 3. Server/domain/TLS, privacy/license/religious sign-off.
    Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,

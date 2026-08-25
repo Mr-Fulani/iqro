@@ -477,6 +477,11 @@ export QURAN_BACKUP_DIR=/absolute/encrypted/quran-backups
 docker compose --profile ops run --rm db-backup
 ```
 
+Repository Make targets добавляют `--no-deps`: backup/verify/restore-check jobs подключаются к
+уже работающему PostgreSQL, но не имеют права запускать или пересоздавать runtime database
+container из-за нового image tag. Если PostgreSQL не запущен или unhealthy, job обязан упасть,
+а оператор сначала восстанавливает штатный deployment profile.
+
 Команда напечатает путь внутри контейнера, например `/backups/quran_....dump`. Проверка:
 
 ```bash
@@ -689,6 +694,34 @@ operations и 1 MiB response. Достижение safety cap завершает
 disposable staging database. Отчёт сопоставляется с API/DB/Redis metrics и connection budget за
 то же окно. На production этот сценарий не запускается.
 
+### Mixed public-read + guest sync capacity test
+
+`ops/load/mixed_capacity.py` запускает public-read и stateful sync одновременно, но сохраняет
+метрики и verdict каждого контура раздельно. Формат ступени —
+`READ_CONCURRENCY:SYNC_CONCURRENCY:SECONDS`. Stateful safety остаётся fail-closed: обязательны
+точный hostname и оба подтверждения disposable staging data.
+
+```bash
+python3 ops/load/mixed_capacity.py \
+  --base-url https://staging.example.org \
+  --confirm-target-host staging.example.org \
+  --allow-stateful-writes \
+  --confirm-disposable-staging-data \
+  --workload ops/load/workloads/web-public-read.json \
+  --stage 10:2:120 \
+  --stage 20:4:180 \
+  --read-think-time-ms 5000 \
+  --sync-think-time-ms 15000 \
+  --refresh-every-cycles 5 \
+  --label release-abc1234-s0-mixed \
+  --json-report /tmp/quran-capacity-release-abc1234-s0-mixed.json
+```
+
+То же можно вызвать через `make ops-mixed-capacity MIXED_CAPACITY_ARGS='...'`. Тест создаёт
+guest/device/sync записи и запускается только против изолированной disposable базы. Фактический
+CX23 прогон подтвердил realistic профиль `20 readers + 4 sync users` без ошибок; полный отчёт —
+[mixed capacity evidence](capacity/staging-cx23-mixed-realistic-2026-08-25.md).
+
 Перед каждым изменением числа API/worker replicas сначала обновите topology/runtime-переменные
 `DATABASE_API_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER`,
 `DATABASE_WORKER_REPLICAS` и `CELERY_WORKER_CONCURRENCY`. Затем сохраните отчёт рядом с
@@ -725,7 +758,8 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
   нужны public library reads и отдельные cache-cold/cache-warm прогоны;
 - bounded guest auth, token refresh, reading writes и sync push/pull автоматизированы;
   budget CX23 evidence подтвердил 8 постоянно активных тяжёлых guest sync-клиентов и p95
-  boundary на 10; realistic mixed profile и сценарий зарегистрированного пользователя остаются;
+  boundary на 10; realistic mixed профиль подтвердил `20 readers + 4 sync users`, а сценарий
+  зарегистрированного пользователя остаётся;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
 - bounded CDN/origin `HEAD`, startup/seek `Range`, TTFB, throughput и cache outcomes уже
   автоматизированы; production-like cold/warm/origin evidence, `416` и origin-failure остаются;

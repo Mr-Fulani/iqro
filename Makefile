@@ -10,7 +10,7 @@ STAGING_APP_VERSION ?= staging-$(STAGING_REVISION)
 STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
 STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.staging.budget.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity ops-mixed-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -96,13 +96,13 @@ production-logs:
 	$(PRODUCTION_COMPOSE) logs --tail=200
 
 production-backup:
-	$(PRODUCTION_COMPOSE) --profile ops run --rm db-backup
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup
 
 production-backup-verify:
-	$(PRODUCTION_COMPOSE) --profile ops run --rm db-backup-verify
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
 
 production-restore-check:
-	$(PRODUCTION_COMPOSE) --profile ops run --rm db-restore-check
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-init:
 	python3 ops/staging/init.py \
@@ -144,13 +144,13 @@ staging-logs:
 	$(STAGING_COMPOSE) logs --tail=200
 
 staging-backup:
-	$(STAGING_COMPOSE) --profile ops run --rm db-backup
+	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-backup
 
 staging-backup-verify:
-	$(STAGING_COMPOSE) --profile ops run --rm db-backup-verify
+	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
 
 staging-restore-check:
-	$(STAGING_COMPOSE) --profile ops run --rm db-restore-check
+	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-observability-config: staging-preflight
 	$(STAGING_COMPOSE) -f compose.observability.yaml config --quiet
@@ -232,3 +232,6 @@ ops-audio-capacity:
 
 ops-sync-capacity:
 	python3 ops/load/sync_capacity.py $(SYNC_CAPACITY_ARGS)
+
+ops-mixed-capacity:
+	python3 ops/load/mixed_capacity.py $(MIXED_CAPACITY_ARGS)
