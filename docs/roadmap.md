@@ -23,9 +23,9 @@ production bundle. Это ещё не означает готовность
 - staging-домен/TLS, noindex, локальный backup/restore drill и budget deployment уже проверены;
   внешний мониторинг, offsite backup и обязательные контентные sign-off остаются открытыми
   release gates;
-- content-backed Quran read workload прошёл на бюджетном CX23 при 14 непрерывно активных
-  виртуальных клиентах: 26 510 запросов за пять минут, 0% ошибок, p95 359 ms;
-  [evidence](capacity/staging-cx23-quran-content-2026-08-25.md). Synthetic warm R2 audio
+- strict budget Quran read workload прошёл на CX23 при 10 непрерывно активных saturated
+  клиентах: 4 612 запросов за две минуты, 0% ошибок, p95 682 ms; 12 клиентов превысили p95;
+  [evidence](capacity/staging-cx23-quran-budget-2026-08-25.md). Synthetic warm R2 audio
   подтвердил 25 playback-клиентов и деградацию с 30. Изолированный guest auth/reading sync
   профиль подтвердил 8 постоянно активных stateful-клиентов и выход за p95 на 10;
   [evidence](capacity/staging-cx23-stateful-sync-2026-08-25.md). Реальный audio release,
@@ -120,8 +120,8 @@ flowchart LR
   превысили p95 gate. Остаются library API, registered-user и mixed journey, реальный
   multi-reciter cache-cold/warm/origin и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
-  [content-backed CX23 evidence](capacity/staging-cx23-quran-content-2026-08-25.md) уже
-  доказывает 14 saturated Quran read clients, а
+  [strict budget CX23 evidence](capacity/staging-cx23-quran-budget-2026-08-25.md) уже
+  доказывает 10 saturated Quran read clients и boundary на 12, а
   [synthetic audio evidence](capacity/staging-r2-synthetic-audio-2026-08-25.md) — 25 warm-CDN
   playback clients на одном тестовом маршруте; отдельный
   [stateful sync evidence](capacity/staging-cx23-stateful-sync-2026-08-25.md) подтверждает 8
@@ -213,8 +213,9 @@ flowchart LR
   commit после GitHub CI.
 - [ ] Провести staged public-read capacity/soak test на production-like staging и записать
   доказанную ёмкость S0/S1. Quran HTML/API часть на budget CX23 подтверждена
-  [content-backed отчётом](capacity/staging-cx23-quran-content-2026-08-25.md): 14 saturated
-  clients, 26 510 запросов за пять минут, 0% ошибок, p95 359 ms. Checkbox остаётся открытым до
+  [strict budget отчётом](capacity/staging-cx23-quran-budget-2026-08-25.md): 10 saturated
+  clients, 4 612 запросов за две минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95.
+  Checkbox остаётся открытым до
   реального multi-reciter audio release, registered-user/mixed sync и повтора на
   production-sized профиле. Synthetic R2 Range и изолированный guest sync уже измерены:
   соответственно 25 playback-клиентов и 8 тяжёлых stateful-клиентов с boundary на 10.

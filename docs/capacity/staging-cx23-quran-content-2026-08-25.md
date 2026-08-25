@@ -1,5 +1,11 @@
 # Staging CX23: Quran content-backed capacity evidence
 
+> Уточнение от 25 августа 2026 года: этот прогон выполнялся на физическом CX23 после точечных
+> rollout, когда web/backend/PostgreSQL имели более широкие base ceilings. Он остаётся валидным
+> host-level результатом, но не доказывает строгий `compose.staging.budget.yaml`. После устранения
+> drift отдельный [strict budget отчёт](staging-cx23-quran-budget-2026-08-25.md) подтвердил 10
+> saturated read-клиентов и latency boundary на 12.
+
 Дата прогона: 25 августа 2026 года. Web artifact: `staging-4ac230d`; базовый staging
 deployment: `a5117cb`.
 

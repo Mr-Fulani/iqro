@@ -18,7 +18,9 @@ staging переключён с временного `r2.dev` на custom domain
 `CF-Cache-Status: HIT`; машинный результат сохранён в
 [CDN contract report](capacity/staging-r2-media-contract-2026-08-25.json). Последний
 зафиксированный Quran content-backed capacity результат находится в
-[отчёте CX23](capacity/staging-cx23-quran-content-2026-08-25.md); исторический прогон до
+[strict budget отчёте CX23](capacity/staging-cx23-quran-budget-2026-08-25.md); прогон с более
+широкими per-container ceilings сохранён в
+[host-level отчёте](capacity/staging-cx23-quran-content-2026-08-25.md), а исторический прогон до
 активации corpus сохранён в
 [pre-publication отчёте](capacity/staging-cx23-prepublication-2026-08-25.md).
 Отдельный synthetic audio Range-прогон через R2/CDN подтвердил 25 playback-клиентов и границу
@@ -105,6 +107,9 @@ Prometheus/Grafana baseline разумно временно увеличить V
 API/Celery worker, уменьшает memory/CPU ceilings, собирает образы последовательно и не включает
 постоянный observability stack. Такой сервер проверяет продуктовые сценарии, HTTPS, R2 и smoke,
 но его результаты нельзя объявлять capacity-гарантией будущего более мощного production.
+После полного или точечного rollout запускайте `make staging-budget-runtime-verify`: команда
+сравнивает фактические Docker CPU/RAM limits всех работающих реплик с budget overlay и
+fail-closed обнаруживает смешанный профиль.
 
 В firewall провайдера открыть:
 
@@ -366,9 +371,11 @@ make staging-restore-check BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 одновременных пользователей фиксируется только из JSON reports и server-side metrics реального
 staging, не из DAU и не из лимитов Docker Compose.
 
-Фактический content-backed прогон 25 августа 2026 года подтвердил на CX23 14 непрерывно
-активных read-only клиентов в течение пяти минут: 26 510 запросов, 88.34 RPS, 0% ошибок,
-p95 359 ms. Полный отчёт и ограничения результата: [Quran content-backed capacity evidence](capacity/staging-cx23-quran-content-2026-08-25.md).
+Фактический strict budget content-backed прогон 25 августа 2026 года подтвердил на CX23 10
+непрерывно активных saturated read-only клиентов в течение двух минут: 4 612 запросов,
+38.41 RPS, 0% ошибок, p95 682 ms. На 12 клиентах общий p95 вырос до 779 ms и gate не прошёл.
+Полный отчёт и ограничения результата:
+[strict budget Quran capacity evidence](capacity/staging-cx23-quran-budget-2026-08-25.md).
 Synthetic warm audio CDN часть подтвердила 25 playback-клиентов при 256 kbps request profile;
 изолированный guest auth/sync профиль подтвердил 8 тяжёлых stateful-клиентов, а 10 не уложились
 в p95 750 ms. Реальный разрешённый multi-reciter audio release, cache-cold,
@@ -390,6 +397,7 @@ make staging-backup-verify BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 cd /opt/quran
 make staging-budget-config
 make staging-budget-up
+make staging-budget-runtime-verify
 make staging-budget-ps
 ```
 
