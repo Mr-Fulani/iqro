@@ -6,7 +6,7 @@
 
 - To: `developer@qurancomplex.gov.sa`
 - CC: не использовать
-- Отправитель: рабочий адрес проекта `iqro.forum@gmail.com`
+- Отправитель: рабочий адрес проекта `fulani.dev@gmail.com`
 
 `developer@qurancomplex.gov.sa` опубликован в официальном Quran Hafs guide и как support email
 официального приложения. `info@qurancomplex.gov.sa` не ставить в копию: 25 августа 2026 года
@@ -90,7 +90,7 @@ Please also tell us whether a separate signed license or scholarly/editorial rev
 Complex is required before public production launch.
 
 - Developer/app owner: **[FULL LEGAL NAME / ORGANIZATION]**
-- Project email: **iqro.forum@gmail.com**
+- Project email: **fulani.dev@gmail.com**
 - Privacy Policy: <https://staging.iqro.forum/en/privacy>
 - Terms of Use: <https://staging.iqro.forum/en/terms>
 - Sources and licenses: <https://staging.iqro.forum/en/sources>
