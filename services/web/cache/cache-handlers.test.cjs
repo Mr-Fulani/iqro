@@ -2,10 +2,20 @@ const assert = require("node:assert/strict");
 const { after, test } = require("node:test");
 
 const RedisIncrementalCacheHandler = require("./incremental-cache-handler.cjs");
-const { SharedCacheStore, closeSharedStore } = require("./shared-store.cjs");
+const {
+  SharedCacheStore,
+  closeSharedStore,
+  redisClientOptions,
+} = require("./shared-store.cjs");
 const useCacheHandler = require("./use-cache-handler.cjs");
 
 after(async () => closeSharedStore());
+
+test("shared Redis cache bounds connection setup without an idle socket timeout", () => {
+  const options = redisClientOptions("redis://redis:6379/0", 2_000);
+  assert.equal(options.socket.connectTimeout, 2_000);
+  assert.equal("socketTimeout" in options.socket, false);
+});
 
 test("required production cache rejects a missing Redis URL", () => {
   const previousRequired = process.env.WEB_CACHE_REQUIRED;

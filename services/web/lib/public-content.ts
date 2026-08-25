@@ -49,7 +49,10 @@ function backendBaseUrl(): string {
 
 async function fetchPublishedJson<T>(path: string, tags: string[]): Promise<T> {
   const response = await fetch(`${backendBaseUrl()}${path}`, {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      "X-Forwarded-Proto": "https",
+    },
     next: {
       revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS,
       tags,

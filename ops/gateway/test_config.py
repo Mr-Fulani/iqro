@@ -43,7 +43,7 @@ class GatewayConfigTests(unittest.TestCase):
         )
         self.assertIn("proxy_set_header X-Forwarded-Proto https;", self.config)
         self.assertIn(
-            "DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in the production env file},gateway",
+            "DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in the production env file},gateway,backend",
             PRODUCTION_COMPOSE.read_text(encoding="utf-8"),
         )
 

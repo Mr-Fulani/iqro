@@ -60,6 +60,18 @@ function hash(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+function redisClientOptions(url, connectTimeoutMs) {
+  return {
+    url,
+    disableOfflineQueue: true,
+    socket: {
+      connectTimeout: connectTimeoutMs,
+      reconnectStrategy: (retries) =>
+        retries >= 2 ? false : Math.min(250 * 2 ** retries, 1_000),
+    },
+  };
+}
+
 class SharedCacheStore {
   constructor() {
     this.url = redisUrl();
@@ -122,15 +134,7 @@ class SharedCacheStore {
       throw error;
     }
 
-    const client = createClient({
-      url: this.url,
-      disableOfflineQueue: true,
-      socket: {
-        connectTimeout: this.connectTimeoutMs,
-        socketTimeout: this.connectTimeoutMs,
-        reconnectStrategy: (retries) => (retries >= 2 ? false : Math.min(250 * 2 ** retries, 1_000)),
-      },
-    });
+    const client = createClient(redisClientOptions(this.url, this.connectTimeoutMs));
     client.on("error", (error) => cacheWarning("Redis connection", error));
     this.client = client;
     this.connectPromise = client
@@ -264,4 +268,10 @@ async function closeSharedStore() {
   await store.close();
 }
 
-module.exports = { SharedCacheStore, cacheWarning, closeSharedStore, getSharedStore };
+module.exports = {
+  SharedCacheStore,
+  cacheWarning,
+  closeSharedStore,
+  getSharedStore,
+  redisClientOptions,
+};

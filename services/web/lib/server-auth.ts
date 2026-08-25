@@ -33,8 +33,11 @@ function backendBase(): string {
 }
 
 export async function backendRequest(path: string, init: RequestInit): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set("X-Forwarded-Proto", "https");
   return fetch(`${backendBase()}${path}`, {
     ...init,
+    headers,
     cache: "no-store",
   });
 }
