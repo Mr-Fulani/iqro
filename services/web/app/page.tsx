@@ -6,14 +6,9 @@ import { ReciterAvatar } from "../components/ReciterAvatar";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
-
-const RECITER_PORTRAITS: Record<string, string> = {
-  "qf-159-maher-al-muaiqly": "/reciters/maher-al-muaiqly.webp",
-  "qf-7-mishari-rashid-al-afasy": "/reciters/mishari-rashid-al-afasy.webp",
-  "qf-174-yasser-ad-dussary": "/reciters/yasser-ad-dussary.webp",
-};
 
 export default function HomePage() {
   const { session, isLoggedIn, loginGuest, isLoading: authLoading } = useAuth();
@@ -188,7 +183,7 @@ export default function HomePage() {
                 >
                   <ReciterAvatar
                     name={name || reciter.name_en}
-                    portraitUrl={reciter.portrait_url || RECITER_PORTRAITS[reciter.slug]}
+                    portraitUrl={reciterPortraitUrl(reciter)}
                     tone={index}
                   />
                   <span className="reciter-card-copy">

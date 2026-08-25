@@ -5,6 +5,7 @@ import { ReciterAvatar } from "@/components/ReciterAvatar";
 import { reciterName, reciterPath } from "@/lib/audio-content";
 import { isLocale, translate } from "@/lib/i18n";
 import { getPublishedReciters } from "@/lib/public-content";
+import { reciterPortraitUrl } from "@/lib/reciter-portraits";
 import { localizedPath } from "@/lib/routing";
 import { createPageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
@@ -62,7 +63,7 @@ export default async function ReciterCatalogPage({
             >
               <ReciterAvatar
                 name={name}
-                portraitUrl={reciter.portrait_url}
+                portraitUrl={reciterPortraitUrl(reciter)}
                 tone={index}
               />
               <span className="reciter-card-copy">

@@ -16,6 +16,7 @@ import {
   isUuid,
   PublicContentNotFoundError,
 } from "@/lib/public-content";
+import { reciterPortraitUrl } from "@/lib/reciter-portraits";
 import { localizedPath } from "@/lib/routing";
 import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
 
@@ -90,7 +91,7 @@ export default async function ReciterPage({ params }: { params: Promise<RoutePar
         </ol>
       </nav>
       <header className="surface seo-reciter-hero">
-        <ReciterAvatar name={name} portraitUrl={reciter.portrait_url} tone={0} />
+        <ReciterAvatar name={name} portraitUrl={reciterPortraitUrl(reciter)} tone={0} />
         <div className="seo-reciter-copy">
           <p className="eyebrow" lang="ar" dir="rtl">{reciter.name_ar}</p>
           <h1>{translate(route.locale, "audio.deep.reciterTitle", { name })}</h1>
