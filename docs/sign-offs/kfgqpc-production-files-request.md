@@ -5,12 +5,16 @@
 ## Кому отправить
 
 - To: `developer@qurancomplex.gov.sa`
-- CC: `info@qurancomplex.gov.sa`
+- CC: не использовать
 - Отправитель: рабочий адрес проекта `iqro.forum@gmail.com`
 
-Это контакты, опубликованные King Fahd Glorious Qur'an Printing Complex на developer platform
-и в официальном Quran Hafs guide. Секреты, API credentials и внутренние серверные URL в письмо
-не добавлять.
+`developer@qurancomplex.gov.sa` опубликован в официальном Quran Hafs guide и как support email
+официального приложения. `info@qurancomplex.gov.sa` не ставить в копию: 25 августа 2026 года
+их входной шлюз отклонил этот recipient с `550 5.7.1 XGEMAIL_0008 Command rejected`. Если
+`developer@...` не ответит в течение пяти рабочих дней, переслать исходное письмо без изменения
+на резервный `contact@qurancomplex.gov.sa`, опубликованный в официальном technical guide, и
+приложить короткое пояснение о недоставленной копии. Секреты, API credentials и внутренние
+серверные URL в письмо не добавлять.
 
 ## Что именно запрашивается
 
