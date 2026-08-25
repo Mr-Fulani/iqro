@@ -5,6 +5,7 @@ from pathlib import Path
 
 CONFIG = Path(__file__).with_name("default.conf")
 DOCKERFILE = Path(__file__).with_name("Dockerfile")
+SECURITY_HEADERS = Path(__file__).with_name("security-headers.conf")
 PRODUCTION_COMPOSE = CONFIG.parents[2] / "compose.production.yaml"
 
 
@@ -52,6 +53,13 @@ class GatewayConfigTests(unittest.TestCase):
             "location /admin/ {", maxsplit=1
         )[0]
         self.assertNotIn("proxy_cache ", generic_api)
+
+    def test_quran_foundation_fonts_are_allowed_by_gateway_csp(self) -> None:
+        security_headers = SECURITY_HEADERS.read_text(encoding="utf-8")
+        self.assertIn(
+            "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
+            security_headers,
+        )
 
 
 if __name__ == "__main__":
