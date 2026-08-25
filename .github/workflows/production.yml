@@ -12,6 +12,7 @@ on:
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/scaling/**"
       - "ops/staging/**"
       - "Makefile"
       - "docs/production.md"
@@ -29,6 +30,7 @@ on:
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/scaling/**"
       - "ops/staging/**"
       - "Makefile"
       - "docs/production.md"
@@ -106,6 +108,12 @@ jobs:
           --env-file services/backend/.env.production.example
           -f compose.production.yaml
           build backend web gateway postgres
+      - name: Validate gateway runtime configuration
+        run: >-
+          docker run --rm
+          --entrypoint nginx
+          quran-platform-gateway:ci-${{ github.sha }}
+          -t
       - name: Scan backend image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

@@ -66,8 +66,10 @@ jobs:
             ops.load.test_capacity \
             ops.load.test_audio_capacity \
             ops.load.test_sync_capacity \
+            ops.gateway.test_config \
             ops.media.test_contract \
-            ops.observability.test_render_config
+            ops.observability.test_render_config \
+            ops.scaling.test_validate
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.28"

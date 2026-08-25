@@ -129,7 +129,7 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 
 ### 3.1. Граница horizontal scale
 
-До добавления второй application-реплики необходимо:
+До добавления второй production application-реплики как S1/multi-host topology необходимо:
 
 - provision'ить production bucket/CDN и загрузить канонические media через готовый immutable
   pipeline; runtime-код и Compose уже не зависят от локального media volume;
@@ -145,6 +145,37 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 load balancer/orchestrator; single-host gateway остаётся стартовым S0-профилем. PostgreSQL read
 replica, отдельные Redis-кластеры и партиционирование добавляются только при измеренной
 saturation; они не являются условием небольшого публичного запуска.
+
+Для промежуточного single-host шага gateway использует Docker DNS и каждые пять секунд
+обновляет адреса `backend`/`web`, поэтому Compose может безопасно добавить или убрать их
+реплики без ручного списка IP и без sticky sessions. Это увеличивает пропускную способность
+процессов, но не даёт high availability при потере самого host.
+
+Соберите release images, затем выполните bounded preflight и scale:
+
+```bash
+make production-build
+make production-scale API_REPLICAS=2 WEB_REPLICAS=2
+make production-ps
+curl --fail https://example.org/api/v1/health/ready
+```
+
+`production-scale` принимает от 1 до 64 реплик каждого типа, автоматически передаёт
+`DATABASE_API_REPLICAS` в Compose, валидирует итоговую модель и запускает
+`database_connection_budget` в release image до изменения работающей topology. Команда
+использует `--no-build`: масштабируется только уже собранный и проверенный release. Worker не
+масштабируется этой командой, Beat остаётся в одной реплике.
+
+После scale выполните public-read/sync capacity smoke и проверьте 5xx, p95/p99, PostgreSQL
+headroom и Redis latency. Откат числа процессов использует тот же проверяемый путь:
+
+```bash
+make production-scale API_REPLICAS=1 WEB_REPLICAS=1
+```
+
+Budget staging overlay на CX23 намеренно остаётся с одной web/API-репликой; эту команду нельзя
+использовать как способ обойти его CPU/memory ceilings. Multi-replica staging-прогон выполняется
+на стандартном или production-sized профиле.
 
 ### 3.2. PostgreSQL/PgBouncer connection budget
 

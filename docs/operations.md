@@ -659,6 +659,12 @@ uv run python manage.py database_connection_budget \
 `SHOW DATABASES`/`SHOW CONFIG` PgBouncer. Расхождение означает, что deployment нельзя
 масштабировать до исправления конфигурации.
 
+Для single-host Compose API/web scale используйте `make production-scale
+API_REPLICAS=N WEB_REPLICAS=M`. Target сам передаёт число API-реплик в database budget,
+запрещает нулевые/чрезмерные значения и не пересобирает release image. Полная процедура,
+проверка после rollout и rollback описаны в
+[production runbook](production.md#31-граница-horizontal-scale).
+
 ## Capacity profiles и рост
 
 Проект использует профили S0–S3 из

@@ -1,14 +1,16 @@
 BACKEND_DIR := services/backend
 WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
-PRODUCTION_COMPOSE = PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
+API_REPLICAS ?= 1
+WEB_REPLICAS ?= 1
+PRODUCTION_COMPOSE = DATABASE_API_REPLICAS=$(API_REPLICAS) PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
 STAGING_ENV ?= ops/staging/staging.env
 STAGING_REVISION ?= $(shell git rev-parse --short HEAD 2>/dev/null || cut -c1-7 .deployed-commit 2>/dev/null || printf unknown)
 STAGING_APP_VERSION ?= staging-$(STAGING_REVISION)
 STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
 STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.staging.budget.yaml
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -69,6 +71,20 @@ production-build:
 
 production-up:
 	$(PRODUCTION_COMPOSE) up --build --detach --wait
+
+production-scale-validate:
+	python3 ops/scaling/validate.py \
+		--api-replicas "$(API_REPLICAS)" \
+		--web-replicas "$(WEB_REPLICAS)"
+
+production-scale-preflight: production-scale-validate production-config
+	$(PRODUCTION_COMPOSE) run --rm --no-deps backend \
+		python manage.py database_connection_budget
+
+production-scale: production-scale-preflight
+	$(PRODUCTION_COMPOSE) up --detach --wait --no-build \
+		--scale backend=$(API_REPLICAS) \
+		--scale web=$(WEB_REPLICAS)
 
 production-down:
 	$(PRODUCTION_COMPOSE) down --remove-orphans

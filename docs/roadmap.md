@@ -79,7 +79,9 @@ flowchart LR
 - [x] Разделить логический `AudioTrack`/таймлайн и физические `AudioRendition` вариантов
   economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
   default `asset` и отдаёт типизированный список renditions.
-- [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`.
+- [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`: backend уже
+  отдаёт ETag/public cache policy, а gateway regression-test запрещает непуржируемый proxy
+  cache; следующий шаг — подключить purge adapter к publication event, затем включить edge.
 - [x] Подготовить PgBouncer-compatible DB configuration и connection budget: ASGI не держит
   persistent connections, transaction mode отключает server-side cursors/автоподготовку
   statements, а startup и operator-команда отклоняют превышение PostgreSQL/client pool budget.
@@ -100,7 +102,9 @@ flowchart LR
   и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
   [pre-publication CX23 evidence](capacity/staging-cx23-prepublication-2026-08-25.md) уже
-  доказывает 14 saturated read clients, но не содержит Quran/audio/sync workload.
+  доказывает 14 saturated read clients. Single-host API/web scale автоматизирован через
+  bounded preflight, DB budget и dynamic Docker DNS; полный S1 report и внешний
+  load-balancer/HA runbook ещё не закрыты.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики
 не требует изменения кода или копирования локального состояния; S1 нагрузка подтверждена.
