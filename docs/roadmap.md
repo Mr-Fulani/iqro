@@ -73,11 +73,10 @@ flowchart LR
   2 vCPU/4 GiB. Бюджетный Hetzner CX23, `staging.iqro.forum`, TLS, отдельный R2 bucket,
   backup/restore drill и pre-publication capacity evidence фактически проверены; production
   media domain, offsite backup и production-sized observability/capacity gates остаются открыты.
-- [ ] Завершить staging media edge: bucket `iqro-staging-media`, scoped token, точный CORS и
-  диагностический public-read/Range уже проверены; делегирование `iqro.forum` на Cloudflare
-  принято реестром. Осталось дождаться активации зоны, подключить
-  `media.staging.iqro.forum`, включить бесплатные cache/security header rules, переключить
-  staging env с временного `r2.dev` и приложить зелёный CDN contract report.
+- [x] Завершить staging media edge: bucket `iqro-staging-media`, scoped token, точный CORS,
+  делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
+  Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
+  временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.

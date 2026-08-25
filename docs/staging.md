@@ -11,17 +11,19 @@ CX23 через budget overlay, TLS и запрет индексации акт�
 Для media создан отдельный Cloudflare R2 bucket `iqro-staging-media`, ограниченный этим bucket
 API token и CORS для `https://staging.iqro.forum`; public-read/Range проверен на отдельном
 диагностическом объекте. Делегирование `iqro.forum` на Cloudflare nameservers принято реестром
-25 августа 2026 года, но custom hostname `media.staging.iqro.forum` включается только после
-активации зоны и выпуска edge TLS certificate. Последний зафиксированный pre-publication
-capacity результат находится в
+25 августа 2026 года. Custom hostname `media.staging.iqro.forum`, edge TLS, точный CORS,
+`X-Content-Type-Options: nosniff` и отдельное cache rule только для media hostname активны;
+staging переключён с временного `r2.dev` на custom domain. Автоматический CDN contract
+(HEAD/Range/416/CORS/ETag/cache headers) зелёный, а повторный Range-запрос подтверждён как
+`CF-Cache-Status: HIT`; машинный результат сохранён в
+[CDN contract report](capacity/staging-r2-media-contract-2026-08-25.json). Последний
+зафиксированный pre-publication capacity результат находится в
 [отчёте CX23](capacity/staging-cx23-prepublication-2026-08-25.md).
 
-Среда ещё не является production: R2 custom media domain ожидает DNS propagation, а
-согласованный media/Quran corpus не активирован; offsite backup и постоянный production-sized
-observability stack не закрыты. До статуса custom domain `Active` staging продолжает использовать
-временный rate-limited `r2.dev` только для технической диагностики, не для продуктового аудио.
-Инструкция ниже остаётся источником истины для пересоздания staging и последующего production
-rollout; секреты и IP-ограничения в документацию не записываются.
+Среда ещё не является production: согласованный media/Quran corpus не активирован; offsite backup
+и постоянный production-sized observability stack не закрыты. Инструкция ниже остаётся
+источником истины для пересоздания staging и последующего production rollout; секреты и
+IP-ограничения в документацию не записываются.
 
 ## Что уже автоматизировано
 
@@ -293,6 +295,17 @@ origins, `GET`/`HEAD`, Range и нужные плееру response headers. Фо
 make staging-media-preflight
 make staging-up
 ```
+
+Для фактического staging проекта 25 августа 2026 года дополнительно включены два бесплатных
+Cloudflare rule, оба с точным условием `http.host eq "media.staging.iqro.forum"`:
+
+- response header transform `X-Content-Type-Options: nosniff`;
+- cache eligibility с origin `Cache-Control`/default edge TTL и сохранением strong ETag.
+
+После переключения `PUBLIC_MEDIA_BASE_URL`, `PUBLIC_AUDIO_BASE_URL` и `STAGING_MEDIA_HOST`
+указывают на `https://media.staging.iqro.forum/`; backend, worker и beat пересозданы без
+перезапуска PostgreSQL, Redis, web или gateway. Readiness и `make staging-media-preflight`
+остались зелёными.
 
 Далее accepted/versioned assets загружаются immutable upload-командами из раздела
 [Managed media CDN contract](operations.md#managed-media-cdn-contract), а публичный CDN contract

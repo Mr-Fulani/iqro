@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-25T02:29:07.874833+00:00",
+  "manifest": {
+    "name": "iqro-staging-r2-diagnostic",
+    "version": 1
+  },
+  "origins": [
+    "https://staging.iqro.forum"
+  ],
+  "min_cache_seconds": 31536000,
+  "passed": true,
+  "assets": [
+    {
+      "name": "staging-range-probe",
+      "url": "https://media.staging.iqro.forum/diagnostics/staging-media-contract/1.0.0/range-probe.bin",
+      "passed": true,
+      "failures": [],
+      "observed_etag": "\"875686fa700a39c0f6316bda2e52f35a\"",
+      "observed_bytes": 63488,
+      "observed_content_type": "application/octet-stream"
+    }
+  ]
+}
