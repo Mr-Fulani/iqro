@@ -62,6 +62,9 @@ runtime. Основной незакрытый объём находится в 
 - Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
   114 треков выбранной декламации, таймкоды и реальное воспроизведение первой суры. Это не
   заменяет versioned manifests и внешний лицензионный/religious release evidence.
+- Staging backend 25 августа 2026 года успешно прошёл отдельную read-only авторизацию в
+  Quran.Foundation production API и получил каталог из 21 chapter reciter. Credentials хранятся
+  только в закрытом staging env; sync выключен, аудиоданные не импортированы и не опубликованы.
 
 ## Матрица P0
 

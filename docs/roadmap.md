@@ -77,6 +77,10 @@ flowchart LR
   делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
   Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
   временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
+- [x] Подключить к staging существующий Quran.Foundation production API-доступ без раскрытия
+  credentials и проверить read-only авторизацию из backend: каталог доступен (21 chapter
+  reciter на 25 августа 2026 года). Фоновая синхронизация намеренно оставлена выключенной;
+  импорт и публикация аудио ждут активной Quran edition и внешних content/license sign-off.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.
