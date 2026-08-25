@@ -202,8 +202,10 @@ API не должен предполагать, что запрос пришёл
   Tag invalidation хранит timestamp без `SCAN`: publication event пишет его централизованно,
   а каждый инстанс сверяет timestamp при чтении. Tag TTL не может быть короче entry TTL, поэтому
   старая запись не «воскресает» после удаления маркера.
-- CDN HTML/RSC/public JSON вводится только вместе с purge adapter. Без него edge TTL может
-  пережить Next.js `revalidateTag`; immutable audio/image media остаётся отдельным CDN-контуром.
+- Gateway кэширует только allowlisted public JSON без cookie/`Authorization`, в bounded zone;
+  publication event после `revalidateTag` выполняет защищённый wildcard purge этой зоны.
+  Внешний CDN для HTML/RSC вводится только вместе с отдельным provider purge adapter;
+  immutable audio/image media остаётся независимым CDN-контуром.
 
 ### Workers
 

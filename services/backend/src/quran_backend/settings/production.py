@@ -43,6 +43,19 @@ if (
         "WEB_CONTENT_REVALIDATION_URL must be an HTTP(S) URL without credentials, "
         "query, or fragment"
     )
+PUBLIC_API_CACHE_PURGE_URL = required_env("PUBLIC_API_CACHE_PURGE_URL")
+public_api_cache_purge_url = urlsplit(PUBLIC_API_CACHE_PURGE_URL)
+if (
+    public_api_cache_purge_url.scheme not in {"http", "https"}
+    or public_api_cache_purge_url.hostname is None
+    or public_api_cache_purge_url.username is not None
+    or public_api_cache_purge_url.password is not None
+    or public_api_cache_purge_url.query
+    or public_api_cache_purge_url.fragment
+):
+    raise ImproperlyConfigured(
+        "PUBLIC_API_CACHE_PURGE_URL must be an HTTP(S) URL without credentials, query, or fragment"
+    )
 for email_setting in (
     "DJANGO_EMAIL_HOST",
     "DJANGO_EMAIL_HOST_USER",

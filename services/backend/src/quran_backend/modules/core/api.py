@@ -112,6 +112,17 @@ class OperationsViewBase(APIView):
         return None
 
 
+class GatewayCachePurgeAuthorizationView(OperationsViewBase):
+    @extend_schema(exclude=True)
+    def get(self, request: Request) -> Response:
+        authorization_error = self.authorization_error(request)
+        if authorization_error is not None:
+            return authorization_error
+        response = Response(status=204)
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+
 class OperationalHealthView(OperationsViewBase):
     @extend_schema(
         operation_id="health_operations",

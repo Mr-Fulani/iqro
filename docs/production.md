@@ -119,8 +119,9 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 - healthchecks проверяют PostgreSQL, Redis, Django readiness, Next.js и gateway;
 - логи Docker ротируются по размеру и количеству файлов;
 - только успешная `migrate --noinput` открывает запуск backend/worker/beat;
-- Nginx раздаёт только собранный Django `/static/`, а `/api/` проксирует в backend; `/media/`
-  локально отсутствует, чтобы потеря application-host не уничтожала канонические assets;
+- Nginx раздаёт только собранный Django `/static/`, проксирует `/api/` в backend и держит
+  bounded 24 MiB cache только для allowlisted public catalog JSON; `/media/` локально
+  отсутствует, чтобы потеря application-host не уничтожала канонические assets;
 - данные PostgreSQL/Redis и собранная статика находятся в именованных volumes.
 
 Лимиты ресурсов задаются в `compose.production.yaml`. Перед размещением на маленьком
@@ -290,8 +291,10 @@ endpoint, чтобы Celery повторил событие. В S0 web cache у�
 
 Перед второй web-репликой дополнительно обеспечьте load balancing и одинаковые
 `WEB_CACHE_KEY_PREFIX`, `WEB_CONTENT_REVALIDATION_SECRET`, build/image version на всех
-инстансах. CDN не должен кэшировать HTML/RSC/public JSON до появления purge adapter; media CDN
-остаётся независимым immutable-контуром.
+инстансах. Gateway public JSON cache уже очищается тем же publication event через защищённый
+operations-token adapter и обходит запросы с cookie/`Authorization`. Внешний CDN не должен
+кэшировать HTML/RSC до появления отдельного provider purge adapter; media CDN остаётся
+независимым immutable-контуром.
 
 ## 4. Обновление и откат
 

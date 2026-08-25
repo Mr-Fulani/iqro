@@ -1,6 +1,7 @@
 FROM alpine:3.23.5
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx nginx-mod-http-cache-purge \
+    && mkdir -p /var/cache/nginx/public-api
 
 COPY default.conf /etc/nginx/http.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/quran-security-headers.conf

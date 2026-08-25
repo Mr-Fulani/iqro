@@ -210,6 +210,22 @@ backend/worker и web через secret store; в логах и URL его бы�
 произвольные cache tags/paths: только allowlisted Quran/audio события с валидными edition,
 content version и UUID. Без корректного секрета он отвечает 404.
 
+Gateway отдельно кэширует только публичные `GET`/`HEAD` JSON-маршруты Quran, каталог
+чтецов/декламаций, список методов расчёта молитв и зарезервированный префикс `library`.
+Запросы с `Authorization` или cookie всегда идут в backend; остальные API, HTML/RSC и
+персональные ответы в этот cache zone не попадают. Ответ сохраняется только при явном
+`Cache-Control: public`, а ключ различает URI, метод, `Origin` и `Accept`. Локальный cache
+ограничен 24 MiB и одним часом неактивности; заголовок `X-Quran-Edge-Cache` показывает
+`MISS`, `HIT`, `BYPASS` или результат повторной проверки.
+
+Та же Celery-задача после успешного web revalidation отправляет внутренний `PURGE` в gateway.
+Gateway сначала проверяет bearer token через backend operations endpoint и только затем
+очищает маленькую public API zone целиком. Это сознательно простой и безопасный первый
+контракт: публикации редки, поэтому wildcard purge дешевле и надёжнее списка потенциально
+неполных URL. Значение `PUBLIC_API_CACHE_PURGE_URL` внутри Compose по умолчанию равно
+`http://gateway:8080/internal/cache/purge-public-api`; operations token не помещается в URL
+или логи.
+
 Production web использует общий Redis-backed handler для fetch/ISR/route entries и общий
 timestamp каждого invalidated tag. `updateTags` пишет timestamp, `getExpiration` и cache reads
 сверяют его без обхода keyspace; `refreshTags` не делает сетевой `SCAN`, потому что локального
@@ -225,9 +241,29 @@ failed revalidation task. Для проверки нового deployment вып
 без URL, затем против временного Redis с отдельным `WEB_CACHE_KEY_PREFIX`; production keyspace
 тестом не очищайте.
 
-Если CDN начнёт кэшировать HTML/RSC или public JSON поверх Next.js, тот же publication event
-обязан purge'ить CDN-варианты; до появления purge adapter gateway не должен добавлять для них
-независимый edge TTL. Immutable media кэшируется отдельно в media CDN и не зависит от ISR
+Проверка cache и защищённой очистки после rollout:
+
+```bash
+curl -sS -D - -o /dev/null https://example.org/api/v1/prayer/methods
+curl -sS -D - -o /dev/null https://example.org/api/v1/prayer/methods
+curl -sS -D - -o /dev/null -H 'Authorization: Bearer invalid-test-token' \
+  https://example.org/api/v1/prayer/methods
+curl -sS -D - -o /dev/null -X PURGE \
+  https://example.org/internal/cache/purge-public-api
+docker compose --env-file services/backend/.env.production -f compose.production.yaml \
+  exec backend python manage.py shell -c \
+  "from django.conf import settings; from urllib.request import Request,urlopen; r=Request(settings.PUBLIC_API_CACHE_PURGE_URL,method='PURGE',headers={'Authorization':f'Bearer {settings.QURAN_OPERATIONS_TOKEN}'}); print(urlopen(r,timeout=5).status)"
+curl -sS -D - -o /dev/null https://example.org/api/v1/prayer/methods
+```
+
+Два первых ответа должны дать `MISS`, затем `HIT`; запрос с заголовком авторизации —
+`BYPASS`; operator-команда — успешный HTTP status; первый запрос после неё — снова `MISS`.
+Не вставляйте operations token непосредственно в shell history. Неавторизованный внешний
+`PURGE` из примера обязан вернуть 401, а обычный метод на purge URL — 405.
+
+Если внешний CDN когда-либо начнёт кэшировать HTML/RSC, тот же publication event нужно
+расширить его provider-specific purge adapter. Сейчас gateway намеренно кэширует только
+allowlisted public JSON. Immutable media кэшируется отдельно в media CDN и не зависит от ISR
 webhook.
 
 `/sitemaps/quran/sitemap.xml` ссылается на child sitemap с edition и активной content version в

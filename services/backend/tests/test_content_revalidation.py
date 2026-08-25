@@ -11,6 +11,8 @@ from quran_backend.modules.core.tasks import notify_web_content_change_task
 
 TEST_SECRET = "test-content-revalidation-secret-00000001"
 TEST_URL = "http://web:3000/api/internal/content-revalidation"
+TEST_PURGE_URL = "http://gateway:8080/internal/cache/purge-public-api"
+TEST_OPERATIONS_TOKEN = "test-operations-token-0000000000000001"
 
 
 class FakeResponse:
@@ -31,16 +33,25 @@ class FakeResponse:
     WEB_CONTENT_REVALIDATION_URL=TEST_URL,
     WEB_CONTENT_REVALIDATION_SECRET=TEST_SECRET,
     WEB_CONTENT_REVALIDATION_TIMEOUT_SECONDS=5,
+    PUBLIC_API_CACHE_PURGE_URL=TEST_PURGE_URL,
+    QURAN_OPERATIONS_TOKEN=TEST_OPERATIONS_TOKEN,
 )
-def test_revalidation_task_posts_authenticated_json(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
+def test_revalidation_task_posts_json_then_purges_public_api_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[dict[str, Any]] = []
 
     def fake_urlopen(request: Any, *, timeout: int) -> FakeResponse:
-        captured["url"] = request.full_url
-        captured["authorization"] = request.get_header("Authorization")
-        captured["content_type"] = request.get_header("Content-type")
-        captured["payload"] = json.loads(request.data)
-        captured["timeout"] = timeout
+        captured.append(
+            {
+                "url": request.full_url,
+                "method": request.get_method(),
+                "authorization": request.get_header("Authorization"),
+                "content_type": request.get_header("Content-type"),
+                "payload": json.loads(request.data) if request.data else None,
+                "timeout": timeout,
+            }
+        )
         return FakeResponse()
 
     monkeypatch.setattr("quran_backend.modules.core.tasks.urlopen", fake_urlopen)
@@ -53,14 +64,30 @@ def test_revalidation_task_posts_authenticated_json(monkeypatch: pytest.MonkeyPa
 
     result = notify_web_content_change_task.run(event)
 
-    assert captured == {
-        "url": TEST_URL,
-        "authorization": f"Bearer {TEST_SECRET}",
-        "content_type": "application/json",
-        "payload": event,
-        "timeout": 5,
+    assert captured == [
+        {
+            "url": TEST_URL,
+            "method": "POST",
+            "authorization": f"Bearer {TEST_SECRET}",
+            "content_type": "application/json",
+            "payload": event,
+            "timeout": 5,
+        },
+        {
+            "url": TEST_PURGE_URL,
+            "method": "PURGE",
+            "authorization": f"Bearer {TEST_OPERATIONS_TOKEN}",
+            "content_type": None,
+            "payload": None,
+            "timeout": 5,
+        },
+    ]
+    assert result == {
+        "accepted": True,
+        "status": 200,
+        "purge_status": 200,
+        "type": event["type"],
     }
-    assert result == {"accepted": True, "status": 200, "type": event["type"]}
 
 
 @pytest.mark.django_db

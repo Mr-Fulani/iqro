@@ -84,7 +84,7 @@ runtime. Основной незакрытый объём находится в 
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
 | 17 | Django Admin и специальные admin API | 🟡 | 30 model registrations для реализованных доменов | Нет полной role matrix, MFA/break-glass safeguards и административных разделов отсутствующих доменов |
-| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness, bounded multi-worker API metrics, versioned opt-in Prometheus/Grafana/Alertmanager dashboard/rules, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API, bounded audio Range и fail-closed auth/sync capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat и общий Next.js Redis cache/tag coordination | Нет production-like capacity/soak proof, provider CDN/billing/QoE ingestion, внешнего uptime и проверенной alert delivery, фактического multi-replica deployment и offsite backup |
+| 18 | Observability, backup, audit, CI/CD | 🟡 | Health/readiness, bounded multi-worker API metrics, versioned opt-in Prometheus/Grafana/Alertmanager dashboard/rules, structured privacy logging, CI, single-host production Compose, local backup/verify/restore drill, load-smoke, staged read-only public web/API, bounded audio Range и fail-closed auth/sync capacity harness, PgBouncer budget, раздельные Redis roles, stateless API/workers, Redis-lease для Beat, общий Next.js Redis cache/tag coordination и bounded gateway public-JSON cache с защищённым purge | Нет production-like capacity/soak proof, provider CDN/billing/QoE ingestion, внешнего uptime и проверенной alert delivery, фактического multi-replica deployment и offsite backup |
 
 ## Критерии приёмки
 
@@ -256,8 +256,9 @@ runtime. Основной незакрытый объём находится в 
    остаются deployment-gate. Production Compose пока остаётся S0 single-host профилем.
 2. Schema/API logical track и bitrate/codec renditions уже разделены; добавить реальные
    transcoded/лицензированные варианты, клиентский выбор качества и egress budget alerts.
-3. Edge-cache публичных Quran/audio/library endpoint'ов без `Authorization`; персональные
-   ответы остаются `private, no-store`.
+3. Edge-cache текущих Quran/audio/prayer catalog endpoint'ов без cookie/`Authorization` и
+   защищённый purge готовы; при появлении `library` остаётся добавить его publication event и
+   contract tests. Персональные ответы остаются `private, no-store`.
 4. PgBouncer-compatible connection budget, stateless API/workers, token-safe Redis lease для
    singleton Beat, отдельно конфигурируемые Redis roles и общий Next.js cache/tag coordination
    готовы; остаются production-like multi-replica deployment и capacity evidence.

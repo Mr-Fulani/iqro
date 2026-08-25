@@ -62,6 +62,7 @@ x-backend-environment: &backend-environment
   MEDIA_CDN_REQUIRED_ORIGINS: ${MEDIA_CDN_REQUIRED_ORIGINS:?Set MEDIA_CDN_REQUIRED_ORIGINS in the production env file}
   WEB_CONTENT_REVALIDATION_URL: http://web:3000/api/internal/content-revalidation
   WEB_CONTENT_REVALIDATION_SECRET: ${WEB_CONTENT_REVALIDATION_SECRET:?Set WEB_CONTENT_REVALIDATION_SECRET in the production env file}
+  PUBLIC_API_CACHE_PURGE_URL: ${PUBLIC_API_CACHE_PURGE_URL:-http://gateway:8080/internal/cache/purge-public-api}
   QF_AUDIO_SYNC_ENABLED: ${QF_AUDIO_SYNC_ENABLED:-false}
 
 x-backend-service: &backend-service

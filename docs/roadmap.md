@@ -79,9 +79,11 @@ flowchart LR
 - [x] Разделить логический `AudioTrack`/таймлайн и физические `AudioRendition` вариантов
   economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
   default `asset` и отдаёт типизированный список renditions.
-- [ ] Добавить edge-cache публичных Quran/audio/library API без `Authorization`: backend уже
-  отдаёт ETag/public cache policy, а gateway regression-test запрещает непуржируемый proxy
-  cache; следующий шаг — подключить purge adapter к publication event, затем включить edge.
+- [x] Добавить bounded edge-cache текущих публичных Quran/audio/prayer catalog API: gateway
+  кэширует только ответы с явным `public` без cookie/`Authorization`, различает Origin/Accept,
+  а publication event после web revalidation выполняет защищённый wildcard purge.
+- [ ] При реализации `library` расширить типизированный publication event и его contract tests;
+  gateway route prefix уже зарезервирован, но не считается рабочим до появления самого домена.
 - [x] Подготовить PgBouncer-compatible DB configuration и connection budget: ASGI не держит
   persistent connections, transaction mode отключает server-side cursors/автоподготовку
   statements, а startup и operator-команда отклоняют превышение PostgreSQL/client pool budget.
@@ -141,8 +143,10 @@ flowchart LR
 - [x] Подключить общий Redis-backed Next.js cache handler для fetch/ISR/route entries и
   распределённые tag timestamps через `updateTags`/`getExpiration`; production без общего
   cache URL запускается fail-closed, а dev/build сохраняют memory fallback.
-- [ ] При edge-cache HTML/RSC/public JSON добавить purge adapter к publication event; до этого
-  gateway/CDN не должны независимо кэшировать эти ответы.
+- [x] Подключить gateway public JSON purge adapter к существующему publication event;
+  неавторизованный purge закрыт operations-token проверкой backend.
+- [ ] Если внешний CDN начнёт кэшировать HTML/RSC, расширить событие отдельным provider purge
+  adapter; до этого HTML/RSC не должны получать независимый edge TTL.
 - [x] Добавить `BreadcrumbList` для глубоких маршрутов сур и аятов.
 - [x] Добавить `WebSite` и `AudioObject` только для опубликованных лицензированных записей,
   не раскрывая прямые media URL в server-rendered HTML.

@@ -16,6 +16,39 @@ class ContentRevalidationTransientError(RuntimeError):
     pass
 
 
+def _request_content_endpoint(
+    request: Request,
+    *,
+    endpoint: str,
+    content_type: str,
+) -> int:
+    try:
+        with urlopen(  # noqa: S310 -- URLs are validated deployment configuration.
+            request,
+            timeout=settings.WEB_CONTENT_REVALIDATION_TIMEOUT_SECONDS,
+        ) as response:
+            status = int(response.status)
+            response.read(64 * 1024)
+    except HTTPError as exc:
+        if exc.code >= 500:
+            raise ContentRevalidationTransientError(
+                f"{endpoint} returned HTTP {exc.code}."
+            ) from exc
+        logger.error(
+            "Content cache endpoint rejected the request",
+            extra={
+                "event": "content_cache_endpoint_rejected",
+                "content_type": content_type,
+                "endpoint": endpoint,
+                "status": exc.code,
+            },
+        )
+        raise
+    except (TimeoutError, URLError) as exc:
+        raise ContentRevalidationTransientError(f"{endpoint} is unavailable.") from exc
+    return status
+
+
 @shared_task(
     name="core.notify_web_content_change",
     autoretry_for=(ContentRevalidationTransientError,),
@@ -35,38 +68,41 @@ def notify_web_content_change_task(event: dict[str, str]) -> dict[str, Any]:
             "Content-Type": "application/json",
         },
     )
-    try:
-        with urlopen(  # noqa: S310 -- Request URL is validated deployment configuration.
-            request,
-            timeout=settings.WEB_CONTENT_REVALIDATION_TIMEOUT_SECONDS,
-        ) as response:
-            status = response.status
-            response.read(64 * 1024)
-    except HTTPError as exc:
-        if exc.code >= 500:
-            raise ContentRevalidationTransientError(
-                f"Web content revalidation returned HTTP {exc.code}."
-            ) from exc
-        logger.error(
-            "Web content revalidation was rejected",
-            extra={
-                "event": "web_content_revalidation_rejected",
-                "content_type": event.get("type", "unknown"),
-                "status": exc.code,
+    content_type = event.get("type", "unknown")
+    status = _request_content_endpoint(
+        request,
+        endpoint="web content revalidation endpoint",
+        content_type=content_type,
+    )
+
+    purge_status: int | None = None
+    if settings.PUBLIC_API_CACHE_PURGE_URL:
+        purge_request = Request(  # noqa: S310 -- URL is trusted deployment configuration.
+            settings.PUBLIC_API_CACHE_PURGE_URL,
+            method="PURGE",
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {settings.QURAN_OPERATIONS_TOKEN}",
             },
         )
-        raise
-    except (TimeoutError, URLError) as exc:
-        raise ContentRevalidationTransientError(
-            "Web content revalidation endpoint is unavailable."
-        ) from exc
+        purge_status = _request_content_endpoint(
+            purge_request,
+            endpoint="public API cache purge endpoint",
+            content_type=content_type,
+        )
 
     logger.info(
         "Web content cache invalidated",
         extra={
             "event": "web_content_revalidated",
-            "content_type": event.get("type", "unknown"),
+            "content_type": content_type,
             "status": status,
+            "purge_status": purge_status,
         },
     )
-    return {"accepted": True, "status": status, "type": event.get("type", "unknown")}
+    return {
+        "accepted": True,
+        "status": status,
+        "purge_status": purge_status,
+        "type": content_type,
+    }

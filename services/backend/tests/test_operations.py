@@ -18,6 +18,7 @@ OPERATIONS_TOKEN = "test-operations-token"
 def test_operations_endpoints_are_hidden_when_not_configured(api_client: APIClient) -> None:
     assert api_client.get(reverse("core:health-operations")).status_code == 404
     assert api_client.get(reverse("core:metrics")).status_code == 404
+    assert api_client.get(reverse("core:gateway-cache-purge-auth")).status_code == 404
 
 
 @override_settings(QURAN_OPERATIONS_TOKEN=OPERATIONS_TOKEN)
@@ -29,6 +30,21 @@ def test_operations_endpoints_require_bearer_token(api_client: APIClient) -> Non
 
     assert response.status_code == 401
     assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+@override_settings(QURAN_OPERATIONS_TOKEN=OPERATIONS_TOKEN)
+def test_gateway_cache_purge_auth_accepts_only_operations_token(
+    api_client: APIClient,
+) -> None:
+    unauthorized = api_client.get(reverse("core:gateway-cache-purge-auth"))
+    authorized = api_client.get(
+        reverse("core:gateway-cache-purge-auth"),
+        headers={"Authorization": f"Bearer {OPERATIONS_TOKEN}"},
+    )
+
+    assert unauthorized.status_code == 401
+    assert authorized.status_code == 204
+    assert authorized.headers["Cache-Control"] == "private, no-store"
 
 
 @pytest.mark.django_db
