@@ -13,6 +13,8 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    QuranFoundationAyahRecitation,
+    QuranFoundationAyahRecitationChapter,
     RecitationEdition,
     RecitationStyle,
     Reciter,
@@ -169,6 +171,94 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     def get_timings(self, obj: RecitationEdition) -> dict[str, int | bool]:
         segment_count = int(getattr(obj, "timing_segment_count", 0))
         return {"available": segment_count > 0, "segment_count": segment_count}
+
+
+class QuranFoundationAyahCoverageSerializer(serializers.Serializer[Any]):
+    chapter_count = serializers.IntegerField(min_value=0)
+    audio_file_count = serializers.IntegerField(min_value=0)
+    complete = serializers.BooleanField()
+
+
+class QuranFoundationAyahRecitationSerializer(
+    serializers.ModelSerializer[QuranFoundationAyahRecitation]
+):
+    quran_edition = QuranEditionAudioReferenceSerializer(
+        source="quran_edition_version",
+        read_only=True,
+    )
+    coverage = serializers.SerializerMethodField()
+    source: Any = serializers.SerializerMethodField()
+    rights = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuranFoundationAyahRecitation
+        fields = (
+            "source_id",
+            "name_ar",
+            "name_en",
+            "name_ru",
+            "style",
+            "quran_edition",
+            "coverage",
+            "source",
+            "rights",
+            "last_synced_at",
+        )
+
+    @extend_schema_field(QuranFoundationAyahCoverageSerializer)
+    def get_coverage(self, obj: QuranFoundationAyahRecitation) -> dict[str, object]:
+        chapter_count = int(getattr(obj, "chapter_count", 0))
+        audio_file_count = int(getattr(obj, "cached_audio_file_count", 0) or 0)
+        return {
+            "chapter_count": chapter_count,
+            "audio_file_count": audio_file_count,
+            "complete": chapter_count == 114 and audio_file_count == obj.audio_file_count,
+        }
+
+    @extend_schema_field(RecitationSourceSerializer)
+    def get_source(self, obj: QuranFoundationAyahRecitation) -> dict[str, str]:
+        return {
+            "name": "Quran.Foundation Content API",
+            "url": (
+                "https://api-docs.quran.foundation/docs/"
+                "content_apis_versioned/4.0.0/recitation-audio-files/"
+            ),
+            "version": "content-api-v4",
+            "checksum_sha256": obj.source_checksum_sha256,
+        }
+
+    @extend_schema_field(RecitationRightsSerializer)
+    def get_rights(self, obj: QuranFoundationAyahRecitation) -> dict[str, bool]:  # noqa: ARG002
+        return {"stream": True, "offline_download": False}
+
+
+class QuranFoundationAyahAudioFileSerializer(serializers.Serializer[Any]):
+    ayah_number = serializers.IntegerField(min_value=1)
+    verse_key = serializers.CharField()
+    url = serializers.URLField()
+
+
+class QuranFoundationAyahChapterSerializer(
+    serializers.ModelSerializer[QuranFoundationAyahRecitationChapter]
+):
+    recitation_id = serializers.IntegerField(source="recitation.source_id", read_only=True)
+    reciter_name = serializers.CharField(source="recitation.name_en", read_only=True)
+    style = serializers.CharField(  # type: ignore[assignment]
+        source="recitation.style",
+        read_only=True,
+    )
+    audio_files = QuranFoundationAyahAudioFileSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = QuranFoundationAyahRecitationChapter
+        fields = (
+            "recitation_id",
+            "reciter_name",
+            "style",
+            "chapter_number",
+            "ayah_count",
+            "audio_files",
+        )
 
 
 class AudioAssetSerializer(serializers.Serializer[Any]):

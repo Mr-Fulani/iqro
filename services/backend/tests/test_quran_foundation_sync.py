@@ -115,6 +115,62 @@ def test_content_sync_rejects_untrusted_next_page_url(monkeypatch: Any) -> None:
         client.sync_recitation_content(7)
 
 
+def test_ayah_recitation_audio_validates_payload_and_normalizes_cdn_urls(
+    monkeypatch: Any,
+) -> None:
+    client = QuranFoundationClient(
+        client_id="test-client",
+        client_secret="test-secret",
+        environment=ENVIRONMENTS["production"],
+    )
+    monkeypatch.setattr(
+        client,
+        "_get_json",
+        lambda path, **_kwargs: {
+            "audio_files": [{"verse_key": "1:1", "url": "Alafasy/mp3/001001.mp3"}],
+            "meta": {"reciter_name": "Test"},
+            "requested_path": path,
+        },
+    )
+
+    payload = client.get_ayah_recitation_audio(7)
+
+    assert payload["audio_files"][0]["verse_key"] == "1:1"
+    assert client.normalize_ayah_audio_url("Alafasy/mp3/001001.mp3") == (
+        "https://verses.quran.foundation/Alafasy/mp3/001001.mp3"
+    )
+    assert client.normalize_ayah_audio_url(
+        "https://verses.quran.foundation/Alafasy/mp3/001001.mp3"
+    ).endswith("/Alafasy/mp3/001001.mp3")
+    assert (
+        client.normalize_ayah_audio_url(
+            "//mirrors.quranicaudio.com/everyayah/Husary_64kbps/001001.mp3"
+        )
+        == "https://mirrors.quranicaudio.com/everyayah/Husary_64kbps/001001.mp3"
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://attacker.example/audio.mp3",
+        "//attacker.example/audio.mp3",
+        "../secrets.mp3",
+        "Alafasy/mp3/001001.mp3?token=secret",
+        "Alafasy/mp3/001001.ogg",
+    ],
+)
+def test_ayah_audio_rejects_unapproved_urls(url: str) -> None:
+    client = QuranFoundationClient(
+        client_id="test-client",
+        client_secret="test-secret",
+        environment=ENVIRONMENTS["production"],
+    )
+
+    with pytest.raises(QuranFoundationError, match="ayah audio URL"):
+        client.normalize_ayah_audio_url(url)
+
+
 def test_mushaf_catalog_sync_uses_wildcard_filter_and_checkpoint(monkeypatch: Any) -> None:
     client = QuranFoundationClient(
         client_id="test-client",

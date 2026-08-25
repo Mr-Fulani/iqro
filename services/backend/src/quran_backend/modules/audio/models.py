@@ -1103,3 +1103,90 @@ class AyahAudioSegment(BaseModel):
             )
         )
         return track_ids, recitation_ids
+
+
+class QuranFoundationAyahRecitation(BaseModel):
+    """Locally cached Quran.Foundation ayah-by-ayah streaming catalog entry."""
+
+    environment = models.CharField(max_length=16)
+    source_id = models.PositiveIntegerField()
+    quran_edition_version = models.ForeignKey(
+        QuranEditionVersion,
+        on_delete=models.PROTECT,
+        related_name="quran_foundation_ayah_recitations",
+    )
+    name_ar = models.CharField(max_length=255)
+    name_en = models.CharField(max_length=255)
+    name_ru = models.CharField(max_length=255)
+    style = models.CharField(max_length=64, blank=True)
+    audio_file_count = models.PositiveIntegerField()
+    source_checksum_sha256 = models.CharField(max_length=64, validators=[validate_sha256])
+    is_available = models.BooleanField(default=True)
+    last_synced_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "audio_qf_ayah_recitation"
+        ordering = ["source_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["environment", "source_id", "quran_edition_version"],
+                name="audio_qf_ayah_recitation_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(environment__in=["prelive", "production"]),
+                name="audio_qf_ayah_env_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(audio_file_count__gt=0),
+                name="audio_qf_ayah_files_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["environment", "is_available", "source_id"],
+                name="audio_qf_ayah_public_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"QF {self.environment} ayah recitation {self.source_id}: {self.name_en}"
+
+
+class QuranFoundationAyahRecitationChapter(BaseModel):
+    """One surah worth of verified external ayah audio URLs."""
+
+    recitation = models.ForeignKey(
+        QuranFoundationAyahRecitation,
+        on_delete=models.CASCADE,
+        related_name="chapters",
+    )
+    chapter_number = models.PositiveSmallIntegerField()
+    ayah_count = models.PositiveSmallIntegerField()
+    audio_files = models.JSONField(default=list)
+
+    class Meta:
+        db_table = "audio_qf_ayah_recitation_chapter"
+        ordering = ["chapter_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recitation", "chapter_number"],
+                name="audio_qf_ayah_chapter_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(chapter_number__gte=1, chapter_number__lte=114),
+                name="audio_qf_ayah_chapter_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(ayah_count__gt=0),
+                name="audio_qf_ayah_count_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["recitation", "chapter_number"],
+                name="audio_qf_ayah_chapter_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.recitation}: surah {self.chapter_number}"

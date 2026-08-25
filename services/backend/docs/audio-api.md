@@ -26,6 +26,8 @@ Django Admin, но не создают дубли чтецов и не дают 
 - `GET /api/v1/recitations/{uuid}/tracks?scope=surah`
 - `GET /api/v1/recitations/{uuid}/surahs/{surah}`
 - `GET /api/v1/recitations/{uuid}/ayahs/{surah}/{ayah}`
+- `GET /api/v1/quran-foundation/ayah-recitations`
+- `GET /api/v1/quran-foundation/ayah-recitations/{source_id}/surahs/{surah}`
 
 Ответ трека содержит продолжительность, право офлайн-загрузки и asset contract:
 
@@ -166,6 +168,19 @@ python manage.py sync_quran_foundation_audio \
 кодом, но сохраняет все полностью проверенные recitations; повторный запуск с `--resume`
 пропускает их. Валидатор не ослабляется из-за upstream-ошибки.
 
+Ayah-by-ayah recitations — отдельный официальный каталог: его IDs нельзя передавать в chapter
+endpoints. Iqro хранит все 6 236 URL каждого source, сгруппированные в 114 строк по суре, и
+возвращает их отдельным API. Полный sync выполняется одной командой:
+
+```bash
+python manage.py sync_quran_foundation_ayah_audio --edition madani-hafs
+```
+
+Production-проверка синхронизировала 12/12 resources: 1 368 chapter groups и 74 832 ayah audio
+URL. Для каждого source проверены первый и последний MP3 через bounded `HEAD` — 24/24 успешно.
+Разрешены только HTTPS origins `verses.quran.foundation` и `mirrors.quranicaudio.com`, реально
+возвращённые production API. Файлы не проксируются, не копируются и не разрешены для offline.
+
 `--surah` можно повторять; `--all-surahs` импортирует все 114 сур. Если оба параметра
 отсутствуют, пилот импортирует только суру 1 и не показывается публичным клиентам.
 Параметры `--surah` и `--all-surahs` взаимоисключающие.
@@ -178,6 +193,8 @@ python manage.py sync_quran_foundation_audio \
 
 ```dotenv
 QF_AUDIO_SYNC_ENABLED=true
+QF_AYAH_AUDIO_SYNC_ENABLED=true
+QF_AYAH_AUDIO_EDITION=madani-hafs
 QF_AUDIO_REFRESH_DAYS=5
 ```
 
@@ -187,6 +204,11 @@ Celery Beat ежедневно запускает `audio.sync_quran_foundation`.
 QF Content Sync с сохранённым checkpoint; для chapter-reciter, которому не соответствует
 Content Sync resource, выполняется полная сверка 114 сур. При изменении создаётся новая
 immutable-версия, а прежняя атомарно переводится в `withdrawn`.
+
+Отдельная задача `audio.sync_quran_foundation_ayah_catalog` раз в семь дней повторно получает
+12 полных списков, проверяет точное множество verse keys активной Hafs edition и CDN samples,
+а затем атомарно заменяет только изменившиеся source. Некорректный или неполный source сразу
+становится недоступен публичному API.
 
 Ручная проверка тем же механизмом:
 

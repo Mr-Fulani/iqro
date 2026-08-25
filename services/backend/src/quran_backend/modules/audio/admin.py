@@ -10,12 +10,55 @@ from quran_backend.modules.audio.models import (
     AudioTimingVersion,
     AudioTrack,
     AyahAudioSegment,
+    QuranFoundationAyahRecitation,
+    QuranFoundationAyahRecitationChapter,
     QuranFoundationSyncState,
     RecitationEdition,
     RecitationPublicationStatus,
     Reciter,
 )
 from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
+
+
+class QuranFoundationReadOnlyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    actions = None
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+
+@admin.register(QuranFoundationAyahRecitation)
+class QuranFoundationAyahRecitationAdmin(QuranFoundationReadOnlyAdmin):
+    list_display = (
+        "source_id",
+        "name_en",
+        "style",
+        "environment",
+        "quran_edition_version",
+        "is_available",
+        "last_synced_at",
+    )
+    list_filter = ("environment", "is_available", "style", "quran_edition_version")
+    search_fields = ("=source_id", "name_ar", "name_en", "name_ru")
+    list_select_related = ("quran_edition_version__edition",)
+    readonly_fields = tuple(field.name for field in QuranFoundationAyahRecitation._meta.fields)
+
+
+@admin.register(QuranFoundationAyahRecitationChapter)
+class QuranFoundationAyahRecitationChapterAdmin(QuranFoundationReadOnlyAdmin):
+    list_display = ("recitation", "chapter_number", "ayah_count")
+    list_filter = ("recitation",)
+    search_fields = ("=recitation__source_id", "=chapter_number")
+    list_select_related = ("recitation",)
+    readonly_fields = tuple(
+        field.name for field in QuranFoundationAyahRecitationChapter._meta.fields
+    )
 
 
 @admin.register(QuranFoundationSyncState)

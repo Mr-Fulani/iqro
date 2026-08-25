@@ -12,6 +12,7 @@ from django.db.models import (
     Prefetch,
     Q,
     QuerySet,
+    Sum,
     When,
 )
 
@@ -20,6 +21,8 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    QuranFoundationAyahRecitation,
+    QuranFoundationAyahRecitationChapter,
     RecitationEdition,
     RecitationPublicationStatus,
     Reciter,
@@ -90,6 +93,42 @@ def public_reciters() -> QuerySet[Reciter]:
         Reciter.objects.alias(has_public_recitation=Exists(public_recitation))
         .filter(is_active=True, has_public_recitation=True)
         .order_by("name_en", "code", "id")
+    )
+
+
+def public_quran_foundation_ayah_recitations(
+    environment: str,
+) -> QuerySet[QuranFoundationAyahRecitation]:
+    return (
+        QuranFoundationAyahRecitation.objects.filter(
+            environment=environment,
+            is_available=True,
+            quran_edition_version__status=PublicationStatus.PUBLISHED,
+            quran_edition_version__edition__active_version_id=F("quran_edition_version_id"),
+        )
+        .select_related("quran_edition_version__edition")
+        .annotate(
+            chapter_count=Count("chapters", distinct=True),
+            cached_audio_file_count=Sum("chapters__ayah_count"),
+        )
+        .filter(chapter_count=114, cached_audio_file_count=F("audio_file_count"))
+        .order_by("source_id")
+    )
+
+
+def public_quran_foundation_ayah_chapters(
+    environment: str,
+    source_id: int,
+) -> QuerySet[QuranFoundationAyahRecitationChapter]:
+    public_recitations = public_quran_foundation_ayah_recitations(environment).filter(
+        source_id=source_id
+    )
+    return (
+        QuranFoundationAyahRecitationChapter.objects.filter(
+            recitation__in=public_recitations,
+        )
+        .select_related("recitation__quran_edition_version__edition")
+        .order_by("chapter_number")
     )
 
 

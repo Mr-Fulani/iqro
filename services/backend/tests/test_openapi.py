@@ -198,6 +198,8 @@ def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
         "/api/v1/recitations/{recitation_id}/tracks",
         "/api/v1/recitations/{recitation_id}/surahs/{surah}",
         "/api/v1/recitations/{recitation_id}/ayahs/{surah}/{ayah}",
+        "/api/v1/quran-foundation/ayah-recitations",
+        "/api/v1/quran-foundation/ayah-recitations/{recitation}/surahs/{surah}",
     }
     assert expected_paths <= paths.keys()
 

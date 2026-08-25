@@ -53,6 +53,11 @@ ENVIRONMENTS = {
 
 USER_AGENT = "iqro.forum-backend/0.1 (+https://iqro.forum)"
 ALLOWED_AUDIO_HOSTS = {"download.quranicaudio.com", "audio.qurancdn.com"}
+AYAH_AUDIO_BASE_URL = "https://verses.quran.foundation"
+ALLOWED_AYAH_AUDIO_HOSTS = {
+    "mirrors.quranicaudio.com",
+    "verses.quran.foundation",
+}
 
 
 class QuranFoundationClient:
@@ -103,6 +108,56 @@ class QuranFoundationClient:
         if not isinstance(recitations, list):
             raise QuranFoundationError("Quran.Foundation returned an invalid recitation catalog.")
         return [row for row in recitations if isinstance(row, dict)]
+
+    def get_ayah_recitation_audio(self, recitation_id: int) -> dict[str, Any]:
+        if recitation_id <= 0:
+            raise QuranFoundationError("Ayah recitation IDs must be positive.")
+        payload = self._get_json(
+            f"/content/api/v4/quran/recitations/{recitation_id}",
+            query={},
+        )
+        audio_files = payload.get("audio_files")
+        meta = payload.get("meta")
+        if not isinstance(audio_files, list) or not isinstance(meta, dict):
+            raise QuranFoundationError(
+                "Quran.Foundation returned invalid ayah recitation metadata."
+            )
+        if not all(isinstance(row, dict) for row in audio_files):
+            raise QuranFoundationError("Quran.Foundation returned an invalid ayah audio file.")
+        return {"audio_files": audio_files, "meta": meta}
+
+    def normalize_ayah_audio_url(self, value: object) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise QuranFoundationError("Quran.Foundation returned an invalid ayah audio URL.")
+        raw_url = value.strip()
+        parsed = urlsplit(raw_url)
+        if parsed.netloc and not parsed.scheme:
+            candidate = f"https:{raw_url}"
+        elif parsed.scheme or parsed.netloc:
+            candidate = raw_url
+        else:
+            if parsed.query or parsed.fragment:
+                raise QuranFoundationError(
+                    "Quran.Foundation returned an invalid relative ayah audio URL."
+                )
+            path_parts = [part for part in parsed.path.split("/") if part]
+            if not path_parts or any(part in {".", ".."} for part in path_parts):
+                raise QuranFoundationError(
+                    "Quran.Foundation returned an unsafe relative ayah audio URL."
+                )
+            candidate = f"{AYAH_AUDIO_BASE_URL}/{'/'.join(path_parts)}"
+        final = urlsplit(candidate)
+        if (
+            final.scheme != "https"
+            or final.hostname not in ALLOWED_AYAH_AUDIO_HOSTS
+            or final.username is not None
+            or final.password is not None
+            or final.query
+            or final.fragment
+            or not final.path.lower().endswith(".mp3")
+        ):
+            raise QuranFoundationError("Quran.Foundation returned an unapproved ayah audio URL.")
+        return candidate
 
     def sync_recitation_content(
         self,
@@ -288,10 +343,16 @@ class QuranFoundationClient:
         return audio_file
 
     def get_external_audio_size(self, url: str) -> int:
+        return self._get_external_audio_size(url, allowed_hosts=ALLOWED_AUDIO_HOSTS)
+
+    def get_external_ayah_audio_size(self, url: str) -> int:
+        return self._get_external_audio_size(url, allowed_hosts=ALLOWED_AYAH_AUDIO_HOSTS)
+
+    def _get_external_audio_size(self, url: str, *, allowed_hosts: set[str]) -> int:
         parsed = urlsplit(url)
         if (
             parsed.scheme != "https"
-            or parsed.hostname not in ALLOWED_AUDIO_HOSTS
+            or parsed.hostname not in allowed_hosts
             or parsed.username is not None
             or parsed.password is not None
         ):
@@ -311,7 +372,7 @@ class QuranFoundationClient:
         except (urllib.error.HTTPError, OSError, TimeoutError) as exc:
             raise QuranFoundationError("Unable to inspect the external audio asset.") from exc
         final_parsed = urlsplit(final_url)
-        if final_parsed.scheme != "https" or final_parsed.hostname not in ALLOWED_AUDIO_HOSTS:
+        if final_parsed.scheme != "https" or final_parsed.hostname not in allowed_hosts:
             raise QuranFoundationError(
                 "The external audio asset redirected to an unapproved origin."
             )

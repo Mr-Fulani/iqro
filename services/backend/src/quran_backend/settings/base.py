@@ -164,6 +164,8 @@ QURAN_SYNC_FULL_RESYNC_TOKEN_MAX_AGE_SECONDS = os.getenv(
     "86400",
 )
 QURAN_QF_AUDIO_SYNC_ENABLED = env_bool("QF_AUDIO_SYNC_ENABLED", False)
+QURAN_QF_AYAH_AUDIO_SYNC_ENABLED = env_bool("QF_AYAH_AUDIO_SYNC_ENABLED", False)
+QURAN_QF_AYAH_AUDIO_EDITION = os.getenv("QF_AYAH_AUDIO_EDITION", "madani-hafs")
 QURAN_QF_MUSHAF_SYNC_ENABLED = env_bool("QF_MUSHAF_SYNC_ENABLED", False)
 QURAN_QF_AUDIO_REFRESH_DAYS = positive_env_int("QF_AUDIO_REFRESH_DAYS", 5)
 if QURAN_QF_AUDIO_REFRESH_DAYS > 6:
@@ -515,6 +517,10 @@ CELERY_BEAT_SCHEDULE = {
     "sync-quran-foundation-audio-daily": {
         "task": "audio.sync_quran_foundation",
         "schedule": 86_400.0,
+    },
+    "sync-quran-foundation-ayah-audio-weekly": {
+        "task": "audio.sync_quran_foundation_ayah_catalog",
+        "schedule": 604_800.0,
     },
     "sync-quran-foundation-mushafs-daily": {
         "task": "quran.sync_quran_foundation_mushafs",

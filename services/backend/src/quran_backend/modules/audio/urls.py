@@ -5,6 +5,8 @@ from django.urls import path
 from quran_backend.modules.audio.api import (
     AudioTrackListView,
     AyahPlaybackView,
+    QuranFoundationAyahRecitationChapterView,
+    QuranFoundationAyahRecitationListView,
     RecitationDetailView,
     RecitationListView,
     ReciterDetailView,
@@ -18,6 +20,16 @@ urlpatterns = [
     path("reciters", ReciterListView.as_view(), name="reciter-list"),
     path("reciters/<uuid:reciter_id>", ReciterDetailView.as_view(), name="reciter-detail"),
     path("recitations", RecitationListView.as_view(), name="recitation-list"),
+    path(
+        "quran-foundation/ayah-recitations",
+        QuranFoundationAyahRecitationListView.as_view(),
+        name="quran-foundation-ayah-recitation-list",
+    ),
+    path(
+        "quran-foundation/ayah-recitations/<int:recitation>/surahs/<int:surah>",
+        QuranFoundationAyahRecitationChapterView.as_view(),
+        name="quran-foundation-ayah-recitation-chapter",
+    ),
     path(
         "recitations/<uuid:recitation_id>",
         RecitationDetailView.as_view(),

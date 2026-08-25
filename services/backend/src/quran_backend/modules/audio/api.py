@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+from django.conf import settings
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -15,11 +16,15 @@ from rest_framework.views import APIView
 from quran_backend.modules.audio.models import (
     AudioTrack,
     AyahAudioSegment,
+    QuranFoundationAyahRecitation,
+    QuranFoundationAyahRecitationChapter,
     RecitationEdition,
     Reciter,
 )
 from quran_backend.modules.audio.selectors import (
     public_ayah_segments,
+    public_quran_foundation_ayah_chapters,
+    public_quran_foundation_ayah_recitations,
     public_recitation_base,
     public_recitations,
     public_reciters,
@@ -31,6 +36,8 @@ from quran_backend.modules.audio.serializers import (
     AyahAudioSegmentSerializer,
     AyahPlaybackSerializer,
     PublicCatalogPageQuerySerializer,
+    QuranFoundationAyahChapterSerializer,
+    QuranFoundationAyahRecitationSerializer,
     RecitationEditionSerializer,
     RecitationListQuerySerializer,
     ReciterDetailSerializer,
@@ -117,6 +124,40 @@ class RecitationDetailView(PublicReadOnlyViewMixin, generics.RetrieveAPIView[Rec
 
     def get_queryset(self) -> QuerySet[RecitationEdition]:
         return public_recitations()
+
+
+@extend_schema(tags=["audio"])
+class QuranFoundationAyahRecitationListView(
+    PublicReadOnlyViewMixin,
+    generics.ListAPIView[QuranFoundationAyahRecitation],
+):
+    serializer_class = QuranFoundationAyahRecitationSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[QuranFoundationAyahRecitation]:
+        return public_quran_foundation_ayah_recitations(settings.QURAN_QF_ENV)
+
+
+@extend_schema(
+    tags=["audio"],
+    parameters=[
+        OpenApiParameter("recitation", int, OpenApiParameter.PATH),
+        OpenApiParameter("surah", int, OpenApiParameter.PATH),
+    ],
+)
+class QuranFoundationAyahRecitationChapterView(
+    PublicReadOnlyViewMixin,
+    generics.RetrieveAPIView[QuranFoundationAyahRecitationChapter],
+):
+    serializer_class = QuranFoundationAyahChapterSerializer
+    lookup_field = "chapter_number"
+    lookup_url_kwarg = "surah"
+
+    def get_queryset(self) -> QuerySet[QuranFoundationAyahRecitationChapter]:
+        return public_quran_foundation_ayah_chapters(
+            settings.QURAN_QF_ENV,
+            self.kwargs["recitation"],
+        )
 
 
 @extend_schema(tags=["audio"])

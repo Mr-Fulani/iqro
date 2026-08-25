@@ -100,7 +100,8 @@ flowchart LR
   отдельный ответ по email не является release gate. Production-каталог содержит 21 Hafs
   chapter-reciter и 12 ayah-by-ayah resources. Полный проход всех 114 сур опубликовал 18
   валидных chapter-reciter; resources `161`, `168` и `173` fail-closed исключены из-за
-  некорректных upstream-таймкодов.
+  некорректных upstream-таймкодов. Отдельный ayah-by-ayah каталог синхронизирован полностью:
+  12/12 sources, 1 368 chapter groups и 74 832 внешних MP3 URL; 24 bounded CDN-пробы успешны.
   Bounded probe подтвердил Range delivery и выявил metadata size drift у source `7`; importer
   всегда сверяет реальный `Content-Length`. Полный импорт выбирает каталог автоматически,
   поддерживает resume и хранит только streaming URL. Все четыре доступных QF Mushaf resource
@@ -269,10 +270,11 @@ flowchart LR
   неразмеченные пары отклоняются перед загрузкой и повторно перед импортом. Поддержаны все
   стили текущего chapter-каталога провайдера, включая `Kids repeat`; локальные тесты покрывают
   разрешённую пару Warsh→Warsh и запрет Warsh→Hafs.
-- [ ] Довести Quran.Foundation integration до полного каталога: синхронизировать chapter и ayah
-  resource IDs в `draft` и публиковать каталог порциями после
-  rights/attribution/editorial/playback checks. Наличие ресурса в API не означает разрешение
-  копировать или rehost его файлы.
+- [x] Довести Quran.Foundation integration до полного доступного production-каталога: 21
+  chapter-reciter проверен по всем 114 сурам (18 опубликованы, 3 fail-closed), 12/12 отдельных
+  ayah-by-ayah resources синхронизированы как 74 832 streaming URL, 4/4 Mushaf snapshots
+  сохранены. Chapter и ayah IDs намеренно разделены в модели/API; MP3 не копируются и не
+  rehostятся, offline download выключен.
 - [x] Убрать Hafs-специфику из локального content pipeline: edition/riwayah, версии,
   контрольные количества и SHA-256, provenance, PDF/page geometry, cover mapping и asset prefix
   теперь задаются проверяемыми build-spec. Dataset builder, PDF→WebP preparation и page

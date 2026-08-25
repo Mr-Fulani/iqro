@@ -67,7 +67,8 @@ Celery Beat выполняет incremental sync ежедневно. Это ук�
 
 ## Аудио
 
-Полный chapter-reciter каталог не скачивается как MP3. Iqro сохраняет metadata, проверенные
+Chapter-reciter и ayah-by-ayah — два разных каталога с несовместимыми source IDs. Полный
+chapter-reciter каталог не скачивается как MP3. Iqro сохраняет metadata, проверенные
 таймкоды, наблюдаемый origin size и официальный streaming URL:
 
 ```bash
@@ -82,6 +83,21 @@ python manage.py sync_quran_foundation_audio \
 каждая сура обязана покрывать все канонические аяты. Полный проход 25 августа 2026 года
 опубликовал 18/21 sources. `161`, `168` и `173` исключены из-за некорректных таймкодов.
 В локальной БД сохранены 2 052 внешних streaming rendition и ни одного MP3/object blob.
+
+Отдельный ayah-by-ayah каталог синхронизируется так:
+
+```bash
+python manage.py sync_quran_foundation_ayah_audio --edition madani-hafs
+```
+
+Production result: 12/12 sources, 1 368 групп по суре, 74 832 проверенных verse keys/URL,
+24/24 CDN sample HEAD и 0 локальных MP3. Публичные endpoints:
+
+- `GET /api/v1/quran-foundation/ayah-recitations`
+- `GET /api/v1/quran-foundation/ayah-recitations/{source_id}/surahs/{surah}`
+
+Данные привязаны к активной Hafs `QuranEditionVersion`; QF не помечает этот каталог qira'ah,
+поэтому связывать его с Warsh/Qaloun/Shu'bah без отдельного подтверждения код не позволяет.
 
 Применимые условия и фактическая production-проверка зафиксированы в
 [`docs/sign-offs/quran-foundation-audio-license-decision-2026-08-25.md`](../../../docs/sign-offs/quran-foundation-audio-license-decision-2026-08-25.md).

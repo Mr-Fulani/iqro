@@ -33,6 +33,8 @@ Iqro Web, будущих iOS/Android клиентах и Telegram Mini App.
 - Sources `161`, `168` и `173` исключены fail-closed из-за некорректных upstream-таймкодов;
   точные безопасные ошибки сохранены в
   [full-catalog evidence](../capacity/quran-foundation-production-catalog-2026-08-25.md).
+- Отдельный ayah-by-ayah каталог проверен полностью: 12/12 resources, 1 368 групп по суре,
+  74 832 внешних MP3 URL и 24 успешные bounded CDN-пробы. Ни один MP3 не скопирован локально.
 - QF audio сохраняется только как внешний streaming URL; `offline_download_allowed=false`.
 - Content Sync вернул Mushaf IDs `1`, `5`, `11`, `19`, все с qira'ah `Hafs`.
 - Полный локальный Mushaf bootstrap: 4 resources, 2 416 страниц, 334 660 позиционированных

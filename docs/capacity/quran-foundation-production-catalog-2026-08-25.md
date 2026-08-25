@@ -15,6 +15,10 @@ access token и полные signed/internal URL в evidence не записыв
 | Surah tracks | 2 052 |
 | Ayah timing segments | 112 248 |
 | External streaming renditions | 2 052 |
+| Ayah-by-ayah resources | 12/12 |
+| Ayah-by-ayah chapter groups | 1 368 |
+| Ayah-by-ayah external MP3 URL | 74 832 |
+| Ayah CDN delivery samples | 24/24 |
 | Локальные MP3/object blobs | 0 |
 | Mushaf resources | 4 |
 | Mushaf pages | 2 416 |
@@ -35,6 +39,22 @@ access token и полные signed/internal URL в evidence не записыв
 Ни один из трёх sources не создал частичную публичную recitation. Management command
 продолжила остальные позиции, сохранила 18 валидных и завершилась с non-zero status, явно
 перечислив `161, 173, 168`.
+
+## Отдельный ayah-by-ayah каталог
+
+Официальные 12 ayah-recitation IDs не взаимозаменяемы с 21 chapter-reciter IDs. Для каждого
+source одним production API request получен полный список 6 236 verse keys/URL. Все списки
+точно совпали с активной Hafs Quran edition и сохранены по 114 chapter groups на source.
+
+```bash
+python manage.py sync_quran_foundation_ayah_audio --edition madani-hafs
+```
+
+Итог: `selected=12`, `available=12`, `chapters=1368`, `audio_files=74832`,
+`delivery_samples=24`, `failed=0`. Девять sources используют `verses.quran.foundation`, три
+возвращают protocol-relative URL официального `mirrors.quranicaudio.com`; backend нормализует
+их только в HTTPS и принимает оба точных hostname через allowlist. Публичный API smoke вернул
+`200`, 12 complete catalog rows и 7 файлов для суры 1 source `8`.
 
 ## Воспроизводимая команда
 
@@ -61,6 +81,6 @@ relative word-image keys без документированного публи�
 ## Проверки кода
 
 - Ruff check и format: passed.
-- strict mypy: 172 source files, no issues.
-- pytest: 557 passed, 6 skipped.
-- coverage: 84.17% при обязательном пороге 80%.
+- strict mypy: 174 source files, no issues.
+- pytest: 567 passed, 6 skipped.
+- coverage: 83.87% при обязательном пороге 80%.
