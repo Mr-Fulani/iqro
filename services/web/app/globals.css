@@ -1193,6 +1193,7 @@ input:focus, select:focus, textarea:focus {
 
 .qf-mushaf-line {
   display: flex;
+  grid-column: 1;
   align-items: center;
   justify-content: center;
   min-width: 0;

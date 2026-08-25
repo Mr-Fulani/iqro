@@ -20,13 +20,15 @@ type AyahFragment = {
 
 type ChapterIntro = {
   surah: SurahIdentity;
-  gridRow: string;
+  firstLine: number;
+  endLine: number;
   compact: boolean;
   showTitle: boolean;
   showBismillah: boolean;
 };
 
 const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+const OPENING_PAGE_ROW_OFFSET = -4;
 
 type QuranFoundationMushafPageProps = {
   mushaf: QuranFoundationMushaf;
@@ -126,6 +128,17 @@ function fragmentsForLine(
   return fragments;
 }
 
+function displayLineNumber(pageNumber: number, sourceLineNumber: number): number {
+  // Quran.Foundation preserves the printed source line numbers on the opening
+  // spread: Al-Fatihah starts at 9 and Al-Baqarah at 10. On a responsive single
+  // page these compact blocks should remain vertically centred, not inherit the
+  // eight or nine empty source rows that separate the facing printed pages.
+  if (pageNumber === 1 || pageNumber === 2) {
+    return sourceLineNumber + OPENING_PAGE_ROW_OFFSET;
+  }
+  return sourceLineNumber;
+}
+
 function chapterIntros(
   page: QuranFoundationMushafPage,
   lines: QuranFoundationMushafWord[][],
@@ -172,7 +185,8 @@ function chapterIntros(
     const firstIntroLine = firstVerseLine - usedRows;
     intros.push({
       surah,
-      gridRow: `${firstIntroLine} / ${firstVerseLine}`,
+      firstLine: firstIntroLine,
+      endLine: firstVerseLine,
       compact: requiredRows > usedRows,
       showTitle,
       showBismillah,
@@ -270,7 +284,9 @@ export function QuranFoundationMushafPageView({
                 intro.showTitle ? "has-title" : "",
                 intro.showBismillah ? "has-bismillah" : "",
               ].filter(Boolean).join(" ")}
-              style={{ gridRow: intro.gridRow }}
+              style={{
+                gridRow: `${displayLineNumber(page.page_number, intro.firstLine)} / ${displayLineNumber(page.page_number, intro.endLine)}`,
+              }}
               key={intro.surah.number}
               data-surah-number={intro.surah.number}
             >
@@ -284,13 +300,17 @@ export function QuranFoundationMushafPageView({
               )}
             </div>
           ))}
-          {lines.map((line, lineIndex) => (
-            <div
-              className="qf-mushaf-line"
-              data-line-number={lineIndex + 1}
-              key={lineIndex + 1}
-              aria-hidden={line.length === 0 ? "true" : undefined}
-            >
+          {lines.map((line, lineIndex) => {
+            if (line.length === 0) return null;
+            const sourceLineNumber = lineIndex + 1;
+            return (
+              <div
+                className="qf-mushaf-line"
+                data-line-number={sourceLineNumber}
+                data-display-line-number={displayLineNumber(page.page_number, sourceLineNumber)}
+                style={{ gridRow: displayLineNumber(page.page_number, sourceLineNumber) }}
+                key={sourceLineNumber}
+              >
               {fragmentsForLine(line, verseKeys).map((fragment) => {
                 const { ayahKey } = fragment;
                 const fragmentClassName = [
@@ -330,8 +350,9 @@ export function QuranFoundationMushafPageView({
                   </button>
                 );
               })}
-            </div>
-          ))}
+              </div>
+            );
+          })}
           <span className="qf-mushaf-page-number" aria-hidden="true">
             {page.page_number}
           </span>

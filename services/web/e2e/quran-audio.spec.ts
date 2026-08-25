@@ -616,7 +616,11 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
     await expect(sheet).toHaveAttribute("dir", "rtl");
     await expect(sheet).toHaveAttribute("lang", "ar");
     await expect(sheet).toHaveAttribute("translate", "no");
-    await expect(sheet.locator(".qf-mushaf-line")).toHaveCount(15);
+    await expect(sheet.locator(".qf-mushaf-line")).toHaveCount(2);
+    await expect(sheet.locator('.qf-mushaf-line[data-line-number="3"]'))
+      .toHaveAttribute("data-display-line-number", "3");
+    await expect(sheet.locator('.qf-mushaf-line[data-line-number="4"]'))
+      .toHaveAttribute("data-display-line-number", "4");
     await expect(view.getByText("سُورَةُ الأنعام", { exact: true })).toBeVisible();
     await expect(view.getByText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", { exact: true })).toBeVisible();
     const secondAyahWords = view.getByRole("button", { name: "Аят 6:2", exact: true });
