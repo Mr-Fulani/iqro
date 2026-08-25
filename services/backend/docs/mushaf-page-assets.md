@@ -9,6 +9,11 @@ S3/CDN и до редакционной публикации.
 Команда не изменяет исходный PDF, не обращается к моделям Django, не импортирует
 `QuranEditionVersion` и не публикует контент.
 
+Без `--spec` используется совместимый закреплённый профиль текущего Hafs PDF. Для другого
+издания команда получает SHA-256, количество cover/logical страниц, MediaBox логических
+страниц, обязательные metadata и edition/riwayah из отдельной JSON asset build-spec. Эти данные
+записываются в manifest schema v2 и затем проверяются командой публикации.
+
 ## Закреплённый источник
 
 Для текущего источника зафиксированы следующие инварианты:
@@ -92,12 +97,54 @@ uv run python manage.py prepare_mushaf_pages \
   --variant-width 1200
 ```
 
-Ширина должна находиться в диапазоне 240-4096 px. Логические страницы задаются в
-диапазоне 1-604; PDF-страница 1 не может попасть в рендер через CLI.
+Ширина должна находиться в диапазоне 240-4096 px. Для текущего Hafs-профиля логические
+страницы задаются в диапазоне 1-604; для другого издания верхнюю границу и число пропускаемых
+cover pages определяет его `--spec`.
 
-При намеренной замене исходника требуется отдельно проверить происхождение и лицензию,
-после чего явно передать его закреплённую контрольную сумму через
-`--expected-sha256`. Изменение checksum не отменяет проверки структуры и metadata.
+`--expected-sha256` предназначен только для совместимого Hafs-профиля. Для другого издания
+нужно использовать `--spec`; изменение checksum само по себе не отменяет проверки структуры,
+metadata, количества страниц и edition identity.
+
+Минимальная asset build-spec для другого издания выглядит так (placeholder необходимо заменить
+фактическими проверенными значениями поставщика):
+
+```jsonc
+{
+  "schema_version": 1,
+  "edition": {
+    "code": "madani-warsh",
+    "name_ar": "مصحف ورش",
+    "name_en": "Warsh Mushaf",
+    "name_ru": "Мусхаф Варш",
+    "riwayah": "Warsh 'an Nafi",
+    "source_name": "Pinned official package",
+    "source_url": "https://provider.example/package",
+    "license_name": "Reviewed provider terms",
+    "license_url": "https://provider.example/terms",
+    "surah_count": 114,
+    "juz_count": 30
+  },
+  "pdf_source": {
+    "expected_sha256": "<64 lowercase hex characters>",
+    "expected_pdf_page_count": "<verified positive integer>",
+    "cover_pdf_page_count": "<verified non-negative integer>",
+    "logical_page_count": "<verified positive integer>",
+    "expected_media_box": [0, 0, "<verified width>", "<verified height>"],
+    "required_metadata": {
+      "Title": "<verified exact title>"
+    }
+  }
+}
+```
+
+Локальный запуск для этой спецификации:
+
+```bash
+uv run python manage.py prepare_mushaf_pages \
+  /path/to/warsh-mushaf.pdf \
+  --spec /path/to/warsh-mushaf-asset-spec.json \
+  --output ../../tmp/warsh-pages
+```
 
 ## Docker
 
@@ -138,8 +185,8 @@ hafs-pages-v1/
 
 Каждая запись `assets[]` в `manifest.json` содержит:
 
-- `logical_page` - страница мусхафа 1-604;
-- `pdf_page` - исходная PDF-страница 2-605;
+- `logical_page` — номер страницы конкретного издания;
+- `pdf_page` — исходная PDF-страница с учётом числа закреплённых cover pages;
 - `variant` и `format`;
 - `dimensions.width` и `dimensions.height`;
 - SHA-256, размер в байтах и относительный POSIX-путь;

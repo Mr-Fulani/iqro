@@ -8,23 +8,23 @@ from django.core.management.base import BaseCommand, CommandError, CommandParser
 from quran_backend.modules.quran.mushaf_assets import (
     DEFAULT_VARIANT_WIDTHS,
     KNOWN_SOURCE_SHA256,
-    LOGICAL_PAGE_COUNT,
     MushafAssetError,
     PopplerWebpRenderer,
     build_mushaf_assets,
     create_build_plan,
     inspect_mushaf_source,
+    load_mushaf_asset_build_spec,
 )
 
 
 class Command(BaseCommand):
     help = (
-        "Validate the pinned Hafs PDF and prepare immutable WebP page assets. "
+        "Validate a pinned Mushaf PDF and prepare immutable WebP page assets. "
         "This command never imports or publishes Quran content."
     )
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("source", type=Path, help="Path to the source Hafs PDF.")
+        parser.add_argument("source", type=Path, help="Path to the pinned source PDF.")
         parser.add_argument(
             "--output",
             type=Path,
@@ -32,14 +32,21 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--expected-sha256",
-            default=KNOWN_SOURCE_SHA256,
-            help="Pinned SHA-256 of the source PDF.",
+            help=(
+                "Pinned SHA-256 for the legacy Hafs profile. Defaults to its known checksum; "
+                "cannot be combined with --spec."
+            ),
+        )
+        parser.add_argument(
+            "--spec",
+            type=Path,
+            help="Edition-specific Mushaf PDF build spec.",
         )
         parser.add_argument("--first-page", type=int, default=1, help="First logical page.")
         parser.add_argument(
             "--last-page",
             type=int,
-            default=LOGICAL_PAGE_COUNT,
+            default=None,
             help="Last logical page, inclusive.",
         )
         parser.add_argument(
@@ -63,14 +70,23 @@ class Command(BaseCommand):
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
         try:
-            source = inspect_mushaf_source(
-                options["source"],
-                expected_sha256=options["expected_sha256"],
-            )
+            if options["spec"] is not None and options["expected_sha256"] is not None:
+                raise MushafAssetError("--spec and --expected-sha256 cannot be combined.")
+            if options["spec"] is None:
+                source = inspect_mushaf_source(
+                    options["source"],
+                    expected_sha256=options["expected_sha256"] or KNOWN_SOURCE_SHA256,
+                )
+            else:
+                source = inspect_mushaf_source(
+                    options["source"],
+                    build_spec=load_mushaf_asset_build_spec(options["spec"]),
+                )
+            logical_page_count = source.build_spec.logical_page_count
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Source is valid: {source.pdf_page_count} PDF pages, "
-                    f"{LOGICAL_PAGE_COUNT} logical pages, SHA-256 {source.sha256}."
+                    f"{logical_page_count} logical pages, SHA-256 {source.sha256}."
                 )
             )
             if options["validate_only"]:

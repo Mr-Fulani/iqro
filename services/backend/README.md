@@ -70,6 +70,13 @@ uv run python manage.py prepare_mushaf_pages \
   --output media/quran/madani-hafs/1.0.0 \
   --variant-width 900
 
+# Для другого издания параметры PDF и edition metadata берутся из asset build-spec:
+uv run python manage.py prepare_mushaf_pages \
+  /path/to/warsh-mushaf.pdf \
+  --spec /path/to/warsh-mushaf-asset-spec.json \
+  --output media/quran/madani-warsh/1.0.0 \
+  --variant-width 900
+
 uv run python manage.py publish_mushaf_pages \
   media/quran/madani-hafs/1.0.0/manifest.json \
   --activate
@@ -85,16 +92,19 @@ uv run python manage.py publish_mushaf_pages \
 ```
 
 Команда публикации идемпотентна и перед записью в БД сверяет `manifest.sha256`, наличие,
-размер и SHA-256 каждой из 604 страниц. Page-only версия не добавляет канонический текст,
+размер и SHA-256 каждой заявленной страницы. Manifest schema v2 переносит edition/riwayah и
+количество страниц из проверенной asset spec, поэтому публикация также не привязана к Hafs или
+604 страницам. Page-only версия не добавляет канонический текст,
 границы джузов или интерактивные координаты аятов; их по-прежнему следует импортировать
 отдельным проверенным Quran dataset.
 
 ## Полный Quran dataset
 
-Сборщик `build_quran_dataset` объединяет закреплённый Tanzil Uthmani corpus, KFQC
-ayah-polygons и подготовленные WebP-страницы. Он принимает только известные SHA-256,
-проверяет покрытие всех 6236 аятов, 60 хизбов и 240 четвертей хизба и переводит нативные
-координаты KFQC в координаты страницы PDF. Точные commits, SHA и лицензии записаны в
+Сборщик `build_quran_dataset` объединяет закреплённый нормализованный Quran corpus,
+ayah-polygons и подготовленные WebP-страницы. Код не привязан к одному риваяту: edition code,
+riwayah, версии, ожидаемые количества, SHA-256 исходников, page geometry, object-key prefix и
+provenance задаются отдельной проверяемой build-spec. Без `--spec` сохраняется совместимый
+профиль текущего `madani-hafs@1.0.2`; его точные commits, SHA и лицензии записаны в
 [docs/quran-sources.lock.json](docs/quran-sources.lock.json).
 
 ```bash
@@ -103,6 +113,14 @@ uv run python manage.py build_quran_dataset \
   /path/to/quran-svg/mushafs/hafs/kfqc/json \
   media/quran/madani-hafs/1.0.0/manifest.json \
   media/quran/datasets/madani-hafs-1.0.2
+
+# Любое другое издание/риваят с собственными закреплёнными источниками:
+uv run python manage.py build_quran_dataset \
+  /path/to/normalized-warsh-quran.json \
+  /path/to/warsh/page-regions \
+  /path/to/warsh/page-assets/manifest.json \
+  media/quran/datasets/madani-warsh-1.0.0 \
+  --spec /path/to/madani-warsh-build-spec.json
 
 uv run python manage.py import_quran_dataset \
   media/quran/datasets/madani-hafs-1.0.2
@@ -117,3 +135,8 @@ uv run python manage.py audit_quran_regions \
 Импорт создаёт только draft. Отдельная команда публикации повторно проверяет фактические
 количества сур, страниц, джузов, хизбов и четвертей, покрытие каждого аята регионом и
 наличие source manifest.
+
+Формат и правила build-spec описаны в
+[docs/quran-dataset-build-spec.md](docs/quran-dataset-build-spec.md). Поддержка формата не
+означает, что официальные файлы Warsh/Qaloun/Shu'bah уже получены или разрешены к публикации:
+для реального кандидата всё равно нужны закреплённые исходники, права и три sign-off.

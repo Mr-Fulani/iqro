@@ -27,10 +27,16 @@ class FakeMushafUploader:
         return StoredObject(key=spec.key, etag=f'"etag-{len(self.specs)}"', created=True)
 
 
-def _prepared_assets(media_root: Path) -> Path:
-    root = media_root / "quran" / "madani-hafs" / "1.0.0"
+def _prepared_assets(
+    media_root: Path,
+    *,
+    edition_code: str = "madani-hafs",
+    page_count: int = 604,
+    schema_version: int = 1,
+) -> Path:
+    root = media_root / "quran" / edition_code / "1.0.0"
     assets: list[dict[str, object]] = []
-    for logical_page in range(1, 605):
+    for logical_page in range(1, page_count + 1):
         relative_path = (
             Path("pages") / f"{logical_page:03d}" / (f"page-{logical_page:03d}-w0900.webp")
         )
@@ -51,19 +57,36 @@ def _prepared_assets(media_root: Path) -> Path:
             }
         )
     manifest = {
-        "schema_version": 1,
-        "source": {"logical_page_count": 604},
+        "schema_version": schema_version,
+        "source": {
+            "logical_page_count": page_count,
+            "cover_pdf_pages": [1],
+        },
         "render": {
             "first_logical_page": 1,
-            "last_logical_page": 604,
-            "page_count": 604,
-            "asset_count": 604,
+            "last_logical_page": page_count,
+            "page_count": page_count,
+            "asset_count": page_count,
             "variant_widths": [900],
             "format": "webp",
             "lossless": True,
         },
         "assets": assets,
     }
+    if schema_version == 2:
+        manifest["edition"] = {
+            "code": edition_code,
+            "name_ar": "مصحف ورش",
+            "name_en": "Warsh Mushaf",
+            "name_ru": "Мусхаф Варш",
+            "riwayah": "Warsh 'an Nafi",
+            "source_name": "Synthetic Warsh source",
+            "source_url": "https://example.test/warsh",
+            "license_name": "Synthetic test license",
+            "license_url": "https://example.test/terms",
+            "surah_count": 114,
+            "juz_count": 30,
+        }
     manifest_path = root / "manifest.json"
     manifest_payload = (json.dumps(manifest, sort_keys=True) + "\n").encode()
     manifest_path.write_bytes(manifest_payload)
@@ -92,6 +115,51 @@ def test_publish_mushaf_pages_registers_and_activates_catalog(tmp_path: Path) ->
         ]
         == "quran/madani-hafs/1.0.0/pages/001/page-001-w0900.webp"
     )
+
+
+@pytest.mark.django_db
+def test_schema_v2_manifest_publishes_warsh_without_hafs_defaults(tmp_path: Path) -> None:
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    manifest = _prepared_assets(
+        media_root,
+        edition_code="madani-warsh",
+        page_count=1,
+        schema_version=2,
+    )
+
+    with override_settings(MEDIA_ROOT=media_root):
+        call_command(
+            "publish_mushaf_pages",
+            manifest,
+            "--content-version",
+            "warsh-pages-test",
+            "--activate",
+        )
+
+    edition = QuranEdition.objects.get(code="madani-warsh")
+    assert edition.riwayah == "Warsh 'an Nafi"
+    assert edition.active_version is not None
+    assert edition.active_version.page_count == 1
+    assert edition.active_version.pages.count() == 1
+
+
+@pytest.mark.django_db
+def test_schema_v2_manifest_rejects_a_different_requested_edition(tmp_path: Path) -> None:
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    manifest = _prepared_assets(
+        media_root,
+        edition_code="madani-warsh",
+        page_count=1,
+        schema_version=2,
+    )
+
+    with (
+        override_settings(MEDIA_ROOT=media_root),
+        pytest.raises(CommandError, match="does not match"),
+    ):
+        call_command("publish_mushaf_pages", manifest, "--edition", "madani-hafs")
 
 
 @pytest.mark.django_db

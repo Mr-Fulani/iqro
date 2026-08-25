@@ -24,6 +24,8 @@ from quran_backend.modules.quran.mushaf_assets import (
     build_mushaf_assets,
     create_build_plan,
     inspect_mushaf_source,
+    legacy_hafs_mushaf_asset_spec,
+    load_mushaf_asset_build_spec,
 )
 
 
@@ -53,6 +55,7 @@ def _source(tmp_path: Path) -> MushafSource:
         metadata={"Title": "Test"},
         pdfinfo_version="pdfinfo test",
         fingerprint=_fingerprint(source_path),
+        build_spec=legacy_hafs_mushaf_asset_spec(expected_sha256=_sha256(source_path)),
     )
 
 
@@ -129,9 +132,10 @@ def _pdfinfo_output(
     page_count: int = EXPECTED_PDF_PAGE_COUNT,
     author: str = "quran.ws",
     media_box_page_two_width: float = 900.0,
+    title: str = "Qur\u2019an — Hafs (Hafs from Asim) — Complete Mushaf",
 ) -> str:
     lines = [
-        "Title:           Qur\u2019an — Hafs (Hafs from Asim) — Complete Mushaf",
+        f"Title:           {title}",
         f"Author:          {author}",
         "Creator:         pdf.quran.ws",
         "Producer:        pdf.quran.ws",
@@ -141,11 +145,51 @@ def _pdfinfo_output(
         f"File size:       {size} bytes",
         "PDF version:     1.3",
     ]
-    for page in range(1, EXPECTED_PDF_PAGE_COUNT + 1):
+    for page in range(1, page_count + 1):
         width = media_box_page_two_width if page == 2 else 900.0
         lines.append(f"Page {page:4d} rot:   0")
         lines.append(f"Page {page:4d} MediaBox: 0.00 0.00 {width:.2f} 1379.25")
     return "\n".join(lines)
+
+
+def _write_warsh_asset_spec(source_path: Path) -> Path:
+    path = source_path.with_name("warsh-asset-spec.json")
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "edition": {
+                    "code": "madani-warsh",
+                    "name_ar": "مصحف ورش",
+                    "name_en": "Warsh Mushaf",
+                    "name_ru": "Мусхаф Варш",
+                    "riwayah": "Warsh 'an Nafi",
+                    "source_name": "Synthetic Warsh source",
+                    "source_url": "https://example.test/warsh",
+                    "license_name": "Synthetic license",
+                    "license_url": "https://example.test/terms",
+                    "surah_count": 114,
+                    "juz_count": 30,
+                },
+                "pdf_source": {
+                    "expected_sha256": _sha256(source_path),
+                    "expected_pdf_page_count": 2,
+                    "cover_pdf_page_count": 1,
+                    "logical_page_count": 1,
+                    "expected_media_box": list(EXPECTED_MEDIA_BOX),
+                    "required_metadata": {
+                        "Title": "Synthetic Warsh Mushaf",
+                        "Author": "quran.ws",
+                        "Creator": "pdf.quran.ws",
+                        "Producer": "pdf.quran.ws",
+                    },
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 class RenderingRunner:
@@ -224,6 +268,48 @@ def test_inspection_rejects_invalid_pdf_structure(
             expected_sha256=_sha256(source_path),
             runner=PdfInfoRunner(output),
         )
+
+
+def test_warsh_asset_spec_controls_pdf_validation_page_mapping_and_manifest(
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "warsh.pdf"
+    source_path.write_bytes(b"synthetic warsh source")
+    spec = load_mushaf_asset_build_spec(_write_warsh_asset_spec(source_path))
+    runner = PdfInfoRunner(
+        _pdfinfo_output(
+            source_path.stat().st_size,
+            page_count=2,
+            title="Synthetic Warsh Mushaf",
+        )
+    )
+    source = inspect_mushaf_source(source_path, build_spec=spec, runner=runner)
+    plan = create_build_plan(source, tmp_path / "warsh-assets", variant_widths=(480,))
+
+    result = build_mushaf_assets(plan, renderer=FakeRenderer())
+
+    assert result.asset_count == 1
+    manifest = cast(dict[str, object], result.manifest)
+    edition = cast(dict[str, object], manifest["edition"])
+    source_manifest = cast(dict[str, object], manifest["source"])
+    assets = cast(list[dict[str, object]], manifest["assets"])
+    assert manifest["schema_version"] == 2
+    assert edition["code"] == "madani-warsh"
+    assert edition["riwayah"] == "Warsh 'an Nafi"
+    assert source_manifest["logical_page_count"] == 1
+    assert assets[0]["pdf_page"] == 2
+
+
+def test_mushaf_asset_spec_rejects_unsafe_edition_code(tmp_path: Path) -> None:
+    source_path = tmp_path / "warsh.pdf"
+    source_path.write_bytes(b"synthetic warsh source")
+    spec_path = _write_warsh_asset_spec(source_path)
+    payload = json.loads(spec_path.read_text(encoding="utf-8"))
+    payload["edition"]["code"] = "../warsh"
+    spec_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(MushafAssetError, match="lowercase ASCII slug"):
+        load_mushaf_asset_build_spec(spec_path)
 
 
 def test_build_partial_range_skips_cover_and_atomically_promotes(tmp_path: Path) -> None:

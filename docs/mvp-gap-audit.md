@@ -50,7 +50,7 @@ runtime. Основной незакрытый объём находится в 
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
   reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 538 passed, 6 skipped; суммарное покрытие 84,82%.
+- Полный backend test suite: 545 passed, 6 skipped; суммарное покрытие 84,76%.
 - Web имеет 48 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,

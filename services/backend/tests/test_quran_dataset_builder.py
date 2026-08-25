@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from django.core.management import call_command
 
 from quran_backend.modules.quran import dataset_builder
 
@@ -74,6 +75,60 @@ def _write_sources(root: Path) -> tuple[Path, Path, Path]:
     return corpus, polygons, asset_manifest
 
 
+def _write_warsh_build_spec(root: Path, corpus: Path, polygons: Path) -> Path:
+    polygon_hash = hashlib.sha256(
+        (f"001.json:{hashlib.sha256((polygons / '001.json').read_bytes()).hexdigest()}\n").encode()
+    ).hexdigest()
+    path = root / "warsh-build-spec.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "source_version": "official-warsh-test-2026.08.25",
+                "edition": {
+                    "code": "madani-warsh",
+                    "version": "0.1.0-test",
+                    "asset_version": "0.1.0",
+                    "name_ar": "مصحف ورش",
+                    "name_en": "Warsh Mushaf",
+                    "name_ru": "Мусхаф Варш",
+                    "riwayah": "Warsh 'an Nafi",
+                    "source_name": "Synthetic official-format fixture",
+                    "source_url": "https://example.test/warsh",
+                    "license_name": "Synthetic test license",
+                    "license_url": "https://example.test/terms",
+                },
+                "corpus_sha256": hashlib.sha256(corpus.read_bytes()).hexdigest(),
+                "polygon_set_sha256": polygon_hash,
+                "expected_counts": {
+                    "surahs": 1,
+                    "ayahs": 1,
+                    "pages": 1,
+                    "juz": 1,
+                    "hizb": 1,
+                    "rub_el_hizb": 1,
+                },
+                "geometry": {
+                    "registered_page_scale": dataset_builder.REGISTERED_PAGE_SCALE,
+                    "standard_viewbox": list(dataset_builder.STANDARD_VIEWBOX),
+                    "opening_viewbox": list(dataset_builder.OPENING_VIEWBOX),
+                    "opening_page_count": 1,
+                    "page_assignment_authority": "Synthetic Warsh polygon geometry",
+                },
+                "surah_names_ru": ["Аль-Фатиха"],
+                "sources": {
+                    "corpus": {"provider": "Synthetic Warsh text fixture"},
+                    "regions": {"provider": "Synthetic Warsh regions fixture"},
+                    "assets": {"provider": "Synthetic Warsh page fixture"},
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_builds_checksummed_dataset_from_verified_sources(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -132,6 +187,61 @@ def test_rejects_changed_corpus(tmp_path: Path) -> None:
             asset_manifest_path=asset_manifest,
             output=tmp_path / "output",
         )
+
+
+def test_builds_warsh_dataset_from_an_explicit_edition_spec(tmp_path: Path) -> None:
+    corpus, polygons, asset_manifest = _write_sources(tmp_path)
+    spec_path = _write_warsh_build_spec(tmp_path, corpus, polygons)
+
+    result = dataset_builder.build_quran_dataset(
+        spec=dataset_builder.load_quran_dataset_build_spec(spec_path),
+        corpus_path=corpus,
+        polygons_dir=polygons,
+        asset_manifest_path=asset_manifest,
+        output=tmp_path / "warsh-output",
+    )
+
+    manifest = json.loads((result.output / "manifest.json").read_text(encoding="utf-8"))
+    page_payload = json.loads((result.output / "pages.jsonl").read_text(encoding="utf-8"))
+    assert manifest["edition"]["code"] == "madani-warsh"
+    assert manifest["edition"]["riwayah"] == "Warsh 'an Nafi"
+    assert manifest["edition"]["version"] == "0.1.0-test"
+    assert manifest["verification"]["page_assignment_authority"] == (
+        "Synthetic Warsh polygon geometry"
+    )
+    assert (
+        manifest["sources"]["corpus"]["sha256"] == hashlib.sha256(corpus.read_bytes()).hexdigest()
+    )
+    assert page_payload["assets"][0]["path"] == "quran/madani-warsh/0.1.0/page.webp"
+
+
+def test_rejects_unsafe_edition_code_in_build_spec(tmp_path: Path) -> None:
+    corpus, polygons, _ = _write_sources(tmp_path)
+    spec_path = _write_warsh_build_spec(tmp_path, corpus, polygons)
+    payload = json.loads(spec_path.read_text(encoding="utf-8"))
+    payload["edition"]["code"] = "../../warsh"
+    spec_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(dataset_builder.QuranDatasetBuildError, match="lowercase ASCII slug"):
+        dataset_builder.load_quran_dataset_build_spec(spec_path)
+
+
+def test_management_command_accepts_an_edition_build_spec(tmp_path: Path) -> None:
+    corpus, polygons, asset_manifest = _write_sources(tmp_path)
+    spec_path = _write_warsh_build_spec(tmp_path, corpus, polygons)
+    output = tmp_path / "command-output"
+
+    call_command(
+        "build_quran_dataset",
+        str(corpus),
+        str(polygons),
+        str(asset_manifest),
+        str(output),
+        spec=spec_path,
+    )
+
+    manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["edition"]["code"] == "madani-warsh"
 
 
 def test_parse_polygons_preserves_disconnected_subpaths() -> None:

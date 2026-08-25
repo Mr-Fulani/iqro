@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -23,6 +24,7 @@ from quran_backend.modules.quran.models import (
 
 EXPECTED_LOGICAL_PAGE_COUNT = 604
 MAX_MANIFEST_BYTES = 10 * 1024 * 1024
+EDITION_CODE_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 
 
 class MushafPublicationError(ValueError):
@@ -43,6 +45,9 @@ class PreparedMushafCatalog:
     manifest_path: Path
     checksum_sha256: str
     pages: list[PreparedMushafPage]
+    logical_page_count: int
+    cover_pdf_page_count: int
+    edition_metadata: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,7 +88,7 @@ def load_prepared_mushaf_catalog(
         raise MushafPublicationError("Prepared asset manifest is not valid JSON.") from exc
     if not isinstance(data, dict):
         raise MushafPublicationError("Prepared asset manifest must be a JSON object.")
-    _validate_manifest_shape(data)
+    logical_page_count, cover_pdf_page_count, edition_metadata = _validate_manifest_shape(data)
 
     assets = data.get("assets")
     if not isinstance(assets, list):
@@ -95,15 +100,19 @@ def load_prepared_mushaf_catalog(
             asset,
             asset_root=root,
             media_root=resolved_media_root,
+            logical_page_count=logical_page_count,
+            cover_pdf_page_count=cover_pdf_page_count,
         )
         variants_by_page.setdefault(logical_page, []).append(variant)
 
-    expected_pages = set(range(1, EXPECTED_LOGICAL_PAGE_COUNT + 1))
+    expected_pages = set(range(1, logical_page_count + 1))
     if set(variants_by_page) != expected_pages:
-        raise MushafPublicationError("Prepared assets must cover logical pages 1-604 exactly.")
+        raise MushafPublicationError(
+            f"Prepared assets must cover logical pages 1-{logical_page_count} exactly."
+        )
 
     pages: list[PreparedMushafPage] = []
-    for number in range(1, EXPECTED_LOGICAL_PAGE_COUNT + 1):
+    for number in range(1, logical_page_count + 1):
         variants = sorted(variants_by_page[number], key=lambda item: int(str(item["width"])))
         largest = variants[-1]
         pages.append(
@@ -120,6 +129,9 @@ def load_prepared_mushaf_catalog(
         manifest_path=manifest,
         checksum_sha256=manifest_checksum,
         pages=pages,
+        logical_page_count=logical_page_count,
+        cover_pdf_page_count=cover_pdf_page_count,
+        edition_metadata=edition_metadata,
     )
 
 
@@ -180,19 +192,19 @@ def publish_prepared_mushaf_catalog(
     version_value: str,
     activate: bool,
 ) -> PublicationResult:
+    if not EDITION_CODE_PATTERN.fullmatch(edition_code):
+        raise MushafPublicationError("Quran edition code must be a lowercase ASCII slug.")
+    manifest_edition_code = str(catalog.edition_metadata.get("code", "")).strip()
+    if manifest_edition_code and manifest_edition_code != edition_code:
+        raise MushafPublicationError(
+            "Requested edition code does not match the prepared asset manifest."
+        )
+    edition_defaults = _edition_defaults(catalog.edition_metadata)
     edition, _ = QuranEdition.objects.get_or_create(
         code=edition_code,
-        defaults={
-            "name_ar": "مصحف المدينة",
-            "name_en": "Madani Mushaf",
-            "name_ru": "Мединский мусхаф",
-            "riwayah": "Hafs 'an Asim",
-            "source_name": "Tanzil + quranpedia/quran-svg + pinned KFQC PDF",
-            "source_url": "https://tanzil.net/download/",
-            "license_name": "Tanzil CC BY 3.0; regions CC0 1.0; KFQC digital-use terms",
-            "license_url": "https://tanzil.net/docs/Text_License",
-        },
+        defaults=edition_defaults,
     )
+    _validate_edition_identity(edition, edition_defaults)
     version = (
         QuranEditionVersion.objects.select_for_update()
         .filter(
@@ -207,9 +219,9 @@ def publish_prepared_mushaf_catalog(
             edition=edition,
             version=version_value,
             checksum_sha256=catalog.checksum_sha256,
-            page_count=EXPECTED_LOGICAL_PAGE_COUNT,
-            surah_count=114,
-            juz_count=30,
+            page_count=catalog.logical_page_count,
+            surah_count=int(catalog.edition_metadata.get("surah_count", 114)),
+            juz_count=int(catalog.edition_metadata.get("juz_count", 30)),
         )
         MushafPage.objects.bulk_create(
             [
@@ -277,26 +289,44 @@ def _validate_manifest_checksum(manifest: Path, actual_checksum: str) -> None:
         raise MushafPublicationError("Manifest checksum verification failed.")
 
 
-def _validate_manifest_shape(data: dict[str, Any]) -> None:
+def _validate_manifest_shape(data: dict[str, Any]) -> tuple[int, int, dict[str, Any]]:
     source = data.get("source")
     render = data.get("render")
-    if (
-        data.get("schema_version") != 1
-        or not isinstance(source, dict)
-        or not isinstance(render, dict)
-    ):
+    schema_version = data.get("schema_version")
+    if schema_version not in (1, 2) or not isinstance(source, dict) or not isinstance(render, dict):
         raise MushafPublicationError("Unsupported prepared asset manifest.")
-    if source.get("logical_page_count") != EXPECTED_LOGICAL_PAGE_COUNT:
-        raise MushafPublicationError("Source manifest must describe 604 logical pages.")
+    if schema_version == 1:
+        logical_page_count = EXPECTED_LOGICAL_PAGE_COUNT
+        cover_pdf_page_count = 1
+        edition_metadata: dict[str, Any] = {}
+    else:
+        logical_page_count = _positive_manifest_int(
+            source.get("logical_page_count"),
+            "source.logical_page_count",
+        )
+        cover_pdf_pages = source.get("cover_pdf_pages")
+        if not isinstance(cover_pdf_pages, list) or cover_pdf_pages != list(
+            range(1, len(cover_pdf_pages) + 1)
+        ):
+            raise MushafPublicationError(
+                "Source manifest cover_pdf_pages must be a leading consecutive sequence."
+            )
+        cover_pdf_page_count = len(cover_pdf_pages)
+        edition_metadata = _validate_manifest_edition(data.get("edition"))
+    if source.get("logical_page_count") != logical_page_count:
+        raise MushafPublicationError(
+            f"Source manifest must describe {logical_page_count} logical pages."
+        )
     expected_render = {
         "first_logical_page": 1,
-        "last_logical_page": EXPECTED_LOGICAL_PAGE_COUNT,
-        "page_count": EXPECTED_LOGICAL_PAGE_COUNT,
+        "last_logical_page": logical_page_count,
+        "page_count": logical_page_count,
         "format": "webp",
         "lossless": True,
     }
     if any(render.get(key) != value for key, value in expected_render.items()):
         raise MushafPublicationError("Only a complete lossless WebP render can be published.")
+    return logical_page_count, cover_pdf_page_count, edition_metadata
 
 
 def _validate_asset(
@@ -304,6 +334,8 @@ def _validate_asset(
     *,
     asset_root: Path,
     media_root: Path,
+    logical_page_count: int,
+    cover_pdf_page_count: int,
 ) -> tuple[int, dict[str, object]]:
     if not isinstance(asset, dict):
         raise MushafPublicationError("Prepared asset entry is malformed.")
@@ -324,8 +356,8 @@ def _validate_asset(
     except (KeyError, TypeError, ValueError) as exc:
         raise MushafPublicationError("Prepared asset dimensions are malformed.") from exc
     if (
-        not 1 <= logical_page <= EXPECTED_LOGICAL_PAGE_COUNT
-        or pdf_page != logical_page + 1
+        not 1 <= logical_page <= logical_page_count
+        or pdf_page != logical_page + cover_pdf_page_count
         or asset.get("format") != "webp"
         or width <= 0
         or height <= 0
@@ -365,10 +397,84 @@ def _validate_existing_version(
     if version.checksum_sha256 != catalog.checksum_sha256:
         raise MushafPublicationError("Edition version exists with a different manifest checksum.")
     pages = list(version.pages.order_by("number"))
-    if len(pages) != EXPECTED_LOGICAL_PAGE_COUNT:
+    if len(pages) != catalog.logical_page_count:
         raise MushafPublicationError("Edition version exists with an incomplete page catalog.")
     if any(page.number != expected for expected, page in enumerate(pages, start=1)):
         raise MushafPublicationError("Edition version page numbering is invalid.")
+
+
+def _validate_manifest_edition(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise MushafPublicationError("Prepared asset manifest has no edition metadata.")
+    required_strings = (
+        "code",
+        "name_ar",
+        "name_en",
+        "name_ru",
+        "riwayah",
+        "source_name",
+        "license_name",
+    )
+    if any(
+        not isinstance(value.get(field), str) or not value[field].strip()
+        for field in required_strings
+    ):
+        raise MushafPublicationError("Prepared asset manifest edition metadata is incomplete.")
+    if not EDITION_CODE_PATTERN.fullmatch(str(value["code"])):
+        raise MushafPublicationError("Prepared asset manifest edition code is unsafe.")
+    for field in ("surah_count", "juz_count"):
+        _positive_manifest_int(value.get(field), f"edition.{field}")
+    return dict(value)
+
+
+def _positive_manifest_int(value: Any, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise MushafPublicationError(f"Prepared asset manifest {label} must be positive.")
+    return value
+
+
+def _edition_defaults(metadata: dict[str, Any]) -> dict[str, Any]:
+    if metadata:
+        return {
+            "name_ar": str(metadata["name_ar"]),
+            "name_en": str(metadata["name_en"]),
+            "name_ru": str(metadata["name_ru"]),
+            "riwayah": str(metadata["riwayah"]),
+            "source_name": str(metadata["source_name"]),
+            "source_url": str(metadata.get("source_url", "")),
+            "license_name": str(metadata["license_name"]),
+            "license_url": str(metadata.get("license_url", "")),
+        }
+    return {
+        "name_ar": "مصحف المدينة",
+        "name_en": "Madani Mushaf",
+        "name_ru": "Мединский мусхаф",
+        "riwayah": "Hafs 'an Asim",
+        "source_name": "Tanzil + quranpedia/quran-svg + pinned KFQC PDF",
+        "source_url": "https://tanzil.net/download/",
+        "license_name": "Tanzil CC BY 3.0; regions CC0 1.0; KFQC digital-use terms",
+        "license_url": "https://tanzil.net/docs/Text_License",
+    }
+
+
+def _validate_edition_identity(
+    edition: QuranEdition,
+    expected: dict[str, Any],
+) -> None:
+    for field in (
+        "name_ar",
+        "name_en",
+        "name_ru",
+        "riwayah",
+        "source_name",
+        "source_url",
+        "license_name",
+        "license_url",
+    ):
+        if getattr(edition, field) != expected[field]:
+            raise MushafPublicationError(
+                f"Existing Quran edition metadata does not match the manifest: {field}."
+            )
 
 
 def _sha256_file(path: Path) -> str:

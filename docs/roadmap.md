@@ -267,6 +267,12 @@ flowchart LR
   resource IDs в `draft` и публиковать каталог порциями после
   rights/attribution/editorial/playback checks. Наличие ресурса в API не означает разрешение
   копировать или rehost его файлы.
+- [x] Убрать Hafs-специфику из локального content pipeline: edition/riwayah, версии,
+  контрольные количества и SHA-256, provenance, PDF/page geometry, cover mapping и asset prefix
+  теперь задаются проверяемыми build-spec. Dataset builder, PDF→WebP preparation и page
+  publication принимают динамическое количество страниц и edition metadata. Legacy Hafs
+  workflow сохранён; synthetic Warsh проходит тот же builder/CLI/publication path, а
+  несовпадающие или небезопасные edition identities отклоняются.
 - [ ] Импортировать каждый официальный KFGQPC риваят как отдельную versioned Quran edition.
   Developer platform сейчас публикует как минимум Hafs, Warsh, Shu'bah, Qaloun, Al-Douri и
   Al-Sousi text/font resources; точный доступный production catalog, page-art packages и права

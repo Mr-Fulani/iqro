@@ -16,13 +16,14 @@ from quran_backend.modules.quran.mushaf_publication import (
 
 
 class Command(BaseCommand):
-    help = (
-        "Verify prepared Mushaf WebP assets, register all 604 pages, and optionally activate them."
-    )
+    help = "Verify prepared Mushaf WebP assets, register every page, and optionally activate them."
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("manifest", type=Path, help="Path to prepared manifest.json.")
-        parser.add_argument("--edition", default="madani-hafs", help="Quran edition code.")
+        parser.add_argument(
+            "--edition",
+            help="Quran edition code; schema-v2 manifests provide it automatically.",
+        )
         parser.add_argument(
             "--content-version",
             default="mushaf-pages-1.0.0",
@@ -50,6 +51,8 @@ class Command(BaseCommand):
                 options["manifest"],
                 media_root=Path(settings.MEDIA_ROOT),
             )
+            manifest_edition = str(catalog.edition_metadata.get("code", "")).strip()
+            edition_code = options["edition"] or manifest_edition or "madani-hafs"
             upload_result = None
             if options["upload"]:
                 upload_result = upload_prepared_mushaf_catalog(
@@ -58,7 +61,7 @@ class Command(BaseCommand):
                 )
             result = publish_prepared_mushaf_catalog(
                 catalog,
-                edition_code=options["edition"],
+                edition_code=edition_code,
                 version_value=options["content_version"],
                 activate=options["activate"],
             )
