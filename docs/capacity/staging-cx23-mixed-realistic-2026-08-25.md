@@ -61,12 +61,14 @@ SIGTERM остановленного перед тестом основного 
 
 ## Что результат не доказывает
 
-- зарегистрированный пользователь с email login/link/merge и несколькими устройствами не
-  проверен;
+- новый registered email account теперь проверен отдельно; existing-account link/merge и
+  несколько устройств не входят в этот отчёт;
 - реальное licensed multi-reciter audio, cold CDN/origin и mobile buffering не входили в тест;
 - import/worker contention, длительный soak, production-sized S0/S1 и multi-host HA не проверены;
 - число DAU из concurrency не выводится: для него нужны peak factor, длительность сессии,
   requests/user и audio minutes/day.
 
-Следующий capacity-шаг — автоматизировать registered-user journey, затем повторить mixed/soak
-на production-sized профиле и отдельно провести real-audio CDN/QoE sign-off.
+Registered-user promotion/sync продолжен в
+[отдельном отчёте](staging-cx23-registered-user-2026-08-25.md). Следующий capacity-шаг —
+production-sized mixed/soak и real-audio CDN/QoE sign-off; для identity остаётся
+existing-account merge + multi-device journey.

@@ -479,8 +479,10 @@ docker compose --profile ops run --rm db-backup
 
 Repository Make targets добавляют `--no-deps`: backup/verify/restore-check jobs подключаются к
 уже работающему PostgreSQL, но не имеют права запускать или пересоздавать runtime database
-container из-за нового image tag. Если PostgreSQL не запущен или unhealthy, job обязан упасть,
-а оператор сначала восстанавливает штатный deployment profile.
+container из-за нового image tag. Staging targets автоматически получают точное имя image из
+работающего PostgreSQL container; поэтому source-only обновление `.deployed-commit` не заставит
+backup job искать ещё не собранный tag. Если PostgreSQL не запущен, target обязан упасть, а
+оператор сначала восстанавливает штатный deployment profile.
 
 Команда напечатает путь внутри контейнера, например `/backups/quran_....dump`. Проверка:
 
@@ -722,6 +724,40 @@ guest/device/sync записи и запускается только проти
 CX23 прогон подтвердил realistic профиль `20 readers + 4 sync users` без ошибок; полный отчёт —
 [mixed capacity evidence](capacity/staging-cx23-mixed-realistic-2026-08-25.md).
 
+### Registered-user email auth + sync capacity test
+
+`ops/load/registered_capacity.py` проверяет promotion нового guest в active email account,
+дальнейшие `/me`, sync push/pull, token refresh и logout. Код забирается из закрытого Mailpit
+через локальный SSH-туннель; email domain обязан заканчиваться на зарезервированный `.test`.
+Email, код, installation credential и tokens в отчёт не попадают.
+
+```bash
+ssh -N -L 18025:127.0.0.1:8025 <USER>@<STAGING_IP>
+
+python3 ops/load/registered_capacity.py \
+  --base-url https://staging.example.org \
+  --mailpit-url http://127.0.0.1:18025 \
+  --email-domain example.test \
+  --confirm-target-host staging.example.org \
+  --allow-stateful-writes \
+  --confirm-disposable-staging-data \
+  --allow-email-challenges \
+  --confirm-intercepted-test-email \
+  --stage 2:120 \
+  --stage 4:180 \
+  --think-time-ms 15000 \
+  --refresh-every-cycles 5 \
+  --label release-abc1234-s0-registered \
+  --json-report /tmp/quran-capacity-release-abc1234-s0-registered.json
+```
+
+То же можно вызвать через
+`make ops-registered-capacity REGISTERED_CAPACITY_ARGS='...'`. Жёсткие пределы: concurrency 20,
+не более 40 новых accounts за весь запуск, стадия до 600 секунд и Mailpit delivery timeout до
+30 секунд. Production SMTP и production database использовать нельзя. Budget CX23 подтвердил
+4 active registered users; 6/8 завершились без ошибок, но вышли за latency gate. Полный отчёт —
+[registered-user capacity evidence](capacity/staging-cx23-registered-user-2026-08-25.md).
+
 Перед каждым изменением числа API/worker replicas сначала обновите topology/runtime-переменные
 `DATABASE_API_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER`,
 `DATABASE_WORKER_REPLICAS` и `CELERY_WORKER_CONCURRENCY`. Затем сохраните отчёт рядом с
@@ -758,8 +794,9 @@ requests per active user, sync operations/day, audio minutes/day и peak factor.
   нужны public library reads и отдельные cache-cold/cache-warm прогоны;
 - bounded guest auth, token refresh, reading writes и sync push/pull автоматизированы;
   budget CX23 evidence подтвердил 8 постоянно активных тяжёлых guest sync-клиентов и p95
-  boundary на 10; realistic mixed профиль подтвердил `20 readers + 4 sync users`, а сценарий
-  зарегистрированного пользователя остаётся;
+  boundary на 10; realistic mixed профиль подтвердил `20 readers + 4 sync users`;
+  guest→new registered email journey подтвердил 4 active users с latency boundary на 6/8;
+  existing-account merge и multi-device journey остаются;
 - одновременный импорт/retention task без нарушения пользовательского SLO;
 - bounded CDN/origin `HEAD`, startup/seek `Range`, TTFB, throughput и cache outcomes уже
   автоматизированы; production-like cold/warm/origin evidence, `416` и origin-failure остаются;

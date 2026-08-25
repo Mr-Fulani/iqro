@@ -156,7 +156,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | 🟡 | Strict budget CX23 Quran read подтвердил 10 saturated clients: 4 612 запросов за 2 минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95. Synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; изолированный guest auth/reading sync подтвердил 8 тяжёлых stateful clients и p95 boundary на 10; realistic mixed — `20 readers + 4 sync users` без ошибок. Реальный multi-reciter audio, registered-user workload и production-sized S0/S1 ещё не измерены |
+| SLO доказаны на проектном пике | 🟡 | Strict budget CX23 Quran read подтвердил 10 saturated clients: 4 612 запросов за 2 минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95. Synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; изолированный guest auth/reading sync подтвердил 8 тяжёлых stateful clients и p95 boundary на 10; realistic mixed — `20 readers + 4 sync users` без ошибок; new registered email account + sync — 4 active users с boundary на 6/8. Реальный multi-reciter audio, existing-account/multi-device identity и production-sized S0/S1 ещё не измерены |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
@@ -255,8 +255,9 @@ provenance-safe immutable кандидата и трёх внешних sign-off
    подтвердил 25 playback clients; изолированный
    [guest sync отчёт](capacity/staging-cx23-stateful-sync-2026-08-25.md) — 8 тяжёлых stateful
    clients и latency boundary на 10; [mixed отчёт](capacity/staging-cx23-mixed-realistic-2026-08-25.md)
-   — `20 readers + 4 sync users` без ошибок. Реальный audio release, registered-user workload и
-   production-sized повтор остаются открыты.
+   — `20 readers + 4 sync users` без ошибок; [registered отчёт](capacity/staging-cx23-registered-user-2026-08-25.md)
+   — 4 active new-account users с boundary на 6/8. Реальный audio release,
+   existing-account/multi-device identity и production-sized повтор остаются открыты.
 3. Server/domain/TLS, privacy/license/religious sign-off.
    Budget CX23, `staging.iqro.forum`, automatic TLS proxy, isolated secrets/test email,
    backup drill и pre-publication evidence уже есть. Отдельный R2 staging bucket/scoped token/CORS,

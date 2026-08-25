@@ -380,9 +380,11 @@ Synthetic warm audio CDN часть подтвердила 25 playback-клие�
 изолированный guest auth/sync профиль подтвердил 8 тяжёлых stateful-клиентов, а 10 не уложились
 в p95 750 ms. Реалистичный смешанный прогон с паузами подтвердил одновременно 20 public-read
 клиентов и 4 guest sync-пользователя без ошибок; краткий cold/burst и `50+10` не прошли latency
-gate. Реальный разрешённый multi-reciter audio release, cache-cold, registered-user workload и
-production-sized repeat ещё открыты. Подробности — в
-[mixed capacity evidence](capacity/staging-cx23-mixed-realistic-2026-08-25.md).
+gate. Новый registered email account + sync подтвердил 4 active users; 6/8 завершились без
+ошибок, но нарушили latency gate. Реальный разрешённый multi-reciter audio release, cache-cold,
+existing-account/multi-device identity и production-sized repeat ещё открыты. Подробности — в
+[mixed capacity evidence](capacity/staging-cx23-mixed-realistic-2026-08-25.md) и
+[registered-user evidence](capacity/staging-cx23-registered-user-2026-08-25.md).
 
 ## 8. Обновление и откат
 
@@ -453,7 +455,7 @@ Staging считается созданным, когда одновременн
   budget-профиле сохранены health/metrics/load reports, а полный observability gate остаётся
   открытым до production-sized среды;
 - backup → verify → restore-check выполнены;
-- integration E2E и четыре capacity harness — public-read, audio, isolated sync и mixed — дали
-  сохранённые reports.
+- integration E2E и пять capacity harness — public-read, audio, isolated sync, mixed и
+  registered-user — дали сохранённые reports.
 
 До выполнения этих пунктов roadmap checkbox «production-like staging deployed» остаётся открыт.

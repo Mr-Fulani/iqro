@@ -9,8 +9,10 @@ STAGING_REVISION ?= $(shell git rev-parse --short HEAD 2>/dev/null || cut -c1-7 
 STAGING_APP_VERSION ?= staging-$(STAGING_REVISION)
 STAGING_COMPOSE = APP_VERSION=$(STAGING_APP_VERSION) PRODUCTION_ENV_FILE=$(abspath $(STAGING_ENV)) docker compose --env-file $(STAGING_ENV) -f compose.production.yaml -f compose.staging.yaml
 STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.staging.budget.yaml
+STAGING_RUNTIME_POSTGRES_IMAGE ?= $(shell container_id="$$( $(STAGING_COMPOSE) ps -q postgres 2>/dev/null )"; if [ -n "$$container_id" ]; then docker inspect --format '{{.Config.Image}}' "$$container_id" 2>/dev/null; fi)
+STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING_COMPOSE)
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity ops-mixed-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-sync-capacity ops-mixed-capacity ops-registered-capacity
 
 # Запуск с сохранением данных базы данных
 up:
@@ -143,14 +145,17 @@ staging-ps:
 staging-logs:
 	$(STAGING_COMPOSE) logs --tail=200
 
-staging-backup:
-	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-backup
+staging-runtime-postgres-image:
+	@test -n "$(STAGING_RUNTIME_POSTGRES_IMAGE)" || (printf '%s\n' 'ERROR: running staging PostgreSQL image was not found; restore the deployment first.' >&2; exit 1)
 
-staging-backup-verify:
-	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
+staging-backup: staging-runtime-postgres-image
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup
 
-staging-restore-check:
-	$(STAGING_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+staging-backup-verify: staging-runtime-postgres-image
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
+
+staging-restore-check: staging-runtime-postgres-image
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-observability-config: staging-preflight
 	$(STAGING_COMPOSE) -f compose.observability.yaml config --quiet
@@ -235,3 +240,6 @@ ops-sync-capacity:
 
 ops-mixed-capacity:
 	python3 ops/load/mixed_capacity.py $(MIXED_CAPACITY_ARGS)
+
+ops-registered-capacity:
+	python3 ops/load/registered_capacity.py $(REGISTERED_CAPACITY_ARGS)
