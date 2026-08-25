@@ -153,11 +153,11 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
-| SLO доказаны на проектном пике | ❌ | Staged public-read keep-alive harness с p95/p99/error/RPS и JSON report готов, но production-like staging capacity/soak evidence ещё нет |
+| SLO доказаны на проектном пике | ❌ | Budget CX23 pre-publication soak доказал 14 saturated read clients: 12 853 запросов за 5 минут, 0.02% ошибок, p95 723 ms; Quran corpus, R2 audio, sync и production-like S0/S1 ещё не измерены |
 | Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
 | Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
-| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev server и standalone production bundle; интеграционный smoke против реального staging API ещё не выполнен |
+| Browser E2E проверяет deployable web artifact | 🟡 | Все 47 сценариев проходят на dev/standalone; реальный staging smoke прошёл для RU/AR Quran shell, audio/prayer/login/404 и SEO, но content-backed journey ждёт активации dataset |
 | Runbooks, dashboards и alerts доступны | 🟡 | Versioned dashboard/rules и runbook готовы; production deployment, provider telemetry, on-call ownership и synthetic delivery ещё не подтверждены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 

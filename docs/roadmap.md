@@ -20,11 +20,12 @@ production bundle. Это ещё не означает готовность
 - Lighthouse/SEO regression gate для RU/EN/AR/TR, арабского RTL и опубликованной суры
   закрыт; field Core Web Vitals и финальный legal/license/religious sign-off проверяются
   после deployment;
-- домен/TLS, внешний мониторинг, offsite backup и обязательные контентные sign-off остаются
-  открытыми release gates;
-- staged public-read harness уже воспроизводит смешанный web/API workload и пишет JSON evidence,
-  но без прогона на production-like staging всё ещё нельзя обещать конкретное количество
-  одновременных пользователей.
+- staging-домен/TLS, noindex, локальный backup/restore drill и budget deployment уже проверены;
+  внешний мониторинг, offsite backup и обязательные контентные sign-off остаются открытыми
+  release gates;
+- pre-publication public-read workload прошёл на бюджетном CX23 при 14 непрерывно активных
+  виртуальных пользователях; [evidence](capacity/staging-cx23-prepublication-2026-08-25.md)
+  не включает Quran corpus и R2 audio, поэтому не является S0/S1 или DAU-гарантией.
 
 Поэтому закрытая web beta и публичный Web MVP являются двумя разными milestones. Публичный
 запуск web не ждёт Flutter и Telegram Mini App, но и не закрывает полный multi-client MVP.
@@ -69,8 +70,9 @@ flowchart LR
   secrets/data, Caddy automatic HTTPS, noindex/robots isolation, закрытый Mailpit, безопасная
   R2 credential/CORS настройка, preflight, backup/observability Make-команды и пошаговый
   [runbook](staging.md). Отдельный budget overlay поддерживает функциональный staging на
-  2 vCPU/4 GiB без выдачи его за capacity evidence. Внешний VPS/DNS/R2 ещё не provisioned,
-  поэтому deployment gate открыт.
+  2 vCPU/4 GiB. Бюджетный Hetzner CX23, `staging.iqro.forum`, TLS, отдельный R2 bucket,
+  backup/restore drill и pre-publication capacity evidence фактически проверены; production
+  media domain, offsite backup и production-sized observability/capacity gates остаются открыты.
 - [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
   приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
   заранее не требуется.
@@ -96,7 +98,9 @@ flowchart LR
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
   остаются library API, registered-user journey, production-like cache-cold/warm/origin прогоны
   и client startup/buffering QoE.
-- [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам.
+- [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
+  [pre-publication CX23 evidence](capacity/staging-cx23-prepublication-2026-08-25.md) уже
+  доказывает 14 saturated read clients, но не содержит Quran/audio/sync workload.
 
 Критерий выхода: потеря application-host не уничтожает media; добавление API/web/worker-реплики
 не требует изменения кода или копирования локального состояния; S1 нагрузка подтверждена.
@@ -167,16 +171,18 @@ flowchart LR
   RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
   transfer size и request count на standalone production build.
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
-  проходит те же 47 сценариев, что быстрый dev/mock слой; остаётся интеграционный smoke против
-  реального staging API без подмены его mock contracts.
+  проходит те же 47 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
+  RU/AR Quran shell, audio, prayer, login, 404, canonical/RTL/noindex без mock contracts;
+  content-backed journey остаётся до активации согласованного dataset.
 - [ ] Получить актуальный зелёный dependency/security gate на release commit; backend
   `pip-audit`, полный web `npm audit` и Trivy-проверка всех пяти production-образов уже
   являются блокирующими CI checks, но итоговый checkbox закрывается только на самом release
   commit после GitHub CI.
 - [ ] Провести staged public-read capacity/soak test на production-like staging и записать
-  доказанную ёмкость S0/S1; bounded keep-alive harness и JSON report уже добавлены, но до
-  реального прогона с server-side метриками не публиковать числовую гарантию по concurrent
-  users.
+  доказанную ёмкость S0/S1. На budget CX23 сохранён
+  [pre-publication отчёт](capacity/staging-cx23-prepublication-2026-08-25.md): 14 saturated
+  clients прошли пятиминутный soak, 16 уже превысили latency gate; полный gate ждёт
+  опубликованную суру, R2 audio и sync workload.
 - [ ] Получить religious/editorial, license/legal и product sign-off для активируемого Quran
   dataset и каждого публичного аудиорелиза.
 - [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,

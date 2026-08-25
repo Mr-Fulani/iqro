@@ -6,10 +6,16 @@ Staging — отдельная публичная копия приложени�
 миграций, SEO, мониторинга и нагрузки до production. Она не использует production-БД,
 production-секреты или production-bucket.
 
-Репозиторная часть staging готова. Фактическая среда пока не существует, потому что для неё
-нужны внешний VPS, доменное имя и Cloudflare account. Создание платного ресурса и изменение DNS
-требуют доступа владельца аккаунта; после появления IP все команды ниже можно выполнить без
-изменения архитектуры приложения.
+Фактический бюджетный staging проекта создан: `https://staging.iqro.forum` работает на Hetzner
+CX23 через budget overlay, TLS и запрет индексации активны, отдельный Cloudflare R2 bucket
+настроен, backup/verify/restore-check выполнен. Последний зафиксированный pre-publication
+capacity результат находится в
+[отчёте CX23](capacity/staging-cx23-prepublication-2026-08-25.md).
+
+Среда ещё не является production: R2 custom media domain и согласованный media/Quran corpus не
+активированы, offsite backup и постоянный production-sized observability stack не закрыты.
+Инструкция ниже остаётся источником истины для пересоздания staging и последующего production
+rollout; секреты и IP-ограничения в документацию не записываются.
 
 ## Что уже автоматизировано
 

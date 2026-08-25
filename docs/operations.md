@@ -550,6 +550,10 @@ python3 ops/load/capacity.py \
   --json-report /tmp/quran-capacity-release-abc1234-prepublication.json
 ```
 
+Фактический budget-staging пример с границей деградации, пятиминутным soak и server-side
+CPU/RAM evidence: [CX23, 25 августа 2026](capacity/staging-cx23-prepublication-2026-08-25.md).
+Он не закрывает полный S0/S1 gate по причинам, перечисленным в отчёте.
+
 ### Bounded audio CDN/origin capacity test
 
 `ops/load/audio_capacity.py` проверяет самый дорогой контур отдельно от API. Он использует
