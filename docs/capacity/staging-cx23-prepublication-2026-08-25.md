@@ -81,3 +81,40 @@ pre-publication read workload. Это намного жёстче обычной
 контентного sign-off и включает опубликованную суру, R2 audio manifest/Range, guest/registered
 sync, cache-cold/warm фазы и длительный soak на выбранном production-профиле. Горизонтальное
 масштабирование API/web проверяется до увеличения рекламируемой ёмкости.
+
+## Post-rollout проверка gateway public API cache
+
+На commit `45faa2e7cab57c439183a4020b7a5abaf76f1232` после проверенного backup выполнена отдельная
+проверка bounded gateway cache. Это regression/smoke evidence, а не замена ступенчатого
+capacity-теста выше.
+
+Проверенный контракт через реальный `https://staging.iqro.forum`:
+
+| Сценарий | Результат |
+|---|---|
+| Первый/повторный public catalog GET | `200 MISS` → `200 HIT` |
+| Quran editions, reciters, recitations | для каждого `MISS` → `HIT` |
+| GET с `Authorization` | `200 BYPASS` |
+| GET с cookie | `200 BYPASS` |
+| Health endpoint | `200`, без edge-cache header |
+| Внешний `PURGE` без operations token | `401` |
+| Обычный GET на purge endpoint | `405` |
+| Внутренний авторизованный `PURGE` | `200`, следующий catalog GET снова `MISS` |
+
+После этого `ops/load/smoke.py` выполнил 200 запросов с concurrency 10 и одним warmup round:
+
+| Endpoint | Запросы | Ошибки | p50 | p95 | max |
+|---|---:|---:|---:|---:|---:|
+| health/live | 50 | 0 | 185.7 ms | 296.3 ms | 419.0 ms |
+| quran/editions | 50 | 0 | 106.0 ms | 219.3 ms | 282.0 ms |
+| reciters | 50 | 0 | 109.1 ms | 275.7 ms | 284.5 ms |
+| recitations | 50 | 0 | 115.4 ms | 215.8 ms | 290.3 ms |
+| **Итого** | **200** | **0** | — | **283.5 ms** | — |
+
+Smoke gate с лимитом p95 1000 ms прошёл. После прогона gateway cache занимал 24 KiB при
+жёстком лимите 24 MiB; gateway использовал около 4.6 MiB RAM. Все контейнеры были healthy,
+readiness и RU/EN web вернули HTTP 200, в последних gateway/worker logs ошибок не было.
+
+Каталоги staging пока пусты, поэтому эти числа доказывают корректность `MISS/HIT/BYPASS/PURGE`
+и отсутствие очевидной регрессии на CX23, но не производительность с полным Quran corpus,
+реальными audio manifests/Range, зарегистрированными пользователями или CDN cache-cold origin.

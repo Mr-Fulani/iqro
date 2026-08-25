@@ -100,8 +100,9 @@ flowchart LR
 - [ ] Расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
   bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence,
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
-  остаются library API, registered-user journey, production-like cache-cold/warm/origin прогоны
-  и client startup/buffering QoE.
+  gateway cache regression на CX23 прошёл 200 запросов при concurrency 10 без ошибок и
+  подтвердил `MISS/HIT/BYPASS/PURGE`; остаются library API, registered-user journey,
+  production-like cache-cold/warm/origin прогоны и client startup/buffering QoE.
 - [ ] Зафиксировать S0/S1 capacity report и runbook перехода к нескольким репликам;
   [pre-publication CX23 evidence](capacity/staging-cx23-prepublication-2026-08-25.md) уже
   доказывает 14 saturated read clients. Single-host API/web scale автоматизирован через
