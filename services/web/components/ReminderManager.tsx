@@ -341,9 +341,12 @@ export function ReminderManager() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.register("/push-sw.js", {
+      const installingRegistration = await navigator.serviceWorker.register("/push-sw.js", {
         scope: "/",
       });
+      const registration = installingRegistration.active
+        ? installingRegistration
+        : await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({

@@ -295,3 +295,119 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
     },
   });
 });
+
+test("browser push waits for the first service worker to become active", async ({ page }) => {
+  await installSession(page);
+  await page.addInitScript(() => {
+    const subscription = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/browser-test",
+      expirationTime: null,
+      toJSON: () => ({
+        endpoint: "https://fcm.googleapis.com/fcm/send/browser-test",
+        keys: { p256dh: "test-p256dh", auth: "test-auth" },
+      }),
+      unsubscribe: async () => true,
+    };
+    const activeRegistration = {
+      active: {},
+      pushManager: {
+        getSubscription: async () => null,
+        subscribe: async () => subscription,
+      },
+    };
+    const installingRegistration = {
+      active: null,
+      pushManager: {
+        getSubscription: async () => {
+          throw new Error("PushManager was used before the service worker became active");
+        },
+      },
+    };
+
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: {
+        permission: "default",
+        requestPermission: async () => "granted",
+      },
+    });
+    Object.defineProperty(window, "PushManager", {
+      configurable: true,
+      value: function PushManager() {},
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register: async () => installingRegistration,
+        ready: Promise.resolve(activeRegistration),
+        getRegistration: async () => activeRegistration,
+      },
+    });
+  });
+
+  let pushPayload: Record<string, unknown> | null = null;
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.includes("/reading-position/")) {
+      return route.fulfill({ status: 404, json: { detail: "Not found." } });
+    }
+    if (url.pathname === "/api/v1/me/bookmarks") {
+      return route.fulfill({ json: { next: null, previous: null, results: [] } });
+    }
+    if (url.pathname === "/api/v1/feedback/tickets") {
+      return route.fulfill({ json: { next: null, previous: null, results: [] } });
+    }
+    if (url.pathname === "/api/v1/me/reminders") {
+      return route.fulfill({
+        json: {
+          mode: "full_snapshot",
+          authoritative: true,
+          generated_at: "2026-08-23T16:00:00Z",
+          count: 0,
+          reminders: [],
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/me/web-push" && request.method() === "GET") {
+      return route.fulfill({
+        json: {
+          available: true,
+          enabled: false,
+          vapid_public_key: "AQID",
+          timezone_name: null,
+          locale: null,
+          supported_reminder_types: ["quran_reading", "quran_review"],
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/me/web-push" && request.method() === "PUT") {
+      pushPayload = request.postDataJSON() as Record<string, unknown>;
+      return route.fulfill({
+        json: {
+          available: true,
+          enabled: true,
+          vapid_public_key: "AQID",
+          timezone_name: "Europe/Istanbul",
+          locale: "ru",
+          supported_reminder_types: ["quran_reading", "quran_review"],
+        },
+      });
+    }
+    return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
+  });
+
+  await page.goto("/profile");
+  const reminders = page
+    .getByRole("heading", { name: "Напоминания" })
+    .locator("xpath=ancestor::section");
+  await reminders.getByRole("button", { name: "Разрешить уведомления" }).click();
+
+  await expect(reminders.getByText("Уведомления включены на этом устройстве.")).toBeVisible();
+  expect(pushPayload).toMatchObject({
+    endpoint: "https://fcm.googleapis.com/fcm/send/browser-test",
+    keys: { p256dh: "test-p256dh", auth: "test-auth" },
+    expiration_time: null,
+    locale: "ru",
+  });
+});
