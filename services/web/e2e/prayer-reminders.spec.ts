@@ -128,11 +128,45 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   page,
 }) => {
   await installSession(page);
+  await page.addInitScript(() => {
+    const subscription = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/prayer-switch-test",
+      expirationTime: null,
+      toJSON: () => ({
+        endpoint: "https://fcm.googleapis.com/fcm/send/prayer-switch-test",
+        keys: { p256dh: "test-p256dh", auth: "test-auth" },
+      }),
+    };
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: { permission: "granted", requestPermission: async () => "granted" },
+    });
+    Object.defineProperty(window, "PushManager", {
+      configurable: true,
+      value: function PushManager() {},
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        getRegistration: async () => ({
+          pushManager: { getSubscription: async () => subscription },
+        }),
+      },
+    });
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: (resolve: PositionCallback) =>
+          resolve({ coords: { latitude: 41.0082, longitude: 28.9784 } } as GeolocationPosition),
+      },
+    });
+  });
   const captured: {
     creates: Array<Record<string, unknown>>;
     patches: Array<Record<string, unknown>>;
     deletes: Array<Record<string, unknown>>;
   } = { creates: [], patches: [], deletes: [] };
+  let prayerLocationPayload: Record<string, unknown> | null = null;
   let currentReminder: Record<string, unknown> | null = null;
 
   await page.route("**/api/v1/**", async (route) => {
@@ -150,12 +184,29 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
     if (url.pathname === "/api/v1/me/web-push" && request.method() === "GET") {
       return route.fulfill({
         json: {
-          available: false,
-          enabled: false,
-          vapid_public_key: "",
-          timezone_name: null,
-          locale: null,
-          supported_reminder_types: ["quran_reading", "quran_review"],
+          available: true,
+          enabled: true,
+          vapid_public_key: "AQID",
+          timezone_name: "Europe/Istanbul",
+          locale: "ru",
+          prayer_location_configured: false,
+          prayer_profile_configured: true,
+          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/me/web-push" && request.method() === "PUT") {
+      prayerLocationPayload = request.postDataJSON() as Record<string, unknown>;
+      return route.fulfill({
+        json: {
+          available: true,
+          enabled: true,
+          vapid_public_key: "AQID",
+          timezone_name: "Europe/Istanbul",
+          locale: "ru",
+          prayer_location_configured: true,
+          prayer_profile_configured: true,
+          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
         },
       });
     }
@@ -261,7 +312,7 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
-  await expect(reminders.getByText("Отправка уведомлений ещё не включена на сервере.")).toBeVisible();
+  await expect(reminders.getByText(/Для первого включения потребуется/)).toBeVisible();
   await expect(reminders.getByLabel("Включено")).toHaveCount(0);
   const repeatSelect = reminders.getByLabel("Повторение");
   await expect(repeatSelect).toHaveValue("every_day");
@@ -271,7 +322,11 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   const maghribSwitch = reminders.getByRole("switch", { name: /^Магриб:/ });
   await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
   await maghribSwitch.click();
+  await expect(maghribSwitch).toHaveAttribute("aria-checked", "true");
 
+  expect(prayerLocationPayload).toMatchObject({
+    prayer_location: { latitude: 41.0082, longitude: 28.9784 },
+  });
   expect(captured.creates[0]).toMatchObject({
     base_revision: 0,
     reminder_type: "prayer",
@@ -281,16 +336,21 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
     signal: "sound",
     is_enabled: true,
   });
-  await expect(maghribSwitch).toHaveAttribute("aria-checked", "true");
+  await expect(reminders.getByText(/Местоположение настроено/)).toBeVisible();
   await maghribSwitch.click();
-  expect(captured.patches[0]).toMatchObject({ base_revision: 1, is_enabled: false });
   await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
+  expect(captured.patches[0]).toMatchObject({ base_revision: 1, is_enabled: false });
 
   await reminders.getByLabel("Тип").selectOption("quran_review");
   await expect(reminders.getByLabel("Начальный аят").locator("option")).toHaveCount(2);
   await reminders.getByLabel("Начальный аят").selectOption({ index: 0 });
   await reminders.getByLabel("Конечный аят").selectOption({ index: 1 });
   await reminders.getByRole("button", { name: "Создать напоминание" }).click();
+
+  const reviewRow = reminders
+    .getByText("Повторение аятов", { exact: true })
+    .locator("xpath=ancestor::div[contains(@class, 'track-row')]");
+  await expect(reviewRow).toBeVisible();
 
   expect(captured.creates[1]).toMatchObject({
     reminder_type: "quran_review",
@@ -300,12 +360,9 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
       end_ayah_id: "01992d87-6c00-7000-8000-000000000703",
     },
   });
-  const reviewRow = reminders
-    .getByText("Повторение аятов", { exact: true })
-    .locator("xpath=ancestor::div[contains(@class, 'track-row')]");
   await expect(reviewRow.getByText(/Каждый день/)).toBeVisible();
   await expect(
-    reviewRow.getByText("Уведомления не подключены", { exact: true }),
+    reviewRow.getByText("Включено", { exact: true }),
   ).toBeVisible();
   await reminders.getByRole("button", { name: "Удалить" }).click();
   expect(captured.deletes[0]).toMatchObject({ base_revision: 1 });
@@ -400,7 +457,9 @@ test("browser push waits for the first service worker to become active", async (
           vapid_public_key: "AQID",
           timezone_name: null,
           locale: null,
-          supported_reminder_types: ["quran_reading", "quran_review"],
+          prayer_location_configured: false,
+          prayer_profile_configured: true,
+          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
         },
       });
     }
@@ -413,7 +472,9 @@ test("browser push waits for the first service worker to become active", async (
           vapid_public_key: "AQID",
           timezone_name: "Europe/Istanbul",
           locale: "ru",
-          supported_reminder_types: ["quran_reading", "quran_review"],
+          prayer_location_configured: false,
+          prayer_profile_configured: true,
+          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
         },
       });
     }
@@ -493,7 +554,9 @@ test("browser push status follows the subscription on the current device", async
           vapid_public_key: "AQID",
           timezone_name: "Europe/Istanbul",
           locale: "ru",
-          supported_reminder_types: ["quran_reading", "quran_review"],
+          prayer_location_configured: true,
+          prayer_profile_configured: true,
+          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
         },
       });
     }

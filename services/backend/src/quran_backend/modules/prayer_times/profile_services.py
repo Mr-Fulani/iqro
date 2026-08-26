@@ -120,7 +120,16 @@ def put_prayer_profile(
         profile.revision += 1
     profile.full_clean()
     profile.save()
+    transaction.on_commit(lambda: _refresh_prayer_reminders(user.id))
     return prayer_profile_snapshot(profile)
+
+
+def _refresh_prayer_reminders(user_id: uuid.UUID) -> None:
+    from quran_backend.modules.reminders.push import (  # noqa: PLC0415
+        refresh_user_prayer_schedules,
+    )
+
+    refresh_user_prayer_schedules(user_id)
 
 
 def _profile_queryset(*, for_update: bool = False) -> QuerySet[PrayerProfile]:

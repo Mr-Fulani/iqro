@@ -124,6 +124,12 @@ Endpoints:
 coordinates, occurrence time, push token и произвольное имя звукового файла никогда не
 принимаются.
 
+Это ограничение относится к reminder payload. Web-клиент передаёт округлённые координаты
+отдельно в device Web Push subscription только после явного browser permission. Координаты не
+входят в `PrayerProfile` или reminder snapshot, не возвращаются status endpoint и удаляются при
+отключении подписки. Для prayer rules сервер использует их вместе с versioned prayer profile,
+чтобы поддерживать indexed очередь пяти ежедневных уведомлений.
+
 ### Типы и расписания
 
 `prayer` использует только prayer schedule:

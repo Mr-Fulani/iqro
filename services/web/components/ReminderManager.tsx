@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   api,
@@ -56,6 +57,7 @@ export function ReminderManager() {
   const [webPushSupported, setWebPushSupported] = useState<boolean | null>(null);
   const [webPushConnected, setWebPushConnected] = useState<boolean | null>(null);
   const [webPushSaving, setWebPushSaving] = useState(false);
+  const [prayerLocationSaving, setPrayerLocationSaving] = useState(false);
   const [webPushNotice, setWebPushNotice] = useState<{
     kind: "error" | "success";
     message: string;
@@ -330,6 +332,7 @@ export function ReminderManager() {
     setError(null);
     setSuccess(null);
     try {
+      if (enabled && !(await ensurePrayerDeliveryReady())) return;
       const matching = prayerReminders.filter(
         (reminder) =>
           reminder.schedule?.kind === "prayer" &&
@@ -378,6 +381,57 @@ export function ReminderManager() {
       setError(api.normalizeError(reason));
     } finally {
       setSavingPrayerEvent(null);
+    }
+  };
+
+  const ensurePrayerDeliveryReady = async (forceLocationRefresh = false): Promise<boolean> => {
+    if (!webPushConnected) {
+      setError(t("reminder.prayerNeedsNotifications"));
+      return false;
+    }
+    if (!webPushStatus?.prayer_profile_configured) {
+      setError(t("reminder.prayerNeedsProfile"));
+      return false;
+    }
+    if (webPushStatus.prayer_location_configured && !forceLocationRefresh) return true;
+    if (!("geolocation" in navigator)) {
+      setError(t("reminder.prayerLocationUnsupported"));
+      return false;
+    }
+
+    setPrayerLocationSaving(true);
+    try {
+      const position = await currentPosition();
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      const subscription = await registration?.pushManager.getSubscription();
+      if (!subscription) {
+        setError(t("reminder.prayerNeedsNotifications"));
+        return false;
+      }
+      const status = await api.enableWebPush(
+        serializePushSubscription(
+          subscription,
+          locale,
+          t("reminder.webPushInvalidSubscription"),
+          {
+            latitude: Number(position.coords.latitude.toFixed(4)),
+            longitude: Number(position.coords.longitude.toFixed(4)),
+          },
+        ),
+      );
+      setWebPushStatus(status);
+      setWebPushConnected(true);
+      setSuccess(t("reminder.prayerLocationSaved"));
+      return true;
+    } catch (reason) {
+      setError(
+        isGeolocationError(reason)
+          ? t("reminder.prayerLocationDenied")
+          : api.normalizeError(reason),
+      );
+      return false;
+    } finally {
+      setPrayerLocationSaving(false);
     }
   };
 
@@ -564,9 +618,36 @@ export function ReminderManager() {
           </div>
           <span className="status-chip">{t("reminder.everyDay")}</span>
         </div>
-        <p className="kpi-desc" style={{ marginBottom: 12 }}>
-          {t("reminder.webPushPrayerLimit")}
-        </p>
+        <div className="prayer-location-status">
+          <p className="kpi-desc">
+            {!webPushConnected
+              ? t("reminder.prayerNeedsNotifications")
+              : !webPushStatus?.prayer_profile_configured
+              ? t("reminder.prayerNeedsProfile")
+              : webPushStatus.prayer_location_configured
+              ? t("reminder.prayerLocationReady")
+              : t("reminder.prayerLocationPrompt")}
+          </p>
+          {webPushConnected && !webPushStatus?.prayer_profile_configured && (
+            <Link className="btn btn-secondary btn-sm" href={`/${locale}/prayer`}>
+              {t("reminder.openPrayerSettings")}
+            </Link>
+          )}
+          {webPushConnected && webPushStatus?.prayer_profile_configured && (
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={prayerLocationSaving || savingPrayerEvent !== null}
+              onClick={() => void ensurePrayerDeliveryReady(true)}
+              type="button"
+            >
+              {prayerLocationSaving
+                ? t("common.saving")
+                : webPushStatus.prayer_location_configured
+                ? t("reminder.refreshPrayerLocation")
+                : t("reminder.configurePrayerLocation")}
+            </button>
+          )}
+        </div>
         <div className="prayer-reminder-list">
           {PRAYER_EVENTS.map(([prayerEvent, label]) => {
             const enabled = prayerReminders.some(
@@ -901,6 +982,7 @@ function serializePushSubscription(
   subscription: PushSubscription,
   locale: WebPushSubscriptionInput["locale"],
   invalidMessage: string,
+  prayerLocation?: WebPushSubscriptionInput["prayer_location"],
 ): WebPushSubscriptionInput {
   const serialized = subscription.toJSON();
   if (!serialized.keys?.p256dh || !serialized.keys.auth) {
@@ -918,5 +1000,25 @@ function serializePushSubscription(
         : new Date(subscription.expirationTime).toISOString(),
     timezone_name: browserTimezone(),
     locale,
+    ...(prayerLocation ? { prayer_location: prayerLocation } : {}),
   };
+}
+
+function currentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      maximumAge: 5 * 60 * 1000,
+      timeout: 15_000,
+    });
+  });
+}
+
+function isGeolocationError(reason: unknown): reason is GeolocationPositionError {
+  return Boolean(
+    reason &&
+      typeof reason === "object" &&
+      "code" in reason &&
+      typeof (reason as { code?: unknown }).code === "number",
+  );
 }

@@ -82,7 +82,9 @@ function fulfillProfileRead(route: Route): boolean {
         vapid_public_key: "",
         timezone_name: null,
         locale: null,
-        supported_reminder_types: ["quran_reading", "quran_review"],
+        prayer_location_configured: false,
+        prayer_profile_configured: false,
+        supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
       },
     });
     return true;

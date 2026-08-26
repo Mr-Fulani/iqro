@@ -210,6 +210,13 @@ workers. Увеличивать worker replicas можно без смены с�
 подписки; устойчивые `429/5xx` требуют проверки provider status и ограничения dispatch rate.
 Не выводите push endpoint или subscription keys в ticket, dashboard и обычный application log.
 
+Prayer Web Push создаётся только после двух явных действий пользователя: включения browser
+notifications и разрешения геолокации. Округлённые координаты хранятся на device subscription,
+не в `PrayerProfile`, не возвращаются status endpoint и удаляются вместе с подпиской. При
+обновлении location, timezone или prayer profile indexed schedules пересчитываются. Если
+profile или location отсутствуют, prayer rule синхронизируется, но schedule fail-closed не
+создаётся. Координаты, endpoint и subscription keys запрещено выводить в application logs.
+
 ## Content cache и sitemap
 
 Каталог и глубокие web-маршруты Quran, чтецов и декламаций получают данные server-to-server

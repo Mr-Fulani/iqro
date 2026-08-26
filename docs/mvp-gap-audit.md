@@ -88,7 +88,7 @@ runtime. Основной незакрытый объём находится в 
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
 | 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |
 | 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI | Flutter local parity и региональный content review отсутствуют |
-| 13 | Локальные уведомления и напоминания | 🟡 | Prayer/reading/review rules, revisions, retention и sync; web Web Push исполняет reading/review при закрытой вкладке, имеет явный permission/disable flow и обновляет locale/timezone при открытии кабинета | Prayer Web Push намеренно не включён без location opt-in; нет offline/native Flutter scheduler и автоматического перепланирования без запуска клиента |
+| 13 | Локальные уведомления и напоминания | 🟡 | Prayer/reading/review rules, revisions, retention и sync; web Web Push исполняет все три типа при закрытой вкладке, пять намазов включаются отдельными ежедневными тумблерами, location хранится только после opt-in на device subscription, а profile/timezone/location перепланируют очередь | Нет полностью offline/native Flutter scheduler; Web Push требует сеть |
 | 14 | Управляемая реклама | ❌ | Только feedback context/category для жалобы на рекламу | Нет campaign/creative/placement/frequency cap/moderation/kill-switch домена |
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
@@ -123,9 +123,9 @@ runtime. Основной незакрытый объём находится в 
 |---|:---:|---|
 | Method/asr/timezone/high-latitude/adjustments доступны | 🟡 | Backend и web profile UI закрывают полный контракт; Flutter local parity отсутствует |
 | Результаты совпадают с golden cases | ✅ | Есть engine golden tests и pinned config/tzdb metadata |
-| Координаты не логируются и не сохраняются без consent | ✅ | Calculate request redaction тестируется; `PrayerProfile` намеренно не содержит location fields |
-| Локальные уведомления работают offline | 🟡 | Web Push доставляет reading/review при закрытой вкладке, но требует сеть; полноценный offline scheduler остаётся задачей Flutter |
-| Timezone/location change перепланирует уведомления | 🟡 | Web-подписка обновляет IANA timezone при следующем открытии кабинета; prayer location не хранится и native reschedule отсутствует |
+| Координаты не логируются и не сохраняются без consent | ✅ | Calculate request redaction тестируется; `PrayerProfile` не содержит location fields, а округлённые координаты появляются только в device Web Push subscription после отдельного browser permission |
+| Локальные уведомления работают offline | 🟡 | Web Push доставляет prayer/reading/review при закрытой вкладке, но требует сеть; полноценный offline scheduler остаётся задачей Flutter |
+| Timezone/location change перепланирует уведомления | 🟡 | Web-подписка обновляет IANA timezone при открытии кабинета; location можно обновить явно, а изменение prayer profile перепланирует серверную очередь; native reschedule отсутствует |
 
 ### Синхронизация
 
@@ -175,19 +175,20 @@ runtime. Основной незакрытый объём находится в 
 - Production env-шаблон приведён к фактическим именам настроек backend: удалены
   неиспользуемые параметры старой реализации, добавлены действующие TTL, rate limits,
   лимиты данных и retention-настройки.
-- Документация prayer/reminders уточнена: backend хранит privacy-safe профиль и правила,
-  но не координаты дома и рассчитанные времена молитв. Масштабируемая Web Push очередь исполняет
-  только reading/review; prayer остаётся для будущего device-local scheduler.
+- Документация prayer/reminders уточнена: versioned профиль не содержит location, а округлённые
+  координаты сохраняются только после отдельного browser consent внутри device Web Push
+  subscription. Масштабируемая очередь исполняет prayer/reading/review; рассчитанные времена не
+  входят в публичные snapshots.
 - Ссылка на этот аудит добавлена в корневой README, чтобы старый unchecked checklist больше
   не использовался как источник фактической готовности.
 - Web bookmark/feedback contracts приведены к OpenAPI: bookmark PATCH/DELETE используют
   revision protocol, feedback поддерживает paginated list, UUIDv7 idempotency, reporter messages,
   close/reopen и отображение публичной переписки.
 - Web prayer-profile и reminder contracts подключены полностью: revisioned method/asr/high-latitude/
-  polar/adjustment/timezone profile и CRUD правил prayer/Quran reading/Quran review. Для
-  reading/review добавлены VAPID Web Push, Service Worker, indexed due queue, bounded retry,
-  browser permission/disable и автоматическое обновление locale/timezone; prayer исполняет
-  будущий мобильный клиент.
+  polar/adjustment/timezone profile и CRUD правил prayer/Quran reading/Quran review. Для всех
+  трёх типов добавлены VAPID Web Push, Service Worker, indexed due queue, bounded retry,
+  browser permission/disable и автоматическое обновление locale/timezone; prayer дополнительно
+  требует отдельный location opt-in и пересчитывается после изменения профиля/location.
 - Web sync доведён до полного transport lifecycle: user-scoped durable outbox без credentials,
   `push` с conflict rebase/remap, постраничный incremental pull, cursor-expiry/full-resync recovery,
   сохранение pull-курсора и guest-outbox flush до email merge. Live PostgreSQL проверка выполнена
@@ -243,8 +244,9 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 2. ✅ Web player state machine: repeat/range, паузы, скорость, sleep timer, browser interruption
    recovery и Media Session controls. Flutter background audio, native audio focus и system
    media controls остаются отдельной mobile-задачей.
-3. ✅ Web Push для Quran reading/review при закрытой вкладке. Flutter local prayer parity и
-   offline notification scheduler с timezone/location reschedule остаются следующей задачей.
+3. ✅ Web Push для prayer/Quran reading/review при закрытой вкладке, включая отдельный location
+   opt-in и пять ежедневных prayer toggles. Flutter local prayer parity и полностью offline
+   notification scheduler остаются следующей задачей.
 
 ### P0-D — продуктовые домены
 
@@ -311,7 +313,8 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 - Наличие поля checksum без client installer не закрывает offline integrity.
 - Verified email, guest merge и device/deletion lifecycle не закрывают безопасную смену/unlink
   identity и дополнительные OAuth providers.
-- Наличие Web Push для reading/review не означает offline-доставку или готовый prayer scheduler.
+- Наличие Web Push для prayer/reading/review не означает полностью offline-доставку без сети или
+  готовый native mobile scheduler.
 - Наличие versioned metrics/dashboard/rules без deployment, внешней телеметрии и проверенной
   доставки alert не означает operational monitoring.
 - Отсутствие ads/payments code не доказывает безопасность ещё не реализованного flow.

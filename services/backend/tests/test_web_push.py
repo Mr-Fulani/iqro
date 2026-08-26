@@ -4,6 +4,7 @@ import base64
 import json
 import uuid
 from datetime import UTC, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any
 from unittest.mock import Mock
 
@@ -25,6 +26,7 @@ from quran_backend.modules.accounts.models import (
 )
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PRIVATE_NO_STORE_CACHE_CONTROL
+from quran_backend.modules.prayer_times.models import PrayerMethodConfig, PrayerProfile
 from quran_backend.modules.reminders.models import (
     ReminderRule,
     ReminderType,
@@ -116,6 +118,22 @@ def _reading_rule(user: User, **overrides: Any) -> ReminderRule:
     return ReminderRule.objects.create(**values)
 
 
+def _prayer_profile(user: User) -> PrayerProfile:
+    configuration = PrayerMethodConfig.objects.select_related("release", "method").get(
+        method__code="muslim-world-league",
+        release__version="2026.1",
+    )
+    return PrayerProfile.objects.create(
+        user=user,
+        method_config=configuration,
+        asr_method="standard",
+        high_latitude_rule="middle_of_night",
+        polar_resolution="unresolved",
+        timezone_mode="device_local",
+        client_updated_at=timezone.now(),
+    )
+
+
 @pytest.mark.django_db
 @override_settings(**PUSH_SETTINGS)
 def test_web_push_api_upserts_reports_and_deletes_device_subscription() -> None:
@@ -125,7 +143,11 @@ def test_web_push_api_upserts_reports_and_deletes_device_subscription() -> None:
 
     unavailable_client = APIClient()
     assert unavailable_client.get(url).status_code in {401, 403}
-    created = client.put(url, _subscription_payload(), format="json")
+    created = client.put(
+        url,
+        _subscription_payload(prayer_location={"latitude": "41.008200", "longitude": "28.978400"}),
+        format="json",
+    )
     status_response = client.get(url)
 
     assert created.status_code == 200
@@ -135,7 +157,9 @@ def test_web_push_api_upserts_reports_and_deletes_device_subscription() -> None:
         "vapid_public_key": "public-test-key",
         "timezone_name": "Europe/Istanbul",
         "locale": "ru",
-        "supported_reminder_types": ["quran_reading", "quran_review"],
+        "prayer_location_configured": True,
+        "prayer_profile_configured": False,
+        "supported_reminder_types": ["prayer", "quran_reading", "quran_review"],
     }
     assert "endpoint" not in created.json()
     assert status_response.json() == created.json()
@@ -143,6 +167,8 @@ def test_web_push_api_upserts_reports_and_deletes_device_subscription() -> None:
     subscription = WebPushSubscription.objects.get(device=device)
     assert subscription.locale == "ru"
     assert subscription.endpoint.endswith("secret-capability")
+    assert subscription.prayer_latitude == Decimal("41.008200")
+    assert subscription.prayer_longitude == Decimal("28.978400")
 
     deleted = client.delete(url)
 
@@ -215,28 +241,38 @@ def test_next_occurrence_resolves_dst_gap_and_fold_once() -> None:
 
 
 @pytest.mark.django_db
-def test_refresh_builds_indexed_schedule_only_for_quran_local_time_rules() -> None:
+def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
-    subscription = _subscription(device, timezone_name="UTC")
+    _prayer_profile(user)
+    subscription = _subscription(
+        device,
+        timezone_name="Europe/Istanbul",
+        prayer_latitude=Decimal("41.008200"),
+        prayer_longitude=Decimal("28.978400"),
+    )
     reading = _reading_rule(user, local_time=time(8, 0))
-    ReminderRule.objects.create(
+    prayer = ReminderRule.objects.create(
         user=user,
         reminder_type=ReminderType.PRAYER,
         prayer_event="fajr",
-        prayer_offset_minutes=-10,
+        prayer_offset_minutes=0,
         client_updated_at=timezone.now(),
     )
 
     refresh_subscription_schedules(
         subscription.id,
-        now=datetime(2026, 8, 26, 7, 0, tzinfo=UTC),
+        now=datetime(2026, 8, 26, 0, 0, tzinfo=UTC),
     )
 
-    schedule = WebPushSchedule.objects.get()
-    assert schedule.reminder == reading
-    assert schedule.occurrence_at == datetime(2026, 8, 26, 8, 0, tzinfo=UTC)
-    assert schedule.next_attempt_at == schedule.occurrence_at
+    schedules = {schedule.reminder_id: schedule for schedule in WebPushSchedule.objects.all()}
+    assert set(schedules) == {reading.id, prayer.id}
+    assert schedules[reading.id].occurrence_at == datetime(2026, 8, 26, 5, 0, tzinfo=UTC)
+    assert datetime(2026, 8, 26, 0, 0, tzinfo=UTC) < schedules[prayer.id].occurrence_at
+    assert schedules[prayer.id].occurrence_at < datetime(2026, 8, 27, 0, 0, tzinfo=UTC)
+    assert all(
+        schedule.next_attempt_at == schedule.occurrence_at for schedule in schedules.values()
+    )
 
 
 @pytest.mark.django_db

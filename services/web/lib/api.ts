@@ -622,7 +622,9 @@ export type WebPushStatus = {
   vapid_public_key: string;
   timezone_name: string | null;
   locale: SupportedLocale | null;
-  supported_reminder_types: Array<"quran_reading" | "quran_review">;
+  prayer_location_configured: boolean;
+  prayer_profile_configured: boolean;
+  supported_reminder_types: Array<"prayer" | "quran_reading" | "quran_review">;
 };
 
 export type WebPushSubscriptionInput = {
@@ -634,6 +636,10 @@ export type WebPushSubscriptionInput = {
   expiration_time: string | null;
   timezone_name: string;
   locale: SupportedLocale;
+  prayer_location?: {
+    latitude: number;
+    longitude: number;
+  };
 };
 
 export type FeedbackTicket = {

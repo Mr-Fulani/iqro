@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from decimal import Decimal
 from typing import Any
 
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_field
@@ -234,12 +235,28 @@ class WebPushKeysSerializer(StrictFieldsSerializer):
     auth = serializers.CharField(min_length=16, max_length=64, trim_whitespace=False)
 
 
+class WebPushPrayerLocationSerializer(StrictFieldsSerializer):
+    latitude = serializers.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=Decimal("-90"),
+        max_value=Decimal("90"),
+    )
+    longitude = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=6,
+        min_value=Decimal("-180"),
+        max_value=Decimal("180"),
+    )
+
+
 class WebPushSubscriptionWriteSerializer(StrictFieldsSerializer):
     endpoint = serializers.URLField(max_length=2048)
     keys = WebPushKeysSerializer()
     expiration_time = serializers.DateTimeField(required=False, allow_null=True, default=None)
     timezone_name = serializers.CharField(min_length=1, max_length=64)
     locale = serializers.ChoiceField(choices=["ar", "en", "ru", "tr"])
+    prayer_location = WebPushPrayerLocationSerializer(required=False)
 
     def validate_timezone_name(self, value: str) -> str:
         if value != value.strip() or ".." in value or "\\" in value or value.startswith("/"):
@@ -259,9 +276,11 @@ class WebPushStatusSerializer(serializers.Serializer[Any]):
     vapid_public_key = serializers.CharField(allow_blank=True)
     timezone_name = serializers.CharField(allow_null=True)
     locale = serializers.ChoiceField(choices=["ar", "en", "ru", "tr"], allow_null=True)
+    prayer_location_configured = serializers.BooleanField()
+    prayer_profile_configured = serializers.BooleanField()
     supported_reminder_types = serializers.ListField(
         child=serializers.ChoiceField(
-            choices=[ReminderType.QURAN_READING, ReminderType.QURAN_REVIEW]
+            choices=[ReminderType.PRAYER, ReminderType.QURAN_READING, ReminderType.QURAN_REVIEW]
         )
     )
 

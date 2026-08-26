@@ -374,6 +374,20 @@ class WebPushSubscription(BaseModel):
     auth = models.CharField(max_length=64)
     timezone_name = models.CharField(max_length=64)
     locale = models.CharField(max_length=8, default="en")
+    prayer_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    prayer_longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
     expires_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True, db_index=True)
     last_success_at = models.DateTimeField(null=True, blank=True)
@@ -390,6 +404,25 @@ class WebPushSubscription(BaseModel):
             models.CheckConstraint(
                 condition=models.Q(consecutive_failures__lte=100),
                 name="reminder_push_failures_bounded",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(prayer_latitude__isnull=True, prayer_longitude__isnull=True)
+                    | models.Q(prayer_latitude__isnull=False, prayer_longitude__isnull=False)
+                ),
+                name="reminder_push_prayer_location_pair",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(prayer_latitude__isnull=True)
+                    | models.Q(
+                        prayer_latitude__gte=-90,
+                        prayer_latitude__lte=90,
+                        prayer_longitude__gte=-180,
+                        prayer_longitude__lte=180,
+                    )
+                ),
+                name="reminder_push_prayer_location_range",
             ),
         ]
         indexes = [

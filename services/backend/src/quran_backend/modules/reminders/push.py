@@ -16,9 +16,11 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from pywebpush import WebPushException, webpush
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 
 from quran_backend.modules.accounts.models import Device, User
+from quran_backend.modules.prayer_times.models import PrayerProfile
+from quran_backend.modules.prayer_times.services import calculate_prayer_times
 from quran_backend.modules.prayer_times.timezones import get_prayer_timezone
 from quran_backend.modules.reminders.models import (
     ReminderRule,
@@ -28,7 +30,11 @@ from quran_backend.modules.reminders.models import (
     WebPushSubscription,
 )
 
-SUPPORTED_WEB_PUSH_TYPES = (ReminderType.QURAN_READING, ReminderType.QURAN_REVIEW)
+SUPPORTED_WEB_PUSH_TYPES = (
+    ReminderType.PRAYER,
+    ReminderType.QURAN_READING,
+    ReminderType.QURAN_REVIEW,
+)
 
 
 @dataclass(frozen=True)
@@ -45,6 +51,14 @@ def web_push_status(*, device: Device | None) -> dict[str, object]:
         "vapid_public_key": settings.WEB_PUSH_VAPID_PUBLIC_KEY if settings.WEB_PUSH_ENABLED else "",
         "timezone_name": subscription.timezone_name if subscription is not None else None,
         "locale": subscription.locale if subscription is not None else None,
+        "prayer_location_configured": bool(
+            subscription is not None
+            and subscription.prayer_latitude is not None
+            and subscription.prayer_longitude is not None
+        ),
+        "prayer_profile_configured": bool(
+            device is not None and PrayerProfile.objects.filter(user_id=device.user_id).exists()
+        ),
         "supported_reminder_types": list(SUPPORTED_WEB_PUSH_TYPES),
     }
 
@@ -82,6 +96,10 @@ def upsert_web_push_subscription(
     current.timezone_name = str(data["timezone_name"])
     current.locale = str(data["locale"])
     current.expires_at = data.get("expires_at")
+    prayer_location = data.get("prayer_location")
+    if prayer_location is not None:
+        current.prayer_latitude = prayer_location["latitude"]
+        current.prayer_longitude = prayer_location["longitude"]
     current.revoked_at = None
     current.consecutive_failures = 0
     current.last_failure_at = None
@@ -151,13 +169,32 @@ def refresh_reminder_schedules(
         _upsert_schedule(subscription=subscription, reminder=reminder, after=current_time)
 
 
+def refresh_user_prayer_schedules(
+    user_id: uuid.UUID,
+    *,
+    now: datetime | None = None,
+) -> None:
+    reminder_ids = ReminderRule.objects.filter(
+        user_id=user_id,
+        reminder_type=ReminderType.PRAYER,
+        deleted_at__isnull=True,
+        is_enabled=True,
+    ).values_list("id", flat=True)
+    for reminder_id in reminder_ids:
+        refresh_reminder_schedules(reminder_id, now=now)
+
+
 def next_local_occurrence(
     reminder: ReminderRule,
     subscription: WebPushSubscription,
     *,
     after: datetime,
 ) -> datetime | None:
-    if not _web_push_eligible(reminder) or reminder.local_time is None:
+    if not _web_push_eligible(reminder):
+        return None
+    if reminder.reminder_type == ReminderType.PRAYER:
+        return _next_prayer_occurrence(reminder, subscription, after=after)
+    if reminder.local_time is None:
         return None
     zone_name = (
         reminder.timezone_name
@@ -176,6 +213,69 @@ def next_local_occurrence(
         candidate = _resolve_local_wall_time(local_date, reminder.local_time, zone)
         if candidate.astimezone(UTC) > after_utc:
             return candidate.astimezone(UTC)
+    return None
+
+
+def _next_prayer_occurrence(
+    reminder: ReminderRule,
+    subscription: WebPushSubscription,
+    *,
+    after: datetime,
+) -> datetime | None:
+    if (
+        reminder.prayer_event is None
+        or subscription.prayer_latitude is None
+        or subscription.prayer_longitude is None
+    ):
+        return None
+    profile = (
+        PrayerProfile.objects.select_related("method_config")
+        .filter(user_id=reminder.user_id)
+        .first()
+    )
+    if profile is None:
+        return None
+    zone_name = (
+        reminder.timezone_name
+        if reminder.timezone_mode == ReminderTimezoneMode.FIXED
+        else subscription.timezone_name
+    )
+    if not zone_name:
+        return None
+    zone = get_prayer_timezone(zone_name)
+    after_utc = after.astimezone(UTC)
+    start_date = after_utc.astimezone(zone).date()
+    for offset in range(8):
+        local_date = start_date + timedelta(days=offset)
+        if not _weekday_enabled(reminder.weekdays_mask, local_date):
+            continue
+        try:
+            calculation = calculate_prayer_times(
+                {
+                    "date": local_date,
+                    "timezone": zone_name,
+                    "location": {
+                        "latitude": subscription.prayer_latitude,
+                        "longitude": subscription.prayer_longitude,
+                    },
+                    "method_config_id": profile.method_config_id,
+                    "method_checksum_sha256": profile.method_config.checksum_sha256,
+                    "asr_method": profile.asr_method,
+                    "high_latitude_rule": profile.high_latitude_rule,
+                    "polar_resolution": profile.polar_resolution,
+                    "adjustments": {
+                        field.removesuffix("_adjustment_minutes"): getattr(profile, field)
+                        for field in PrayerProfile.adjustment_fields
+                    },
+                }
+            )
+        except APIException:
+            return None
+        event = calculation["times"][reminder.prayer_event]
+        candidate = datetime.fromisoformat(str(event["utc"]).replace("Z", "+00:00"))
+        candidate += timedelta(minutes=reminder.prayer_offset_minutes or 0)
+        if candidate > after_utc:
+            return candidate
     return None
 
 
@@ -294,12 +394,15 @@ def _upsert_schedule(
 
 
 def _web_push_eligible(reminder: ReminderRule) -> bool:
-    return bool(
-        reminder.deleted_at is None
-        and reminder.is_enabled
-        and reminder.reminder_type in SUPPORTED_WEB_PUSH_TYPES
-        and reminder.local_time is not None
-    )
+    if (
+        reminder.deleted_at is not None
+        or not reminder.is_enabled
+        or reminder.reminder_type not in SUPPORTED_WEB_PUSH_TYPES
+    ):
+        return False
+    if reminder.reminder_type == ReminderType.PRAYER:
+        return reminder.prayer_event is not None
+    return reminder.local_time is not None
 
 
 def _weekday_enabled(mask: int, value: date) -> bool:
@@ -339,6 +442,46 @@ def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
 
 
 def _localized_message(reminder: ReminderRule, locale: str) -> tuple[str, str]:
+    if reminder.reminder_type == ReminderType.PRAYER:
+        prayer_names = {
+            "ru": {
+                "fajr": "Фаджр",
+                "dhuhr": "Зухр",  # noqa: RUF001
+                "asr": "Аср",  # noqa: RUF001
+                "maghrib": "Магриб",
+                "isha": "Иша",
+            },
+            "en": {
+                "fajr": "Fajr",
+                "dhuhr": "Dhuhr",
+                "asr": "Asr",
+                "maghrib": "Maghrib",
+                "isha": "Isha",
+            },
+            "ar": {
+                "fajr": "الفجر",
+                "dhuhr": "الظهر",
+                "asr": "العصر",
+                "maghrib": "المغرب",
+                "isha": "العشاء",
+            },
+            "tr": {
+                "fajr": "Sabah",
+                "dhuhr": "Öğle",
+                "asr": "İkindi",
+                "maghrib": "Akşam",
+                "isha": "Yatsı",  # noqa: RUF001
+            },
+        }
+        bodies = {
+            "ru": "Наступило время намаза.",
+            "en": "It is time for prayer.",
+            "ar": "حان وقت الصلاة.",
+            "tr": "Namaz vakti geldi.",
+        }
+        selected_locale = locale if locale in prayer_names else "en"
+        prayer_name = prayer_names[selected_locale].get(str(reminder.prayer_event), "Prayer")
+        return prayer_name, bodies[selected_locale]
     messages = {
         "ru": {
             "reading": ("Время читать Коран", "Ваше запланированное чтение Корана."),
@@ -368,6 +511,8 @@ def _localized_message(reminder: ReminderRule, locale: str) -> tuple[str, str]:
 
 
 def _notification_url(reminder: ReminderRule, locale: str) -> str:
+    if reminder.reminder_type == ReminderType.PRAYER:
+        return f"/{locale}/prayer"
     if reminder.reminder_type == ReminderType.QURAN_REVIEW and reminder.start_ayah is not None:
         return f"/{locale}/quran?surah={reminder.start_ayah.surah.number}"
     return f"/{locale}/quran"

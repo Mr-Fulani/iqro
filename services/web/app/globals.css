@@ -1703,6 +1703,22 @@ input:focus, select:focus, textarea:focus {
   gap: 10px;
 }
 
+.prayer-location-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.prayer-location-status .kpi-desc {
+  margin: 0;
+}
+
 .prayer-reminder-row {
   display: flex;
   align-items: center;
