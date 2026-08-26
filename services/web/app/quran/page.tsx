@@ -27,16 +27,24 @@ import {
 import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
 
+function positiveInteger(value: string | null): number | null {
+  if (value === null || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function QuranContent() {
   const searchParams = useSearchParams();
-  const initialSurahParam = searchParams.get("surah");
+  const deepLinkSurah = positiveInteger(searchParams.get("surah")) || 1;
+  const deepLinkAyah = positiveInteger(searchParams.get("ayah"));
+  const deepLinkKey = deepLinkAyah === null ? null : `${deepLinkSurah}:${deepLinkAyah}`;
 
   const { isLoggedIn, loginGuest } = useAuth();
   const { formatNumber, locale, t } = useI18n();
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);
-  const [selectedSurah, setSelectedSurah] = useState<number>(initialSurahParam ? Number(initialSurahParam) : 1);
+  const [selectedSurah, setSelectedSurah] = useState<number>(deepLinkSurah);
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
@@ -57,6 +65,7 @@ function QuranContent() {
     playbackRate: 1,
   });
   const pendingNavigationPage = useRef<number | null>(null);
+  const handledDeepLink = useRef<string | null>(null);
   const ayahPlaybackRequestId = useRef(0);
   const playerControlRequestId = useRef(0);
   const selectedFoundationMushaf = useMemo(
@@ -65,7 +74,9 @@ function QuranContent() {
   );
   const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
 
-  const [viewMode, setViewMode] = useState<"text" | "mushaf">("text");
+  const [viewMode, setViewMode] = useState<"text" | "mushaf">(
+    deepLinkAyah === null ? "text" : "mushaf",
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
 
@@ -152,6 +163,26 @@ function QuranContent() {
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
   }, [selectedEdition, selectedSurah]);
+
+  // Notification links include the first ayah of a review range. Wait until
+  // that surah's ayahs are loaded, then open its Mushaf page and highlight it.
+  useEffect(() => {
+    if (deepLinkKey === null || deepLinkAyah === null || handledDeepLink.current === deepLinkKey) {
+      return;
+    }
+    setViewMode("mushaf");
+    if (selectedSurah !== deepLinkSurah) {
+      setSelectedSurah(deepLinkSurah);
+      return;
+    }
+    const linkedAyah = ayahs.find(
+      (ayah) => ayah.surah_number === deepLinkSurah && ayah.number === deepLinkAyah,
+    );
+    if (!linkedAyah?.pages.length) return;
+    setSelectedMushafAyah(deepLinkKey);
+    setCurrentPage(linkedAyah.pages[0]);
+    handledDeepLink.current = deepLinkKey;
+  }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah]);
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
@@ -788,7 +819,7 @@ function QuranContent() {
             )}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+          <div className="mushaf-page-navigation">
             <button
               className="btn btn-secondary"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -796,7 +827,7 @@ function QuranContent() {
             >
               {t("quran.previousPage", { page: currentPage - 1 })}
             </button>
-            <span style={{ fontWeight: 600, alignSelf: "center" }}>
+            <span className="mushaf-page-navigation-status">
               {t("quran.pageOf", { page: currentPage, count: mushafPageCount })}
             </span>
             <button

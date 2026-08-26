@@ -226,6 +226,22 @@ test("signed-out profile offers email login without a redundant guest action", a
   await expect(page.getByRole("button", { name: "Войти как гость" })).toHaveCount(0);
 });
 
+test("authenticated profile actions fit a 320px mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await installAuthMocks(page);
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: activeSession }),
+  );
+
+  await page.goto("/profile");
+
+  await expect(page.getByRole("button", { name: "Выйти на всех устройствах" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});
+
 test("logout all sessions requires confirmation and clears the web session", async ({ page }) => {
   await installAuthMocks(page);
   await page.unroute("**/api/web-auth/refresh");

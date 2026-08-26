@@ -322,6 +322,49 @@ def test_claim_and_successful_delivery_advance_schedule(monkeypatch: pytest.Monk
 
 @pytest.mark.django_db
 @override_settings(**PUSH_SETTINGS)
+def test_review_notification_links_to_the_first_ayah(
+    monkeypatch: pytest.MonkeyPatch,
+    quran_dataset: dict[str, Any],
+) -> None:
+    user = User.objects.create_user()
+    _client, device = _authenticated_web_client(user)
+    subscription = _subscription(device, timezone_name="UTC")
+    occurrence = timezone.now() - timedelta(seconds=1)
+    rule = ReminderRule.objects.create(
+        user=user,
+        reminder_type=ReminderType.QURAN_REVIEW,
+        local_time=occurrence.time().replace(microsecond=0, tzinfo=None),
+        start_ayah=quran_dataset["first_ayah"],
+        end_ayah=quran_dataset["second_ayah"],
+        client_updated_at=timezone.now(),
+    )
+    WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=occurrence,
+        next_attempt_at=occurrence,
+    )
+    captured: dict[str, Any] = {}
+
+    def fake_webpush(**kwargs: Any) -> Mock:
+        captured.update(kwargs)
+        return Mock(status_code=201)
+
+    monkeypatch.setattr("quran_backend.modules.reminders.push.webpush", fake_webpush)
+    claimed = claim_due_web_push_schedules(now=occurrence + timedelta(seconds=1))
+
+    result = deliver_claimed_web_push_schedule(
+        schedule_id=claimed[0].schedule_id,
+        claim_token=claimed[0].claim_token,
+    )
+
+    assert result == "delivered"
+    payload = json.loads(captured["data"])
+    assert payload["url"] == "/ru/quran?surah=1&ayah=1"
+
+
+@pytest.mark.django_db
+@override_settings(**PUSH_SETTINGS)
 def test_gone_push_endpoint_is_deleted(monkeypatch: pytest.MonkeyPatch) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)

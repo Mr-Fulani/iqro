@@ -352,6 +352,7 @@ a:hover {
   transition: all 0.15s ease;
   font-family: inherit;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .btn:disabled {
@@ -467,6 +468,14 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 20px;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.responsive-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .surface-title {
@@ -1336,6 +1345,27 @@ input:focus, select:focus, textarea:focus {
   color: var(--primary);
 }
 
+.mushaf-page-navigation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mushaf-page-navigation .btn:first-child {
+  justify-self: start;
+}
+
+.mushaf-page-navigation .btn:last-child {
+  justify-self: end;
+}
+
+.mushaf-page-navigation-status {
+  font-weight: 600;
+  text-align: center;
+}
+
 @media (max-width: 600px) {
   .mushaf-page-container {
     padding: 8px;
@@ -1357,6 +1387,23 @@ input:focus, select:focus, textarea:focus {
 
   .qf-mushaf-bismillah {
     font-size: clamp(14px, 4.4vw, 21px);
+  }
+
+  .mushaf-page-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mushaf-page-navigation-status {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .mushaf-page-navigation .btn {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    padding-inline: 10px;
+    white-space: normal;
   }
 }
 
@@ -2036,6 +2083,31 @@ input:focus, select:focus, textarea:focus {
     padding: 14px;
   }
 
+  .surface {
+    padding: 18px;
+    border-radius: var(--radius-lg);
+  }
+
+  .surface-head > *,
+  .track-row > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .responsive-actions {
+    width: 100%;
+  }
+
+  .responsive-actions .btn {
+    white-space: normal;
+  }
+
+  .track-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
   .app-menu {
     justify-content: center;
     flex-wrap: wrap;
@@ -2165,6 +2237,22 @@ input:focus, select:focus, textarea:focus {
 
   .footer-content {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-container {
+    width: calc(100% - 16px);
+    margin-top: 8px;
+  }
+
+  .surface {
+    padding: 14px;
+  }
+
+  .btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 

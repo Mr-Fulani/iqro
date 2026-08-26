@@ -351,7 +351,7 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="responsive-actions">
             <button
               className="btn btn-outline-primary btn-sm"
               onClick={() => void handleSyncPull()}
@@ -389,7 +389,7 @@ export default function ProfilePage() {
           <div className="alert alert-error" style={{ marginBottom: 14 }}>
             <strong>{t("profile.logoutAllTitle")}</strong>
             <p style={{ marginTop: 6 }}>{t("profile.logoutAllDescription")}</p>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div className="responsive-actions" style={{ marginTop: 10 }}>
               <button
                 className="btn btn-danger btn-sm"
                 type="button"
@@ -595,7 +595,7 @@ export default function ProfilePage() {
                         }
                       />
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div className="responsive-actions">
                       <button className="btn btn-primary btn-sm" type="submit">
                         {t("common.save")}
                       </button>
@@ -626,7 +626,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div className="responsive-actions">
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() =>
@@ -735,7 +735,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="responsive-actions">
               <button
                 type="submit"
                 className="btn btn-primary btn-sm"
@@ -769,7 +769,7 @@ export default function ProfilePage() {
                     })}
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div className="responsive-actions">
                   <span className={`status-chip ${ticket.status === "resolved" ? "ok" : ""}`}>
                     {FEEDBACK_STATUS_LABELS[ticket.status] ? t(FEEDBACK_STATUS_LABELS[ticket.status]) : ticket.status}
                   </span>
@@ -814,7 +814,7 @@ export default function ProfilePage() {
                   {selectedFeedback.team ? ` · ${t("feedback.team", { team: selectedFeedback.team })}` : ""}
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div className="responsive-actions">
                 <span
                   className={`status-chip ${selectedFeedback.status === "resolved" ? "ok" : ""}`}
                 >
@@ -866,7 +866,7 @@ export default function ProfilePage() {
                   onChange={(event) => setFeedbackReply(event.target.value)}
                   placeholder={t("feedback.replyPlaceholder")}
                 />
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="responsive-actions">
                   <button
                     className="btn btn-primary btn-sm"
                     disabled={feedbackActionLoading || !feedbackReply.trim()}

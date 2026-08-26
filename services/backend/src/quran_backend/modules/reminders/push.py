@@ -514,7 +514,10 @@ def _notification_url(reminder: ReminderRule, locale: str) -> str:
     if reminder.reminder_type == ReminderType.PRAYER:
         return f"/{locale}/prayer"
     if reminder.reminder_type == ReminderType.QURAN_REVIEW and reminder.start_ayah is not None:
-        return f"/{locale}/quran?surah={reminder.start_ayah.surah.number}"
+        return (
+            f"/{locale}/quran?surah={reminder.start_ayah.surah.number}"
+            f"&ayah={reminder.start_ayah.number}"
+        )
     return f"/{locale}/quran"
 
 

@@ -599,6 +599,17 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
+test("Quran review deep link opens and highlights its first ayah", async ({ page }) => {
+  await page.goto("/quran?surah=6&ayah=2");
+
+  await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  const linkedAyah = page.getByRole("button", { name: "Аят 6:2", exact: true });
+  await expect(linkedAyah).toHaveCount(2);
+  await expect(linkedAyah.first()).toHaveClass(/is-selected/);
+  await expect(linkedAyah.last()).toHaveClass(/is-selected/);
+});
+
 test("mushaf switcher renders all supported Quran.Foundation font variants", async ({ page }) => {
   await page.goto("/quran?surah=6");
   await page.getByRole("button", { name: /Мусхаф/ }).click();
@@ -842,8 +853,22 @@ for (const viewport of [
     await fragments.last().click();
     await expect(fragments.first()).toHaveClass(/is-selected/);
     await expect(fragments.last()).toHaveClass(/is-selected/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      await page.evaluate(() => document.documentElement.clientWidth),
+    );
   });
 }
+
+test("Mushaf controls fit a 320px mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto("/quran?surah=6");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+
+  await expect(page.locator(".mushaf-page-navigation")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});
 
 test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ page }) => {
   await page.goto("/quran?surah=6");
