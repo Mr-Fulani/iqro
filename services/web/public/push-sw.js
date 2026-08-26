@@ -30,6 +30,7 @@ self.addEventListener("push", (event) => {
       badge: "/icon",
       silent: signal === "silent",
       vibrate: signal === "vibration" ? [180, 80, 180] : undefined,
+      renotify: signal !== "silent",
       data: { url },
     }),
   );

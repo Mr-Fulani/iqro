@@ -399,6 +399,31 @@ export function ReminderManager() {
     }
   };
 
+  const testWebPush = async () => {
+    if (!webPushSupported || Notification.permission !== "granted") {
+      setWebPushNotice({ kind: "error", message: t("reminder.webPushBlocked") });
+      return;
+    }
+    setWebPushSaving(true);
+    setWebPushNotice(null);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(t("reminder.webPushTestTitle"), {
+        body: t("reminder.webPushTestBody"),
+        tag: `iqro-notification-test-${Date.now()}`,
+        icon: "/icon",
+        badge: "/icon",
+        requireInteraction: true,
+        data: { url: `/${locale}/profile` },
+      });
+      setWebPushNotice({ kind: "success", message: t("reminder.webPushTestSent") });
+    } catch (reason) {
+      setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
+    } finally {
+      setWebPushSaving(false);
+    }
+  };
+
   if (!isLoggedIn) return null;
 
   return (
@@ -451,14 +476,24 @@ export function ReminderManager() {
         ) : webPushStatus?.available === false ? (
           <p className="kpi-desc">{t("reminder.webPushUnavailable")}</p>
         ) : webPushStatus?.enabled ? (
-          <button
-            className="btn btn-secondary btn-sm"
-            type="button"
-            disabled={webPushSaving}
-            onClick={() => void disableWebPush()}
-          >
-            {webPushSaving ? t("common.saving") : t("reminder.webPushDisable")}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="btn btn-primary btn-sm"
+              type="button"
+              disabled={webPushSaving}
+              onClick={() => void testWebPush()}
+            >
+              {webPushSaving ? t("common.saving") : t("reminder.webPushTest")}
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              disabled={webPushSaving}
+              onClick={() => void disableWebPush()}
+            >
+              {t("reminder.webPushDisable")}
+            </button>
+          </div>
         ) : (
           <button
             className="btn btn-primary btn-sm"

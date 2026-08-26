@@ -314,6 +314,7 @@ test("browser push waits for the first service worker to become active", async (
         getSubscription: async () => null,
         subscribe: async () => subscription,
       },
+      showNotification: async () => undefined,
     };
     const installingRegistration = {
       active: null,
@@ -324,12 +325,16 @@ test("browser push waits for the first service worker to become active", async (
       },
     };
 
+    const notificationMock = {
+      permission: "default",
+      requestPermission: async () => {
+        notificationMock.permission = "granted";
+        return "granted";
+      },
+    };
     Object.defineProperty(window, "Notification", {
       configurable: true,
-      value: {
-        permission: "default",
-        requestPermission: async () => "granted",
-      },
+      value: notificationMock,
     });
     Object.defineProperty(window, "PushManager", {
       configurable: true,
@@ -410,4 +415,10 @@ test("browser push waits for the first service worker to become active", async (
     expiration_time: null,
     locale: "ru",
   });
+  await reminders.getByRole("button", { name: "Проверить сейчас" }).click();
+  await expect(
+    reminders.getByText(
+      "Тестовое уведомление передано браузеру. Если баннера нет, проверьте системный Центр уведомлений.",
+    ),
+  ).toBeVisible();
 });
