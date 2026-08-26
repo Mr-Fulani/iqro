@@ -179,10 +179,13 @@ staging-budget-config: staging-preflight
 	$(STAGING_BUDGET_COMPOSE) config --quiet
 
 staging-budget-build: staging-budget-config
-	$(STAGING_BUDGET_COMPOSE) build backend web gateway postgres
+	$(STAGING_BUDGET_COMPOSE) build backend
+	$(STAGING_BUDGET_COMPOSE) build web
+	$(STAGING_BUDGET_COMPOSE) build gateway
+	$(STAGING_BUDGET_COMPOSE) build postgres
 
-staging-budget-up: staging-budget-config
-	$(STAGING_BUDGET_COMPOSE) up --build --detach --wait
+staging-budget-up: staging-budget-build
+	$(STAGING_BUDGET_COMPOSE) up --no-build --detach --wait
 	python3 ops/staging/verify_runtime_budget.py --env-file "$(STAGING_ENV)"
 
 staging-budget-runtime-verify: staging-preflight
