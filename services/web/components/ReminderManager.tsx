@@ -399,35 +399,6 @@ export function ReminderManager() {
     }
   };
 
-  const testWebPush = async () => {
-    if (!webPushSupported || Notification.permission !== "granted") {
-      setWebPushNotice({ kind: "error", message: t("reminder.webPushBlocked") });
-      return;
-    }
-    setWebPushSaving(true);
-    setWebPushNotice(null);
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const tag = `iqro-notification-test-${Date.now()}`;
-      await registration.showNotification(t("reminder.webPushTestTitle"), {
-        body: t("reminder.webPushTestBody"),
-        tag,
-        requireInteraction: true,
-        data: { url: `/${locale}/profile` },
-      });
-      const displayed = await registration.getNotifications({ tag });
-      if (!displayed.some((notification) => notification.tag === tag)) {
-        setWebPushNotice({ kind: "error", message: t("reminder.webPushTestDiscarded") });
-        return;
-      }
-      setWebPushNotice({ kind: "success", message: t("reminder.webPushTestVerified") });
-    } catch (reason) {
-      setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
-    } finally {
-      setWebPushSaving(false);
-    }
-  };
-
   if (!isLoggedIn) return null;
 
   return (
@@ -480,15 +451,7 @@ export function ReminderManager() {
         ) : webPushStatus?.available === false ? (
           <p className="kpi-desc">{t("reminder.webPushUnavailable")}</p>
         ) : webPushStatus?.enabled ? (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              className="btn btn-primary btn-sm"
-              type="button"
-              disabled={webPushSaving}
-              onClick={() => void testWebPush()}
-            >
-              {webPushSaving ? t("common.saving") : t("reminder.webPushTest")}
-            </button>
+          <div>
             <button
               className="btn btn-secondary btn-sm"
               type="button"
