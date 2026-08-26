@@ -408,15 +408,19 @@ export function ReminderManager() {
     setWebPushNotice(null);
     try {
       const registration = await navigator.serviceWorker.ready;
+      const tag = `iqro-notification-test-${Date.now()}`;
       await registration.showNotification(t("reminder.webPushTestTitle"), {
         body: t("reminder.webPushTestBody"),
-        tag: `iqro-notification-test-${Date.now()}`,
-        icon: "/icon",
-        badge: "/icon",
+        tag,
         requireInteraction: true,
         data: { url: `/${locale}/profile` },
       });
-      setWebPushNotice({ kind: "success", message: t("reminder.webPushTestSent") });
+      const displayed = await registration.getNotifications({ tag });
+      if (!displayed.some((notification) => notification.tag === tag)) {
+        setWebPushNotice({ kind: "error", message: t("reminder.webPushTestDiscarded") });
+        return;
+      }
+      setWebPushNotice({ kind: "success", message: t("reminder.webPushTestVerified") });
     } catch (reason) {
       setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
     } finally {

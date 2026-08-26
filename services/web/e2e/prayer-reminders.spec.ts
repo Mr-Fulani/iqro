@@ -308,13 +308,18 @@ test("browser push waits for the first service worker to become active", async (
       }),
       unsubscribe: async () => true,
     };
+    let shownNotificationTag = "";
     const activeRegistration = {
       active: {},
       pushManager: {
         getSubscription: async () => null,
         subscribe: async () => subscription,
       },
-      showNotification: async () => undefined,
+      showNotification: async (_title: string, options?: NotificationOptions) => {
+        shownNotificationTag = options?.tag || "";
+      },
+      getNotifications: async (options?: GetNotificationOptions) =>
+        options?.tag === shownNotificationTag ? [{ tag: shownNotificationTag }] : [],
     };
     const installingRegistration = {
       active: null,
@@ -418,7 +423,7 @@ test("browser push waits for the first service worker to become active", async (
   await reminders.getByRole("button", { name: "Проверить сейчас" }).click();
   await expect(
     reminders.getByText(
-      "Тестовое уведомление передано браузеру. Если баннера нет, проверьте системный Центр уведомлений.",
+      "Браузер создал тестовое уведомление. Оно должно быть видно в системном Центре уведомлений.",
     ),
   ).toBeVisible();
 });
