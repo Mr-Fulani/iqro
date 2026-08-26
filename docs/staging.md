@@ -271,9 +271,10 @@ make staging-budget-ps
 make staging-budget-logs
 ```
 
-### Тестовые email-коды
+### Email-коды: безопасный режим и реальная отправка
 
-Mailpit не опубликован в internet. Открыть SSH tunnel на локальном компьютере:
+По умолчанию staging использует Mailpit: письма не покидают сервер. Mailpit не опубликован
+в internet. Открыть SSH tunnel на локальном компьютере:
 
 ```bash
 ssh -L 8025:127.0.0.1:8025 <USER>@<PUBLIC_VPS_IP>
@@ -281,6 +282,19 @@ ssh -L 8025:127.0.0.1:8025 <USER>@<PUBLIC_VPS_IP>
 
 Пока SSH открыт, UI доступен только вам на `http://127.0.0.1:8025`. Коды входа staging
 появляются там и не отправляются реальным адресатам.
+
+После проверки домена `auth.iqro.forum` в Resend можно явно включить реальную отправку:
+
+```bash
+make staging-email-configure STAGING_EMAIL_FROM=login@auth.iqro.forum
+make staging-preflight
+```
+
+Команда запросит API-ключ скрытым вводом, запишет его только в игнорируемый файл
+`ops/staging/staging.env` с правами `0600` и включит SMTP через `smtp.resend.com:587` с TLS.
+Ключ не попадает в shell history, Git или вывод команды. После этого пересоздайте backend и
+worker. При переносе на новый сервер повторяется только эта команда; DNS-записи домена менять
+не нужно.
 
 ## 6. Подключение Cloudflare R2 для изображений и аудио
 

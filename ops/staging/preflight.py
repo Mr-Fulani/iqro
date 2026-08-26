@@ -67,6 +67,13 @@ def validate(
         "DATABASE_USER",
         "DATABASE_PASSWORD",
         "DATABASE_CONN_MAX_AGE",
+        "STAGING_EMAIL_DELIVERY_MODE",
+        "DJANGO_EMAIL_HOST",
+        "DJANGO_EMAIL_PORT",
+        "DJANGO_EMAIL_HOST_USER",
+        "DJANGO_EMAIL_HOST_PASSWORD",
+        "DJANGO_EMAIL_USE_TLS",
+        "DJANGO_DEFAULT_FROM_EMAIL",
         "PUBLIC_MEDIA_BASE_URL",
         "PUBLIC_AUDIO_BASE_URL",
         "MEDIA_OBJECT_STORAGE_ENDPOINT_URL",
@@ -107,6 +114,35 @@ def validate(
         errors.append("DJANGO_SECURE_SSL_REDIRECT must be true")
     if values["DATABASE_CONN_MAX_AGE"] != "0":
         errors.append("DATABASE_CONN_MAX_AGE must be 0 under ASGI")
+    email_mode = values["STAGING_EMAIL_DELIVERY_MODE"].lower()
+    if email_mode not in {"mailpit", "smtp"}:
+        errors.append("STAGING_EMAIL_DELIVERY_MODE must be mailpit or smtp")
+    elif email_mode == "mailpit":
+        if values["DJANGO_EMAIL_HOST"] != "mailpit":
+            errors.append("mailpit mode must use DJANGO_EMAIL_HOST=mailpit")
+        if values["DJANGO_EMAIL_PORT"] != "1025":
+            errors.append("mailpit mode must use DJANGO_EMAIL_PORT=1025")
+        if values["DJANGO_EMAIL_USE_TLS"].lower() != "false":
+            errors.append("mailpit mode must disable DJANGO_EMAIL_USE_TLS")
+    else:
+        if values["DJANGO_EMAIL_HOST"] in {"mailpit", "localhost", "127.0.0.1"}:
+            errors.append("smtp mode must use an external DJANGO_EMAIL_HOST")
+        try:
+            email_port = int(values["DJANGO_EMAIL_PORT"])
+        except ValueError:
+            email_port = 0
+        if not 1 <= email_port <= 65535:
+            errors.append("DJANGO_EMAIL_PORT must be between 1 and 65535")
+        if values["DJANGO_EMAIL_USE_TLS"].lower() != "true":
+            errors.append("smtp mode must enable DJANGO_EMAIL_USE_TLS")
+        if not values["DJANGO_EMAIL_HOST_USER"].strip():
+            errors.append("smtp mode requires DJANGO_EMAIL_HOST_USER")
+        if not values["DJANGO_EMAIL_HOST_PASSWORD"].strip():
+            errors.append("smtp mode requires DJANGO_EMAIL_HOST_PASSWORD")
+        if "@" not in values["DJANGO_DEFAULT_FROM_EMAIL"]:
+            errors.append(
+                "smtp mode requires an email address in DJANGO_DEFAULT_FROM_EMAIL"
+            )
     if (
         "staging" not in values["DATABASE_NAME"]
         or "staging" not in values["DATABASE_USER"]

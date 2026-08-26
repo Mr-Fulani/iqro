@@ -5,6 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 
+from ops.staging.configure_email import _resend_replacements
 from ops.staging.configure_media import _replace_values, build_cors
 from ops.staging.init import NOT_CONFIGURED, SECRET_KEYS, _render, build_overrides
 from ops.staging.preflight import load_env, validate
@@ -124,11 +125,30 @@ def test_media_configuration_and_cors_are_derived_from_staging_origins() -> None
     ]
 
 
+def test_resend_configuration_enables_external_smtp_without_exposing_the_key() -> None:
+    values = _overrides(media_ready=True)
+    values.update(
+        _resend_replacements(
+            from_email="login@auth.iqro.forum",
+            api_key="re_abcdefghijklmnopqrstuvwxyz123456",
+        )
+    )
+
+    errors, warnings = validate(values, require_media=True)
+
+    assert errors == []
+    assert warnings == []
+    assert values["STAGING_EMAIL_DELIVERY_MODE"] == "smtp"
+    assert values["DJANGO_EMAIL_HOST"] == "smtp.resend.com"
+    assert values["DJANGO_DEFAULT_FROM_EMAIL"] == "IQRO <login@auth.iqro.forum>"
+
+
 def main() -> int:
     test_generated_config_passes_basic_preflight_with_media_warning()
     test_generated_config_passes_strict_media_preflight()
     test_strict_preflight_rejects_unconfigured_media()
     test_media_configuration_and_cors_are_derived_from_staging_origins()
+    test_resend_configuration_enables_external_smtp_without_exposing_the_key()
     with tempfile.TemporaryDirectory(prefix="quran-staging-test-") as directory:
         test_render_and_load_do_not_duplicate_overrides(Path(directory))
     print("OK: staging configuration self-tests passed.")

@@ -178,6 +178,7 @@ def build_overrides(
         "OBSERVABILITY_MONTHLY_ORIGIN_EGRESS_BUDGET_BYTES": "21474836480",
         "PROMETHEUS_RETENTION_TIME": "7d",
         "PROMETHEUS_RETENTION_SIZE": "1GB",
+        "STAGING_EMAIL_DELIVERY_MODE": "mailpit",
         "DJANGO_EMAIL_HOST": "mailpit",
         "DJANGO_EMAIL_PORT": "1025",
         "DJANGO_EMAIL_HOST_USER": "staging-required-placeholder",
