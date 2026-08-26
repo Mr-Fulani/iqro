@@ -32,6 +32,11 @@ const PRAYER_LABELS: Record<string, MessageKey> = {
   isha: "prayer.isha",
 };
 
+type PrayerEvent = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+type QuranReminderType = Extract<Reminder["reminder_type"], "quran_reading" | "quran_review">;
+
+const PRAYER_EVENTS = Object.entries(PRAYER_LABELS) as Array<[PrayerEvent, MessageKey]>;
+
 const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], MessageKey> = {
   prayer: "reminder.type.prayer",
   quran_reading: "reminder.type.reading",
@@ -56,15 +61,13 @@ export function ReminderManager() {
     message: string;
   } | null>(null);
 
-  const [reminderType, setReminderType] = useState<Reminder["reminder_type"]>("prayer");
-  const [prayerEvent, setPrayerEvent] = useState<"fajr" | "dhuhr" | "asr" | "maghrib" | "isha">("fajr");
-  const [prayerOffset, setPrayerOffset] = useState(-10);
+  const [reminderType, setReminderType] = useState<QuranReminderType>("quran_reading");
   const [localTime, setLocalTime] = useState("07:30");
   const [weekdaysMask, setWeekdaysMask] = useState(127);
   const [timezoneMode, setTimezoneMode] = useState<ReminderTimezone["mode"]>("device_local");
   const [fixedTimezone, setFixedTimezone] = useState("Europe/Istanbul");
   const [signal, setSignal] = useState<Reminder["signal"]>("sound");
-  const [isEnabled, setIsEnabled] = useState(true);
+  const [savingPrayerEvent, setSavingPrayerEvent] = useState<PrayerEvent | null>(null);
 
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [reviewSurah, setReviewSurah] = useState(1);
@@ -75,6 +78,18 @@ export function ReminderManager() {
   const activeReminders = useMemo(
     () => reminders.filter((reminder) => reminder.deleted_at === null),
     [reminders],
+  );
+  const prayerReminders = useMemo(
+    () => activeReminders.filter((reminder) => reminder.reminder_type === "prayer"),
+    [activeReminders],
+  );
+  const quranReminders = useMemo(
+    () => activeReminders.filter((reminder) => reminder.reminder_type !== "prayer"),
+    [activeReminders],
+  );
+  const enabledReminderCount = useMemo(
+    () => activeReminders.filter((reminder) => reminder.is_enabled).length,
+    [activeReminders],
   );
 
   useEffect(() => {
@@ -206,35 +221,30 @@ export function ReminderManager() {
 
   const resetForm = () => {
     setEditing(null);
-    setReminderType("prayer");
-    setPrayerEvent("fajr");
-    setPrayerOffset(-10);
+    setReminderType("quran_reading");
     setLocalTime("07:30");
     setWeekdaysMask(127);
     setTimezoneMode("device_local");
     setFixedTimezone("Europe/Istanbul");
     setSignal("sound");
-    setIsEnabled(true);
     setReviewSurah(1);
     setReviewStartId("");
     setReviewEndId("");
   };
 
   const beginEdit = (reminder: Reminder) => {
-    if (!reminder.schedule) return;
+    if (
+      !reminder.schedule ||
+      reminder.schedule.kind === "prayer" ||
+      reminder.reminder_type === "prayer"
+    ) return;
     setEditing(reminder);
     setReminderType(reminder.reminder_type);
-    if (reminder.schedule.kind === "prayer") {
-      setPrayerEvent(reminder.schedule.prayer_event);
-      setPrayerOffset(reminder.schedule.prayer_offset_minutes);
-    } else {
-      setLocalTime(reminder.schedule.local_time.slice(0, 5));
-    }
+    setLocalTime(reminder.schedule.local_time.slice(0, 5));
     setWeekdaysMask(reminder.weekdays_mask);
     setTimezoneMode(reminder.timezone.mode);
     if (reminder.timezone.mode === "fixed") setFixedTimezone(reminder.timezone.name);
     setSignal(reminder.signal);
-    setIsEnabled(reminder.is_enabled);
     if (reminder.review_target) {
       setReviewSurah(reminder.review_target.start.surah_number);
       setReviewStartId(reminder.review_target.start.id);
@@ -257,10 +267,7 @@ export function ReminderManager() {
     setSaving(true);
     setError(null);
     setSuccess(null);
-    const schedule =
-      reminderType === "prayer"
-        ? ({ kind: "prayer", prayer_event: prayerEvent, prayer_offset_minutes: prayerOffset } as const)
-        : ({ kind: "local_time", local_time: `${localTime}:00` } as const);
+    const schedule = { kind: "local_time", local_time: `${localTime}:00` } as const;
     const timezone: ReminderTimezone =
       timezoneMode === "fixed"
         ? { mode: "fixed", name: fixedTimezone }
@@ -279,7 +286,7 @@ export function ReminderManager() {
             weekdays_mask: weekdaysMask,
             timezone,
             signal,
-            is_enabled: isEnabled,
+            is_enabled: editing.is_enabled,
           })
         : await api.createReminder({
             reminder_type: reminderType,
@@ -288,7 +295,7 @@ export function ReminderManager() {
             weekdays_mask: weekdaysMask,
             timezone,
             signal,
-            is_enabled: isEnabled,
+            is_enabled: true,
           });
       setReminders((previous) => {
         const withoutSaved = previous.filter((item) => item.id !== saved.id);
@@ -315,6 +322,62 @@ export function ReminderManager() {
       );
     } catch (reason) {
       setError(api.normalizeError(reason));
+    }
+  };
+
+  const setPrayerReminderEnabled = async (prayerEvent: PrayerEvent, enabled: boolean) => {
+    setSavingPrayerEvent(prayerEvent);
+    setError(null);
+    setSuccess(null);
+    try {
+      const matching = prayerReminders.filter(
+        (reminder) =>
+          reminder.schedule?.kind === "prayer" &&
+          reminder.schedule.prayer_event === prayerEvent,
+      );
+      if (enabled) {
+        const existing = matching[0];
+        const updated = existing
+          ? await api.updateReminder(existing.id, {
+              base_revision: existing.revision,
+              is_enabled: true,
+            })
+          : await api.createReminder({
+              reminder_type: "prayer",
+              schedule: {
+                kind: "prayer",
+                prayer_event: prayerEvent,
+                prayer_offset_minutes: 0,
+              },
+              weekdays_mask: 127,
+              timezone: { mode: "device_local" },
+              signal: "sound",
+              is_enabled: true,
+            });
+        setReminders((previous) => replaceReminder(previous, updated));
+      } else {
+        const enabledRules = matching.filter((reminder) => reminder.is_enabled);
+        const updatedRules = await Promise.all(
+          enabledRules.map((reminder) =>
+            api.updateReminder(reminder.id, {
+              base_revision: reminder.revision,
+              is_enabled: false,
+            }),
+          ),
+        );
+        setReminders((previous) =>
+          updatedRules.reduce(replaceReminder, previous),
+        );
+      }
+      setSuccess(
+        t(enabled ? "reminder.prayerEnabled" : "reminder.prayerDisabled", {
+          prayer: t(PRAYER_LABELS[prayerEvent]),
+        }),
+      );
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+    } finally {
+      setSavingPrayerEvent(null);
     }
   };
 
@@ -425,7 +488,7 @@ export function ReminderManager() {
           <h3 className="surface-title">{t("reminder.title")}</h3>
           <p className="surface-subtitle">{t("reminder.description")}</p>
         </div>
-        <span className="status-chip">{t("reminder.activeCount", { count: activeReminders.length })}</span>
+        <span className="status-chip">{t("reminder.activeCount", { count: enabledReminderCount })}</span>
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
@@ -452,9 +515,6 @@ export function ReminderManager() {
               : t("reminder.webPushOff")}
           </span>
         </div>
-        <p className="kpi-desc" style={{ marginBottom: 10 }}>
-          {t("reminder.webPushPrayerLimit")}
-        </p>
         {webPushNotice && (
           <div
             className={`alert ${
@@ -496,6 +556,55 @@ export function ReminderManager() {
         )}
       </div>
 
+      <div className="prayer-reminder-panel">
+        <div className="surface-head" style={{ marginBottom: 8 }}>
+          <div>
+            <h4 className="surface-title">{t("reminder.prayerTitle")}</h4>
+            <p className="surface-subtitle">{t("reminder.prayerDescription")}</p>
+          </div>
+          <span className="status-chip">{t("reminder.everyDay")}</span>
+        </div>
+        <p className="kpi-desc" style={{ marginBottom: 12 }}>
+          {t("reminder.webPushPrayerLimit")}
+        </p>
+        <div className="prayer-reminder-list">
+          {PRAYER_EVENTS.map(([prayerEvent, label]) => {
+            const enabled = prayerReminders.some(
+              (reminder) =>
+                reminder.is_enabled &&
+                reminder.schedule?.kind === "prayer" &&
+                reminder.schedule.prayer_event === prayerEvent,
+            );
+            const busy = savingPrayerEvent === prayerEvent;
+            return (
+              <div className="prayer-reminder-row" key={prayerEvent}>
+                <div>
+                  <strong>{t(label)}</strong>
+                  <p className="kpi-desc">
+                    {t(enabled ? "reminder.prayerEveryDayOn" : "reminder.prayerOff")}
+                  </p>
+                </div>
+                <button
+                  aria-checked={enabled}
+                  aria-label={t("reminder.prayerToggleLabel", {
+                    prayer: t(label),
+                    status: t(enabled ? "reminder.enabled" : "reminder.disabled"),
+                  })}
+                  className={`reminder-switch ${enabled ? "is-on" : ""}`}
+                  disabled={savingPrayerEvent !== null}
+                  onClick={() => void setPrayerReminderEnabled(prayerEvent, !enabled)}
+                  role="switch"
+                  type="button"
+                >
+                  <span aria-hidden="true" />
+                  <span className="sr-only">{busy ? t("common.saving") : t(enabled ? "reminder.disable" : "reminder.enable")}</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <form
         onSubmit={(event) => void saveReminder(event)}
         style={{
@@ -508,6 +617,10 @@ export function ReminderManager() {
           marginBottom: 18,
         }}
       >
+        <div>
+          <h4 className="surface-title">{t("reminder.quranTitle")}</h4>
+          <p className="surface-subtitle">{t("reminder.quranDescription")}</p>
+        </div>
         <div className="form-row">
           <div className="form-group">
             <label className="form-label" htmlFor="reminder-type">{t("reminder.type")}</label>
@@ -515,54 +628,23 @@ export function ReminderManager() {
               id="reminder-type"
               value={reminderType}
               onChange={(event) =>
-                setReminderType(event.target.value as Reminder["reminder_type"])
+                setReminderType(event.target.value as QuranReminderType)
               }
             >
-              <option value="prayer">{t("reminder.type.prayer")}</option>
               <option value="quran_reading">{t("reminder.type.reading")}</option>
               <option value="quran_review">{t("reminder.type.review")}</option>
             </select>
           </div>
 
-          {reminderType === "prayer" ? (
-            <>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reminder-prayer">{t("reminder.prayerEvent")}</label>
-                <select
-                  id="reminder-prayer"
-                  value={prayerEvent}
-                  onChange={(event) =>
-                    setPrayerEvent(event.target.value as typeof prayerEvent)
-                  }
-                >
-                  {Object.entries(PRAYER_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{t(label)}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="reminder-offset">{t("reminder.offset")}</label>
-                <input
-                  id="reminder-offset"
-                  type="number"
-                  min={-120}
-                  max={120}
-                  value={prayerOffset}
-                  onChange={(event) => setPrayerOffset(Number(event.target.value))}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="form-group">
-              <label className="form-label" htmlFor="reminder-time">{t("reminder.localTime")}</label>
-              <input
-                id="reminder-time"
-                type="time"
-                value={localTime}
-                onChange={(event) => setLocalTime(event.target.value)}
-              />
-            </div>
-          )}
+          <div className="form-group">
+            <label className="form-label" htmlFor="reminder-time">{t("reminder.localTime")}</label>
+            <input
+              id="reminder-time"
+              type="time"
+              value={localTime}
+              onChange={(event) => setLocalTime(event.target.value)}
+            />
+          </div>
 
           <div className="form-group">
             <label className="form-label" htmlFor="reminder-signal">{t("reminder.signal")}</label>
@@ -621,20 +703,32 @@ export function ReminderManager() {
           </div>
         )}
 
-        <div>
-          <p className="form-label" style={{ marginBottom: 8 }}>{t("reminder.weekdays")}</p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {WEEKDAYS.map(([bit, label]) => (
-              <label key={bit} style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(weekdaysMask & bit)}
-                  onChange={() => toggleWeekday(bit)}
-                />
-                {t(label)}
-              </label>
-            ))}
-          </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="reminder-repeat">{t("reminder.repeat")}</label>
+          <select
+            id="reminder-repeat"
+            value={weekdaysMask === 127 ? "every_day" : "custom"}
+            onChange={(event) =>
+              setWeekdaysMask(event.target.value === "every_day" ? 127 : 31)
+            }
+          >
+            <option value="every_day">{t("reminder.everyDay")}</option>
+            <option value="custom">{t("reminder.selectedDays")}</option>
+          </select>
+          {weekdaysMask !== 127 && (
+            <div className="reminder-weekdays">
+              {WEEKDAYS.map(([bit, label]) => (
+                <label key={bit}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(weekdaysMask & bit)}
+                    onChange={() => toggleWeekday(bit)}
+                  />
+                  {t(label)}
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="form-row">
@@ -661,14 +755,6 @@ export function ReminderManager() {
               />
             </div>
           )}
-          <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={isEnabled}
-              onChange={(event) => setIsEnabled(event.target.checked)}
-            />
-            {t("reminder.enabled")}
-          </label>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -685,11 +771,11 @@ export function ReminderManager() {
 
       {loading ? (
         <p className="kpi-desc">{t("reminder.loading")}</p>
-      ) : activeReminders.length === 0 ? (
-        <p className="kpi-desc">{t("reminder.none")}</p>
+      ) : quranReminders.length === 0 ? (
+        <p className="kpi-desc">{t("reminder.quranNone")}</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {activeReminders.map((reminder) => (
+          {quranReminders.map((reminder) => (
             <div className="track-row" key={reminder.id}>
               <div>
                 <strong>{t(REMINDER_TYPE_LABELS[reminder.reminder_type])}</strong>
@@ -730,6 +816,10 @@ export function ReminderManager() {
 }
 
 type Translate = ReturnType<typeof useI18n>["t"];
+
+function replaceReminder(reminders: Reminder[], updated: Reminder): Reminder[] {
+  return [updated, ...reminders.filter((reminder) => reminder.id !== updated.id)];
+}
 
 function formatSchedule(reminder: Reminder, t: Translate): string {
   if (!reminder.schedule) return t("reminder.removed");

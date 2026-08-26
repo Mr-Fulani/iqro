@@ -1689,6 +1689,89 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-strong);
 }
 
+.prayer-reminder-panel {
+  padding: 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.prayer-reminder-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.prayer-reminder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.reminder-switch {
+  position: relative;
+  width: 46px;
+  min-width: 46px;
+  height: 26px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.reminder-switch > span[aria-hidden="true"] {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.24);
+  transition: transform 160ms ease;
+}
+
+.reminder-switch.is-on {
+  background: var(--primary);
+}
+
+.reminder-switch.is-on > span[aria-hidden="true"] {
+  transform: translateX(20px);
+}
+
+[dir="rtl"] .reminder-switch.is-on > span[aria-hidden="true"] {
+  transform: translateX(-20px);
+}
+
+.reminder-switch:focus-visible {
+  outline: 3px solid rgba(16, 185, 129, 0.24);
+  outline-offset: 2px;
+}
+
+.reminder-switch:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.reminder-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reminder-weekdays label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 /* -------------------------------------------------------------------------
    Alerts & Notifications
 ------------------------------------------------------------------------- */

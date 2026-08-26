@@ -124,7 +124,7 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   expect(captured.profile?.client_updated_at).toEqual(expect.any(String));
 });
 
-test("reminder snapshot, create, patch, delete and Quran review use the strict API shape", async ({
+test("prayer switches and Quran reminders use the strict API shape", async ({
   page,
 }) => {
   await installSession(page);
@@ -262,23 +262,29 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
   await expect(reminders.getByText("Отправка уведомлений ещё не включена на сервере.")).toBeVisible();
-  await reminders.getByLabel("Молитва").selectOption("maghrib");
-  await reminders.getByLabel("Смещение, минут").fill("-5");
-  await reminders.getByRole("button", { name: "Создать напоминание" }).click();
+  await expect(reminders.getByLabel("Включено")).toHaveCount(0);
+  const repeatSelect = reminders.getByLabel("Повторение");
+  await expect(repeatSelect).toHaveValue("every_day");
+  await repeatSelect.selectOption("custom");
+  await expect(reminders.getByLabel("Пн")).toBeVisible();
+  await repeatSelect.selectOption("every_day");
+  const maghribSwitch = reminders.getByRole("switch", { name: /^Магриб:/ });
+  await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
+  await maghribSwitch.click();
 
   expect(captured.creates[0]).toMatchObject({
     base_revision: 0,
     reminder_type: "prayer",
-    schedule: { kind: "prayer", prayer_event: "maghrib", prayer_offset_minutes: -5 },
+    schedule: { kind: "prayer", prayer_event: "maghrib", prayer_offset_minutes: 0 },
     weekdays_mask: 127,
     timezone: { mode: "device_local" },
     signal: "sound",
     is_enabled: true,
   });
-  await reminders.getByRole("button", { name: "Отключить" }).click();
+  await expect(maghribSwitch).toHaveAttribute("aria-checked", "true");
+  await maghribSwitch.click();
   expect(captured.patches[0]).toMatchObject({ base_revision: 1, is_enabled: false });
-  await reminders.getByRole("button", { name: "Удалить" }).click();
-  expect(captured.deletes[0]).toMatchObject({ base_revision: 2 });
+  await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
 
   await reminders.getByLabel("Тип").selectOption("quran_review");
   await expect(reminders.getByLabel("Начальный аят").locator("option")).toHaveCount(2);
@@ -294,10 +300,15 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
       end_ayah_id: "01992d87-6c00-7000-8000-000000000703",
     },
   });
-  await expect(reminders.getByText(/Каждый день/)).toBeVisible();
+  const reviewRow = reminders
+    .getByText("Повторение аятов", { exact: true })
+    .locator("xpath=ancestor::div[contains(@class, 'track-row')]");
+  await expect(reviewRow.getByText(/Каждый день/)).toBeVisible();
   await expect(
-    reminders.getByText("Уведомления не подключены", { exact: true }),
+    reviewRow.getByText("Уведомления не подключены", { exact: true }),
   ).toBeVisible();
+  await reminders.getByRole("button", { name: "Удалить" }).click();
+  expect(captured.deletes[0]).toMatchObject({ base_revision: 1 });
 });
 
 test("browser push waits for the first service worker to become active", async ({ page }) => {
