@@ -54,6 +54,20 @@ class GatewayConfigTests(unittest.TestCase):
         )[0]
         self.assertNotIn("proxy_cache ", generic_api)
 
+    def test_web_auth_namespace_is_routed_to_next_bff(self) -> None:
+        web_auth_location = "location /api/web-auth/ {"
+        generic_api_location = "location /api/ {"
+        self.assertIn(web_auth_location, self.config)
+        self.assertLess(
+            self.config.index(web_auth_location),
+            self.config.index(generic_api_location),
+        )
+        web_auth = self.config.split(web_auth_location, maxsplit=1)[1].split(
+            generic_api_location, maxsplit=1
+        )[0]
+        self.assertIn("proxy_pass http://quran_web;", web_auth)
+        self.assertNotIn("proxy_cache ", web_auth)
+
     def test_quran_foundation_fonts_are_allowed_by_gateway_csp(self) -> None:
         security_headers = SECURITY_HEADERS.read_text(encoding="utf-8")
         self.assertIn(
