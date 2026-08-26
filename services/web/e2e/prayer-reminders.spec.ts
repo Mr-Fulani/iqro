@@ -330,16 +330,22 @@ test("browser push waits for the first service worker to become active", async (
       },
     };
 
-    const notificationMock = {
-      permission: "default",
-      requestPermission: async () => {
-        notificationMock.permission = "granted";
+    class NotificationMock extends EventTarget {
+      static permission: NotificationPermission = "default";
+
+      static async requestPermission(): Promise<NotificationPermission> {
+        NotificationMock.permission = "granted";
         return "granted";
-      },
-    };
+      }
+
+      constructor() {
+        super();
+        window.setTimeout(() => this.dispatchEvent(new Event("show")), 0);
+      }
+    }
     Object.defineProperty(window, "Notification", {
       configurable: true,
-      value: notificationMock,
+      value: NotificationMock,
     });
     Object.defineProperty(window, "PushManager", {
       configurable: true,
@@ -423,7 +429,7 @@ test("browser push waits for the first service worker to become active", async (
   await reminders.getByRole("button", { name: "Проверить сейчас" }).click();
   await expect(
     reminders.getByText(
-      "Браузер создал тестовое уведомление. Оно должно быть видно в системном Центре уведомлений.",
+      "Браузер подтвердил событие системного показа. Если баннера нет, его скрывает операционная система или режим фокусирования, а не Iqro.",
     ),
   ).toBeVisible();
 });

@@ -420,6 +420,22 @@ export function ReminderManager() {
         setWebPushNotice({ kind: "error", message: t("reminder.webPushTestDiscarded") });
         return;
       }
+      const directResult = await verifyDirectNotification(
+        t("reminder.webPushTestTitle"),
+        t("reminder.webPushTestBody"),
+      );
+      if (directResult === "shown") {
+        setWebPushNotice({ kind: "success", message: t("reminder.webPushTestShown") });
+        return;
+      }
+      if (directResult === "error") {
+        setWebPushNotice({ kind: "error", message: t("reminder.webPushTestDisplayError") });
+        return;
+      }
+      if (directResult === "timeout") {
+        setWebPushNotice({ kind: "error", message: t("reminder.webPushTestNotShown") });
+        return;
+      }
       setWebPushNotice({ kind: "success", message: t("reminder.webPushTestVerified") });
     } catch (reason) {
       setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
@@ -733,6 +749,38 @@ export function ReminderManager() {
       )}
     </section>
   );
+}
+
+type DirectNotificationResult = "shown" | "error" | "timeout" | "unsupported";
+
+function verifyDirectNotification(
+  title: string,
+  body: string,
+): Promise<DirectNotificationResult> {
+  return new Promise((resolve) => {
+    let notification: Notification;
+    try {
+      notification = new Notification(title, {
+        body,
+        tag: `iqro-direct-notification-test-${Date.now()}`,
+        requireInteraction: true,
+      });
+    } catch {
+      resolve("unsupported");
+      return;
+    }
+
+    let settled = false;
+    const finish = (result: DirectNotificationResult) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(result);
+    };
+    const timeoutId = window.setTimeout(() => finish("timeout"), 3_000);
+    notification.addEventListener("show", () => finish("shown"), { once: true });
+    notification.addEventListener("error", () => finish("error"), { once: true });
+  });
 }
 
 type Translate = ReturnType<typeof useI18n>["t"];
