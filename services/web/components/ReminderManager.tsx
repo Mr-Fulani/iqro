@@ -49,6 +49,7 @@ export function ReminderManager() {
   const [editing, setEditing] = useState<Reminder | null>(null);
   const [webPushStatus, setWebPushStatus] = useState<WebPushStatus | null>(null);
   const [webPushSupported, setWebPushSupported] = useState<boolean | null>(null);
+  const [webPushConnected, setWebPushConnected] = useState<boolean | null>(null);
   const [webPushSaving, setWebPushSaving] = useState(false);
   const [webPushNotice, setWebPushNotice] = useState<{
     kind: "error" | "success";
@@ -88,6 +89,7 @@ export function ReminderManager() {
     if (!isLoggedIn) {
       setReminders([]);
       setWebPushStatus(null);
+      setWebPushConnected(null);
       return;
     }
     let active = true;
@@ -127,17 +129,29 @@ export function ReminderManager() {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (!webPushStatus?.enabled || !webPushSupported) return;
-    const timezoneName = browserTimezone();
-    if (webPushStatus.timezone_name === timezoneName && webPushStatus.locale === locale) {
+    if (!webPushStatus?.enabled || !webPushSupported) {
+      setWebPushConnected(false);
       return;
     }
+    if (Notification.permission !== "granted") {
+      setWebPushConnected(false);
+      return;
+    }
+    const timezoneName = browserTimezone();
     let active = true;
+    setWebPushConnected(null);
     navigator.serviceWorker
       .getRegistration("/")
       .then((registration) => registration?.pushManager.getSubscription())
       .then((subscription) => {
-        if (!subscription) return undefined;
+        if (!active) return undefined;
+        setWebPushConnected(Boolean(subscription));
+        if (
+          !subscription ||
+          (webPushStatus.timezone_name === timezoneName && webPushStatus.locale === locale)
+        ) {
+          return undefined;
+        }
         return api.enableWebPush(
           serializePushSubscription(
             subscription,
@@ -151,6 +165,7 @@ export function ReminderManager() {
       })
       .catch((reason) => {
         if (active) {
+          setWebPushConnected(false);
           setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
         }
       });
@@ -363,6 +378,7 @@ export function ReminderManager() {
         ),
       );
       setWebPushStatus(status);
+      setWebPushConnected(true);
       setWebPushNotice({ kind: "success", message: t("reminder.webPushEnabled") });
     } catch (reason) {
       if (createdSubscription) await createdSubscription.unsubscribe().catch(() => false);
@@ -388,6 +404,7 @@ export function ReminderManager() {
           ? { ...current, enabled: false, timezone_name: null, locale: null }
           : current,
       );
+      setWebPushConnected(false);
       const registration = await navigator.serviceWorker.getRegistration("/");
       const subscription = await registration?.pushManager.getSubscription();
       await subscription?.unsubscribe().catch(() => false);
@@ -427,8 +444,10 @@ export function ReminderManager() {
             <h4 className="surface-title">{t("reminder.webPushTitle")}</h4>
             <p className="surface-subtitle">{t("reminder.webPushDescription")}</p>
           </div>
-          <span className={`status-chip ${webPushStatus?.enabled ? "ok" : ""}`}>
-            {webPushStatus?.enabled
+          <span className={`status-chip ${webPushConnected ? "ok" : ""}`}>
+            {webPushConnected === null
+              ? t("reminder.webPushChecking")
+              : webPushConnected
               ? t("reminder.webPushOn")
               : t("reminder.webPushOff")}
           </span>
@@ -450,7 +469,7 @@ export function ReminderManager() {
           <p className="kpi-desc">{t("reminder.webPushUnsupported")}</p>
         ) : webPushStatus?.available === false ? (
           <p className="kpi-desc">{t("reminder.webPushUnavailable")}</p>
-        ) : webPushStatus?.enabled ? (
+        ) : webPushConnected ? (
           <div>
             <button
               className="btn btn-secondary btn-sm"
@@ -461,6 +480,10 @@ export function ReminderManager() {
               {t("reminder.webPushDisable")}
             </button>
           </div>
+        ) : webPushConnected === null ? (
+          <button className="btn btn-secondary btn-sm" type="button" disabled>
+            {t("reminder.webPushChecking")}
+          </button>
         ) : (
           <button
             className="btn btn-primary btn-sm"
@@ -673,8 +696,16 @@ export function ReminderManager() {
                 <p className="kpi-desc">{formatSchedule(reminder, t)}</p>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span className={`status-chip ${reminder.is_enabled ? "ok" : ""}`}>
-                  {reminder.is_enabled ? t("reminder.enabled") : t("reminder.disabled")}
+                <span
+                  className={`status-chip ${
+                    reminderStatus(reminder, webPushStatus, webPushConnected) === "enabled"
+                      ? "ok"
+                      : ""
+                  }`}
+                >
+                  {t(
+                    reminderStatusMessage(reminder, webPushStatus, webPushConnected),
+                  )}
                 </span>
                 <button
                   className="btn btn-secondary btn-sm"
@@ -711,7 +742,47 @@ function formatSchedule(reminder: Reminder, t: Translate): string {
   const review = reminder.review_target
     ? ` · ${reminder.review_target.start.surah_number}:${reminder.review_target.start.ayah_number}–${reminder.review_target.end.surah_number}:${reminder.review_target.end.ayah_number}`
     : "";
-  return `${schedule}${review} · ${timezone}`;
+  return `${schedule}${review} · ${formatWeekdays(reminder.weekdays_mask, t)} · ${timezone}`;
+}
+
+function formatWeekdays(weekdaysMask: number, t: Translate): string {
+  if (weekdaysMask === 127) return t("reminder.everyDay");
+  return WEEKDAYS.filter(([bit]) => Boolean(weekdaysMask & bit))
+    .map(([, label]) => t(label))
+    .join(", ");
+}
+
+type ReminderStatus = "enabled" | "disabled" | "checking" | "not_connected";
+
+function reminderStatus(
+  reminder: Reminder,
+  webPushStatus: WebPushStatus | null,
+  webPushConnected: boolean | null,
+): ReminderStatus {
+  if (!reminder.is_enabled) return "disabled";
+  if (
+    reminder.reminder_type !== "quran_reading" &&
+    reminder.reminder_type !== "quran_review"
+  ) {
+    return "enabled";
+  }
+  if (webPushStatus === null || webPushConnected === null) return "checking";
+  if (!webPushStatus.supported_reminder_types.includes(reminder.reminder_type)) {
+    return "not_connected";
+  }
+  return webPushConnected ? "enabled" : "not_connected";
+}
+
+function reminderStatusMessage(
+  reminder: Reminder,
+  webPushStatus: WebPushStatus | null,
+  webPushConnected: boolean | null,
+): MessageKey {
+  const status = reminderStatus(reminder, webPushStatus, webPushConnected);
+  if (status === "disabled") return "reminder.disabled";
+  if (status === "checking") return "reminder.webPushChecking";
+  if (status === "not_connected") return "reminder.notificationsNotConnected";
+  return "reminder.enabled";
 }
 
 function formatOffset(minutes: number, t: Translate): string {

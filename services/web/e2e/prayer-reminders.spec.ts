@@ -294,6 +294,10 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
       end_ayah_id: "01992d87-6c00-7000-8000-000000000703",
     },
   });
+  await expect(reminders.getByText(/Каждый день/)).toBeVisible();
+  await expect(
+    reminders.getByText("Уведомления не подключены", { exact: true }),
+  ).toBeVisible();
 });
 
 test("browser push waits for the first service worker to become active", async ({ page }) => {
@@ -308,11 +312,15 @@ test("browser push waits for the first service worker to become active", async (
       }),
       unsubscribe: async () => true,
     };
+    let currentSubscription: typeof subscription | null = null;
     const activeRegistration = {
       active: {},
       pushManager: {
-        getSubscription: async () => null,
-        subscribe: async () => subscription,
+        getSubscription: async () => currentSubscription,
+        subscribe: async () => {
+          currentSubscription = subscription;
+          return subscription;
+        },
       },
     };
     const installingRegistration = {
@@ -408,6 +416,7 @@ test("browser push waits for the first service worker to become active", async (
   await reminders.getByRole("button", { name: "Разрешить уведомления" }).click();
 
   await expect(reminders.getByText("Уведомления включены на этом устройстве.")).toBeVisible();
+  await expect(reminders.getByText("Подключены", { exact: true })).toBeVisible();
   expect(pushPayload).toMatchObject({
     endpoint: "https://fcm.googleapis.com/fcm/send/browser-test",
     keys: { p256dh: "test-p256dh", auth: "test-auth" },
@@ -416,4 +425,79 @@ test("browser push waits for the first service worker to become active", async (
   });
   await expect(reminders.getByRole("button", { name: "Проверить сейчас" })).toHaveCount(0);
   await expect(reminders.getByRole("button", { name: "Отключить уведомления" })).toBeVisible();
+});
+
+test("browser push status follows the subscription on the current device", async ({ page }) => {
+  await installSession(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: {
+        permission: "granted",
+        requestPermission: async () => "granted",
+      },
+    });
+    Object.defineProperty(window, "PushManager", {
+      configurable: true,
+      value: function PushManager() {},
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        getRegistration: async () => ({
+          pushManager: { getSubscription: async () => null },
+        }),
+      },
+    });
+  });
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.includes("/reading-position/")) {
+      return route.fulfill({ status: 404, json: { detail: "Not found." } });
+    }
+    if (url.pathname === "/api/v1/me/bookmarks") {
+      return route.fulfill({ json: { next: null, previous: null, results: [] } });
+    }
+    if (url.pathname === "/api/v1/feedback/tickets") {
+      return route.fulfill({ json: { next: null, previous: null, results: [] } });
+    }
+    if (url.pathname === "/api/v1/me/reminders") {
+      return route.fulfill({
+        json: {
+          mode: "full_snapshot",
+          authoritative: true,
+          generated_at: "2026-08-23T16:00:00Z",
+          count: 0,
+          reminders: [],
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/me/web-push" && request.method() === "GET") {
+      return route.fulfill({
+        json: {
+          available: true,
+          enabled: true,
+          vapid_public_key: "AQID",
+          timezone_name: "Europe/Istanbul",
+          locale: "ru",
+          supported_reminder_types: ["quran_reading", "quran_review"],
+        },
+      });
+    }
+    return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
+  });
+
+  await page.goto("/profile");
+  const reminders = page
+    .getByRole("heading", { name: "Напоминания" })
+    .locator("xpath=ancestor::section");
+  await expect(reminders.getByText("Не подключены", { exact: true })).toBeVisible();
+  await expect(
+    reminders.getByRole("button", { name: "Разрешить уведомления" }),
+  ).toBeVisible();
+  await expect(
+    reminders.getByRole("button", { name: "Отключить уведомления" }),
+  ).toHaveCount(0);
 });
