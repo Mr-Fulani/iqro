@@ -7,4 +7,4 @@ class AudioConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "quran_backend.modules.audio"
     label = "audio"
-    verbose_name = "Quran audio"
+    verbose_name = "Аудио Корана"

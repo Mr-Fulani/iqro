@@ -26,10 +26,11 @@ from quran_backend.modules.feedback.services import (
 
 class FeedbackTicketAdminForm(forms.ModelForm):  # type: ignore[type-arg]
     transition_reason = forms.CharField(
+        label="Причина изменения",
         required=False,
         max_length=500,
         widget=forms.Textarea(attrs={"rows": 2}),
-        help_text="Required when status, priority, team, or assignee changes.",
+        help_text=("Обязательно при изменении статуса, приоритета, команды или ответственного."),
     )
 
     class Meta:
@@ -57,7 +58,10 @@ class FeedbackTicketAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             self.changed_data
         )
         if changed_workflow_fields and not cleaned_data.get("transition_reason"):
-            self.add_error("transition_reason", "Document the reason for this workflow change.")
+            self.add_error(
+                "transition_reason",
+                "Укажите причину изменения процесса обработки.",
+            )
         new_status = cleaned_data.get("status")
         if (
             new_status
@@ -66,7 +70,7 @@ class FeedbackTicketAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         ):
             self.add_error(
                 "status",
-                f"Transition {self.original_status} -> {new_status} is not allowed.",
+                f"Переход {self.original_status} → {new_status} недопустим.",
             )
         return cleaned_data
 
@@ -146,15 +150,15 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     fieldsets = (
         (
-            "Identity",
+            "Идентификация",
             {"fields": ("id", "public_id", "reporter", "client_request_id", "created_at")},
         ),
         (
-            "Report",
+            "Обращение",
             {"fields": ("category", "subject", "locale", "channel", "contact_email")},
         ),
         (
-            "Workflow",
+            "Обработка",
             {
                 "fields": (
                     "status",
@@ -166,7 +170,7 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             },
         ),
         (
-            "SLA and lifecycle",
+            "SLA и жизненный цикл",
             {
                 "fields": (
                     "sla_response_due_at",
@@ -222,7 +226,7 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         ):
             setattr(obj, field, getattr(saved, field))
 
-    @admin.action(description="Escalate selected tickets to critical priority")
+    @admin.action(description="Повысить приоритет выбранных обращений до критического")
     def escalate_to_critical(
         self,
         request: HttpRequest,
@@ -233,7 +237,7 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 ticket_id,
                 request.user,  # type: ignore[arg-type]
                 changes={"priority": FeedbackPriority.CRITICAL},
-                reason="Manual critical escalation from the feedback inbox.",
+                reason="Ручное повышение приоритета из списка обращений.",
             )
 
 

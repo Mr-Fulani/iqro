@@ -6,6 +6,10 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from quran_backend.admin_localization import configure_russian_admin
+
+configure_russian_admin()
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("quran_backend.modules.core.urls")),

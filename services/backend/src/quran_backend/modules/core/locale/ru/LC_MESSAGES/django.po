@@ -1,0 +1,234 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: iqro-admin 1.0\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "Guest"
+msgstr "Гость"
+
+msgid "Active"
+msgstr "Активен"
+
+msgid "Pending deletion"
+msgstr "Ожидает удаления"
+
+msgid "Suspended"
+msgstr "Приостановлен"
+
+msgid "Deleted"
+msgstr "Удалён"
+
+msgid "Product analytics"
+msgstr "Аналитика продукта"
+
+msgid "Notifications"
+msgstr "Уведомления"
+
+msgid "Diagnostics"
+msgstr "Диагностика"
+
+msgid "Location storage"
+msgstr "Хранение местоположения"
+
+msgid "Draft"
+msgstr "Черновик"
+
+msgid "Published"
+msgstr "Опубликовано"
+
+msgid "Withdrawn"
+msgstr "Отозвано"
+
+msgid "Meccan"
+msgstr "Мекканская"
+
+msgid "Medinan"
+msgstr "Мединская"
+
+msgid "Kids repeat"
+msgstr "Детское повторение"
+
+msgid "Surah"
+msgstr "Сура"
+
+msgid "Juz"
+msgstr "Джуз"
+
+msgid "Full Quran"
+msgstr "Весь Коран"
+
+msgid "Economy"
+msgstr "Экономное"
+
+msgid "Standard"
+msgstr "Стандартное"
+
+msgid "High"
+msgstr "Высокое"
+
+msgid "Middle of the night"
+msgstr "Середина ночи"
+
+msgid "Seventh of the night"
+msgstr "Седьмая часть ночи"
+
+msgid "Twilight angle"
+msgstr "Угол сумерек"
+
+msgid "No polar-circle substitution"
+msgstr "Без полярной поправки"
+
+msgid "Aqrab al-balad (nearest latitude)"
+msgstr "Акраб аль-балад (ближайшая широта)"
+
+msgid "Aqrab al-yaum (nearest day)"
+msgstr "Акраб аль-яум (ближайший день)"
+
+msgid "Hanafi"
+msgstr "Ханафитский"
+
+msgid "Device local"
+msgstr "Часовой пояс устройства"
+
+msgid "Device local timezone"
+msgstr "Часовой пояс устройства"
+
+msgid "Fixed timezone"
+msgstr "Фиксированный часовой пояс"
+
+msgid "Prayer"
+msgstr "Намаз"
+
+msgid "Quran reading"
+msgstr "Чтение Корана"
+
+msgid "Quran review"
+msgstr "Повторение Корана"
+
+msgid "Fajr"
+msgstr "Фаджр"
+
+msgid "Dhuhr"
+msgstr "Зухр"
+
+msgid "Asr"
+msgstr "Аср"
+
+msgid "Maghrib"
+msgstr "Магриб"
+
+msgid "Isha"
+msgstr "Иша"
+
+msgid "Local client notification"
+msgstr "Локальное уведомление устройства"
+
+msgid "Silent"
+msgstr "Без звука"
+
+msgid "Vibration"
+msgstr "Вибрация"
+
+msgid "Short system sound"
+msgstr "Короткий системный звук"
+
+msgid "General suggestion"
+msgstr "Общее предложение"
+
+msgid "Technical problem"
+msgstr "Техническая проблема"
+
+msgid "Religious content concern"
+msgstr "Замечание к религиозному содержанию"
+
+msgid "Mushaf page or region problem"
+msgstr "Проблема страницы или разметки Мусхафа"
+
+msgid "Audio, timing or reciter problem"
+msgstr "Проблема аудио, таймкодов или чтеца"
+
+msgid "Advertisement complaint"
+msgstr "Жалоба на рекламу"
+
+msgid "Account or synchronization"
+msgstr "Аккаунт или синхронизация"
+
+msgid "Donation or external link"
+msgstr "Пожертвование или внешняя ссылка"
+
+msgid "Accessibility or localization"
+msgstr "Доступность или перевод"
+
+msgid "Other"
+msgstr "Другое"
+
+msgid "New"
+msgstr "Новое"
+
+msgid "Triaged"
+msgstr "Распределено"
+
+msgid "In progress"
+msgstr "В работе"
+
+msgid "Waiting for user"
+msgstr "Ожидает пользователя"
+
+msgid "Resolved"
+msgstr "Решено"
+
+msgid "Rejected"
+msgstr "Отклонено"
+
+msgid "Duplicate"
+msgstr "Дубликат"
+
+msgid "Closed"
+msgstr "Закрыто"
+
+msgid "Normal"
+msgstr "Обычный"
+
+msgid "Critical"
+msgstr "Критический"
+
+msgid "Web"
+msgstr "Веб"
+
+msgid "Telegram Mini App"
+msgstr "Telegram Mini App"
+
+msgid "Reporter"
+msgstr "Пользователь"
+
+msgid "Operator"
+msgstr "Оператор"
+
+msgid "System"
+msgstr "Система"
+
+msgid "Public"
+msgstr "Публичное"
+
+msgid "Internal"
+msgstr "Внутреннее"
+
+msgid "Created"
+msgstr "Создано"
+
+msgid "Status changed"
+msgstr "Статус изменён"
+
+msgid "Routing changed"
+msgstr "Маршрут изменён"
+
+msgid "Message added"
+msgstr "Сообщение добавлено"
+
+msgid "Reopened"
+msgstr "Открыто повторно"

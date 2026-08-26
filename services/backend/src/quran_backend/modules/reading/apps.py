@@ -7,7 +7,7 @@ class ReadingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "quran_backend.modules.reading"
     label = "reading"
-    verbose_name = "Reading and synchronization"
+    verbose_name = "Чтение и синхронизация"
 
     def ready(self) -> None:
         from quran_backend.modules.reading import checks as _checks  # noqa: F401, PLC0415

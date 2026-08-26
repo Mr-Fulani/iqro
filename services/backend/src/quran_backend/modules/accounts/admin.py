@@ -33,13 +33,13 @@ class UserAdmin(DjangoUserAdmin):  # type: ignore[type-arg]
     )
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
-        ("Profile", {"fields": ("status", "preferred_locale", "timezone")}),
+        ("Профиль", {"fields": ("status", "preferred_locale", "timezone")}),
         (
-            "Permissions",
+            "Права доступа",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
         ),
         (
-            "Dates",
+            "Даты",
             {
                 "fields": (
                     "date_joined",

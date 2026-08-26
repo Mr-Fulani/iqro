@@ -112,7 +112,7 @@ class PrayerConfigReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             and obj.status == PrayerConfigReleaseStatus.DRAFT
         )
 
-    @admin.action(description="Publish selected draft as the default release")
+    @admin.action(description="Опубликовать выбранный черновик как основной выпуск")
     def publish_as_default(
         self,
         request: HttpRequest,
@@ -127,9 +127,13 @@ class PrayerConfigReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         except ValidationError as error:
             self.message_user(request, _validation_message(error), level=messages.ERROR)
             return
-        self.message_user(request, f"Published {release} as the default.", level=messages.SUCCESS)
+        self.message_user(
+            request,
+            f"Выпуск {release} опубликован как основной.",
+            level=messages.SUCCESS,
+        )
 
-    @admin.action(description="Publish selected draft as an additional release")
+    @admin.action(description="Опубликовать выбранный черновик как дополнительный выпуск")
     def publish_additional(
         self,
         request: HttpRequest,
@@ -144,9 +148,9 @@ class PrayerConfigReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         except ValidationError as error:
             self.message_user(request, _validation_message(error), level=messages.ERROR)
             return
-        self.message_user(request, f"Published {release}.", level=messages.SUCCESS)
+        self.message_user(request, f"Выпуск {release} опубликован.", level=messages.SUCCESS)
 
-    @admin.action(description="Withdraw selected non-default release")
+    @admin.action(description="Отозвать выбранный неосновной выпуск")
     def withdraw_release(
         self,
         request: HttpRequest,
@@ -161,7 +165,7 @@ class PrayerConfigReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         except ValidationError as error:
             self.message_user(request, _validation_message(error), level=messages.ERROR)
             return
-        self.message_user(request, f"Withdrew {release}.", level=messages.SUCCESS)
+        self.message_user(request, f"Выпуск {release} отозван.", level=messages.SUCCESS)
 
     def _single_release(
         self,
@@ -171,7 +175,7 @@ class PrayerConfigReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if queryset.count() != 1:
             self.message_user(
                 request,
-                "Select exactly one release for this lifecycle operation.",
+                "Для этой операции выберите ровно один выпуск.",
                 level=messages.ERROR,
             )
             return None
@@ -207,12 +211,12 @@ class PrayerMethodConfigAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_select_related = ("release", "method")
     readonly_fields = ("id", "checksum_sha256", "created_at", "updated_at")
 
-    @admin.display(description="Isha rule")
+    @admin.display(description="Правило Иша")
     def isha_mode(self, obj: PrayerMethodConfig) -> str:
         if obj.isha_angle is not None:
             return f"{obj.isha_angle}°"
         interval = obj.isha_interval_minutes
-        return f"{interval} min" if interval is not None else "Invalid"
+        return f"{interval} мин" if interval is not None else "Некорректно"
 
     def get_readonly_fields(
         self,

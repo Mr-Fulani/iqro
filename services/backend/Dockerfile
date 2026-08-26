@@ -6,6 +6,8 @@ FROM python-base AS builder
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
+RUN apk add --no-cache gettext
+
 COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 WORKDIR /app
@@ -17,6 +19,7 @@ COPY src ./src
 COPY manage.py ./manage.py
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
+RUN .venv/bin/python manage.py compilemessages --locale ru
 RUN DJANGO_SETTINGS_MODULE=quran_backend.settings.test \
     .venv/bin/python manage.py collectstatic --noinput
 

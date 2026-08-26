@@ -7,6 +7,7 @@ import uuid
 from collections.abc import Callable
 
 from django.http import HttpRequest, HttpResponse
+from django.utils import translation
 
 from quran_backend.modules.core.request_context import reset_request_id, set_request_id
 from quran_backend.modules.core.runtime_metrics import observe_http_request
@@ -14,6 +15,22 @@ from quran_backend.modules.core.runtime_metrics import observe_http_request
 REQUEST_ID_HEADER = "X-Request-ID"
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 logger = logging.getLogger(__name__)
+
+
+class AdminRussianLocaleMiddleware:
+    """Keep the internal Django admin in Russian for every operator."""
+
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if not request.path.startswith("/admin/"):
+            return self.get_response(request)
+
+        with translation.override("ru"):
+            response = self.get_response(request)
+            response.headers["Content-Language"] = "ru"
+            return response
 
 
 class RequestIdMiddleware:

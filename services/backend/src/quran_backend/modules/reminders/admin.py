@@ -36,14 +36,14 @@ class ReminderRuleAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_select_related = ("user", "device")
     readonly_fields = tuple(field.name for field in ReminderRule._meta.fields)
 
-    @admin.display(description="Schedule")
+    @admin.display(description="Расписание")
     def schedule(self, obj: ReminderRule) -> str:
         if obj.deleted_at is not None:
-            return "Deleted"
+            return "Удалено"
         if obj.prayer_event:
             offset = obj.prayer_offset_minutes or 0
             return f"{obj.prayer_event} {offset:+d} min"
-        return obj.local_time.isoformat(timespec="minutes") if obj.local_time else "Invalid"
+        return obj.local_time.isoformat(timespec="minutes") if obj.local_time else "Некорректно"
 
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
