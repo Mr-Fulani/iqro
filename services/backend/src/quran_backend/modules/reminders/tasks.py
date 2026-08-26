@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
+from quran_backend.modules.reminders.push import (
+    claim_due_web_push_schedules,
+    deliver_claimed_web_push_schedule,
+)
 from quran_backend.modules.reminders.retention import prune_reminder_tombstones
 
 
@@ -33,6 +38,36 @@ def prune_reminder_tombstones_task() -> dict[str, Any]:
         }
     )
     return result
+
+
+@shared_task(name="reminders.dispatch_web_push_due")  # type: ignore[untyped-decorator]
+def dispatch_web_push_due_task() -> dict[str, int]:
+    if not settings.WEB_PUSH_ENABLED:
+        return {"claimed": 0, "batches": 0}
+    claimed_count = 0
+    batches = 0
+    for _ in range(settings.WEB_PUSH_DISPATCH_MAX_BATCHES):
+        claimed = claim_due_web_push_schedules()
+        if not claimed:
+            break
+        batches += 1
+        claimed_count += len(claimed)
+        for item in claimed:
+            deliver_web_push_schedule_task.delay(
+                str(item.schedule_id),
+                str(item.claim_token),
+            )
+        if len(claimed) < settings.WEB_PUSH_DISPATCH_BATCH_SIZE:
+            break
+    return {"claimed": claimed_count, "batches": batches}
+
+
+@shared_task(name="reminders.deliver_web_push")  # type: ignore[untyped-decorator]
+def deliver_web_push_schedule_task(schedule_id: str, claim_token: str) -> str:
+    return deliver_claimed_web_push_schedule(
+        schedule_id=uuid.UUID(schedule_id),
+        claim_token=uuid.UUID(claim_token),
+    )
 
 
 def _positive_setting(name: str, default: int) -> int:

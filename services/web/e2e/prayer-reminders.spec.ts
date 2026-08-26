@@ -147,6 +147,18 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
     if (url.pathname === "/api/v1/feedback/tickets") {
       return route.fulfill({ json: { next: null, previous: null, results: [] } });
     }
+    if (url.pathname === "/api/v1/me/web-push" && request.method() === "GET") {
+      return route.fulfill({
+        json: {
+          available: false,
+          enabled: false,
+          vapid_public_key: "",
+          timezone_name: null,
+          locale: null,
+          supported_reminder_types: ["quran_reading", "quran_review"],
+        },
+      });
+    }
     if (url.pathname === "/api/v1/me/reminders" && request.method() === "GET") {
       return route.fulfill({
         json: {
@@ -249,6 +261,7 @@ test("reminder snapshot, create, patch, delete and Quran review use the strict A
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
+  await expect(reminders.getByText("Отправка уведомлений ещё не включена на сервере.")).toBeVisible();
   await reminders.getByLabel("Молитва").selectOption("maghrib");
   await reminders.getByLabel("Смещение, минут").fill("-5");
   await reminders.getByRole("button", { name: "Создать напоминание" }).click();

@@ -185,6 +185,31 @@ docker compose --env-file services/backend/.env.production \
 `singleton lease was lost`. Ключ нельзя удалять, пока старый процесс жив: token-safe release
 защищает штатный shutdown, но ручной `DEL` обходит эту защиту.
 
+## Web Push delivery
+
+Beat каждые 30 секунд запускает `reminders.dispatch_web_push_due`; dispatcher атомарно
+захватывает bounded batch ближайших записей и ставит короткие delivery-задачи обычным Celery
+workers. Увеличивать worker replicas можно без смены схемы: PostgreSQL `SKIP LOCKED` не даёт
+двум dispatchers владеть одной записью, а просроченный claim автоматически возвращается в
+очередь. Beat по-прежнему должен быть один.
+
+Обязательные env-параметры при `WEB_PUSH_ENABLED=true`: `WEB_PUSH_VAPID_PUBLIC_KEY`,
+`WEB_PUSH_VAPID_PRIVATE_KEY`, `WEB_PUSH_VAPID_SUBJECT`. Закрытый VAPID-ключ хранится как secret,
+не передаётся в web и не попадает в логи. При миграции между серверами сохраняйте ту же пару
+ключей; плановая ротация требует периода с двумя ключами либо повторной подписки клиентов.
+
+Метрики не содержат user/device/endpoint labels:
+
+- `quran_web_push_active_subscriptions` — число активных device-подписок;
+- `quran_web_push_schedules{state="scheduled|due"}` — общий и уже готовый к отправке объём;
+- `quran_web_push_oldest_due_age_seconds` — задержка самой старой готовой записи.
+
+`QuranWebPushDeliveryDelayed` срабатывает, если задержка больше 120 секунд держится пять минут.
+Проверяйте последовательно: heartbeat Beat, Redis broker, наличие Celery workers, task failures,
+исходящий HTTPS/DNS и ответы push providers. `404/410` являются штатной очисткой отозванной
+подписки; устойчивые `429/5xx` требуют проверки provider status и ограничения dispatch rate.
+Не выводите push endpoint или subscription keys в ticket, dashboard и обычный application log.
+
 ## Content cache и sitemap
 
 Каталог и глубокие web-маршруты Quran, чтецов и декламаций получают данные server-to-server

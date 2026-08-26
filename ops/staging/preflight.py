@@ -82,6 +82,8 @@ def validate(
         "MEDIA_OBJECT_STORAGE_SECRET_ACCESS_KEY",
         "MEDIA_CDN_REQUIRED_ORIGINS",
         "GATEWAY_BIND_ADDRESS",
+        "WEB_PUSH_ENABLED",
+        "WEB_PUSH_VAPID_SUBJECT",
     ) + SECRET_KEYS
     for key in required:
         if not values.get(key):
@@ -114,6 +116,16 @@ def validate(
         errors.append("DJANGO_SECURE_SSL_REDIRECT must be true")
     if values["DATABASE_CONN_MAX_AGE"] != "0":
         errors.append("DATABASE_CONN_MAX_AGE must be 0 under ASGI")
+    web_push_enabled = values["WEB_PUSH_ENABLED"].lower()
+    if web_push_enabled not in {"true", "false"}:
+        errors.append("WEB_PUSH_ENABLED must be true or false")
+    elif web_push_enabled == "true":
+        if not values.get("WEB_PUSH_VAPID_PUBLIC_KEY"):
+            errors.append("enabled Web Push requires WEB_PUSH_VAPID_PUBLIC_KEY")
+        if not values.get("WEB_PUSH_VAPID_PRIVATE_KEY"):
+            errors.append("enabled Web Push requires WEB_PUSH_VAPID_PRIVATE_KEY")
+    if not values["WEB_PUSH_VAPID_SUBJECT"].startswith(("mailto:", "https://")):
+        errors.append("WEB_PUSH_VAPID_SUBJECT must use mailto: or https://")
     email_mode = values["STAGING_EMAIL_DELIVERY_MODE"].lower()
     if email_mode not in {"mailpit", "smtp"}:
         errors.append("STAGING_EMAIL_DELIVERY_MODE must be mailpit or smtp")

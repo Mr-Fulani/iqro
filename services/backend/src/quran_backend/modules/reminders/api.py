@@ -16,12 +16,19 @@ from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.reminders.exceptions import ReminderRateLimitExceeded
+from quran_backend.modules.reminders.push import (
+    delete_web_push_subscription,
+    upsert_web_push_subscription,
+    web_push_status,
+)
 from quran_backend.modules.reminders.serializers import (
     ReminderCreateSerializer,
     ReminderDeleteSerializer,
     ReminderFullSnapshotSerializer,
     ReminderOutputSerializer,
     ReminderPatchSerializer,
+    WebPushStatusSerializer,
+    WebPushSubscriptionWriteSerializer,
 )
 from quran_backend.modules.reminders.services import (
     create_reminder,
@@ -178,3 +185,70 @@ class ReminderDetailView(
                 data=dict(serializer.validated_data),
             )
         )
+
+
+@method_decorator(sensitive_post_parameters(), name="dispatch")
+@extend_schema(tags=["reminders"])
+class WebPushSubscriptionView(
+    ReminderRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    def get_throttles(self) -> list[BaseThrottle]:
+        if getattr(self, "request", None) is not None and self.request.method in {
+            "PUT",
+            "DELETE",
+        }:
+            return [ReminderMutationThrottle()]
+        return []
+
+    @extend_schema(
+        operation_id="web_push_status",
+        responses={
+            status.HTTP_200_OK: WebPushStatusSerializer,
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        return Response(web_push_status(device=_authenticated_device(request)))
+
+    @extend_schema(
+        operation_id="web_push_subscription_upsert",
+        request=WebPushSubscriptionWriteSerializer,
+        responses={
+            status.HTTP_200_OK: WebPushStatusSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Request validation failed."),
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
+        },
+    )
+    def put(self, request: Request) -> Response:
+        serializer = WebPushSubscriptionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        keys = dict(values.pop("keys"))
+        expires_at = values.pop("expiration_time", None)
+        return Response(
+            upsert_web_push_subscription(
+                user=_authenticated_user(request),
+                device=_authenticated_device(request),
+                data={
+                    **values,
+                    "expires_at": expires_at,
+                    **keys,
+                },
+            )
+        )
+
+    @extend_schema(
+        operation_id="web_push_subscription_delete",
+        responses={
+            status.HTTP_204_NO_CONTENT: None,
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
+        },
+    )
+    def delete(self, request: Request) -> Response:
+        delete_web_push_subscription(
+            user=_authenticated_user(request),
+            device=_authenticated_device(request),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

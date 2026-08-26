@@ -97,6 +97,9 @@ def test_metrics_are_prometheus_text_and_do_not_expose_token(api_client: APIClie
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("text/plain")
     assert "quran_platform_build_info" in body
+    assert "quran_web_push_active_subscriptions" in body
+    assert 'quran_web_push_schedules{state="due"}' in body
+    assert "quran_web_push_oldest_due_age_seconds" in body
     assert "quran_http_requests_total" in body
     assert 'route="api/v1/health/live"' in body
     assert "quran_foundation_audio_sync_enabled 0.0" in body

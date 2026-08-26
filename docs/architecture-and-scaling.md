@@ -87,6 +87,7 @@ API не должен предполагать, что запрос пришёл
 | Фоновое аудио и lock screen | Гарантируемый native flow | В пределах браузера | Только пока жив WebView |
 | Крупные offline audio packages | Да | Ограниченно | Нет гарантии |
 | Локальный prayer scheduler | Да | Нет гарантии | Нет гарантии |
+| Web Push при закрытом клиенте | FCM/APNs adapter | Да для reading/review | В пределах Telegram/WebView |
 | Синхронизация аккаунта | Да | Да | Да после проверки Telegram identity |
 | Публичный контент через CDN | Да | Да | Да |
 
@@ -220,6 +221,12 @@ API не должен предполагать, что запрос пришёл
 - Тяжёлые imports, exports, media processing и построение manifests используют отдельные
   очереди с лимитами concurrency.
 - Большие payload не передаются через Redis; задача получает идентификатор объекта.
+- Web Push не сканирует все reminder rules каждую минуту. Для каждой активной device-подписки
+  хранится только ближайшее `occurrence_at/next_attempt_at`; composite due index выбирает
+  bounded batch. `SELECT ... FOR UPDATE SKIP LOCKED` и короткий claim позволяют добавлять
+  worker-реплики без двойного владения одной записью, а notification tag защищает UI от
+  повторного показа при at-least-once доставке. Истёкшие browser endpoints удаляются по
+  ответам `404/410`, временные ошибки повторяются только в ограниченном окне.
 
 ## 7. Профили мощности
 

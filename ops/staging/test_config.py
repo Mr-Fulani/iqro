@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import tempfile
@@ -7,6 +8,7 @@ from pathlib import Path
 
 from ops.staging.configure_email import _resend_replacements
 from ops.staging.configure_media import _replace_values, build_cors
+from ops.staging.configure_web_push import generate_vapid_keys
 from ops.staging.init import NOT_CONFIGURED, SECRET_KEYS, _render, build_overrides
 from ops.staging.preflight import load_env, validate
 
@@ -143,12 +145,35 @@ def test_resend_configuration_enables_external_smtp_without_exposing_the_key() -
     assert values["DJANGO_DEFAULT_FROM_EMAIL"] == "IQRO <login@auth.iqro.forum>"
 
 
+def test_generated_vapid_keys_enable_web_push_preflight() -> None:
+    public_key, private_key = generate_vapid_keys()
+    values = _overrides(media_ready=True)
+    values.update(
+        {
+            "WEB_PUSH_ENABLED": "true",
+            "WEB_PUSH_VAPID_PUBLIC_KEY": public_key,
+            "WEB_PUSH_VAPID_PRIVATE_KEY": private_key,
+        }
+    )
+
+    errors, warnings = validate(values, require_media=True)
+    public_raw = base64.urlsafe_b64decode(public_key + "==")
+    private_der = base64.urlsafe_b64decode(private_key + "==")
+
+    assert errors == []
+    assert warnings == []
+    assert len(public_raw) == 65
+    assert public_raw[0] == 4
+    assert private_der.startswith(b"0")
+
+
 def main() -> int:
     test_generated_config_passes_basic_preflight_with_media_warning()
     test_generated_config_passes_strict_media_preflight()
     test_strict_preflight_rejects_unconfigured_media()
     test_media_configuration_and_cors_are_derived_from_staging_origins()
     test_resend_configuration_enables_external_smtp_without_exposing_the_key()
+    test_generated_vapid_keys_enable_web_push_preflight()
     with tempfile.TemporaryDirectory(prefix="quran-staging-test-") as directory:
         test_render_and_load_do_not_duplicate_overrides(Path(directory))
     print("OK: staging configuration self-tests passed.")

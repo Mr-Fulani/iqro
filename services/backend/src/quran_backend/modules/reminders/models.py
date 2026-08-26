@@ -361,6 +361,102 @@ class ReminderRule(BaseModel):
         super().save(*args, **kwargs)
 
 
+class WebPushSubscription(BaseModel):
+    """A browser push capability bound to one authenticated installation."""
+
+    device = models.OneToOneField(
+        "accounts.Device",
+        on_delete=models.CASCADE,
+        related_name="web_push_subscription",
+    )
+    endpoint = models.TextField(unique=True)
+    p256dh = models.CharField(max_length=128)
+    auth = models.CharField(max_length=64)
+    timezone_name = models.CharField(max_length=64)
+    locale = models.CharField(max_length=8, default="en")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_failure_at = models.DateTimeField(null=True, blank=True)
+    consecutive_failures = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "reminder_web_push_subscription"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(locale__in=["ar", "en", "ru", "tr"]),
+                name="reminder_push_supported_locale",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(consecutive_failures__lte=100),
+                name="reminder_push_failures_bounded",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["revoked_at", "updated_at"],
+                name="reminder_push_active_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.device_id}:{self.timezone_name}"
+
+    def clean(self) -> None:
+        super().clean()
+        try:
+            get_prayer_timezone(self.timezone_name)
+        except InvalidPrayerTimezoneError as exc:
+            raise ValidationError({"timezone_name": str(exc)}) from exc
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class WebPushSchedule(BaseModel):
+    """Indexed next delivery for one local-time rule and browser subscription."""
+
+    subscription = models.ForeignKey(
+        WebPushSubscription,
+        on_delete=models.CASCADE,
+        related_name="schedules",
+    )
+    reminder = models.ForeignKey(
+        ReminderRule,
+        on_delete=models.CASCADE,
+        related_name="web_push_schedules",
+    )
+    occurrence_at = models.DateTimeField()
+    next_attempt_at = models.DateTimeField(db_index=True)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    claim_token = models.UUIDField(null=True, blank=True)
+    claimed_until = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_error_code = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = "reminder_web_push_schedule"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["subscription", "reminder"],
+                name="reminder_push_schedule_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(attempt_count__lte=100),
+                name="reminder_push_attempts_bounded",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["next_attempt_at", "claimed_until"],
+                name="reminder_push_due_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.reminder_id}:{self.occurrence_at.isoformat()}"
+
+
 class RetiredReminderId(models.Model):
     """Compact bounded ledger for physically pruned reminder identities."""
 

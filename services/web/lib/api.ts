@@ -616,6 +616,26 @@ export type ReminderSnapshot = {
   reminders: Reminder[];
 };
 
+export type WebPushStatus = {
+  available: boolean;
+  enabled: boolean;
+  vapid_public_key: string;
+  timezone_name: string | null;
+  locale: SupportedLocale | null;
+  supported_reminder_types: Array<"quran_reading" | "quran_review">;
+};
+
+export type WebPushSubscriptionInput = {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  expiration_time: string | null;
+  timezone_name: string;
+  locale: SupportedLocale;
+};
+
 export type FeedbackTicket = {
   public_id: string;
   category: string;
@@ -1599,6 +1619,23 @@ export class ApiClient {
   // -------------------------------------------------------------------------
   public async getReminders(): Promise<ReminderSnapshot> {
     return this.request<ReminderSnapshot>("/api/v1/me/reminders");
+  }
+
+  public async getWebPushStatus(): Promise<WebPushStatus> {
+    return this.request<WebPushStatus>("/api/v1/me/web-push");
+  }
+
+  public async enableWebPush(
+    data: WebPushSubscriptionInput,
+  ): Promise<WebPushStatus> {
+    return this.request<WebPushStatus>("/api/v1/me/web-push", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  public async disableWebPush(): Promise<void> {
+    await this.request<void>("/api/v1/me/web-push", { method: "DELETE" });
   }
 
   public async getReminder(reminderId: string): Promise<Reminder> {

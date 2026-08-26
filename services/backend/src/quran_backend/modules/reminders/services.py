@@ -174,6 +174,7 @@ def create_reminder(
     except IntegrityError as exc:
         raise ReminderCreateConflictError from exc
     _append_reminder_change(reminder, action=SyncAction.UPSERT)
+    _schedule_web_push_refresh(reminder.id)
     return reminder_snapshot(reminder), True
 
 
@@ -207,6 +208,7 @@ def patch_reminder(
     _validate_reminder(current)
     current.save()
     _append_reminder_change(current, action=SyncAction.UPSERT)
+    _schedule_web_push_refresh(current.id)
     return reminder_snapshot(current)
 
 
@@ -246,6 +248,7 @@ def delete_reminder(
     current.save()
     _append_reminder_change(current, action=SyncAction.DELETE)
     _collapse_reminder_change_history(current)
+    _schedule_web_push_refresh(current.id)
     return reminder_snapshot(current)
 
 
@@ -274,6 +277,14 @@ def _collapse_reminder_change_history(reminder: ReminderRule) -> None:
         snapshot=snapshot,
         updated_at=timezone.now(),
     )
+
+
+def _schedule_web_push_refresh(reminder_id: uuid.UUID) -> None:
+    from quran_backend.modules.reminders.push import (  # noqa: PLC0415
+        refresh_reminder_schedules,
+    )
+
+    transaction.on_commit(lambda: refresh_reminder_schedules(reminder_id))
 
 
 def _create_values(data: dict[str, Any]) -> dict[str, Any]:

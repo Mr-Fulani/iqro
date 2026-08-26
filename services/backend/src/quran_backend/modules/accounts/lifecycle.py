@@ -72,6 +72,10 @@ def list_user_devices(*, user: User, context: AccessAuthContext) -> list[dict[st
 
 
 def revoke_user_device(*, user: User, context: AccessAuthContext, device_id: UUID) -> None:
+    from quran_backend.modules.reminders.models import (  # noqa: PLC0415
+        WebPushSubscription,
+    )
+
     if device_id == context.device.id:
         raise CurrentDeviceRevokeConflict
     now = timezone.now()
@@ -97,6 +101,7 @@ def revoke_user_device(*, user: User, context: AccessAuthContext, device_id: UUI
             ).update(revoked_at=now)
         device.revoked_at = now
         device.save(update_fields=["revoked_at", "updated_at"])
+        WebPushSubscription.objects.filter(device=device).delete()
 
 
 def request_account_deletion(
@@ -105,6 +110,10 @@ def request_account_deletion(
     context: AccessAuthContext,
     reauth_challenge_id: UUID,
 ) -> User:
+    from quran_backend.modules.reminders.models import (  # noqa: PLC0415
+        WebPushSubscription,
+    )
+
     now = timezone.now()
     with transaction.atomic():
         locked_user = User.objects.select_for_update().get(id=user.id)
@@ -132,6 +141,7 @@ def request_account_deletion(
                 "updated_at",
             ]
         )
+        WebPushSubscription.objects.filter(device__user=locked_user).delete()
         return locked_user
 
 

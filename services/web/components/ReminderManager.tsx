@@ -7,6 +7,8 @@ import {
   Reminder,
   ReminderTimezone,
   Surah,
+  WebPushSubscriptionInput,
+  WebPushStatus,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -45,6 +47,13 @@ export function ReminderManager() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editing, setEditing] = useState<Reminder | null>(null);
+  const [webPushStatus, setWebPushStatus] = useState<WebPushStatus | null>(null);
+  const [webPushSupported, setWebPushSupported] = useState<boolean | null>(null);
+  const [webPushSaving, setWebPushSaving] = useState(false);
+  const [webPushNotice, setWebPushNotice] = useState<{
+    kind: "error" | "success";
+    message: string;
+  } | null>(null);
 
   const [reminderType, setReminderType] = useState<Reminder["reminder_type"]>("prayer");
   const [prayerEvent, setPrayerEvent] = useState<"fajr" | "dhuhr" | "asr" | "maghrib" | "isha">("fajr");
@@ -68,8 +77,17 @@ export function ReminderManager() {
   );
 
   useEffect(() => {
+    setWebPushSupported(
+      "Notification" in window &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window,
+    );
+  }, []);
+
+  useEffect(() => {
     if (!isLoggedIn) {
       setReminders([]);
+      setWebPushStatus(null);
       return;
     }
     let active = true;
@@ -89,6 +107,57 @@ export function ReminderManager() {
       active = false;
     };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let active = true;
+    api
+      .getWebPushStatus()
+      .then((status) => {
+        if (active) setWebPushStatus(status);
+      })
+      .catch((reason) => {
+        if (active) {
+          setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!webPushStatus?.enabled || !webPushSupported) return;
+    const timezoneName = browserTimezone();
+    if (webPushStatus.timezone_name === timezoneName && webPushStatus.locale === locale) {
+      return;
+    }
+    let active = true;
+    navigator.serviceWorker
+      .getRegistration("/")
+      .then((registration) => registration?.pushManager.getSubscription())
+      .then((subscription) => {
+        if (!subscription) return undefined;
+        return api.enableWebPush(
+          serializePushSubscription(
+            subscription,
+            locale,
+            t("reminder.webPushInvalidSubscription"),
+          ),
+        );
+      })
+      .then((status) => {
+        if (active && status) setWebPushStatus(status);
+      })
+      .catch((reason) => {
+        if (active) {
+          setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [locale, t, webPushStatus, webPushSupported]);
 
   useEffect(() => {
     if (reminderType !== "quran_review" || surahs.length > 0) return;
@@ -252,6 +321,81 @@ export function ReminderManager() {
     setWeekdaysMask((current) => (current & bit ? current & ~bit : current | bit));
   };
 
+  const enableWebPush = async () => {
+    if (!webPushStatus?.available || !webPushStatus.vapid_public_key) {
+      setWebPushNotice({ kind: "error", message: t("reminder.webPushUnavailable") });
+      return;
+    }
+    if (!webPushSupported) {
+      setWebPushNotice({ kind: "error", message: t("reminder.webPushUnsupported") });
+      return;
+    }
+
+    setWebPushSaving(true);
+    setWebPushNotice(null);
+    let createdSubscription: PushSubscription | null = null;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setWebPushNotice({ kind: "error", message: t("reminder.webPushBlocked") });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register("/push-sw.js", {
+        scope: "/",
+      });
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(webPushStatus.vapid_public_key),
+        });
+        createdSubscription = subscription;
+      }
+      const status = await api.enableWebPush(
+        serializePushSubscription(
+          subscription,
+          locale,
+          t("reminder.webPushInvalidSubscription"),
+        ),
+      );
+      setWebPushStatus(status);
+      setWebPushNotice({ kind: "success", message: t("reminder.webPushEnabled") });
+    } catch (reason) {
+      if (createdSubscription) await createdSubscription.unsubscribe().catch(() => false);
+      setWebPushNotice({
+        kind: "error",
+        message:
+          reason instanceof DOMException && reason.name === "NotAllowedError"
+            ? t("reminder.webPushBlocked")
+            : api.normalizeError(reason),
+      });
+    } finally {
+      setWebPushSaving(false);
+    }
+  };
+
+  const disableWebPush = async () => {
+    setWebPushSaving(true);
+    setWebPushNotice(null);
+    try {
+      await api.disableWebPush();
+      setWebPushStatus((current) =>
+        current
+          ? { ...current, enabled: false, timezone_name: null, locale: null }
+          : current,
+      );
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      const subscription = await registration?.pushManager.getSubscription();
+      await subscription?.unsubscribe().catch(() => false);
+      setWebPushNotice({ kind: "success", message: t("reminder.webPushDisabled") });
+    } catch (reason) {
+      setWebPushNotice({ kind: "error", message: api.normalizeError(reason) });
+    } finally {
+      setWebPushSaving(false);
+    }
+  };
+
   if (!isLoggedIn) return null;
 
   return (
@@ -266,6 +410,63 @@ export function ReminderManager() {
 
       {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
       {success && <div className="alert alert-success" style={{ marginBottom: 12 }}>{success}</div>}
+
+      <div
+        style={{
+          padding: 16,
+          background: "var(--bg-subtle)",
+          borderRadius: "var(--radius-md)",
+          marginBottom: 18,
+        }}
+      >
+        <div className="surface-head" style={{ marginBottom: 8 }}>
+          <div>
+            <h4 className="surface-title">{t("reminder.webPushTitle")}</h4>
+            <p className="surface-subtitle">{t("reminder.webPushDescription")}</p>
+          </div>
+          <span className={`status-chip ${webPushStatus?.enabled ? "ok" : ""}`}>
+            {webPushStatus?.enabled
+              ? t("reminder.webPushOn")
+              : t("reminder.webPushOff")}
+          </span>
+        </div>
+        <p className="kpi-desc" style={{ marginBottom: 10 }}>
+          {t("reminder.webPushPrayerLimit")}
+        </p>
+        {webPushNotice && (
+          <div
+            className={`alert ${
+              webPushNotice.kind === "error" ? "alert-error" : "alert-success"
+            }`}
+            style={{ marginBottom: 10 }}
+          >
+            {webPushNotice.message}
+          </div>
+        )}
+        {webPushSupported === false ? (
+          <p className="kpi-desc">{t("reminder.webPushUnsupported")}</p>
+        ) : webPushStatus?.available === false ? (
+          <p className="kpi-desc">{t("reminder.webPushUnavailable")}</p>
+        ) : webPushStatus?.enabled ? (
+          <button
+            className="btn btn-secondary btn-sm"
+            type="button"
+            disabled={webPushSaving}
+            onClick={() => void disableWebPush()}
+          >
+            {webPushSaving ? t("common.saving") : t("reminder.webPushDisable")}
+          </button>
+        ) : (
+          <button
+            className="btn btn-primary btn-sm"
+            type="button"
+            disabled={webPushSaving || webPushStatus === null}
+            onClick={() => void enableWebPush()}
+          >
+            {webPushSaving ? t("common.saving") : t("reminder.webPushEnable")}
+          </button>
+        )}
+      </div>
 
       <form
         onSubmit={(event) => void saveReminder(event)}
@@ -513,4 +714,43 @@ function formatOffset(minutes: number, t: Translate): string {
   return minutes > 0
     ? t("reminder.after", { minutes })
     : t("reminder.before", { minutes: Math.abs(minutes) });
+}
+
+function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const decoded = window.atob(base64);
+  const bytes = new Uint8Array(new ArrayBuffer(decoded.length));
+  for (let index = 0; index < decoded.length; index += 1) {
+    bytes[index] = decoded.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function browserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+function serializePushSubscription(
+  subscription: PushSubscription,
+  locale: WebPushSubscriptionInput["locale"],
+  invalidMessage: string,
+): WebPushSubscriptionInput {
+  const serialized = subscription.toJSON();
+  if (!serialized.keys?.p256dh || !serialized.keys.auth) {
+    throw new Error(invalidMessage);
+  }
+  return {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: serialized.keys.p256dh,
+      auth: serialized.keys.auth,
+    },
+    expiration_time:
+      subscription.expirationTime === null
+        ? null
+        : new Date(subscription.expirationTime).toISOString(),
+    timezone_name: browserTimezone(),
+    locale,
+  };
 }

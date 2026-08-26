@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import base64
+import binascii
 from urllib.parse import urlsplit
 
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from django.core.exceptions import ImproperlyConfigured
+from py_vapid import Vapid
 
 from quran_backend.settings.base import *  # noqa: F403
 from quran_backend.settings.base import (
@@ -29,6 +33,26 @@ QURAN_OPERATIONS_TOKEN = required_env("QURAN_OPERATIONS_TOKEN")
 WEB_CONTENT_REVALIDATION_SECRET = required_env("WEB_CONTENT_REVALIDATION_SECRET")
 if len(WEB_CONTENT_REVALIDATION_SECRET) < 32:
     raise ImproperlyConfigured("WEB_CONTENT_REVALIDATION_SECRET must be at least 32 characters")
+if WEB_PUSH_ENABLED:  # noqa: F405
+    WEB_PUSH_VAPID_PUBLIC_KEY = required_env("WEB_PUSH_VAPID_PUBLIC_KEY")
+    WEB_PUSH_VAPID_PRIVATE_KEY = required_env("WEB_PUSH_VAPID_PRIVATE_KEY")
+    WEB_PUSH_VAPID_SUBJECT = required_env("WEB_PUSH_VAPID_SUBJECT")
+    if not WEB_PUSH_VAPID_SUBJECT.startswith(("mailto:", "https://")):
+        raise ImproperlyConfigured("WEB_PUSH_VAPID_SUBJECT must use mailto: or https://")
+    try:
+        public_padding = "=" * (-len(WEB_PUSH_VAPID_PUBLIC_KEY) % 4)
+        configured_public_key = base64.urlsafe_b64decode(
+            (WEB_PUSH_VAPID_PUBLIC_KEY + public_padding).encode("ascii")
+        )
+        vapid = Vapid.from_string(WEB_PUSH_VAPID_PRIVATE_KEY)
+        derived_public_key = vapid.public_key.public_bytes(
+            Encoding.X962,
+            PublicFormat.UncompressedPoint,
+        )
+    except (UnicodeEncodeError, ValueError, TypeError, binascii.Error) as exc:
+        raise ImproperlyConfigured("Web Push VAPID keys are invalid") from exc
+    if configured_public_key != derived_public_key:
+        raise ImproperlyConfigured("Web Push VAPID public/private keys do not match")
 WEB_CONTENT_REVALIDATION_URL = required_env("WEB_CONTENT_REVALIDATION_URL")
 revalidation_url = urlsplit(WEB_CONTENT_REVALIDATION_URL)
 if (

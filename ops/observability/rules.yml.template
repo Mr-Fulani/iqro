@@ -133,6 +133,14 @@ groups:
         annotations:
           summary: Celery tasks failed during the last 10 minutes
           runbook: docs/operations.md#alert-triage
+      - alert: QuranWebPushDeliveryDelayed
+        expr: quran_web_push_oldest_due_age_seconds > 120
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: The oldest browser reminder is more than two minutes overdue
+          runbook: docs/operations.md#web-push-delivery
 
   - name: quran-platform-media-finops-alerts
     rules:

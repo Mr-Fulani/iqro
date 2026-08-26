@@ -316,6 +316,10 @@ def authenticate_access_token(
 
 
 def revoke_access_session(*, user: User, context: AccessAuthContext) -> None:
+    from quran_backend.modules.reminders.models import (  # noqa: PLC0415
+        WebPushSubscription,
+    )
+
     now = timezone.now()
     with transaction.atomic():
         try:
@@ -328,9 +332,14 @@ def revoke_access_session(*, user: User, context: AccessAuthContext) -> None:
         except (Device.DoesNotExist, RefreshSession.DoesNotExist) as exc:
             raise AccessTokenInvalid from exc
         _revoke_session(session=session, revoked_at=now)
+        WebPushSubscription.objects.filter(device=device).delete()
 
 
 def revoke_all_user_sessions(*, user: User) -> None:
+    from quran_backend.modules.reminders.models import (  # noqa: PLC0415
+        WebPushSubscription,
+    )
+
     now = timezone.now()
     with transaction.atomic():
         # Lock devices in a stable order before sessions. Refresh and bootstrap flows
@@ -347,13 +356,13 @@ def revoke_all_user_sessions(*, user: User) -> None:
             .order_by("id")
             .values_list("id", flat=True)
         )
-        if not session_ids:
-            return
-        RefreshSession.objects.filter(id__in=session_ids).update(revoked_at=now)
-        RefreshToken.objects.filter(
-            session_id__in=session_ids,
-            revoked_at__isnull=True,
-        ).update(revoked_at=now)
+        if session_ids:
+            RefreshSession.objects.filter(id__in=session_ids).update(revoked_at=now)
+            RefreshToken.objects.filter(
+                session_id__in=session_ids,
+                revoked_at__isnull=True,
+            ).update(revoked_at=now)
+        WebPushSubscription.objects.filter(device__user=user).delete()
 
 
 def decode_access_token(raw_token: str) -> AccessClaims:

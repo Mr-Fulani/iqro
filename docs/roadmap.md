@@ -95,6 +95,10 @@ flowchart LR
   делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
   Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
   временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
+- [x] Реализовать браузерные напоминания о чтении и повторении аятов: opt-in Web Push,
+  Service Worker, VAPID, privacy-safe device subscription, локализованный deep link, indexed
+  due queue с claim/retry и горизонтально масштабируемые Celery workers. Prayer-правила не
+  отправляются из web без отдельного location opt-in и остаются задачей mobile scheduler.
 - [x] Подключить существующий Quran.Foundation production API-доступ без раскрытия credentials.
   Стандартные Developer Terms приняты как достаточное разрешение для first-party streaming;
   отдельный ответ по email не является release gate. Production-каталог содержит 21 Hafs

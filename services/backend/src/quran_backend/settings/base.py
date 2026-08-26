@@ -135,6 +135,20 @@ QURAN_REMINDER_MAX_TOTAL_PER_USER = os.getenv(
     "QURAN_REMINDER_MAX_TOTAL_PER_USER",
     "256",
 )
+WEB_PUSH_ENABLED = env_bool("WEB_PUSH_ENABLED", False)
+WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
+WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")
+WEB_PUSH_VAPID_SUBJECT = os.getenv("WEB_PUSH_VAPID_SUBJECT", "mailto:privacy@iqro.forum")
+WEB_PUSH_ALLOWED_ENDPOINT_HOST_SUFFIXES = env_list(
+    "WEB_PUSH_ALLOWED_ENDPOINT_HOST_SUFFIXES",
+    "fcm.googleapis.com,push.services.mozilla.com,web.push.apple.com,notify.windows.com",
+)
+WEB_PUSH_DISPATCH_BATCH_SIZE = positive_env_int("WEB_PUSH_DISPATCH_BATCH_SIZE", 200)
+WEB_PUSH_DISPATCH_MAX_BATCHES = positive_env_int("WEB_PUSH_DISPATCH_MAX_BATCHES", 10)
+WEB_PUSH_CLAIM_TTL_SECONDS = positive_env_int("WEB_PUSH_CLAIM_TTL_SECONDS", 120)
+WEB_PUSH_RETRY_WINDOW_SECONDS = positive_env_int("WEB_PUSH_RETRY_WINDOW_SECONDS", 900)
+WEB_PUSH_REQUEST_TIMEOUT_SECONDS = positive_env_int("WEB_PUSH_REQUEST_TIMEOUT_SECONDS", 10)
+WEB_PUSH_MESSAGE_TTL_SECONDS = positive_env_int("WEB_PUSH_MESSAGE_TTL_SECONDS", 3600)
 QURAN_REMINDER_TOMBSTONE_RETENTION_DAYS = os.getenv(
     "QURAN_REMINDER_TOMBSTONE_RETENTION_DAYS",
     "365",
@@ -545,6 +559,10 @@ CELERY_BEAT_SCHEDULE = {
     "prune-reminder-tombstones-hourly": {
         "task": "reminders.prune_tombstones",
         "schedule": 3_600.0,
+    },
+    "dispatch-web-push-reminders-every-30-seconds": {
+        "task": "reminders.dispatch_web_push_due",
+        "schedule": 30.0,
     },
 }
 

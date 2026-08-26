@@ -74,6 +74,19 @@ function fulfillProfileRead(route: Route): boolean {
     });
     return true;
   }
+  if (url.pathname === "/api/v1/me/web-push" && request.method() === "GET") {
+    void route.fulfill({
+      json: {
+        available: false,
+        enabled: false,
+        vapid_public_key: "",
+        timezone_name: null,
+        locale: null,
+        supported_reminder_types: ["quran_reading", "quran_review"],
+      },
+    });
+    return true;
+  }
   return false;
 }
 

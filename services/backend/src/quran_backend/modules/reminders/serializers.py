@@ -229,6 +229,43 @@ class ReminderFullSnapshotSerializer(serializers.Serializer[Any]):
     reminders = ReminderOutputSerializer(many=True)
 
 
+class WebPushKeysSerializer(StrictFieldsSerializer):
+    p256dh = serializers.CharField(min_length=20, max_length=128, trim_whitespace=False)
+    auth = serializers.CharField(min_length=16, max_length=64, trim_whitespace=False)
+
+
+class WebPushSubscriptionWriteSerializer(StrictFieldsSerializer):
+    endpoint = serializers.URLField(max_length=2048)
+    keys = WebPushKeysSerializer()
+    expiration_time = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    timezone_name = serializers.CharField(min_length=1, max_length=64)
+    locale = serializers.ChoiceField(choices=["ar", "en", "ru", "tr"])
+
+    def validate_timezone_name(self, value: str) -> str:
+        if value != value.strip() or ".." in value or "\\" in value or value.startswith("/"):
+            raise serializers.ValidationError("Use a canonical IANA timezone identifier.")
+        try:
+            get_prayer_timezone(value)
+        except InvalidPrayerTimezoneError as exc:
+            raise serializers.ValidationError(
+                "Use a timezone identifier available in the pinned IANA database."
+            ) from exc
+        return value
+
+
+class WebPushStatusSerializer(serializers.Serializer[Any]):
+    available = serializers.BooleanField()
+    enabled = serializers.BooleanField()
+    vapid_public_key = serializers.CharField(allow_blank=True)
+    timezone_name = serializers.CharField(allow_null=True)
+    locale = serializers.ChoiceField(choices=["ar", "en", "ru", "tr"], allow_null=True)
+    supported_reminder_types = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[ReminderType.QURAN_READING, ReminderType.QURAN_REVIEW]
+        )
+    )
+
+
 def _discriminated_serializer(
     data: Any,
     *,

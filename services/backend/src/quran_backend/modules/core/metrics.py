@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from django.db.models import Min
+from django.utils import timezone
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Gauge, generate_latest
 
 from quran_backend.modules.audio.models import AudioTrack
@@ -12,6 +14,7 @@ from quran_backend.modules.quran.models import (
     PublicationStatus,
     QuranEdition,
 )
+from quran_backend.modules.reminders.models import WebPushSchedule, WebPushSubscription
 
 
 def render_platform_metrics(
@@ -89,5 +92,31 @@ def render_platform_metrics(
         registry=registry,
     )
     max_failures.labels(environment=summary.environment).set(summary.max_consecutive_failures)
+
+    current_time = timezone.now()
+    web_push_subscriptions = Gauge(
+        "quran_web_push_active_subscriptions",
+        "Active browser Web Push subscriptions.",
+        registry=registry,
+    )
+    web_push_subscriptions.set(WebPushSubscription.objects.filter(revoked_at__isnull=True).count())
+    web_push_schedules = Gauge(
+        "quran_web_push_schedules",
+        "Current Web Push schedules grouped by readiness.",
+        labelnames=("state",),
+        registry=registry,
+    )
+    due_schedules = WebPushSchedule.objects.filter(next_attempt_at__lte=current_time)
+    web_push_schedules.labels(state="scheduled").set(WebPushSchedule.objects.count())
+    web_push_schedules.labels(state="due").set(due_schedules.count())
+    oldest_due = due_schedules.aggregate(value=Min("next_attempt_at"))["value"]
+    web_push_oldest_due = Gauge(
+        "quran_web_push_oldest_due_age_seconds",
+        "Age in seconds of the oldest due Web Push schedule, or zero when none are due.",
+        registry=registry,
+    )
+    web_push_oldest_due.set(
+        max((current_time - oldest_due).total_seconds(), 0) if oldest_due else 0
+    )
 
     return generate_latest(registry), CONTENT_TYPE_LATEST
