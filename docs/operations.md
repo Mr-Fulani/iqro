@@ -216,6 +216,9 @@ notifications и разрешения геолокации. Округлённы
 обновлении location, timezone или prayer profile indexed schedules пересчитываются. Если
 profile или location отсутствуют, prayer rule синхронизируется, но schedule fail-closed не
 создаётся. Координаты, endpoint и subscription keys запрещено выводить в application logs.
+Последнее место ручного расчёта дополнительно хранится только в browser `localStorage`, чтобы
+форма не сбрасывалась после reload. На сервер уведомлений оно передаётся лишь после отдельного
+нажатия пользователем «Использовать местоположение».
 
 ## Content cache и sitemap
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   api,
+  ApiError,
   PrayerAdjustments,
   PrayerCalculationResponse,
   PrayerMethod,
@@ -11,6 +12,10 @@ import {
 import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
+import {
+  loadPrayerLocationPreference,
+  savePrayerLocationPreference,
+} from "../../lib/prayer-location";
 
 const PRESET_CITIES = [
   { label: "prayer.city.makkah" as MessageKey, lat: "21.4225", lng: "39.8262", tz: "Asia/Riyadh" },
@@ -32,7 +37,7 @@ const ADJUSTMENT_LABELS: Array<[keyof PrayerAdjustments, MessageKey]> = [
 ];
 
 export default function PrayerPage() {
-  const { isLoggedIn, loginGuest } = useAuth();
+  const { session, isLoggedIn, isLoading: authLoading, loginGuest } = useAuth();
   const { locale, t, formatDate } = useI18n();
   const [methods, setMethods] = useState<PrayerMethod[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("");
@@ -60,6 +65,9 @@ export default function PrayerPage() {
   >("device_local");
   const [fixedTimezone, setFixedTimezone] = useState<string>("Europe/Istanbul");
   const [profileRevision, setProfileRevision] = useState<number>(0);
+  const [profileReady, setProfileReady] = useState<boolean>(false);
+  const [locationReady, setLocationReady] = useState<boolean>(false);
+  const [quickCity, setQuickCity] = useState<string>("0");
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
 
@@ -84,8 +92,15 @@ export default function PrayerPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      setProfileRevision(0);
+      setProfileMessage(null);
+      setProfileReady(true);
+      return;
+    }
     let active = true;
+    setProfileReady(false);
     api
       .getPrayerProfile()
       .then((profile) => {
@@ -107,13 +122,45 @@ export default function PrayerPage() {
             : t("prayer.methodUnavailable"),
         );
       })
-      .catch(() => {
-        if (active) setProfileRevision(0);
+      .catch((reason) => {
+        if (!active) return;
+        setProfileRevision(0);
+        if (reason instanceof ApiError && reason.status === 404) {
+          setProfileMessage(t("prayer.profileNotSaved"));
+        } else {
+          setError(api.normalizeError(reason));
+        }
+      })
+      .finally(() => {
+        if (active) setProfileReady(true);
       });
     return () => {
       active = false;
     };
-  }, [isLoggedIn, t]);
+  }, [authLoading, isLoggedIn, t]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    const saved = loadPrayerLocationPreference(session?.user.id);
+    if (saved) {
+      setLatitude(saved.latitude);
+      setLongitude(saved.longitude);
+      setTimezone(saved.timezone);
+      const cityIndex = PRESET_CITIES.findIndex(
+        (city) =>
+          city.lat === saved.latitude &&
+          city.lng === saved.longitude &&
+          city.tz === saved.timezone,
+      );
+      setQuickCity(cityIndex >= 0 ? String(cityIndex) : "custom");
+    } else {
+      setLatitude(PRESET_CITIES[0].lat);
+      setLongitude(PRESET_CITIES[0].lng);
+      setTimezone(PRESET_CITIES[0].tz);
+      setQuickCity("0");
+    }
+    setLocationReady(true);
+  }, [authLoading, session?.user.id]);
 
   const handleCitySelect = (cityIndex: number) => {
     const city = PRESET_CITIES[cityIndex];
@@ -121,6 +168,7 @@ export default function PrayerPage() {
       setLatitude(city.lat);
       setLongitude(city.lng);
       setTimezone(city.tz);
+      setQuickCity(String(cityIndex));
     }
   };
 
@@ -130,6 +178,7 @@ export default function PrayerPage() {
         (pos) => {
           setLatitude(pos.coords.latitude.toFixed(4));
           setLongitude(pos.coords.longitude.toFixed(4));
+          setQuickCity("custom");
           try {
             const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
             if (detectedTz) setTimezone(detectedTz);
@@ -144,12 +193,19 @@ export default function PrayerPage() {
     }
   };
 
-  const handleCalculate = async () => {
+  const handleCalculate = async (persistLocation = true) => {
     if (!selectedMethodId) return;
     setLoading(true);
     setError(null);
 
     const activeMethod = methods.find((m) => m.id === selectedMethodId);
+    if (persistLocation) {
+      savePrayerLocationPreference(session?.user.id, {
+        latitude,
+        longitude,
+        timezone,
+      });
+    }
 
     try {
       const calc = await api.calculatePrayer({
@@ -181,9 +237,11 @@ export default function PrayerPage() {
     setError(null);
     setProfileMessage(null);
     try {
+      let ownerId = session?.user.id;
       if (!isLoggedIn) {
         const guest = await loginGuest();
         if (!guest) return;
+        ownerId = guest.user.id;
       }
       const profile = await api.savePrayerProfile({
         base_revision: profileRevision,
@@ -198,6 +256,7 @@ export default function PrayerPage() {
       });
       setProfileRevision(profile.revision);
       setProfileMessage(t("prayer.profileSaved", { revision: profile.revision }));
+      savePrayerLocationPreference(ownerId, { latitude, longitude, timezone });
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -207,17 +266,21 @@ export default function PrayerPage() {
 
   // Calculate automatically when the selected method becomes available.
   useEffect(() => {
-    if (selectedMethodId) {
-      void handleCalculate();
+    if (selectedMethodId && locationReady && profileReady) {
+      void handleCalculate(false);
     }
     // Recalculate here only when the method changes; the form submit handles other edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMethodId]);
+  }, [locationReady, profileReady, selectedMethodId]);
 
   const formatPrayerTime = (isoString?: string) => {
     if (!isoString) return "--:--";
     try {
-      return formatDate(isoString, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+      return formatDate(isoString, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: result?.timezone || timezone,
+      });
     } catch {
       return "--:--";
     }
@@ -254,8 +317,15 @@ export default function PrayerPage() {
         >
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">{t("prayer.quickCity")}</label>
-              <select onChange={(e) => handleCitySelect(Number(e.target.value))}>
+              <label className="form-label" htmlFor="prayer-quick-city">{t("prayer.quickCity")}</label>
+              <select
+                id="prayer-quick-city"
+                value={quickCity}
+                onChange={(e) => {
+                  if (e.target.value !== "custom") handleCitySelect(Number(e.target.value));
+                }}
+              >
+                <option value="custom">{t("prayer.customLocation")}</option>
                 {PRESET_CITIES.map((city, idx) => (
                   <option key={city.label} value={idx}>
                     {t(city.label)}
@@ -265,8 +335,9 @@ export default function PrayerPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t("prayer.method")}</label>
+              <label className="form-label" htmlFor="prayer-method">{t("prayer.method")}</label>
               <select
+                id="prayer-method"
                 value={selectedMethodId}
                 onChange={(e) => setSelectedMethodId(e.target.value)}
                 disabled={methods.length === 0}
@@ -280,8 +351,9 @@ export default function PrayerPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t("prayer.date")}</label>
+              <label className="form-label" htmlFor="prayer-date">{t("prayer.date")}</label>
               <input
+                id="prayer-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -291,35 +363,48 @@ export default function PrayerPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">{t("prayer.latitude")}</label>
+              <label className="form-label" htmlFor="prayer-latitude">{t("prayer.latitude")}</label>
               <input
+                id="prayer-latitude"
                 type="text"
                 value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
+                onChange={(e) => {
+                  setLatitude(e.target.value);
+                  setQuickCity("custom");
+                }}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t("prayer.longitude")}</label>
+              <label className="form-label" htmlFor="prayer-longitude">{t("prayer.longitude")}</label>
               <input
+                id="prayer-longitude"
                 type="text"
                 value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
+                onChange={(e) => {
+                  setLongitude(e.target.value);
+                  setQuickCity("custom");
+                }}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t("prayer.timezone")}</label>
+              <label className="form-label" htmlFor="prayer-timezone">{t("prayer.timezone")}</label>
               <input
+                id="prayer-timezone"
                 type="text"
                 value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
+                onChange={(e) => {
+                  setTimezone(e.target.value);
+                  setQuickCity("custom");
+                }}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t("prayer.asrSchool")}</label>
+              <label className="form-label" htmlFor="prayer-asr-school">{t("prayer.asrSchool")}</label>
               <select
+                id="prayer-asr-school"
                 value={asrMethod}
                 onChange={(e) => setAsrMethod(e.target.value as "standard" | "hanafi")}
               >
@@ -328,6 +413,8 @@ export default function PrayerPage() {
               </select>
             </div>
           </div>
+
+          <p className="kpi-desc">{t("prayer.locationPersistence")}</p>
 
           <details
             open

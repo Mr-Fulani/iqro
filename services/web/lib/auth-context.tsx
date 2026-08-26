@@ -12,6 +12,7 @@ import {
   loadLegacyStoredIdentity,
 } from "./api";
 import { clearSyncState } from "./sync-state";
+import { clearPrayerLocationPreference } from "./prayer-location";
 import { useI18n } from "./i18n-context";
 import { rememberPostAuthReturnPath } from "./auth-navigation";
 
@@ -157,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async (): Promise<void> => {
+    const userId = api.getSession()?.user.id;
     setIsLoading(true);
     setError(null);
     try {
@@ -164,16 +166,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore network errors on logout
     } finally {
+      clearPrayerLocationPreference(userId);
       setSession(null);
       setIsLoading(false);
     }
   }, []);
 
   const logoutAll = useCallback(async (): Promise<boolean> => {
+    const userId = api.getSession()?.user.id;
     setIsLoading(true);
     setError(null);
     try {
       await api.logoutAll();
+      clearPrayerLocationPreference(userId);
       setSession(null);
       return true;
     } catch (err) {

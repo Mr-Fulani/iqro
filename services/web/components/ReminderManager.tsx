@@ -14,6 +14,10 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey } from "../lib/i18n";
+import {
+  loadPrayerLocationPreference,
+  savePrayerLocationPreference,
+} from "../lib/prayer-location";
 
 const WEEKDAYS = [
   [1, "reminder.weekday.mon"],
@@ -45,7 +49,7 @@ const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], MessageKey> = {
 };
 
 export function ReminderManager() {
-  const { isLoggedIn } = useAuth();
+  const { session, isLoggedIn } = useAuth();
   const { locale, t } = useI18n();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -92,6 +96,11 @@ export function ReminderManager() {
   const enabledReminderCount = useMemo(
     () => activeReminders.filter((reminder) => reminder.is_enabled).length,
     [activeReminders],
+  );
+  const prayerDeliveryReady = Boolean(
+    webPushConnected &&
+      webPushStatus?.prayer_profile_configured &&
+      webPushStatus.prayer_location_configured,
   );
 
   useEffect(() => {
@@ -401,7 +410,21 @@ export function ReminderManager() {
 
     setPrayerLocationSaving(true);
     try {
-      const position = await currentPosition();
+      const savedLocation = loadPrayerLocationPreference(session?.user.id);
+      const position = savedLocation ? null : await currentPosition();
+      const latitude = savedLocation?.latitude ?? position?.coords.latitude.toFixed(4);
+      const longitude = savedLocation?.longitude ?? position?.coords.longitude.toFixed(4);
+      if (!latitude || !longitude) {
+        setError(t("reminder.prayerLocationUnsupported"));
+        return false;
+      }
+      if (!savedLocation) {
+        savePrayerLocationPreference(session?.user.id, {
+          latitude,
+          longitude,
+          timezone: browserTimezone(),
+        });
+      }
       const registration = await navigator.serviceWorker.getRegistration("/");
       const subscription = await registration?.pushManager.getSubscription();
       if (!subscription) {
@@ -414,8 +437,8 @@ export function ReminderManager() {
           locale,
           t("reminder.webPushInvalidSubscription"),
           {
-            latitude: Number(position.coords.latitude.toFixed(4)),
-            longitude: Number(position.coords.longitude.toFixed(4)),
+            latitude: Number(latitude),
+            longitude: Number(longitude),
           },
         ),
       );
@@ -616,7 +639,6 @@ export function ReminderManager() {
             <h4 className="surface-title">{t("reminder.prayerTitle")}</h4>
             <p className="surface-subtitle">{t("reminder.prayerDescription")}</p>
           </div>
-          <span className="status-chip">{t("reminder.everyDay")}</span>
         </div>
         <div className="prayer-location-status">
           <p className="kpi-desc">
@@ -634,18 +656,23 @@ export function ReminderManager() {
             </Link>
           )}
           {webPushConnected && webPushStatus?.prayer_profile_configured && (
-            <button
-              className="btn btn-secondary btn-sm"
-              disabled={prayerLocationSaving || savingPrayerEvent !== null}
-              onClick={() => void ensurePrayerDeliveryReady(true)}
-              type="button"
-            >
-              {prayerLocationSaving
-                ? t("common.saving")
-                : webPushStatus.prayer_location_configured
-                ? t("reminder.refreshPrayerLocation")
-                : t("reminder.configurePrayerLocation")}
-            </button>
+            <div className="prayer-location-actions">
+              <Link className="btn btn-secondary btn-sm" href={`/${locale}/prayer`}>
+                {t("reminder.openPrayerSettings")}
+              </Link>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={prayerLocationSaving || savingPrayerEvent !== null}
+                onClick={() => void ensurePrayerDeliveryReady(true)}
+                type="button"
+              >
+                {prayerLocationSaving
+                  ? t("common.saving")
+                  : webPushStatus.prayer_location_configured
+                  ? t("reminder.refreshPrayerLocation")
+                  : t("reminder.configurePrayerLocation")}
+              </button>
+            </div>
           )}
         </div>
         <div className="prayer-reminder-list">
@@ -662,7 +689,13 @@ export function ReminderManager() {
                 <div>
                   <strong>{t(label)}</strong>
                   <p className="kpi-desc">
-                    {t(enabled ? "reminder.prayerEveryDayOn" : "reminder.prayerOff")}
+                    {t(
+                      enabled
+                        ? prayerDeliveryReady
+                          ? "reminder.prayerEveryDayOn"
+                          : "reminder.prayerSavedWaiting"
+                        : "reminder.prayerOff",
+                    )}
                   </p>
                 </div>
                 <button

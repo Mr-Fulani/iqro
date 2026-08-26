@@ -35,7 +35,10 @@ async function installSession(page: Page) {
 
 test("prayer profile persists the complete revisioned calculation preferences", async ({ page }) => {
   await installSession(page);
-  const captured: { profile?: Record<string, unknown> } = {};
+  const captured: {
+    profile?: Record<string, unknown>;
+    calculations: Array<Record<string, unknown>>;
+  } = { calculations: [] };
 
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -90,10 +93,12 @@ test("prayer profile persists the complete revisioned calculation preferences", 
       });
     }
     if (url.pathname === "/api/v1/prayer/calculate") {
+      const calculation = request.postDataJSON() as Record<string, unknown>;
+      captured.calculations.push(calculation);
       return route.fulfill({
         json: {
           date: "2026-08-23",
-          timezone: "Asia/Riyadh",
+          timezone: calculation.timezone,
           method: { id: method.id, code: method.code, name: method.name },
           times: {},
         },
@@ -107,6 +112,9 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   await page.getByLabel("Полярная зона").selectOption("aqrab_balad");
   await page.getByLabel("Часовой пояс профиля").selectOption("fixed");
   await page.getByLabel("Фиксированный timezone").fill("Europe/Istanbul");
+  await page.getByLabel("Широта (Latitude)").fill("40.7128");
+  await page.getByLabel("Долгота (Longitude)").fill("-74.0060");
+  await page.getByLabel("Часовой пояс (IANA)").fill("America/New_York");
   await page.getByLabel("Фаджр", { exact: true }).fill("-3");
   await page.getByRole("button", { name: "Сохранить профиль" }).click();
 
@@ -122,6 +130,16 @@ test("prayer profile persists the complete revisioned calculation preferences", 
     fixed_timezone: "Europe/Istanbul",
   });
   expect(captured.profile?.client_updated_at).toEqual(expect.any(String));
+
+  await page.reload();
+  await expect(page.getByLabel("Широта (Latitude)")).toHaveValue("40.7128");
+  await expect(page.getByLabel("Долгота (Longitude)")).toHaveValue("-74.0060");
+  await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue("America/New_York");
+  await expect(page.getByLabel("Быстрый выбор города")).toHaveValue("custom");
+  await expect.poll(() => captured.calculations.at(-1)).toMatchObject({
+    timezone: "America/New_York",
+    location: { latitude: 40.7128, longitude: -74.006 },
+  });
 });
 
 test("prayer switches and Quran reminders use the strict API shape", async ({
@@ -312,8 +330,11 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
-  await expect(reminders.getByText(/Для первого включения потребуется/)).toBeVisible();
+  await expect(reminders.getByText(/Время намаза зависит от города/)).toBeVisible();
   await expect(reminders.getByLabel("Включено")).toHaveCount(0);
+  await expect(
+    reminders.locator(".prayer-reminder-panel > .surface-head .status-chip"),
+  ).toHaveCount(0);
   const repeatSelect = reminders.getByLabel("Повторение");
   await expect(repeatSelect).toHaveValue("every_day");
   await repeatSelect.selectOption("custom");
