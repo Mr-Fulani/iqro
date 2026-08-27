@@ -139,7 +139,7 @@ staging-config: staging-preflight
 	$(STAGING_COMPOSE) config --quiet
 
 staging-build: staging-config
-	$(STAGING_COMPOSE) build backend web gateway postgres
+	$(STAGING_COMPOSE) build backend web gateway postgres tls-proxy
 
 staging-up: staging-config
 	$(STAGING_COMPOSE) up --build --detach --wait
@@ -183,6 +183,7 @@ staging-budget-build: staging-budget-config
 	$(STAGING_BUDGET_COMPOSE) build web
 	$(STAGING_BUDGET_COMPOSE) build gateway
 	$(STAGING_BUDGET_COMPOSE) build postgres
+	$(STAGING_BUDGET_COMPOSE) build tls-proxy
 
 staging-budget-up: staging-budget-build
 	$(STAGING_BUDGET_COMPOSE) up --no-build --detach --wait
