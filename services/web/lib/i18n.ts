@@ -510,6 +510,7 @@ export const MESSAGES = {
   "quran.madaniPage": message("Мадинский Мусхаф · Страница {page}", "Madani Mushaf · Page {page}", "مصحف المدينة · الصفحة {page}", "Medine Mushafı · Sayfa {page}"),
   "quran.previousPage": message("◀ Предыдущая страница ({page})", "◀ Previous page ({page})", "الصفحة السابقة ({page}) ▶", "◀ Önceki sayfa ({page})"),
   "quran.pageOf": message("Страница {page} из {count}", "Page {page} of {count}", "الصفحة {page} من {count}", "{count} sayfadan {page}. sayfa"),
+  "quran.swipePages": message("Листайте страницы свайпом", "Swipe to turn pages", "اسحب لقلب الصفحات", "Sayfaları kaydırarak çevirin"),
   "quran.nextPage": message("Следующая страница ({page}) ▶", "Next page ({page}) ▶", "◀ الصفحة التالية ({page})", "Sonraki sayfa ({page}) ▶"),
   "quran.loading": message("Загрузка Корана…", "Loading Quran…", "جارٍ تحميل القرآن…", "Kur'an yükleniyor…"),
   "prayer.city.makkah": message("Мекка (Саудовская Аравия)", "Makkah (Saudi Arabia)", "مكة (السعودية)", "Mekke (Suudi Arabistan)"),

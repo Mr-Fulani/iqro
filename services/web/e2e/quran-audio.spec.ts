@@ -839,6 +839,9 @@ for (const viewport of [
     const overlay = page.locator(".mushaf-regions");
     await expect(image).toBeVisible();
     await expect(overlay).toBeVisible();
+    await page.locator(".mushaf-page-turn").evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished)),
+    );
     const imageBox = await image.boundingBox();
     const overlayBox = await overlay.boundingBox();
     expect(imageBox).not.toBeNull();
@@ -859,12 +862,60 @@ for (const viewport of [
   });
 }
 
-test("Mushaf controls fit a 320px mobile viewport", async ({ page }) => {
+test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 760 });
   await page.goto("/quran?surah=6");
   await page.getByRole("button", { name: /Мусхаф/ }).click();
 
-  await expect(page.locator(".mushaf-page-navigation")).toBeVisible();
+  const reader = page.locator(".mushaf-reader-surface");
+  const stage = page.locator(".mushaf-page-container");
+  const image = page.locator(".mushaf-image");
+  await expect(reader).toBeInViewport();
+  await expect(page.locator(".mushaf-reader-toolbar")).toBeVisible();
+  await expect(image).toHaveAttribute("data-page-number", "128");
+
+  const readerBox = await reader.boundingBox();
+  expect(readerBox).not.toBeNull();
+  expect(readerBox!.x).toBeLessThanOrEqual(1);
+  expect(readerBox!.width).toBeGreaterThanOrEqual(319);
+  expect(await reader.evaluate((element) => getComputedStyle(element).order)).toBe("2");
+  expect(
+    await page.locator(".quran-audio-surface").evaluate((element) => getComputedStyle(element).order),
+  ).toBe("3");
+
+  await stage.dispatchEvent("pointerdown", {
+    pointerId: 1,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: 70,
+    clientY: 360,
+  });
+  await stage.dispatchEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: 250,
+    clientY: 365,
+  });
+  await expect(image).toHaveAttribute("data-page-number", "129");
+  await expect(page.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "next");
+
+  await stage.dispatchEvent("pointerdown", {
+    pointerId: 2,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: 250,
+    clientY: 360,
+  });
+  await stage.dispatchEvent("pointerup", {
+    pointerId: 2,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: 70,
+    clientY: 365,
+  });
+  await expect(image).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "previous");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );

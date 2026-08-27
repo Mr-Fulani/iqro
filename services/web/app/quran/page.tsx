@@ -1,6 +1,14 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   MushafAudioPlayer,
@@ -51,6 +59,7 @@ function QuranContent() {
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
+  const [mushafPageLoading, setMushafPageLoading] = useState(false);
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
   const [foundationMushafPage, setFoundationMushafPage] = useState<QuranFoundationMushafPage | null>(null);
@@ -77,6 +86,10 @@ function QuranContent() {
   const [viewMode, setViewMode] = useState<"text" | "mushaf">(
     deepLinkAyah === null ? "text" : "mushaf",
   );
+  const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
+  const previousPage = useRef(currentPage);
+  const mushafReader = useRef<HTMLElement | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
 
@@ -186,6 +199,26 @@ function QuranContent() {
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
+    if (currentPage !== previousPage.current) {
+      setPageTurnDirection(currentPage > previousPage.current ? "next" : "previous");
+      previousPage.current = currentPage;
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (viewMode !== "mushaf" || !window.matchMedia("(max-width: 768px)").matches) return;
+    const timeout = window.setTimeout(() => {
+      mushafReader.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(timeout);
+  }, [viewMode]);
+
+  useEffect(() => {
     if (
       viewMode !== "mushaf" ||
       !selectedEdition ||
@@ -193,12 +226,17 @@ function QuranContent() {
       selectedFoundationMushafId !== null
     ) {
       setMushafPage(null);
+      setMushafPageLoading(false);
       return;
     }
+    let cancelled = false;
+    setMushafPageLoading(true);
     api
       .getPage(selectedEdition, currentPage)
       .then((pageData) => {
+        if (cancelled) return;
         setMushafPage(pageData);
+        setMushafPageLoading(false);
         setSelectedMushafAyah((selectedAyah) => {
           if (!selectedAyah) return null;
           const isOnLoadedPage = pageData.regions.some(
@@ -208,8 +246,13 @@ function QuranContent() {
         });
       })
       .catch(() => {
+        if (cancelled) return;
         setMushafPage(null);
+        setMushafPageLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedEdition, currentPage, selectedFoundationMushafId, viewMode]);
 
   useEffect(() => {
@@ -336,6 +379,31 @@ function QuranContent() {
     sendPlayerControl,
   ]);
 
+  const turnMushafPage = useCallback((direction: "next" | "previous") => {
+    setPageTurnDirection(direction);
+    setCurrentPage((page) => direction === "next"
+      ? Math.min(mushafPageCount, page + 1)
+      : Math.max(1, page - 1));
+  }, [mushafPageCount]);
+
+  const handleMushafPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const target = event.target as Element;
+    if (target.closest("button, a, input, select, [role='button']")) return;
+    swipeStart.current = { x: event.clientX, y: event.clientY };
+  }, []);
+
+  const handleMushafPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+    // A Mushaf progresses right-to-left: dragging the page to the right opens
+    // the next page, while dragging it to the left returns to the previous one.
+    turnMushafPage(deltaX > 0 ? "next" : "previous");
+  }, [turnMushafPage]);
+
   const handleSavePosition = async (ayahNumber?: number) => {
     if (!isLoggedIn) {
       const res = await loginGuest();
@@ -394,9 +462,9 @@ function QuranContent() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div className={`quran-page-layout${viewMode === "mushaf" ? " is-mushaf-mode" : ""}`}>
       {/* Control Bar */}
-      <section className="surface">
+      <section className="surface quran-control-surface">
         <div className="surface-head" style={{ marginBottom: 16 }}>
           <div>
             <p className="eyebrow">{t("quran.eyebrow")}</p>
@@ -501,7 +569,7 @@ function QuranContent() {
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onClick={() => turnMushafPage("previous")}
                 disabled={currentPage <= 1}
               >
                 ◀ {t("common.back")}
@@ -518,7 +586,7 @@ function QuranContent() {
               />
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => setCurrentPage((p) => Math.min(mushafPageCount, p + 1))}
+                onClick={() => turnMushafPage("next")}
                 disabled={currentPage >= mushafPageCount}
               >
                 {t("common.next")} ▶
@@ -626,7 +694,7 @@ function QuranContent() {
 
       {/* Content Area */}
       {viewMode === "text" ? (
-        <section className="surface">
+        <section className="surface quran-content-surface">
           {/* Bismillah Header */}
           {selectedSurah !== 1 && selectedSurah !== 9 && (
             <div style={{ textAlign: "center", padding: "16px 0 24px", borderBottom: "1px solid var(--border)" }}>
@@ -734,67 +802,132 @@ function QuranContent() {
         </section>
       ) : (
         /* Mushaf Page View */
-        <section className="surface">
-          <div className="mushaf-page-container">
+        <section
+          className="surface quran-content-surface mushaf-reader-surface"
+          ref={mushafReader}
+        >
+          <div className="mushaf-reader-toolbar" aria-label={t("quran.mushafPage")}>
+            <button
+              className="mushaf-reader-toolbar-button"
+              type="button"
+              onClick={() => turnMushafPage("previous")}
+              disabled={currentPage <= 1}
+              aria-label={t("quran.previousPage", { page: currentPage - 1 })}
+            >
+              ‹
+            </button>
+            <div className="mushaf-reader-toolbar-status">
+              <strong>{t("quran.pageOf", { page: currentPage, count: mushafPageCount })}</strong>
+              <span>{t("quran.swipePages")}</span>
+            </div>
+            <button
+              className="mushaf-reader-toolbar-button"
+              type="button"
+              onClick={() => turnMushafPage("next")}
+              disabled={currentPage >= mushafPageCount}
+              aria-label={t("quran.nextPage", { page: currentPage + 1 })}
+            >
+              ›
+            </button>
+          </div>
+          <div
+            className="mushaf-page-container"
+            data-swipe-next="right"
+            onPointerDown={handleMushafPointerDown}
+            onPointerUp={handleMushafPointerUp}
+            onPointerCancel={() => {
+              swipeStart.current = null;
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                turnMushafPage("next");
+              } else if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                turnMushafPage("previous");
+              }
+            }}
+            tabIndex={0}
+            aria-label={t("quran.madaniPage", { page: currentPage })}
+          >
             {selectedFoundationMushaf ? (
               foundationPageLoading ? (
                 <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
               ) : foundationMushafPage ? (
-                <QuranFoundationMushafPageView
-                  mushaf={selectedFoundationMushaf}
-                  page={foundationMushafPage}
-                  surahs={surahs}
-                  selectedAyahKey={selectedMushafAyah}
-                  playingAyahKey={playingMushafAyah}
-                  onSelectAyah={setSelectedMushafAyah}
-                />
-              ) : null
-            ) : mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
-              <div className="mushaf-page-frame">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={mushafPage.assets[0].url}
-                  alt={t("quran.mushafAlt", { page: currentPage })}
-                  className="mushaf-image"
-                  data-page-number={currentPage}
-                />
-                <svg
-                  className="mushaf-regions"
-                  viewBox="0 0 1 1"
-                  preserveAspectRatio="none"
-                  aria-label={t("quran.regionsAria", { page: currentPage })}
-                  data-page-number={currentPage}
+                <div
+                  className={`mushaf-page-turn is-${pageTurnDirection}`}
+                  data-page-turn={pageTurnDirection}
+                  key={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
                 >
-                  {mushafRegions.map((region) => {
-                    const key = `${region.ayah.surah}:${region.ayah.number}`;
-                    return (
-                      <polygon
-                        key={region.id}
-                        points={region.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
-                        className={`mushaf-region${selectedMushafAyah === key ? " is-selected" : ""}${playingMushafAyah === key ? " is-playing" : ""}`}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={t("common.ayah", { ayah: key })}
-                        onClick={() => setSelectedMushafAyah(key)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedMushafAyah(key);
-                          }
-                        }}
-                      >
-                        <title>{t("common.ayah", { ayah: key })}</title>
-                      </polygon>
-                    );
-                  })}
-                </svg>
-                {selectedMushafAyah && (
-                  <div className="mushaf-selection-label">
-                    {playingMushafAyah === selectedMushafAyah
-                      ? t("quran.playingAyah", { ayah: selectedMushafAyah })
-                      : t("quran.selectedAyah", { ayah: selectedMushafAyah })}
-                  </div>
-                )}
+                  <QuranFoundationMushafPageView
+                    mushaf={selectedFoundationMushaf}
+                    page={foundationMushafPage}
+                    surahs={surahs}
+                    selectedAyahKey={selectedMushafAyah}
+                    playingAyahKey={playingMushafAyah}
+                    onSelectAyah={setSelectedMushafAyah}
+                  />
+                </div>
+              ) : null
+            ) : mushafPageLoading ? (
+              <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
+            ) : mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
+              <div
+                className={`mushaf-page-turn is-${pageTurnDirection}`}
+                data-page-turn={pageTurnDirection}
+                key={`image-${mushafPage.number}`}
+              >
+                <div
+                  className="mushaf-page-frame"
+                  style={{ aspectRatio: `${mushafPage.image_width} / ${mushafPage.image_height}` }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={mushafPage.assets[0].url}
+                    alt={t("quran.mushafAlt", { page: mushafPage.number })}
+                    className="mushaf-image"
+                    data-page-number={mushafPage.number}
+                    width={mushafPage.image_width}
+                    height={mushafPage.image_height}
+                  />
+                  <svg
+                    className="mushaf-regions"
+                    viewBox="0 0 1 1"
+                    preserveAspectRatio="none"
+                    aria-label={t("quran.regionsAria", { page: mushafPage.number })}
+                    data-page-number={mushafPage.number}
+                  >
+                    {mushafRegions.map((region) => {
+                      const key = `${region.ayah.surah}:${region.ayah.number}`;
+                      return (
+                        <polygon
+                          key={region.id}
+                          points={region.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
+                          className={`mushaf-region${selectedMushafAyah === key ? " is-selected" : ""}${playingMushafAyah === key ? " is-playing" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t("common.ayah", { ayah: key })}
+                          onClick={() => setSelectedMushafAyah(key)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedMushafAyah(key);
+                            }
+                          }}
+                        >
+                          <title>{t("common.ayah", { ayah: key })}</title>
+                        </polygon>
+                      );
+                    })}
+                  </svg>
+                  {selectedMushafAyah && (
+                    <div className="mushaf-selection-label">
+                      {playingMushafAyah === selectedMushafAyah
+                        ? t("quran.playingAyah", { ayah: selectedMushafAyah })
+                        : t("quran.selectedAyah", { ayah: selectedMushafAyah })}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: 40 }}>
@@ -822,7 +955,7 @@ function QuranContent() {
           <div className="mushaf-page-navigation">
             <button
               className="btn btn-secondary"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => turnMushafPage("previous")}
               disabled={currentPage <= 1}
             >
               {t("quran.previousPage", { page: currentPage - 1 })}
@@ -832,7 +965,7 @@ function QuranContent() {
             </span>
             <button
               className="btn btn-secondary"
-              onClick={() => setCurrentPage((p) => Math.min(mushafPageCount, p + 1))}
+              onClick={() => turnMushafPage("next")}
               disabled={currentPage >= mushafPageCount}
             >
               {t("quran.nextPage", { page: currentPage + 1 })}
