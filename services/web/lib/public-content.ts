@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { SOCIAL_PLATFORM_CODES } from "./api";
 import type {
   AudioTrack,
   Ayah,
@@ -6,6 +7,7 @@ import type {
   QuranEdition,
   Recitation,
   Reciter,
+  SocialProfile,
   Surah,
 } from "./api";
 import { latestRecitationsByVariant, reciterPersonKey } from "./reciter-catalog";
@@ -74,6 +76,39 @@ function assertArray<T>(value: T[], resource: string): T[] {
     throw new Error(`Published content API returned an invalid ${resource} payload`);
   }
   return value;
+}
+
+function assertSocialProfiles(value: unknown): SocialProfile[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Published content API returned an invalid social profile list");
+  }
+  const supportedPlatforms = new Set<string>(SOCIAL_PLATFORM_CODES);
+  const seenPlatforms = new Set<string>();
+  for (const profile of value) {
+    if (
+      !profile ||
+      typeof profile !== "object" ||
+      typeof profile.platform !== "string" ||
+      !supportedPlatforms.has(profile.platform) ||
+      seenPlatforms.has(profile.platform) ||
+      typeof profile.platform_name !== "string" ||
+      !profile.platform_name.trim() ||
+      typeof profile.display_name !== "string" ||
+      typeof profile.url !== "string" ||
+      typeof profile.sort_order !== "number" ||
+      !Number.isInteger(profile.sort_order) ||
+      profile.sort_order < 0 ||
+      typeof profile.include_in_seo !== "boolean"
+    ) {
+      throw new Error("Published content API returned an invalid social profile item");
+    }
+    const url = new URL(profile.url);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      throw new Error("Published content API returned an unsafe social profile URL");
+    }
+    seenPlatforms.add(profile.platform);
+  }
+  return value as SocialProfile[];
 }
 
 function assertPage<T>(value: PaginatedResponse<T>, resource: string): PaginatedResponse<T> {
@@ -236,3 +271,19 @@ export const getPublishedSurahTracks = cache(
     );
   },
 );
+
+export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[]> => {
+  const profiles = await fetchPublishedJson<unknown>("/api/v1/site/social-profiles", [
+    "site:social-profiles",
+  ]);
+  return assertSocialProfiles(profiles);
+});
+
+export async function getPublishedSocialProfilesOrEmpty(): Promise<SocialProfile[]> {
+  try {
+    return await getPublishedSocialProfiles();
+  } catch (error) {
+    console.error("Social profiles are temporarily unavailable", error);
+    return [];
+  }
+}

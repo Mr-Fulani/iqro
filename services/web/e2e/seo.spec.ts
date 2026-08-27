@@ -187,6 +187,43 @@ test("root layout publishes WebSite structured data", async ({ request }) => {
   const html = await response.text();
   expect(html).toContain('"@type":"WebSite"');
   expect(html).toContain(`"@id":"${siteUrl}/#website"`);
+  expect(html).toContain('"@type":"Organization"');
+  expect(html).toContain(`"@id":"${siteUrl}/#organization"`);
+  expect(html).toContain('"sameAs":["https://t.me/iqro_forum"]');
+});
+
+test("footer renders only published social profiles as safe external links", async ({ page }) => {
+  await page.goto("/ru");
+
+  const socialBlock = page.locator(".footer-social");
+  await expect(socialBlock.getByText("Мы в социальных сетях")).toBeVisible();
+  const telegram = socialBlock.getByRole("link", { name: "Telegram: @iqro_forum" });
+  await expect(telegram).toHaveAttribute("href", "https://t.me/iqro_forum");
+  await expect(telegram).toHaveAttribute("target", "_blank");
+  await expect(telegram).toHaveAttribute("rel", "me noopener noreferrer");
+  const youtube = socialBlock.getByRole("link", { name: "YouTube: IQRO" });
+  await expect(youtube).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(socialBlock.locator(".social-link")).toHaveCount(2);
+});
+
+test("social profile grid stays inside a narrow RTL viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto("/ar");
+
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const geometry = await page.locator(".footer-social").evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return {
+      left: box.left,
+      right: box.right,
+      viewport: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(0);
+  expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
+  expect(geometry.documentWidth).toBe(geometry.viewport);
+  await expect(page.locator(".footer-social .social-link")).toHaveCount(2);
 });
 
 test("public responses include the defense-in-depth security policy", async ({ request }) => {
@@ -305,6 +342,17 @@ test("content revalidation accepts only authenticated allowlisted events", async
   });
   expect(accepted.ok()).toBe(true);
   expect(await accepted.json()).toEqual({ accepted: true, type: event.type });
+
+  const socialEvent = {
+    type: "site.social_profiles.changed",
+    action: "updated",
+  };
+  const acceptedSocial = await request.post(endpoint, {
+    data: socialEvent,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(acceptedSocial.ok()).toBe(true);
+  expect(await acceptedSocial.json()).toEqual({ accepted: true, type: socialEvent.type });
 });
 
 test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {

@@ -43,6 +43,8 @@ def test_admin_index_uses_russian_project_labels() -> None:
     assert "Обращения пользователей" in body
     assert "Аудио Корана" in body
     assert "Время намаза" in body
+    assert "Настройки сайта" in body
+    assert "Социальные сети" in body
 
 
 def test_every_project_admin_model_and_field_has_a_russian_label() -> None:

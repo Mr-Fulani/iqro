@@ -5,6 +5,25 @@ const port = Number(process.env.MOCK_PUBLIC_API_PORT || 3199);
 const publishedAt = "2026-08-24T00:00:00Z";
 const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
 
+const socialProfiles = [
+  {
+    platform: "telegram",
+    platform_name: "Telegram",
+    display_name: "@iqro_forum",
+    url: "https://t.me/iqro_forum",
+    sort_order: 10,
+    include_in_seo: true,
+  },
+  {
+    platform: "youtube",
+    platform_name: "YouTube",
+    display_name: "IQRO",
+    url: "https://www.youtube.com/@iqro",
+    sort_order: 20,
+    include_in_seo: false,
+  },
+];
+
 const edition = {
   id: "00000000-0000-0000-0000-000000000001",
   code: "madani-hafs",
@@ -202,6 +221,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (path === "/api/v1/quran/editions") return sendJson(response, 200, [edition]);
+  if (path === "/api/v1/site/social-profiles") return sendJson(response, 200, socialProfiles);
   if (path === "/api/v1/quran/editions/madani-hafs") return sendJson(response, 200, edition);
   if (path === "/api/v1/quran/editions/madani-hafs/surahs") return sendJson(response, 200, [surah]);
   if (path === "/api/v1/quran/editions/madani-hafs/surahs/1") return sendJson(response, 200, surah);

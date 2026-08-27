@@ -4,6 +4,7 @@ import { isEditionCode, isUuid } from "./public-content";
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const QURAN_ACTIONS = new Set(["published", "activated", "withdrawn"]);
 const AUDIO_ACTIONS = new Set(["published", "withdrawn"]);
+const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
 
 type QuranContentChange = {
   type: "quran.edition.changed";
@@ -20,7 +21,12 @@ type AudioContentChange = {
   version: string;
 };
 
-export type ContentChange = QuranContentChange | AudioContentChange;
+type SocialProfilesChange = {
+  type: "site.social_profiles.changed";
+  action: string;
+};
+
+export type ContentChange = QuranContentChange | AudioContentChange | SocialProfilesChange;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -65,6 +71,14 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as AudioContentChange;
   }
 
+  if (value.type === "site.social_profiles.changed") {
+    if (!hasExactKeys(value, ["type", "action"])) return null;
+    if (typeof value.action !== "string" || !SOCIAL_PROFILE_ACTIONS.has(value.action)) {
+      return null;
+    }
+    return value as SocialProfilesChange;
+  }
+
   return null;
 }
 
@@ -73,6 +87,12 @@ function expireTag(tag: string): void {
 }
 
 export function revalidateContentChange(change: ContentChange): void {
+  if (change.type === "site.social_profiles.changed") {
+    expireTag("site:social-profiles");
+    revalidatePath("/", "layout");
+    return;
+  }
+
   if (change.type === "quran.edition.changed") {
     expireTag("quran:editions");
     expireTag(`quran:edition:${change.edition}`);

@@ -221,6 +221,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.reading.apps.ReadingConfig",
     "quran_backend.modules.reminders.apps.RemindersConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
+    "quran_backend.modules.website.apps.WebsiteConfig",
 ]
 
 MIDDLEWARE = [

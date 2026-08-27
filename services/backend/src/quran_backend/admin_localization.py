@@ -79,6 +79,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "feedback.FeedbackMessage": ("сообщение", "сообщения по обращениям"),
     "feedback.FeedbackAudit": ("изменение обращения", "история изменений обращений"),
     "feedback.FeedbackContext": ("контекст обращения", "контекст обращений"),
+    "website.SocialProfile": ("социальная сеть", "социальные сети"),
 }
 
 
@@ -192,6 +193,7 @@ FIELD_LABELS: dict[str, str] = {
     "is_available": "Доступен",
     "is_default": "По умолчанию",
     "is_enabled": "Включено",
+    "include_in_seo": "Добавлять в SEO",
     "is_staff": "Доступ в админку",
     "is_superuser": "Суперпользователь",
     "isha_adjustment_minutes": "Поправка Иша, минуты",
@@ -245,6 +247,7 @@ FIELD_LABELS: dict[str, str] = {
     "password": "Пароль",
     "payload": "Данные",
     "platform": "Платформа",
+    "profile_url": "Ссылка на профиль",
     "playback_ms": "Позиция воспроизведения, мс",
     "polar_resolution": "Полярная поправка",
     "policy_version": "Версия политики",
@@ -308,6 +311,7 @@ FIELD_LABELS: dict[str, str] = {
     "source_url": "URL источника",
     "source_user": "Гостевой пользователь",
     "source_version": "Версия источника",
+    "sort_order": "Порядок вывода",
     "start_ayah": "Начальный аят",
     "start_ms": "Начало, мс",
     "status": "Статус",
@@ -330,6 +334,7 @@ FIELD_LABELS: dict[str, str] = {
     "team": "Команда",
     "text_search": "Текст для поиска",
     "text_uthmani": "Текст Усмани",
+    "display_name": "Название аккаунта",
     "ticket": "Обращение",
     "timezone": "Часовой пояс",
     "timezone_database_version": "Версия базы часовых поясов",

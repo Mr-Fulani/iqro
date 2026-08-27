@@ -489,7 +489,7 @@ test("audio widget survives route navigation and pauses at the current position"
     (element as HTMLAudioElement).currentTime = 12.5;
   });
 
-  await page.locator('.app-menu a[href="/ru"]').click();
+  await page.locator('.brand-link[href="/ru"]').click();
 
   await expect(page).toHaveURL("/ru");
   await expect(player).toBeVisible();
@@ -538,7 +538,7 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
-  await page.locator('.app-menu a[href="/ru"]').click();
+  await page.locator('.brand-link[href="/ru"]').click();
   await expect(page).toHaveURL("/ru");
   expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
@@ -673,7 +673,9 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(firstAyah.getByRole("button", { name: "Добавить в закладки" })).toHaveText("🔖");
 
   await speedButton.click();
-  await expect(page.getByLabel("Скорость воспроизведения", { exact: true })).toHaveValue("1.25");
+  const advancedPlayer = page.getByRole("region", { name: "Расширенный аудиоплеер" });
+  await expect(advancedPlayer.getByLabel("Скорость воспроизведения", { exact: true }))
+    .toHaveValue("1.25");
   await expect(firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,25×" })).toHaveText("1,25×");
 
   await playButton.click();
@@ -692,7 +694,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
 
   await repeatButton.click();
-  await expect(page.getByLabel("Режим повтора", { exact: true })).toHaveValue("ayah");
+  await expect(advancedPlayer.getByLabel("Режим повтора", { exact: true })).toHaveValue("ayah");
   await expect(firstAyah.getByRole("button", { name: "Режим повтора: Без повтора" })).toHaveAttribute("aria-pressed", "true");
 
   await secondAyah.getByRole("button", { name: "Повтор аята: Аят 6:2" }).click();

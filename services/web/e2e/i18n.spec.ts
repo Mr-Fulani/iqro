@@ -106,7 +106,7 @@ test("header logo replaces Home and the Dua placeholder follows Quran", async ({
     "/ru/profile",
   ]);
 
-  await page.getByRole("link", { name: "Ду’а" }).click();
+  await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);

@@ -139,6 +139,19 @@ export const MESSAGES = {
   "footer.security": message("Безопасность", "Security", "الأمن", "Güvenlik"),
   "footer.sources": message("Источники и лицензии", "Sources and licenses", "المصادر والتراخيص", "Kaynaklar ve lisanslar"),
   "footer.contacts": message("Контакты и feedback", "Contact and feedback", "التواصل والملاحظات", "İletişim ve geri bildirim"),
+  "footer.socialTitle": message("Мы в социальных сетях", "Follow IQRO", "تابعوا IQRO", "IQRO’yu takip edin"),
+  "footer.socialDescription": message(
+    "Новости проекта, полезные материалы и обновления платформы.",
+    "Project news, useful materials, and platform updates.",
+    "أخبار المشروع والمواد المفيدة وتحديثات المنصة.",
+    "Proje haberleri, faydalı içerikler ve platform güncellemeleri.",
+  ),
+  "footer.socialAria": message(
+    "Официальные страницы IQRO в социальных сетях",
+    "Official IQRO social profiles",
+    "حسابات IQRO الرسمية على شبكات التواصل",
+    "IQRO resmi sosyal medya hesapları",
+  ),
   "footer.copyright": message(
     "© 2026 IQRO — Исламский форум. Издание Мединского Мусхафа (Хафс ‘ан ‘Асым).",
     "© 2026 IQRO — Islamic forum. Madani Mushaf edition (Hafs ‘an ‘Asim).",

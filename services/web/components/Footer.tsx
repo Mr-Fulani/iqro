@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import type { SocialProfile } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
+import { SocialLinks } from "./social/SocialLinks";
 
-export function Footer() {
+type FooterProps = {
+  socialProfiles?: SocialProfile[];
+};
+
+export function Footer({ socialProfiles = [] }: FooterProps) {
   const { locale, t } = useI18n();
   return (
     <footer className="app-footer">
@@ -45,6 +51,20 @@ export function Footer() {
             <Link href={localizedPath(locale, "/contacts")}>{t("footer.contacts")}</Link>
           </nav>
         </div>
+
+        {socialProfiles.length > 0 ? (
+          <section className="footer-social" aria-labelledby="footer-social-title">
+            <div className="footer-social-copy">
+              <p className="footer-column-title" id="footer-social-title">{t("footer.socialTitle")}</p>
+              <p>{t("footer.socialDescription")}</p>
+            </div>
+            <SocialLinks
+              profiles={socialProfiles}
+              ariaLabel={t("footer.socialAria")}
+              className="footer-social-links"
+            />
+          </section>
+        ) : null}
       </div>
 
       <div className="footer-bottom">

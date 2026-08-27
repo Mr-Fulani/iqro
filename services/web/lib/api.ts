@@ -24,6 +24,40 @@ export type RequestState<T = unknown> = {
   error?: string;
 };
 
+export const SOCIAL_PLATFORM_CODES = [
+  "telegram",
+  "youtube",
+  "instagram",
+  "vk",
+  "tiktok",
+  "x",
+  "facebook",
+  "threads",
+  "whatsapp",
+  "discord",
+  "linkedin",
+  "pinterest",
+  "odnoklassniki",
+  "dzen",
+  "rutube",
+  "github",
+  "reddit",
+  "twitch",
+  "snapchat",
+  "bluesky",
+] as const;
+
+export type SocialPlatformCode = (typeof SOCIAL_PLATFORM_CODES)[number];
+
+export type SocialProfile = {
+  platform: SocialPlatformCode;
+  platform_name: string;
+  display_name: string;
+  url: string;
+  sort_order: number;
+  include_in_seo: boolean;
+};
+
 export const ACCOUNT_LIFECYCLE_NOTICE_KEY = "quran_platform_account_lifecycle_notice_v1";
 
 // ---------------------------------------------------------------------------

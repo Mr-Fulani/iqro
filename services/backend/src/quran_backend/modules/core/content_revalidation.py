@@ -57,3 +57,12 @@ def enqueue_audio_content_change(
             "version": version,
         }
     )
+
+
+def enqueue_social_profiles_change(*, action: str) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "site.social_profiles.changed",
+            "action": action,
+        }
+    )

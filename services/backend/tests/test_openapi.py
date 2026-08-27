@@ -18,6 +18,7 @@ def test_openapi_contract_is_31_and_matches_bookmark_concurrency_api() -> None:
     )
 
     assert schema["openapi"] == "3.1.0"
+    assert set(schema["paths"]["/api/v1/site/social-profiles"]) == {"get"}
     bookmark_detail = schema["paths"]["/api/v1/me/bookmarks/{bookmark_id}"]
     assert set(bookmark_detail["delete"]["responses"]) == {"200"}
     update_schema = schema["components"]["schemas"]["BookmarkUpdateRequest"]

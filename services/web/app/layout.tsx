@@ -9,6 +9,7 @@ import { AudioPlayerProvider } from "../lib/audio-player-context";
 import { requestLocale } from "../lib/server-locale";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../lib/seo";
 import { serializeJsonLd } from "../lib/json-ld";
+import { getPublishedSocialProfilesOrEmpty } from "../lib/public-content";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();
@@ -21,6 +22,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await requestLocale();
+  const socialProfiles = await getPublishedSocialProfilesOrEmpty();
+  const organizationId = absoluteSiteUrl("/#organization");
   const websiteJson = serializeJsonLd({
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -28,6 +31,18 @@ export default async function RootLayout({
     name: SITE_NAME,
     url: absoluteSiteUrl("/"),
     inLanguage: ["ru", "en", "ar", "tr"],
+    publisher: { "@id": organizationId },
+  });
+  const organizationJson = serializeJsonLd({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": organizationId,
+    name: "IQRO",
+    alternateName: "IQRO — Islamic forum",
+    url: absoluteSiteUrl("/"),
+    ...(socialProfiles.some((profile) => profile.include_in_seo)
+      ? { sameAs: socialProfiles.filter((profile) => profile.include_in_seo).map((profile) => profile.url) }
+      : {}),
   });
   return (
     <html lang={locale} dir={directionFor(locale)} suppressHydrationWarning>
@@ -37,13 +52,14 @@ export default async function RootLayout({
       </head>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJson }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJson }} />
         <I18nProvider initialLocale={locale}>
           <AuthProvider>
             <AudioPlayerProvider>
               <div className="app-container">
                 <Header />
                 <main>{children}</main>
-                <Footer />
+                <Footer socialProfiles={socialProfiles} />
               </div>
             </AudioPlayerProvider>
           </AuthProvider>

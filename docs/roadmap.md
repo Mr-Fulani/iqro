@@ -1,6 +1,6 @@
 # План и roadmap Quran Platform
 
-Дата обновления: 25 августа 2026 года
+Дата обновления: 27 августа 2026 года
 
 Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Текущий
 статус реализации по P0 остаётся в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
@@ -11,7 +11,7 @@ capacity-прогонов, оценка стартового DAU и пороги
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 47 Playwright-сценариев проходят как на dev server, так и на standalone
+ESLint, TypeScript и 62 Playwright-сценария проходят как на dev server, так и на standalone
 production bundle. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
@@ -221,6 +221,9 @@ flowchart LR
   об источниках/лицензиях; production требует реальное имя и адрес оператора, юридическую
   юрисдикцию и рабочие legal/security email из secret/config store.
 - [x] Добавить app icon, web manifest и social preview assets.
+- [x] Добавить общий каталог социальных профилей: безопасные URL и порядок в русской
+  админке, публичный кэшируемый API для всех клиентов, серверный адаптивный блок футера,
+  `Organization.sameAs` и автоматическая ревалидация после изменений.
 - [x] Добавить локализованную пользовательскую 404, route error boundary с retry и
   независимый global 500 fallback без раскрытия серверной ошибки.
 - [x] Сделать заголовок каждой страницы её основным `h1`, сохранив название продукта в
@@ -241,7 +244,7 @@ flowchart LR
   RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
   transfer size и request count на standalone production build.
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
-  проходит те же 47 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
+  проходит те же 62 сценария, что быстрый dev/mock слой. Реальный staging smoke подтвердил
   RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
   RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` временно активирован только на
   noindex staging; content-backed SSR/API и глубокая сура отвечают `200`. Полный browser journey
