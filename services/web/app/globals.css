@@ -2199,11 +2199,17 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary);
 }
 
-.reminder-switch.is-on > span[aria-hidden="true"] {
+.reminder-switch.is-pending {
+  background: var(--warning);
+}
+
+.reminder-switch.is-on > span[aria-hidden="true"],
+.reminder-switch.is-pending > span[aria-hidden="true"] {
   transform: translateX(20px);
 }
 
-[dir="rtl"] .reminder-switch.is-on > span[aria-hidden="true"] {
+[dir="rtl"] .reminder-switch.is-on > span[aria-hidden="true"],
+[dir="rtl"] .reminder-switch.is-pending > span[aria-hidden="true"] {
   transform: translateX(-20px);
 }
 

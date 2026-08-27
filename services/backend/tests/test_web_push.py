@@ -5,13 +5,17 @@ import json
 import uuid
 from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
+from importlib import import_module
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from django.apps import apps
 from django.conf import settings
+from django.db import connection
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -256,7 +260,7 @@ def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
         user=user,
         reminder_type=ReminderType.PRAYER,
         prayer_event="fajr",
-        prayer_offset_minutes=0,
+        prayer_offset_minutes=-10,
         client_updated_at=timezone.now(),
     )
 
@@ -270,9 +274,58 @@ def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
     assert schedules[reading.id].occurrence_at == datetime(2026, 8, 26, 5, 0, tzinfo=UTC)
     assert datetime(2026, 8, 26, 0, 0, tzinfo=UTC) < schedules[prayer.id].occurrence_at
     assert schedules[prayer.id].occurrence_at < datetime(2026, 8, 27, 0, 0, tzinfo=UTC)
+    prayer.prayer_offset_minutes = 0
+    assert schedules[prayer.id].occurrence_at == next_local_occurrence(
+        prayer,
+        subscription,
+        after=datetime(2026, 8, 26, 0, 0, tzinfo=UTC),
+    )
     assert all(
         schedule.next_attempt_at == schedule.occurrence_at for schedule in schedules.values()
     )
+
+
+@pytest.mark.django_db
+def test_prayer_offset_migration_moves_existing_schedule_to_exact_time() -> None:
+    user = User.objects.create_user()
+    _client, device = _authenticated_web_client(user)
+    subscription = _subscription(device, timezone_name="Europe/Istanbul")
+    rule = ReminderRule.objects.create(
+        user=user,
+        reminder_type=ReminderType.PRAYER,
+        prayer_event="fajr",
+        prayer_offset_minutes=-10,
+        client_updated_at=timezone.now(),
+    )
+    occurrence = datetime(2026, 8, 28, 1, 38, tzinfo=UTC)
+    schedule = WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=occurrence,
+        next_attempt_at=occurrence,
+        attempt_count=2,
+        claim_token=uuid.uuid4(),
+        claimed_until=occurrence + timedelta(minutes=1),
+        last_error_code="transport",
+    )
+    migration = import_module(
+        "quran_backend.modules.reminders.migrations.0004_normalize_prayer_reminder_offsets"
+    )
+
+    migration.normalize_prayer_reminder_offsets(
+        apps,
+        SimpleNamespace(connection=connection),
+    )
+
+    rule.refresh_from_db()
+    schedule.refresh_from_db()
+    assert rule.prayer_offset_minutes == 0
+    assert schedule.occurrence_at == occurrence + timedelta(minutes=10)
+    assert schedule.next_attempt_at == occurrence + timedelta(minutes=10)
+    assert schedule.attempt_count == 0
+    assert schedule.claim_token is None
+    assert schedule.claimed_until is None
+    assert schedule.last_error_code == ""
 
 
 @pytest.mark.django_db

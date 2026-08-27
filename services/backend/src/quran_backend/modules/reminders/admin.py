@@ -41,8 +41,7 @@ class ReminderRuleAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if obj.deleted_at is not None:
             return "Удалено"
         if obj.prayer_event:
-            offset = obj.prayer_offset_minutes or 0
-            return f"{obj.prayer_event} {offset:+d} min"
+            return str(obj.prayer_event)
         return obj.local_time.isoformat(timespec="minutes") if obj.local_time else "Некорректно"
 
     def has_add_permission(self, _request: HttpRequest) -> bool:

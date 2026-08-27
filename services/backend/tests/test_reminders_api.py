@@ -124,7 +124,11 @@ def test_create_read_snapshot_and_exact_retry_are_authoritative_and_idempotent()
     assert retried.status_code == 200
     assert created.json() == retried.json()
     assert created.json()["revision"] == 1
-    assert created.json()["schedule"] == payload["schedule"]
+    assert created.json()["schedule"] == {
+        "kind": "prayer",
+        "prayer_event": "fajr",
+        "prayer_offset_minutes": 0,
+    }
     assert created.json()["timezone"] == {"mode": "device_local"}
     assert created.json()["delivery_mode"] == "local"
     assert created.json()["device_id"] is None
@@ -147,10 +151,7 @@ def test_same_create_id_with_different_normalized_payload_conflicts() -> None:
     url = reverse("reminders:reminder-list")
     assert client.post(url, payload, format="json").status_code == 201
 
-    changed = {
-        **payload,
-        "schedule": {**payload["schedule"], "prayer_offset_minutes": 5},
-    }
+    changed = {**payload, "schedule": {**payload["schedule"], "prayer_event": "dhuhr"}}
     response = client.post(url, changed, format="json")
 
     assert response.status_code == 409

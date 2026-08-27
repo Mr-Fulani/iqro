@@ -273,7 +273,6 @@ def _next_prayer_occurrence(
             return None
         event = calculation["times"][reminder.prayer_event]
         candidate = datetime.fromisoformat(str(event["utc"]).replace("Z", "+00:00"))
-        candidate += timedelta(minutes=reminder.prayer_offset_minutes or 0)
         if candidate > after_utc:
             return candidate
     return None

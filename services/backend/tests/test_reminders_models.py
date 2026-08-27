@@ -484,7 +484,7 @@ def test_admin_is_registered_read_only_and_formats_local_schedule(reminder_user:
         is_staff=True,
         is_superuser=True,
     )
-    prayer = _prayer_rule(reminder_user, prayer_offset_minutes=-15)
+    prayer = _prayer_rule(reminder_user)
     prayer.save()
     reading = _reading_rule(reminder_user)
     reading.save()
@@ -497,6 +497,6 @@ def test_admin_is_registered_read_only_and_formats_local_schedule(reminder_user:
     assert model_admin.has_add_permission(request) is False
     assert model_admin.has_change_permission(request, prayer) is False
     assert model_admin.has_delete_permission(request, prayer) is False
-    assert model_admin.schedule(prayer) == "fajr -15 min"
+    assert model_admin.schedule(prayer) == "fajr"
     assert model_admin.schedule(reading) == "07:30"
     assert model_admin.get_queryset(request).query.select_related is not False

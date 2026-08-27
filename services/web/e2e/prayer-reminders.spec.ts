@@ -159,6 +159,15 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
 }) => {
   await installSession(page);
   await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "quran_prayer_location_v1:00000000-0000-7000-8000-000000000102",
+      JSON.stringify({
+        latitude: "41.0082",
+        longitude: "28.9784",
+        timezone: "Europe/Istanbul",
+        updated_at: "2026-08-23T16:00:00Z",
+      }),
+    );
     const subscription = {
       endpoint: "https://fcm.googleapis.com/fcm/send/prayer-switch-test",
       expirationTime: null,
@@ -342,7 +351,7 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
-  await expect(reminders.getByText(/Время намаза зависит от города/)).toBeVisible();
+  await expect(reminders.getByText(/Местоположение настроено/)).toBeVisible();
   await expect(reminders.getByLabel("Включено")).toHaveCount(0);
   await expect(
     reminders.locator(".prayer-reminder-panel > .surface-head .status-chip"),
@@ -369,7 +378,6 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
     signal: "sound",
     is_enabled: true,
   });
-  await expect(reminders.getByText(/Местоположение настроено/)).toBeVisible();
   await maghribSwitch.click();
   await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
   expect(captured.patches[0]).toMatchObject({ base_revision: 1, is_enabled: false });

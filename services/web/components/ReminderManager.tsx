@@ -172,9 +172,15 @@ export function ReminderManager() {
       .then((subscription) => {
         if (!active) return undefined;
         setWebPushConnected(Boolean(subscription));
+        const prayerLocation = storedPrayerLocation(session?.user.id);
+        const needsPrayerLocationSync = Boolean(
+          prayerLocation && !webPushStatus.prayer_location_configured,
+        );
         if (
           !subscription ||
-          (webPushStatus.timezone_name === timezoneName && webPushStatus.locale === locale)
+          (webPushStatus.timezone_name === timezoneName &&
+            webPushStatus.locale === locale &&
+            !needsPrayerLocationSync)
         ) {
           return undefined;
         }
@@ -183,6 +189,7 @@ export function ReminderManager() {
             subscription,
             locale,
             t("reminder.webPushInvalidSubscription"),
+            prayerLocation,
           ),
         );
       })
@@ -198,7 +205,7 @@ export function ReminderManager() {
     return () => {
       active = false;
     };
-  }, [locale, t, webPushStatus, webPushSupported]);
+  }, [locale, session?.user.id, t, webPushStatus, webPushSupported]);
 
   useEffect(() => {
     if (reminderType !== "quran_review" || surahs.length > 0) return;
@@ -352,6 +359,14 @@ export function ReminderManager() {
         const updated = existing
           ? await api.updateReminder(existing.id, {
               base_revision: existing.revision,
+              schedule: {
+                kind: "prayer",
+                prayer_event: prayerEvent,
+                prayer_offset_minutes: 0,
+              },
+              weekdays_mask: 127,
+              timezone: { mode: "device_local" },
+              signal: "sound",
               is_enabled: true,
             })
           : await api.createReminder({
@@ -515,6 +530,7 @@ export function ReminderManager() {
           subscription,
           locale,
           t("reminder.webPushInvalidSubscription"),
+          storedPrayerLocation(session?.user.id),
         ),
       );
       setWebPushStatus(status);
@@ -704,7 +720,9 @@ export function ReminderManager() {
                     prayer: t(label),
                     status: t(enabled ? "reminder.enabled" : "reminder.disabled"),
                   })}
-                  className={`reminder-switch ${enabled ? "is-on" : ""}`}
+                  className={`reminder-switch ${
+                    enabled ? (prayerDeliveryReady ? "is-on" : "is-pending") : ""
+                  }`}
                   disabled={savingPrayerEvent !== null}
                   onClick={() => void setPrayerReminderEnabled(prayerEvent, !enabled)}
                   role="switch"
@@ -1034,6 +1052,17 @@ function serializePushSubscription(
     timezone_name: browserTimezone(),
     locale,
     ...(prayerLocation ? { prayer_location: prayerLocation } : {}),
+  };
+}
+
+function storedPrayerLocation(
+  userId?: string | null,
+): WebPushSubscriptionInput["prayer_location"] | undefined {
+  const saved = loadPrayerLocationPreference(userId);
+  if (!saved) return undefined;
+  return {
+    latitude: Number(saved.latitude),
+    longitude: Number(saved.longitude),
   };
 }
 

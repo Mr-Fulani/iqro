@@ -365,7 +365,10 @@ def _schedule_values(schedule: dict[str, Any]) -> dict[str, Any]:
     if schedule["kind"] == "prayer":
         return {
             "prayer_event": str(schedule["prayer_event"]),
-            "prayer_offset_minutes": schedule["prayer_offset_minutes"],
+            # Prayer switches intentionally mean the exact calculated prayer
+            # time. Keep accepting the legacy API field so older clients can
+            # sync, but never persist its former hidden offset.
+            "prayer_offset_minutes": 0,
             "local_time": None,
         }
     return {
@@ -445,7 +448,7 @@ def _input_functional_state(data: dict[str, Any]) -> tuple[Any, ...]:
         str(data["reminder_type"]),
         str(schedule["prayer_event"]) if is_prayer else None,
         None if is_prayer else schedule["local_time"],
-        schedule["prayer_offset_minutes"] if is_prayer else None,
+        0 if is_prayer else None,
         target_data.get("start_ayah_id"),
         target_data.get("end_ayah_id"),
         data["weekdays_mask"],
