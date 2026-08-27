@@ -80,7 +80,7 @@ const ru = (locale: Locale, config: LegalConfig): AdditionalLegalCopy => ({
       },
       {
         title: "3. localStorage и sessionStorage",
-        paragraphs: ["localStorage хранит локальный cursor, очередь ещё не отправленных изменений, техническое состояние синхронизации и последнее выбранное на этом устройстве место расчёта намаза. sessionStorage временно хранит безопасный маршрут возврата после входа и одноразовые уведомления об удалении аккаунта. Данные остаются на конкретном устройстве до очистки браузера, выхода или удаления соответствующего состояния приложением."],
+        paragraphs: ["localStorage хранит локальный cursor, очередь ещё не отправленных изменений, техническое состояние синхронизации, а также последние выбранные на этом устройстве место, метод расчёта намаза и мазхаб Асра. sessionStorage временно хранит безопасный маршрут возврата после входа и одноразовые уведомления об удалении аккаунта. Данные остаются на конкретном устройстве до очистки браузера, выхода или удаления соответствующего состояния приложением."],
       },
       {
         title: "4. Управление",
@@ -207,7 +207,7 @@ const en = (locale: Locale, config: LegalConfig): AdditionalLegalCopy => ({
     sections: [
       { title: "1. What we use now", paragraphs: ["Iqro uses only mechanisms necessary for language, sign-in, security, and synchronization. We currently use no advertising, behavioral, or analytics cookies."] },
       { title: "2. Cookies", paragraphs: ["Cookies do not contain your password. Server authentication cookies are not available to browser JavaScript."], bullets: ["quran_locale_v1 — selected language; up to one year; SameSite=Lax.", "quran_refresh_v1 — extends an authenticated session; HttpOnly, Secure in production, SameSite=Lax; removed on sign-out or refresh-session expiry.", "quran_installation_id_v1 and quran_installation_credential_v1 — identify and protect an installation; HttpOnly, Secure in production, SameSite=Lax; up to 400 days."] },
-      { title: "3. localStorage and sessionStorage", paragraphs: ["localStorage holds the local cursor, unsent change queue, synchronization state, and the last prayer-calculation location selected on this device. sessionStorage temporarily holds the safe post-login return path and one-time account-lifecycle notices. Data remains on that device until the browser or the app clears it."] },
+      { title: "3. localStorage and sessionStorage", paragraphs: ["localStorage holds the local cursor, unsent change queue, synchronization state, and the last prayer-calculation location, method, and Asr school selected on this device. sessionStorage temporarily holds the safe post-login return path and one-time account-lifecycle notices. Data remains on that device until the browser or the app clears it."] },
       { title: "4. Your controls", paragraphs: ["You can block or clear these technologies in browser settings, but language may reset, sign-in may not persist, and unsent changes may be lost. Strictly necessary cookies do not require a separate consent choice. Before adding analytics, advertising, or another optional technology, we will add consent controls and update this page."], links: [{ label: "Privacy Policy", href: internal(locale, "/privacy") }] },
     ],
   },
@@ -256,7 +256,7 @@ const ar = (locale: Locale, config: LegalConfig): AdditionalLegalCopy => ({
     sections: [
       { title: "1. ما نستخدمه الآن", paragraphs: ["يستخدم Iqro الوسائل الضرورية فقط للغة وتسجيل الدخول والأمن والمزامنة. لا نستخدم حاليًا ملفات إعلانية أو سلوكية أو تحليلية."] },
       { title: "2. ملفات الارتباط", paragraphs: ["لا تحتوي الملفات على كلمة مرورك، ولا تستطيع JavaScript في المتصفح قراءة ملفات التحقق الخادمية."], bullets: ["quran_locale_v1 — اللغة المختارة؛ حتى سنة؛ SameSite=Lax.", "quran_refresh_v1 — تجديد الجلسة؛ HttpOnly وSecure في production وSameSite=Lax؛ يحذف عند الخروج أو انتهاء الجلسة.", "quran_installation_id_v1 وquran_installation_credential_v1 — تعريف التثبيت وحمايته؛ HttpOnly وSecure في production وSameSite=Lax؛ حتى 400 يوم."] },
-      { title: "3. التخزين المحلي والمؤقت", paragraphs: ["يحفظ localStorage مؤشر المزامنة وطابور التغييرات غير المرسلة والحالة التقنية وآخر موقع لحساب الصلاة اختير على هذا الجهاز. ويحفظ sessionStorage مؤقتًا مسار الرجوع الآمن وإشعارات دورة الحساب. تبقى البيانات على الجهاز حتى يمسحها المتصفح أو التطبيق."] },
+      { title: "3. التخزين المحلي والمؤقت", paragraphs: ["يحفظ localStorage مؤشر المزامنة وطابور التغييرات غير المرسلة والحالة التقنية وآخر موقع وطريقة حساب ومذهب عصر اختيرت على هذا الجهاز. ويحفظ sessionStorage مؤقتًا مسار الرجوع الآمن وإشعارات دورة الحساب. تبقى البيانات على الجهاز حتى يمسحها المتصفح أو التطبيق."] },
       { title: "4. التحكم", paragraphs: ["يمكنك حظر هذه الوسائل أو مسحها، لكن قد تُعاد اللغة ويتوقف استمرار الدخول وتضيع تغييرات غير مرسلة. لا نطلب اختيارًا منفصلًا للملفات الضرورية بحتًا. سنضيف إدارة الموافقة ونحدّث الصفحة قبل أي تحليلات أو إعلانات أو تقنية اختيارية."], links: [{ label: "سياسة الخصوصية", href: internal(locale, "/privacy") }] },
     ],
   },
@@ -305,7 +305,7 @@ const tr = (locale: Locale, config: LegalConfig): AdditionalLegalCopy => ({
     sections: [
       { title: "1. Şu anda kullandıklarımız", paragraphs: ["Iqro yalnızca dil, oturum açma, güvenlik ve eşitleme için gerekli mekanizmaları kullanır. Şu anda reklam, davranış veya analiz çerezi kullanmıyoruz."] },
       { title: "2. Çerezler", paragraphs: ["Çerezler parolanızı içermez. Sunucu kimlik doğrulama çerezlerine tarayıcı JavaScript'i erişemez."], bullets: ["quran_locale_v1 — seçilen dil; bir yıla kadar; SameSite=Lax.", "quran_refresh_v1 — oturumu yeniler; production'da HttpOnly ve Secure, SameSite=Lax; çıkışta veya oturum süresi dolunca silinir.", "quran_installation_id_v1 ve quran_installation_credential_v1 — kurulumu tanımlar ve korur; production'da HttpOnly ve Secure, SameSite=Lax; 400 güne kadar."] },
-      { title: "3. localStorage ve sessionStorage", paragraphs: ["localStorage yerel cursor'ı, gönderilmemiş değişiklik kuyruğunu, eşitleme durumunu ve bu cihazda seçilen son namaz hesaplama konumunu tutar. sessionStorage güvenli giriş dönüş yolunu ve tek kullanımlık hesap bildirimlerini geçici tutar. Tarayıcı veya uygulama temizleyene kadar cihazda kalır."] },
+      { title: "3. localStorage ve sessionStorage", paragraphs: ["localStorage yerel cursor'ı, gönderilmemiş değişiklik kuyruğunu, eşitleme durumunu ve bu cihazda seçilen son namaz hesaplama konumunu, yöntemini ve ikindi mezhebini tutar. sessionStorage güvenli giriş dönüş yolunu ve tek kullanımlık hesap bildirimlerini geçici tutar. Tarayıcı veya uygulama temizleyene kadar cihazda kalır."] },
       { title: "4. Kontrolleriniz", paragraphs: ["Tarayıcıdan engelleyebilir veya temizleyebilirsiniz; dil sıfırlanabilir, oturum kalıcı olmaz ve gönderilmemiş değişiklikler kaybolabilir. Kesinlikle gerekli çerezler için ayrı seçim istemeyiz. Analiz, reklam veya başka isteğe bağlı teknoloji eklemeden önce rıza yönetimi ekleyip bu sayfayı güncelleyeceğiz."], links: [{ label: "Gizlilik Politikası", href: internal(locale, "/privacy") }] },
     ],
   },

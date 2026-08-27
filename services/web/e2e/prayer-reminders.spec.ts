@@ -29,6 +29,15 @@ const method = {
   checksum_sha256: "a".repeat(64),
 };
 
+const dubaiMethod = {
+  id: "01992d87-6c00-7000-8000-000000000600",
+  code: "dubai",
+  available: true,
+  name: { ar: "دبي", en: "Dubai", ru: "Дубай" },
+  description: { ar: "", en: "", ru: "" },
+  checksum_sha256: "d".repeat(64),
+};
+
 async function installSession(page: Page) {
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: activeSession }));
 }
@@ -44,12 +53,13 @@ test("prayer profile persists the complete revisioned calculation preferences", 
     const request = route.request();
     const url = new URL(request.url());
     if (url.pathname === "/api/v1/prayer/methods") {
+      await new Promise((resolve) => setTimeout(resolve, 100));
       return route.fulfill({
         json: {
           catalog_version: "2026.1",
           configuration_schema_version: 1,
           checksum_sha256: "b".repeat(64),
-          methods: [method],
+          methods: [dubaiMethod, method],
         },
       });
     }
@@ -108,6 +118,7 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   });
 
   await page.goto("/prayer");
+  await page.getByLabel("Метод расчёта").selectOption(method.id);
   await page.getByLabel("Высокие широты").selectOption("seventh_of_night");
   await page.getByLabel("Полярная зона").selectOption("aqrab_balad");
   await page.getByLabel("Часовой пояс профиля").selectOption("fixed");
@@ -132,6 +143,7 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   expect(captured.profile?.client_updated_at).toEqual(expect.any(String));
 
   await page.reload();
+  await expect(page.getByLabel("Метод расчёта")).toHaveValue(method.id);
   await expect(page.getByLabel("Широта (Latitude)")).toHaveValue("40.7128");
   await expect(page.getByLabel("Долгота (Longitude)")).toHaveValue("-74.0060");
   await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue("America/New_York");

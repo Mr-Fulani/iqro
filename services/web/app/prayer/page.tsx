@@ -80,10 +80,15 @@ export default function PrayerPage() {
     api
       .getPrayerMethods()
       .then((res) => {
-        setMethods(res.methods || []);
-        const defaultMethod = res.methods.find((m) => m.available) || res.methods[0];
+        const nextMethods = res.methods || [];
+        setMethods(nextMethods);
+        const defaultMethod = nextMethods.find((m) => m.available) || nextMethods[0];
         if (defaultMethod) {
-          setSelectedMethodId(defaultMethod.id);
+          setSelectedMethodId((currentMethodId) =>
+            nextMethods.some((method) => method.id === currentMethodId)
+              ? currentMethodId
+              : defaultMethod.id,
+          );
         }
       })
       .catch((err) => {
@@ -105,8 +110,11 @@ export default function PrayerPage() {
       .getPrayerProfile()
       .then((profile) => {
         if (!active) return;
-        setSelectedMethodId(profile.method_config.id);
-        setAsrMethod(profile.asr_method);
+        const devicePreference = loadPrayerLocationPreference(session?.user.id);
+        setSelectedMethodId(
+          devicePreference?.method_config_id || profile.method_config.id,
+        );
+        setAsrMethod(devicePreference?.asr_method || profile.asr_method);
         setHighLatitudeRule(profile.high_latitude_rule);
         setPolarResolution(profile.polar_resolution);
         setAdjustments(profile.adjustments);
@@ -137,7 +145,7 @@ export default function PrayerPage() {
     return () => {
       active = false;
     };
-  }, [authLoading, isLoggedIn, t]);
+  }, [authLoading, isLoggedIn, session?.user.id, t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -146,6 +154,8 @@ export default function PrayerPage() {
       setLatitude(saved.latitude);
       setLongitude(saved.longitude);
       setTimezone(saved.timezone);
+      if (saved.method_config_id) setSelectedMethodId(saved.method_config_id);
+      if (saved.asr_method) setAsrMethod(saved.asr_method);
       const cityIndex = PRESET_CITIES.findIndex(
         (city) =>
           city.lat === saved.latitude &&
@@ -204,6 +214,8 @@ export default function PrayerPage() {
         latitude,
         longitude,
         timezone,
+        method_config_id: selectedMethodId,
+        asr_method: asrMethod,
       });
     }
 
@@ -256,7 +268,13 @@ export default function PrayerPage() {
       });
       setProfileRevision(profile.revision);
       setProfileMessage(t("prayer.profileSaved", { revision: profile.revision }));
-      savePrayerLocationPreference(ownerId, { latitude, longitude, timezone });
+      savePrayerLocationPreference(ownerId, {
+        latitude,
+        longitude,
+        timezone,
+        method_config_id: selectedMethodId,
+        asr_method: asrMethod,
+      });
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -339,7 +357,17 @@ export default function PrayerPage() {
               <select
                 id="prayer-method"
                 value={selectedMethodId}
-                onChange={(e) => setSelectedMethodId(e.target.value)}
+                onChange={(e) => {
+                  const methodConfigId = e.target.value;
+                  setSelectedMethodId(methodConfigId);
+                  savePrayerLocationPreference(session?.user.id, {
+                    latitude,
+                    longitude,
+                    timezone,
+                    method_config_id: methodConfigId,
+                    asr_method: asrMethod,
+                  });
+                }}
                 disabled={methods.length === 0}
               >
                 {methods.map((m) => (
