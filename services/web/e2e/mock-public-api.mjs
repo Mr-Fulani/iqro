@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 const host = "127.0.0.1";
 const port = Number(process.env.MOCK_PUBLIC_API_PORT || 3199);
 const publishedAt = "2026-08-24T00:00:00Z";
+const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
 
 const edition = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -150,8 +151,55 @@ function sendJson(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
-const server = createServer((request, response) => {
+async function readJson(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+}
+
+const server = createServer(async (request, response) => {
   const path = new URL(request.url || "/", `http://${host}:${port}`).pathname;
+
+  if (path === "/api/v1/auth/guest" && request.method === "POST") {
+    const input = await readJson(request);
+    if (input.installation_id === unavailableInstallationId) {
+      return sendJson(response, 403, {
+        code: "guest_bootstrap_unavailable",
+        detail: "Guest bootstrap is unavailable for this installation.",
+      });
+    }
+    return sendJson(response, 200, {
+      token_type: "Bearer",
+      access_token: "rotated-guest-access-token",
+      expires_in: 900,
+      access_expires_at: "2027-08-27T00:15:00Z",
+      refresh_token: "rotated-guest-refresh-token",
+      refresh_expires_in: 2592000,
+      refresh_expires_at: "2027-09-26T00:00:00Z",
+      user: {
+        id: "00000000-0000-7000-8000-000000000199",
+        status: "guest",
+        preferred_locale: input.locale || "ru",
+        email: null,
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+      },
+      device: {
+        id: "00000000-0000-7000-8000-000000000299",
+        platform: "web",
+        locale: input.locale || "ru",
+        app_version: input.app_version || "1.0.0",
+        bootstrap_generation: 1,
+      },
+    });
+  }
+  if (path === "/api/v1/auth/email/start" && request.method === "POST") {
+    return sendJson(response, 202, {
+      challenge_id: "00000000-0000-7000-8000-000000000399",
+      expires_in: 600,
+      expires_at: "2027-08-27T00:10:00Z",
+    });
+  }
 
   if (path === "/api/v1/quran/editions") return sendJson(response, 200, [edition]);
   if (path === "/api/v1/quran/editions/madani-hafs") return sendJson(response, 200, edition);

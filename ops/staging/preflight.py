@@ -74,6 +74,7 @@ def validate(
         "DJANGO_EMAIL_HOST_PASSWORD",
         "DJANGO_EMAIL_USE_TLS",
         "DJANGO_DEFAULT_FROM_EMAIL",
+        "FEEDBACK_NOTIFICATION_EMAIL",
         "PUBLIC_MEDIA_BASE_URL",
         "PUBLIC_AUDIO_BASE_URL",
         "MEDIA_OBJECT_STORAGE_ENDPOINT_URL",
@@ -155,6 +156,8 @@ def validate(
             errors.append(
                 "smtp mode requires an email address in DJANGO_DEFAULT_FROM_EMAIL"
             )
+    if "@" not in values["FEEDBACK_NOTIFICATION_EMAIL"]:
+        errors.append("FEEDBACK_NOTIFICATION_EMAIL must be an email address")
     if (
         "staging" not in values["DATABASE_NAME"]
         or "staging" not in values["DATABASE_USER"]

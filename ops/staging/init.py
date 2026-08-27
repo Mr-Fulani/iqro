@@ -129,6 +129,7 @@ def build_overrides(
         "LEGAL_ENTITY_NAME": "Quran Platform Staging",
         "LEGAL_CONTACT_EMAIL": acme_email,
         "SECURITY_CONTACT_EMAIL": acme_email,
+        "FEEDBACK_NOTIFICATION_EMAIL": acme_email,
         "LEGAL_POSTAL_ADDRESS": "Staging environment; not a public legal notice",
         "LEGAL_JURISDICTION": "Staging only",
         "LEGAL_EFFECTIVE_DATE": datetime.now(tz=UTC).date().isoformat(),

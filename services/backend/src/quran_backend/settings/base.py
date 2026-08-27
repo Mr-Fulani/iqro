@@ -361,6 +361,11 @@ MAILERS = {
     }
 }
 DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "Quran Platform <noreply@localhost>")
+PUBLIC_SITE_URL = os.getenv("SITE_URL", "http://localhost:3000").rstrip("/")
+FEEDBACK_NOTIFICATION_EMAIL = os.getenv(
+    "FEEDBACK_NOTIFICATION_EMAIL",
+    os.getenv("LEGAL_CONTACT_EMAIL", ""),
+).strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -19,10 +19,28 @@ export async function POST(request: NextRequest) {
     installation_id: storedId,
     installation_credential: storedCredential,
   };
-  const identity = validInstallationIdentity(storedIdentity)
+  let identity = validInstallationIdentity(storedIdentity)
     ? storedIdentity
     : newInstallationIdentity();
-  const response = await backendRequest("/api/v1/auth/guest", {
+  let response = await bootstrapGuest(identity, input);
+  if (await guestBootstrapUnavailable(response)) {
+    identity = newInstallationIdentity();
+    response = await bootstrapGuest(identity, input);
+  }
+  if (!response.ok) {
+    return setInstallationCookies(await forwardBackendResponse(response), identity);
+  }
+  return setInstallationCookies(
+    authenticatedResponse(await parseBackendTokens(response)),
+    identity,
+  );
+}
+
+function bootstrapGuest(
+  identity: { installation_id: string; installation_credential: string },
+  input: { locale?: string; app_version?: string },
+): Promise<Response> {
+  return backendRequest("/api/v1/auth/guest", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -32,11 +50,14 @@ export async function POST(request: NextRequest) {
       app_version: input.app_version || "1.0.0",
     }),
   });
-  if (!response.ok) {
-    return setInstallationCookies(await forwardBackendResponse(response), identity);
+}
+
+async function guestBootstrapUnavailable(response: Response): Promise<boolean> {
+  if (response.status !== 403) return false;
+  try {
+    const payload = (await response.clone().json()) as { code?: unknown };
+    return payload.code === "guest_bootstrap_unavailable";
+  } catch {
+    return false;
   }
-  return setInstallationCookies(
-    authenticatedResponse(await parseBackendTokens(response)),
-    identity,
-  );
 }

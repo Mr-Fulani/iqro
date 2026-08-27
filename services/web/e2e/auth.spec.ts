@@ -22,6 +22,8 @@ const guestSession = {
   },
 };
 
+const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
+
 const activeSession = {
   ...guestSession,
   access_token: "active-access-token",
@@ -224,6 +226,37 @@ test("signed-out profile offers email login without a redundant guest action", a
   await expect(emailLogin).toBeVisible();
   await expect(emailLogin).toHaveAttribute("href", "/ru/login");
   await expect(page.getByRole("button", { name: "Войти как гость" })).toHaveCount(0);
+});
+
+test("email login recovers an installation that is still bound to a signed-out account", async ({
+  context,
+  page,
+}) => {
+  await context.addCookies([
+    {
+      name: "quran_installation_id_v1",
+      value: unavailableInstallationId,
+      domain: "127.0.0.1",
+      path: "/api/web-auth",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "quran_installation_credential_v1",
+      value: "A".repeat(43),
+      domain: "127.0.0.1",
+      path: "/api/web-auth",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("reader@example.com");
+  await page.getByRole("button", { name: "Получить код" }).click();
+
+  await expect(page.getByText(/Код отправлен на reader@example.com/)).toBeVisible();
+  await expect(page.getByText("Guest bootstrap is unavailable for this installation.")).toHaveCount(0);
 });
 
 test("authenticated profile actions fit a 320px mobile viewport", async ({ page }) => {

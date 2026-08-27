@@ -29,6 +29,10 @@ from quran_backend.modules.feedback.models import (
     FeedbackTicket,
     FeedbackVisibility,
 )
+from quran_backend.modules.feedback.tasks import (
+    send_feedback_operator_notification_task,
+    send_feedback_reporter_notification_task,
+)
 
 TERMINAL_STATUSES = {
     FeedbackStatus.REJECTED,
@@ -227,6 +231,7 @@ def create_ticket(
             "initial_message_id": initial_message.id,
         },
     )
+    _notify_operator_after_commit(ticket.id, initial_message.id, "created")
     return ticket, True
 
 
@@ -372,6 +377,7 @@ def add_reporter_message(
         action=FeedbackAuditAction.MESSAGE_ADDED,
         new_values={"message_id": message.id, "visibility": message.visibility},
     )
+    _notify_operator_after_commit(ticket.id, message.id, "reporter_reply")
     return ticket, message, True
 
 
@@ -461,7 +467,31 @@ def register_operator_message(message_id: uuid.UUID, actor: User) -> FeedbackMes
         action=FeedbackAuditAction.MESSAGE_ADDED,
         new_values={"message_id": message.id, "visibility": message.visibility},
     )
+    if message.visibility == FeedbackVisibility.PUBLIC:
+        _notify_reporter_after_commit(message.id)
     return message
+
+
+def _notify_operator_after_commit(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    event: str,
+) -> None:
+    transaction.on_commit(
+        lambda: send_feedback_operator_notification_task.delay(
+            str(ticket_id),
+            str(message_id),
+            event,
+        ),
+        robust=True,
+    )
+
+
+def _notify_reporter_after_commit(message_id: uuid.UUID) -> None:
+    transaction.on_commit(
+        lambda: send_feedback_reporter_notification_task.delay(str(message_id)),
+        robust=True,
+    )
 
 
 def context_snapshot(context: FeedbackContext) -> dict[str, Any]:

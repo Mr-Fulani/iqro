@@ -143,6 +143,7 @@ def test_resend_configuration_enables_external_smtp_without_exposing_the_key() -
     assert values["STAGING_EMAIL_DELIVERY_MODE"] == "smtp"
     assert values["DJANGO_EMAIL_HOST"] == "smtp.resend.com"
     assert values["DJANGO_DEFAULT_FROM_EMAIL"] == "IQRO <login@auth.iqro.forum>"
+    assert values["FEEDBACK_NOTIFICATION_EMAIL"] == "ops@example.test"
 
 
 def test_generated_vapid_keys_enable_web_push_preflight() -> None:
