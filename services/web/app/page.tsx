@@ -37,7 +37,7 @@ export default function HomePage() {
 
     api
       .getReciters()
-      .then((res) => setFeaturedReciters(groupRecitersByPerson(res.results || []).slice(0, 6)))
+      .then((res) => setFeaturedReciters(groupRecitersByPerson(res.results || []).slice(0, 10)))
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 

@@ -610,6 +610,59 @@ input:focus, select:focus, textarea:focus {
   gap: 16px;
 }
 
+.reciter-showcase .reciter-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reciter-showcase .reciter-card {
+  gap: 10px;
+  padding: 16px 10px 14px;
+}
+
+.reciter-showcase .reciter-avatar {
+  width: 88px;
+  height: 88px;
+  flex-basis: 88px;
+}
+
+.reciter-showcase .reciter-avatar-play {
+  width: 30px;
+  height: 30px;
+}
+
+.reciter-showcase .reciter-card-copy strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.reciter-showcase .reciter-card-copy span {
+  font-size: 15px;
+}
+
+@media (max-width: 699px) {
+  .reciter-showcase .reciter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .reciter-showcase .reciter-card {
+    padding: 12px 6px;
+  }
+
+  .reciter-showcase .reciter-avatar {
+    width: 78px;
+    height: 78px;
+    flex-basis: 78px;
+  }
+
+  .reciter-showcase .reciter-avatar-play {
+    width: 27px;
+    height: 27px;
+    border-width: 2px;
+  }
+}
+
 .reciter-card {
   min-width: 0;
   padding: 22px 16px 18px;

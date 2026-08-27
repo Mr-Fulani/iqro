@@ -80,6 +80,51 @@ const reciters = [
     country_code: "SA",
     portrait_url: null,
   },
+  {
+    id: "00000000-0000-7000-8000-000000000005",
+    slug: "qf-5-hani-ar-rifai",
+    name_ar: "هاني الرفاعي",
+    name_en: "Hani ar-Rifai",
+    name_ru: "Хани ар-Рифаи",
+    country_code: "SA",
+    portrait_url: null,
+  },
+  {
+    id: "00000000-0000-7000-8000-000000000006",
+    slug: "qf-6-mahmoud-khaleel-al-husary",
+    name_ar: "محمود خليل الحصري",
+    name_en: "Mahmoud Khaleel Al-Husary",
+    name_ru: "Махмуд Халиль аль-Хусари",
+    country_code: "EG",
+    portrait_url: null,
+  },
+  {
+    id: "00000000-0000-7000-8000-000000000007",
+    slug: "qf-7-mishari-rashid-al-afasy",
+    name_ar: "مشاري راشد العفاسي",
+    name_en: "Mishari Rashid al-Afasy",
+    name_ru: "Мишари Рашид аль-Афаси",
+    country_code: "KW",
+    portrait_url: null,
+  },
+  {
+    id: "00000000-0000-7000-8000-000000000009",
+    slug: "qf-9-muhammad-siddiq-al-minshawi",
+    name_ar: "محمد صديق المنشاوي",
+    name_en: "Muhammad Siddiq al-Minshawi",
+    name_ru: "Мухаммад Сиддик аль-Миншави",
+    country_code: "EG",
+    portrait_url: null,
+  },
+  {
+    id: "00000000-0000-7000-8000-000000000010",
+    slug: "qf-10-saud-ash-shuraym",
+    name_ar: "سعود الشريم",
+    name_en: "Saud ash-Shuraym",
+    name_ru: "Сауд аш-Шурайм",
+    country_code: "SA",
+    portrait_url: null,
+  },
 ];
 
 function recitation(
@@ -116,7 +161,7 @@ test("portrait manifest covers the full production reciter catalog", async () =>
   }
 
   const people = groupRecitersByPerson(reciters);
-  expect(people).toHaveLength(5);
+  expect(people).toHaveLength(10);
   expect(people.filter((reciter) => reciter.slug.includes("abdul-baset"))).toHaveLength(1);
   expect(people[0].slug).toBe("qf-2-abdul-baset-abdul-samad");
 });
@@ -134,9 +179,9 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
 
   const section = page.getByTestId("featured-reciters");
   await expect(section.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
-  await expect(section.getByTestId("featured-reciter")).toHaveCount(5);
-  await expect(section.getByTestId("reciter-avatar")).toHaveCount(5);
-  await expect(section.locator("img")).toHaveCount(5);
+  await expect(section.getByTestId("featured-reciter")).toHaveCount(10);
+  await expect(section.getByTestId("reciter-avatar")).toHaveCount(10);
+  await expect(section.locator("img")).toHaveCount(10);
   await expect(section.locator("img").nth(0)).toHaveAttribute(
     "src",
     /\/reciters\/abdul-baset-abdul-samad\.webp$/,
@@ -144,7 +189,22 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
   const portraitSources = await section.locator("img").evaluateAll((images) =>
     images.map((image) => image.getAttribute("src")),
   );
-  expect(new Set(portraitSources).size).toBe(5);
+  expect(new Set(portraitSources).size).toBe(10);
+  expect(
+    await section.locator(".reciter-grid").evaluate((grid) =>
+      getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(5);
+
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(
+    await section.locator(".reciter-grid").evaluate((grid) =>
+      getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
 
   await section.getByRole("link", { name: "Слушать чтение: Абдур-Рахман ас-Судайс" }).click();
 
@@ -192,7 +252,7 @@ test("one reciter exposes multiple reading styles without duplicate person optio
   await page.goto(`/audio?reciter=${reciters[1].id}`);
 
   const reciterSelect = page.getByLabel("Чтец (Кари)");
-  await expect(reciterSelect.locator("option")).toHaveCount(5);
+  await expect(reciterSelect.locator("option")).toHaveCount(10);
   await expect(reciterSelect).toHaveValue(reciters[0].id);
 
   const readingSelect = page.getByLabel("Издание и стиль чтения");
