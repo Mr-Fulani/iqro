@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { groupRecitersByPerson } from "../lib/reciter-catalog";
@@ -164,6 +164,48 @@ test("portrait manifest covers the full production reciter catalog", async () =>
   expect(people).toHaveLength(10);
   expect(people.filter((reciter) => reciter.slug.includes("abdul-baset"))).toHaveLength(1);
   expect(people[0].slug).toBe("qf-2-abdul-baset-abdul-samad");
+});
+
+test("home hero links Quran, audio, Dua and prayer with optimized landmark slides", async ({ page }) => {
+  const heroImages = [
+    "hero-kaaba.webp",
+    "hero-prophets-mosque.webp",
+    "hero-quba-mosque.webp",
+  ];
+  for (const imageName of heroImages) {
+    const imagePath = path.join(process.cwd(), "public", "images", "home", imageName);
+    await access(imagePath);
+    expect((await stat(imagePath)).size).toBeLessThan(150_000);
+  }
+
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  await page.goto("/ru");
+
+  const hero = page.getByTestId("home-hero");
+  await expect(hero.getByText("Мединский Мусхаф Хафс · 604 страницы")).toBeVisible();
+  await expect(hero.getByRole("link", { name: "📖 Читать Коран" })).toHaveAttribute("href", "/ru/quran");
+  await expect(hero.getByRole("link", { name: "🎵 Слушать Коран" })).toHaveAttribute("href", "/ru/audio");
+  await expect(hero.getByRole("link", { name: "🤲 Ду’а" })).toHaveAttribute("href", "/ru/dua");
+  await expect(hero.getByRole("link", { name: "🕌 Время намаза" })).toHaveAttribute("href", "/ru/prayer");
+  expect(await hero.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(440);
+
+  await hero.getByTestId("hero-slide-1").click();
+  await expect(hero.getByTestId("hero-media")).toHaveAttribute(
+    "style",
+    /hero-prophets-mosque\.webp/,
+  );
+
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+  const carouselBottom = await hero.locator(".hero-carousel").evaluate(
+    (element) => element.getBoundingClientRect().bottom,
+  );
+  const eyebrowTop = await hero.locator(".hero-content .eyebrow").evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  expect(carouselBottom).toBeLessThanOrEqual(eyebrowTop);
 });
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {

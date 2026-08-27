@@ -11,6 +11,15 @@ import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
 
+const HERO_SLIDES = [
+  { src: "/images/home/hero-kaaba.webp", label: "home.heroKaaba" as const },
+  {
+    src: "/images/home/hero-prophets-mosque.webp",
+    label: "home.heroProphetsMosque" as const,
+  },
+  { src: "/images/home/hero-quba-mosque.webp", label: "home.heroQubaMosque" as const },
+];
+
 export default function HomePage() {
   const { session, isLoggedIn } = useAuth();
   const { locale, t, formatDate } = useI18n();
@@ -21,6 +30,19 @@ export default function HomePage() {
   const [featuredReciters, setFeaturedReciters] = useState<Reciter[]>([]);
   const [recitersLoading, setRecitersLoading] = useState(true);
   const [todayPrayer, setTodayPrayer] = useState<PrayerCalculationResponse | null>(null);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches || heroPaused) return;
+
+    const intervalId = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % HERO_SLIDES.length);
+    }, 7000);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroPaused]);
 
   useEffect(() => {
     // Load initial Quran editions
@@ -81,22 +103,62 @@ export default function HomePage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Hero Banner */}
-      <section className="hero-card">
+      <section className="hero-card" data-testid="home-hero">
+        <div
+          key={HERO_SLIDES[heroSlide].src}
+          className="hero-media"
+          data-testid="hero-media"
+          style={{ backgroundImage: `url(${HERO_SLIDES[heroSlide].src})` }}
+          aria-hidden="true"
+        />
+        <div className="hero-scrim" aria-hidden="true" />
+
         <div className="hero-content">
           <p className="eyebrow" style={{ color: "#a7f3d0" }}>
             {t("home.eyebrow")}
           </p>
           <h1>{t("home.title")}</h1>
           <p>{t("home.description")}</p>
+          <div className="hero-actions">
+            <Link href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg hero-primary-action">
+              {t("home.readQuran")}
+            </Link>
+            <Link href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+              {t("home.listenQuran")}
+            </Link>
+            <Link href={localizedPath(locale, "/dua")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+              {t("home.openDua")}
+            </Link>
+            <Link href={localizedPath(locale, "/prayer")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+              {t("home.prayerTimes")}
+            </Link>
+          </div>
         </div>
 
-        <div className="hero-actions">
-          <Link href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg" style={{ background: "#ffffff", color: "#065f46" }}>
-            {t("home.readQuran")}
-          </Link>
-          <Link href={localizedPath(locale, "/prayer")} className="btn btn-outline-primary btn-lg" style={{ borderColor: "#a7f3d0", color: "#ffffff" }}>
-            {t("home.prayerTimes")}
-          </Link>
+        <div className="hero-carousel" aria-label={t("home.heroCarousel")} aria-live="polite">
+          <span className="hero-carousel-label">{t(HERO_SLIDES[heroSlide].label)}</span>
+          <div className="hero-carousel-dots">
+            {HERO_SLIDES.map((slide, index) => (
+              <button
+                key={slide.src}
+                type="button"
+                className={`hero-carousel-dot ${index === heroSlide ? "is-active" : ""}`}
+                onClick={() => setHeroSlide(index)}
+                aria-label={t("home.showHeroSlide", { name: t(slide.label) })}
+                aria-pressed={index === heroSlide}
+                data-testid={`hero-slide-${index}`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="hero-carousel-toggle"
+            onClick={() => setHeroPaused((paused) => !paused)}
+            aria-label={heroPaused ? t("home.playHeroCarousel") : t("home.pauseHeroCarousel")}
+            title={heroPaused ? t("home.playHeroCarousel") : t("home.pauseHeroCarousel")}
+          >
+            {heroPaused ? "▶" : "Ⅱ"}
+          </button>
         </div>
       </section>
 

@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 test("public Quran page exposes page-specific canonical and social metadata", async ({ page }) => {
   await page.goto("/ru/quran");
 
-  await expect(page).toHaveTitle("Читать Коран — Мадинский Мусхаф Хафс | Quran Platform");
+  await expect(page).toHaveTitle("Читать Коран — Мединский Мусхаф Хафс | Quran Platform");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     /Читайте 114 сур Священного Корана/,
@@ -42,7 +42,7 @@ test("public Quran page exposes page-specific canonical and social metadata", as
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
-    "Читать Коран — Мадинский Мусхаф Хафс",
+    "Читать Коран — Мединский Мусхаф Хафс",
   );
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",
