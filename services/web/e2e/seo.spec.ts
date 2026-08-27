@@ -232,9 +232,14 @@ test("legal and contact pages are localized, canonical, and linked from the foot
     "/ru/profile#feedback",
   );
   await expect(page.locator('.app-footer a[href="/ru/privacy"]')).toBeVisible();
+  await expect(page.locator('.app-footer a[href="/ru/dua"]')).toHaveText("Ду’а");
   await expect(page.locator('.app-footer a[href="/ru/data-rights"]')).toBeVisible();
   await expect(page.locator('.app-footer a[href="/ru/security"]')).toBeVisible();
   await expect(page.locator('.app-footer a[href="/ru/sources"]')).toBeVisible();
+  await expect(page.locator(".footer-brand")).toContainText("IQRO — Исламский форум");
+  await expect(page.locator(".footer-bottom")).toContainText(
+    "© 2026 IQRO — Исламский форум",
+  );
 });
 
 test("localized legal suite exposes working deletion and provider disclosures", async ({ page, request }) => {

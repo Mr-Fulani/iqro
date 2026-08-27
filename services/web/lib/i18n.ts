@@ -140,10 +140,10 @@ export const MESSAGES = {
   "footer.sources": message("Источники и лицензии", "Sources and licenses", "المصادر والتراخيص", "Kaynaklar ve lisanslar"),
   "footer.contacts": message("Контакты и feedback", "Contact and feedback", "التواصل والملاحظات", "İletişim ve geri bildirim"),
   "footer.copyright": message(
-    "© 2026 Quran Platform. Издание Мединского Мусхафа (Хафс ‘ан ‘Асым).",
-    "© 2026 Quran Platform. Madani Mushaf edition (Hafs ‘an ‘Asim).",
-    "© 2026 منصة القرآن. طبعة مصحف المدينة (حفص عن عاصم).",
-    "© 2026 Quran Platform. Medine Mushafı baskısı (Hafs an Asım).",
+    "© 2026 IQRO — Исламский форум. Издание Мединского Мусхафа (Хафс ‘ан ‘Асым).",
+    "© 2026 IQRO — Islamic forum. Madani Mushaf edition (Hafs ‘an ‘Asim).",
+    "© 2026 IQRO — المنتدى الإسلامي. طبعة مصحف المدينة (حفص عن عاصم).",
+    "© 2026 IQRO — İslami forum. Medine Mushafı baskısı (Hafs an Asım).",
   ),
   "home.eyebrow": message("Мединский Мусхаф Хафс · 604 страницы", "Madani Mushaf Hafs · 604 pages", "مصحف المدينة برواية حفص · 604 صفحات", "Medine Mushafı Hafs · 604 sayfa"),
   "home.title": message(
