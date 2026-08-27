@@ -21,8 +21,8 @@ export function Header() {
       : "guest-online";
 
   const navItems = [
-    { href: "/", label: t("nav.home"), icon: "🏠" },
     { href: "/quran", label: t("nav.quran"), icon: "📖" },
+    { href: "/dua", label: t("nav.dua"), icon: "🤲" },
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
@@ -34,7 +34,7 @@ export function Header() {
         <Link href={localizedPath(locale, "/")} className="brand-link">
           <span className="brand-mark">Q</span>
           <div>
-            <p className="eyebrow">Quran Platform</p>
+            <p className="eyebrow">IQRO</p>
             <p className="brand-title">{t("brand.subtitle")}</p>
           </div>
         </Link>

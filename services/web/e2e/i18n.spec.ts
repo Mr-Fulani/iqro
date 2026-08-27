@@ -88,6 +88,30 @@ test("authenticated Russian header stays on one row with the logout action", asy
   await expectSingleRowHeader(page);
 });
 
+test("header logo replaces Home and the Dua placeholder follows Quran", async ({ page }) => {
+  await page.goto("/ru/quran");
+
+  const brand = page.locator(".brand-link");
+  await expect(brand).toHaveAttribute("href", "/ru");
+  await expect(brand).toContainText("IQRO");
+  await expect(brand).toContainText("Исламский форум");
+  await expect(page.locator('.app-menu a[href="/ru"]')).toHaveCount(0);
+  expect(await page.locator(".app-menu a").evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href")),
+  )).toEqual([
+    "/ru/quran",
+    "/ru/dua",
+    "/ru/audio",
+    "/ru/prayer",
+    "/ru/profile",
+  ]);
+
+  await page.getByRole("link", { name: "Ду’а" }).click();
+  await expect(page).toHaveURL("/ru/dua");
+  await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+});
+
 test.describe("browser language negotiation", () => {
   test.use({ locale: "tr-TR" });
 
