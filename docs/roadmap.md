@@ -332,8 +332,10 @@ multi-client MVP остаётся на этапах B–D.
   поэтапная публикация без необходимости выпускать новую версию приложения.
 - [ ] Playback state sync при сохранении device-local очереди.
 - [ ] Flutter local prayer calculation и notification scheduler с timezone/location reschedule.
-- [ ] Versioned translation/tafsir schema/API/UI и provider catalog sync; каждый источник имеет
-  собственные права, attribution, locale и editorial status.
+- [x] Versioned translation schema/API/UI и Quran.Foundation Content Sync; каждый перевод имеет
+  собственные права, attribution, locale, immutable version и publication status.
+- [ ] Versioned tafsir schema/API/UI и provider catalog sync; тафсир не смешивается со
+  смысловыми переводами и проходит отдельный editorial sign-off.
 - [ ] Reading sessions, goals и streaks.
 - [ ] Editorial approvals, safe feedback attachments и user notifications.
 

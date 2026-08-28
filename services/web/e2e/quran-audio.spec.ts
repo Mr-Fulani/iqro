@@ -108,6 +108,78 @@ const ayahs = [1, 2].map((number) => ({
   pages: [128],
 }));
 
+const translationEditions = [
+  {
+    source_id: 20,
+    slug: "en-sahih-international",
+    language_code: "en",
+    language_name: "english",
+    name: "Saheeh International",
+    author_name: "Saheeh International",
+    active_version: {
+      sync_sequence: 1408,
+      schema_version: "1",
+      checksum_sha256: "e".repeat(64),
+      ayah_count: 6236,
+      published_at: "2026-08-28T00:00:00Z",
+    },
+    source: {
+      name: "Quran.Foundation Content API",
+      url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/translations/",
+      license_name: "Quran.Foundation Developer Terms",
+      license_url: "https://api-docs.quran.foundation/legal/developer-terms/",
+      attribution: "Quran data provided by Quran Foundation.",
+    },
+  },
+  {
+    source_id: 45,
+    slug: "quran.ru.kuliev",
+    language_code: "ru",
+    language_name: "russian",
+    name: "Elmir Kuliev",
+    author_name: "Elmir Kuliev",
+    active_version: {
+      sync_sequence: 1408,
+      schema_version: "1",
+      checksum_sha256: "d".repeat(64),
+      ayah_count: 6236,
+      published_at: "2026-08-28T00:00:00Z",
+    },
+    source: {
+      name: "Quran.Foundation Content API",
+      url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/translations/",
+      license_name: "Quran.Foundation Developer Terms",
+      license_url: "https://api-docs.quran.foundation/legal/developer-terms/",
+      attribution: "Quran data provided by Quran Foundation.",
+    },
+  },
+];
+
+const translatedAyahs = [
+  { verse_key: "6:1", surah_number: 6, ayah_number: 1, text: "Хвала Аллаху", foot_notes: [] },
+  { verse_key: "6:2", surah_number: 6, ayah_number: 2, text: "Он сотворил вас", foot_notes: [] },
+];
+
+const englishTranslatedAyahs = [
+  {
+    verse_key: "6:1",
+    surah_number: 6,
+    ayah_number: 1,
+    text: "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
+    foot_notes: [
+      { id: 1, text: "Allāh is the proper name belonging only to the Almighty God." },
+      { id: 2, text: "Ar-Raḥmān and ar-Raḥeem are names derived from mercy." },
+    ],
+  },
+  {
+    verse_key: "6:2",
+    surah_number: 6,
+    ayah_number: 2,
+    text: "He created you.",
+    foot_notes: [],
+  },
+];
+
 function divisions(count: number) {
   return Array.from({ length: count }, (_, index) => ({
     id: `00000000-0000-7000-8400-${String(index + 1).padStart(12, "0")}`,
@@ -392,6 +464,12 @@ async function installApiMocks(page: Page) {
           },
         },
       });
+    } else if (path === "/api/v1/quran/translations") {
+      await route.fulfill({ json: translationEditions });
+    } else if (path === "/api/v1/quran/translations/45/surahs/6") {
+      await route.fulfill({ json: translatedAyahs });
+    } else if (path === "/api/v1/quran/translations/20/surahs/6") {
+      await route.fulfill({ json: englishTranslatedAyahs });
     } else if (path === "/api/v1/quran/editions") {
       await route.fulfill({ json: [edition] });
     } else if (path === "/api/v1/quran/foundation/mushafs") {
@@ -427,6 +505,81 @@ async function installApiMocks(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
+});
+
+test("reader shows a saved semantic translation in text and Mushaf modes", async ({ page }) => {
+  await page.goto("/ru/quran?surah=6");
+
+  const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
+  await expect(translationToggle).toBeChecked();
+  await expect(page.getByLabel("Перевод и автор")).toHaveValue("45");
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await expect(page.getByText("Он сотворил вас", { exact: true })).toBeVisible();
+
+  await page.getByLabel("Перевод и автор").selectOption("20");
+  const firstAyah = page.locator(".ayah-card").first();
+  await expect(
+    firstAyah.getByText(
+      "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await firstAyah.getByText("Сноски переводчика (2)", { exact: true }).click();
+  await expect(
+    firstAyah.getByText("Allāh is the proper name belonging only to the Almighty God.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    firstAyah.getByText("Ar-Raḥmān and ar-Raḥeem are names derived from mercy.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByLabel("Перевод и автор").selectOption("45");
+
+  await translationToggle.uncheck();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toHaveCount(0);
+  await translationToggle.check();
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+
+  const translationPanel = page.locator(".mushaf-translation-panel");
+  await expect(translationPanel.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await expect(translationPanel.getByText("Он сотворил вас", { exact: true })).toBeVisible();
+  await expect(translationPanel).toHaveAttribute("translate", "no");
+
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});
+
+test("arabic reader does not select an English translation automatically", async ({ page }) => {
+  await page.goto("/ar/quran?surah=6");
+
+  const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
+  const translationSelect = page.locator("#translation-edition").filter({ visible: true });
+  await expect(translationToggle).not.toBeChecked();
+  await expect(translationSelect).toHaveValue("");
+  await expect(
+    page
+      .getByText(
+        "النص العربي هو الأصل. سيُتاح الشرح العربي بشكل مستقل في قسم التفسير، لذلك لا نختار ترجمة إنجليزية تلقائيًا.",
+        { exact: true },
+      )
+      .filter({ visible: true }),
+  ).toBeVisible();
+
+  await translationToggle.check();
+  await expect(translationSelect).toHaveValue("");
+  await translationSelect.selectOption("20");
+  await expect(
+    page
+      .getByText(
+        "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
+        { exact: true },
+      )
+      .filter({ visible: true }),
+  ).toBeVisible();
 });
 
 test("catalog loads all 114 surahs and starts the first track on one click", async ({ page }) => {
@@ -941,20 +1094,43 @@ for (const viewport of [
 ]) {
   test(`mushaf overlay remains registered and selectable on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto("/quran?surah=6");
+    await page.goto("/ru/quran?surah=6");
     await page.getByRole("button", { name: /Мусхаф/ }).click();
 
-    const image = page.locator(".mushaf-image");
-    const overlay = page.locator(".mushaf-regions");
+    const mushafFrame = page
+      .locator(".mushaf-page-frame")
+      .filter({ visible: true })
+      .last();
+    const image = mushafFrame.locator(".mushaf-image");
+    const overlay = mushafFrame.locator(".mushaf-regions");
     await expect(image).toBeVisible();
     await expect(overlay).toBeVisible();
     await page.locator(".mushaf-page-turn").evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished)),
     );
-    const imageBox = await image.boundingBox();
-    const overlayBox = await overlay.boundingBox();
-    expect(imageBox).not.toBeNull();
-    expect(overlayBox).not.toBeNull();
+    const boxes = await mushafFrame.evaluate((frame) => {
+      const imageElement = frame.querySelector<HTMLElement>(".mushaf-image");
+      const overlayElement = frame.querySelector<HTMLElement>(".mushaf-regions");
+      if (!imageElement || !overlayElement) return null;
+      const imageRect = imageElement.getBoundingClientRect();
+      const overlayRect = overlayElement.getBoundingClientRect();
+      return {
+        imageBox: {
+          x: imageRect.x,
+          y: imageRect.y,
+          width: imageRect.width,
+          height: imageRect.height,
+        },
+        overlayBox: {
+          x: overlayRect.x,
+          y: overlayRect.y,
+          width: overlayRect.width,
+          height: overlayRect.height,
+        },
+      };
+    });
+    expect(boxes).not.toBeNull();
+    const { imageBox, overlayBox } = boxes!;
     expect(Math.abs(imageBox!.x - overlayBox!.x)).toBeLessThan(1);
     expect(Math.abs(imageBox!.y - overlayBox!.y)).toBeLessThan(1);
     expect(Math.abs(imageBox!.width - overlayBox!.width)).toBeLessThan(1);

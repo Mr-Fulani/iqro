@@ -34,8 +34,10 @@ import {
   QuranEdition,
   QuranFoundationMushaf,
   QuranFoundationMushafPage,
+  QuranTranslationEdition,
   RubElHizb,
   Surah,
+  type AyahTranslation,
   type PrayerReadingPrayer,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
@@ -62,6 +64,86 @@ const PRAYER_READING_PRAYERS = new Set<PrayerReadingPrayer>([
 ]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const TRANSLATION_PREFERENCE_KEY_PREFIX = "iqro_quran_translation_v2";
+const DEFAULT_TRANSLATION_BY_LOCALE: Record<string, number | null> = {
+  ar: null,
+  en: 20,
+  ru: 45,
+  tr: 77,
+};
+
+type TranslationPreference = {
+  enabled: boolean;
+  sourceId: number | null;
+};
+
+function translationPreferenceKey(locale: string): string {
+  return `${TRANSLATION_PREFERENCE_KEY_PREFIX}:${locale}`;
+}
+
+function readTranslationPreference(locale: string): TranslationPreference | null {
+  try {
+    const raw = window.localStorage.getItem(translationPreferenceKey(locale));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<TranslationPreference>;
+    if (typeof parsed.enabled !== "boolean") return null;
+    if (parsed.sourceId !== null && !Number.isSafeInteger(parsed.sourceId)) return null;
+    return { enabled: parsed.enabled, sourceId: parsed.sourceId ?? null };
+  } catch {
+    return null;
+  }
+}
+
+function writeTranslationPreference(locale: string, preference: TranslationPreference): void {
+  window.localStorage.setItem(translationPreferenceKey(locale), JSON.stringify(preference));
+}
+
+function translationFootnoteTexts(footNotes: AyahTranslation["foot_notes"]): string[] {
+  const candidates = Array.isArray(footNotes) ? footNotes : Object.values(footNotes);
+  return candidates.flatMap((note) => {
+    if (typeof note === "string") return note.trim() ? [note.trim()] : [];
+    if (!note || typeof note !== "object" || !("text" in note)) return [];
+    const text = note.text;
+    return typeof text === "string" && text.trim() ? [text.trim()] : [];
+  });
+}
+
+function TranslationFootnotes({ footNotes }: { footNotes: AyahTranslation["foot_notes"] }) {
+  const { t } = useI18n();
+  const notes = translationFootnoteTexts(footNotes);
+  if (notes.length === 0) return null;
+
+  return (
+    <details className="translation-footnotes">
+      <summary>
+        {t("quran.translationFootnotes")} <span>({notes.length})</span>
+      </summary>
+      <ol>
+        {notes.map((note, index) => (
+          <li key={`${index}-${note.slice(0, 32)}`}>
+            <span>[{index + 1}]</span>
+            <p>{note}</p>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+function expandVerseMapping(mapping: Record<string, string>): string[] {
+  const keys: string[] = [];
+  for (const [surah, ranges] of Object.entries(mapping)) {
+    for (const range of ranges.split(",")) {
+      const match = range.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!match) continue;
+      const start = Number(match[1]);
+      const end = Number(match[2] || match[1]);
+      for (let ayah = start; ayah <= end; ayah += 1) keys.push(`${surah}:${ayah}`);
+    }
+  }
+  return keys;
+}
 
 function QuranContent() {
   const searchParams = useSearchParams();
@@ -113,6 +195,16 @@ function QuranContent() {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<number>(deepLinkSurah);
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
+  const [translationEditions, setTranslationEditions] = useState<QuranTranslationEdition[]>([]);
+  const [selectedTranslationId, setSelectedTranslationId] = useState<number | null>(null);
+  const [translationEnabled, setTranslationEnabled] = useState(false);
+  const [translationPreferenceReady, setTranslationPreferenceReady] = useState(false);
+  const [translationsByVerse, setTranslationsByVerse] = useState<
+    Record<string, AyahTranslation>
+  >({});
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationError, setTranslationError] = useState(false);
+  const translationPreferenceLocale = useRef<string | null>(null);
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
@@ -142,9 +234,38 @@ function QuranContent() {
     [foundationMushafs, selectedFoundationMushafId],
   );
   const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
-
+  const selectedTranslation = useMemo(
+    () =>
+      translationEditions.find((edition) => edition.source_id === selectedTranslationId) || null,
+    [selectedTranslationId, translationEditions],
+  );
+  const mushafVerseKeys = useMemo(() => {
+    if (foundationMushafPage) return expandVerseMapping(foundationMushafPage.verse_mapping);
+    if (mushafPage) {
+      return [
+        ...new Set(
+          mushafPage.regions.map(
+            (region) => `${region.ayah.surah}:${region.ayah.number}`,
+          ),
+        ),
+      ];
+    }
+    return ayahs
+      .filter((ayah) => ayah.pages.includes(currentPage))
+      .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
+  }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
   const [viewMode, setViewMode] = useState<"text" | "mushaf">(
     deepLinkAyah === null && prayerReadingConfig === null ? "text" : "mushaf",
+  );
+  const requiredTranslationSurahs = useMemo(() => {
+    if (viewMode === "text") return [selectedSurah];
+    const pageSurahs = mushafVerseKeys.map((key) => Number(key.split(":")[0]));
+    return [...new Set([selectedSurah, ...pageSurahs])].filter(Number.isSafeInteger);
+  }, [mushafVerseKeys, selectedSurah, viewMode]);
+  const translationSurahKey = requiredTranslationSurahs.join(",");
+  const mushafTranslations = useMemo(
+    () => mushafVerseKeys.map((key) => translationsByVerse[key]).filter(Boolean),
+    [mushafVerseKeys, translationsByVerse],
   );
   const [prayerReadingReady, setPrayerReadingReady] = useState(
     prayerReadingConfig === null,
@@ -173,6 +294,88 @@ function QuranContent() {
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    translationPreferenceLocale.current = null;
+    setTranslationPreferenceReady(false);
+    api
+      .getTranslations()
+      .then((catalog) => {
+        if (cancelled) return;
+        setTranslationEditions(catalog);
+        const saved = readTranslationPreference(locale);
+        const savedEdition = catalog.find((edition) => edition.source_id === saved?.sourceId);
+        const localeDefaultId = DEFAULT_TRANSLATION_BY_LOCALE[locale] ?? null;
+        const localeDefault = catalog.find((edition) => edition.source_id === localeDefaultId);
+        const fallback =
+          locale === "ar"
+            ? undefined
+            : catalog.find((edition) => edition.language_code === locale) || catalog[0];
+        setSelectedTranslationId(
+          savedEdition?.source_id ?? localeDefault?.source_id ?? fallback?.source_id ?? null,
+        );
+        setTranslationEnabled(saved?.enabled ?? locale !== "ar");
+        setTranslationError(false);
+        translationPreferenceLocale.current = locale;
+        setTranslationPreferenceReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTranslationEditions([]);
+        setSelectedTranslationId(null);
+        setTranslationEnabled(false);
+        setTranslationError(true);
+        translationPreferenceLocale.current = null;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
+  useEffect(() => {
+    if (!translationPreferenceReady || translationPreferenceLocale.current !== locale) return;
+    writeTranslationPreference(locale, {
+      enabled: translationEnabled,
+      sourceId: selectedTranslationId,
+    });
+  }, [locale, selectedTranslationId, translationEnabled, translationPreferenceReady]);
+
+  useEffect(() => {
+    if (!translationEnabled || selectedTranslationId === null) {
+      setTranslationsByVerse({});
+      setTranslationLoading(false);
+      if (selectedTranslationId !== null) setTranslationError(false);
+      return;
+    }
+    let cancelled = false;
+    setTranslationLoading(true);
+    setTranslationError(false);
+    Promise.all(
+      requiredTranslationSurahs.map((surah) =>
+        api.getSurahTranslation(selectedTranslationId, surah),
+      ),
+    )
+      .then((surahTranslations) => {
+        if (cancelled) return;
+        const byVerse = Object.fromEntries(
+          surahTranslations.flat().map((translation) => [translation.verse_key, translation]),
+        );
+        setTranslationsByVerse(byVerse);
+        setTranslationLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTranslationsByVerse({});
+        setTranslationLoading(false);
+        setTranslationError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // translationSurahKey is a stable dependency for the computed surah list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTranslationId, translationEnabled, translationSurahKey]);
 
   // Display variants are independent from the published Quran text edition.
   useEffect(() => {
@@ -720,6 +923,65 @@ function QuranContent() {
           </div>
         </div>
 
+        <div className="translation-settings" style={{ marginTop: 14 }}>
+          <label className="translation-toggle" htmlFor="translation-enabled">
+            <input
+              id="translation-enabled"
+              type="checkbox"
+              checked={translationEnabled}
+              onChange={(event) => setTranslationEnabled(event.target.checked)}
+              disabled={translationEditions.length === 0}
+            />
+            <span>
+              <strong>{t("quran.translationToggle")}</strong>
+              <small>{t("quran.translationHelp")}</small>
+            </span>
+          </label>
+          <div className="translation-edition-control">
+            <label className="form-label" htmlFor="translation-edition">
+              {t("quran.translationEdition")}
+            </label>
+            <select
+              id="translation-edition"
+              value={selectedTranslationId ?? ""}
+              onChange={(event) => {
+                const sourceId = Number(event.target.value);
+                setSelectedTranslationId(
+                  Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
+                );
+              }}
+              disabled={!translationEnabled || translationEditions.length === 0}
+            >
+              {translationEditions.length === 0 ? (
+                <option value="">{t("quran.translationUnavailable")}</option>
+              ) : selectedTranslationId === null ? (
+                <option value="">{t("quran.translationChoose")}</option>
+              ) : null}
+              {translationEditions.map((edition) => (
+                <option key={edition.source_id} value={edition.source_id}>
+                  [{edition.language_code.toUpperCase()}] {edition.name} · {edition.author_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {translationEnabled && selectedTranslation && (
+            <p className="translation-source-note">
+              {selectedTranslation.name} · {selectedTranslation.author_name}.{" "}
+              <a href={selectedTranslation.source.url} target="_blank" rel="noreferrer">
+                {selectedTranslation.source.attribution}
+              </a>
+            </p>
+          )}
+          {locale === "ar" && (
+            <p className="translation-context-note">{t("quran.translationArabicTafsirNotice")}</p>
+          )}
+          {translationError && (
+            <p className="translation-error" role="status">
+              {t("quran.translationError")}
+            </p>
+          )}
+        </div>
+
         <div className="form-row" style={{ marginTop: 14 }}>
           <div className="form-group">
             <label className="form-label" htmlFor="juz-navigation">{t("quran.juz")}</label>
@@ -915,6 +1177,22 @@ function QuranContent() {
                     </div>
 
                     <p className="quran-arabic-text">{ayah.text_uthmani}</p>
+                    {translationEnabled && (
+                      <div className="ayah-translation notranslate" translate="no">
+                        {translationLoading ? (
+                          <span className="ayah-translation-status">
+                            {t("quran.translationLoading")}
+                          </span>
+                        ) : translationsByVerse[ayahKey] ? (
+                          <>
+                            <p>{translationsByVerse[ayahKey].text}</p>
+                            <TranslationFootnotes
+                              footNotes={translationsByVerse[ayahKey].foot_notes}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -1096,6 +1374,40 @@ function QuranContent() {
               {t("quran.nextPage", { page: currentPage + 1 })}
             </button>
           </div>
+          {translationEnabled && (
+            <aside
+              className="mushaf-translation-panel notranslate"
+              translate="no"
+              aria-label={t("quran.translationToggle")}
+            >
+              <div className="mushaf-translation-heading">
+                <div>
+                  <span className="eyebrow">{t("quran.translationToggle")}</span>
+                  <strong>{selectedTranslation?.name}</strong>
+                </div>
+                <span>{t("quran.translationPage", { page: currentPage })}</span>
+              </div>
+              {translationLoading ? (
+                <p className="ayah-translation-status">{t("quran.translationLoading")}</p>
+              ) : mushafTranslations.length > 0 ? (
+                <div className="mushaf-translation-list">
+                  {mushafTranslations.map((translation) => (
+                    <article key={translation.verse_key}>
+                      <span>{translation.verse_key}</span>
+                      <div>
+                        <p>{translation.text}</p>
+                        <TranslationFootnotes footNotes={translation.foot_notes} />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="ayah-translation-status">
+                  {t("quran.translationPageUnavailable")}
+                </p>
+              )}
+            </aside>
+          )}
         </section>
       )}
     </div>

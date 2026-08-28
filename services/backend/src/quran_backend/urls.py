@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.accounts.user_urls")),
     path("api/v1/auth/", include("quran_backend.modules.accounts.urls")),
     path("api/v1/quran/", include("quran_backend.modules.quran.urls")),
+    path("api/v1/quran/", include("quran_backend.modules.translations.urls")),
     path("api/v1/prayer/", include("quran_backend.modules.prayer_times.urls")),
     path("api/v1/", include("quran_backend.modules.prayer_times.profile_urls")),
     path("api/v1/", include("quran_backend.modules.audio.urls")),

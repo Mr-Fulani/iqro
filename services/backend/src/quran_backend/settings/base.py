@@ -181,6 +181,24 @@ QURAN_QF_AUDIO_SYNC_ENABLED = env_bool("QF_AUDIO_SYNC_ENABLED", False)
 QURAN_QF_AYAH_AUDIO_SYNC_ENABLED = env_bool("QF_AYAH_AUDIO_SYNC_ENABLED", False)
 QURAN_QF_AYAH_AUDIO_EDITION = os.getenv("QF_AYAH_AUDIO_EDITION", "madani-hafs")
 QURAN_QF_MUSHAF_SYNC_ENABLED = env_bool("QF_MUSHAF_SYNC_ENABLED", False)
+QURAN_QF_TRANSLATION_SYNC_ENABLED = env_bool(
+    "QF_TRANSLATION_SYNC_ENABLED",
+    QURAN_QF_MUSHAF_SYNC_ENABLED,
+)
+try:
+    QURAN_QF_TRANSLATION_RESOURCE_IDS = tuple(
+        sorted({int(value) for value in env_list("QF_TRANSLATION_RESOURCE_IDS", "20,45,77")})
+    )
+except ValueError as exc:
+    raise ImproperlyConfigured(
+        "QF_TRANSLATION_RESOURCE_IDS must contain comma-separated positive integers"
+    ) from exc
+if not QURAN_QF_TRANSLATION_RESOURCE_IDS or any(
+    resource_id <= 0 for resource_id in QURAN_QF_TRANSLATION_RESOURCE_IDS
+):
+    raise ImproperlyConfigured(
+        "QF_TRANSLATION_RESOURCE_IDS must contain comma-separated positive integers"
+    )
 QURAN_QF_AUDIO_REFRESH_DAYS = positive_env_int("QF_AUDIO_REFRESH_DAYS", 5)
 if QURAN_QF_AUDIO_REFRESH_DAYS > 6:
     raise ImproperlyConfigured("QF_AUDIO_REFRESH_DAYS must be between 1 and 6")
@@ -216,6 +234,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.core.apps.CoreConfig",
     "quran_backend.modules.accounts.apps.AccountsConfig",
     "quran_backend.modules.quran.apps.QuranConfig",
+    "quran_backend.modules.translations.apps.TranslationsConfig",
     "quran_backend.modules.audio.apps.AudioConfig",
     "quran_backend.modules.prayer_times.apps.PrayerTimesConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",
@@ -550,6 +569,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "sync-quran-foundation-mushafs-daily": {
         "task": "quran.sync_quran_foundation_mushafs",
+        "schedule": 86_400.0,
+    },
+    "sync-quran-foundation-translations-daily": {
+        "task": "translations.sync_quran_foundation_translations",
         "schedule": 86_400.0,
     },
     "prune-auth-sessions-hourly": {

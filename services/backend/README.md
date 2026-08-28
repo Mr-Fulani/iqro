@@ -50,6 +50,12 @@ Production Content Sync всех доступных Quran.Foundation Mushaf layo
 checkpoint refresh и полный возобновляемый chapter-reciter import описаны в
 [docs/quran-foundation-content.md](docs/quran-foundation-content.md).
 
+Смысловые переводы хранятся в отдельном версионированном домене. По умолчанию Content Sync
+следит за Saheeh International (`20`), Elmir Kuliev (`45`) и Diyanet (`77`), сверяет каждый
+snapshot с координатами опубликованного Корана и атомарно переключает активную версию.
+Операторский запуск: `python manage.py sync_quran_foundation_translations --force`.
+Решение по источникам и правам: [docs/sign-offs/quran-foundation-translations-2026-08-28.md](docs/sign-offs/quran-foundation-translations-2026-08-28.md).
+
 Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar
 правила, pinned tzdata и privacy contract для координат описаны в
 [docs/prayer-api.md](docs/prayer-api.md).

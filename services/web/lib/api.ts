@@ -186,6 +186,38 @@ export type Ayah = {
   pages: number[];
 };
 
+export type QuranTranslationEdition = {
+  source_id: number;
+  slug: string;
+  language_code: string;
+  language_name: string;
+  name: string;
+  author_name: string;
+  active_version: {
+    sync_sequence: number;
+    schema_version: string;
+    checksum_sha256: string;
+    ayah_count: number;
+    published_at: string;
+  };
+  source: {
+    name: string;
+    url: string;
+    license_name: string;
+    license_url: string;
+    attribution: string;
+  };
+};
+
+export type AyahTranslation = {
+  verse_key: string;
+  surah_number: number;
+  ayah_number: number;
+  text: string;
+  foot_notes: Array<string | { id?: number | string; text?: string; [key: string]: unknown }> |
+    Record<string, unknown>;
+};
+
 export type PageAssetVariant = {
   url: string;
   width: number;
@@ -1263,6 +1295,20 @@ export class ApiClient {
 
   public async getAyah(edition: string, surahNumber: number, ayahNumber: number): Promise<Ayah> {
     return this.request<Ayah>(`/api/v1/quran/editions/${edition}/ayahs/${surahNumber}/${ayahNumber}`);
+  }
+
+  public async getTranslations(language?: string): Promise<QuranTranslationEdition[]> {
+    const query = language ? `?language=${encodeURIComponent(language)}` : "";
+    return this.request<QuranTranslationEdition[]>(`/api/v1/quran/translations${query}`);
+  }
+
+  public async getSurahTranslation(
+    translationId: number,
+    surahNumber: number,
+  ): Promise<AyahTranslation[]> {
+    return this.request<AyahTranslation[]>(
+      `/api/v1/quran/translations/${translationId}/surahs/${surahNumber}`,
+    );
   }
 
   public async getPage(edition: string, pageNumber: number): Promise<MushafPage> {

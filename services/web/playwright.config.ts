@@ -4,6 +4,7 @@ const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const productionMode = process.env.PLAYWRIGHT_PRODUCTION === "1";
 const baseURL = externalBaseUrl || `http://127.0.0.1:${productionMode ? 3101 : 3100}`;
 const mockPublicApiUrl = "http://127.0.0.1:3199";
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -19,12 +20,17 @@ export default defineConfig({
     locale: "ru-RU",
     screenshot: "only-on-failure",
     trace: "on-first-retry",
-    video: "retain-on-failure",
+    video: process.env.PLAYWRIGHT_DISABLE_VIDEO === "1" ? "off" : "retain-on-failure",
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: chromiumExecutablePath
+          ? { executablePath: chromiumExecutablePath }
+          : undefined,
+      },
     },
   ],
   webServer: externalBaseUrl

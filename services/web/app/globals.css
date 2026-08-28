@@ -1304,6 +1304,62 @@ input:focus, select:focus, textarea:focus {
   font-weight: 400;
 }
 
+.translation-settings {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(280px, 1.2fr);
+  gap: 12px 18px;
+  padding: 16px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--primary-subtle);
+}
+
+.translation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.translation-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+.translation-toggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.translation-toggle small,
+.translation-source-note,
+.ayah-translation-status {
+  color: var(--text-muted);
+}
+
+.translation-edition-control {
+  display: grid;
+  gap: 6px;
+}
+
+.translation-source-note,
+.translation-context-note,
+.translation-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.translation-context-note {
+  color: var(--text-muted);
+}
+
+.translation-error {
+  color: var(--danger);
+}
+
 .ayah-card {
   padding: 18px;
   border: 1px solid var(--border);
@@ -1323,6 +1379,133 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
   background: var(--primary-subtle);
   box-shadow: 0 0 0 1px var(--primary-border);
+}
+
+.ayah-translation {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+.ayah-translation p,
+.mushaf-translation-list p {
+  margin: 0;
+}
+
+.translation-footnotes {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.translation-footnotes summary {
+  color: var(--primary-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.translation-footnotes summary span {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.translation-footnotes ol {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.translation-footnotes li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.translation-footnotes li > span {
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+.mushaf-translation-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--primary-subtle);
+}
+
+.mushaf-translation-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mushaf-translation-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.mushaf-translation-heading > span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.mushaf-translation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mushaf-translation-list article {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  line-height: 1.65;
+}
+
+.mushaf-translation-list article > span {
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mushaf-translation-list article > div {
+  min-width: 0;
+}
+
+@media (max-width: 680px) {
+  .translation-settings {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .translation-source-note,
+  .translation-context-note,
+  .translation-error {
+    grid-column: 1;
+  }
+
+  .mushaf-translation-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mushaf-translation-list article {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 
 .ayah-header {
