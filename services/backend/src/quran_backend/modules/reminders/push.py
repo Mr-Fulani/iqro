@@ -22,6 +22,7 @@ from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.prayer_times.services import calculate_prayer_times
 from quran_backend.modules.prayer_times.timezones import get_prayer_timezone
+from quran_backend.modules.reading.models import PrayerReadingPlan
 from quran_backend.modules.reminders.models import (
     ReminderRule,
     ReminderTimezoneMode,
@@ -430,17 +431,40 @@ def _round_trips(candidate: datetime, naive: datetime, zone: Any) -> bool:
 def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
     reminder = schedule.reminder
     locale = schedule.subscription.locale
-    title, body = _localized_message(reminder, locale)
+    prayer_reading_plan = (
+        PrayerReadingPlan.objects.filter(user_id=reminder.user_id)
+        .only("pages_per_prayer")
+        .first()
+        if reminder.reminder_type == ReminderType.PRAYER
+        else None
+    )
+    pages_after_prayer = (
+        prayer_reading_plan.pages_per_prayer if prayer_reading_plan is not None else None
+    )
+    title, body = _localized_message(
+        reminder,
+        locale,
+        pages_after_prayer=pages_after_prayer,
+    )
     return {
         "title": title,
         "body": body,
-        "url": _notification_url(reminder, locale),
+        "url": _notification_url(
+            reminder,
+            locale,
+            has_prayer_reading_plan=prayer_reading_plan is not None,
+        ),
         "tag": f"reminder-{reminder.id}",
         "signal": reminder.signal,
     }
 
 
-def _localized_message(reminder: ReminderRule, locale: str) -> tuple[str, str]:
+def _localized_message(
+    reminder: ReminderRule,
+    locale: str,
+    *,
+    pages_after_prayer: int | None = None,
+) -> tuple[str, str]:
     if reminder.reminder_type == ReminderType.PRAYER:
         prayer_names = {
             "ru": {
@@ -480,6 +504,26 @@ def _localized_message(reminder: ReminderRule, locale: str) -> tuple[str, str]:
         }
         selected_locale = locale if locale in prayer_names else "en"
         prayer_name = prayer_names[selected_locale].get(str(reminder.prayer_event), "Prayer")
+        if pages_after_prayer is not None:
+            plan_bodies = {
+                "ru": (
+                    f"Время намаза. После намаза — {pages_after_prayer} стр. Корана "
+                    "по вашему плану."
+                ),
+                "en": (
+                    f"It is time for prayer. Afterwards, read {pages_after_prayer} "
+                    "Quran pages from your plan."
+                ),
+                "ar": (
+                    f"حان وقت الصلاة. بعدها اقرأ {pages_after_prayer} صفحات من القرآن "
+                    "وفق خطتك."
+                ),
+                "tr": (
+                    f"Namaz vakti geldi. Sonrasında planınızdaki {pages_after_prayer} "  # noqa: RUF001
+                    "Kur'an sayfasını okuyun."  # noqa: RUF001
+                ),
+            }
+            return prayer_name, plan_bodies[selected_locale]
         return prayer_name, bodies[selected_locale]
     messages = {
         "ru": {
@@ -509,8 +553,15 @@ def _localized_message(reminder: ReminderRule, locale: str) -> tuple[str, str]:
     return selected["review" if reminder.reminder_type == ReminderType.QURAN_REVIEW else "reading"]
 
 
-def _notification_url(reminder: ReminderRule, locale: str) -> str:
+def _notification_url(
+    reminder: ReminderRule,
+    locale: str,
+    *,
+    has_prayer_reading_plan: bool = False,
+) -> str:
     if reminder.reminder_type == ReminderType.PRAYER:
+        if has_prayer_reading_plan:
+            return f"/{locale}#prayer-reading-plan"
         return f"/{locale}/prayer"
     if reminder.reminder_type == ReminderType.QURAN_REVIEW and reminder.start_ayah is not None:
         return (

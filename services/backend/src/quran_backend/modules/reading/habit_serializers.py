@@ -11,6 +11,7 @@ from rest_framework import serializers
 from quran_backend.modules.core.serializers import StrictFieldsSerializer, UUIDv7Field
 from quran_backend.modules.reading.models import (
     READING_GOAL_LIMITS,
+    PrayerReadingPrayer,
     ReadingGoalMetric,
     ReadingGoalStatus,
     ReadingSessionSource,
@@ -130,6 +131,43 @@ class TodayQuerySerializer(StrictFieldsSerializer):
         return _validate_timezone_name(value)
 
 
+class PrayerReadingPlanQuerySerializer(StrictFieldsSerializer):
+    timezone_name = serializers.CharField(max_length=64, required=False)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
+
+
+class PrayerReadingPlanWriteSerializer(StrictFieldsSerializer):
+    pages_per_prayer = serializers.IntegerField(min_value=1, max_value=20)
+    timezone_name = serializers.CharField(max_length=64)
+    base_revision = serializers.IntegerField(min_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
+
+
+class PrayerReadingCheckInCreateSerializer(StrictFieldsSerializer):
+    id = UUIDv7Field()
+    session_id = UUIDv7Field()
+    prayer = serializers.ChoiceField(choices=PrayerReadingPrayer.choices)
+    local_date = serializers.DateField()
+    timezone_name = serializers.CharField(max_length=64)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
+
+
+class PrayerReadingCheckInDeleteSerializer(StrictFieldsSerializer):
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+
+
 class ReadingGoalOutputSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     metric = serializers.ChoiceField(choices=ReadingGoalMetric.choices)
@@ -143,6 +181,41 @@ class ReadingGoalOutputSerializer(serializers.Serializer[Any]):
     device_id = serializers.UUIDField(allow_null=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+
+
+class PrayerReadingPlanOutputSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    pages_per_prayer = serializers.IntegerField()
+    timezone_name = serializers.CharField()
+    revision = serializers.IntegerField()
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
+class PrayerReadingCheckInOutputSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    prayer = serializers.ChoiceField(choices=PrayerReadingPrayer.choices)
+    local_date = serializers.DateField()
+    timezone_name = serializers.CharField()
+    pages = serializers.IntegerField()
+    reading_session_id = serializers.UUIDField(allow_null=True)
+    revision = serializers.IntegerField()
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
+class PrayerReadingDayOutputSerializer(serializers.Serializer[Any]):
+    local_date = serializers.DateField()
+    timezone_name = serializers.CharField()
+    plan = PrayerReadingPlanOutputSerializer(allow_null=True)
+    check_ins = PrayerReadingCheckInOutputSerializer(many=True)
+    achieved_pages = serializers.IntegerField()
+    target_pages = serializers.IntegerField()
+    remaining_pages = serializers.IntegerField()
 
 
 class ReadingGoalEnvelopeSerializer(serializers.Serializer[Any]):

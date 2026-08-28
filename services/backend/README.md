@@ -59,6 +59,9 @@ optimistic concurrency, минимизированные tombstones, retention �
 для Flutter/Web/Telegram Mini App описаны в
 [docs/prayer-profile-and-reminders.md](docs/prayer-profile-and-reminders.md).
 
+Ежедневная норма чтения, ручные и автоматические сессии, серии дней и план чтения после
+пяти намазов описаны в [docs/reading-habit.md](docs/reading-habit.md).
+
 ## Подготовка страниц мусхафа
 
 Проверка закреплённого PDF и атомарная подготовка lossless WebP-вариантов выполняются

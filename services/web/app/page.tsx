@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ReciterAvatar } from "../components/ReciterAvatar";
 import { TodayReadingCard } from "../components/TodayReadingCard";
+import { PrayerReadingPlanCard } from "../components/PrayerReadingPlanCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -11,6 +12,11 @@ import { groupRecitersByPerson } from "../lib/reciter-catalog";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
+import {
+  dateInTimezone,
+  DEFAULT_PRAYER_LOCATION,
+  loadPrayerLocationPreference,
+} from "../lib/prayer-location";
 
 const HERO_SLIDES = [
   { src: "/images/home/hero-kaaba.webp", label: "home.heroKaaba" as const },
@@ -22,9 +28,10 @@ const HERO_SLIDES = [
 ];
 
 export default function HomePage() {
-  const { session, isLoggedIn } = useAuth();
+  const { session, isLoggedIn, isLoading: authLoading } = useAuth();
   const { locale, t, formatDate } = useI18n();
   const isActiveAccount = session?.user.status === "active";
+  const sessionUserId = session?.user.id;
 
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [featuredSurahs, setFeaturedSurahs] = useState<Surah[]>([]);
@@ -64,29 +71,64 @@ export default function HomePage() {
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 
-    // Load prayer times preview for today
-    api
-      .getPrayerMethods()
-      .then(async (manifest) => {
-        const defaultMethod = manifest.methods.find((m) => m.available) || manifest.methods[0];
-        if (defaultMethod) {
-          const today = new Date().toISOString().slice(0, 10);
-          const calc = await api.calculatePrayer({
-            date: today,
-            timezone: "UTC",
-            location: { latitude: "21.4225", longitude: "39.8262" }, // Makkah default
-            method_config_id: defaultMethod.id,
-            method_checksum_sha256: defaultMethod.checksum_sha256,
-          });
-          setTodayPrayer(calc);
-        }
-      })
-      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    let active = true;
+
+    const loadPrayerPreview = async () => {
+      const manifest = await api.getPrayerMethods();
+      const availableMethods = manifest.methods.filter((method) => method.available);
+      const profile = sessionUserId
+        ? await api.getPrayerProfile().catch(() => null)
+        : null;
+      const preference = loadPrayerLocationPreference(sessionUserId);
+      const method =
+        manifest.methods.find(
+          (candidate) =>
+            candidate.available && candidate.id === preference?.method_config_id,
+        ) ||
+        manifest.methods.find(
+          (candidate) => candidate.available && candidate.id === profile?.method_config.id,
+        ) ||
+        availableMethods[0] ||
+        manifest.methods[0];
+      if (!method) return;
+
+      const location = preference || DEFAULT_PRAYER_LOCATION;
+      const timezoneName = location.timezone;
+      const calc = await api.calculatePrayer({
+        date: dateInTimezone(timezoneName),
+        timezone: timezoneName,
+        location: {
+          latitude: Number(location.latitude),
+          longitude: Number(location.longitude),
+        },
+        method_config_id: method.id,
+        method_checksum_sha256: method.checksum_sha256,
+        asr_method: preference?.asr_method || profile?.asr_method || "standard",
+        high_latitude_rule: profile?.high_latitude_rule,
+        polar_resolution: profile?.polar_resolution,
+        adjustments: profile?.adjustments,
+      });
+      if (active) setTodayPrayer(calc);
+    };
+
+    setTodayPrayer(null);
+    void loadPrayerPreview().catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [authLoading, sessionUserId]);
 
   const formatTime = (isoString?: string) => {
     if (!isoString) return "--:--";
-    return formatDate(isoString, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+    return formatDate(isoString, {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: todayPrayer?.timezone || DEFAULT_PRAYER_LOCATION.timezone,
+    });
   };
 
   const editionName = (edition: QuranEdition) =>
@@ -164,6 +206,8 @@ export default function HomePage() {
       </section>
 
       <TodayReadingCard />
+
+      <PrayerReadingPlanCard />
 
       {/* Reader and Quran catalog summary */}
       <section className="kpi-grid">
@@ -264,15 +308,20 @@ export default function HomePage() {
       {todayPrayer && (todayPrayer.times || todayPrayer.prayer_times) && (() => {
         const pTimes = todayPrayer.times || todayPrayer.prayer_times;
         return (
-          <section className="surface">
+          <section className="surface" data-testid="home-prayer-schedule">
             <div className="surface-head">
               <div>
                 <p className="eyebrow">{t("home.todaySchedule")}</p>
                 <h3 className="surface-title">{t("home.prayers")}</h3>
               </div>
-              <Link href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
-                {t("home.configurePrayer")}
-              </Link>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <span className="status-chip ok">
+                  {t("prayer.timezoneValue", { timezone: todayPrayer.timezone })}
+                </span>
+                <Link href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
+                  {t("home.configurePrayer")}
+                </Link>
+              </div>
             </div>
 
             <div className="prayer-grid">

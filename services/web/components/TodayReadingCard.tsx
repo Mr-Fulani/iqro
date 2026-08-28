@@ -73,6 +73,12 @@ export function TodayReadingCard() {
     if (!authLoading && session) void loadToday();
   }, [authLoading, loadToday, session]);
 
+  useEffect(() => {
+    const refresh = () => void loadToday();
+    window.addEventListener("quran-reading-progress-changed", refresh);
+    return () => window.removeEventListener("quran-reading-progress-changed", refresh);
+  }, [loadToday]);
+
   const ensureGuestSession = async (): Promise<boolean> => {
     if (api.getSession()) return true;
     return Boolean(await loginGuest());

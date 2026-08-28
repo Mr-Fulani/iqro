@@ -31,6 +31,7 @@ from quran_backend.modules.accounts.models import (
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PRIVATE_NO_STORE_CACHE_CONTROL
 from quran_backend.modules.prayer_times.models import PrayerMethodConfig, PrayerProfile
+from quran_backend.modules.reading.models import PrayerReadingPlan
 from quran_backend.modules.reminders.models import (
     ReminderRule,
     ReminderType,
@@ -371,6 +372,56 @@ def test_claim_and_successful_delivery_advance_schedule(monkeypatch: pytest.Monk
     assert schedule.claim_token is None
     assert subscription.consecutive_failures == 0
     assert subscription.last_success_at is not None
+
+
+@pytest.mark.django_db
+@override_settings(**PUSH_SETTINGS)
+def test_prayer_notification_includes_the_after_prayer_reading_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = User.objects.create_user()
+    _client, device = _authenticated_web_client(user)
+    subscription = _subscription(device, timezone_name="UTC")
+    PrayerReadingPlan.objects.create(
+        user=user,
+        pages_per_prayer=2,
+        timezone_name="UTC",
+        client_updated_at=timezone.now(),
+    )
+    occurrence = timezone.now() - timedelta(seconds=1)
+    rule = ReminderRule.objects.create(
+        user=user,
+        reminder_type=ReminderType.PRAYER,
+        prayer_event="fajr",
+        prayer_offset_minutes=0,
+        client_updated_at=timezone.now(),
+    )
+    WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=occurrence,
+        next_attempt_at=occurrence,
+    )
+    captured: dict[str, Any] = {}
+
+    def fake_webpush(**kwargs: Any) -> Mock:
+        captured.update(kwargs)
+        return Mock(status_code=201)
+
+    monkeypatch.setattr("quran_backend.modules.reminders.push.webpush", fake_webpush)
+    claimed = claim_due_web_push_schedules(now=occurrence + timedelta(seconds=1))
+    result = deliver_claimed_web_push_schedule(
+        schedule_id=claimed[0].schedule_id,
+        claim_token=claimed[0].claim_token,
+    )
+
+    payload = json.loads(captured["data"])
+    assert result == "delivered"
+    assert payload["title"] == "Фаджр"
+    assert payload["body"] == (
+        "Время намаза. После намаза — 2 стр. Корана по вашему плану."
+    )
+    assert payload["url"] == "/ru#prayer-reading-plan"
 
 
 @pytest.mark.django_db

@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db.models import QuerySet
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -22,10 +23,14 @@ from quran_backend.modules.accounts.models import (
 )
 from quran_backend.modules.reading.habit_services import (
     record_manual_session,
+    record_prayer_reading_check_in,
+    set_prayer_reading_plan,
     set_reading_goal,
 )
 from quran_backend.modules.reading.models import (
     GoalProgress,
+    PrayerReadingCheckIn,
+    PrayerReadingPlan,
     ReadingGoal,
     ReadingGoalMetric,
     ReadingGoalStatus,
@@ -197,6 +202,42 @@ def test_manual_session_update_and_delete_recalculate_progress_and_streak() -> N
     assert GoalProgress.objects.filter(goal_id=goal["id"]).exists() is False
 
 
+def test_manual_session_idempotency_lookup_locks_only_the_session_table(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PostgreSQL rejects FOR UPDATE on nullable LEFT JOIN relations."""
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    select_for_update = QuerySet.select_for_update
+    reading_session_locks: list[dict[str, object]] = []
+
+    def capture_lock(
+        queryset: QuerySet[object],
+        *args: object,
+        **kwargs: object,
+    ) -> QuerySet[object]:
+        if queryset.model is ReadingSession:
+            reading_session_locks.append(dict(kwargs))
+        return select_for_update(queryset, *args, **kwargs)
+
+    monkeypatch.setattr(QuerySet, "select_for_update", capture_lock)
+    response = client.post(
+        reverse("reading:reading-session-manual"),
+        {
+            "id": str(uuid.uuid7()),
+            "timezone_name": "UTC",
+            "local_date": timezone.now().date().isoformat(),
+            "metric": "pages",
+            "amount": "1",
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert {"of": ("self",)} in reading_session_locks
+
+
 def test_goal_revision_and_manual_date_validation_are_fail_closed() -> None:
     user = User.objects.create_user()
     client = _authenticated_client(user)
@@ -228,6 +269,130 @@ def test_goal_revision_and_manual_date_validation_are_fail_closed() -> None:
     assert stale.json()["code"] == "reading_goal_revision_conflict"
     assert future.status_code == 400
     assert future.json()["field_errors"]["local_date"] == "Future reading cannot be recorded."
+
+
+def test_prayer_reading_plan_check_ins_are_idempotent_and_reversible() -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    today = timezone.now().date().isoformat()
+    goal = client.put(
+        reverse("reading:reading-goal"),
+        _goal_payload(metric="pages", amount="10"),
+        format="json",
+    )
+    empty = client.get(
+        reverse("reading:prayer-reading-plan"),
+        {"timezone_name": "UTC"},
+    )
+    plan = client.put(
+        reverse("reading:prayer-reading-plan"),
+        {
+            "pages_per_prayer": 2,
+            "timezone_name": "UTC",
+            "base_revision": 0,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    check_in_id = uuid.uuid7()
+    session_id = uuid.uuid7()
+    payload = {
+        "id": str(check_in_id),
+        "session_id": str(session_id),
+        "prayer": "fajr",
+        "local_date": today,
+        "timezone_name": "UTC",
+        "client_updated_at": timezone.now().isoformat(),
+    }
+    checked = client.post(
+        reverse("reading:prayer-reading-check-in-create"),
+        payload,
+        format="json",
+    )
+    duplicate_slot = client.post(
+        reverse("reading:prayer-reading-check-in-create"),
+        {**payload, "id": str(uuid.uuid7()), "session_id": str(uuid.uuid7())},
+        format="json",
+    )
+    day = client.get(reverse("reading:prayer-reading-plan"))
+    reading_today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
+    delete_url = reverse(
+        "reading:prayer-reading-check-in-detail",
+        kwargs={"check_in_id": check_in_id},
+    )
+    removed = client.delete(
+        f"{delete_url}?{
+            urlencode(
+                {
+                    'base_revision': 1,
+                    'client_updated_at': timezone.now().isoformat(),
+                }
+            )
+        }"
+    )
+    after_delete = client.get(reverse("reading:prayer-reading-plan"))
+
+    assert goal.status_code == 201
+    assert empty.status_code == 200
+    assert empty.json()["plan"] is None
+    assert plan.status_code == 201
+    assert plan.json()["pages_per_prayer"] == 2
+    assert checked.status_code == 201
+    assert checked.json()["pages"] == 2
+    assert duplicate_slot.status_code == 200
+    assert duplicate_slot.json()["id"] == str(check_in_id)
+    assert ReadingSession.objects.filter(id=session_id).count() == 1
+    assert day.json()["achieved_pages"] == 2
+    assert day.json()["target_pages"] == 10
+    assert day.json()["remaining_pages"] == 8
+    assert [item["prayer"] for item in day.json()["check_ins"]] == ["fajr"]
+    assert reading_today.json()["progress"]["achieved_amount"] == "2.00"
+    assert removed.status_code == 204
+    assert after_delete.json()["achieved_pages"] == 0
+    assert after_delete.json()["check_ins"] == []
+    assert PrayerReadingCheckIn.objects.filter(id=check_in_id).exists() is False
+    assert ReadingSession.objects.get(id=session_id).status == "discarded"
+
+
+def test_prayer_reading_plan_rejects_invalid_pages_and_mismatched_timezone() -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    invalid = client.put(
+        reverse("reading:prayer-reading-plan"),
+        {
+            "pages_per_prayer": 21,
+            "timezone_name": "UTC",
+            "base_revision": 0,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    plan, _created = set_prayer_reading_plan(
+        user=user,
+        pages_per_prayer=2,
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=timezone.now(),
+    )
+    mismatch = client.post(
+        reverse("reading:prayer-reading-check-in-create"),
+        {
+            "id": str(uuid.uuid7()),
+            "session_id": str(uuid.uuid7()),
+            "prayer": "isha",
+            "local_date": timezone.now().date().isoformat(),
+            "timezone_name": "Europe/Istanbul",
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+
+    assert invalid.status_code == 400
+    assert plan.pages_per_prayer == 2
+    assert mismatch.status_code == 400
+    assert mismatch.json()["field_errors"]["timezone_name"] == (
+        "Timezone must match the active prayer reading plan."
+    )
 
 
 def test_guest_merge_keeps_newer_goal_sessions_progress_and_is_idempotent() -> None:
@@ -277,6 +442,24 @@ def test_guest_merge_keeps_newer_goal_sessions_progress_and_is_idempotent() -> N
         client_updated_at=now,
         device_id=guest_device.id,
     )
+    guest_prayer_plan, _created = set_prayer_reading_plan(
+        user=guest,
+        pages_per_prayer=2,
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=now,
+        device_id=guest_device.id,
+    )
+    guest_prayer_check_in, _created = record_prayer_reading_check_in(
+        user=guest,
+        check_in_id=uuid.uuid7(),
+        session_id=uuid.uuid7(),
+        prayer="fajr",
+        local_date=now.date(),
+        timezone_name="UTC",
+        client_updated_at=now,
+        device_id=guest_device.id,
+    )
     idempotency_key = uuid.uuid4()
 
     result = merge_guest_into_account(
@@ -295,17 +478,24 @@ def test_guest_merge_keeps_newer_goal_sessions_progress_and_is_idempotent() -> N
     guest_goal.refresh_from_db()
     target_goal.refresh_from_db()
     guest_session.refresh_from_db()
+    guest_prayer_plan.refresh_from_db()
+    guest_prayer_check_in.refresh_from_db()
     progress = GoalProgress.objects.get(goal=guest_goal)
     streak = ReadingStreak.objects.get(user=target)
     assert result.replayed is False
     assert replay.replayed is True
     assert result.moved_counts["reading_goals"] == 1
-    assert result.moved_counts["reading_sessions"] == 1
+    assert result.moved_counts["reading_sessions"] == 2
+    assert result.moved_counts["prayer_reading_plans"] == 1
+    assert result.moved_counts["prayer_reading_check_ins"] == 1
     assert result.moved_counts["goal_progress"] == 1
     assert guest_goal.user_id == target.id
     assert guest_goal.status == ReadingGoalStatus.ACTIVE
     assert target_goal.status == ReadingGoalStatus.ARCHIVED
     assert guest_session.user_id == target.id
+    assert guest_prayer_plan.user_id == target.id
+    assert guest_prayer_check_in.user_id == target.id
+    assert PrayerReadingPlan.objects.filter(user=target).count() == 1
     assert guest_session.device_id == guest_device.id
     assert progress.user_id == target.id
     assert progress.completed_at is not None

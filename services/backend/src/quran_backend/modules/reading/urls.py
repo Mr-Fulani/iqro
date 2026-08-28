@@ -13,6 +13,9 @@ from quran_backend.modules.reading.habit_api import (
     AutomaticReadingSessionCreateView,
     ManualReadingSessionCreateView,
     ManualReadingSessionDetailView,
+    PrayerReadingCheckInCreateView,
+    PrayerReadingCheckInDetailView,
+    PrayerReadingPlanView,
     ReadingGoalView,
     ReadingSessionListView,
     TodayView,
@@ -34,6 +37,21 @@ urlpatterns = [
     ),
     path("me/today", TodayView.as_view(), name="today"),
     path("me/reading-goal", ReadingGoalView.as_view(), name="reading-goal"),
+    path(
+        "me/prayer-reading-plan",
+        PrayerReadingPlanView.as_view(),
+        name="prayer-reading-plan",
+    ),
+    path(
+        "me/prayer-reading-check-ins",
+        PrayerReadingCheckInCreateView.as_view(),
+        name="prayer-reading-check-in-create",
+    ),
+    path(
+        "me/prayer-reading-check-ins/<uuid:check_in_id>",
+        PrayerReadingCheckInDetailView.as_view(),
+        name="prayer-reading-check-in-detail",
+    ),
     path(
         "me/reading-sessions",
         ReadingSessionListView.as_view(),

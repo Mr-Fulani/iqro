@@ -193,6 +193,11 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     paths = schema["paths"]
     assert set(paths["/api/v1/me/today"]) == {"get"}
     assert set(paths["/api/v1/me/reading-goal"]) == {"get", "put", "delete"}
+    assert set(paths["/api/v1/me/prayer-reading-plan"]) == {"get", "put"}
+    assert set(paths["/api/v1/me/prayer-reading-check-ins"]) == {"post"}
+    assert set(paths["/api/v1/me/prayer-reading-check-ins/{check_in_id}"]) == {
+        "delete"
+    }
     assert set(paths["/api/v1/me/reading-sessions"]) == {"get"}
     assert set(paths["/api/v1/me/reading-sessions/automatic"]) == {"post"}
     assert set(paths["/api/v1/me/reading-sessions/manual"]) == {"post"}
@@ -212,6 +217,9 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     automatic_request = schema["components"]["schemas"]["AutomaticReadingSessionCreateRequest"]
     assert automatic_request["properties"]["active_seconds"]["maximum"] == 86_400
     assert automatic_request["properties"]["credited_pages"]["maximum"] == 604
+    prayer_plan_request = schema["components"]["schemas"]["PrayerReadingPlanWriteRequest"]
+    assert prayer_plan_request["additionalProperties"] is False
+    assert prayer_plan_request["properties"]["pages_per_prayer"]["maximum"] == 20
     today_schema = schema["components"]["schemas"]["TodayOutput"]
     assert {"continue_reading", "goal", "progress", "streak"} <= today_schema["properties"].keys()
 

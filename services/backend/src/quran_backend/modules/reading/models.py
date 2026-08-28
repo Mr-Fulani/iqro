@@ -314,6 +314,14 @@ class ReadingSessionStatus(models.TextChoices):
     DISCARDED = "discarded", "Discarded"
 
 
+class PrayerReadingPrayer(models.TextChoices):
+    FAJR = "fajr", "Fajr"
+    DHUHR = "dhuhr", "Dhuhr"
+    ASR = "asr", "Asr"
+    MAGHRIB = "maghrib", "Maghrib"
+    ISHA = "isha", "Isha"
+
+
 READING_GOAL_LIMITS: dict[str, Decimal] = {
     ReadingGoalMetric.MINUTES: Decimal("1440"),
     ReadingGoalMetric.PAGES: Decimal("604"),
@@ -392,6 +400,45 @@ class ReadingGoal(BaseModel):
         limit = READING_GOAL_LIMITS.get(self.metric)
         if limit is not None and self.target_amount > limit:
             raise ValidationError({"target_amount": f"Target must not exceed {int(limit)}."})
+        device = self.device
+        if device is not None and device.user_id != self.user_id:
+            raise ValidationError({"device": "Device must belong to the same user."})
+
+
+class PrayerReadingPlan(BaseModel):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="prayer_reading_plan",
+    )
+    pages_per_prayer = models.PositiveSmallIntegerField(default=2)
+    timezone_name = models.CharField(max_length=64)
+    client_updated_at = models.DateTimeField()
+    revision = models.PositiveBigIntegerField(default=1)
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="prayer_reading_plans",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "prayer_reading_plan"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(pages_per_prayer__gte=1, pages_per_prayer__lte=20),
+                name="prayer_reading_plan_pages_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(revision__gte=1),
+                name="prayer_reading_plan_revision_positive",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        _validate_timezone_name(self.timezone_name)
         device = self.device
         if device is not None and device.user_id != self.user_id:
             raise ValidationError({"device": "Device must belong to the same user."})
@@ -608,6 +655,76 @@ class ReadingSession(BaseModel):
         }
         if errors:
             raise ValidationError(errors)
+
+
+class PrayerReadingCheckIn(BaseModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="prayer_reading_check_ins",
+    )
+    plan = models.ForeignKey(
+        PrayerReadingPlan,
+        on_delete=models.CASCADE,
+        related_name="check_ins",
+    )
+    prayer = models.CharField(max_length=16, choices=PrayerReadingPrayer)
+    local_date = models.DateField()
+    timezone_name = models.CharField(max_length=64)
+    pages = models.PositiveSmallIntegerField()
+    reading_session = models.OneToOneField(
+        ReadingSession,
+        on_delete=models.SET_NULL,
+        related_name="prayer_reading_check_in",
+        null=True,
+        blank=True,
+    )
+    client_updated_at = models.DateTimeField()
+    revision = models.PositiveBigIntegerField(default=1)
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="prayer_reading_check_ins",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "prayer_reading_check_in"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "local_date", "prayer"],
+                name="prayer_reading_check_in_daily_prayer_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(pages__gte=1, pages__lte=20),
+                name="prayer_reading_check_in_pages_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(revision__gte=1),
+                name="prayer_reading_check_in_revision_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "local_date"],
+                name="prayer_reading_user_date_idx",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        _validate_timezone_name(self.timezone_name)
+        if self.plan.user_id != self.user_id:
+            raise ValidationError({"plan": "Plan must belong to the same user."})
+        session = self.reading_session
+        if session is not None and session.user_id != self.user_id:
+            raise ValidationError(
+                {"reading_session": "Reading session must belong to the same user."}
+            )
+        device = self.device
+        if device is not None and device.user_id != self.user_id:
+            raise ValidationError({"device": "Device must belong to the same user."})
 
 
 class GoalProgress(BaseModel):

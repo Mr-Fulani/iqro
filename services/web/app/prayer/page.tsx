@@ -13,12 +13,14 @@ import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
 import {
+  dateInTimezone,
+  DEFAULT_PRAYER_LOCATION,
   loadPrayerLocationPreference,
   savePrayerLocationPreference,
 } from "../../lib/prayer-location";
 
 const PRESET_CITIES = [
-  { label: "prayer.city.makkah" as MessageKey, lat: "21.4225", lng: "39.8262", tz: "Asia/Riyadh" },
+  { label: "prayer.city.makkah" as MessageKey, lat: DEFAULT_PRAYER_LOCATION.latitude, lng: DEFAULT_PRAYER_LOCATION.longitude, tz: DEFAULT_PRAYER_LOCATION.timezone },
   { label: "prayer.city.madinah" as MessageKey, lat: "24.4672", lng: "39.6111", tz: "Asia/Riyadh" },
   { label: "prayer.city.moscow" as MessageKey, lat: "55.7558", lng: "37.6173", tz: "Europe/Moscow" },
   { label: "prayer.city.kazan" as MessageKey, lat: "55.7887", lng: "49.1221", tz: "Europe/Moscow" },
@@ -41,10 +43,10 @@ export default function PrayerPage() {
   const { locale, t, formatDate } = useI18n();
   const [methods, setMethods] = useState<PrayerMethod[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("");
-  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [latitude, setLatitude] = useState<string>("21.4225");
-  const [longitude, setLongitude] = useState<string>("39.8262");
-  const [timezone, setTimezone] = useState<string>("Asia/Riyadh");
+  const [date, setDate] = useState<string>(() => dateInTimezone(DEFAULT_PRAYER_LOCATION.timezone));
+  const [latitude, setLatitude] = useState<string>(DEFAULT_PRAYER_LOCATION.latitude);
+  const [longitude, setLongitude] = useState<string>(DEFAULT_PRAYER_LOCATION.longitude);
+  const [timezone, setTimezone] = useState<string>(DEFAULT_PRAYER_LOCATION.timezone);
   const [asrMethod, setAsrMethod] = useState<"standard" | "hanafi">("standard");
   const [highLatitudeRule, setHighLatitudeRule] = useState<
     PrayerProfile["high_latitude_rule"]
@@ -154,6 +156,7 @@ export default function PrayerPage() {
       setLatitude(saved.latitude);
       setLongitude(saved.longitude);
       setTimezone(saved.timezone);
+      setDate(dateInTimezone(saved.timezone));
       if (saved.method_config_id) setSelectedMethodId(saved.method_config_id);
       if (saved.asr_method) setAsrMethod(saved.asr_method);
       const cityIndex = PRESET_CITIES.findIndex(
@@ -167,6 +170,7 @@ export default function PrayerPage() {
       setLatitude(PRESET_CITIES[0].lat);
       setLongitude(PRESET_CITIES[0].lng);
       setTimezone(PRESET_CITIES[0].tz);
+      setDate(dateInTimezone(PRESET_CITIES[0].tz));
       setQuickCity("0");
     }
     setLocationReady(true);

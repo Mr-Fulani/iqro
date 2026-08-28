@@ -15,6 +15,8 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.reading.models import (
     GoalProgress,
+    PrayerReadingCheckIn,
+    PrayerReadingPlan,
     ReadingGoal,
     ReadingGoalMetric,
     ReadingGoalStatus,
@@ -28,6 +30,7 @@ from quran_backend.modules.reading.services import reading_position_snapshot
 MANUAL_BACKDATE_DAYS = 7
 RECALCULATION_VERSION = 1
 AMOUNT_QUANTUM = Decimal("0.01")
+PRAYERS_PER_DAY = 5
 
 
 class ReadingGoalNotFoundError(NotFound):
@@ -64,12 +67,289 @@ class ReadingSessionImmutableError(APIException):
     default_code = "reading_session_immutable"
 
 
+class PrayerReadingPlanNotFoundError(NotFound):
+    default_detail = "A prayer reading plan was not found."
+    default_code = "prayer_reading_plan_not_found"
+
+
+class PrayerReadingPlanRevisionConflictError(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "The prayer reading plan changed on another client."
+    default_code = "prayer_reading_plan_revision_conflict"
+
+
+class PrayerReadingCheckInNotFoundError(NotFound):
+    default_detail = "The prayer reading check-in was not found."
+    default_code = "prayer_reading_check_in_not_found"
+
+
+class PrayerReadingCheckInConflictError(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "The prayer reading check-in identifier is already in use."
+    default_code = "prayer_reading_check_in_conflict"
+
+
 def get_active_goal(user: User) -> ReadingGoal | None:
     return (
         ReadingGoal.objects.filter(user=user, status=ReadingGoalStatus.ACTIVE)
         .select_related("device")
         .first()
     )
+
+
+def get_prayer_reading_day(
+    user: User,
+    *,
+    fallback_timezone_name: str | None = None,
+) -> dict[str, Any]:
+    plan = (
+        PrayerReadingPlan.objects.filter(user=user)
+        .select_related("device")
+        .first()
+    )
+    timezone_name = (
+        plan.timezone_name
+        if plan is not None
+        else fallback_timezone_name or user.timezone or "UTC"
+    )
+    local_date = _local_date(timezone.now(), timezone_name)
+    check_ins = (
+        list(
+            PrayerReadingCheckIn.objects.filter(
+                user=user,
+                plan=plan,
+                local_date=local_date,
+            )
+            .select_related("reading_session", "device")
+            .order_by("created_at")
+        )
+        if plan is not None
+        else []
+    )
+    achieved_pages = sum(check_in.pages for check_in in check_ins)
+    target_pages = plan.pages_per_prayer * PRAYERS_PER_DAY if plan is not None else 0
+    return {
+        "local_date": local_date.isoformat(),
+        "timezone_name": timezone_name,
+        "plan": prayer_reading_plan_snapshot(plan) if plan is not None else None,
+        "check_ins": [prayer_reading_check_in_snapshot(item) for item in check_ins],
+        "achieved_pages": achieved_pages,
+        "target_pages": target_pages,
+        "remaining_pages": max(target_pages - achieved_pages, 0),
+    }
+
+
+@transaction.atomic
+def set_prayer_reading_plan(  # noqa: PLR0913
+    *,
+    user: User,
+    pages_per_prayer: int,
+    timezone_name: str,
+    base_revision: int,
+    client_updated_at: datetime,
+    device_id: uuid.UUID | None = None,
+) -> tuple[PrayerReadingPlan, bool]:
+    User.objects.select_for_update().only("id").get(id=user.id)
+    device = _device_for_user(user, device_id)
+    current = (
+        PrayerReadingPlan.objects.select_for_update(of=("self",))
+        .select_related("device")
+        .filter(user=user)
+        .first()
+    )
+    if current is None:
+        if base_revision != 0:
+            raise PrayerReadingPlanRevisionConflictError
+        plan = PrayerReadingPlan(
+            user=user,
+            pages_per_prayer=pages_per_prayer,
+            timezone_name=timezone_name,
+            client_updated_at=client_updated_at,
+            device=device,
+        )
+        plan.full_clean()
+        plan.save(force_insert=True)
+        return plan, True
+    if current.revision != base_revision:
+        raise PrayerReadingPlanRevisionConflictError
+    if (
+        current.pages_per_prayer == pages_per_prayer
+        and current.timezone_name == timezone_name
+        and current.device_id == (device.id if device is not None else None)
+    ):
+        return current, False
+    current.pages_per_prayer = pages_per_prayer
+    current.timezone_name = timezone_name
+    current.client_updated_at = client_updated_at
+    current.device = device
+    current.revision += 1
+    current.full_clean()
+    current.save(
+        update_fields=[
+            "pages_per_prayer",
+            "timezone_name",
+            "client_updated_at",
+            "device",
+            "revision",
+            "updated_at",
+        ]
+    )
+    return current, False
+
+
+@transaction.atomic
+def record_prayer_reading_check_in(  # noqa: PLR0913
+    *,
+    user: User,
+    check_in_id: uuid.UUID,
+    session_id: uuid.UUID,
+    prayer: str,
+    local_date: date,
+    timezone_name: str,
+    client_updated_at: datetime,
+    device_id: uuid.UUID | None = None,
+) -> tuple[PrayerReadingCheckIn, bool]:
+    User.objects.select_for_update().only("id").get(id=user.id)
+    try:
+        plan = (
+            PrayerReadingPlan.objects.select_for_update(of=("self",))
+            .select_related("device")
+            .get(user=user)
+        )
+    except PrayerReadingPlan.DoesNotExist as exc:
+        raise PrayerReadingPlanNotFoundError from exc
+    if timezone_name != plan.timezone_name:
+        raise ValidationError(
+            {"timezone_name": "Timezone must match the active prayer reading plan."}
+        )
+    _validate_manual_date(local_date, timezone_name)
+    device = _device_for_user(user, device_id)
+
+    existing_by_id = (
+        PrayerReadingCheckIn.objects.select_for_update(of=("self",))
+        .select_related("reading_session", "device")
+        .filter(id=check_in_id)
+        .first()
+    )
+    if existing_by_id is not None:
+        if not _prayer_check_in_matches(
+            existing_by_id,
+            user=user,
+            plan=plan,
+            prayer=prayer,
+            local_date=local_date,
+            timezone_name=timezone_name,
+            session_id=session_id,
+        ):
+            raise PrayerReadingCheckInConflictError
+        return existing_by_id, False
+
+    existing_slot = (
+        PrayerReadingCheckIn.objects.select_for_update(of=("self",))
+        .select_related("reading_session", "device")
+        .filter(user=user, local_date=local_date, prayer=prayer)
+        .first()
+    )
+    if existing_slot is not None:
+        return existing_slot, False
+
+    now = timezone.now()
+    session, _session_created = _create_completed_session(
+        user=user,
+        session_id=session_id,
+        device_id=device_id,
+        values={
+            "source": ReadingSessionSource.MANUAL,
+            "timezone_name": timezone_name,
+            "local_date": local_date,
+            "started_at": now,
+            "ended_at": now,
+            "active_seconds": 0,
+            "credited_pages": 0,
+            "credited_ayahs": 0,
+            "manual_metric": ReadingGoalMetric.PAGES,
+            "manual_amount": Decimal(plan.pages_per_prayer),
+            "client_updated_at": client_updated_at,
+        },
+    )
+    check_in = PrayerReadingCheckIn(
+        id=check_in_id,
+        user=user,
+        plan=plan,
+        prayer=prayer,
+        local_date=local_date,
+        timezone_name=timezone_name,
+        pages=plan.pages_per_prayer,
+        reading_session=session,
+        client_updated_at=client_updated_at,
+        device=device,
+    )
+    check_in.full_clean()
+    check_in.save(force_insert=True)
+    return check_in, True
+
+
+@transaction.atomic
+def delete_prayer_reading_check_in(
+    *,
+    user: User,
+    check_in_id: uuid.UUID,
+    base_revision: int,
+    client_updated_at: datetime,
+    device_id: uuid.UUID | None = None,
+) -> None:
+    User.objects.select_for_update().only("id").get(id=user.id)
+    try:
+        check_in = (
+            PrayerReadingCheckIn.objects.select_for_update(of=("self",))
+            .select_related("reading_session", "plan", "device")
+            .get(user=user, id=check_in_id)
+        )
+    except PrayerReadingCheckIn.DoesNotExist as exc:
+        raise PrayerReadingCheckInNotFoundError from exc
+    if check_in.revision != base_revision:
+        raise PrayerReadingCheckInConflictError
+    session = check_in.reading_session
+    if session is not None and session.status != ReadingSessionStatus.DISCARDED:
+        discard_manual_session(
+            user=user,
+            session_id=session.id,
+            base_revision=session.revision,
+            client_updated_at=client_updated_at,
+            device_id=device_id,
+        )
+    check_in.delete()
+
+
+def prayer_reading_plan_snapshot(plan: PrayerReadingPlan) -> dict[str, Any]:
+    return {
+        "id": str(plan.id),
+        "pages_per_prayer": plan.pages_per_prayer,
+        "timezone_name": plan.timezone_name,
+        "revision": plan.revision,
+        "client_updated_at": plan.client_updated_at.isoformat(),
+        "device_id": str(plan.device_id) if plan.device_id else None,
+        "created_at": plan.created_at.isoformat(),
+        "updated_at": plan.updated_at.isoformat(),
+    }
+
+
+def prayer_reading_check_in_snapshot(check_in: PrayerReadingCheckIn) -> dict[str, Any]:
+    return {
+        "id": str(check_in.id),
+        "prayer": check_in.prayer,
+        "local_date": check_in.local_date.isoformat(),
+        "timezone_name": check_in.timezone_name,
+        "pages": check_in.pages,
+        "reading_session_id": (
+            str(check_in.reading_session_id) if check_in.reading_session_id else None
+        ),
+        "revision": check_in.revision,
+        "client_updated_at": check_in.client_updated_at.isoformat(),
+        "device_id": str(check_in.device_id) if check_in.device_id else None,
+        "created_at": check_in.created_at.isoformat(),
+        "updated_at": check_in.updated_at.isoformat(),
+    }
 
 
 @transaction.atomic
@@ -252,7 +532,7 @@ def _create_completed_session(
     User.objects.select_for_update().only("id").get(id=user.id)
     device = _device_for_user(user, device_id)
     existing = (
-        ReadingSession.objects.select_for_update()
+        ReadingSession.objects.select_for_update(of=("self",))
         .select_related("goal", "device")
         .filter(id=session_id)
         .first()
@@ -595,7 +875,7 @@ def recalculate_reading_streak(
 def _manual_session_for_update(user: User, session_id: uuid.UUID) -> ReadingSession:
     try:
         session = (
-            ReadingSession.objects.select_for_update()
+            ReadingSession.objects.select_for_update(of=("self",))
             .select_related("goal", "device")
             .get(user=user, id=session_id)
         )
@@ -683,6 +963,26 @@ def _session_matches_create(
         and session.manual_amount == values["manual_amount"]
         and session.client_updated_at == values["client_updated_at"]
         and session.device_id == (device.id if device is not None else None)
+    )
+
+
+def _prayer_check_in_matches(  # noqa: PLR0913
+    check_in: PrayerReadingCheckIn,
+    *,
+    user: User,
+    plan: PrayerReadingPlan,
+    prayer: str,
+    local_date: date,
+    timezone_name: str,
+    session_id: uuid.UUID,
+) -> bool:
+    return (
+        check_in.user_id == user.id
+        and check_in.plan_id == plan.id
+        and check_in.prayer == prayer
+        and check_in.local_date == local_date
+        and check_in.timezone_name == timezone_name
+        and check_in.reading_session_id == session_id
     )
 
 

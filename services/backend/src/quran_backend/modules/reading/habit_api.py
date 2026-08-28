@@ -20,6 +20,13 @@ from quran_backend.modules.reading.habit_serializers import (
     AutomaticReadingSessionCreateSerializer,
     ManualReadingSessionCreateSerializer,
     ManualReadingSessionUpdateSerializer,
+    PrayerReadingCheckInCreateSerializer,
+    PrayerReadingCheckInDeleteSerializer,
+    PrayerReadingCheckInOutputSerializer,
+    PrayerReadingDayOutputSerializer,
+    PrayerReadingPlanOutputSerializer,
+    PrayerReadingPlanQuerySerializer,
+    PrayerReadingPlanWriteSerializer,
     ReadingGoalDeleteSerializer,
     ReadingGoalEnvelopeSerializer,
     ReadingGoalOutputSerializer,
@@ -34,14 +41,20 @@ from quran_backend.modules.reading.habit_serializers import (
 from quran_backend.modules.reading.habit_services import (
     ReadingGoalNotFoundError,
     archive_reading_goal,
+    delete_prayer_reading_check_in,
     discard_manual_session,
     get_active_goal,
+    get_prayer_reading_day,
     get_today_summary,
     goal_snapshot,
     list_reading_sessions,
+    prayer_reading_check_in_snapshot,
+    prayer_reading_plan_snapshot,
     record_automatic_session,
     record_manual_session,
+    record_prayer_reading_check_in,
     session_snapshot,
+    set_prayer_reading_plan,
     set_reading_goal,
     update_manual_session,
 )
@@ -169,6 +182,103 @@ class ReadingSessionListView(PrivateNoStoreResponseMixin, APIView):
         return Response({"results": [session_snapshot(session) for session in sessions]})
 
 
+@extend_schema(tags=["reading-habit"])
+class PrayerReadingPlanView(
+    HabitMutationRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    @extend_schema(
+        operation_id="prayer_reading_plan_retrieve",
+        responses=PrayerReadingDayOutputSerializer,
+        parameters=[PrayerReadingPlanQuerySerializer],
+    )
+    def get(self, request: Request) -> Response:
+        query = PrayerReadingPlanQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            get_prayer_reading_day(
+                _authenticated_user(request),
+                fallback_timezone_name=query.validated_data.get("timezone_name"),
+            )
+        )
+
+    @extend_schema(
+        operation_id="prayer_reading_plan_set",
+        request=PrayerReadingPlanWriteSerializer,
+        responses={
+            status.HTTP_200_OK: PrayerReadingPlanOutputSerializer,
+            status.HTTP_201_CREATED: PrayerReadingPlanOutputSerializer,
+        },
+    )
+    def put(self, request: Request) -> Response:
+        serializer = PrayerReadingPlanWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        plan, created = set_prayer_reading_plan(
+            user=_authenticated_user(request),
+            **data,
+        )
+        return Response(
+            prayer_reading_plan_snapshot(plan),
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+@method_decorator(sensitive_post_parameters(), name="dispatch")
+@extend_schema(tags=["reading-habit"])
+class PrayerReadingCheckInCreateView(
+    HabitMutationRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    @extend_schema(
+        operation_id="prayer_reading_check_in_create",
+        request=PrayerReadingCheckInCreateSerializer,
+        responses={
+            status.HTTP_200_OK: PrayerReadingCheckInOutputSerializer,
+            status.HTTP_201_CREATED: PrayerReadingCheckInOutputSerializer,
+        },
+    )
+    def post(self, request: Request) -> Response:
+        serializer = PrayerReadingCheckInCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        check_in, created = record_prayer_reading_check_in(
+            user=_authenticated_user(request),
+            check_in_id=data.pop("id"),
+            **data,
+        )
+        return Response(
+            prayer_reading_check_in_snapshot(check_in),
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["reading-habit"])
+class PrayerReadingCheckInDetailView(
+    HabitMutationRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    @extend_schema(
+        operation_id="prayer_reading_check_in_delete",
+        request=None,
+        responses={status.HTTP_204_NO_CONTENT: None},
+        parameters=[PrayerReadingCheckInDeleteSerializer],
+    )
+    def delete(self, request: Request, check_in_id: uuid.UUID) -> Response:
+        serializer = PrayerReadingCheckInDeleteSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        delete_prayer_reading_check_in(
+            user=_authenticated_user(request),
+            check_in_id=check_in_id,
+            **data,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 @method_decorator(sensitive_post_parameters(), name="dispatch")
 @extend_schema(tags=["reading-habit"])
 class AutomaticReadingSessionCreateView(
@@ -275,6 +385,9 @@ __all__ = [
     "AutomaticReadingSessionCreateView",
     "ManualReadingSessionCreateView",
     "ManualReadingSessionDetailView",
+    "PrayerReadingCheckInCreateView",
+    "PrayerReadingCheckInDetailView",
+    "PrayerReadingPlanView",
     "ReadingGoalNotFoundError",
     "ReadingGoalView",
     "ReadingSessionListView",

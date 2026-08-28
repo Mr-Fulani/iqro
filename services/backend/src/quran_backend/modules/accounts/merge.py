@@ -25,6 +25,8 @@ from quran_backend.modules.reading.habit_services import recalculate_reading_str
 from quran_backend.modules.reading.models import (
     Bookmark,
     GoalProgress,
+    PrayerReadingCheckIn,
+    PrayerReadingPlan,
     ReadingGoal,
     ReadingGoalStatus,
     ReadingPosition,
@@ -211,6 +213,7 @@ def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) 
 
     counts["reading_goals"] = ReadingGoal.objects.filter(user=source).update(user=target)
     counts["reading_sessions"] = ReadingSession.objects.filter(user=source).update(user=target)
+    _merge_prayer_reading_state(source=source, target=target, counts=counts)
     counts["goal_progress"] = GoalProgress.objects.filter(user=source).update(user=target)
     counts["reading_streaks"] = ReadingStreak.objects.filter(user__in=(source, target)).count()
     ReadingStreak.objects.filter(user__in=(source, target)).delete()
@@ -223,6 +226,81 @@ def _position_rank(position: ReadingPosition) -> tuple[Any, ...]:
 
 def _goal_rank(goal: ReadingGoal) -> tuple[Any, ...]:
     return (goal.client_updated_at, goal.updated_at, goal.id)
+
+
+def _merge_prayer_reading_state(
+    *,
+    source: User,
+    target: User,
+    counts: dict[str, int],
+) -> None:
+    source_plan = PrayerReadingPlan.objects.select_for_update().filter(user=source).first()
+    if source_plan is None:
+        counts["prayer_reading_plans"] = 0
+        counts["prayer_reading_check_ins"] = 0
+        return
+    source_check_ins = list(
+        PrayerReadingCheckIn.objects.select_for_update()
+        .filter(user=source)
+        .order_by("id")
+    )
+    target_plan = PrayerReadingPlan.objects.select_for_update().filter(user=target).first()
+    if target_plan is None:
+        source_plan.user = target
+        source_plan.save(update_fields=["user", "updated_at"])
+        PrayerReadingCheckIn.objects.filter(user=source).update(user=target)
+        counts["prayer_reading_plans"] = 1
+        counts["prayer_reading_check_ins"] = len(source_check_ins)
+        return
+
+    if _prayer_reading_plan_rank(source_plan) > _prayer_reading_plan_rank(target_plan):
+        target_plan.pages_per_prayer = source_plan.pages_per_prayer
+        target_plan.timezone_name = source_plan.timezone_name
+        target_plan.client_updated_at = source_plan.client_updated_at
+        target_plan.device = source_plan.device
+        target_plan.revision = max(target_plan.revision, source_plan.revision) + 1
+        target_plan.save()
+
+    for source_check_in in source_check_ins:
+        target_check_in = (
+            PrayerReadingCheckIn.objects.select_for_update()
+            .filter(
+                user=target,
+                local_date=source_check_in.local_date,
+                prayer=source_check_in.prayer,
+            )
+            .first()
+        )
+        if target_check_in is None:
+            source_check_in.user = target
+            source_check_in.plan = target_plan
+            source_check_in.save(update_fields=["user", "plan", "updated_at"])
+            continue
+        if _prayer_reading_check_in_rank(source_check_in) > _prayer_reading_check_in_rank(
+            target_check_in
+        ):
+            target_check_in.pages = source_check_in.pages
+            target_check_in.timezone_name = source_check_in.timezone_name
+            target_check_in.reading_session = source_check_in.reading_session
+            target_check_in.client_updated_at = source_check_in.client_updated_at
+            target_check_in.device = source_check_in.device
+            target_check_in.revision = max(
+                target_check_in.revision,
+                source_check_in.revision,
+            ) + 1
+            target_check_in.save()
+        source_check_in.delete()
+    source_plan.delete()
+    counts["prayer_reading_plans"] = 1
+    counts["prayer_reading_check_ins"] = len(source_check_ins)
+
+
+def _prayer_reading_plan_rank(plan: PrayerReadingPlan) -> tuple[Any, ...]:
+    return (plan.client_updated_at, plan.updated_at, plan.id)
+
+
+def _prayer_reading_check_in_rank(check_in: PrayerReadingCheckIn) -> tuple[Any, ...]:
+    return (check_in.client_updated_at, check_in.updated_at, check_in.id)
 
 
 def _archive_goal_for_merge(goal: ReadingGoal) -> None:

@@ -559,6 +559,43 @@ export type ReadingToday = {
   streak: ReadingStreak;
 };
 
+export type PrayerReadingPrayer = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+
+export type PrayerReadingPlan = {
+  id: string;
+  pages_per_prayer: number;
+  timezone_name: string;
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PrayerReadingCheckIn = {
+  id: string;
+  prayer: PrayerReadingPrayer;
+  local_date: string;
+  timezone_name: string;
+  pages: number;
+  reading_session_id: string | null;
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PrayerReadingDay = {
+  local_date: string;
+  timezone_name: string;
+  plan: PrayerReadingPlan | null;
+  check_ins: PrayerReadingCheckIn[];
+  achieved_pages: number;
+  target_pages: number;
+  remaining_pages: number;
+};
+
 export type ReadingSession = {
   id: string;
   goal_id: string | null;
@@ -1356,6 +1393,56 @@ export class ApiClient {
         client_updated_at: new Date().toISOString(),
       }),
     });
+  }
+
+  public async getPrayerReadingDay(timezoneName?: string): Promise<PrayerReadingDay> {
+    const params = new URLSearchParams();
+    if (timezoneName) params.set("timezone_name", timezoneName);
+    const query = params.size ? `?${params.toString()}` : "";
+    return this.request<PrayerReadingDay>(`/api/v1/me/prayer-reading-plan${query}`, {
+      cache: "no-store",
+    });
+  }
+
+  public async setPrayerReadingPlan(data: {
+    pages_per_prayer: number;
+    timezone_name: string;
+    base_revision: number;
+  }): Promise<PrayerReadingPlan> {
+    return this.request<PrayerReadingPlan>("/api/v1/me/prayer-reading-plan", {
+      method: "PUT",
+      body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+    });
+  }
+
+  public async createPrayerReadingCheckIn(data: {
+    prayer: PrayerReadingPrayer;
+    local_date: string;
+    timezone_name: string;
+  }): Promise<PrayerReadingCheckIn> {
+    return this.request<PrayerReadingCheckIn>("/api/v1/me/prayer-reading-check-ins", {
+      method: "POST",
+      body: JSON.stringify({
+        id: generateUuidV7(),
+        session_id: generateUuidV7(),
+        ...data,
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
+  }
+
+  public async deletePrayerReadingCheckIn(
+    checkInId: string,
+    baseRevision: number,
+  ): Promise<void> {
+    const params = new URLSearchParams({
+      base_revision: String(baseRevision),
+      client_updated_at: new Date().toISOString(),
+    });
+    await this.request<void>(
+      `/api/v1/me/prayer-reading-check-ins/${encodeURIComponent(checkInId)}?${params.toString()}`,
+      { method: "DELETE" },
+    );
   }
 
   public async createManualReadingSession(data: {

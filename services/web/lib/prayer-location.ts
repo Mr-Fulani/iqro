@@ -7,6 +7,12 @@ export type PrayerLocationPreference = {
   updated_at: string;
 };
 
+export const DEFAULT_PRAYER_LOCATION = {
+  latitude: "21.4225",
+  longitude: "39.8262",
+  timezone: "Asia/Riyadh",
+} as const;
+
 const STORAGE_PREFIX = "quran_prayer_location_v1";
 
 function storageKey(userId?: string | null): string {
@@ -98,5 +104,20 @@ export function clearPrayerLocationPreference(userId?: string | null): void {
     window.localStorage.removeItem(storageKey(userId));
   } catch {
     // Ignore unavailable browser storage during sign-out cleanup.
+  }
+}
+
+export function dateInTimezone(timezoneName: string, value = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezoneName,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(value);
+    const dateParts = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+  } catch {
+    return value.toISOString().slice(0, 10);
   }
 }
