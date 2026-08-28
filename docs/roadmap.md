@@ -386,7 +386,7 @@ matrix.
 
 ## Этап F. Дуа и расширяемая библиотека
 
-- [ ] Реализовать отдельный домен `dua`: collections, entries, sources, translations,
+- [x] Реализовать отдельный домен `dua`: collections, entries, sources, translations,
   categories, publication и withdrawal.
 - [ ] Добавить bookmarks/collections/offline manifests для дуа через типизированные ссылки.
 - [ ] Создать `library` как read-model витрину, а не универсальное хранилище контента.

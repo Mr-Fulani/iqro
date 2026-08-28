@@ -103,6 +103,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
     for (const path of [
       "",
       "/quran",
+      "/dua",
       "/audio",
       "/prayer",
       "/legal",
@@ -152,6 +153,17 @@ test("published surah and ayah routes render indexable Quran text on the server"
   await page.goto(`${surahPath}/ayah/1`);
   await expect(page).toHaveTitle("Сура 1, аят 1: Аль-Фатиха | Quran Platform");
   await expect(page.locator(".seo-single-ayah")).toContainText("بِسْمِ اللَّهِ");
+});
+
+test("published Dua catalog renders localized Arabic text and provenance on the server", async ({ request }) => {
+  const response = await request.get("/ru/dua");
+
+  expect(response.ok()).toBe(true);
+  const html = await response.text();
+  expect(html).toContain("Слова поминания при пробуждении ото сна");
+  expect(html).toContain("الْحَمْدُ للَّهِ");
+  expect(html).toContain("Молитвы из Корана и Сунны");
+  expect(html).toContain("https://islamhouse.com/ru/books/888254");
 });
 
 test("published reciter and recitation routes render the licensed audio catalog on the server", async ({ page, request }) => {

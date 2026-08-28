@@ -88,7 +88,7 @@ test("authenticated Russian header stays on one row with the logout action", asy
   await expectSingleRowHeader(page);
 });
 
-test("header logo replaces Home and the Dua placeholder follows Quran", async ({ page }) => {
+test("header logo replaces Home and the published Dua catalog follows Quran", async ({ page }) => {
   await page.goto("/ru/quran");
 
   const brand = page.locator(".brand-link");
@@ -111,7 +111,10 @@ test("header logo replaces Home and the Dua placeholder follows Quran", async ({
   await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
+  await expect(page.getByRole("heading", { level: 2, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
+  await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
+  await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
 });
 
 test.describe("browser language negotiation", () => {

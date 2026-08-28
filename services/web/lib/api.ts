@@ -250,6 +250,74 @@ export type AyahTafsir = {
   text: string;
 };
 
+// ---------------------------------------------------------------------------
+// Dua Catalog Types
+// ---------------------------------------------------------------------------
+export type DuaSourceEdition = {
+  language_code: SupportedLocale;
+  provider: string;
+  source_item_id: string;
+  title: string;
+  author: string;
+  translator: string;
+  reviewer: string;
+  source_url: string;
+  rights_url: string;
+  source_version: string;
+};
+
+export type DuaCollection = {
+  id: string;
+  slug: string;
+  version: string;
+  schema_version: number;
+  category_count: number;
+  entry_count: number;
+  published_at: string;
+  source: DuaSourceEdition | null;
+};
+
+export type DuaCategory = {
+  id: string;
+  source_number: number;
+  slug: string;
+  title: string;
+  entry_count: number;
+};
+
+export type DuaEvidence = {
+  kind: "hadith" | "quran" | "source_note";
+  provider: string;
+  source_name: string;
+  source_reference: string;
+  source_url: string;
+  grade: string;
+  external_id: string;
+  verification_status: "source_only" | "editorially_verified";
+};
+
+export type DuaEntry = {
+  id: string;
+  source_number: number;
+  slug: string;
+  collection: string;
+  collection_version: string;
+  category: {
+    source_number: number;
+    slug: string;
+    title: string;
+  };
+  arabic_text: string;
+  repetitions: number;
+  translation: {
+    language_code: SupportedLocale;
+    meaning_text: string;
+    transliteration: string;
+  } | null;
+  evidence: DuaEvidence[];
+  source: DuaSourceEdition | null;
+};
+
 export type QuranReaderPreference = {
   id: string | null;
   locale: SupportedLocale;
@@ -1467,6 +1535,39 @@ export class ApiClient {
   ): Promise<AyahTafsir[]> {
     return this.request<AyahTafsir[]>(
       `/api/v1/quran/tafsirs/${tafsirId}/surahs/${surahNumber}`,
+    );
+  }
+
+  public async getDuaCollections(language: SupportedLocale): Promise<DuaCollection[]> {
+    return this.request<DuaCollection[]>(
+      `/api/v1/dua/collections?language=${encodeURIComponent(language)}`,
+    );
+  }
+
+  public async getDuaCategories(language: SupportedLocale): Promise<DuaCategory[]> {
+    return this.request<DuaCategory[]>(
+      `/api/v1/dua/categories?language=${encodeURIComponent(language)}`,
+    );
+  }
+
+  public async getDuaEntries(params: {
+    language: SupportedLocale;
+    category?: string;
+    q?: string;
+    cursor?: string;
+    page_size?: number;
+  }): Promise<PaginatedResponse<DuaEntry>> {
+    const query = new URLSearchParams({ language: params.language });
+    if (params.category) query.set("category", params.category);
+    if (params.q) query.set("q", params.q);
+    if (params.cursor) query.set("cursor", params.cursor);
+    if (params.page_size) query.set("page_size", String(params.page_size));
+    return this.request<PaginatedResponse<DuaEntry>>(`/api/v1/dua/entries?${query}`);
+  }
+
+  public async getDuaEntry(id: string, language: SupportedLocale): Promise<DuaEntry> {
+    return this.request<DuaEntry>(
+      `/api/v1/dua/entries/${encodeURIComponent(id)}?language=${encodeURIComponent(language)}`,
     );
   }
 

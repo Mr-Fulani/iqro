@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "version": "hisn-starter-2026-08-28",
+  "collection": {
+    "slug": "hisn-al-muslim"
+  },
+  "sources": [
+    {
+      "language": "ar",
+      "provider": "islamhouse",
+      "source_item_id": "2522",
+      "title": "حصن المسلم من أذكار الكتاب والسنة",
+      "author": "سعيد بن علي بن وهف القحطاني",
+      "source_url": "https://islamhouse.com/ar/books/2522",
+      "rights_url": "https://d1.islamhouse.com/html/faq.htm",
+      "source_version": "islamhouse-web-2026-08-28"
+    },
+    {
+      "language": "en",
+      "provider": "islamhouse",
+      "source_item_id": "39062",
+      "title": "Fortress of the Muslim",
+      "author": "Saeed bin Ali bin Wahf al-Qahtani",
+      "source_url": "https://islamhouse.com/en/books/39062",
+      "rights_url": "https://d1.islamhouse.com/html/faq.htm",
+      "source_version": "islamhouse-web-2026-08-28"
+    },
+    {
+      "language": "ru",
+      "provider": "islamhouse",
+      "source_item_id": "888254",
+      "title": "Молитвы из Корана и Сунны",
+      "author": "Саид ибн Али ибн Вахб аль-Кахтани",
+      "translator": "Абу Абдуррахман ад-Дагестани",
+      "source_url": "https://islamhouse.com/ru/books/888254",
+      "rights_url": "https://d1.islamhouse.com/html/faq.htm",
+      "source_version": "islamhouse-web-2026-08-28"
+    },
+    {
+      "language": "tr",
+      "provider": "islamhouse",
+      "source_item_id": "861",
+      "title": "Hısnu'l-Müslim",
+      "author": "Said b. Ali b. Vehf el-Kahtânî",
+      "translator": "İsmail Yaşa",
+      "reviewer": "Muhammed Şahin",
+      "source_url": "https://islamhouse.com/tr/books/861",
+      "rights_url": "https://d1.islamhouse.com/html/faq.htm",
+      "source_version": "islamhouse-web-2026-08-28"
+    }
+  ],
+  "categories": [
+    {
+      "source_number": 1,
+      "slug": "waking-up",
+      "translations": [
+        {"language": "ar", "title": "أذكار الاستيقاظ من النوم"},
+        {"language": "en", "title": "When waking up"},
+        {"language": "ru", "title": "Слова поминания при пробуждении ото сна"},
+        {"language": "tr", "title": "Uykudan uyanınca yapılan dualar"}
+      ]
+    },
+    {
+      "source_number": 5,
+      "slug": "before-undressing",
+      "translations": [
+        {"language": "ar", "title": "ما يقول إذا وضع ثوبه"},
+        {"language": "en", "title": "Before undressing"},
+        {"language": "ru", "title": "Что следует сказать снявшему с себя одежду"},
+        {"language": "tr", "title": "Elbise çıkarırken yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 6,
+      "slug": "entering-toilet",
+      "translations": [
+        {"language": "ar", "title": "دعاء دخول الخلاء"},
+        {"language": "en", "title": "Before entering the toilet"},
+        {"language": "ru", "title": "Слова обращения к Аллаху при входе в туалет"},
+        {"language": "tr", "title": "Tuvalete girmeden önce yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 7,
+      "slug": "leaving-toilet",
+      "translations": [
+        {"language": "ar", "title": "دعاء الخروج من الخلاء"},
+        {"language": "en", "title": "After leaving the toilet"},
+        {"language": "ru", "title": "Слова обращения к Аллаху после выхода из туалета"},
+        {"language": "tr", "title": "Tuvaletten çıktıktan sonra yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 8,
+      "slug": "starting-ablution",
+      "translations": [
+        {"language": "ar", "title": "الذكر قبل الوضوء"},
+        {"language": "en", "title": "When starting ablution"},
+        {"language": "ru", "title": "Слова поминания перед омовением"},
+        {"language": "tr", "title": "Abdestten önce yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 9,
+      "slug": "after-ablution",
+      "translations": [
+        {"language": "ar", "title": "الذكر بعد الفراغ من الوضوء"},
+        {"language": "en", "title": "Upon completing the ablution"},
+        {"language": "ru", "title": "Слова поминания после завершения омовения"},
+        {"language": "tr", "title": "Abdestten sonra yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 10,
+      "slug": "leaving-home",
+      "translations": [
+        {"language": "ar", "title": "الذكر عند الخروج من المنزل"},
+        {"language": "en", "title": "When leaving the home"},
+        {"language": "ru", "title": "Слова поминания при выходе из дома"},
+        {"language": "tr", "title": "Evden çıkarken yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 11,
+      "slug": "entering-home",
+      "translations": [
+        {"language": "ar", "title": "الذكر عند دخول المنزل"},
+        {"language": "en", "title": "Upon entering the home"},
+        {"language": "ru", "title": "Слова поминания при входе в дом"},
+        {"language": "tr", "title": "Eve girerken yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 13,
+      "slug": "entering-mosque",
+      "translations": [
+        {"language": "ar", "title": "دعاء دخول المسجد"},
+        {"language": "en", "title": "Upon entering the mosque"},
+        {"language": "ru", "title": "Слова обращения к Аллаху при входе в мечеть"},
+        {"language": "tr", "title": "Câmiye girerken yapılan dua"}
+      ]
+    },
+    {
+      "source_number": 14,
+      "slug": "leaving-mosque",
+      "translations": [
+        {"language": "ar", "title": "دعاء الخروج من المسجد"},
+        {"language": "en", "title": "Upon leaving the mosque"},
+        {"language": "ru", "title": "Слова обращения к Аллаху при выходе из мечети"},
+        {"language": "tr", "title": "Câmiden çıkarken yapılan dua"}
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "source_number": 1,
+      "category_source_number": 1,
+      "slug": "waking-praise",
+      "arabic_text": "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ"},
+        {"language": "en", "meaning_text": "All praise is for Allah who gave us life after having taken it from us and unto Him is the resurrection."},
+        {"language": "ru", "meaning_text": "Хвала Аллаху, воскресившему нас после того, как Он умертвил нас (то есть, послал нам сон, являющийся братом смерти), и к Нему воскресение.", "transliteration": "Аль-хамду ли-Лляхи аллязи ахйа-на ба'да ма амата-на ва иляй-хи-н-нушуру."},
+        {"language": "tr", "meaning_text": "Bizi öldürdükten (uykudan) sonra dirilten Allah'a hamd olsun. Dönüş (Kıyâmet günü yeniden diriliş), yalnızca O'nadır."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 15", "source_reference": "Al-Bukhari 6314; Muslim 2711.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 9,
+      "category_source_number": 5,
+      "slug": "before-undressing-basmala",
+      "arabic_text": "بِسْمِ اللَّهِ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "بِسْمِ اللَّهِ"},
+        {"language": "en", "meaning_text": "In the name of Allah."},
+        {"language": "ru", "meaning_text": "С именем Аллаха.", "transliteration": "Би-сми Лляхи."},
+        {"language": "tr", "meaning_text": "Allah'ın adıyla (çıkarırım)."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 23", "source_reference": "At-Tirmidhi 606; Irwa al-Ghalil 50; Sahih al-Jami 3/203.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 10,
+      "category_source_number": 6,
+      "slug": "entering-toilet-refuge",
+      "arabic_text": "[بِسْمِ اللَّهِ] اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبْثِ وَالْخَبَائِثِ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "[بِسْمِ اللَّهِ] اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبْثِ وَالْخَبَائِثِ"},
+        {"language": "en", "meaning_text": "[In the name of Allah]. O Allah, I take refuge with You from all evil and evil-doers."},
+        {"language": "ru", "meaning_text": "С именем Аллаха, о Аллах, поистине, я прибегаю к Тебе от порочности и дурных поступков (возможно также, что под «хубс» и «хабаис» имеются в виду злые духи обоего пола).", "transliteration": "Би-сми Лляхи, Аллахумма, ин-ни а'узу би-кя мин аль-хубси ва-ль-хабаиси."},
+        {"language": "tr", "meaning_text": "[Allah'ın adıyla] Allahım! Erkek ve dişi şeytanlardan sana sığınırım."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 24", "source_reference": "Al-Bukhari 142; Muslim 375; Bismillah addition: Fath al-Bari 1/244.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 11,
+      "category_source_number": 7,
+      "slug": "leaving-toilet-forgiveness",
+      "arabic_text": "غُفْرَانَكَ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "غُفْرَانَكَ"},
+        {"language": "en", "meaning_text": "I ask You [Allah] for forgiveness."},
+        {"language": "ru", "meaning_text": "Прости.", "transliteration": "Гуфрана-кя."},
+        {"language": "tr", "meaning_text": "(Allahım!) Senden beni bağışlamanı dilerim."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 25", "source_reference": "Abu Dawud 30; At-Tirmidhi 7; Ibn Majah 300.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 12,
+      "category_source_number": 8,
+      "slug": "starting-ablution-basmala",
+      "arabic_text": "بِسْمِ اللَّهِ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "بِسْمِ اللَّهِ"},
+        {"language": "en", "meaning_text": "In the name of Allah."},
+        {"language": "ru", "meaning_text": "С именем Аллаха.", "transliteration": "Би-сми Лляхи."},
+        {"language": "tr", "meaning_text": "Allah'ın adıyla (abdeste başlarım)."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 26", "source_reference": "Abu Dawud 101; Ibn Majah 397; Ahmad 9418; Irwa al-Ghalil 1/122.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 13,
+      "category_source_number": 9,
+      "slug": "after-ablution-testimony",
+      "arabic_text": "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ"},
+        {"language": "en", "meaning_text": "I bear witness that none has the right to be worshipped except Allah, alone, without any partner, and I bear witness that Muhammad is His slave and Messenger."},
+        {"language": "ru", "meaning_text": "Свидетельствую, что нет бога, кроме одного лишь Аллаха, у которого нет сотоварища, и свидетельствую, что Мухаммад — Его раб и Его посланник.", "transliteration": "Ашхаду алля иляха илля Лляху вахда-ху ля шарикя ля-ху ва ашхаду анна Мухаммадан 'абду-ху ва расулю-ху."},
+        {"language": "tr", "meaning_text": "Allah'tan başka hak ilâh olmadığına, O'nun bir olduğuna ve ortağının bulunmadığına şehâdet ederim. Yine Muhammed -sallallahu aleyhi ve sellem-'in O'nun kulu ve elçisi olduğuna şehâdet ederim."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 27", "source_reference": "Muslim 234.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 16,
+      "category_source_number": 10,
+      "slug": "leaving-home-trust",
+      "arabic_text": "بِسْمِ اللَّهِ، تَوَكَّلْتُ عَلَى اللَّهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "بِسْمِ اللَّهِ، تَوَكَّلْتُ عَلَى اللَّهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ"},
+        {"language": "en", "meaning_text": "In the name of Allah, I place my trust in Allah, and there is no might nor power except with Allah."},
+        {"language": "ru", "meaning_text": "С именем Аллаха, я уповаю на Аллаха, нет мощи и силы ни у кого, кроме Аллаха.", "transliteration": "Би-сми Лляхи, таваккяльту 'аля Лляхи, ва ля хауля ва ля куввата илля би-Лляхи."},
+        {"language": "tr", "meaning_text": "Allah'ın adıyla (çıkarım). Allah'a tevekkül ettim. Güç ve kuvvet, ancak Allah'ındır."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 30", "source_reference": "Abu Dawud 5095; At-Tirmidhi 3426.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 18,
+      "category_source_number": 11,
+      "slug": "entering-home-trust",
+      "arabic_text": "بِسْمِ اللَّهِ وَلَجْنَا، وَبِسْمِ اللَّهِ خَرَجْنَا، وَعَلَى رَبِّنَا تَوَكَّلْنَا",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "بِسْمِ اللَّهِ وَلَجْنَا، وَبِسْمِ اللَّهِ خَرَجْنَا، وَعَلَى رَبِّنَا تَوَكَّلْنَا"},
+        {"language": "en", "meaning_text": "In the name of Allah we enter and in the name of Allah we leave, and upon our Lord we place our trust. Then one should greet one's family with salam."},
+        {"language": "ru", "meaning_text": "С именем Аллаха мы вошли, с именем Аллаха вышли и на Господа нашего стали уповать. Затем следует поприветствовать находящихся в доме.", "transliteration": "Би-сми Лляхи валяджна, ва би-сми Лляхи хараджна ва 'аля Рабби-на таваккяльна."},
+        {"language": "tr", "meaning_text": "Allah'ın adıyla girdik, Allah'ın adıyla çıktık ve sadece Rabbimiz olan Allah'a tevekkül ettik. Sonra âilesine selâm versin."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 32", "source_reference": "Abu Dawud 5096; related wording: Muslim 2018.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 20,
+      "category_source_number": 13,
+      "slug": "entering-mosque-mercy",
+      "arabic_text": "أَعُوذُ بِاللَّهِ الْعَظِيمِ، وَبِوَجْهِهِ الْكَرِيمِ، وَسُلْطَانِهِ الْقَدِيمِ مِنَ الشَّيْطَانِ الرَّجِيمِ، [بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ]، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "أَعُوذُ بِاللَّهِ الْعَظِيمِ، وَبِوَجْهِهِ الْكَرِيمِ، وَسُلْطَانِهِ الْقَدِيمِ مِنَ الشَّيْطَانِ الرَّجِيمِ، [بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ]، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ"},
+        {"language": "en", "meaning_text": "I take refuge with Allah, The Supreme and with His Noble Face, and His eternal authority from the accursed devil. In the name of Allah, and prayers and peace be upon the Messenger of Allah. O Allah, open the gates of Your mercy for me."},
+        {"language": "ru", "meaning_text": "Прибегаю к Аллаху Великому, к Его благородному лику и Его предвечной власти от проклятого шайтана. С именем Аллаха, благословение и мир посланнику Аллаха. О Аллах, открой для меня врата милосердия Своего!", "transliteration": "А'узу би-Лляхи-ль-'Азыми, ва би-ваджхи-хи-ль-Кярими ва сультани-хи-ль-кадыми мин аш-шайтани-р-раджими. Би-сми Лляхи, ва-с-саляту ва-с-саляму 'аля расули-Лляхи. Аллахумма-фтах ли абваба рахмати-кя!"},
+        {"language": "tr", "meaning_text": "Allah'ın rahmetinden kovulmuş şeytandan, Yüce Allah'a, O'nun kerîm vechine ve ezelî hükümranlığına sığınırım. Allah'ın adıyla, salât ve selâm Rasûlullah'ın üzerine olsun. Allahım! Bana rahmetinin kapılarını aç."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, notes 37–40", "source_reference": "Abu Dawud 465; Sahih al-Jami 1/528; Muslim 713.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    },
+    {
+      "source_number": 21,
+      "category_source_number": 14,
+      "slug": "leaving-mosque-favour",
+      "arabic_text": "بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ، اللَّهُمَّ اعْصِمْنِي مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "repetitions": 1,
+      "translations": [
+        {"language": "ar", "meaning_text": "بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ، اللَّهُمَّ اعْصِمْنِي مِنَ الشَّيْطَانِ الرَّجِيمِ"},
+        {"language": "en", "meaning_text": "In the name of Allah, and prayers and peace be upon the Messenger of Allah. O Allah, I ask You from Your favour. O Allah, guard me from the accursed devil."},
+        {"language": "ru", "meaning_text": "С именем Аллаха, благословение и мир посланнику Аллаха, о Аллах, поистине, я прошу Тебя о милости Твоей, о Аллах, защити меня от проклятого шайтана.", "transliteration": "Би-сми Лляхи, ва-с-саляту ва-с-саляму 'аля расули Лляхи, Аллахумма, инни ас'алю-кя мин фадли-кя, Аллахум-ма-'сым-ни мин аш-шайтани-р-раджими."},
+        {"language": "tr", "meaning_text": "Allah'ın adıyla (çıkarım). Salât ve selâm, Rasûlullah'ın üzerine olsun. Allahım! Senin lütfundan isterim. Allahım! Rahmetinden kovulmuş şeytandan beni koru."}
+      ],
+      "evidence": [
+        {"kind": "source_note", "provider": "islamhouse", "source_name": "Hisn al-Muslim, note 41", "source_reference": "Muslim 713; Ibn Majah 771.", "source_url": "https://islamhouse.com/en/books/39062", "verification_status": "source_only"}
+      ]
+    }
+  ]
+}

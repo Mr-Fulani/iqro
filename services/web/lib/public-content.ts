@@ -3,11 +3,15 @@ import { SOCIAL_PLATFORM_CODES } from "./api";
 import type {
   AudioTrack,
   Ayah,
+  DuaCategory,
+  DuaCollection,
+  DuaEntry,
   PaginatedResponse,
   QuranEdition,
   Recitation,
   Reciter,
   SocialProfile,
+  SupportedLocale,
   Surah,
 } from "./api";
 import { latestRecitationsByVariant, reciterPersonKey } from "./reciter-catalog";
@@ -278,6 +282,37 @@ export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[
   ]);
   return assertSocialProfiles(profiles);
 });
+
+export type PublishedDuaInitialData = {
+  collections: DuaCollection[];
+  categories: DuaCategory[];
+  entries: PaginatedResponse<DuaEntry>;
+};
+
+export const getPublishedDuaInitialData = cache(
+  async (locale: SupportedLocale): Promise<PublishedDuaInitialData> => {
+    const language = encodeURIComponent(locale);
+    const [collections, categories, entries] = await Promise.all([
+      fetchPublishedJson<DuaCollection[]>(
+        `/api/v1/dua/collections?language=${language}`,
+        ["dua:catalog", `dua:locale:${locale}`],
+      ),
+      fetchPublishedJson<DuaCategory[]>(
+        `/api/v1/dua/categories?language=${language}`,
+        ["dua:catalog", `dua:locale:${locale}`],
+      ),
+      fetchPublishedJson<PaginatedResponse<DuaEntry>>(
+        `/api/v1/dua/entries?language=${language}&page_size=20`,
+        ["dua:catalog", `dua:locale:${locale}`],
+      ),
+    ]);
+    return {
+      collections: assertArray(collections, "Dua collection list"),
+      categories: assertArray(categories, "Dua category list"),
+      entries: assertPage(entries, "Dua entry"),
+    };
+  },
+);
 
 export async function getPublishedSocialProfilesOrEmpty(): Promise<SocialProfile[]> {
   try {

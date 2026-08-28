@@ -162,6 +162,87 @@ const tracks = Array.from({ length: 114 }, (_, index) => {
   };
 });
 
+const duaContent = {
+  ar: {
+    title: "أذكار الاستيقاظ من النوم",
+    meaning: "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
+    transliteration: "",
+    edition: "حصن المسلم من أذكار الكتاب والسنة",
+    author: "سعيد بن علي بن وهف القحطاني",
+    sourceUrl: "https://islamhouse.com/ar/books/2522",
+  },
+  en: {
+    title: "When waking up",
+    meaning: "All praise is for Allah who gave us life after having taken it from us and unto Him is the resurrection.",
+    transliteration: "",
+    edition: "Fortress of the Muslim",
+    author: "Saeed bin Ali bin Wahf al-Qahtani",
+    sourceUrl: "https://islamhouse.com/en/books/39062",
+  },
+  ru: {
+    title: "Слова поминания при пробуждении ото сна",
+    meaning: "Хвала Аллаху, воскресившему нас после того, как Он умертвил нас, и к Нему воскресение.",
+    transliteration: "Аль-хамду ли-Лляхи аллязи ахйа-на ба'да ма амата-на ва иляй-хи-н-нушуру.",
+    edition: "Молитвы из Корана и Сунны",
+    author: "Саид ибн Али ибн Вахб аль-Кахтани",
+    sourceUrl: "https://islamhouse.com/ru/books/888254",
+  },
+  tr: {
+    title: "Uykudan uyanınca yapılan dualar",
+    meaning: "Bizi öldürdükten sonra dirilten Allah'a hamd olsun. Dönüş yalnızca O'nadır.",
+    transliteration: "",
+    edition: "Hısnu'l-Müslim",
+    author: "Said b. Ali b. Vehf el-Kahtânî",
+    sourceUrl: "https://islamhouse.com/tr/books/861",
+  },
+};
+
+function duaSource(language) {
+  const localized = duaContent[language] || duaContent.en;
+  return {
+    language_code: language,
+    provider: "islamhouse",
+    source_item_id: "test-source",
+    title: localized.edition,
+    author: localized.author,
+    translator: "",
+    reviewer: "",
+    source_url: localized.sourceUrl,
+    rights_url: "https://d1.islamhouse.com/html/faq.htm",
+    source_version: "test-v1",
+  };
+}
+
+function duaEntry(language) {
+  const localized = duaContent[language] || duaContent.en;
+  return {
+    id: "00000000-0000-7000-8000-000000000801",
+    source_number: 1,
+    slug: "waking-praise",
+    collection: "hisn-al-muslim",
+    collection_version: "test-v1",
+    category: { source_number: 1, slug: "waking-up", title: localized.title },
+    arabic_text: "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
+    repetitions: 1,
+    translation: {
+      language_code: language,
+      meaning_text: localized.meaning,
+      transliteration: localized.transliteration,
+    },
+    evidence: [{
+      kind: "source_note",
+      provider: "islamhouse",
+      source_name: "Hisn al-Muslim, note 15",
+      source_reference: "Al-Bukhari 6314; Muslim 2711.",
+      source_url: localized.sourceUrl,
+      grade: "",
+      external_id: "",
+      verification_status: "source_only",
+    }],
+    source: duaSource(language),
+  };
+}
+
 function sendJson(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -177,7 +258,9 @@ async function readJson(request) {
 }
 
 const server = createServer(async (request, response) => {
-  const path = new URL(request.url || "/", `http://${host}:${port}`).pathname;
+  const url = new URL(request.url || "/", `http://${host}:${port}`);
+  const path = url.pathname;
+  const language = duaContent[url.searchParams.get("language")] ? url.searchParams.get("language") : "en";
 
   if (path === "/api/v1/auth/guest" && request.method === "POST") {
     const input = await readJson(request);
@@ -221,6 +304,34 @@ const server = createServer(async (request, response) => {
   }
 
   if (path === "/api/v1/quran/editions") return sendJson(response, 200, [edition]);
+  if (path === "/api/v1/dua/collections") {
+    return sendJson(response, 200, [{
+      id: "00000000-0000-7000-8000-000000000800",
+      slug: "hisn-al-muslim",
+      version: "test-v1",
+      schema_version: 1,
+      category_count: 10,
+      entry_count: 10,
+      published_at: publishedAt,
+      source: duaSource(language),
+    }]);
+  }
+  if (path === "/api/v1/dua/categories") {
+    const localized = duaContent[language] || duaContent.en;
+    return sendJson(response, 200, [{
+      id: "00000000-0000-7000-8000-000000000802",
+      source_number: 1,
+      slug: "waking-up",
+      title: localized.title,
+      entry_count: 1,
+    }]);
+  }
+  if (path === "/api/v1/dua/entries") {
+    return sendJson(response, 200, { next: null, previous: null, results: [duaEntry(language)] });
+  }
+  if (path === "/api/v1/dua/entries/00000000-0000-7000-8000-000000000801") {
+    return sendJson(response, 200, duaEntry(language));
+  }
   if (path === "/api/v1/site/social-profiles") return sendJson(response, 200, socialProfiles);
   if (path === "/api/v1/quran/editions/madani-hafs") return sendJson(response, 200, edition);
   if (path === "/api/v1/quran/editions/madani-hafs/surahs") return sendJson(response, 200, [surah]);

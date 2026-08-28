@@ -275,6 +275,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.reading.apps.ReadingConfig",
     "quran_backend.modules.memorization.apps.MemorizationConfig",
     "quran_backend.modules.reminders.apps.RemindersConfig",
+    "quran_backend.modules.dua.apps.DuaConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
     "quran_backend.modules.website.apps.WebsiteConfig",
 ]
@@ -356,6 +357,7 @@ LANGUAGES = [
     ("ar", "العربية"),
     ("en", "English"),
     ("ru", "Русский"),
+    ("tr", "Türkçe"),
 ]
 TIME_ZONE = "UTC"
 USE_I18N = True

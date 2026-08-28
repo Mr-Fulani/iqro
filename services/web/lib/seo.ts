@@ -12,6 +12,7 @@ export const LOCAL_SITE_URL = "http://localhost:3000";
 export const PUBLIC_INDEXABLE_PATHS = [
   "/",
   "/quran",
+  "/dua",
   "/audio",
   "/prayer",
   "/legal",

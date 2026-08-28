@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
     titleKey: "dua.title",
     descriptionKey: "dua.description",
     path: "/dua",
-    index: false,
+    index: true,
   });
 }
 

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const PRIORITY: Record<(typeof PUBLIC_INDEXABLE_PATHS)[number], number> = {
   "/": 1,
   "/quran": 0.9,
+  "/dua": 0.8,
   "/audio": 0.8,
   "/prayer": 0.7,
   "/legal": 0.4,

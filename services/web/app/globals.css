@@ -3488,6 +3488,251 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* -------------------------------------------------------------------------
+   Dua catalog
+------------------------------------------------------------------------- */
+.dua-page {
+  display: grid;
+  gap: 20px;
+}
+
+.dua-hero {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 5%, rgba(180, 83, 9, 0.12), transparent 34%),
+    linear-gradient(145deg, #ffffff 0%, #f0fdf7 100%);
+}
+
+.dua-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--accent-gold-border);
+  border-radius: 20px;
+  background: var(--accent-gold-subtle);
+  font-size: 34px;
+}
+
+.dua-catalog-summary {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(120px, auto) minmax(280px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.dua-catalog-summary > div,
+.dua-catalog-summary > p {
+  min-height: 82px;
+  padding: 14px 16px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.dua-catalog-summary > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dua-catalog-summary strong {
+  color: var(--primary);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.dua-catalog-summary span,
+.dua-catalog-summary p,
+.dua-source-lead {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dua-catalog-summary span {
+  margin-top: 6px;
+}
+
+.dua-catalog-summary p {
+  display: flex;
+  align-items: center;
+  line-height: 1.55;
+}
+
+.dua-source-lead {
+  margin-top: 14px;
+}
+
+.dua-browser {
+  display: grid;
+  gap: 18px;
+}
+
+.dua-search {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 8px;
+}
+
+.dua-category-list {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.dua-category-chip {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dua-category-chip:hover,
+.dua-category-chip:focus-visible {
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+.dua-category-chip:focus-visible {
+  outline: 3px solid rgba(16, 185, 129, 0.15);
+  outline-offset: 1px;
+}
+
+.dua-category-chip.is-active {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+.dua-entry-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.dua-entry-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.dua-entry-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dua-entry-head h2 {
+  margin-top: 3px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.dua-entry-number {
+  color: var(--accent-gold);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dua-arabic {
+  margin: 22px 0;
+  color: #16251f;
+  font-family: var(--font-arabic);
+  font-size: clamp(25px, 3vw, 32px);
+  line-height: 2;
+  text-align: center;
+}
+
+.dua-translation-block {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.dua-translation-block + .dua-translation-block {
+  margin-top: 14px;
+}
+
+.dua-translation-block > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dua-translation-block p {
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.dua-meaning p {
+  color: var(--text-primary);
+}
+
+.dua-provenance {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.dua-provenance summary {
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dua-provenance-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.dua-provenance-body > div {
+  display: grid;
+  gap: 3px;
+}
+
+.dua-provenance-body strong {
+  color: var(--text-primary);
+}
+
+.dua-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  gap: 8px;
+  padding: 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.dua-empty span {
+  font-size: 32px;
+}
+
+.dua-load-more {
+  justify-self: center;
+}
+
+/* -------------------------------------------------------------------------
    Alerts & Notifications
 ------------------------------------------------------------------------- */
 .alert {
@@ -4188,6 +4433,18 @@ input:focus, select:focus, textarea:focus {
   .footer-content {
     flex-direction: column;
   }
+
+  .dua-catalog-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dua-catalog-summary > p {
+    grid-column: 1 / -1;
+  }
+
+  .dua-entry-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 360px) {
@@ -4212,6 +4469,14 @@ input:focus, select:focus, textarea:focus {
 
   .prayer-reading-session-form > * {
     grid-column: 1;
+  }
+
+  .dua-search {
+    grid-template-columns: 1fr;
+  }
+
+  .dua-search .btn {
+    width: 100%;
   }
 }
 
