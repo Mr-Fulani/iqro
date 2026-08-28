@@ -220,6 +220,10 @@ function QuranContent() {
   const deepLinkSurah = positiveInteger(searchParams.get("surah")) || 1;
   const deepLinkAyah = positiveInteger(searchParams.get("ayah"));
   const deepLinkKey = deepLinkAyah === null ? null : `${deepLinkSurah}:${deepLinkAyah}`;
+  const deepLinkPageCandidate = positiveInteger(searchParams.get("page"));
+  const deepLinkPage = deepLinkPageCandidate !== null && deepLinkPageCandidate <= 604
+    ? deepLinkPageCandidate
+    : null;
 
   const prayerReadingConfig = useMemo<PrayerReadingSessionConfig | null>(() => {
     if (searchParams.get("mode") !== "after-prayer") return null;
@@ -289,7 +293,7 @@ function QuranContent() {
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(deepLinkPage || 1);
   const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
   const [mushafPageLoading, setMushafPageLoading] = useState(false);
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
@@ -307,6 +311,7 @@ function QuranContent() {
   });
   const pendingNavigationPage = useRef<number | null>(null);
   const handledDeepLink = useRef<string | null>(null);
+  const handledPageDeepLink = useRef<number | null>(null);
   const handledPrayerReadingStart = useRef(false);
   const ayahPlaybackRequestId = useRef(0);
   const playerControlRequestId = useRef(0);
@@ -340,7 +345,9 @@ function QuranContent() {
       .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
   }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
   const [viewMode, setViewMode] = useState<"text" | "mushaf">(
-    deepLinkAyah === null && prayerReadingConfig === null ? "text" : "mushaf",
+    deepLinkAyah === null && deepLinkPage === null && prayerReadingConfig === null
+      ? "text"
+      : "mushaf",
   );
   const requiredTranslationSurahs = useMemo(() => {
     if (viewMode === "text") return [selectedSurah];
@@ -673,6 +680,9 @@ function QuranContent() {
         if (pendingNavigationPage.current !== null) {
           setCurrentPage(pendingNavigationPage.current);
           pendingNavigationPage.current = null;
+        } else if (deepLinkAyah === null && deepLinkPage !== null) {
+          setCurrentPage(deepLinkPage);
+          handledPageDeepLink.current = deepLinkPage;
         } else if (res.length > 0 && res[0].pages?.length > 0) {
           setCurrentPage(res[0].pages[0]);
         }
@@ -681,7 +691,7 @@ function QuranContent() {
         setLoading(false);
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
-  }, [selectedEdition, selectedSurah]);
+  }, [deepLinkAyah, deepLinkPage, selectedEdition, selectedSurah]);
 
   // Notification links include the first ayah of a review range. Wait until
   // that surah's ayahs are loaded, then open its Mushaf page and highlight it.
@@ -702,6 +712,23 @@ function QuranContent() {
     setCurrentPage(linkedAyah.pages[0]);
     handledDeepLink.current = deepLinkKey;
   }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah]);
+
+  // Legacy bookmarks may point to a Mushaf page without an ayah reference.
+  // Apply the page after the initial surah request, which otherwise resets the
+  // reader to that surah's first page.
+  useEffect(() => {
+    if (
+      deepLinkAyah !== null
+      || deepLinkPage === null
+      || handledPageDeepLink.current === deepLinkPage
+    ) {
+      return;
+    }
+    setViewMode("mushaf");
+    setSelectedMushafAyah(null);
+    setCurrentPage(Math.min(deepLinkPage, mushafPageCount));
+    handledPageDeepLink.current = deepLinkPage;
+  }, [deepLinkAyah, deepLinkPage, mushafPageCount]);
 
   useEffect(() => {
     if (

@@ -894,6 +894,9 @@ export type Bookmark = {
     id: string;
     surah_number: number;
     ayah_number: number;
+    surah_name_ar?: string;
+    surah_name_en?: string;
+    surah_name_ru?: string;
   } | null;
   label: string;
   color_key: string;

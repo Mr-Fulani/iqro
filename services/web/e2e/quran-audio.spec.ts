@@ -579,6 +579,10 @@ async function installApiMocks(page: Page) {
       await route.fulfill({ json: [surah] });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/6/ayahs") {
       await route.fulfill({ json: ayahs });
+    } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/1/ayahs") {
+      await route.fulfill({
+        json: [{ ...ayahs[0], id: "00000000-0000-7000-8200-000000000001", surah_number: 1, pages: [1] }],
+      });
     } else if (path === "/api/v1/quran/editions/madani-hafs/juz") {
       await route.fulfill({ json: juz });
     } else if (path === "/api/v1/quran/editions/madani-hafs/hizb") {
@@ -859,6 +863,13 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
   await expect(linkedAyah).toHaveCount(2);
   await expect(linkedAyah.first()).toHaveClass(/is-selected/);
   await expect(linkedAyah.last()).toHaveClass(/is-selected/);
+});
+
+test("legacy Quran bookmark deep link opens its saved Mushaf page", async ({ page }) => {
+  await page.goto("/quran?page=128");
+
+  await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
 });
 
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {

@@ -153,6 +153,9 @@ def bookmark_snapshot(bookmark: Bookmark) -> dict[str, Any]:
             "id": str(bookmark_ayah.id),
             "surah_number": bookmark_ayah.surah.number,
             "ayah_number": bookmark_ayah.number,
+            "surah_name_ar": bookmark_ayah.surah.name_ar,
+            "surah_name_en": bookmark_ayah.surah.name_en,
+            "surah_name_ru": bookmark_ayah.surah.name_ru,
         }
     bookmark_page = bookmark.page
     return {

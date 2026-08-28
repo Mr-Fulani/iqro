@@ -1,13 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { api, type DuaEntry } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+import { localizedPath } from "../lib/routing";
 
 function entryKey(entry: DuaEntry): string {
   return `${entry.collection}:${entry.source_number}`;
+}
+
+function entryAnchor(entry: DuaEntry): string {
+  return `dua-${entry.collection}-${entry.source_number}`;
 }
 
 function FavoriteIcon({ active }: { active: boolean }) {
@@ -171,11 +177,21 @@ export function DuaEntryList({
         const readerName =
           locale === "ar" && audio?.reader_name_ar ? audio.reader_name_ar : audio?.reader_name;
         return (
-          <article className="dua-entry-card" key={entry.id}>
+          <article className="dua-entry-card" id={entryAnchor(entry)} key={entry.id}>
             <header className="dua-entry-head">
               <div>
                 <span className="dua-entry-number">#{formatNumber(entry.source_number)}</span>
-                <EntryHeading>{entry.category.title}</EntryHeading>
+                <EntryHeading>
+                  <Link
+                    className="dua-entry-title-link"
+                    href={localizedPath(
+                      locale,
+                      `/dua/${entry.category.slug}#${entryAnchor(entry)}`,
+                    )}
+                  >
+                    {entry.category.title}
+                  </Link>
+                </EntryHeading>
               </div>
               <div className="dua-entry-tools">
                 <div className="dua-entry-actions">

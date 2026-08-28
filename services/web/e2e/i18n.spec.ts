@@ -149,6 +149,13 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
     "/ru/dua",
   );
   await expect(page.locator(".dua-topic-content .dua-entry-card")).toHaveCount(1);
+  await expect(page.locator(".dua-topic-content .dua-entry-card")).toHaveAttribute(
+    "id",
+    "dua-hisn-al-muslim-1",
+  );
+  await expect(page.getByRole("link", {
+    name: "Слова поминания при пробуждении ото сна",
+  })).toHaveAttribute("href", "/ru/dua/waking-up#dua-hisn-al-muslim-1");
   await expect(page.locator(".dua-topic-content .dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
 });
 

@@ -461,6 +461,12 @@ class AyahReferenceOutputSerializer(serializers.Serializer[Any]):
     ayah_number = serializers.IntegerField()
 
 
+class BookmarkAyahReferenceOutputSerializer(AyahReferenceOutputSerializer):
+    surah_name_ar = serializers.CharField()
+    surah_name_en = serializers.CharField()
+    surah_name_ru = serializers.CharField()
+
+
 class ReadingPositionOutputSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     entity_type = serializers.ChoiceField(choices=["reading_position"], read_only=True)
@@ -482,7 +488,7 @@ class BookmarkOutputSerializer(serializers.Serializer[Any]):
     entity_type = serializers.ChoiceField(choices=["bookmark"], read_only=True)
     edition_code = serializers.CharField()
     page_number = serializers.IntegerField(allow_null=True)
-    ayah = AyahReferenceOutputSerializer(allow_null=True)
+    ayah = BookmarkAyahReferenceOutputSerializer(allow_null=True)
     label = serializers.CharField()  # type: ignore[assignment]
     color_key = serializers.CharField()
     note = serializers.CharField()

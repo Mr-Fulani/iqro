@@ -70,11 +70,6 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // New Bookmark form state
-  const [newBookmarkPage, setNewBookmarkPage] = useState<number>(1);
-  const [newBookmarkLabel, setNewBookmarkLabel] = useState<string>(() => t("profile.defaultBookmark"));
-  const [newBookmarkColor, setNewBookmarkColor] = useState<string>("emerald");
-  const [newBookmarkNote, setNewBookmarkNote] = useState<string>("");
   const [bookmarkDraft, setBookmarkDraft] = useState<{
     id: string;
     label: string;
@@ -156,26 +151,6 @@ export default function ProfilePage() {
       setFeedbackTickets(tickets.results || []);
     } catch {
       // Feedback might be empty
-    }
-  };
-
-  const handleCreateBookmark = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      await api.createBookmark({
-        edition_code: "madani-hafs",
-        page_number: Number(newBookmarkPage),
-        label: newBookmarkLabel,
-        color_key: newBookmarkColor,
-        note: newBookmarkNote,
-      });
-      setSuccessMsg(t("profile.bookmarkCreated"));
-      setNewBookmarkNote("");
-      await loadBookmarksData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err) {
-      setError(api.normalizeError(err));
     }
   };
 
@@ -373,6 +348,29 @@ export default function ProfilePage() {
     favorite.entry ? [favorite.entry] : [],
   );
   const savedItemCount = bookmarks.length + duaFavoriteEntries.length;
+  const bookmarkSurahName = (bookmark: Bookmark): string => {
+    const ayah = bookmark.ayah;
+    if (!ayah) return "";
+    if (locale === "ar") return ayah.surah_name_ar || String(ayah.surah_number);
+    if (locale === "ru") return ayah.surah_name_ru || ayah.surah_name_en || String(ayah.surah_number);
+    return ayah.surah_name_en || String(ayah.surah_number);
+  };
+  const bookmarkHref = (bookmark: Bookmark): string => {
+    if (bookmark.ayah) {
+      return localizedPath(
+        locale,
+        `/quran?surah=${bookmark.ayah.surah_number}&ayah=${bookmark.ayah.ayah_number}`,
+      );
+    }
+    return localizedPath(locale, `/quran?page=${bookmark.page_number || 1}`);
+  };
+  const bookmarkTitle = (bookmark: Bookmark): string =>
+    bookmark.ayah
+      ? t("profile.quranAyahTitle", {
+          surah: bookmarkSurahName(bookmark),
+          ayah: formatNumber(bookmark.ayah.ayah_number),
+        })
+      : t("profile.quranPageTitle", { page: formatNumber(bookmark.page_number || 1) });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -567,205 +565,129 @@ export default function ProfilePage() {
         ) : null}
 
         {favoriteFilter !== "dua" ? (
-          <div className="profile-favorite-group">
-            <div className="profile-favorite-group-head">
-              <div>
-                <h4>{t("profile.quranFavoritesTitle")}</h4>
-                <p>{t("profile.bookmarksDescription")}</p>
-              </div>
-              <span className="status-chip">{formatNumber(bookmarks.length)}</span>
-            </div>
-
-        {/* Add Bookmark Form */}
-        <form
-          onSubmit={handleCreateBookmark}
-          style={{
-            padding: 16,
-            background: "var(--bg-subtle)",
-            borderRadius: "var(--radius-md)",
-            marginBottom: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">{t("profile.pageInput")}</label>
-              <input
-                type="number"
-                min={1}
-                max={604}
-                value={newBookmarkPage}
-                onChange={(e) => setNewBookmarkPage(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">{t("profile.bookmarkName")}</label>
-              <input
-                type="text"
-                value={newBookmarkLabel}
-                onChange={(e) => setNewBookmarkLabel(e.target.value)}
-                placeholder={t("profile.bookmarkExample")}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">{t("profile.colorLabel")}</label>
-              <select
-                value={newBookmarkColor}
-                onChange={(e) => setNewBookmarkColor(e.target.value)}
-              >
-                <option value="emerald">{t("profile.color.emerald")}</option>
-                <option value="gold">{t("profile.color.gold")}</option>
-                <option value="sapphire">{t("profile.color.sapphire")}</option>
-                <option value="ruby">{t("profile.color.ruby")}</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t("profile.noteOptional")}</label>
-            <input
-              type="text"
-              value={newBookmarkNote}
-              onChange={(e) => setNewBookmarkNote(e.target.value)}
-              placeholder={t("profile.notePlaceholder")}
-            />
-          </div>
-
-          <div>
-            <button type="submit" className="btn btn-primary btn-sm">
-              {t("profile.addBookmark")}
-            </button>
-          </div>
-        </form>
-
-        {/* Bookmarks List */}
-        {loadingBookmarks ? (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
-            {t("profile.loadingBookmarks")}
-          </div>
-        ) : bookmarks.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {bookmarks.map((bm) => (
-              <div key={bm.id} className="track-row" style={{ alignItems: "stretch" }}>
-                {bookmarkDraft?.id === bm.id ? (
-                  <form
-                    onSubmit={(event) => void handleUpdateBookmark(event)}
-                    style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}
-                  >
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label" htmlFor={`bookmark-label-${bm.id}`}>
-                          {t("profile.name")}
-                        </label>
-                        <input
-                          id={`bookmark-label-${bm.id}`}
-                          value={bookmarkDraft.label}
-                          maxLength={120}
-                          onChange={(event) =>
-                            setBookmarkDraft({ ...bookmarkDraft, label: event.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label" htmlFor={`bookmark-color-${bm.id}`}>
-                          {t("profile.color")}
-                        </label>
-                        <select
-                          id={`bookmark-color-${bm.id}`}
-                          value={bookmarkDraft.color_key}
-                          onChange={(event) =>
-                            setBookmarkDraft({ ...bookmarkDraft, color_key: event.target.value })
-                          }
+          <div className="profile-favorite-group profile-quran-favorites">
+            {loadingBookmarks ? (
+              <div className="profile-favorite-empty">{t("profile.loadingBookmarks")}</div>
+            ) : bookmarks.length > 0 ? (
+              <div className="profile-bookmark-list">
+                {bookmarks.map((bm) => (
+                  <div key={bm.id} className="track-row profile-bookmark-row">
+                    {bookmarkDraft?.id === bm.id ? (
+                      <form
+                        onSubmit={(event) => void handleUpdateBookmark(event)}
+                        className="profile-bookmark-edit"
+                      >
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label" htmlFor={`bookmark-label-${bm.id}`}>
+                              {t("profile.name")}
+                            </label>
+                            <input
+                              id={`bookmark-label-${bm.id}`}
+                              value={bookmarkDraft.label}
+                              maxLength={120}
+                              onChange={(event) =>
+                                setBookmarkDraft({ ...bookmarkDraft, label: event.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label" htmlFor={`bookmark-color-${bm.id}`}>
+                              {t("profile.color")}
+                            </label>
+                            <select
+                              id={`bookmark-color-${bm.id}`}
+                              value={bookmarkDraft.color_key}
+                              onChange={(event) =>
+                                setBookmarkDraft({ ...bookmarkDraft, color_key: event.target.value })
+                              }
+                            >
+                              <option value="emerald">{t("profile.color.emerald")}</option>
+                              <option value="gold">{t("profile.color.gold")}</option>
+                              <option value="sapphire">{t("profile.color.sapphire")}</option>
+                              <option value="ruby">{t("profile.color.ruby")}</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" htmlFor={`bookmark-note-${bm.id}`}>
+                            {t("profile.note")}
+                          </label>
+                          <textarea
+                            id={`bookmark-note-${bm.id}`}
+                            value={bookmarkDraft.note}
+                            maxLength={2000}
+                            rows={2}
+                            onChange={(event) =>
+                              setBookmarkDraft({ ...bookmarkDraft, note: event.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="responsive-actions">
+                          <button className="btn btn-primary btn-sm" type="submit">
+                            {t("common.save")}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            type="button"
+                            onClick={() => setBookmarkDraft(null)}
+                          >
+                            {t("common.cancel")}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <Link
+                          href={bookmarkHref(bm)}
+                          className="profile-bookmark-link"
+                          aria-label={t("profile.openSavedQuran", { title: bookmarkTitle(bm) })}
                         >
-                          <option value="emerald">{t("profile.color.emerald")}</option>
-                          <option value="gold">{t("profile.color.gold")}</option>
-                          <option value="sapphire">{t("profile.color.sapphire")}</option>
-                          <option value="ruby">{t("profile.color.ruby")}</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label" htmlFor={`bookmark-note-${bm.id}`}>
-                        {t("profile.note")}
-                      </label>
-                      <textarea
-                        id={`bookmark-note-${bm.id}`}
-                        value={bookmarkDraft.note}
-                        maxLength={2000}
-                        rows={2}
-                        onChange={(event) =>
-                          setBookmarkDraft({ ...bookmarkDraft, note: event.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="responsive-actions">
-                      <button className="btn btn-primary btn-sm" type="submit">
-                        {t("common.save")}
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        type="button"
-                        onClick={() => setBookmarkDraft(null)}
-                      >
-                        {t("common.cancel")}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span className="ayah-badge" style={{ background: "var(--accent-gold-subtle)", color: "var(--accent-gold)" }}>
-                        🔖
-                      </span>
-                      <div>
-                        <strong>{bm.label}</strong>
-                        <p className="kpi-desc">
-                          {bm.page_number ? t("common.page", { page: bm.page_number }) : ""}
-                          {bm.ayah
-                            ? ` · ${t("common.surah", { surah: `${bm.ayah.surah_number}:${bm.ayah.ayah_number}` })}`
-                            : ""}
-                          {bm.note ? ` · «${bm.note}»` : ""}
-                        </p>
-                      </div>
-                    </div>
+                          <span className="ayah-badge" aria-hidden="true">🔖</span>
+                          <span className="profile-bookmark-copy">
+                            <strong>{bookmarkTitle(bm)}</strong>
+                            <span>
+                              {bm.label || ""}
+                              {bm.ayah && bm.page_number
+                                ? ` · ${t("common.page", { page: formatNumber(bm.page_number) })}`
+                                : ""}
+                              {bm.note ? ` · «${bm.note}»` : ""}
+                            </span>
+                          </span>
+                          <span className="profile-bookmark-arrow" aria-hidden="true">→</span>
+                        </Link>
 
-                    <div className="responsive-actions">
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() =>
-                          setBookmarkDraft({
-                            id: bm.id,
-                            label: bm.label,
-                            color_key: bm.color_key,
-                            note: bm.note || "",
-                            revision: bm.revision,
-                          })
-                        }
-                      >
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => void handleDeleteBookmark(bm.id, bm.revision)}
-                        title={t("profile.deleteBookmarkTitle")}
-                      >
-                        {t("common.delete")}
-                      </button>
-                    </div>
-                  </>
-                )}
+                        <div className="responsive-actions profile-bookmark-actions">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() =>
+                              setBookmarkDraft({
+                                id: bm.id,
+                                label: bm.label,
+                                color_key: bm.color_key,
+                                note: bm.note || "",
+                                revision: bm.revision,
+                              })
+                            }
+                          >
+                            {t("common.edit")}
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => void handleDeleteBookmark(bm.id, bm.revision)}
+                            title={t("profile.deleteBookmarkTitle")}
+                          >
+                            {t("common.delete")}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
-            {t("profile.noBookmarks")}
-          </div>
-        )}
+            ) : (
+              <div className="profile-favorite-empty">{t("profile.noBookmarks")}</div>
+            )}
           </div>
         ) : null}
       </section>

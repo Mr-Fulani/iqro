@@ -531,6 +531,37 @@ def test_bookmark_tombstone_hidden_from_default_list(
 
 
 @pytest.mark.django_db
+def test_ayah_bookmark_includes_surah_names_for_saved_navigation(
+    quran_dataset: dict[str, Any],
+) -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    response = client.post(
+        reverse("reading:bookmark-list"),
+        {
+            "id": str(uuid.uuid7()),
+            "edition_code": "madani-hafs",
+            "page_number": 1,
+            "surah_number": 1,
+            "ayah_number": 1,
+            "label": "Opening ayah",
+            "client_updated_at": _timestamp(),
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["ayah"] == {
+        "id": response.json()["ayah"]["id"],
+        "surah_number": 1,
+        "ayah_number": 1,
+        "surah_name_ar": "الفاتحة",
+        "surah_name_en": "Al-Fatihah",
+        "surah_name_ru": "Аль-Фатиха",
+    }
+
+
+@pytest.mark.django_db
 def test_bookmark_create_retry_is_idempotent_after_payload_normalization(
     quran_dataset: dict[str, Any],
 ) -> None:

@@ -29,6 +29,9 @@ const bookmark = {
     id: "01992d87-6c00-7000-8000-000000000402",
     surah_number: 2,
     ayah_number: 5,
+    surah_name_ar: "البقرة",
+    surah_name_en: "Al-Baqarah",
+    surah_name_ru: "Аль-Бакара",
   },
   label: "Тестовая закладка",
   color_key: "emerald",
@@ -177,7 +180,12 @@ test("bookmark edit and delete follow the backend revision contract", async ({ p
   });
 
   await page.goto("/profile");
-  await expect(page.getByText("Сура 2:5")).toBeVisible();
+  await expect(page.getByText("Сура «Аль-Бакара», аят 5")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Открыть: Сура «Аль-Бакара», аят 5" })).toHaveAttribute(
+    "href",
+    "/ru/quran?surah=2&ayah=5",
+  );
+  await expect(page.getByRole("button", { name: "➕ Добавить закладку" })).toHaveCount(0);
   await page.getByRole("button", { name: "Изменить" }).click();
   await page.getByLabel("Название", { exact: true }).fill("Обновлённая закладка");
   await page.getByLabel("Заметка", { exact: true }).fill("Новая заметка");
@@ -252,6 +260,14 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await expect(page.getByRole("heading", { level: 3, name: "Избранное" })).toBeVisible();
   await expect(page.getByText("الْحَمْدُ للَّهِ الَّذِي", { exact: false })).toBeVisible();
   await expect(page.getByText("Тестовая закладка")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна" })).toHaveAttribute(
+    "href",
+    "/ru/dua/waking-up#dua-hisn-al-muslim-1",
+  );
+  await expect(page.getByRole("link", { name: "Открыть: Сура «Аль-Бакара», аят 5" })).toHaveAttribute(
+    "href",
+    "/ru/quran?surah=2&ayah=5",
+  );
   expect(
     await page.locator(".profile-favorites").evaluate(
       (element) => element.scrollWidth <= element.clientWidth,
