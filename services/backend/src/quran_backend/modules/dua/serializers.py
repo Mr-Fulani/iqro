@@ -5,12 +5,29 @@ from typing import Any
 from rest_framework import serializers
 
 from quran_backend.modules.dua.models import (
+    DuaAudioAsset,
     DuaCategory,
     DuaCollection,
     DuaEntry,
     DuaEvidence,
     DuaSourceEdition,
 )
+
+
+class DuaAudioAssetSerializer(serializers.ModelSerializer[DuaAudioAsset]):
+    class Meta:
+        model = DuaAudioAsset
+        fields = (
+            "id",
+            "language_code",
+            "provider",
+            "reader_name",
+            "reader_name_ar",
+            "url",
+            "source_url",
+            "rights_url",
+            "source_version",
+        )
 
 
 class DuaSourceEditionSerializer(serializers.ModelSerializer[DuaSourceEdition]):
@@ -106,6 +123,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
     translation = serializers.SerializerMethodField()
     evidence = DuaEvidenceSerializer(many=True, read_only=True)
     source = serializers.SerializerMethodField()  # type: ignore[assignment]
+    audio = serializers.SerializerMethodField()
     collection = serializers.CharField(
         source="collection_version.collection.slug",
         read_only=True,
@@ -130,6 +148,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
             "translation",
             "evidence",
             "source",
+            "audio",
         )
 
     def get_category(self, obj: DuaEntry) -> dict[str, Any]:
@@ -153,3 +172,24 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
     def get_source(self, obj: DuaEntry) -> dict[str, Any] | None:
         source = _first_localized(obj.collection_version, "localized_source_editions")
         return DuaSourceEditionSerializer(source).data if source else None
+
+    def get_audio(self, obj: DuaEntry) -> list[dict[str, Any]]:
+        assets = getattr(obj.collection_version.collection, "active_audio_assets", ())
+        matching_assets = [asset for asset in assets if asset.source_number == obj.source_number]
+        return list(DuaAudioAssetSerializer(matching_assets, many=True).data)
+
+
+class DuaFavoriteWriteSerializer(serializers.Serializer[dict[str, Any]]):
+    is_favorite = serializers.BooleanField()
+
+
+class DuaFavoriteSerializer(serializers.Serializer[dict[str, Any]]):
+    id = serializers.UUIDField(allow_null=True)
+    collection = serializers.CharField()
+    source_number = serializers.IntegerField(min_value=1)
+    is_favorite = serializers.BooleanField()
+    created_at = serializers.DateTimeField(allow_null=True)
+
+
+class DuaFavoriteListSerializer(serializers.Serializer[dict[str, Any]]):
+    results = DuaFavoriteSerializer(many=True)

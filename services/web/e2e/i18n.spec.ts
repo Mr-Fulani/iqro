@@ -152,6 +152,35 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   await expect(page.locator(".dua-topic-content .dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
 });
 
+test("Dua cards expose source audio and account favorites", async ({ page }) => {
+  await page.route("**/audio/ar/1.mp3", (route) => route.abort());
+  await page.goto("/ru/dua/waking-up");
+
+  const play = page.getByRole("button", { name: "Прослушать ду’а" });
+  const favorite = page.getByRole("button", { name: "Добавить в избранное" });
+  await expect(play).toBeVisible();
+  await expect(favorite).toBeVisible();
+  await expect(favorite).toHaveAttribute("aria-pressed", "false");
+
+  await play.click();
+  await expect(page.locator(".dua-audio-panel audio")).toHaveAttribute(
+    "src",
+    "https://www.hisnmuslim.com/audio/ar/1.mp3",
+  );
+  await expect(page.locator(".dua-audio-panel")).toContainText("Чтец: Hamad Al-Duraihem");
+
+  await favorite.click();
+  await expect(page.getByRole("button", { name: "Удалить из избранного" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Удалить из избранного" }).click();
+  await expect(page.getByRole("button", { name: "Добавить в избранное" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
 test.describe("browser language negotiation", () => {
   test.use({ locale: "tr-TR" });
 

@@ -9,6 +9,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from quran_backend.modules.core.content_revalidation import enqueue_dua_content_change
 from quran_backend.modules.dua.models import (
     DuaCategory,
     DuaCategoryTranslation,
@@ -216,6 +217,11 @@ def _publish_version(version: DuaCollectionVersion) -> None:
     collection.active_version = version
     collection.full_clean()
     collection.save(update_fields=("active_version", "updated_at"))
+    enqueue_dua_content_change(
+        action="activated",
+        collection=collection.slug,
+        version=version.version,
+    )
 
 
 @transaction.atomic

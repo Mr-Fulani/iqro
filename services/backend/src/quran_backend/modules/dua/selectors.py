@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.db.models import Count, F, Prefetch, Q, QuerySet
 
 from quran_backend.modules.dua.models import (
+    DuaAudioAsset,
     DuaCategory,
     DuaCategoryTranslation,
     DuaCollection,
@@ -83,6 +84,11 @@ def published_dua_entries(
                 "collection_version__source_editions",
                 queryset=localized_sources,
                 to_attr="localized_source_editions",
+            ),
+            Prefetch(
+                "collection_version__collection__audio_assets",
+                queryset=DuaAudioAsset.objects.filter(is_active=True).order_by("sort_order"),
+                to_attr="active_audio_assets",
             ),
             Prefetch("evidence", queryset=DuaEvidence.objects.order_by("sort_order")),
         )

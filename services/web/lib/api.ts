@@ -296,6 +296,18 @@ export type DuaEvidence = {
   verification_status: "source_only" | "editorially_verified";
 };
 
+export type DuaAudioAsset = {
+  id: string;
+  language_code: string;
+  provider: string;
+  reader_name: string;
+  reader_name_ar: string;
+  url: string;
+  source_url: string;
+  rights_url: string;
+  source_version: string;
+};
+
 export type DuaEntry = {
   id: string;
   source_number: number;
@@ -317,6 +329,15 @@ export type DuaEntry = {
   } | null;
   evidence: DuaEvidence[];
   source: DuaSourceEdition | null;
+  audio: DuaAudioAsset[];
+};
+
+export type DuaFavorite = {
+  id: string | null;
+  collection: string;
+  source_number: number;
+  is_favorite: boolean;
+  created_at: string | null;
 };
 
 export type QuranReaderPreference = {
@@ -1569,6 +1590,26 @@ export class ApiClient {
   public async getDuaEntry(id: string, language: SupportedLocale): Promise<DuaEntry> {
     return this.request<DuaEntry>(
       `/api/v1/dua/entries/${encodeURIComponent(id)}?language=${encodeURIComponent(language)}`,
+    );
+  }
+
+  public async getDuaFavorites(): Promise<{ results: DuaFavorite[] }> {
+    return this.request<{ results: DuaFavorite[] }>("/api/v1/me/dua-favorites", {
+      cache: "no-store",
+    });
+  }
+
+  public async setDuaFavorite(
+    collection: string,
+    sourceNumber: number,
+    isFavorite: boolean,
+  ): Promise<DuaFavorite> {
+    return this.request<DuaFavorite>(
+      `/api/v1/me/dua-favorites/${encodeURIComponent(collection)}/${sourceNumber}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ is_favorite: isFavorite }),
+      },
     );
   }
 

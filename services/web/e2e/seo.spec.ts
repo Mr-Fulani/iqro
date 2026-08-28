@@ -391,6 +391,19 @@ test("content revalidation accepts only authenticated allowlisted events", async
   });
   expect(acceptedSocial.ok()).toBe(true);
   expect(await acceptedSocial.json()).toEqual({ accepted: true, type: socialEvent.type });
+
+  const duaEvent = {
+    type: "dua.collection.changed",
+    action: "updated",
+    collection: "hisn-al-muslim",
+    version: "hisn-full-2026-08-28",
+  };
+  const acceptedDua = await request.post(endpoint, {
+    data: duaEvent,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(acceptedDua.ok()).toBe(true);
+  expect(await acceptedDua.json()).toEqual({ accepted: true, type: duaEvent.type });
 });
 
 test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {

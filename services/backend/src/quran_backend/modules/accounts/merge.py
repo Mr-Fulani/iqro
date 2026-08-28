@@ -18,6 +18,7 @@ from quran_backend.modules.accounts.models import (
     User,
     UserStatus,
 )
+from quran_backend.modules.dua.models import DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
 from quran_backend.modules.memorization.models import MemorizationPlan, MemorizationSession
 from quran_backend.modules.prayer_times.models import PrayerProfile
@@ -109,6 +110,7 @@ def merge_guest_into_account(
     _merge_consents(source=source, target=target, counts=counts)
     _merge_reading_state(source=source, target=target, counts=counts)
     _merge_memorization_state(source=source, target=target, counts=counts)
+    _merge_dua_favorites(source=source, target=target, counts=counts)
     _merge_reminders(source=source, target=target, counts=counts)
     _merge_prayer_profile(source=source, target=target, counts=counts)
     _merge_feedback(source=source, target=target, counts=counts)
@@ -260,6 +262,22 @@ def _merge_memorization_state(*, source: User, target: User, counts: dict[str, i
     source_plan.delete()
     counts["memorization_plans"] = 1
     counts["memorization_sessions"] = len(source_sessions)
+
+
+def _merge_dua_favorites(*, source: User, target: User, counts: dict[str, int]) -> None:
+    favorites = list(DuaFavorite.objects.select_for_update().filter(user=source).order_by("id"))
+    for favorite in favorites:
+        duplicate = DuaFavorite.objects.select_for_update().filter(
+            user=target,
+            collection=favorite.collection,
+            source_number=favorite.source_number,
+        )
+        if duplicate.exists():
+            favorite.delete()
+        else:
+            favorite.user = target
+            favorite.save(update_fields=["user", "updated_at"])
+    counts["dua_favorites"] = len(favorites)
 
 
 def _memorization_plan_rank(plan: MemorizationPlan) -> tuple[Any, ...]:

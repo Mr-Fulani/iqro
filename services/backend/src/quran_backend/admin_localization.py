@@ -111,6 +111,8 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "dua.DuaEntry": ("ду’а", "ду’а"),
     "dua.DuaEntryTranslation": ("перевод ду’а", "переводы ду’а"),
     "dua.DuaEvidence": ("ссылка на источник ду’а", "ссылки на источники ду’а"),
+    "dua.DuaAudioAsset": ("аудиозапись ду’а", "аудиозаписи ду’а"),
+    "dua.DuaFavorite": ("избранная ду’а", "избранные ду’а"),
 }
 
 
@@ -320,6 +322,8 @@ FIELD_LABELS: dict[str, str] = {
     "quran_edition_version": "Версия издания Корана",
     "ramadan_isha_interval_minutes": "Интервал Иша в Рамадан, минуты",
     "reading_order": "Порядок чтения",
+    "reader_name": "Имя чтеца",
+    "reader_name_ar": "Имя чтеца на арабском",
     "reason": "Причина",
     "record_count": "Количество записей",
     "recitation": "Чтение",
@@ -415,6 +419,7 @@ FIELD_LABELS: dict[str, str] = {
     "track": "Аудиодорожка",
     "trigger_identity": "Способ входа, запустивший перенос",
     "updated_at": "Изменено",
+    "url": "URL",
     "used_at": "Использовано",
     "user": "Пользователь",
     "verification_key": "Ключ подтверждения",

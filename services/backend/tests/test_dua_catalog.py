@@ -3,8 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 
 import pytest
+from django.urls import reverse
 from rest_framework.test import APIClient
 
+from quran_backend.modules.accounts.models import User
 from quran_backend.modules.dua.importer import (
     DuaSnapshotError,
     bundled_full_snapshot_path,
@@ -14,9 +16,11 @@ from quran_backend.modules.dua.importer import (
     validate_dua_snapshot,
 )
 from quran_backend.modules.dua.models import (
+    DuaAudioAsset,
     DuaCollection,
     DuaCollectionVersion,
     DuaEntry,
+    DuaFavorite,
     DuaPublicationStatus,
 )
 
@@ -47,6 +51,19 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
     assert first["translation"]["transliteration"].startswith("Аль-хамду")
     assert first["source"]["source_url"] == "https://islamhouse.com/ru/books/888254"
     assert first["evidence"][0]["verification_status"] == "source_only"
+    assert first["audio"] == [
+        {
+            "id": str(DuaAudioAsset.objects.get(source_number=1).id),
+            "language_code": "ar",
+            "provider": "hisnmuslim",
+            "reader_name": "Hamad Al-Duraihem",
+            "reader_name_ar": "حمد الدريهم",
+            "url": "https://www.hisnmuslim.com/audio/ar/1.mp3",
+            "source_url": "https://hisnmuslim.com/",
+            "rights_url": "",
+            "source_version": "hisnmuslim-audio-2026-08-29",
+        }
+    ]
 
     repeated_entry = DuaEntry.objects.get(
         collection_version__collection__active_version__isnull=False,
@@ -63,6 +80,70 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
         HTTP_IF_NONE_MATCH=catalog["ETag"],
     )
     assert cached.status_code == 304
+
+
+@pytest.mark.django_db
+def test_dua_audio_catalog_covers_every_published_entry() -> None:
+    assets = DuaAudioAsset.objects.filter(
+        collection__slug="hisn-al-muslim",
+        is_active=True,
+    )
+
+    assert assets.count() == 267
+    assert list(assets.values_list("source_number", flat=True)) == list(range(1, 268))
+    assert assets.get(source_number=153).url.endswith("/153.mp3")
+
+
+@pytest.mark.django_db
+def test_dua_favorites_are_account_scoped_idempotent_and_removable(
+    api_client: APIClient,
+) -> None:
+    user = User.objects.create_user()
+    other_user = User.objects.create_user()
+    detail_url = reverse(
+        "dua-personal:favorite-detail",
+        kwargs={"collection_slug": "hisn-al-muslim", "source_number": 1},
+    )
+    list_url = reverse("dua-personal:favorite-list")
+
+    assert api_client.get(list_url).status_code == 401
+    api_client.force_authenticate(user=user)
+    created = api_client.put(detail_url, {"is_favorite": True}, format="json")
+    repeated = api_client.put(detail_url, {"is_favorite": True}, format="json")
+    listed = api_client.get(list_url)
+
+    assert created.status_code == 200
+    assert created.json()["is_favorite"] is True
+    assert repeated.status_code == 200
+    assert repeated.json()["id"] == created.json()["id"]
+    assert listed.status_code == 200
+    assert listed["Cache-Control"] == "private, no-store, max-age=0"
+    assert listed.json()["results"] == [created.json()]
+    assert DuaFavorite.objects.filter(user=user).count() == 1
+    assert DuaFavorite.objects.filter(user=other_user).count() == 0
+
+    removed = api_client.put(detail_url, {"is_favorite": False}, format="json")
+
+    assert removed.status_code == 200
+    assert removed.json()["is_favorite"] is False
+    assert removed.json()["id"] is None
+    assert DuaFavorite.objects.filter(user=user).count() == 0
+
+
+@pytest.mark.django_db
+def test_dua_favorite_rejects_unknown_published_entry(api_client: APIClient) -> None:
+    api_client.force_authenticate(user=User.objects.create_user())
+    response = api_client.put(
+        reverse(
+            "dua-personal:favorite-detail",
+            kwargs={"collection_slug": "hisn-al-muslim", "source_number": 999},
+        ),
+        {"is_favorite": True},
+        format="json",
+    )
+
+    assert response.status_code == 404
+    assert response.content_type == "application/problem+json"
 
 
 @pytest.mark.django_db

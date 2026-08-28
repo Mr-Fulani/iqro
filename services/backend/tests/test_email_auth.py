@@ -24,6 +24,7 @@ from quran_backend.modules.accounts.models import (
     User,
     UserStatus,
 )
+from quran_backend.modules.dua.models import DuaCollection, DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackChannel, FeedbackTicket
 from quran_backend.modules.reading.models import Bookmark, ReadingPosition, SyncChange
 from quran_backend.modules.reminders.models import ReminderRule, ReminderType
@@ -304,6 +305,11 @@ def test_existing_account_login_transactionally_merges_guest_state(
         client_updated_at=now,
         device=guest_device,
     )
+    dua_favorite = DuaFavorite.objects.create(
+        user=guest,
+        collection=DuaCollection.objects.get(slug="hisn-al-muslim"),
+        source_number=1,
+    )
     reminder = ReminderRule.objects.create(
         user=guest,
         device=guest_device,
@@ -346,6 +352,7 @@ def test_existing_account_login_transactionally_merges_guest_state(
     guest_device.refresh_from_db()
     old_target_position.refresh_from_db()
     bookmark.refresh_from_db()
+    dua_favorite.refresh_from_db()
     reminder.refresh_from_db()
     ticket.refresh_from_db()
     assert guest.status == UserStatus.DELETED
@@ -355,6 +362,7 @@ def test_existing_account_login_transactionally_merges_guest_state(
     assert old_target_position.progress_percent == Decimal("90.00")
     assert old_target_position.revision == 4
     assert bookmark.user_id == target.id
+    assert dua_favorite.user_id == target.id
     assert reminder.user_id == target.id
     assert reminder.device_id == guest_device.id
     assert ticket.reporter_id == target.id
@@ -363,6 +371,7 @@ def test_existing_account_login_transactionally_merges_guest_state(
     assert audit.target_user_id == target.id
     assert audit.trigger_identity_id == identity.id
     assert audit.moved_counts["bookmarks"] == 1
+    assert audit.moved_counts["dua_favorites"] == 1
     assert SyncChange.objects.filter(user=target).count() == 3
     assert RefreshSession.objects.filter(user=target, revoked_at__isnull=True).count() == 1
 

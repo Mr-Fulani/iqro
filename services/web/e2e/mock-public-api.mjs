@@ -4,6 +4,7 @@ const host = "127.0.0.1";
 const port = Number(process.env.MOCK_PUBLIC_API_PORT || 3199);
 const publishedAt = "2026-08-24T00:00:00Z";
 const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
+const duaFavoriteKeys = new Set();
 
 const socialProfiles = [
   {
@@ -241,6 +242,17 @@ function duaEntry(language) {
       verification_status: "source_only",
     }],
     source: duaSource(language),
+    audio: [{
+      id: "00000000-0000-7000-8000-000000000803",
+      language_code: "ar",
+      provider: "hisnmuslim",
+      reader_name: "Hamad Al-Duraihem",
+      reader_name_ar: "حمد الدريهم",
+      url: "https://www.hisnmuslim.com/audio/ar/1.mp3",
+      source_url: "https://hisnmuslim.com/",
+      rights_url: "",
+      source_version: "hisnmuslim-audio-test-v1",
+    }],
   };
 }
 
@@ -332,6 +344,33 @@ const server = createServer(async (request, response) => {
   }
   if (path === "/api/v1/dua/entries/00000000-0000-7000-8000-000000000801") {
     return sendJson(response, 200, duaEntry(language));
+  }
+  if (path === "/api/v1/me/dua-favorites" && request.method === "GET") {
+    return sendJson(response, 200, {
+      results: [...duaFavoriteKeys].map((key) => {
+        const [collection, sourceNumber] = key.split(":");
+        return {
+          id: "00000000-0000-7000-8000-000000000804",
+          collection,
+          source_number: Number(sourceNumber),
+          is_favorite: true,
+          created_at: publishedAt,
+        };
+      }),
+    });
+  }
+  if (path === "/api/v1/me/dua-favorites/hisn-al-muslim/1" && request.method === "PUT") {
+    const input = await readJson(request);
+    const key = "hisn-al-muslim:1";
+    if (input.is_favorite) duaFavoriteKeys.add(key);
+    else duaFavoriteKeys.delete(key);
+    return sendJson(response, 200, {
+      id: input.is_favorite ? "00000000-0000-7000-8000-000000000804" : null,
+      collection: "hisn-al-muslim",
+      source_number: 1,
+      is_favorite: Boolean(input.is_favorite),
+      created_at: input.is_favorite ? publishedAt : null,
+    });
   }
   if (path === "/api/v1/site/social-profiles") return sendJson(response, 200, socialProfiles);
   if (path === "/api/v1/quran/editions/madani-hafs") return sendJson(response, 200, edition);

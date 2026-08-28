@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib import admin
 
 from quran_backend.modules.dua.models import (
+    DuaAudioAsset,
     DuaCategory,
     DuaCategoryTranslation,
     DuaCollection,
@@ -10,6 +11,7 @@ from quran_backend.modules.dua.models import (
     DuaEntry,
     DuaEntryTranslation,
     DuaEvidence,
+    DuaFavorite,
     DuaSourceEdition,
 )
 
@@ -85,3 +87,23 @@ class DuaEvidenceAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     list_filter = ("kind", "provider", "verification_status")
     search_fields = ("source_name", "source_reference", "external_id")
+
+
+@admin.register(DuaAudioAsset)
+class DuaAudioAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "source_number",
+        "collection",
+        "reader_name",
+        "provider",
+        "is_active",
+    )
+    list_filter = ("collection", "provider", "language_code", "is_active")
+    search_fields = ("reader_name", "reader_name_ar", "url")
+
+
+@admin.register(DuaFavorite)
+class DuaFavoriteAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("user", "collection", "source_number", "created_at")
+    list_filter = ("collection",)
+    search_fields = ("user__email", "collection__slug")

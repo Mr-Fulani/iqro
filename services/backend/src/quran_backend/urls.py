@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.audio.urls")),
     path("api/v1/feedback/", include("quran_backend.modules.feedback.urls")),
     path("api/v1/dua/", include("quran_backend.modules.dua.urls")),
+    path("api/v1/", include("quran_backend.modules.dua.personal_urls")),
     path("api/v1/site/", include("quran_backend.modules.website.urls")),
     path("api/v1/", include("quran_backend.modules.reading.urls")),
     path("api/v1/", include("quran_backend.modules.memorization.urls")),

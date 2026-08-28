@@ -59,6 +59,22 @@ def enqueue_audio_content_change(
     )
 
 
+def enqueue_dua_content_change(
+    *,
+    action: str,
+    collection: str,
+    version: str,
+) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "dua.collection.changed",
+            "action": action,
+            "collection": collection,
+            "version": version,
+        }
+    )
+
+
 def enqueue_social_profiles_change(*, action: str) -> None:
     enqueue_content_revalidation(
         {

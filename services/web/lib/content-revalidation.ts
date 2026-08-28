@@ -4,6 +4,7 @@ import { isEditionCode, isUuid } from "./public-content";
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const QURAN_ACTIONS = new Set(["published", "activated", "withdrawn"]);
 const AUDIO_ACTIONS = new Set(["published", "withdrawn"]);
+const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
 
 type QuranContentChange = {
@@ -26,7 +27,18 @@ type SocialProfilesChange = {
   action: string;
 };
 
-export type ContentChange = QuranContentChange | AudioContentChange | SocialProfilesChange;
+type DuaContentChange = {
+  type: "dua.collection.changed";
+  action: string;
+  collection: string;
+  version: string;
+};
+
+export type ContentChange =
+  | QuranContentChange
+  | AudioContentChange
+  | DuaContentChange
+  | SocialProfilesChange;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -79,6 +91,19 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as SocialProfilesChange;
   }
 
+  if (value.type === "dua.collection.changed") {
+    if (!hasExactKeys(value, ["type", "action", "collection", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !DUA_ACTIONS.has(value.action) ||
+      typeof value.collection !== "string" ||
+      !/^[a-z0-9][a-z0-9-]{0,99}$/.test(value.collection) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as DuaContentChange;
+  }
+
   return null;
 }
 
@@ -103,6 +128,13 @@ export function revalidateContentChange(change: ContentChange): void {
     revalidatePath(
       `/sitemaps/quran/${encodeURIComponent(change.edition)}/${encodeURIComponent(change.version)}/sitemap.xml`,
     );
+    return;
+  }
+
+  if (change.type === "dua.collection.changed") {
+    expireTag("dua:catalog");
+    revalidatePath("/[locale]/dua", "page");
+    revalidatePath("/[locale]/dua/[category]", "page");
     return;
   }
 

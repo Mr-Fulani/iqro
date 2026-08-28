@@ -3830,6 +3830,103 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.35;
 }
 
+.dua-entry-tools {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-items: end;
+}
+
+.dua-entry-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dua-icon-action {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--panel) 88%, var(--primary) 12%);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, color 160ms ease,
+    background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.dua-icon-action svg {
+  width: 100%;
+  height: 100%;
+}
+
+.dua-icon-action:hover,
+.dua-icon-action:focus-visible,
+.dua-icon-action.is-active {
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--border));
+  color: var(--panel);
+  background: var(--primary);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--primary) 22%, transparent);
+  transform: translateY(-1px);
+}
+
+.dua-favorite-action.is-active,
+.dua-favorite-action:hover,
+.dua-favorite-action:focus-visible {
+  border-color: #bb6372;
+  color: #fff;
+  background: #a94355;
+  box-shadow: 0 7px 18px rgb(169 67 85 / 22%);
+}
+
+.dua-icon-action:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-gold) 46%, transparent);
+  outline-offset: 2px;
+}
+
+.dua-icon-action:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+
+.dua-audio-panel {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--panel) 86%, var(--primary) 14%);
+}
+
+.dua-audio-panel audio {
+  width: 100%;
+  min-height: 40px;
+}
+
+.dua-audio-panel p,
+.dua-audio-panel > span,
+.dua-action-error {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.dua-audio-panel a {
+  font-weight: 700;
+}
+
+.dua-audio-panel > span,
+.dua-action-error {
+  color: var(--danger, #a53f4f);
+}
+
+.dua-action-error {
+  margin-top: 10px;
+}
+
 @media (max-width: 720px) {
   .dua-category-section > header {
     display: grid;
@@ -3858,7 +3955,8 @@ input:focus, select:focus, textarea:focus {
   .dua-category-chip,
   .dua-category-chip::after,
   .dua-topic-icon,
-  .dua-category-arrow {
+  .dua-category-arrow,
+  .dua-icon-action {
     transition: none;
   }
 }

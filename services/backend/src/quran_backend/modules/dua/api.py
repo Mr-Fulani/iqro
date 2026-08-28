@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import NoReturn, cast
 
 from django.db.models import QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics
-from rest_framework.exceptions import ValidationError
+from rest_framework import generics, status
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.throttling import BaseThrottle
+from rest_framework.views import APIView
 
+from quran_backend.modules.accounts.models import User
+from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
 from quran_backend.modules.dua.importer import SUPPORTED_DUA_LANGUAGES
 from quran_backend.modules.dua.models import DuaCategory, DuaCollection, DuaEntry
@@ -21,6 +26,18 @@ from quran_backend.modules.dua.serializers import (
     DuaCategorySerializer,
     DuaCollectionSerializer,
     DuaEntrySerializer,
+    DuaFavoriteListSerializer,
+    DuaFavoriteSerializer,
+    DuaFavoriteWriteSerializer,
+)
+from quran_backend.modules.dua.services import (
+    DuaFavoriteTargetNotFoundError,
+    list_dua_favorites,
+    set_dua_favorite,
+)
+from quran_backend.modules.reading.throttling import (
+    ReadingMutationRateThrottle,
+    ReadingRateLimitExceeded,
 )
 
 LANGUAGE_PARAMETER = OpenApiParameter(
@@ -92,3 +109,55 @@ class DuaEntryDetailView(PublicDuaViewMixin, generics.RetrieveAPIView[DuaEntry])
 
     def get_queryset(self) -> QuerySet[DuaEntry]:
         return published_dua_entries(self.selected_language())
+
+
+@extend_schema(tags=["dua-favorites"])
+class DuaFavoriteListView(PrivateNoStoreResponseMixin, APIView):
+    @extend_schema(
+        operation_id="dua_favorites_list",
+        responses={
+            status.HTTP_200_OK: DuaFavoriteListSerializer,
+            status.HTTP_401_UNAUTHORIZED: None,
+        },
+    )
+    def get(self, request: Request) -> Response:
+        return Response(list_dua_favorites(cast(User, request.user)))
+
+
+@extend_schema(tags=["dua-favorites"])
+class DuaFavoriteDetailView(PrivateNoStoreResponseMixin, APIView):
+    def get_throttles(self) -> list[BaseThrottle]:
+        return [ReadingMutationRateThrottle()]
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise ReadingRateLimitExceeded(wait)
+
+    @extend_schema(
+        operation_id="dua_favorite_set",
+        request=DuaFavoriteWriteSerializer,
+        responses={
+            status.HTTP_200_OK: DuaFavoriteSerializer,
+            status.HTTP_400_BAD_REQUEST: None,
+            status.HTTP_401_UNAUTHORIZED: None,
+            status.HTTP_404_NOT_FOUND: None,
+            status.HTTP_429_TOO_MANY_REQUESTS: None,
+        },
+    )
+    def put(
+        self,
+        request: Request,
+        collection_slug: str,
+        source_number: int,
+    ) -> Response:
+        serializer = DuaFavoriteWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            snapshot = set_dua_favorite(
+                user=cast(User, request.user),
+                collection_slug=collection_slug,
+                source_number=source_number,
+                is_favorite=serializer.validated_data["is_favorite"],
+            )
+        except DuaFavoriteTargetNotFoundError as exc:
+            raise NotFound("The published Dua entry was not found.") from exc
+        return Response(snapshot)

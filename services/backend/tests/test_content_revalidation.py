@@ -6,7 +6,10 @@ from typing import Any
 import pytest
 from django.test import override_settings
 
-from quran_backend.modules.core.content_revalidation import enqueue_content_revalidation
+from quran_backend.modules.core.content_revalidation import (
+    enqueue_content_revalidation,
+    enqueue_dua_content_change,
+)
 from quran_backend.modules.core.tasks import notify_web_content_change_task
 
 TEST_SECRET = "test-content-revalidation-secret-00000001"
@@ -114,3 +117,32 @@ def test_revalidation_event_is_enqueued_only_after_commit(
         assert queued == []
 
     assert queued == [event]
+
+
+@pytest.mark.django_db
+@override_settings(
+    WEB_CONTENT_REVALIDATION_URL=TEST_URL,
+    WEB_CONTENT_REVALIDATION_SECRET=TEST_SECRET,
+)
+def test_dua_revalidation_uses_a_scoped_collection_event(
+    django_capture_on_commit_callbacks: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queued: list[dict[str, str]] = []
+    monkeypatch.setattr(notify_web_content_change_task, "delay", queued.append)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        enqueue_dua_content_change(
+            action="updated",
+            collection="hisn-al-muslim",
+            version="hisn-full-2026-08-28",
+        )
+
+    assert queued == [
+        {
+            "type": "dua.collection.changed",
+            "action": "updated",
+            "collection": "hisn-al-muslim",
+            "version": "hisn-full-2026-08-28",
+        }
+    ]

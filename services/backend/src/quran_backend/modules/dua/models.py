@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -296,3 +297,87 @@ class DuaEvidence(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.entry}:{self.source_reference}"
+
+
+class DuaAudioAsset(BaseModel):
+    """A source-hosted recording mapped to a stable collection entry number."""
+
+    collection = models.ForeignKey(
+        DuaCollection,
+        on_delete=models.CASCADE,
+        related_name="audio_assets",
+    )
+    source_number = models.PositiveSmallIntegerField()
+    language_code = models.CharField(max_length=8, default="ar")
+    provider = models.CharField(max_length=64)
+    reader_name = models.CharField(max_length=255)
+    reader_name_ar = models.CharField(max_length=255, blank=True)
+    url = models.URLField(max_length=500)
+    source_url = models.URLField(max_length=500)
+    rights_url = models.URLField(max_length=500, blank=True)
+    source_version = models.CharField(max_length=64)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "dua_audio_asset"
+        ordering = ("source_number", "sort_order", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("collection", "source_number", "url"),
+                name="dua_audio_collection_entry_url_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_number__gt=0),
+                name="dua_audio_source_number_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(sort_order__gt=0),
+                name="dua_audio_sort_order_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("collection", "source_number", "is_active"),
+                name="dua_audio_catalog_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.collection.slug}:{self.source_number}:{self.reader_name}"
+
+
+class DuaFavorite(BaseModel):
+    """An account-owned favorite that survives Dua catalog version changes."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="dua_favorites",
+    )
+    collection = models.ForeignKey(
+        DuaCollection,
+        on_delete=models.CASCADE,
+        related_name="favorites",
+    )
+    source_number = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = "dua_favorite"
+        ordering = ("-created_at", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "collection", "source_number"),
+                name="dua_favorite_user_entry_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_number__gt=0),
+                name="dua_favorite_source_number_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("user", "created_at"), name="dua_favorite_user_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.collection.slug}:{self.source_number}"
