@@ -355,6 +355,9 @@ const server = createServer(async (request, response) => {
           source_number: Number(sourceNumber),
           is_favorite: true,
           created_at: publishedAt,
+          ...(url.searchParams.get("include") === "entry"
+            ? { entry: duaEntry(language) }
+            : {}),
         };
       }),
     });

@@ -41,6 +41,42 @@ const bookmark = {
   updated_at: "2026-08-23T16:00:00Z",
 };
 
+const duaFavoriteEntry = {
+  id: "01992d87-6c00-7000-8000-000000000601",
+  source_number: 1,
+  slug: "waking-praise",
+  collection: "hisn-al-muslim",
+  collection_version: "hisn-full-2026-08-28",
+  category: {
+    source_number: 1,
+    slug: "waking-up",
+    title: "Слова поминания при пробуждении ото сна",
+  },
+  arabic_text: "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
+  repetitions: 1,
+  repetition_label: "",
+  translation: {
+    language_code: "ru",
+    meaning_text: "Хвала Аллаху, воскресившему нас после того, как Он умертвил нас.",
+    transliteration: "Аль-хамду ли-Лляхи аллязи ахйа-на.",
+  },
+  evidence: [],
+  source: null,
+  audio: [
+    {
+      id: "01992d87-6c00-7000-8000-000000000602",
+      language_code: "ar",
+      provider: "hisnmuslim",
+      reader_name: "Hamad Al-Duraihem",
+      reader_name_ar: "حمد الدريهم",
+      url: "https://www.hisnmuslim.com/audio/ar/1.mp3",
+      source_url: "https://hisnmuslim.com/",
+      rights_url: "",
+      source_version: "hisnmuslim-audio-2026-08-29",
+    },
+  ],
+};
+
 const feedbackSummary = {
   public_id: "FB-contract-test",
   category: "audio",
@@ -160,6 +196,82 @@ test("bookmark edit and delete follow the backend revision contract", async ({ p
   await expect(page.getByText("Обновлённая закладка")).toHaveCount(0);
   expect(captured.deleteQuery?.get("base_revision")).toBe("3");
   expect(captured.deleteQuery?.get("client_updated_at")).toBeTruthy();
+});
+
+test("profile combines favorite duas and Quran bookmarks with working filters", async ({ page }) => {
+  await installSession(page);
+  await page.route("**/audio/ar/1.mp3", (route) => route.abort());
+  let duaIsFavorite = true;
+  let removePayload: Record<string, unknown> | undefined;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.includes("/reading-position/")) return emptyReading(route);
+    if (url.pathname === "/api/v1/me/bookmarks" && request.method() === "GET") {
+      return route.fulfill({
+        json: { next: null, previous: null, results: [bookmark] },
+      });
+    }
+    if (url.pathname === "/api/v1/me/dua-favorites" && request.method() === "GET") {
+      expect(url.searchParams.get("language") || "ru").toBe("ru");
+      const favorite = {
+        id: "01992d87-6c00-7000-8000-000000000603",
+        collection: "hisn-al-muslim",
+        source_number: 1,
+        is_favorite: true,
+        created_at: "2026-08-29T00:00:00Z",
+        ...(url.searchParams.get("include") === "entry" ? { entry: duaFavoriteEntry } : {}),
+      };
+      return route.fulfill({ json: { results: duaIsFavorite ? [favorite] : [] } });
+    }
+    if (
+      url.pathname === "/api/v1/me/dua-favorites/hisn-al-muslim/1" &&
+      request.method() === "PUT"
+    ) {
+      removePayload = request.postDataJSON() as Record<string, unknown>;
+      duaIsFavorite = Boolean(removePayload.is_favorite);
+      return route.fulfill({
+        json: {
+          id: duaIsFavorite ? "01992d87-6c00-7000-8000-000000000603" : null,
+          collection: "hisn-al-muslim",
+          source_number: 1,
+          is_favorite: duaIsFavorite,
+          created_at: duaIsFavorite ? "2026-08-29T00:00:00Z" : null,
+        },
+      });
+    }
+    if (url.pathname === "/api/v1/feedback/tickets") {
+      return route.fulfill({ json: { next: null, previous: null, results: [] } });
+    }
+    return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/profile");
+  await expect(page.getByRole("heading", { level: 3, name: "Избранное" })).toBeVisible();
+  await expect(page.getByText("الْحَمْدُ للَّهِ الَّذِي", { exact: false })).toBeVisible();
+  await expect(page.getByText("Тестовая закладка")).toBeVisible();
+  expect(
+    await page.locator(".profile-favorites").evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+
+  await page.getByRole("button", { name: /^Ду’а\s+1$/ }).click();
+  await expect(page.getByText("Тестовая закладка")).toHaveCount(0);
+  await page.getByRole("button", { name: "Прослушать ду’а" }).click();
+  await expect(page.locator(".dua-audio-panel audio")).toHaveAttribute(
+    "src",
+    "https://www.hisnmuslim.com/audio/ar/1.mp3",
+  );
+
+  await page.getByRole("button", { name: "Удалить из избранного" }).click();
+  await expect(page.getByText("Вы ещё не добавили ду’а в избранное.")).toBeVisible();
+  expect(removePayload).toEqual({ is_favorite: false });
+
+  await page.getByRole("button", { name: /^Коран\s+1$/ }).click();
+  await expect(page.getByText("Тестовая закладка")).toBeVisible();
 });
 
 test("feedback create, reply, close and reopen match the backend contract", async ({ page }) => {

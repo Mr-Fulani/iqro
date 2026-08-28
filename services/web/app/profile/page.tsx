@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   api,
   Bookmark,
+  DuaEntry,
+  DuaFavorite,
   FeedbackTicket,
   FeedbackTicketDetail,
   ReadingPosition,
@@ -15,6 +17,9 @@ import { SYNC_STATE_EVENT } from "../../lib/sync-state";
 import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
 import { localizedPath } from "../../lib/routing";
+import { DuaEntryList } from "../../components/DuaEntryList";
+
+type FavoriteFilter = "all" | "dua" | "quran";
 
 const FEEDBACK_CATEGORIES = [
   ["religious_content", "feedback.category.religious"],
@@ -50,12 +55,15 @@ export default function ProfilePage() {
     logoutAll,
     isLoading: authLoading,
   } = useAuth();
-  const { locale, t } = useI18n();
+  const { formatNumber, locale, t } = useI18n();
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [duaFavorites, setDuaFavorites] = useState<DuaFavorite[]>([]);
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState<boolean>(false);
+  const [loadingDuaFavorites, setLoadingDuaFavorites] = useState<boolean>(false);
+  const [favoriteFilter, setFavoriteFilter] = useState<FavoriteFilter>("all");
   const [loadingSync, setLoadingSync] = useState<boolean>(false);
   const [pendingSync, setPendingSync] = useState<number>(0);
   const [confirmLogoutAll, setConfirmLogoutAll] = useState<boolean>(false);
@@ -85,14 +93,29 @@ export default function ProfilePage() {
   const [feedbackReply, setFeedbackReply] = useState<string>("");
   const [feedbackActionLoading, setFeedbackActionLoading] = useState<boolean>(false);
 
+  const loadDuaFavoritesData = useCallback(async () => {
+    setLoadingDuaFavorites(true);
+    try {
+      const snapshot = await api.getDuaFavorites(locale, true);
+      setDuaFavorites(
+        snapshot.results.filter((favorite) => favorite.is_favorite && favorite.entry),
+      );
+    } catch (err) {
+      setError(api.normalizeError(err));
+    } finally {
+      setLoadingDuaFavorites(false);
+    }
+  }, [locale]);
+
   // Load user data on mount / login
   useEffect(() => {
     if (isLoggedIn && session?.user.status !== "pending_deletion") {
       void loadReadingData();
       void loadBookmarksData();
+      void loadDuaFavoritesData();
       void loadTicketsData();
     }
-  }, [isLoggedIn, session?.user.status]);
+  }, [isLoggedIn, loadDuaFavoritesData, session?.user.status]);
 
   useEffect(() => {
     if (!session?.user.id) {
@@ -167,6 +190,21 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDuaFavoriteChange = (entry: DuaEntry, isFavorite: boolean) => {
+    if (isFavorite) return;
+    setDuaFavorites((current) =>
+      current.filter(
+        (favorite) =>
+          !(
+            favorite.collection === entry.collection &&
+            favorite.source_number === entry.source_number
+          ),
+      ),
+    );
+    setSuccessMsg(t("profile.duaFavoriteRemoved"));
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
   const handleUpdateBookmark = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookmarkDraft) return;
@@ -206,6 +244,7 @@ export default function ProfilePage() {
           : t("profile.syncCurrent"),
       );
       await loadBookmarksData();
+      await loadDuaFavoritesData();
       await loadReadingData();
       setPendingSync(result.pending);
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -330,6 +369,10 @@ export default function ProfilePage() {
   }
 
   const isGuest = session?.user.status === "guest";
+  const duaFavoriteEntries = duaFavorites.flatMap((favorite) =>
+    favorite.entry ? [favorite.entry] : [],
+  );
+  const savedItemCount = bookmarks.length + duaFavoriteEntries.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -430,9 +473,14 @@ export default function ProfilePage() {
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">{t("profile.savedBookmarks")}</span>
-            <span className="kpi-value">{bookmarks.length}</span>
-            <span className="kpi-desc">{t("profile.editionMadani")}</span>
+            <span className="kpi-label">{t("profile.savedItems")}</span>
+            <span className="kpi-value">{formatNumber(savedItemCount)}</span>
+            <span className="kpi-desc">
+              {t("profile.savedItemsBreakdown", {
+                dua: formatNumber(duaFavoriteEntries.length),
+                quran: formatNumber(bookmarks.length),
+              })}
+            </span>
           </div>
 
           <div className="kpi-card">
@@ -457,14 +505,76 @@ export default function ProfilePage() {
 
       <AccountSecurityPanel />
 
-      {/* Bookmarks Section */}
-      <section className="surface">
+      {/* Saved content */}
+      <section className="surface profile-favorites" id="favorites">
         <div className="surface-head">
           <div>
-            <h3 className="surface-title">{t("profile.bookmarksTitle")}</h3>
-            <p className="surface-subtitle">{t("profile.bookmarksDescription")}</p>
+            <h3 className="surface-title">{t("profile.favoritesTitle")}</h3>
+            <p className="surface-subtitle">{t("profile.favoritesDescription")}</p>
           </div>
         </div>
+
+        <div className="profile-favorite-filters" aria-label={t("profile.favoriteFiltersLabel")}>
+          {(["all", "dua", "quran"] as const).map((filter) => {
+            const count =
+              filter === "all"
+                ? savedItemCount
+                : filter === "dua"
+                  ? duaFavoriteEntries.length
+                  : bookmarks.length;
+            return (
+              <button
+                key={filter}
+                type="button"
+                className={`profile-favorite-filter ${favoriteFilter === filter ? "is-active" : ""}`}
+                aria-pressed={favoriteFilter === filter}
+                onClick={() => setFavoriteFilter(filter)}
+              >
+                {t(`profile.favoriteFilter.${filter}` as MessageKey)}
+                <span>{formatNumber(count)}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {favoriteFilter !== "quran" ? (
+          <div className="profile-favorite-group">
+            <div className="profile-favorite-group-head">
+              <div>
+                <h4>{t("profile.duaFavoritesTitle")}</h4>
+                <p>{t("profile.duaFavoritesDescription")}</p>
+              </div>
+              <span className="status-chip">{formatNumber(duaFavoriteEntries.length)}</span>
+            </div>
+            {loadingDuaFavorites ? (
+              <div className="profile-favorite-empty">{t("profile.loadingDuaFavorites")}</div>
+            ) : duaFavoriteEntries.length > 0 ? (
+              <DuaEntryList
+                entries={duaFavoriteEntries}
+                headingLevel={3}
+                onFavoriteChange={handleDuaFavoriteChange}
+              />
+            ) : (
+              <div className="profile-favorite-empty">
+                <span aria-hidden="true">♡</span>
+                <p>{t("profile.noDuaFavorites")}</p>
+                <Link href={localizedPath(locale, "/dua")} className="btn btn-secondary btn-sm">
+                  {t("profile.openDuaCatalog")}
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {favoriteFilter !== "dua" ? (
+          <div className="profile-favorite-group">
+            <div className="profile-favorite-group-head">
+              <div>
+                <h4>{t("profile.quranFavoritesTitle")}</h4>
+                <p>{t("profile.bookmarksDescription")}</p>
+              </div>
+              <span className="status-chip">{formatNumber(bookmarks.length)}</span>
+            </div>
 
         {/* Add Bookmark Form */}
         <form
@@ -656,6 +766,8 @@ export default function ProfilePage() {
             {t("profile.noBookmarks")}
           </div>
         )}
+          </div>
+        ) : null}
       </section>
 
       {/* Feedback & Support Section */}

@@ -3562,6 +3562,116 @@ input:focus, select:focus, textarea:focus {
   margin-top: 14px;
 }
 
+.profile-favorites {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-favorite-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.profile-favorite-filter {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.profile-favorite-filter span {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 78%, var(--primary) 22%);
+  font-size: 11px;
+}
+
+.profile-favorite-filter:hover,
+.profile-favorite-filter:focus-visible,
+.profile-favorite-filter.is-active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.profile-favorite-filter:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-gold) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.profile-favorite-group {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.profile-favorite-group + .profile-favorite-group {
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.profile-favorite-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.profile-favorite-group-head h4 {
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.profile-favorite-group-head p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-favorites .dua-entry-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.profile-favorite-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.profile-favorite-empty > span {
+  color: #a94355;
+  font-size: 34px;
+  line-height: 1;
+}
+
 .dua-browser {
   display: grid;
   gap: 18px;
@@ -3928,6 +4038,16 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 720px) {
+  .profile-favorite-filters {
+    width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  .profile-favorite-filter {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
   .dua-category-section > header {
     display: grid;
   }

@@ -111,6 +111,7 @@ def test_dua_favorites_are_account_scoped_idempotent_and_removable(
     created = api_client.put(detail_url, {"is_favorite": True}, format="json")
     repeated = api_client.put(detail_url, {"is_favorite": True}, format="json")
     listed = api_client.get(list_url)
+    expanded = api_client.get(f"{list_url}?include=entry&language=ru")
 
     assert created.status_code == 200
     assert created.json()["is_favorite"] is True
@@ -119,8 +120,22 @@ def test_dua_favorites_are_account_scoped_idempotent_and_removable(
     assert listed.status_code == 200
     assert listed["Cache-Control"] == "private, no-store, max-age=0"
     assert listed.json()["results"] == [created.json()]
+    expanded_favorite = expanded.json()["results"][0]
+    assert expanded.status_code == 200
+    assert expanded_favorite["collection"] == "hisn-al-muslim"
+    assert expanded_favorite["entry"]["source_number"] == 1
+    assert expanded_favorite["entry"]["category"]["title"] == (
+        "Слова поминания при пробуждении ото сна"
+    )
+    assert expanded_favorite["entry"]["translation"]["language_code"] == "ru"
+    assert expanded_favorite["entry"]["audio"][0]["url"].endswith("/1.mp3")
     assert DuaFavorite.objects.filter(user=user).count() == 1
     assert DuaFavorite.objects.filter(user=other_user).count() == 0
+
+    invalid_include = api_client.get(f"{list_url}?include=everything")
+    invalid_language = api_client.get(f"{list_url}?include=entry&language=de")
+    assert invalid_include.status_code == 400
+    assert invalid_language.status_code == 400
 
     removed = api_client.put(detail_url, {"is_favorite": False}, format="json")
 

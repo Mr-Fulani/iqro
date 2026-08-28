@@ -338,6 +338,7 @@ export type DuaFavorite = {
   source_number: number;
   is_favorite: boolean;
   created_at: string | null;
+  entry?: DuaEntry | null;
 };
 
 export type QuranReaderPreference = {
@@ -1593,8 +1594,15 @@ export class ApiClient {
     );
   }
 
-  public async getDuaFavorites(): Promise<{ results: DuaFavorite[] }> {
-    return this.request<{ results: DuaFavorite[] }>("/api/v1/me/dua-favorites", {
+  public async getDuaFavorites(
+    language?: SupportedLocale,
+    includeEntry = false,
+  ): Promise<{ results: DuaFavorite[] }> {
+    const query = new URLSearchParams();
+    if (language) query.set("language", language);
+    if (includeEntry) query.set("include", "entry");
+    const suffix = query.size ? `?${query.toString()}` : "";
+    return this.request<{ results: DuaFavorite[] }>(`/api/v1/me/dua-favorites${suffix}`, {
       cache: "no-store",
     });
   }

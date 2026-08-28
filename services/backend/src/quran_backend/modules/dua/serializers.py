@@ -189,6 +189,7 @@ class DuaFavoriteSerializer(serializers.Serializer[dict[str, Any]]):
     source_number = serializers.IntegerField(min_value=1)
     is_favorite = serializers.BooleanField()
     created_at = serializers.DateTimeField(allow_null=True)
+    entry = DuaEntrySerializer(allow_null=True, required=False)
 
 
 class DuaFavoriteListSerializer(serializers.Serializer[dict[str, Any]]):

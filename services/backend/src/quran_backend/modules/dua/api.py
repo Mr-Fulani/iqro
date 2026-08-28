@@ -49,14 +49,26 @@ LANGUAGE_PARAMETER = OpenApiParameter(
     description="Localized source edition and meaning.",
 )
 
+FAVORITE_INCLUDE_PARAMETER = OpenApiParameter(
+    "include",
+    str,
+    OpenApiParameter.QUERY,
+    enum=["entry"],
+    description="Set to entry to include the localized published Dua card.",
+)
+
+
+def selected_dua_language(request: Request) -> str:
+    language = str(request.query_params.get("language", "en")).strip().lower()
+    if language not in SUPPORTED_DUA_LANGUAGES:
+        raise ValidationError({"language": "Supported values are ar, en, ru and tr."})
+    return language
+
 
 class PublicDuaViewMixin(PublicReadOnlyViewMixin):
     def selected_language(self) -> str:
         request = cast(Request, vars(self)["request"])
-        language = str(request.query_params.get("language", "en")).strip().lower()
-        if language not in SUPPORTED_DUA_LANGUAGES:
-            raise ValidationError({"language": "Supported values are ar, en, ru and tr."})
-        return language
+        return selected_dua_language(request)
 
 
 @extend_schema(tags=["dua"], parameters=[LANGUAGE_PARAMETER])
@@ -111,7 +123,10 @@ class DuaEntryDetailView(PublicDuaViewMixin, generics.RetrieveAPIView[DuaEntry])
         return published_dua_entries(self.selected_language())
 
 
-@extend_schema(tags=["dua-favorites"])
+@extend_schema(
+    tags=["dua-favorites"],
+    parameters=[LANGUAGE_PARAMETER, FAVORITE_INCLUDE_PARAMETER],
+)
 class DuaFavoriteListView(PrivateNoStoreResponseMixin, APIView):
     @extend_schema(
         operation_id="dua_favorites_list",
@@ -121,7 +136,38 @@ class DuaFavoriteListView(PrivateNoStoreResponseMixin, APIView):
         },
     )
     def get(self, request: Request) -> Response:
-        return Response(list_dua_favorites(cast(User, request.user)))
+        snapshot = list_dua_favorites(cast(User, request.user))
+        include = str(request.query_params.get("include", "")).strip().lower()
+        if include not in {"", "entry"}:
+            raise ValidationError({"include": "Supported value is entry."})
+        if include != "entry" or not snapshot["results"]:
+            return Response(snapshot)
+
+        language = selected_dua_language(request)
+        favorite_keys = {
+            (item["collection"], item["source_number"]) for item in snapshot["results"]
+        }
+        entries = published_dua_entries(language).filter(
+            collection_version__collection__slug__in={key[0] for key in favorite_keys},
+            source_number__in={key[1] for key in favorite_keys},
+        )
+        serialized_entries = DuaEntrySerializer(entries, many=True).data
+        entries_by_key = {
+            (entry["collection"], entry["source_number"]): entry
+            for entry in serialized_entries
+            if (entry["collection"], entry["source_number"]) in favorite_keys
+        }
+        return Response(
+            {
+                "results": [
+                    {
+                        **item,
+                        "entry": entries_by_key.get((item["collection"], item["source_number"])),
+                    }
+                    for item in snapshot["results"]
+                ]
+            }
+        )
 
 
 @extend_schema(tags=["dua-favorites"])

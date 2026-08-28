@@ -42,9 +42,11 @@ function AudioIcon({ playing }: { playing: boolean }) {
 export function DuaEntryList({
   entries,
   headingLevel = 2,
+  onFavoriteChange,
 }: {
   entries: DuaEntry[];
   headingLevel?: 2 | 3;
+  onFavoriteChange?: (entry: DuaEntry, isFavorite: boolean) => void;
 }) {
   const { isLoading: authLoading, loginGuest, session } = useAuth();
   const { formatNumber, locale, t } = useI18n();
@@ -112,6 +114,7 @@ export function DuaEntryList({
         else next.delete(key);
         return next;
       });
+      onFavoriteChange?.(entry, saved.is_favorite);
     } catch (error) {
       setFavoriteKeys((current) => {
         const next = new Set(current);
