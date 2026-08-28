@@ -36,6 +36,13 @@ When a prayer Web Push reminder belongs to a user with an active after-prayer pl
 localized notification includes the selected page count and opens a guided reading session for
 that prayer and local date.
 
+The guided reader records full active minutes through automatic reading sessions with zero
+credited pages. Its prayer check-in records the actual pages separately. Consequently, a
+time-based daily goal receives only measured active time, while a page-based daily goal receives
+only the check-in pages; the same guided reading is never credited twice to either metric. The
+timer pauses when the tab is hidden, the window loses focus, or the reader is idle, and stops
+after the check-in is saved.
+
 Coordinates are not stored by this feature. The plan stores only the page count, IANA time
 zone, revision metadata, device reference, and daily prayer check-ins. Account deletion removes
 plans and check-ins; guest-to-account merge preserves them.

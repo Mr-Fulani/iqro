@@ -23,6 +23,8 @@ type PrayerReadingSessionBarProps = {
   currentPage: number;
   edition: string;
   surah: number;
+  activeSeconds: number;
+  onFinished: () => void;
 };
 
 const PRAYER_LABELS: Record<PrayerReadingPrayer, MessageKey> = {
@@ -42,6 +44,8 @@ export function PrayerReadingSessionBar({
   currentPage,
   edition,
   surah,
+  activeSeconds,
+  onFinished,
 }: PrayerReadingSessionBarProps) {
   const { loginGuest } = useAuth();
   const { formatNumber, locale, t } = useI18n();
@@ -52,6 +56,14 @@ export function PrayerReadingSessionBar({
   const [savedPages, setSavedPages] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const prayerLabel = t(PRAYER_LABELS[config.prayer]);
+  const activeTime = useMemo(() => {
+    const minutes = Math.floor(activeSeconds / 60);
+    const seconds = activeSeconds % 60;
+    return `${formatNumber(minutes)}:${formatNumber(seconds, {
+      minimumIntegerDigits: 2,
+      useGrouping: false,
+    })}`;
+  }, [activeSeconds, formatNumber]);
 
   useEffect(() => {
     visitedPages.current.add(currentPage);
@@ -97,6 +109,7 @@ export function PrayerReadingSessionBar({
         // The after-prayer progress is already saved; position sync is best-effort.
       }
       setSavedPages(checkIn.pages);
+      onFinished();
       window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (reason) {
       setError(api.normalizeError(reason));
@@ -130,6 +143,10 @@ export function PrayerReadingSessionBar({
         >
           <span style={{ width: `${progressPercent}%` }} />
         </div>
+        <div className="prayer-reading-session-time" data-testid="prayer-reading-active-time">
+          <strong>{activeTime}</strong>
+          <span>{t("prayerReading.readerActiveTime")}</span>
+        </div>
       </div>
 
       {savedPages === null ? (
@@ -155,6 +172,7 @@ export function PrayerReadingSessionBar({
             {saving ? t("common.saving") : t("prayerReading.finishReading")}
           </button>
           <small>{t("prayerReading.actualHint")}</small>
+          <small>{t("prayerReading.readerTimeHint")}</small>
         </form>
       ) : (
         <div className="alert alert-success prayer-reading-session-success" role="status">

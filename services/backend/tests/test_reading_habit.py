@@ -370,6 +370,70 @@ def test_prayer_reading_plan_check_ins_are_flexible_idempotent_and_reversible() 
     assert ReadingSession.objects.get(id=session_id).status == "discarded"
 
 
+@pytest.mark.parametrize(
+    ("metric", "expected_amount"),
+    [
+        (ReadingGoalMetric.PAGES, "3.00"),
+        (ReadingGoalMetric.MINUTES, "2.00"),
+    ],
+)
+def test_guided_prayer_reading_keeps_page_and_time_progress_independent(
+    metric: str,
+    expected_amount: str,
+) -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    now = timezone.now()
+    client.put(
+        reverse("reading:reading-goal"),
+        _goal_payload(metric=metric, amount="10"),
+        format="json",
+    )
+    client.put(
+        reverse("reading:prayer-reading-plan"),
+        {
+            "pages_per_prayer": 4,
+            "timezone_name": "UTC",
+            "base_revision": 0,
+            "client_updated_at": now.isoformat(),
+        },
+        format="json",
+    )
+    check_in = client.post(
+        reverse("reading:prayer-reading-check-in-create"),
+        {
+            "id": str(uuid.uuid7()),
+            "session_id": str(uuid.uuid7()),
+            "prayer": "fajr",
+            "pages": 3,
+            "local_date": now.date().isoformat(),
+            "timezone_name": "UTC",
+            "client_updated_at": now.isoformat(),
+        },
+        format="json",
+    )
+    timed_session = client.post(
+        reverse("reading:reading-session-automatic"),
+        {
+            "id": str(uuid.uuid7()),
+            "timezone_name": "UTC",
+            "started_at": (now - timedelta(minutes=2)).isoformat(),
+            "ended_at": now.isoformat(),
+            "active_seconds": 120,
+            "credited_pages": 0,
+            "credited_ayahs": 0,
+            "client_updated_at": now.isoformat(),
+        },
+        format="json",
+    )
+    reading_today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
+
+    assert check_in.status_code == 201
+    assert timed_session.status_code == 201
+    assert reading_today.status_code == 200
+    assert reading_today.json()["progress"]["achieved_amount"] == expected_amount
+
+
 def test_prayer_reading_plan_rejects_invalid_pages_and_mismatched_timezone() -> None:
     user = User.objects.create_user()
     client = _authenticated_client(user)

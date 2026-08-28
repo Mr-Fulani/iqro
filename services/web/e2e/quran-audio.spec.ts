@@ -612,7 +612,7 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
 
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
   let checkInPayload: Record<string, unknown> | null = null;
-  let automaticSessions = 0;
+  const automaticSessionPayloads: Record<string, unknown>[] = [];
   const session = {
     token_type: "Bearer",
     access_token: "after-prayer-access-token",
@@ -673,10 +673,11 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     });
   });
   await page.route("**/api/v1/me/reading-sessions/automatic", (route) => {
-    automaticSessions += 1;
+    automaticSessionPayloads.push(route.request().postDataJSON() as Record<string, unknown>);
     return route.fulfill({ status: 201, json: {} });
   });
 
+  await page.clock.install();
   await page.goto(
     "/quran?surah=6&mode=after-prayer&prayer=fajr&prayer_date=2026-08-28"
       + "&prayer_timezone=Europe%2FIstanbul&prayer_target=2&prayer_credited=0",
@@ -686,6 +687,10 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
   await expect(guided.getByRole("heading", { name: "После намаза Фаджр" })).toBeVisible();
   await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
   await expect(guided.getByLabel("Фактически прочитано — страниц")).toHaveValue("1");
+  await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("0:00");
+  await page.clock.runFor(60_000);
+  await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("1:00");
+  await expect.poll(() => automaticSessionPayloads.length).toBe(1);
   await guided.getByLabel("Фактически прочитано — страниц").fill("3");
   await guided.getByRole("button", { name: "Завершить и сохранить" }).click();
 
@@ -696,7 +701,15 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     timezone_name: "Europe/Istanbul",
     pages: 3,
   });
-  expect(automaticSessions).toBe(0);
+  expect(automaticSessionPayloads).toHaveLength(1);
+  expect(automaticSessionPayloads[0]).toMatchObject({
+    timezone_name: "Europe/Istanbul",
+    active_seconds: 60,
+    credited_pages: 0,
+    credited_ayahs: 0,
+  });
+  await page.clock.runFor(60_000);
+  expect(automaticSessionPayloads).toHaveLength(1);
 
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

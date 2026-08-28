@@ -1055,6 +1055,18 @@ input:focus, select:focus, textarea:focus {
   gap: 3px;
 }
 
+.prayer-reading-session-time {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.prayer-reading-session-time strong {
+  font-variant-numeric: tabular-nums;
+}
+
 .prayer-reading-session-form {
   display: grid;
   grid-template-columns: minmax(120px, 0.55fr) minmax(150px, 1fr);

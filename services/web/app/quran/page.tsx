@@ -149,6 +149,8 @@ function QuranContent() {
   const [prayerReadingReady, setPrayerReadingReady] = useState(
     prayerReadingConfig === null,
   );
+  const [prayerReadingActiveSeconds, setPrayerReadingActiveSeconds] = useState(0);
+  const [prayerReadingFinished, setPrayerReadingFinished] = useState(false);
   const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
   const previousPage = useRef(currentPage);
   const mushafReader = useRef<HTMLElement | null>(null);
@@ -562,12 +564,25 @@ function QuranContent() {
       {prayerReadingConfig === null ? (
         <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
       ) : prayerReadingReady ? (
-        <PrayerReadingSessionBar
-          config={prayerReadingConfig}
-          currentPage={currentPage}
-          edition={selectedEdition}
-          surah={selectedSurah}
-        />
+        <>
+          {!prayerReadingFinished && (
+            <ReadingActivityTracker
+              currentPage={currentPage}
+              viewMode={viewMode}
+              creditPageProgress={false}
+              timezoneName={prayerReadingConfig.timezoneName}
+              onActiveSecondsChange={setPrayerReadingActiveSeconds}
+            />
+          )}
+          <PrayerReadingSessionBar
+            config={prayerReadingConfig}
+            currentPage={currentPage}
+            edition={selectedEdition}
+            surah={selectedSurah}
+            activeSeconds={prayerReadingActiveSeconds}
+            onFinished={() => setPrayerReadingFinished(true)}
+          />
+        </>
       ) : (
         <section className="surface prayer-reading-session" aria-live="polite">
           {t("common.loading")}

@@ -13,6 +13,9 @@ import {
 type ReadingActivityTrackerProps = {
   currentPage: number;
   viewMode: "text" | "mushaf";
+  creditPageProgress?: boolean;
+  timezoneName?: string;
+  onActiveSecondsChange?: (seconds: number) => void;
 };
 
 const HEARTBEAT_SECONDS = 60;
@@ -26,9 +29,16 @@ function browserTimezone(): string {
   }
 }
 
-export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivityTrackerProps) {
+export function ReadingActivityTracker({
+  currentPage,
+  viewMode,
+  creditPageProgress = true,
+  timezoneName,
+  onActiveSecondsChange,
+}: ReadingActivityTrackerProps) {
   const { session, isLoading: authLoading, loginGuest } = useAuth();
   const activeSeconds = useRef(0);
+  const totalActiveSeconds = useRef(0);
   const segmentStartedAt = useRef<Date | null>(null);
   const lastInteractionAt = useRef(0);
   const previousPage = useRef(currentPage);
@@ -38,10 +48,15 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
   const creditedPages = useRef(new Set<number>());
   const sending = useRef(new Set<string>());
   const authLoadingRef = useRef(authLoading);
+  const onActiveSecondsChangeRef = useRef(onActiveSecondsChange);
 
   useEffect(() => {
     authLoadingRef.current = authLoading;
   }, [authLoading]);
+
+  useEffect(() => {
+    onActiveSecondsChangeRef.current = onActiveSecondsChange;
+  }, [onActiveSecondsChange]);
 
   const deliver = useCallback(async (payload: AutomaticReadingPayload) => {
     if (sending.current.has(payload.id)) return;
@@ -58,6 +73,7 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
       await api.createAutomaticReadingSession(payload);
       const remaining = loadReadingActivityQueue().filter((item) => item.id !== payload.id);
       saveReadingActivityQueue(remaining);
+      window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (error) {
       if (!(error instanceof ApiError) || error.status === 429 || error.status >= 500) {
         enqueueReadingActivity(payload);
@@ -71,6 +87,7 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
     const seconds = activeSeconds.current;
     if (
       seconds >= HEARTBEAT_SECONDS &&
+      creditPageProgress &&
       viewModeRef.current === "mushaf" &&
       !creditedPages.current.has(currentPageRef.current)
     ) {
@@ -82,7 +99,7 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
     const endedAt = new Date();
     const payload: AutomaticReadingPayload = {
       id: generateUuidV7(),
-      timezone_name: browserTimezone(),
+      timezone_name: timezoneName || browserTimezone(),
       started_at: (segmentStartedAt.current || endedAt).toISOString(),
       ended_at: endedAt.toISOString(),
       active_seconds: seconds,
@@ -95,7 +112,7 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
     changedPages.current = new Set();
     segmentStartedAt.current = endedAt;
     void deliver(payload);
-  }, [deliver]);
+  }, [creditPageProgress, deliver, timezoneName]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -106,12 +123,12 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
   useEffect(() => {
     currentPageRef.current = currentPage;
     viewModeRef.current = viewMode;
-    if (viewMode === "mushaf" && previousPage.current !== currentPage) {
+    if (creditPageProgress && viewMode === "mushaf" && previousPage.current !== currentPage) {
       changedPages.current.add(currentPage);
       lastInteractionAt.current = Date.now();
     }
     previousPage.current = currentPage;
-  }, [currentPage, viewMode]);
+  }, [creditPageProgress, currentPage, viewMode]);
 
   useEffect(() => {
     segmentStartedAt.current ||= new Date();
@@ -130,6 +147,8 @@ export function ReadingActivityTracker({ currentPage, viewMode }: ReadingActivit
         Date.now() - lastInteractionAt.current <= IDLE_AFTER_MS;
       if (!isActive) return;
       activeSeconds.current += 1;
+      totalActiveSeconds.current += 1;
+      onActiveSecondsChangeRef.current?.(totalActiveSeconds.current);
       if (activeSeconds.current >= HEARTBEAT_SECONDS) finalizeSegment(false);
     }, 1000);
 
