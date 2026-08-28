@@ -7,6 +7,7 @@ import { api, type DuaEntry } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
+import { FavoriteHeartIcon } from "./FavoriteHeartIcon";
 
 function entryKey(entry: DuaEntry): string {
   return `${entry.collection}:${entry.source_number}`;
@@ -14,20 +15,6 @@ function entryKey(entry: DuaEntry): string {
 
 function entryAnchor(entry: DuaEntry): string {
   return `dua-${entry.collection}-${entry.source_number}`;
-}
-
-function FavoriteIcon({ active }: { active: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 20.35 10.55 19C5.4 14.36 2 11.28 2 7.5 2 4.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 16.5 2C19.58 2 22 4.42 22 7.5c0 3.78-3.4 6.86-8.55 11.51Z"
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function AudioIcon({ playing }: { playing: boolean }) {
@@ -49,10 +36,12 @@ export function DuaEntryList({
   entries,
   headingLevel = 2,
   onFavoriteChange,
+  compact = false,
 }: {
   entries: DuaEntry[];
   headingLevel?: 2 | 3;
   onFavoriteChange?: (entry: DuaEntry, isFavorite: boolean) => void;
+  compact?: boolean;
 }) {
   const { isLoading: authLoading, loginGuest, session } = useAuth();
   const { formatNumber, locale, t } = useI18n();
@@ -167,7 +156,7 @@ export function DuaEntryList({
   }
 
   return (
-    <div className="dua-entry-list">
+    <div className={`dua-entry-list${compact ? " is-compact" : ""}`}>
       {entries.map((entry) => {
         const key = entryKey(entry);
         const audio = entry.audio?.[0];
@@ -177,7 +166,11 @@ export function DuaEntryList({
         const readerName =
           locale === "ar" && audio?.reader_name_ar ? audio.reader_name_ar : audio?.reader_name;
         return (
-          <article className="dua-entry-card" id={entryAnchor(entry)} key={entry.id}>
+          <article
+            className={`dua-entry-card${compact ? " is-compact" : ""}`}
+            id={entryAnchor(entry)}
+            key={entry.id}
+          >
             <header className="dua-entry-head">
               <div>
                 <span className="dua-entry-number">#{formatNumber(entry.source_number)}</span>
@@ -221,21 +214,23 @@ export function DuaEntryList({
                     aria-busy={favoriteBusy}
                     disabled={favoriteBusy || authLoading}
                   >
-                    <FavoriteIcon active={favorite} />
+                    <FavoriteHeartIcon active={favorite} />
                   </button>
                 </div>
-                <span className="status-chip">
-                  {entry.repetition_label
-                    ? t("dua.repeatSequence", {
-                        count: entry.repetition_label
-                          .split(" · ")
-                          .map((value) => formatNumber(Number(value)))
-                          .join(" · "),
-                      })
-                    : entry.repetitions === 1
-                      ? t("dua.repeatOnce")
-                      : t("dua.repeatCount", { count: formatNumber(entry.repetitions) })}
-                </span>
+                {!compact ? (
+                  <span className="status-chip">
+                    {entry.repetition_label
+                      ? t("dua.repeatSequence", {
+                          count: entry.repetition_label
+                            .split(" · ")
+                            .map((value) => formatNumber(Number(value)))
+                            .join(" · "),
+                        })
+                      : entry.repetitions === 1
+                        ? t("dua.repeatOnce")
+                        : t("dua.repeatCount", { count: formatNumber(entry.repetitions) })}
+                  </span>
+                ) : null}
               </div>
             </header>
 
@@ -274,47 +269,51 @@ export function DuaEntryList({
               </div>
             ) : null}
 
-            <p className="dua-arabic" lang="ar" dir="rtl">
-              {entry.arabic_text}
-            </p>
+            {!compact ? (
+              <>
+                <p className="dua-arabic" lang="ar" dir="rtl">
+                  {entry.arabic_text}
+                </p>
 
-            {entry.translation?.transliteration ? (
-              <div className="dua-translation-block">
-                <span>{t("dua.transliteration")}</span>
-                <p>{entry.translation.transliteration}</p>
-              </div>
-            ) : null}
-
-            {locale !== "ar" && entry.translation ? (
-              <div className="dua-translation-block dua-meaning">
-                <span>{t("dua.meaning")}</span>
-                <p>{entry.translation.meaning_text}</p>
-              </div>
-            ) : null}
-
-            <details className="dua-provenance">
-              <summary>{t("dua.sourceAndEvidence")}</summary>
-              <div className="dua-provenance-body">
-                {entry.evidence.map((evidence, index) => (
-                  <div key={`${evidence.source_reference}-${index}`}>
-                    <strong>{evidence.source_reference}</strong>
-                    <span>
-                      {evidence.verification_status === "editorially_verified"
-                        ? t("dua.editoriallyVerified")
-                        : t("dua.sourceOnly")}
-                    </span>
+                {entry.translation?.transliteration ? (
+                  <div className="dua-translation-block">
+                    <span>{t("dua.transliteration")}</span>
+                    <p>{entry.translation.transliteration}</p>
                   </div>
-                ))}
-                {entry.source ? (
-                  <p>
-                    {t("dua.sourceEdition")}: {entry.source.title}.{" "}
-                    <a href={entry.source.source_url} target="_blank" rel="noreferrer">
-                      {t("dua.openSource")} ↗
-                    </a>
-                  </p>
                 ) : null}
-              </div>
-            </details>
+
+                {locale !== "ar" && entry.translation ? (
+                  <div className="dua-translation-block dua-meaning">
+                    <span>{t("dua.meaning")}</span>
+                    <p>{entry.translation.meaning_text}</p>
+                  </div>
+                ) : null}
+
+                <details className="dua-provenance">
+                  <summary>{t("dua.sourceAndEvidence")}</summary>
+                  <div className="dua-provenance-body">
+                    {entry.evidence.map((evidence, index) => (
+                      <div key={`${evidence.source_reference}-${index}`}>
+                        <strong>{evidence.source_reference}</strong>
+                        <span>
+                          {evidence.verification_status === "editorially_verified"
+                            ? t("dua.editoriallyVerified")
+                            : t("dua.sourceOnly")}
+                        </span>
+                      </div>
+                    ))}
+                    {entry.source ? (
+                      <p>
+                        {t("dua.sourceEdition")}: {entry.source.title}.{" "}
+                        <a href={entry.source.source_url} target="_blank" rel="noreferrer">
+                          {t("dua.openSource")} ↗
+                        </a>
+                      </p>
+                    ) : null}
+                  </div>
+                </details>
+              </>
+            ) : null}
           </article>
         );
       })}

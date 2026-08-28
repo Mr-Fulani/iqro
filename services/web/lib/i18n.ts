@@ -910,6 +910,7 @@ export const MESSAGES = {
   "quran.bookmarkLoginError": message("Не удалось войти для добавления закладки.", "Could not sign in to add a bookmark.", "تعذر الدخول لإضافة علامة.", "Yer imi eklemek için giriş yapılamadı."),
   "quran.bookmarkLabel": message("Сура {surah}:{ayah} (стр. {page})", "Surah {surah}:{ayah} (p. {page})", "السورة {surah}:{ayah} (ص {page})", "Sure {surah}:{ayah} (s. {page})"),
   "quran.bookmarkAdded": message("Закладка добавлена в личный кабинет.", "Bookmark added to your profile.", "أُضيفت العلامة إلى حسابك.", "Yer imi profilinize eklendi."),
+  "quran.bookmarkRemoved": message("Закладка удалена из избранного.", "Bookmark removed from favorites.", "أُزيلت العلامة من المفضلة.", "Yer imi favorilerden kaldırıldı."),
   "quran.eyebrow": message("Чтение Священного Писания", "Reading the Holy Quran", "قراءة القرآن الكريم", "Kur'an-ı Kerim okuma"),
   "quran.title": message(
     "Читать Коран — Мединский Мусхаф Хафс",
@@ -1113,6 +1114,7 @@ export const MESSAGES = {
   "quran.markReadTitle": message("Отметить как прочитанное", "Mark as read", "وضع علامة مقروء", "Okundu olarak işaretle"),
   "quran.mark": message("📍 Отметка", "📍 Mark", "📍 علامة", "📍 İşaret"),
   "quran.bookmarkTitle": message("Добавить в закладки", "Add bookmark", "إضافة علامة", "Yer imi ekle"),
+  "quran.bookmarkRemoveTitle": message("Удалить из закладок", "Remove bookmark", "إزالة العلامة", "Yer imini kaldır"),
   "quran.bookmark": message("🔖 Закладка", "🔖 Bookmark", "🔖 علامة", "🔖 Yer imi"),
   "quran.noAyahs": message("Аяты выбранной суры не найдены в каталоге.", "No ayahs found for the selected surah.", "لم توجد آيات للسورة المحددة.", "Seçilen sure için ayet bulunamadı."),
   "quran.mushafAlt": message("Страница Мусхафа {page}", "Mushaf page {page}", "صفحة المصحف {page}", "Mushaf sayfası {page}"),

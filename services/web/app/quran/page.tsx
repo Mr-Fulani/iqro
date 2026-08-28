@@ -20,6 +20,7 @@ import {
   type PrayerReadingSessionConfig,
 } from "../../components/PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
+import { FavoriteHeartIcon } from "../../components/FavoriteHeartIcon";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -28,6 +29,7 @@ import {
   api,
   ApiError,
   Ayah,
+  type Bookmark,
   type AyahTafsir,
   Hizb,
   Juz,
@@ -70,6 +72,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-
 
 const TRANSLATION_PREFERENCE_KEY_PREFIX = "iqro_quran_translation_v2";
 const READER_PREFERENCE_KEY_PREFIX = "iqro_quran_reader_preference_v1";
+const MUSHAF_VARIANT_PREFERENCE_KEY = "iqro_quran_mushaf_variant_v1";
 const DEFAULT_TRANSLATION_BY_LOCALE: Record<string, number | null> = {
   ar: null,
   en: 20,
@@ -114,6 +117,28 @@ function readLegacyTranslationPreference(locale: string): TranslationPreference 
 
 function readerPreferenceKey(locale: string): string {
   return `${READER_PREFERENCE_KEY_PREFIX}:${locale}`;
+}
+
+function readMushafVariantPreference(): number | null {
+  try {
+    const stored = window.localStorage.getItem(MUSHAF_VARIANT_PREFERENCE_KEY);
+    if (!stored || stored === "image") return null;
+    const sourceId = Number(stored);
+    return Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMushafVariantPreference(sourceId: number | null): void {
+  try {
+    window.localStorage.setItem(
+      MUSHAF_VARIANT_PREFERENCE_KEY,
+      sourceId === null ? "image" : String(sourceId),
+    );
+  } catch {
+    // Reading remains available when browser storage is blocked.
+  }
 }
 
 function readReaderPreference(locale: string): ReaderPreference | null {
@@ -312,6 +337,7 @@ function QuranContent() {
   const pendingNavigationPage = useRef<number | null>(null);
   const handledDeepLink = useRef<string | null>(null);
   const handledPageDeepLink = useRef<number | null>(null);
+  const pendingTextAyah = useRef<string | null>(null);
   const handledPrayerReadingStart = useRef(false);
   const ayahPlaybackRequestId = useRef(0);
   const playerControlRequestId = useRef(0);
@@ -386,6 +412,10 @@ function QuranContent() {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
+  const [savedAyahBookmarks, setSavedAyahBookmarks] = useState<Record<string, Bookmark>>({});
+  const [bookmarkStateReady, setBookmarkStateReady] = useState(false);
+  const [bookmarkBusyKeys, setBookmarkBusyKeys] = useState<Set<string>>(new Set());
+  const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
 
   // Load Editions
   useEffect(() => {
@@ -633,17 +663,54 @@ function QuranContent() {
             (mushaf.rendering.mode === "page-font" || mushaf.rendering.mode === "unicode-font"),
         );
         setFoundationMushafs(renderable);
-        setSelectedFoundationMushafId((sourceId) =>
-          sourceId !== null && renderable.some((mushaf) => mushaf.source_id === sourceId)
-            ? sourceId
-            : null,
-        );
+        const preferredSourceId = readMushafVariantPreference();
+        const resolvedSourceId = preferredSourceId !== null
+          && renderable.some((mushaf) => mushaf.source_id === preferredSourceId)
+          ? preferredSourceId
+          : null;
+        setSelectedFoundationMushafId(resolvedSourceId);
+        if (preferredSourceId !== null && resolvedSourceId === null) {
+          writeMushafVariantPreference(null);
+        }
       })
       .catch(() => {
         setFoundationMushafs([]);
         setSelectedFoundationMushafId(null);
       });
   }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      setSavedAyahBookmarks({});
+      setBookmarkStateReady(true);
+      return;
+    }
+    setBookmarkStateReady(false);
+    let cancelled = false;
+    void api
+      .getBookmarks()
+      .then((snapshot) => {
+        if (cancelled) return;
+        setSavedAyahBookmarks(
+          Object.fromEntries(
+            snapshot.results.flatMap((bookmark) =>
+              bookmark.ayah && !bookmark.deleted_at
+                ? [[`${bookmark.ayah.surah_number}:${bookmark.ayah.ayah_number}`, bookmark]]
+                : [],
+            ),
+          ),
+        );
+        setBookmarkStateReady(true);
+      })
+      .catch(() => {
+        // The public Quran reader remains usable if personal state is unavailable.
+        if (!cancelled) setBookmarkStateReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session]);
 
   // Load Surahs when edition changes
   useEffect(() => {
@@ -894,11 +961,24 @@ function QuranContent() {
 
   const navigateToAyah = useCallback((ayahNumber: number) => {
     const ayah = ayahs.find((item) => item.number === ayahNumber);
-    if (!ayah?.pages.length) return;
-    setViewMode("mushaf");
-    setSelectedMushafAyah(`${selectedSurah}:${ayahNumber}`);
-    setCurrentPage(ayah.pages[0]);
+    if (!ayah) return;
+    const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    pendingTextAyah.current = ayahKey;
+    setViewMode("text");
+    setSelectedMushafAyah(ayahKey);
+    if (ayah.pages.length > 0) setCurrentPage(ayah.pages[0]);
   }, [ayahs, selectedSurah]);
+
+  useEffect(() => {
+    const ayahKey = pendingTextAyah.current;
+    if (viewMode !== "text" || !ayahKey || ayahKey !== selectedMushafAyah) return;
+    const target = document.getElementById(`quran-ayah-${ayahKey.replace(":", "-")}`);
+    if (!target) return;
+    pendingTextAyah.current = null;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [ayahs, selectedMushafAyah, viewMode]);
 
   const handlePlayAyah = useCallback((ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
@@ -998,7 +1078,9 @@ function QuranContent() {
     }
   };
 
-  const handleAddBookmark = async (ayahNumber?: number) => {
+  const handleToggleBookmark = async (ayahNumber: number) => {
+    const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    if (!bookmarkStateReady || bookmarkBusyKeys.has(ayahKey)) return;
     if (!isLoggedIn) {
       const res = await loginGuest();
       if (!res) {
@@ -1007,23 +1089,46 @@ function QuranContent() {
       }
     }
 
+    setBookmarkBusyKeys((current) => new Set(current).add(ayahKey));
     try {
-      await api.createBookmark({
-        edition_code: selectedEdition,
-        page_number: currentPage,
-        surah_number: selectedSurah,
-        ayah_number: ayahNumber || undefined,
-        label: t("quran.bookmarkLabel", {
-          surah: selectedSurah,
-          ayah: ayahNumber || 1,
-          page: currentPage,
-        }),
-        color_key: "emerald",
-      });
-      setFeedbackMessage({ text: t("quran.bookmarkAdded"), type: "ok" });
+      const existing = savedAyahBookmarks[ayahKey];
+      if (existing) {
+        await api.deleteBookmark(existing.id, existing.revision);
+        setSavedAyahBookmarks((current) => {
+          const next = { ...current };
+          delete next[ayahKey];
+          return next;
+        });
+        setFeedbackMessage({ text: t("quran.bookmarkRemoved"), type: "ok" });
+      } else {
+        const created = await api.createBookmark({
+          edition_code: selectedEdition,
+          page_number: currentPage,
+          surah_number: selectedSurah,
+          ayah_number: ayahNumber,
+          label: t("quran.bookmarkLabel", {
+            surah: selectedSurah,
+            ayah: ayahNumber,
+            page: currentPage,
+          }),
+          color_key: "emerald",
+        });
+        setSavedAyahBookmarks((current) => ({ ...current, [ayahKey]: created }));
+        setBookmarkAnimationKey(ayahKey);
+        window.setTimeout(() => {
+          setBookmarkAnimationKey((current) => current === ayahKey ? null : current);
+        }, 900);
+        setFeedbackMessage({ text: t("quran.bookmarkAdded"), type: "ok" });
+      }
       setTimeout(() => setFeedbackMessage(null), 4000);
     } catch (err) {
       setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
+    } finally {
+      setBookmarkBusyKeys((current) => {
+        const next = new Set(current);
+        next.delete(ayahKey);
+        return next;
+      });
     }
   };
 
@@ -1129,7 +1234,9 @@ function QuranContent() {
               value={selectedFoundationMushafId === null ? "image" : String(selectedFoundationMushafId)}
               onChange={(event) => {
                 const value = event.target.value;
-                setSelectedFoundationMushafId(value === "image" ? null : Number(value));
+                const sourceId = value === "image" ? null : Number(value);
+                setSelectedFoundationMushafId(sourceId);
+                writeMushafVariantPreference(sourceId);
                 setSelectedMushafAyah(null);
               }}
             >
@@ -1143,10 +1250,17 @@ function QuranContent() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t("quran.surahSelect")}</label>
+            <label className="form-label" htmlFor="surah-navigation">
+              {t("quran.surahSelect")}
+            </label>
             <select
+              id="surah-navigation"
               value={selectedSurah}
-              onChange={(e) => setSelectedSurah(Number(e.target.value))}
+              onChange={(event) => {
+                setViewMode("text");
+                setSelectedMushafAyah(null);
+                setSelectedSurah(Number(event.target.value));
+              }}
               disabled={surahs.length === 0}
             >
               {surahs.map((s) => (
@@ -1433,6 +1547,9 @@ function QuranContent() {
                 const isAyahActive = playingMushafAyah === ayahKey;
                 const isAyahPlaying = isAyahActive && isAudioPlaying;
                 const isAyahRepeating = isAyahActive && audioSettings.repeatMode === "ayah";
+                const savedBookmark = savedAyahBookmarks[ayahKey];
+                const bookmarkBusy = bookmarkBusyKeys.has(ayahKey);
+                const bookmarkAnimating = bookmarkAnimationKey === ayahKey;
                 const ayahTafsir = tafsirsByVerse[ayahKey];
                 const isTafsirExpanded = expandedTafsirVerse === ayahKey;
                 const playbackActionLabel = isAyahPlaying
@@ -1443,7 +1560,8 @@ function QuranContent() {
                 return (
                   <article
                     key={ayah.id}
-                    className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}`}
+                    id={`quran-ayah-${selectedSurah}-${ayah.number}`}
+                    className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}${selectedMushafAyah === ayahKey ? " is-navigation-target" : ""}`}
                   >
                     <div className="ayah-header">
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1497,13 +1615,20 @@ function QuranContent() {
                             <span aria-hidden="true">📍</span>
                           </button>
                           <button
-                            className="btn btn-sm ayah-icon-button"
+                            className={`btn btn-sm ayah-icon-button quran-favorite-button${savedBookmark ? " is-saved" : ""}${bookmarkAnimating ? " is-animating" : ""}`}
                             type="button"
-                            onClick={() => void handleAddBookmark(ayah.number)}
-                            aria-label={t("quran.bookmarkTitle")}
-                            title={t("quran.bookmarkTitle")}
+                            onClick={() => void handleToggleBookmark(ayah.number)}
+                            aria-label={savedBookmark
+                              ? t("quran.bookmarkRemoveTitle")
+                              : t("quran.bookmarkTitle")}
+                            title={savedBookmark
+                              ? t("quran.bookmarkRemoveTitle")
+                              : t("quran.bookmarkTitle")}
+                            aria-pressed={Boolean(savedBookmark)}
+                            aria-busy={bookmarkBusy || !bookmarkStateReady}
+                            disabled={bookmarkBusy || !bookmarkStateReady}
                           >
-                            <span aria-hidden="true">🔖</span>
+                            <FavoriteHeartIcon active={Boolean(savedBookmark)} />
                           </button>
                         </div>
                       </div>

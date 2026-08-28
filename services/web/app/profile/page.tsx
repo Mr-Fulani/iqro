@@ -550,6 +550,7 @@ export default function ProfilePage() {
               <DuaEntryList
                 entries={duaFavoriteEntries}
                 headingLevel={3}
+                compact
                 onFavoriteChange={handleDuaFavoriteChange}
               />
             ) : (

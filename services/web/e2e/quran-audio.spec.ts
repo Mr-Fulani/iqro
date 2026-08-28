@@ -1019,8 +1019,101 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
     }
   }
 
-  await variant.selectOption("image");
+  await page.reload();
+  const restoredVariant = page.getByLabel("Вариант Мусхафа");
+  await expect(restoredVariant).toHaveValue("19");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute(
+    "data-page-number",
+    "128",
+  );
+
+  await restoredVariant.selectOption("image");
+  await page.reload();
+  await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("image");
+  await page.getByRole("button", { name: /Мусхаф/ }).click();
   await expect(page.locator(".mushaf-image")).toBeVisible();
+});
+
+test("Quran favorite uses an animated heart and toggles the saved ayah", async ({ page }) => {
+  const session = {
+    token_type: "Bearer",
+    access_token: "quran-favorite-access-token",
+    expires_in: 900,
+    access_expires_at: "2026-08-29T10:15:00Z",
+    user: {
+      id: "00000000-0000-7000-8000-000000000701",
+      status: "active",
+      preferred_locale: "ru",
+      email: "reader@example.com",
+    },
+    device: {
+      id: "00000000-0000-7000-8000-000000000702",
+      platform: "web",
+      locale: "ru",
+      app_version: "1.0.0",
+      bootstrap_generation: 1,
+    },
+  };
+  let savedBookmark: Record<string, unknown> | null = null;
+  let deleteRequested = false;
+
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: session }));
+  await page.route("**/api/v1/me/bookmarks**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/v1/me/bookmarks" && request.method() === "GET") {
+      return route.fulfill({
+        json: { next: null, previous: null, results: savedBookmark ? [savedBookmark] : [] },
+      });
+    }
+    if (url.pathname === "/api/v1/me/bookmarks" && request.method() === "POST") {
+      savedBookmark = {
+        id: "00000000-0000-7000-8000-000000000703",
+        edition_code: "madani-hafs",
+        page_number: 128,
+        ayah: {
+          id: ayahs[0].id,
+          surah_number: 6,
+          ayah_number: 1,
+          surah_name_ar: surah.name_ar,
+          surah_name_en: surah.name_en,
+          surah_name_ru: surah.name_ru,
+        },
+        label: "Сура 6:1 (стр. 128)",
+        color_key: "emerald",
+        note: "",
+        revision: 1,
+        deleted_at: null,
+      };
+      return route.fulfill({ status: 201, json: savedBookmark });
+    }
+    if (request.method() === "DELETE") {
+      deleteRequested = true;
+      const deleted = { ...savedBookmark, revision: 2, deleted_at: "2026-08-29T10:00:00Z" };
+      savedBookmark = null;
+      return route.fulfill({ json: deleted });
+    }
+    return route.fallback();
+  });
+
+  await page.goto("/quran?surah=6");
+  const addFavorite = page.getByRole("button", { name: "Добавить в закладки" }).first();
+  await expect(addFavorite.locator(".favorite-heart-icon")).toBeVisible();
+  await expect(addFavorite).toHaveAttribute("aria-pressed", "false");
+
+  await addFavorite.click();
+  const removeFavorite = page.getByRole("button", { name: "Удалить из закладок" }).first();
+  await expect(removeFavorite).toHaveAttribute("aria-pressed", "true");
+  await expect(removeFavorite).toHaveClass(/is-saved/);
+  await expect(removeFavorite).toHaveClass(/is-animating/);
+
+  await removeFavorite.click();
+  await expect(page.getByRole("button", { name: "Добавить в закладки" }).first()).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(deleteRequested).toBe(true);
 });
 
 test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {
@@ -1039,7 +1132,9 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(repeatButton).toHaveText("🔁");
   await expect(speedButton).toHaveText("1×");
   await expect(firstAyah.getByRole("button", { name: "Отметить как прочитанное" })).toHaveText("📍");
-  await expect(firstAyah.getByRole("button", { name: "Добавить в закладки" })).toHaveText("🔖");
+  await expect(
+    firstAyah.getByRole("button", { name: "Добавить в закладки" }).locator(".favorite-heart-icon"),
+  ).toBeVisible();
 
   await speedButton.click();
   const advancedPlayer = page.getByRole("region", { name: "Расширенный аудиоплеер" });
@@ -1048,7 +1143,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,25×" })).toHaveText("1,25×");
 
   await playButton.click();
-  const audio = page.locator(".mushaf-audio-now-playing audio");
+  const audio = page.locator(".mushaf-audio-now-playing audio[src]");
   await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
   await expect(firstAyah).toHaveClass(/is-audio-active/);
   await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:1/)).toBeVisible();
@@ -1316,6 +1411,29 @@ test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", asy
 });
 
 test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ page }) => {
+  const nextSurah = {
+    ...surah,
+    id: "00000000-0000-7000-8000-000000000007",
+    number: 7,
+    name_ar: "الأعراف",
+    name_en: "Al-A'raf",
+    name_ru: "Аль-Араф",
+    ayah_count: 1,
+    first_page: 151,
+  };
+  const nextSurahAyah = {
+    ...ayahs[0],
+    id: "00000000-0000-7000-8200-000000000007",
+    surah_number: 7,
+    text_uthmani: "المص",
+    pages: [151],
+  };
+  await page.route("**/api/v1/quran/editions/madani-hafs/surahs", (route) =>
+    route.fulfill({ json: [surah, nextSurah] }),
+  );
+  await page.route("**/api/v1/quran/editions/madani-hafs/surahs/7/ayahs", (route) =>
+    route.fulfill({ json: [nextSurahAyah] }),
+  );
   await page.goto("/quran?surah=6");
 
   await expect(page.getByLabel("Джуз (1-30)").locator("option")).toHaveCount(31);
@@ -1328,7 +1446,21 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
   await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
 
+  await page.getByLabel("Выбор суры (1–114)").selectOption("7");
+  await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
+  await expect(page.locator(".mushaf-image")).toHaveCount(0);
+  await expect(page.locator("#quran-ayah-7-1 .quran-arabic-text")).toContainText("المص");
+
+  await page.getByLabel("Выбор суры (1–114)").selectOption("6");
+  await expect(page.getByLabel(/Аят суры/).locator("option")).toHaveCount(3);
+  await page.getByLabel("Хизб (1-60)").selectOption("13");
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+
   await page.getByLabel(/Аят суры/).selectOption("2");
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
-  await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
+  await expect(page.locator(".mushaf-image")).toHaveCount(0);
+  await expect(page.locator("#quran-ayah-6-2")).toHaveClass(/is-navigation-target/);
+  await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text")).toContainText(
+    "هُوَ ٱلَّذِى خَلَقَكُم",
+  );
 });

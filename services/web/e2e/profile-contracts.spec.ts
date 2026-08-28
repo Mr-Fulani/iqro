@@ -258,7 +258,9 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/profile");
   await expect(page.getByRole("heading", { level: 3, name: "Избранное" })).toBeVisible();
-  await expect(page.getByText("الْحَمْدُ للَّهِ الَّذِي", { exact: false })).toBeVisible();
+  await expect(page.locator(".profile-favorites .dua-entry-list.is-compact")).toBeVisible();
+  await expect(page.locator(".profile-favorites .dua-arabic")).toHaveCount(0);
+  await expect(page.locator(".profile-favorites .dua-translation-block")).toHaveCount(0);
   await expect(page.getByText("Тестовая закладка")).toBeVisible();
   await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна" })).toHaveAttribute(
     "href",
@@ -276,6 +278,10 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
 
   await page.getByRole("button", { name: /^Ду’а\s+1$/ }).click();
   await expect(page.getByText("Тестовая закладка")).toHaveCount(0);
+  await expect(page.getByRole("heading", {
+    level: 3,
+    name: "Слова поминания при пробуждении ото сна",
+  })).toBeVisible();
   await page.getByRole("button", { name: "Прослушать ду’а" }).click();
   await expect(page.locator(".dua-audio-panel audio")).toHaveAttribute(
     "src",
