@@ -26,6 +26,7 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
           <nav className="footer-column" aria-label={t("footer.sections")}>
             <p className="footer-column-title">{t("footer.sections")}</p>
             <Link href={localizedPath(locale, "/quran")}>{t("footer.quran")}</Link>
+            <Link href={localizedPath(locale, "/planner")}>{t("nav.planner")}</Link>
             <Link href={localizedPath(locale, "/dua")}>{t("nav.dua")}</Link>
             <Link href={localizedPath(locale, "/audio/reciters")}>{t("footer.reciters")}</Link>
             <Link href={localizedPath(locale, "/prayer")}>{t("footer.prayer")}</Link>

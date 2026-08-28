@@ -22,6 +22,7 @@ export function Header() {
 
   const navItems = [
     { href: "/quran", label: t("nav.quran"), icon: "📖" },
+    { href: "/planner", label: t("nav.planner"), icon: "🗓️" },
     { href: "/dua", label: t("nav.dua"), icon: "🤲" },
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },

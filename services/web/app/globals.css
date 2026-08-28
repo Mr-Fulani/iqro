@@ -1085,6 +1085,371 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* -------------------------------------------------------------------------
+   Reading planner and history
+------------------------------------------------------------------------- */
+.planner-page,
+.planner-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.planner-summary {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.16), transparent 34%),
+    linear-gradient(145deg, #ffffff 0%, #f6fffb 100%);
+}
+
+.planner-summary-head,
+.planner-calendar-head {
+  align-items: flex-start;
+}
+
+.planner-summary-actions,
+.planner-range,
+.planner-history-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planner-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planner-stats article {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.planner-stats strong {
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.planner-stats span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.planner-calm-note {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+}
+
+.planner-calendar-section,
+.planner-history,
+.planner-day-detail {
+  min-width: 0;
+}
+
+.planner-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.planner-weekday {
+  min-width: 0;
+  padding: 2px 4px 6px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.planner-day {
+  min-width: 0;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.planner-day:hover,
+.planner-day:focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.planner-day.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-border);
+}
+
+.planner-day.is-completed {
+  border-color: var(--success-border);
+  background: var(--success-subtle);
+}
+
+.planner-day.is-partial {
+  border-color: var(--warning-border);
+  background: var(--warning-subtle);
+}
+
+.planner-day.is-missed {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.planner-day.is-pending {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.planner-day.is-no_goal {
+  background: var(--bg-subtle);
+}
+
+.planner-day-number {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.planner-day-number b {
+  font: inherit;
+}
+
+.planner-day-number em {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.planner-day-state {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planner-day small {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planner-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.planner-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.planner-legend i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-subtle);
+}
+
+.planner-legend i.is-completed {
+  border-color: var(--success-border);
+  background: var(--success-subtle);
+}
+
+.planner-legend i.is-partial {
+  border-color: var(--warning-border);
+  background: var(--warning-subtle);
+}
+
+.planner-legend i.is-missed {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.planner-legend i.is-pending {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.planner-day-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.planner-detail-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+
+.planner-detail-card > span {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.planner-detail-card small {
+  color: var(--text-secondary);
+}
+
+.planner-prayer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.planner-prayer-badges span {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.planner-prayer-badges span.is-complete {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+}
+
+.planner-history-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.planner-history-group {
+  display: grid;
+  gap: 9px;
+}
+
+.planner-history-group + .planner-history-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.planner-history-date {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.planner-history-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.planner-history-entry.is-manual {
+  background: #fffdf7;
+}
+
+.planner-history-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.planner-history-entry-copy,
+.planner-history-entry > div:not(.planner-history-actions):not(.planner-history-edit) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.planner-history-entry small {
+  color: var(--text-secondary);
+}
+
+.planner-history-edit {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(145px, 1fr) minmax(145px, 0.8fr) auto;
+  align-items: end;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.planner-history-edit .form-group {
+  margin: 0;
+}
+
+.planner-history-empty {
+  padding: 22px 0 4px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.home-planner-cta {
+  border-color: var(--primary-border);
+  background:
+    radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.12), transparent 38%),
+    var(--panel);
+}
+
+/* -------------------------------------------------------------------------
    Featured Reciters
 ------------------------------------------------------------------------- */
 .reciter-showcase {
@@ -3264,6 +3629,15 @@ input:focus, select:focus, textarea:focus {
     transform: none;
   }
 
+  .planner-day {
+    transition: none;
+  }
+
+  .planner-day:hover,
+  .planner-day:focus-visible {
+    transform: none;
+  }
+
   .social-link {
     transition: none;
   }
@@ -3303,6 +3677,19 @@ input:focus, select:focus, textarea:focus {
 
   .prayer-reading-session-form {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .planner-stats,
+  .planner-day-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planner-history-edit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planner-history-edit .planner-history-actions {
+    grid-column: 1 / -1;
   }
 
   .prayer-reading-slots {
@@ -3546,6 +3933,76 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 520px) {
+  .planner-page,
+  .planner-dashboard {
+    gap: 16px;
+  }
+
+  .planner-summary-actions,
+  .planner-summary-actions .btn,
+  .planner-range,
+  .planner-range .btn,
+  .home-planner-cta .btn {
+    width: 100%;
+  }
+
+  .planner-range .btn {
+    flex: 1 1 0;
+  }
+
+  .planner-calendar {
+    gap: 4px;
+  }
+
+  .planner-weekday {
+    padding-inline: 1px;
+    font-size: 9px;
+  }
+
+  .planner-day {
+    min-height: 58px;
+    gap: 2px;
+    padding: 5px 3px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .planner-day-number {
+    font-size: 14px;
+  }
+
+  .planner-day-number em {
+    display: none;
+  }
+
+  .planner-day-state,
+  .planner-day small {
+    display: none;
+  }
+
+  .planner-legend {
+    gap: 8px 10px;
+  }
+
+  .planner-history-entry {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .planner-history-entry > .planner-history-actions {
+    grid-column: 1 / -1;
+    padding-inline-start: 46px;
+  }
+
+  .planner-history-edit,
+  .planner-stats,
+  .planner-day-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-history-edit .planner-history-actions {
+    padding-inline-start: 0;
+  }
+
   .global-audio-player-spacer.is-compact {
     height: 158px;
   }

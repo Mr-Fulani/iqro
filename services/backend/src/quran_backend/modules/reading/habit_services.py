@@ -7,7 +7,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException, NotFound, ValidationError
@@ -327,6 +327,7 @@ def update_prayer_reading_check_in(  # noqa: PLR0913
         amount=Decimal(pages),
         client_updated_at=client_updated_at,
         device_id=device_id,
+        allow_prayer_check_in=True,
     )
     check_in.pages = pages
     check_in.client_updated_at = client_updated_at
@@ -373,6 +374,7 @@ def delete_prayer_reading_check_in(
             base_revision=session.revision,
             client_updated_at=client_updated_at,
             device_id=device_id,
+            allow_prayer_check_in=True,
         )
     check_in.delete()
 
@@ -630,9 +632,14 @@ def update_manual_session(  # noqa: PLR0913
     amount: Decimal,
     client_updated_at: datetime,
     device_id: uuid.UUID | None = None,
+    allow_prayer_check_in: bool = False,
 ) -> ReadingSession:
     User.objects.select_for_update().only("id").get(id=user.id)
-    session = _manual_session_for_update(user, session_id)
+    session = _manual_session_for_update(
+        user,
+        session_id,
+        allow_prayer_check_in=allow_prayer_check_in,
+    )
     if session.revision != base_revision:
         raise ReadingSessionRevisionConflictError
     _validate_manual_date(local_date, timezone_name)
@@ -666,16 +673,21 @@ def update_manual_session(  # noqa: PLR0913
 
 
 @transaction.atomic
-def discard_manual_session(
+def discard_manual_session(  # noqa: PLR0913
     *,
     user: User,
     session_id: uuid.UUID,
     base_revision: int,
     client_updated_at: datetime,
     device_id: uuid.UUID | None = None,
+    allow_prayer_check_in: bool = False,
 ) -> ReadingSession:
     User.objects.select_for_update().only("id").get(id=user.id)
-    session = _manual_session_for_update(user, session_id)
+    session = _manual_session_for_update(
+        user,
+        session_id,
+        allow_prayer_check_in=allow_prayer_check_in,
+    )
     if session.revision != base_revision:
         raise ReadingSessionRevisionConflictError
     old_goal = session.goal
@@ -705,12 +717,168 @@ def discard_manual_session(
     return session
 
 
-def list_reading_sessions(user: User, *, limit: int) -> list[ReadingSession]:
+def list_reading_sessions(
+    user: User,
+    *,
+    limit: int,
+    source: str | None = None,
+) -> list[ReadingSession]:
+    queryset = ReadingSession.objects.filter(user=user, deleted_at__isnull=True)
+    if source is not None:
+        queryset = queryset.filter(source=source)
     return list(
-        ReadingSession.objects.filter(user=user, deleted_at__isnull=True)
-        .select_related("goal", "device")
-        .order_by("-local_date", "-created_at")[:limit]
+        queryset.select_related("goal", "device").order_by("-local_date", "-created_at")[:limit]
     )
+
+
+def get_reading_planner_history(
+    user: User,
+    *,
+    days: int,
+    fallback_timezone_name: str | None = None,
+) -> dict[str, Any]:
+    active_goal = get_active_goal(user)
+    prayer_plan = PrayerReadingPlan.objects.filter(user=user).only("timezone_name").first()
+    timezone_name = (
+        active_goal.timezone_name
+        if active_goal is not None
+        else prayer_plan.timezone_name
+        if prayer_plan is not None
+        else fallback_timezone_name or user.timezone or "UTC"
+    )
+    local_today = _local_date(timezone.now(), timezone_name)
+    first_date = local_today - timedelta(days=days - 1)
+    goals = list(
+        ReadingGoal.objects.filter(user=user, started_on__lte=local_today)
+        .filter(Q(ended_on__isnull=True) | Q(ended_on__gte=first_date))
+        .order_by("started_on", "created_at")
+    )
+    progress_by_goal_date = {
+        (progress.goal_id, progress.local_date): progress
+        for progress in GoalProgress.objects.filter(
+            user=user,
+            local_date__gte=first_date,
+            local_date__lte=local_today,
+        )
+    }
+    reading_dates = set(
+        ReadingSession.objects.filter(
+            user=user,
+            deleted_at__isnull=True,
+            local_date__gte=first_date,
+            local_date__lte=local_today,
+        )
+        .filter(
+            Q(source=ReadingSessionSource.MANUAL)
+            | Q(active_seconds__gt=0)
+            | Q(credited_pages__gt=0)
+            | Q(credited_ayahs__gt=0)
+        )
+        .values_list("local_date", flat=True)
+    )
+    automatic_by_date = {
+        row["local_date"]: row
+        for row in ReadingSession.objects.filter(
+            user=user,
+            source=ReadingSessionSource.AUTOMATIC,
+            deleted_at__isnull=True,
+            local_date__gte=first_date,
+            local_date__lte=local_today,
+        )
+        .filter(Q(active_seconds__gt=0) | Q(credited_pages__gt=0) | Q(credited_ayahs__gt=0))
+        .values("local_date")
+        .annotate(
+            session_count=Count("id"),
+            active_seconds=Sum("active_seconds"),
+            pages=Sum("credited_pages"),
+            ayahs=Sum("credited_ayahs"),
+        )
+    }
+    prayer_by_date: dict[date, list[PrayerReadingCheckIn]] = {}
+    for check_in in (
+        PrayerReadingCheckIn.objects.filter(
+            user=user,
+            local_date__gte=first_date,
+            local_date__lte=local_today,
+        )
+        .select_related("reading_session", "device")
+        .order_by("local_date", "created_at")
+    ):
+        prayer_by_date.setdefault(check_in.local_date, []).append(check_in)
+
+    snapshots: list[dict[str, Any]] = []
+    for offset in range(days):
+        local_date = first_date + timedelta(days=offset)
+        applicable_goals = [
+            goal
+            for goal in goals
+            if goal.started_on <= local_date
+            and (goal.ended_on is None or goal.ended_on >= local_date)
+        ]
+        goal = (
+            max(applicable_goals, key=lambda item: (item.started_on, item.created_at))
+            if applicable_goals
+            else None
+        )
+        progress = progress_by_goal_date.get((goal.id, local_date)) if goal is not None else None
+        achieved = progress.achieved_amount if progress is not None else Decimal("0")
+        check_ins = prayer_by_date.get(local_date, [])
+        automatic = automatic_by_date.get(local_date)
+        snapshots.append(
+            {
+                "local_date": local_date.isoformat(),
+                "state": _planner_day_state(
+                    goal=goal,
+                    achieved=achieved,
+                    local_date=local_date,
+                    local_today=local_today,
+                ),
+                "has_reading": local_date in reading_dates,
+                "goal": (
+                    {
+                        "id": str(goal.id),
+                        "metric": goal.metric,
+                        "target_amount": _amount_string(goal.target_amount),
+                        "achieved_amount": _amount_string(achieved),
+                        "remaining_amount": _amount_string(
+                            max(goal.target_amount - achieved, Decimal("0"))
+                        ),
+                    }
+                    if goal is not None
+                    else None
+                ),
+                "prayer_check_ins": [
+                    prayer_reading_check_in_snapshot(check_in) for check_in in check_ins
+                ],
+                "prayer_pages": sum(check_in.pages for check_in in check_ins),
+                "prayer_count": len(check_ins),
+                "automatic_sessions": automatic["session_count"] if automatic else 0,
+                "automatic_active_seconds": automatic["active_seconds"] if automatic else 0,
+                "automatic_pages": automatic["pages"] if automatic else 0,
+                "automatic_ayahs": automatic["ayahs"] if automatic else 0,
+            }
+        )
+    return {
+        "local_date": local_today.isoformat(),
+        "timezone_name": timezone_name,
+        "days": snapshots,
+    }
+
+
+def _planner_day_state(
+    *,
+    goal: ReadingGoal | None,
+    achieved: Decimal,
+    local_date: date,
+    local_today: date,
+) -> str:
+    if goal is None:
+        return "no_goal"
+    if achieved >= goal.target_amount:
+        return "completed"
+    if achieved > 0:
+        return "partial"
+    return "pending" if local_date == local_today else "missed"
 
 
 def get_today_summary(
@@ -933,7 +1101,12 @@ def recalculate_reading_streak(
     return streak
 
 
-def _manual_session_for_update(user: User, session_id: uuid.UUID) -> ReadingSession:
+def _manual_session_for_update(
+    user: User,
+    session_id: uuid.UUID,
+    *,
+    allow_prayer_check_in: bool,
+) -> ReadingSession:
     try:
         session = (
             ReadingSession.objects.select_for_update(of=("self",))
@@ -946,6 +1119,11 @@ def _manual_session_for_update(user: User, session_id: uuid.UUID) -> ReadingSess
         raise ReadingSessionImmutableError
     if session.status == ReadingSessionStatus.DISCARDED:
         raise ReadingSessionNotFoundError
+    if (
+        not allow_prayer_check_in
+        and PrayerReadingCheckIn.objects.filter(reading_session_id=session.id).exists()
+    ):
+        raise ReadingSessionImmutableError
     return session
 
 

@@ -32,6 +32,8 @@ from quran_backend.modules.reading.habit_serializers import (
     ReadingGoalEnvelopeSerializer,
     ReadingGoalOutputSerializer,
     ReadingGoalWriteSerializer,
+    ReadingPlannerOutputSerializer,
+    ReadingPlannerQuerySerializer,
     ReadingSessionDeleteSerializer,
     ReadingSessionListOutputSerializer,
     ReadingSessionListQuerySerializer,
@@ -46,6 +48,7 @@ from quran_backend.modules.reading.habit_services import (
     discard_manual_session,
     get_active_goal,
     get_prayer_reading_day,
+    get_reading_planner_history,
     get_today_summary,
     goal_snapshot,
     list_reading_sessions,
@@ -180,8 +183,28 @@ class ReadingSessionListView(PrivateNoStoreResponseMixin, APIView):
         sessions = list_reading_sessions(
             _authenticated_user(request),
             limit=query.validated_data["limit"],
+            source=query.validated_data.get("source"),
         )
         return Response({"results": [session_snapshot(session) for session in sessions]})
+
+
+@extend_schema(tags=["reading-habit"])
+class ReadingPlannerView(PrivateNoStoreResponseMixin, APIView):
+    @extend_schema(
+        operation_id="reading_planner_retrieve",
+        responses=ReadingPlannerOutputSerializer,
+        parameters=[ReadingPlannerQuerySerializer],
+    )
+    def get(self, request: Request) -> Response:
+        query = ReadingPlannerQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            get_reading_planner_history(
+                _authenticated_user(request),
+                days=query.validated_data["days"],
+                fallback_timezone_name=query.validated_data.get("timezone_name"),
+            )
+        )
 
 
 @extend_schema(tags=["reading-habit"])
@@ -409,6 +432,7 @@ __all__ = [
     "PrayerReadingPlanView",
     "ReadingGoalNotFoundError",
     "ReadingGoalView",
+    "ReadingPlannerView",
     "ReadingSessionListView",
     "TodayView",
 ]

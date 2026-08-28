@@ -668,7 +668,7 @@ test("arabic reader does not select an English translation automatically", async
   await expect(
     page
       .getByText(
-        "النص العربي هو الأصل. سيُتاح الشرح العربي بشكل مستقل في قسم التفسير، لذلك لا نختار ترجمة إنجليزية تلقائيًا.",
+        "النص العربي هو الأصل. الشرح العربي متاح بشكل مستقل في قسم التفسير، لذلك لا نختار ترجمة إنجليزية تلقائيًا.",
         { exact: true },
       )
       .filter({ visible: true }),

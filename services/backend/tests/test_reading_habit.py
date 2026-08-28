@@ -205,6 +205,136 @@ def test_manual_session_update_and_delete_recalculate_progress_and_streak() -> N
     assert GoalProgress.objects.filter(goal_id=goal["id"]).exists() is False
 
 
+def test_planner_history_distinguishes_missed_partial_and_completed_days() -> None:
+    user = User.objects.create_user(timezone="UTC")
+    client = _authenticated_client(user)
+    local_today = timezone.now().date()
+    goal_response = client.put(
+        reverse("reading:reading-goal"),
+        _goal_payload(metric="minutes", amount="2"),
+        format="json",
+    )
+    goal_id = goal_response.json()["id"]
+    ReadingGoal.objects.filter(id=goal_id).update(started_on=local_today - timedelta(days=2))
+
+    for local_date, amount in (
+        (local_today - timedelta(days=3), "1"),
+        (local_today - timedelta(days=1), "1"),
+        (local_today, "3"),
+    ):
+        response = client.post(
+            reverse("reading:reading-session-manual"),
+            {
+                "id": str(uuid.uuid7()),
+                "timezone_name": "UTC",
+                "local_date": local_date.isoformat(),
+                "metric": "minutes",
+                "amount": amount,
+                "client_updated_at": timezone.now().isoformat(),
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+
+    plan, _created = set_prayer_reading_plan(
+        user=user,
+        pages_per_prayer=2,
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=timezone.now(),
+    )
+    check_in, _created = record_prayer_reading_check_in(
+        user=user,
+        check_in_id=uuid.uuid7(),
+        session_id=uuid.uuid7(),
+        prayer="fajr",
+        pages=3,
+        local_date=local_today - timedelta(days=1),
+        timezone_name="UTC",
+        client_updated_at=timezone.now(),
+    )
+
+    planner = client.get(
+        reverse("reading:reading-planner"),
+        {"days": 3, "timezone_name": "UTC"},
+    )
+
+    assert planner.status_code == 400
+    assert planner.json()["field_errors"]["days"] == [
+        "Ensure this value is greater than or equal to 7."
+    ]
+
+    planner = client.get(
+        reverse("reading:reading-planner"),
+        {"days": 7, "timezone_name": "UTC"},
+    )
+    days_by_date = {day["local_date"]: day for day in planner.json()["days"]}
+    without_goal = days_by_date[(local_today - timedelta(days=3)).isoformat()]
+    missed = days_by_date[(local_today - timedelta(days=2)).isoformat()]
+    partial = days_by_date[(local_today - timedelta(days=1)).isoformat()]
+    completed = days_by_date[local_today.isoformat()]
+
+    assert planner.status_code == 200
+    assert planner.headers["Cache-Control"] == "private, no-store, max-age=0"
+    assert planner.json()["timezone_name"] == "UTC"
+    assert len(planner.json()["days"]) == 7
+    assert without_goal["state"] == "no_goal"
+    assert without_goal["has_reading"] is True
+    assert without_goal["goal"] is None
+    assert missed["state"] == "missed"
+    assert missed["has_reading"] is False
+    assert missed["goal"]["achieved_amount"] == "0.00"
+    assert partial["state"] == "partial"
+    assert partial["has_reading"] is True
+    assert partial["goal"]["achieved_amount"] == "1.00"
+    assert partial["prayer_pages"] == 3
+    assert partial["prayer_count"] == 1
+    assert partial["prayer_check_ins"][0]["id"] == str(check_in.id)
+    assert partial["automatic_sessions"] == 0
+    assert partial["automatic_active_seconds"] == 0
+    assert completed["state"] == "completed"
+    assert completed["has_reading"] is True
+    assert completed["goal"]["achieved_amount"] == "3.00"
+    assert completed["goal"]["remaining_amount"] == "0.00"
+    assert PrayerReadingPlan.objects.get(id=plan.id).pages_per_prayer == 2
+
+    linked_session_update = client.patch(
+        reverse(
+            "reading:reading-session-detail",
+            kwargs={"session_id": check_in.reading_session_id},
+        ),
+        {
+            "timezone_name": "UTC",
+            "local_date": (local_today - timedelta(days=1)).isoformat(),
+            "metric": "pages",
+            "amount": 4,
+            "base_revision": check_in.reading_session.revision,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    assert linked_session_update.status_code == 409
+    assert linked_session_update.json()["code"] == "reading_session_immutable"
+
+    linked_session_delete = client.delete(
+        f"{
+            reverse(
+                'reading:reading-session-detail',
+                kwargs={'session_id': check_in.reading_session_id},
+            )
+        }?{
+            urlencode(
+                {
+                    'base_revision': check_in.reading_session.revision,
+                    'client_updated_at': timezone.now().isoformat(),
+                }
+            )
+        }"
+    )
+    assert linked_session_delete.status_code == 409
+    assert linked_session_delete.json()["code"] == "reading_session_immutable"
+
+
 def test_manual_session_idempotency_lookup_locks_only_the_session_table(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

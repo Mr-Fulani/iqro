@@ -340,7 +340,9 @@ multi-client MVP остаётся на этапах B–D.
   запросу; подключены все provider-ресурсы активных языков сайта.
 - [ ] Получить отдельный религиозный/editorial sign-off выбранных Tafsir editions перед
   включением `QF_TAFSIR_SYNC_ENABLED` в публичном production.
-- [ ] Reading sessions, goals и streaks.
+- [x] Reading sessions, daily goals и streaks: автоматические и ручные записи пересчитывают
+  прогресс без двойного зачёта; самостоятельный web-планировщик показывает календарь 7/30/90
+  дней, фактические prayer check-ins и редактируемую историю без переноса пропусков в «долг».
 - [ ] Editorial approvals, safe feedback attachments и user notifications.
 
 Критерий выхода: основные Quran-сценарии полезны offline на Flutter, web и Telegram Mini App

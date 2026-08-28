@@ -209,6 +209,19 @@ export default function HomePage() {
 
       <PrayerReadingPlanCard />
 
+      <section className="surface home-planner-cta">
+        <div className="surface-head">
+          <div>
+            <p className="eyebrow">{t("planner.eyebrow")}</p>
+            <h2 className="surface-title">{t("planner.homeTitle")}</h2>
+            <p className="surface-subtitle">{t("planner.homeDescription")}</p>
+          </div>
+          <Link href={localizedPath(locale, "/planner")} className="btn btn-primary">
+            {t("planner.open")}
+          </Link>
+        </div>
+      </section>
+
       {/* Reader and Quran catalog summary */}
       <section className="kpi-grid">
         <article className="kpi-card">

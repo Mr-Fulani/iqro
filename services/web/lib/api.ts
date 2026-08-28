@@ -696,6 +696,41 @@ export type ReadingSession = {
   updated_at: string;
 };
 
+export type ReadingPlannerDayState =
+  | "no_goal"
+  | "pending"
+  | "missed"
+  | "partial"
+  | "completed";
+
+export type ReadingPlannerGoal = {
+  id: string;
+  metric: ReadingGoalMetric;
+  target_amount: string;
+  achieved_amount: string;
+  remaining_amount: string;
+};
+
+export type ReadingPlannerDay = {
+  local_date: string;
+  state: ReadingPlannerDayState;
+  has_reading: boolean;
+  goal: ReadingPlannerGoal | null;
+  prayer_check_ins: PrayerReadingCheckIn[];
+  prayer_pages: number;
+  prayer_count: number;
+  automatic_sessions: number;
+  automatic_active_seconds: number;
+  automatic_pages: number;
+  automatic_ayahs: number;
+};
+
+export type ReadingPlanner = {
+  local_date: string;
+  timezone_name: string;
+  days: ReadingPlannerDay[];
+};
+
 export type Bookmark = {
   id: string;
   edition_code: string;
@@ -1625,6 +1660,61 @@ export class ApiClient {
         ...data,
       }),
     });
+  }
+
+  public async getReadingPlanner(
+    timezoneName: string,
+    days = 30,
+  ): Promise<ReadingPlanner> {
+    const params = new URLSearchParams({
+      timezone_name: timezoneName,
+      days: String(days),
+    });
+    return this.request<ReadingPlanner>(`/api/v1/me/reading-planner?${params.toString()}`);
+  }
+
+  public async getReadingSessions(
+    limit = 100,
+    source?: ReadingSession["source"],
+  ): Promise<{ results: ReadingSession[] }> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (source) params.set("source", source);
+    return this.request<{ results: ReadingSession[] }>(
+      `/api/v1/me/reading-sessions?${params.toString()}`,
+    );
+  }
+
+  public async updateManualReadingSession(
+    sessionId: string,
+    data: {
+      metric: ReadingGoalMetric;
+      amount: number | string;
+      timezone_name: string;
+      local_date: string;
+      base_revision: number;
+    },
+  ): Promise<ReadingSession> {
+    return this.request<ReadingSession>(
+      `/api/v1/me/reading-sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+      },
+    );
+  }
+
+  public async deleteManualReadingSession(
+    sessionId: string,
+    baseRevision: number,
+  ): Promise<ReadingSession> {
+    const params = new URLSearchParams({
+      base_revision: String(baseRevision),
+      client_updated_at: new Date().toISOString(),
+    });
+    return this.request<ReadingSession>(
+      `/api/v1/me/reading-sessions/${encodeURIComponent(sessionId)}?${params.toString()}`,
+      { method: "DELETE" },
+    );
   }
 
   public async getReadingPosition(edition: string): Promise<ReadingPosition> {

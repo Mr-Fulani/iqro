@@ -122,6 +122,18 @@ class ReadingSessionDeleteSerializer(StrictFieldsSerializer):
 
 class ReadingSessionListQuerySerializer(StrictFieldsSerializer):
     limit = serializers.IntegerField(min_value=1, max_value=100, required=False, default=30)
+    source = serializers.ChoiceField(  # type: ignore[assignment]
+        choices=ReadingSessionSource.choices,
+        required=False,
+    )
+
+
+class ReadingPlannerQuerySerializer(StrictFieldsSerializer):
+    days = serializers.IntegerField(min_value=7, max_value=90, required=False, default=30)
+    timezone_name = serializers.CharField(max_length=64, required=False)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
 
 
 class TodayQuerySerializer(StrictFieldsSerializer):
@@ -263,6 +275,36 @@ class ReadingSessionOutputSerializer(serializers.Serializer[Any]):
 
 class ReadingSessionListOutputSerializer(serializers.Serializer[Any]):
     results = ReadingSessionOutputSerializer(many=True)
+
+
+class ReadingPlannerGoalOutputSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    metric = serializers.ChoiceField(choices=ReadingGoalMetric.choices)
+    target_amount = serializers.DecimalField(max_digits=8, decimal_places=2)
+    achieved_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    remaining_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ReadingPlannerDayOutputSerializer(serializers.Serializer[Any]):
+    local_date = serializers.DateField()
+    state = serializers.ChoiceField(
+        choices=("no_goal", "pending", "missed", "partial", "completed")
+    )
+    has_reading = serializers.BooleanField()
+    goal = ReadingPlannerGoalOutputSerializer(allow_null=True)
+    prayer_check_ins = PrayerReadingCheckInOutputSerializer(many=True)
+    prayer_pages = serializers.IntegerField()
+    prayer_count = serializers.IntegerField()
+    automatic_sessions = serializers.IntegerField()
+    automatic_active_seconds = serializers.IntegerField()
+    automatic_pages = serializers.IntegerField()
+    automatic_ayahs = serializers.IntegerField()
+
+
+class ReadingPlannerOutputSerializer(serializers.Serializer[Any]):
+    local_date = serializers.DateField()
+    timezone_name = serializers.CharField()
+    days = ReadingPlannerDayOutputSerializer(many=True)
 
 
 class GoalProgressOutputSerializer(serializers.Serializer[Any]):

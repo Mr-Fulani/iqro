@@ -39,7 +39,7 @@ content/license/religious, monitoring, offsite backup, security и rollback gate
 гостевая и verified-email сессии, transactional guest merge, позиции/закладки, надёжная
 offline-синхронизация серверного состояния, prayer engine/profile, local-only reminder rules,
 feedback, account lifecycle, расширенный web-аудиоплеер, четырёхъязычный web UI и production
-runtime. Основной незакрытый объём находится в Flutter, offline packages, локальном планировщике
+runtime. Основной незакрытый объём находится в Flutter, offline packages, нативном планировщике
 уведомлений, клиентском i18n parity и отсутствующих контентных/коммерческих доменах.
 
 ## Доказательная база
@@ -81,12 +81,12 @@ runtime. Основной незакрытый объём находится в 
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
-| 6 | Позиции, закладки, история, цели, серии | 🟡 | Position, bookmarks, revisions, tombstones и sync | Нет reading sessions/history, goals и streaks |
+| 6 | Позиции, закладки, история, цели, серии | ✅ | Position, bookmarks, revisioned manual/automatic reading sessions, daily goals, progress, streaks, after-prayer check-ins и web-календарь 7/30/90 дней с исправлением истории | — |
 | 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable logical tracks и economy/standard/high renditions, compatible default asset, 114 surah tracks, ayah timings, R2/CDN ADR, create-only S3 upload и CDN evidence gate | Не доказаны три полностью лицензированных multi-quality релиза; production R2/CDN ещё не provisioned и corpus не загружен; нет transcoding, управляемой offline-установки, клиентского quality policy и redistribution pipeline |
 | 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут; persistent dock сохраняет трек и позицию, ставя playback на паузу при route navigation | — |
 | 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
 | 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
-| 11 | Заглушки переводов и тафсиров | ❌ | — | Нет `translations`/`tafsir` models, API и placeholder UI |
+| 11 | Переводы и тафсиры | 🟡 | Независимые versioned models/API/UI, locale-filtered provider catalogs, сноски и все проверенные ресурсы активных языков синхронизированы на staging | До публичного production нужен религиозно-редакционный sign-off выбранных Tafsir editions |
 | 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI | Flutter local parity и региональный content review отсутствуют |
 | 13 | Локальные уведомления и напоминания | 🟡 | Prayer/reading/review rules, revisions, retention и sync; web Web Push исполняет все три типа при закрытой вкладке, пять намазов включаются отдельными ежедневными тумблерами, location хранится только после opt-in на device subscription, а profile/timezone/location перепланируют очередь | Нет полностью offline/native Flutter scheduler; Web Push требует сеть |
 | 14 | Управляемая реклама | ❌ | Только feedback context/category для жалобы на рекламу | Нет campaign/creative/placement/frequency cap/moderation/kill-switch домена |
@@ -132,7 +132,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | Guest data не теряются после регистрации | ✅ | Verified-email вход транзакционно переносит позиции, закладки, reminders, профиль, feedback и устройства; merge и rollback покрыты тестами |
-| Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions, prayer profile и reminders есть; goals/playback отсутствуют |
+| Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions и reminders имеют offline sync; daily goals доступны через единый server-authoritative API на всех устройствах | Goals ещё не входят в offline sync protocol; playback-state отсутствует |
 | Повтор operation ID не создаёт дубликат | ✅ | Idempotency/fingerprint tests присутствуют |
 | Tombstones не возвращают удалённые данные | ✅ | Bookmark/reminder tombstones и retired-ID ledgers реализованы |
 | Full resync после expired cursor без потери outbox | ✅ | Backend token/restart/retention contract и web постраничный recovery с rebase/pull покрыты тестами |
@@ -251,8 +251,9 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 ### P0-D — продуктовые домены
 
 1. ✅ Backend+web RU/EN/AR/TR i18n и полный RTL UI; Flutter/TMA parity остаётся в client backlog.
-2. Translation/tafsir placeholder schema/API/UI.
-3. Reading sessions, goals, streaks и playback-state sync.
+2. ✅ Versioned translation/tafsir schema/API/UI и provider sync для активных языков; production
+   Tafsir publication остаётся за editorial sign-off.
+3. ✅ Reading sessions, goals, streaks и web planner/history; playback-state sync остаётся открыт.
 4. Safe feedback attachments, user notifications и editorial approvals.
 5. Ads/donation domains реализовывать последними, после утверждения policy/placements.
 

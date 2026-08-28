@@ -7,8 +7,9 @@ obligatory prayers.
 ## Endpoints
 
 - `GET /api/v1/me/today`
+- `GET /api/v1/me/reading-planner?days=7|30|90&timezone_name=...`
 - `GET|PUT|DELETE /api/v1/me/reading-goal`
-- `GET /api/v1/me/reading-sessions`
+- `GET /api/v1/me/reading-sessions?source=manual|automatic`
 - `POST /api/v1/me/reading-sessions/automatic`
 - `POST /api/v1/me/reading-sessions/manual`
 - `PATCH|DELETE /api/v1/me/reading-sessions/{id}`
@@ -31,6 +32,21 @@ two pages after each prayer is ten pages per day and approximately 61 days for 6
 Any completed reading session keeps the reading-day streak, even when the daily target was not
 fully reached. Goal completion remains a separate signal. Unread pages are not carried into the
 next day automatically, and an after-prayer check-in never marks a later prayer slot.
+
+The planner endpoint returns an oldest-to-newest calendar window of 7–90 local dates. Each day
+has one of `no_goal`, `pending`, `missed`, `partial`, or `completed`, plus the goal snapshot and
+actual prayer check-ins for that date. `has_reading` remains true for factual reading activity
+even when no daily goal was active. Automatic heartbeat sessions are aggregated per day, so the
+90-day response remains bounded. Historical prayer targets are intentionally not inferred:
+the current plan can change and is not versioned by date, so the API reports only factual prayer
+pages and check-in counts. Responses are private and `no-store`.
+
+The web planner groups automatic heartbeat sessions into a compact daily summary and keeps every
+standalone manual entry individually editable or deletable. Sessions owned by an after-prayer
+check-in are changed only through that check-in and are immutable through the generic session
+endpoint. Manual entries may be edited for seven days,
+matching the API's correction window; deletion remains available later. A missed day stays as a
+historical fact and never creates debt or silently increases a future target.
 
 When a prayer Web Push reminder belongs to a user with an active after-prayer plan, the
 localized notification includes the selected page count and opens a guided reading session for
