@@ -1159,6 +1159,10 @@ input:focus, select:focus, textarea:focus {
   font-size: 26px;
 }
 
+.memorization-progress-total .btn {
+  margin-top: 6px;
+}
+
 .memorization-practice {
   display: grid;
   gap: 20px;
@@ -1215,6 +1219,30 @@ input:focus, select:focus, textarea:focus {
   line-height: 2;
   text-align: center;
   color: var(--text-primary);
+}
+
+.memorization-tajweed-status {
+  direction: auto;
+  margin: 0;
+  text-align: start;
+}
+
+.memorization-tajweed-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-size: clamp(31px, 4vw, 46px);
+}
+
+.memorization-tajweed-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding-inline: 0.035em;
+  line-height: 1.8;
 }
 
 .memorization-reveal {

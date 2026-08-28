@@ -13,7 +13,13 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant } from "../lib/reciter-catalog";
+import {
+  loadReciterPreference,
+  preferredRecitation,
+  rememberReciterPreference,
+} from "../lib/reciter-preference";
 import { MemorizationAudioLoop } from "./MemorizationAudioLoop";
+import { MemorizationTajweedAyahs } from "./MemorizationTajweedAyahs";
 
 type PracticeMode = "read" | "listen" | "test";
 
@@ -104,11 +110,22 @@ export function MemorizationWorkspace() {
       .then(([nextDashboard, nextSurahs, allRecitations]) => {
         if (!active) return;
         setSurahs(nextSurahs);
-        setRecitations(
-          latestRecitationsByVariant(allRecitations).filter(
-            (item) => item.rights.stream && item.timings.available,
-          ),
+        const availableRecitations = latestRecitationsByVariant(allRecitations).filter(
+          (item) => item.rights.stream && item.timings.available,
         );
+        setRecitations(availableRecitations);
+        const plannedRecitation = availableRecitations.find(
+          (item) => item.id === nextDashboard.plan?.recitation_id,
+        );
+        if (plannedRecitation) {
+          rememberReciterPreference(plannedRecitation.reciter, plannedRecitation);
+        } else if (!nextDashboard.plan) {
+          const remembered = preferredRecitation(
+            availableRecitations,
+            loadReciterPreference(),
+          );
+          if (remembered) setRecitationId(remembered.id);
+        }
         if (!nextDashboard.plan && !deepLinkApplied.current) {
           deepLinkApplied.current = true;
           const params = new URLSearchParams(window.location.search);
@@ -162,6 +179,16 @@ export function MemorizationWorkspace() {
   const targetToday = plan?.daily_repetitions || dailyRepetitions;
   const progressPercent = targetToday > 0 ? Math.min(100, (totalToday / targetToday) * 100) : 0;
   const remainingForAudio = Math.max(targetToday - totalToday, 1);
+  const hiddenPracticeAyahs = useMemo(
+    () => new Set(
+      mode === "test"
+        ? practiceAyahs
+            .filter((ayah) => !revealedAyahs.has(ayah.number))
+            .map((ayah) => ayah.number)
+        : [],
+    ),
+    [mode, practiceAyahs, revealedAyahs],
+  );
 
   const savePlan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -198,6 +225,34 @@ export function MemorizationWorkspace() {
   const addRepetition = () => {
     if (practiceStartedAt.current === null) practiceStartedAt.current = Date.now();
     setLocalRepetitions((value) => value + 1);
+  };
+
+  const selectRecitation = (nextRecitationId: string) => {
+    const recitation = recitations.find((item) => item.id === nextRecitationId);
+    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    setRecitationId(nextRecitationId);
+  };
+
+  const resetCounters = async () => {
+    if (totalToday < 1 || !window.confirm(t("memorization.resetConfirm"))) return;
+    setSaving(true);
+    setError(null);
+    setMode("read");
+    setLocalRepetitions(0);
+    pendingSessionId.current = null;
+    practiceStartedAt.current = Date.now();
+    try {
+      if (recordedToday > 0) {
+        await api.resetTodayMemorizationProgress(timezoneName);
+        await loadDashboard();
+      }
+      window.dispatchEvent(new Event("memorization-progress-changed"));
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+      await loadDashboard().catch(() => undefined);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const finishSession = async (assessment: MemorizationAssessment) => {
@@ -311,7 +366,7 @@ export function MemorizationWorkspace() {
             </label>
             <label className="form-group memorization-reciter-field">
               <span className="form-label">{t("memorization.reciter")}</span>
-              <select value={recitationId} onChange={(event) => setRecitationId(event.target.value)}>
+              <select value={recitationId} onChange={(event) => selectRecitation(event.target.value)}>
                 <option value="">{t("memorization.withoutAudio")}</option>
                 {recitations.map((recitation) => (
                   <option key={recitation.id} value={recitation.id}>
@@ -357,6 +412,14 @@ export function MemorizationWorkspace() {
               <div className="memorization-progress-total">
                 <strong>{formatNumber(totalToday)} / {formatNumber(targetToday)}</strong>
                 <span>{t("memorization.repetitions")}</span>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => void resetCounters()}
+                  disabled={saving || totalToday < 1}
+                >
+                  {t("memorization.resetCounters")}
+                </button>
               </div>
             </div>
             <div className="today-progress-track" aria-label={t("memorization.todayProgress")}>
@@ -400,23 +463,11 @@ export function MemorizationWorkspace() {
               />
             )}
 
-            <div className="memorization-ayah-list" lang="ar" dir="rtl">
-              {practiceAyahs.map((ayah) => {
-                const hidden = mode === "test" && !revealedAyahs.has(ayah.number);
-                return (
-                  <article key={ayah.id} className="memorization-ayah-card">
-                    <span className="memorization-ayah-number">{formatNumber(ayah.number)}</span>
-                    {hidden ? (
-                      <button type="button" className="memorization-reveal" onClick={() => revealAyah(ayah.number)}>
-                        {t("memorization.revealAyah", { ayah: formatNumber(ayah.number) })}
-                      </button>
-                    ) : (
-                      <p className="memorization-arabic">{ayah.text_uthmani}</p>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
+            <MemorizationTajweedAyahs
+              ayahs={practiceAyahs}
+              hiddenAyahs={hiddenPracticeAyahs}
+              onReveal={revealAyah}
+            />
 
             <div className="memorization-counter">
               <div>

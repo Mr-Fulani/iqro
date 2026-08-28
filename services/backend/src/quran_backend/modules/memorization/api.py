@@ -20,6 +20,7 @@ from quran_backend.modules.memorization.serializers import (
     MemorizationPlanOutputSerializer,
     MemorizationPlanWriteSerializer,
     MemorizationQuerySerializer,
+    MemorizationResetQuerySerializer,
     MemorizationSessionCreateSerializer,
     MemorizationSessionOutputSerializer,
 )
@@ -27,6 +28,7 @@ from quran_backend.modules.memorization.services import (
     get_memorization_dashboard,
     plan_snapshot,
     record_memorization_session,
+    reset_today_memorization_progress,
     session_snapshot,
     set_memorization_plan,
 )
@@ -54,7 +56,11 @@ def _bind_authenticated_device(request: Request, data: dict[str, Any]) -> dict[s
 
 class MemorizationMutationRateLimitMixin:
     def get_throttles(self) -> list[BaseThrottle]:
-        if getattr(getattr(self, "request", None), "method", None) in {"POST", "PUT"}:
+        if getattr(getattr(self, "request", None), "method", None) in {
+            "DELETE",
+            "POST",
+            "PUT",
+        }:
             return [ReadingMutationRateThrottle()]
         return []
 
@@ -135,3 +141,17 @@ class MemorizationSessionCreateView(
             session_snapshot(session),
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+    @extend_schema(
+        operation_id="memorization_today_progress_reset",
+        parameters=[MemorizationResetQuerySerializer],
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def delete(self, request: Request) -> Response:
+        query = MemorizationResetQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        reset_today_memorization_progress(
+            _authenticated_user(request),
+            fallback_timezone_name=query.validated_data.get("timezone_name"),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

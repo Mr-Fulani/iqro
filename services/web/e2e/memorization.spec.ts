@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, Page, test } from "@playwright/test";
 
 const activeSession = {
@@ -87,6 +88,70 @@ const recitation = {
   published_at: "2026-08-28T00:00:00Z",
 };
 
+const tajweedMushaf = {
+  source_id: 19,
+  name: "QCF V4 Tajweed",
+  description: "Color-coded Tajweed Mushaf",
+  qirat_name: "Hafs",
+  pages_count: 604,
+  lines_per_page: 15,
+  default_font_name: "v4-tajweed",
+  mapping_mode: "reference",
+  schema_version: "1",
+  sync_sequence: 1,
+  source_checksum_sha256: "c".repeat(64),
+  last_synced_at: "2026-08-28T00:00:00Z",
+  rendering: {
+    available: true,
+    mode: "page-font",
+    font_format: "woff2",
+    font_url_template: "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p{page}.woff2",
+    color_format: "COLRv1",
+  },
+  source: {
+    name: "Quran.Foundation Content API",
+    url: "https://api-docs.quran.foundation/",
+    attribution: "Quran data provided by Quran Foundation.",
+  },
+};
+
+const tajweedPage = {
+  mushaf_id: 19,
+  qirat_name: "Hafs",
+  font_name: "v4-tajweed",
+  rendering: {
+    ...tajweedMushaf.rendering,
+    font_url: "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2",
+  },
+  page_number: 1,
+  verse_mapping: { "1": "1-2" },
+  first_verse_id: 1,
+  last_verse_id: 2,
+  first_word_id: 1,
+  last_word_id: 4,
+  verses_count: 2,
+  words: [
+    [1, 1, 1, "ﱁ", "word"],
+    [2, 1, 2, "ﱂ", "end"],
+    [3, 2, 3, "ﱃ", "word"],
+    [4, 2, 4, "ﱄ", "end"],
+  ].map(([id, verseId, position, text, charType]) => ({
+    id,
+    word_id: id,
+    verse_id: verseId,
+    page_number: 1,
+    line_number: 1,
+    position_in_line: position,
+    position_in_page: position,
+    position_in_verse: position,
+    char_type_id: null,
+    char_type_name: charType,
+    text,
+    css_class: "",
+    css_style: "",
+  })),
+};
+
 function planSnapshot() {
   return {
     id: "00000000-0000-7000-8000-000000000920",
@@ -118,11 +183,17 @@ function planSnapshot() {
 }
 
 async function installMocks(page: Page) {
+  const testFont = await readFile(
+    new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
+  );
   let plan: ReturnType<typeof planSnapshot> | null = null;
   let completed = 0;
   const writes: Array<Record<string, unknown>> = [];
 
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: activeSession }));
+  await page.route("https://verses.quran.foundation/fonts/**", (route) =>
+    route.fulfill({ status: 200, contentType: "font/woff2", body: testFont }),
+  );
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -176,6 +247,10 @@ async function installMocks(page: Page) {
         },
       });
     }
+    if (url.pathname === "/api/v1/me/memorization-sessions" && request.method() === "DELETE") {
+      completed = 0;
+      return route.fulfill({ status: 204 });
+    }
     if (url.pathname === "/api/v1/quran/editions/madani-hafs/surahs") {
       return route.fulfill({ json: [surah] });
     }
@@ -184,6 +259,12 @@ async function installMocks(page: Page) {
     }
     if (url.pathname === "/api/v1/recitations") {
       return route.fulfill({ json: { next: null, previous: null, results: [recitation] } });
+    }
+    if (url.pathname === "/api/v1/quran/foundation/mushafs") {
+      return route.fulfill({ json: [tajweedMushaf] });
+    }
+    if (url.pathname === "/api/v1/quran/foundation/mushafs/19/pages/1") {
+      return route.fulfill({ json: tajweedPage });
     }
     return route.fulfill({ status: 404, json: { detail: "Not found" } });
   });
@@ -195,20 +276,29 @@ test("creates a synced plan, tests recall, and records self-assessment", async (
 
   await page.goto("/ru/memorization");
   await expect(page.getByRole("heading", { name: "Заучивание Корана" })).toBeVisible();
-  await page.getByLabel("По аят").selectOption("2");
   await page.getByLabel("Чтец для повторения").selectOption(recitation.id);
+  await page.reload();
+  await expect(page.getByLabel("Чтец для повторения")).toHaveValue(recitation.id);
+  await page.getByLabel("По аят").selectOption("2");
   await page.getByRole("button", { name: "Сохранить план" }).click();
 
   await expect(page.getByText("Сура 1, аяты 1–2").first()).toBeVisible();
+  await expect(page.getByTestId("memorization-tajweed")).toHaveAttribute(
+    "data-tajweed-status",
+    "ready",
+  );
   await page.getByRole("tab", { name: "Проверить себя" }).click();
-  await expect(page.getByText(ayahs[0].text_uthmani)).toHaveCount(0);
+  await expect(page.getByLabel(ayahs[0].text_uthmani)).toHaveCount(0);
   await page.getByRole("button", { name: "Показать аят 1" }).click();
-  await expect(page.getByText(ayahs[0].text_uthmani)).toBeVisible();
+  await expect(page.getByLabel(ayahs[0].text_uthmani)).toBeVisible();
 
   await page.getByRole("button", { name: "+ 1 повтор" }).click();
   await page.getByRole("button", { name: "Запомнил" }).click();
 
   await expect(page.getByText("1 / 5", { exact: true })).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Сбросить счётчики" }).click();
+  await expect(page.getByText("0 / 5", { exact: true })).toBeVisible();
   expect(writes).toHaveLength(2);
   expect(writes[0]).toMatchObject({
     start_ayah_id: ayahs[0].id,

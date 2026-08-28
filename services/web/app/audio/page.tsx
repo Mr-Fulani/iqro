@@ -19,6 +19,12 @@ import {
   reciterSourcesForPerson,
 } from "../../lib/reciter-catalog";
 import { reciterPortraitUrl } from "../../lib/reciter-portraits";
+import {
+  loadReciterPreference,
+  preferredRecitation,
+  preferredReciter,
+  rememberReciterPreference,
+} from "../../lib/reciter-preference";
 
 export default function AudioPage() {
   const searchParams = useSearchParams();
@@ -52,7 +58,12 @@ export default function AudioPage() {
           const requestedPerson = requestedSource
             ? people.find((item) => reciterPersonKey(item) === reciterPersonKey(requestedSource))
             : undefined;
-          setSelectedReciterId(requestedPerson?.id || people[0].id);
+          const selected =
+            requestedPerson ||
+            preferredReciter(people, loadReciterPreference()) ||
+            people[0];
+          setSelectedReciterId(selected.id);
+          rememberReciterPreference(selected);
         }
         setLoading(false);
       })
@@ -78,7 +89,10 @@ export default function AudioPage() {
         );
         setRecitations(available);
         if (available.length > 0) {
-          setSelectedRecitationId(available[0].id);
+          const selectedRecitation =
+            preferredRecitation(available, loadReciterPreference()) || available[0];
+          setSelectedRecitationId(selectedRecitation.id);
+          rememberReciterPreference(selectedRecitation.reciter, selectedRecitation);
         } else {
           setSelectedRecitationId("");
           setTracks([]);
@@ -117,6 +131,18 @@ export default function AudioPage() {
     locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
   const reciterSecondaryName = (reciter: Reciter) =>
     locale === "ar" ? reciter.name_en : reciter.name_ar;
+
+  const selectReciter = (reciterId: string) => {
+    const reciter = reciters.find((item) => item.id === reciterId);
+    if (reciter) rememberReciterPreference(reciter);
+    setSelectedReciterId(reciterId);
+  };
+
+  const selectRecitation = (recitationId: string) => {
+    const recitation = recitations.find((item) => item.id === recitationId);
+    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    setSelectedRecitationId(recitationId);
+  };
 
   const handlePlayTrack = async (track: AudioTrack) => {
     if (!track.surah_number || !selectedRecitation) return;
@@ -170,7 +196,7 @@ export default function AudioPage() {
             <select
               id="audio-reciter-select"
               value={selectedReciterId}
-              onChange={(e) => setSelectedReciterId(e.target.value)}
+              onChange={(e) => selectReciter(e.target.value)}
               disabled={reciters.length === 0}
             >
               {reciters.map((r) => (
@@ -186,7 +212,7 @@ export default function AudioPage() {
             <select
               id="audio-recitation-select"
               value={selectedRecitationId}
-              onChange={(e) => setSelectedRecitationId(e.target.value)}
+              onChange={(e) => selectRecitation(e.target.value)}
               disabled={recitations.length === 0}
             >
               {recitations.map((rec) => (
@@ -251,7 +277,7 @@ export default function AudioPage() {
                   className={`reciter-card audio-reciter-card${isSelected ? " is-selected" : ""}`}
                   type="button"
                   key={reciter.id}
-                  onClick={() => setSelectedReciterId(reciter.id)}
+                  onClick={() => selectReciter(reciter.id)}
                   aria-label={t("home.listenReciter", { name })}
                   aria-pressed={isSelected}
                   data-testid="audio-reciter"

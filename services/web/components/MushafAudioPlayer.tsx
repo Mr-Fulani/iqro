@@ -5,6 +5,11 @@ import { api, Recitation, SurahPlayback } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant } from "../lib/reciter-catalog";
 import {
+  loadReciterPreference,
+  preferredRecitation,
+  rememberReciterPreference,
+} from "../lib/reciter-preference";
+import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
   type AudioPlayerControlRequest,
@@ -81,13 +86,13 @@ export function MushafAudioPlayer({
         if (cancelled) return;
         const available = latestRecitationsByVariant(response.results || []);
         setRecitations(available);
-        setSelectedRecitationId((current) => {
-          if (available.some((item) => item.id === current)) return current;
-          const preferred = available
-            .filter((item) => item.code.startsWith("qf-7-"))
-            .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
-          return preferred?.id || available[0]?.id || "";
-        });
+        const remembered = preferredRecitation(available, loadReciterPreference());
+        const fallback = available
+          .filter((item) => item.code.startsWith("qf-7-"))
+          .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
+        const selected = remembered || fallback || available[0];
+        setSelectedRecitationId(selected?.id || "");
+        if (selected) rememberReciterPreference(selected.reciter, selected);
       })
       .catch((reason) => {
         if (!cancelled) setError(api.normalizeError(reason));
@@ -99,6 +104,12 @@ export function MushafAudioPlayer({
       cancelled = true;
     };
   }, [editionCode]);
+
+  const selectRecitation = (recitationId: string) => {
+    const recitation = recitations.find((item) => item.id === recitationId);
+    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    setSelectedRecitationId(recitationId);
+  };
 
   useEffect(() => {
     if (!selectedRecitationId) {
@@ -219,7 +230,7 @@ export function MushafAudioPlayer({
           <select
             id="mushaf-recitation"
             value={selectedRecitationId}
-            onChange={(event) => setSelectedRecitationId(event.target.value)}
+            onChange={(event) => selectRecitation(event.target.value)}
             disabled={catalogLoading || recitations.length === 0}
           >
             {recitations.map((recitation) => (

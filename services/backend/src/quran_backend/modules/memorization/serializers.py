@@ -17,6 +17,13 @@ class MemorizationQuerySerializer(StrictFieldsSerializer):
         return _validate_timezone_name(value)
 
 
+class MemorizationResetQuerySerializer(StrictFieldsSerializer):
+    timezone_name = serializers.CharField(max_length=64, required=False)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
+
+
 class MemorizationPlanWriteSerializer(StrictFieldsSerializer):
     start_ayah_id = serializers.UUIDField()
     end_ayah_id = serializers.UUIDField()

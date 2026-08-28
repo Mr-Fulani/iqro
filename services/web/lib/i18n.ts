@@ -375,9 +375,33 @@ export const MESSAGES = {
     "منع المتصفح التشغيل التلقائي. اضغط التشغيل مرة أخرى.",
     "Tarayıcı otomatik oynatmayı engelledi. Yeniden oynatın.",
   ),
+  "memorization.tajweedLoading": message(
+    "Загружается цветной текст с правилами таджвида…",
+    "Loading the color-coded Tajweed text…",
+    "جارٍ تحميل النص الملوّن بأحكام التجويد…",
+    "Renkli tecvid metni yükleniyor…",
+  ),
+  "memorization.tajweedFallback": message(
+    "Цветной шрифт таджвида сейчас недоступен — показан проверенный текст Усмани.",
+    "The color Tajweed font is currently unavailable, so the verified Uthmani text is shown.",
+    "خط التجويد الملوّن غير متاح حاليًا، لذا يظهر النص العثماني الموثوق.",
+    "Renkli tecvid yazı tipi şu anda kullanılamıyor; doğrulanmış Osmanî metin gösteriliyor.",
+  ),
   "memorization.revealAyah": message("Показать аят {ayah}", "Reveal ayah {ayah}", "إظهار الآية {ayah}", "{ayah}. ayeti göster"),
   "memorization.currentSession": message("В этом занятии", "This session", "في هذه الجلسة", "Bu çalışmada"),
   "memorization.addRepetition": message("+ 1 повтор", "+ 1 repetition", "+ تكرار واحد", "+ 1 tekrar"),
+  "memorization.resetCounters": message(
+    "Сбросить счётчики",
+    "Reset counters",
+    "تصفير العدادات",
+    "Sayaçları sıfırla",
+  ),
+  "memorization.resetConfirm": message(
+    "Сбросить повторы за сегодня и текущий несохранённый счётчик? План заучивания останется без изменений.",
+    "Reset today's repetitions and the current unsaved counter? Your memorization plan will remain unchanged.",
+    "هل تريد تصفير تكرارات اليوم والعداد الحالي غير المحفوظ؟ ستبقى خطة الحفظ دون تغيير.",
+    "Bugünkü tekrarları ve kaydedilmemiş mevcut sayacı sıfırlamak istiyor musunuz? Ezber planınız değişmeyecek.",
+  ),
   "memorization.assessmentQuestion": message(
     "Как запомнился этот диапазон?",
     "How well did you retain this range?",

@@ -115,6 +115,25 @@ def get_memorization_dashboard(
 
 
 @transaction.atomic
+def reset_today_memorization_progress(
+    user: User,
+    *,
+    fallback_timezone_name: str | None = None,
+) -> int:
+    User.objects.select_for_update().only("id").get(id=user.id)
+    plan_timezone = (
+        MemorizationPlan.objects.filter(user=user).values_list("timezone_name", flat=True).first()
+    )
+    timezone_name = plan_timezone or fallback_timezone_name or user.timezone or "UTC"
+    local_date = timezone.now().astimezone(ZoneInfo(timezone_name)).date()
+    deleted, _details = MemorizationSession.objects.filter(
+        user=user,
+        local_date=local_date,
+    ).delete()
+    return deleted
+
+
+@transaction.atomic
 def set_memorization_plan(  # noqa: PLR0913
     *,
     user: User,

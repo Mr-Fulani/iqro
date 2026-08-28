@@ -1801,6 +1801,14 @@ export class ApiClient {
     });
   }
 
+  public async resetTodayMemorizationProgress(timezoneName: string): Promise<void> {
+    const params = new URLSearchParams({ timezone_name: timezoneName });
+    await this.request<void>(
+      `/api/v1/me/memorization-sessions?${params.toString()}`,
+      { method: "DELETE" },
+    );
+  }
+
   public async getReadingSessions(
     limit = 100,
     source?: ReadingSession["source"],

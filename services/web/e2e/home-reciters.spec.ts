@@ -384,6 +384,12 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
 
   await expect(page).toHaveURL(`/ru/audio?reciter=${reciters[4].id}`, { timeout: 15_000 });
   await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[4].id);
+
+  await page.goto("/ru/audio");
+  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[4].id);
+  await page.getByLabel("Чтец (Кари)").selectOption(reciters[8].id);
+  await page.reload();
+  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[8].id);
 });
 
 test("one reciter exposes multiple reading styles without duplicate person options", async ({ page }) => {

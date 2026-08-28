@@ -11,6 +11,7 @@ import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { groupRecitersByPerson } from "../lib/reciter-catalog";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
+import { rememberReciterPreference } from "../lib/reciter-preference";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
 import {
@@ -295,6 +296,7 @@ export default function HomePage() {
                   key={reciter.id}
                   href={localizedPath(locale, `/audio?reciter=${encodeURIComponent(reciter.id)}`)}
                   className="reciter-card"
+                  onClick={() => rememberReciterPreference(reciter)}
                   aria-label={t("home.listenReciter", { name })}
                   data-testid="featured-reciter"
                 >

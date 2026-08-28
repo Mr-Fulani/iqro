@@ -8,6 +8,7 @@ import type {
   Surah,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
+import { isAllowedQuranFontUrl } from "../lib/quran-font";
 
 type FontState = "loading" | "ready" | "error";
 type SurahIdentity = Pick<Surah, "number" | "name_ar">;
@@ -38,26 +39,6 @@ type QuranFoundationMushafPageProps = {
   playingAyahKey: string | null;
   onSelectAyah: (ayahKey: string) => void;
 };
-
-function isAllowedQuranFontUrl(value: string | undefined): value is string {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "verses.quran.foundation" &&
-      url.port === "" &&
-      url.username === "" &&
-      url.password === "" &&
-      url.search === "" &&
-      url.hash === "" &&
-      url.pathname.startsWith("/fonts/quran/") &&
-      url.pathname.endsWith(".woff2")
-    );
-  } catch {
-    return false;
-  }
-}
 
 function verseKeysFromMapping(mapping: Record<string, string>): string[] {
   const keys: string[] = [];

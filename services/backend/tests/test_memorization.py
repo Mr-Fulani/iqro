@@ -129,6 +129,68 @@ def test_session_is_idempotent_and_updates_today_progress(
     assert dashboard.json()["recent_days"][0]["session_count"] == 1
 
 
+def test_today_progress_can_be_reset_without_deleting_the_plan(
+    quran_dataset: dict[str, object],
+) -> None:
+    user = User.objects.create_user(timezone="UTC")
+    other_user = User.objects.create_user(timezone="UTC")
+    client = _client(user)
+    plan = client.put(
+        reverse("memorization:dashboard"),
+        _plan_payload(quran_dataset),
+        format="json",
+    ).json()
+    now = timezone.now()
+    session, _created = record_memorization_session(
+        user=user,
+        session_id=uuid.uuid7(),
+        plan_id=uuid.UUID(plan["id"]),
+        completed_repetitions=3,
+        assessment="repeat",
+        duration_seconds=90,
+        timezone_name="UTC",
+        local_date=now.date(),
+        client_updated_at=now,
+    )
+    other_plan, _created = set_memorization_plan(
+        user=other_user,
+        start_ayah_id=quran_dataset["first_ayah"].id,
+        end_ayah_id=quran_dataset["second_ayah"].id,
+        recitation_id=None,
+        daily_repetitions=5,
+        pause_seconds=2,
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=now,
+    )
+    other_session, _created = record_memorization_session(
+        user=other_user,
+        session_id=uuid.uuid7(),
+        plan_id=other_plan.id,
+        completed_repetitions=2,
+        assessment="memorized",
+        duration_seconds=60,
+        timezone_name="UTC",
+        local_date=now.date(),
+        client_updated_at=now,
+    )
+
+    response = client.delete(
+        reverse("memorization:session-create"),
+        {"timezone_name": "UTC"},
+    )
+    dashboard = client.get(reverse("memorization:dashboard"))
+
+    assert response.status_code == 204
+    assert response.headers["Cache-Control"] == "private, no-store, max-age=0"
+    assert not MemorizationSession.objects.filter(id=session.id).exists()
+    assert MemorizationSession.objects.filter(id=other_session.id).exists()
+    assert MemorizationPlan.objects.filter(id=plan["id"], user=user).exists()
+    assert dashboard.json()["today"]["completed_repetitions"] == 0
+    assert dashboard.json()["today"]["remaining_repetitions"] == 5
+    assert dashboard.json()["recent_days"] == []
+
+
 def test_session_cannot_use_another_users_plan(quran_dataset: dict[str, object]) -> None:
     owner = User.objects.create_user(timezone="UTC")
     stranger = User.objects.create_user(timezone="UTC")
