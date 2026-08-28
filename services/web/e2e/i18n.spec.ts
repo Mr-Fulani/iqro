@@ -112,9 +112,33 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page).toHaveURL("/ru/dua");
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
+  await expect(page.getByRole("heading", { level: 2, name: "Темы" })).toBeVisible();
+  await expect(page.locator(".dua-category-list")).toHaveCSS("display", "grid");
+  await expect(page.locator(".dua-category-chip")).toHaveCount(2);
+  await expect(page.locator(".dua-category-chip").nth(1)).toContainText("1 ду’а");
+  expect(await page.locator(".dua-category-list").evaluate(
+    (element) => element.scrollWidth <= element.clientWidth,
+  )).toBe(true);
   await expect(page.getByRole("heading", { level: 2, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
   await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
   await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
+});
+
+test("Dua topics use responsive cards without horizontal scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/dua");
+
+  const topics = page.locator(".dua-category-list");
+  const cards = page.locator(".dua-category-chip");
+  await expect(topics).toHaveCSS("display", "grid");
+  await expect(cards).toHaveCount(2);
+  expect(await topics.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await cards.evaluateAll((elements) => elements.every(
+    (element) => element.getBoundingClientRect().width <= element.parentElement!.clientWidth,
+  ))).toBe(true);
+
+  await cards.nth(1).click();
+  await expect(cards.nth(1)).toHaveAttribute("aria-pressed", "true");
 });
 
 test.describe("browser language negotiation", () => {

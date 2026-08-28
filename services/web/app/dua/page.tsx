@@ -168,26 +168,42 @@ export default function DuaPage({
           ) : null}
         </form>
 
-        <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
-          <button
-            type="button"
-            className={`dua-category-chip${selectedCategory === "" ? " is-active" : ""}`}
-            aria-pressed={selectedCategory === ""}
-            onClick={() => setSelectedCategory("")}
-          >
-            {t("dua.allCategories")}
-          </button>
-          {categories.map((category) => (
+        <div className="dua-category-section">
+          <header>
+            <h2>{t("dua.topicsTitle")}</h2>
+            <p>{t("dua.categoryFilter")}</p>
+          </header>
+          <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
             <button
-              key={category.id}
               type="button"
-              className={`dua-category-chip${selectedCategory === category.slug ? " is-active" : ""}`}
-              aria-pressed={selectedCategory === category.slug}
-              onClick={() => setSelectedCategory(category.slug)}
+              className={`dua-category-chip${selectedCategory === "" ? " is-active" : ""}`}
+              aria-pressed={selectedCategory === ""}
+              onClick={() => setSelectedCategory("")}
             >
-              {category.title}
+              <span className="dua-category-title">{t("dua.allCategories")}</span>
+              <span className="dua-category-meta">
+                <span>{formatNumber(categories.length)}</span>
+                <small>{t("dua.categoriesAvailable")}</small>
+              </span>
             </button>
-          ))}
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                className={`dua-category-chip${selectedCategory === category.slug ? " is-active" : ""}`}
+                aria-pressed={selectedCategory === category.slug}
+                onClick={() => setSelectedCategory(category.slug)}
+              >
+                <span className="dua-category-title">{category.title}</span>
+                <span className="dua-category-meta">
+                  <span>#{formatNumber(category.source_number)}</span>
+                  <small>
+                    {t("dua.categoryEntryCount", { count: formatNumber(category.entry_count) })}
+                  </small>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {error ? (

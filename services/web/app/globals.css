@@ -3573,30 +3573,61 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
-.dua-category-list {
+.dua-category-section {
+  display: grid;
+  gap: 12px;
+}
+
+.dua-category-section > header {
   display: flex;
-  gap: 8px;
-  padding-bottom: 4px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dua-category-section h2 {
+  font-size: 18px;
+}
+
+.dua-category-section p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dua-category-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  min-width: 0;
 }
 
 .dua-category-chip {
-  flex: 0 0 auto;
-  padding: 7px 12px;
+  display: grid;
+  gap: 14px;
+  align-content: space-between;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   background: var(--panel);
   color: var(--text-secondary);
   font: inherit;
-  font-size: 13px;
+  text-align: start;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .dua-category-chip:hover,
 .dua-category-chip:focus-visible {
   border-color: var(--primary-border);
   color: var(--primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .dua-category-chip:focus-visible {
@@ -3608,7 +3639,31 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--primary-border);
   background: var(--primary-subtle);
   color: var(--primary-text);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.dua-category-title {
+  color: var(--text-primary);
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.dua-category-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--accent-gold);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dua-category-meta small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .dua-entry-list {
