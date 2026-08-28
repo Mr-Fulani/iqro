@@ -84,7 +84,7 @@ function fulfillProfileRead(route: Route): boolean {
         locale: null,
         prayer_location_configured: false,
         prayer_profile_configured: false,
-        supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+        supported_reminder_types: ["prayer", "quran_review"],
       },
     });
     return true;

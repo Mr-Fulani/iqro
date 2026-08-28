@@ -889,6 +889,22 @@ input:focus, select:focus, textarea:focus {
   font-size: 13px;
 }
 
+.prayer-reading-notification-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.prayer-reading-notification-row .kpi-desc {
+  margin: 4px 0 0;
+}
+
 .prayer-reading-form {
   display: grid;
   grid-template-columns: minmax(180px, 0.45fr) minmax(260px, 1fr) auto;

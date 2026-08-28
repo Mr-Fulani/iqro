@@ -642,6 +642,7 @@ export type PrayerReadingPrayer = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 export type PrayerReadingPlan = {
   id: string;
   pages_per_prayer: number;
+  notifications_enabled: boolean;
   timezone_name: string;
   revision: number;
   client_updated_at: string;
@@ -1572,6 +1573,7 @@ export class ApiClient {
 
   public async setPrayerReadingPlan(data: {
     pages_per_prayer: number;
+    notifications_enabled: boolean;
     timezone_name: string;
     base_revision: number;
   }): Promise<PrayerReadingPlan> {

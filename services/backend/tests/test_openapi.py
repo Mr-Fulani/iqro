@@ -218,6 +218,7 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     prayer_plan_request = schema["components"]["schemas"]["PrayerReadingPlanWriteRequest"]
     assert prayer_plan_request["additionalProperties"] is False
     assert prayer_plan_request["properties"]["pages_per_prayer"]["maximum"] == 20
+    assert prayer_plan_request["properties"]["notifications_enabled"]["type"] == "boolean"
     prayer_check_in_request = schema["components"]["schemas"]["PrayerReadingCheckInCreateRequest"]
     assert prayer_check_in_request["properties"]["pages"]["maximum"] == 604
     today_schema = schema["components"]["schemas"]["TodayOutput"]

@@ -35,12 +35,15 @@ export function PrayerReadingPlanCard() {
   const { formatNumber, locale, t } = useI18n();
   const [day, setDay] = useState<PrayerReadingDay | null>(null);
   const [pagesPerPrayer, setPagesPerPrayer] = useState(2);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [timezoneName, setTimezoneName] = useState(() => browserTimezone());
   const [editing, setEditing] = useState(false);
   const [editingPrayer, setEditingPrayer] = useState<PrayerReadingPrayer | null>(null);
   const [actualPages, setActualPages] = useState(2);
   const [loading, setLoading] = useState(false);
-  const [busyPrayer, setBusyPrayer] = useState<PrayerReadingPrayer | "plan" | null>(null);
+  const [busyPrayer, setBusyPrayer] = useState<
+    PrayerReadingPrayer | "plan" | "notifications" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadDay = useCallback(async (preferredTimezone = timezoneName) => {
@@ -51,7 +54,10 @@ export function PrayerReadingPlanCard() {
       const result = await api.getPrayerReadingDay(preferredTimezone);
       setDay(result);
       setTimezoneName(result.timezone_name);
-      if (result.plan) setPagesPerPrayer(result.plan.pages_per_prayer);
+      if (result.plan) {
+        setPagesPerPrayer(result.plan.pages_per_prayer);
+        setNotificationsEnabled(result.plan.notifications_enabled);
+      }
     } catch (reason) {
       setError(api.normalizeError(reason));
     } finally {
@@ -91,11 +97,36 @@ export function PrayerReadingPlanCard() {
       }
       await api.setPrayerReadingPlan({
         pages_per_prayer: pagesPerPrayer,
+        notifications_enabled: notificationsEnabled,
         timezone_name: timezoneName,
         base_revision: day?.plan?.revision || 0,
       });
       setEditing(false);
       await loadDay(timezoneName);
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+    } finally {
+      setBusyPrayer(null);
+    }
+  };
+
+  const toggleReadingNotifications = async () => {
+    const nextValue = !notificationsEnabled;
+    if (!day?.plan) {
+      setNotificationsEnabled(nextValue);
+      return;
+    }
+    setBusyPrayer("notifications");
+    setError(null);
+    try {
+      const updated = await api.setPrayerReadingPlan({
+        pages_per_prayer: day.plan.pages_per_prayer,
+        notifications_enabled: nextValue,
+        timezone_name: day.plan.timezone_name,
+        base_revision: day.plan.revision,
+      });
+      setNotificationsEnabled(updated.notifications_enabled);
+      setDay((current) => (current ? { ...current, plan: updated } : current));
     } catch (reason) {
       setError(api.normalizeError(reason));
     } finally {
@@ -196,6 +227,27 @@ export function PrayerReadingPlanCard() {
           <strong>≈ {formatNumber(completionDays)}</strong>
           <span>{t("prayerReading.daysForMushaf")}</span>
         </div>
+      </div>
+
+      <div className="prayer-reading-notification-row">
+        <div>
+          <strong>{t("prayerReading.notificationsTitle")}</strong>
+          <p className="kpi-desc">{t("prayerReading.notificationsDescription")}</p>
+        </div>
+        <button
+          aria-checked={notificationsEnabled}
+          aria-label={t("prayerReading.notificationsToggleLabel")}
+          className={`reminder-switch ${notificationsEnabled ? "is-on" : ""}`}
+          disabled={busyPrayer !== null}
+          onClick={() => void toggleReadingNotifications()}
+          role="switch"
+          type="button"
+        >
+          <span aria-hidden="true" />
+          <span className="sr-only">
+            {t(notificationsEnabled ? "reminder.disable" : "reminder.enable")}
+          </span>
+        </button>
       </div>
 
       {showForm ? (

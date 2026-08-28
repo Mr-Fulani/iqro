@@ -152,6 +152,7 @@ class PrayerReadingPlanQuerySerializer(StrictFieldsSerializer):
 
 class PrayerReadingPlanWriteSerializer(StrictFieldsSerializer):
     pages_per_prayer = serializers.IntegerField(min_value=1, max_value=20)
+    notifications_enabled = serializers.BooleanField(required=False, default=True)
     timezone_name = serializers.CharField(max_length=64)
     base_revision = serializers.IntegerField(min_value=0)
     client_updated_at = serializers.DateTimeField()
@@ -206,6 +207,7 @@ class ReadingGoalOutputSerializer(serializers.Serializer[Any]):
 class PrayerReadingPlanOutputSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     pages_per_prayer = serializers.IntegerField()
+    notifications_enabled = serializers.BooleanField()
     timezone_name = serializers.CharField()
     revision = serializers.IntegerField()
     client_updated_at = serializers.DateTimeField()

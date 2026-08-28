@@ -48,9 +48,11 @@ endpoint. Manual entries may be edited for seven days,
 matching the API's correction window; deletion remains available later. A missed day stays as a
 historical fact and never creates debt or silently increases a future target.
 
-When a prayer Web Push reminder belongs to a user with an active after-prayer plan, the
-localized notification includes the selected page count and opens a guided reading session for
-that prayer and local date.
+When a prayer Web Push reminder belongs to a user with an active after-prayer plan and
+`notifications_enabled=true`, the localized notification includes the selected page count and
+opens a guided reading session for that prayer and local date. Turning this flag off keeps the
+prayer-time notification itself and removes only the reading copy and deep link. The setting is
+therefore independent from the five prayer reminder rules.
 
 The guided reader records full active minutes through automatic reading sessions with zero
 credited pages. Its prayer check-in records the actual pages separately. Consequently, a
@@ -59,6 +61,6 @@ only the check-in pages; the same guided reading is never credited twice to eith
 timer pauses when the tab is hidden, the window loses focus, or the reader is idle, and stops
 after the check-in is saved.
 
-Coordinates are not stored by this feature. The plan stores only the page count, IANA time
-zone, revision metadata, device reference, and daily prayer check-ins. Account deletion removes
-plans and check-ins; guest-to-account merge preserves them.
+Coordinates are not stored by this feature. The plan stores only the page count, reading
+notification flag, IANA time zone, revision metadata, device reference, and daily prayer
+check-ins. Account deletion removes plans and check-ins; guest-to-account merge preserves them.

@@ -421,6 +421,7 @@ def test_prayer_reading_plan_check_ins_are_flexible_idempotent_and_reversible() 
         reverse("reading:prayer-reading-plan"),
         {
             "pages_per_prayer": 2,
+            "notifications_enabled": False,
             "timezone_name": "UTC",
             "base_revision": 0,
             "client_updated_at": timezone.now().isoformat(),
@@ -480,6 +481,7 @@ def test_prayer_reading_plan_check_ins_are_flexible_idempotent_and_reversible() 
     assert empty.json()["plan"] is None
     assert plan.status_code == 201
     assert plan.json()["pages_per_prayer"] == 2
+    assert plan.json()["notifications_enabled"] is False
     assert checked.status_code == 201
     assert checked.json()["pages"] == 1
     assert duplicate_slot.status_code == 200

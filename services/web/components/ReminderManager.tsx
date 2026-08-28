@@ -38,7 +38,7 @@ const PRAYER_LABELS: Record<string, MessageKey> = {
 };
 
 type PrayerEvent = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
-type QuranReminderType = Extract<Reminder["reminder_type"], "quran_reading" | "quran_review">;
+type ReminderManagerVariant = "all" | "prayer";
 
 const PRAYER_EVENTS = Object.entries(PRAYER_LABELS) as Array<[PrayerEvent, MessageKey]>;
 
@@ -48,7 +48,7 @@ const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], MessageKey> = {
   quran_review: "reminder.type.review",
 };
 
-export function ReminderManager() {
+export function ReminderManager({ variant = "all" }: { variant?: ReminderManagerVariant }) {
   const { session, isLoggedIn } = useAuth();
   const { locale, t } = useI18n();
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -67,7 +67,7 @@ export function ReminderManager() {
     message: string;
   } | null>(null);
 
-  const [reminderType, setReminderType] = useState<QuranReminderType>("quran_reading");
+  const reminderType = "quran_review" as const;
   const [localTime, setLocalTime] = useState("07:30");
   const [weekdaysMask, setWeekdaysMask] = useState(127);
   const [timezoneMode, setTimezoneMode] = useState<ReminderTimezone["mode"]>("device_local");
@@ -82,7 +82,11 @@ export function ReminderManager() {
   const [reviewEndId, setReviewEndId] = useState("");
 
   const activeReminders = useMemo(
-    () => reminders.filter((reminder) => reminder.deleted_at === null),
+    () =>
+      reminders.filter(
+        (reminder) =>
+          reminder.deleted_at === null && reminder.reminder_type !== "quran_reading",
+      ),
     [reminders],
   );
   const prayerReminders = useMemo(
@@ -90,12 +94,15 @@ export function ReminderManager() {
     [activeReminders],
   );
   const quranReminders = useMemo(
-    () => activeReminders.filter((reminder) => reminder.reminder_type !== "prayer"),
+    () => activeReminders.filter((reminder) => reminder.reminder_type === "quran_review"),
     [activeReminders],
   );
   const enabledReminderCount = useMemo(
-    () => activeReminders.filter((reminder) => reminder.is_enabled).length,
-    [activeReminders],
+    () =>
+      (variant === "prayer" ? prayerReminders : activeReminders).filter(
+        (reminder) => reminder.is_enabled,
+      ).length,
+    [activeReminders, prayerReminders, variant],
   );
   const prayerDeliveryReady = Boolean(
     webPushConnected &&
@@ -208,14 +215,14 @@ export function ReminderManager() {
   }, [locale, session?.user.id, t, webPushStatus, webPushSupported]);
 
   useEffect(() => {
-    if (reminderType !== "quran_review" || surahs.length > 0) return;
+    if (variant !== "all" || surahs.length > 0) return;
     api.getSurahs("madani-hafs").then(setSurahs).catch((reason) => {
       setError(api.normalizeError(reason));
     });
-  }, [reminderType, surahs.length]);
+  }, [surahs.length, variant]);
 
   useEffect(() => {
-    if (reminderType !== "quran_review") return;
+    if (variant !== "all") return;
     let active = true;
     api
       .getAyahs("madani-hafs", reviewSurah)
@@ -235,11 +242,10 @@ export function ReminderManager() {
     return () => {
       active = false;
     };
-  }, [reminderType, reviewSurah]);
+  }, [reviewSurah, variant]);
 
   const resetForm = () => {
     setEditing(null);
-    setReminderType("quran_reading");
     setLocalTime("07:30");
     setWeekdaysMask(127);
     setTimezoneMode("device_local");
@@ -254,10 +260,9 @@ export function ReminderManager() {
     if (
       !reminder.schedule ||
       reminder.schedule.kind === "prayer" ||
-      reminder.reminder_type === "prayer"
+      reminder.reminder_type !== "quran_review"
     ) return;
     setEditing(reminder);
-    setReminderType(reminder.reminder_type);
     setLocalTime(reminder.schedule.local_time.slice(0, 5));
     setWeekdaysMask(reminder.weekdays_mask);
     setTimezoneMode(reminder.timezone.mode);
@@ -578,8 +583,16 @@ export function ReminderManager() {
     <section className="surface">
       <div className="surface-head">
         <div>
-          <h3 className="surface-title">{t("reminder.title")}</h3>
-          <p className="surface-subtitle">{t("reminder.description")}</p>
+          <h3 className="surface-title">
+            {t(variant === "prayer" ? "reminder.prayerCenterTitle" : "reminder.title")}
+          </h3>
+          <p className="surface-subtitle">
+            {t(
+              variant === "prayer"
+                ? "reminder.prayerCenterDescription"
+                : "reminder.description",
+            )}
+          </p>
         </div>
         <span className="status-chip">{t("reminder.activeCount", { count: enabledReminderCount })}</span>
       </div>
@@ -650,12 +663,14 @@ export function ReminderManager() {
       </div>
 
       <div className="prayer-reminder-panel">
-        <div className="surface-head" style={{ marginBottom: 8 }}>
-          <div>
-            <h4 className="surface-title">{t("reminder.prayerTitle")}</h4>
-            <p className="surface-subtitle">{t("reminder.prayerDescription")}</p>
+        {variant === "all" && (
+          <div className="surface-head" style={{ marginBottom: 8 }}>
+            <div>
+              <h4 className="surface-title">{t("reminder.prayerTitle")}</h4>
+              <p className="surface-subtitle">{t("reminder.prayerDescription")}</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="prayer-location-status">
           <p className="kpi-desc">
             {!webPushConnected
@@ -737,6 +752,8 @@ export function ReminderManager() {
         </div>
       </div>
 
+      {variant === "all" && (
+        <>
       <form
         onSubmit={(event) => void saveReminder(event)}
         style={{
@@ -754,20 +771,6 @@ export function ReminderManager() {
           <p className="surface-subtitle">{t("reminder.quranDescription")}</p>
         </div>
         <div className="form-row">
-          <div className="form-group">
-            <label className="form-label" htmlFor="reminder-type">{t("reminder.type")}</label>
-            <select
-              id="reminder-type"
-              value={reminderType}
-              onChange={(event) =>
-                setReminderType(event.target.value as QuranReminderType)
-              }
-            >
-              <option value="quran_reading">{t("reminder.type.reading")}</option>
-              <option value="quran_review">{t("reminder.type.review")}</option>
-            </select>
-          </div>
-
           <div className="form-group">
             <label className="form-label" htmlFor="reminder-time">{t("reminder.localTime")}</label>
             <input
@@ -792,8 +795,7 @@ export function ReminderManager() {
           </div>
         </div>
 
-        {reminderType === "quran_review" && (
-          <div className="form-row">
+        <div className="form-row">
             <div className="form-group">
               <label className="form-label" htmlFor="review-surah">{t("reminder.surah")}</label>
               <select
@@ -832,8 +834,7 @@ export function ReminderManager() {
                 ))}
               </select>
             </div>
-          </div>
-        )}
+        </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="reminder-repeat">{t("reminder.repeat")}</label>
@@ -942,6 +943,8 @@ export function ReminderManager() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </section>
   );

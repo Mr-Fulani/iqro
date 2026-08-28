@@ -10,7 +10,6 @@ import {
   ReadingPosition,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
-import { ReminderManager } from "../../components/ReminderManager";
 import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
 import { SYNC_STATE_EVENT } from "../../lib/sync-state";
 import { useI18n } from "../../lib/i18n-context";
@@ -59,7 +58,6 @@ export default function ProfilePage() {
   const [loadingBookmarks, setLoadingBookmarks] = useState<boolean>(false);
   const [loadingSync, setLoadingSync] = useState<boolean>(false);
   const [pendingSync, setPendingSync] = useState<number>(0);
-  const [syncVersion, setSyncVersion] = useState<number>(0);
   const [confirmLogoutAll, setConfirmLogoutAll] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -210,7 +208,6 @@ export default function ProfilePage() {
       await loadBookmarksData();
       await loadReadingData();
       setPendingSync(result.pending);
-      setSyncVersion((current) => current + 1);
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err) {
       setError(api.normalizeError(err));
@@ -660,8 +657,6 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
-
-      <ReminderManager key={syncVersion} />
 
       {/* Feedback & Support Section */}
       <section className="surface" id="feedback">

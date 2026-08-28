@@ -34,7 +34,6 @@ from quran_backend.modules.reminders.models import (
 
 SUPPORTED_WEB_PUSH_TYPES = (
     ReminderType.PRAYER,
-    ReminderType.QURAN_READING,
     ReminderType.QURAN_REVIEW,
 )
 
@@ -192,7 +191,11 @@ def next_local_occurrence(
     *,
     after: datetime,
 ) -> datetime | None:
-    if not _web_push_eligible(reminder):
+    if (
+        reminder.deleted_at is not None
+        or not reminder.is_enabled
+        or reminder.reminder_type not in ReminderType.values
+    ):
         return None
     if reminder.reminder_type == ReminderType.PRAYER:
         return _next_prayer_occurrence(reminder, subscription, after=after)
@@ -296,6 +299,7 @@ def claim_due_web_push_schedules(
             subscription__revoked_at__isnull=True,
             reminder__deleted_at__isnull=True,
             reminder__is_enabled=True,
+            reminder__reminder_type__in=SUPPORTED_WEB_PUSH_TYPES,
         )
         .filter(Q(claimed_until__isnull=True) | Q(claimed_until__lt=current_time))
         .order_by("next_attempt_at", "id")[:limit]
@@ -433,7 +437,10 @@ def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
     reminder = schedule.reminder
     locale = schedule.subscription.locale
     prayer_reading_plan = (
-        PrayerReadingPlan.objects.filter(user_id=reminder.user_id)
+        PrayerReadingPlan.objects.filter(
+            user_id=reminder.user_id,
+            notifications_enabled=True,
+        )
         .only("pages_per_prayer", "timezone_name")
         .first()
         if reminder.reminder_type == ReminderType.PRAYER

@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
+import { ReminderManager } from "../../components/ReminderManager";
 import {
   dateInTimezone,
   DEFAULT_PRAYER_LOCATION,
@@ -638,6 +639,7 @@ export default function PrayerPage() {
           </section>
         );
       })()}
+      <ReminderManager variant="prayer" />
     </div>
   );
 }

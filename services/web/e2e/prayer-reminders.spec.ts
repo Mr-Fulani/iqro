@@ -154,7 +154,7 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   });
 });
 
-test("prayer switches and Quran reminders use the strict API shape", async ({
+test("prayer switches and memorization reminders use the strict API shape", async ({
   page,
 }) => {
   await installSession(page);
@@ -230,7 +230,7 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
           locale: "ru",
           prayer_location_configured: false,
           prayer_profile_configured: true,
-          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+          supported_reminder_types: ["prayer", "quran_review"],
         },
       });
     }
@@ -245,7 +245,7 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
           locale: "ru",
           prayer_location_configured: true,
           prayer_profile_configured: true,
-          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+          supported_reminder_types: ["prayer", "quran_review"],
         },
       });
     }
@@ -347,7 +347,7 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
   });
 
-  await page.goto("/profile");
+  await page.goto("/planner");
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
@@ -382,14 +382,13 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   await expect(maghribSwitch).toHaveAttribute("aria-checked", "false");
   expect(captured.patches[0]).toMatchObject({ base_revision: 1, is_enabled: false });
 
-  await reminders.getByLabel("Тип").selectOption("quran_review");
   await expect(reminders.getByLabel("Начальный аят").locator("option")).toHaveCount(2);
   await reminders.getByLabel("Начальный аят").selectOption({ index: 0 });
   await reminders.getByLabel("Конечный аят").selectOption({ index: 1 });
   await reminders.getByRole("button", { name: "Создать напоминание" }).click();
 
   const reviewRow = reminders
-    .getByText("Повторение аятов", { exact: true })
+    .getByText("Заучивание и повторение аятов", { exact: true })
     .locator("xpath=ancestor::div[contains(@class, 'track-row')]");
   await expect(reviewRow).toBeVisible();
 
@@ -407,6 +406,15 @@ test("prayer switches and Quran reminders use the strict API shape", async ({
   ).toBeVisible();
   await reminders.getByRole("button", { name: "Удалить" }).click();
   expect(captured.deletes[0]).toMatchObject({ base_revision: 1 });
+
+  await page.goto("/profile");
+  await expect(page.getByRole("heading", { name: "Напоминания" })).toHaveCount(0);
+
+  await page.goto("/prayer");
+  const prayerNotifications = page
+    .getByRole("heading", { name: "Уведомления о намазе" })
+    .locator("xpath=ancestor::section");
+  await expect(prayerNotifications.getByRole("switch")).toHaveCount(5);
 });
 
 test("browser push waits for the first service worker to become active", async ({ page }) => {
@@ -500,7 +508,7 @@ test("browser push waits for the first service worker to become active", async (
           locale: null,
           prayer_location_configured: false,
           prayer_profile_configured: true,
-          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+          supported_reminder_types: ["prayer", "quran_review"],
         },
       });
     }
@@ -515,14 +523,14 @@ test("browser push waits for the first service worker to become active", async (
           locale: "ru",
           prayer_location_configured: false,
           prayer_profile_configured: true,
-          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+          supported_reminder_types: ["prayer", "quran_review"],
         },
       });
     }
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
   });
 
-  await page.goto("/profile");
+  await page.goto("/planner");
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");
@@ -597,14 +605,14 @@ test("browser push status follows the subscription on the current device", async
           locale: "ru",
           prayer_location_configured: true,
           prayer_profile_configured: true,
-          supported_reminder_types: ["prayer", "quran_reading", "quran_review"],
+          supported_reminder_types: ["prayer", "quran_review"],
         },
       });
     }
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
   });
 
-  await page.goto("/profile");
+  await page.goto("/planner");
   const reminders = page
     .getByRole("heading", { name: "Напоминания" })
     .locator("xpath=ancestor::section");

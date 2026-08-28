@@ -412,6 +412,7 @@ class PrayerReadingPlan(BaseModel):
         related_name="prayer_reading_plan",
     )
     pages_per_prayer = models.PositiveSmallIntegerField(default=2)
+    notifications_enabled = models.BooleanField(default=True)
     timezone_name = models.CharField(max_length=64)
     client_updated_at = models.DateTimeField()
     revision = models.PositiveBigIntegerField(default=1)

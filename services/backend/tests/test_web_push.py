@@ -123,6 +123,23 @@ def _reading_rule(user: User, **overrides: Any) -> ReminderRule:
     return ReminderRule.objects.create(**values)
 
 
+def _review_rule(
+    user: User,
+    quran_dataset: dict[str, Any],
+    **overrides: Any,
+) -> ReminderRule:
+    values: dict[str, Any] = {
+        "user": user,
+        "reminder_type": ReminderType.QURAN_REVIEW,
+        "local_time": time(7, 30),
+        "start_ayah": quran_dataset["first_ayah"],
+        "end_ayah": quran_dataset["second_ayah"],
+        "client_updated_at": timezone.now(),
+    }
+    values.update(overrides)
+    return ReminderRule.objects.create(**values)
+
+
 def _prayer_profile(user: User) -> PrayerProfile:
     configuration = PrayerMethodConfig.objects.select_related("release", "method").get(
         method__code="muslim-world-league",
@@ -164,7 +181,7 @@ def test_web_push_api_upserts_reports_and_deletes_device_subscription() -> None:
         "locale": "ru",
         "prayer_location_configured": True,
         "prayer_profile_configured": False,
-        "supported_reminder_types": ["prayer", "quran_reading", "quran_review"],
+        "supported_reminder_types": ["prayer", "quran_review"],
     }
     assert "endpoint" not in created.json()
     assert status_response.json() == created.json()
@@ -246,7 +263,9 @@ def test_next_occurrence_resolves_dst_gap_and_fold_once() -> None:
 
 
 @pytest.mark.django_db
-def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
+def test_refresh_builds_indexed_schedules_for_review_and_prayer_rules(
+    quran_dataset: dict[str, Any],
+) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     _prayer_profile(user)
@@ -256,7 +275,7 @@ def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
         prayer_latitude=Decimal("41.008200"),
         prayer_longitude=Decimal("28.978400"),
     )
-    reading = _reading_rule(user, local_time=time(8, 0))
+    review = _review_rule(user, quran_dataset, local_time=time(8, 0))
     prayer = ReminderRule.objects.create(
         user=user,
         reminder_type=ReminderType.PRAYER,
@@ -271,8 +290,8 @@ def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
     )
 
     schedules = {schedule.reminder_id: schedule for schedule in WebPushSchedule.objects.all()}
-    assert set(schedules) == {reading.id, prayer.id}
-    assert schedules[reading.id].occurrence_at == datetime(2026, 8, 26, 5, 0, tzinfo=UTC)
+    assert set(schedules) == {review.id, prayer.id}
+    assert schedules[review.id].occurrence_at == datetime(2026, 8, 26, 5, 0, tzinfo=UTC)
     assert datetime(2026, 8, 26, 0, 0, tzinfo=UTC) < schedules[prayer.id].occurrence_at
     assert schedules[prayer.id].occurrence_at < datetime(2026, 8, 27, 0, 0, tzinfo=UTC)
     prayer.prayer_offset_minutes = 0
@@ -284,6 +303,32 @@ def test_refresh_builds_indexed_schedules_for_quran_and_prayer_rules() -> None:
     assert all(
         schedule.next_attempt_at == schedule.occurrence_at for schedule in schedules.values()
     )
+
+
+@pytest.mark.django_db
+def test_daily_reading_schedule_cleanup_migration_preserves_the_rule() -> None:
+    user = User.objects.create_user()
+    _client, device = _authenticated_web_client(user)
+    subscription = _subscription(device, timezone_name="UTC")
+    rule = _reading_rule(user, local_time=time(8, 0))
+    WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=timezone.now(),
+        next_attempt_at=timezone.now(),
+    )
+    migration = import_module(
+        "quran_backend.modules.reminders.migrations."
+        "0005_remove_daily_quran_reading_web_push_schedules"
+    )
+
+    migration.remove_daily_quran_reading_schedules(
+        apps,
+        SimpleNamespace(connection=connection),
+    )
+
+    assert ReminderRule.objects.filter(id=rule.id).exists()
+    assert not WebPushSchedule.objects.filter(reminder=rule).exists()
 
 
 @pytest.mark.django_db
@@ -331,14 +376,18 @@ def test_prayer_offset_migration_moves_existing_schedule_to_exact_time() -> None
 
 @pytest.mark.django_db
 @override_settings(**PUSH_SETTINGS)
-def test_claim_and_successful_delivery_advance_schedule(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_claim_and_successful_delivery_advance_schedule(
+    monkeypatch: pytest.MonkeyPatch,
+    quran_dataset: dict[str, Any],
+) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     subscription = _subscription(device, timezone_name="UTC")
     current_time = timezone.now()
     occurrence = current_time - timedelta(seconds=1)
-    rule = _reading_rule(
+    rule = _review_rule(
         user,
+        quran_dataset,
         local_time=occurrence.time().replace(microsecond=0, tzinfo=None),
     )
     schedule = WebPushSchedule.objects.create(
@@ -362,8 +411,8 @@ def test_claim_and_successful_delivery_advance_schedule(monkeypatch: pytest.Monk
 
     assert result == "delivered"
     payload = json.loads(captured["data"])
-    assert payload["title"] == "Время читать Коран"
-    assert payload["url"] == "/ru/quran"
+    assert payload["title"] == "Время повторить аяты"
+    assert payload["url"] == "/ru/quran?surah=1&ayah=1"
     assert "secret-capability" in captured["subscription_info"]["endpoint"]
     schedule.refresh_from_db()
     subscription.refresh_from_db()
@@ -382,7 +431,7 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     subscription = _subscription(device, timezone_name="UTC")
-    PrayerReadingPlan.objects.create(
+    plan = PrayerReadingPlan.objects.create(
         user=user,
         pages_per_prayer=2,
         timezone_name="UTC",
@@ -425,6 +474,44 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
         f"&prayer_date={expected_date}&prayer_timezone=UTC"
         "&prayer_target=2&prayer_credited=0"
     )
+
+    plan.notifications_enabled = False
+    plan.save(update_fields=["notifications_enabled", "updated_at"])
+    next_occurrence = timezone.now() - timedelta(seconds=1)
+    WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=next_occurrence,
+        next_attempt_at=next_occurrence,
+    )
+    captured.clear()
+    claimed = claim_due_web_push_schedules(now=next_occurrence + timedelta(seconds=1))
+    result = deliver_claimed_web_push_schedule(
+        schedule_id=claimed[0].schedule_id,
+        claim_token=claimed[0].claim_token,
+    )
+
+    payload = json.loads(captured["data"])
+    assert result == "delivered"
+    assert payload["body"] == "Наступило время намаза."
+    assert payload["url"] == "/ru/prayer"
+
+
+@pytest.mark.django_db
+def test_daily_quran_reading_schedules_are_no_longer_claimed() -> None:
+    user = User.objects.create_user()
+    _client, device = _authenticated_web_client(user)
+    subscription = _subscription(device, timezone_name="UTC")
+    occurrence = timezone.now() - timedelta(seconds=1)
+    rule = _reading_rule(user, local_time=time(8, 0))
+    WebPushSchedule.objects.create(
+        subscription=subscription,
+        reminder=rule,
+        occurrence_at=occurrence,
+        next_attempt_at=occurrence,
+    )
+
+    assert claim_due_web_push_schedules(now=timezone.now()) == []
 
 
 @pytest.mark.django_db
@@ -472,11 +559,14 @@ def test_review_notification_links_to_the_first_ayah(
 
 @pytest.mark.django_db
 @override_settings(**PUSH_SETTINGS)
-def test_gone_push_endpoint_is_deleted(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gone_push_endpoint_is_deleted(
+    monkeypatch: pytest.MonkeyPatch,
+    quran_dataset: dict[str, Any],
+) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     subscription = _subscription(device, timezone_name="UTC")
-    rule = _reading_rule(user, local_time=time(8, 0))
+    rule = _review_rule(user, quran_dataset, local_time=time(8, 0))
     occurrence = timezone.now() - timedelta(seconds=1)
     schedule = WebPushSchedule.objects.create(
         subscription=subscription,
@@ -505,11 +595,12 @@ def test_gone_push_endpoint_is_deleted(monkeypatch: pytest.MonkeyPatch) -> None:
 @override_settings(**PUSH_SETTINGS, WEB_PUSH_RETRY_WINDOW_SECONDS=900)
 def test_stale_occurrence_is_skipped_instead_of_burst_delivered(
     monkeypatch: pytest.MonkeyPatch,
+    quran_dataset: dict[str, Any],
 ) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     subscription = _subscription(device, timezone_name="UTC")
-    rule = _reading_rule(user, local_time=time(8, 0))
+    rule = _review_rule(user, quran_dataset, local_time=time(8, 0))
     occurrence = timezone.now() - timedelta(days=2)
     schedule = WebPushSchedule.objects.create(
         subscription=subscription,
@@ -537,14 +628,16 @@ def test_stale_occurrence_is_skipped_instead_of_burst_delivered(
 @override_settings(**PUSH_SETTINGS)
 def test_transport_error_is_bounded_for_database_retry(
     monkeypatch: pytest.MonkeyPatch,
+    quran_dataset: dict[str, Any],
 ) -> None:
     user = User.objects.create_user()
     _client, device = _authenticated_web_client(user)
     subscription = _subscription(device, timezone_name="UTC")
     current_time = timezone.now()
     occurrence = current_time - timedelta(seconds=1)
-    rule = _reading_rule(
+    rule = _review_rule(
         user,
+        quran_dataset,
         local_time=occurrence.time().replace(microsecond=0, tzinfo=None),
     )
     schedule = WebPushSchedule.objects.create(

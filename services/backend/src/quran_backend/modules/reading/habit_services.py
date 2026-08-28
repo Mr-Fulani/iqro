@@ -141,6 +141,7 @@ def set_prayer_reading_plan(  # noqa: PLR0913
     timezone_name: str,
     base_revision: int,
     client_updated_at: datetime,
+    notifications_enabled: bool = True,
     device_id: uuid.UUID | None = None,
 ) -> tuple[PrayerReadingPlan, bool]:
     User.objects.select_for_update().only("id").get(id=user.id)
@@ -157,6 +158,7 @@ def set_prayer_reading_plan(  # noqa: PLR0913
         plan = PrayerReadingPlan(
             user=user,
             pages_per_prayer=pages_per_prayer,
+            notifications_enabled=notifications_enabled,
             timezone_name=timezone_name,
             client_updated_at=client_updated_at,
             device=device,
@@ -168,11 +170,13 @@ def set_prayer_reading_plan(  # noqa: PLR0913
         raise PrayerReadingPlanRevisionConflictError
     if (
         current.pages_per_prayer == pages_per_prayer
+        and current.notifications_enabled == notifications_enabled
         and current.timezone_name == timezone_name
         and current.device_id == (device.id if device is not None else None)
     ):
         return current, False
     current.pages_per_prayer = pages_per_prayer
+    current.notifications_enabled = notifications_enabled
     current.timezone_name = timezone_name
     current.client_updated_at = client_updated_at
     current.device = device
@@ -181,6 +185,7 @@ def set_prayer_reading_plan(  # noqa: PLR0913
     current.save(
         update_fields=[
             "pages_per_prayer",
+            "notifications_enabled",
             "timezone_name",
             "client_updated_at",
             "device",
@@ -383,6 +388,7 @@ def prayer_reading_plan_snapshot(plan: PrayerReadingPlan) -> dict[str, Any]:
     return {
         "id": str(plan.id),
         "pages_per_prayer": plan.pages_per_prayer,
+        "notifications_enabled": plan.notifications_enabled,
         "timezone_name": plan.timezone_name,
         "revision": plan.revision,
         "client_updated_at": plan.client_updated_at.isoformat(),

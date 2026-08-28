@@ -311,17 +311,19 @@ async function installReadingMocks(page: Page) {
     if (url.pathname === "/api/v1/me/prayer-reading-plan" && request.method() === "PUT") {
       const payload = request.postDataJSON() as Record<string, unknown>;
       writes.push(payload);
+      const existingRevision = Number(prayerPlan?.revision || 0);
       prayerPlan = {
         id: "019a1284-9800-7000-8000-000000000701",
         pages_per_prayer: payload.pages_per_prayer,
+        notifications_enabled: payload.notifications_enabled,
         timezone_name: payload.timezone_name,
-        revision: 1,
+        revision: existingRevision + 1,
         client_updated_at: payload.client_updated_at,
         device_id: activeSession.device.id,
         created_at: "2026-08-28T09:00:00Z",
         updated_at: "2026-08-28T09:00:00Z",
       };
-      return route.fulfill({ status: 201, json: prayerPlan });
+      return route.fulfill({ status: existingRevision ? 200 : 201, json: prayerPlan });
     }
     if (url.pathname === "/api/v1/me/prayer-reading-check-ins" && request.method() === "POST") {
       const payload = request.postDataJSON() as Record<string, unknown>;
@@ -416,6 +418,12 @@ test("prayer reading plan keeps partial and extra pages honest for each prayer",
   await plan.getByRole("button", { name: "Сохранить план" }).click();
 
   await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
+  const readingNotifications = plan.getByRole("switch", {
+    name: "Уведомления о чтении после намаза",
+  });
+  await expect(readingNotifications).toHaveAttribute("aria-checked", "true");
+  await readingNotifications.click();
+  await expect(readingNotifications).toHaveAttribute("aria-checked", "false");
   const fajr = plan.locator(".prayer-reading-slot").filter({ hasText: "Фаджр" });
   await expect(fajr.getByText("0 из 2 стр.")).toBeVisible();
   await expect(fajr.getByRole("link", { name: "Открыть чтение после намаза Фаджр" }))
@@ -436,11 +444,20 @@ test("prayer reading plan keeps partial and extra pages honest for each prayer",
   await expect(plan.getByText("Сегодня выполнена норма после 1 из 5 намазов")).toBeVisible();
   await expect(plan.getByText("3 / 10 стр.")).toBeVisible();
   await expect(fajr.getByText("3 из 2 стр.")).toBeVisible();
-  expect(writes[0]).toMatchObject({ pages_per_prayer: 2, base_revision: 0 });
-  expect(writes[1]).toMatchObject({ prayer: "fajr", local_date: "2026-08-28", pages: 1 });
-  expect(String(writes[1].id)).toMatch(/^[0-9a-f-]{36}$/);
-  expect(String(writes[1].session_id)).toMatch(/^[0-9a-f-]{36}$/);
-  expect(writes[2]).toMatchObject({ pages: 3, base_revision: 1 });
+  expect(writes[0]).toMatchObject({
+    pages_per_prayer: 2,
+    notifications_enabled: true,
+    base_revision: 0,
+  });
+  expect(writes[1]).toMatchObject({
+    pages_per_prayer: 2,
+    notifications_enabled: false,
+    base_revision: 1,
+  });
+  expect(writes[2]).toMatchObject({ prayer: "fajr", local_date: "2026-08-28", pages: 1 });
+  expect(String(writes[2].id)).toMatch(/^[0-9a-f-]{36}$/);
+  expect(String(writes[2].session_id)).toMatch(/^[0-9a-f-]{36}$/);
+  expect(writes[3]).toMatchObject({ pages: 3, base_revision: 1 });
 
   await fajr.getByRole("button", { name: "Изменить" }).click();
   await plan.getByRole("button", { name: "Удалить отметку" }).click();

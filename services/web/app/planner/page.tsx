@@ -2,6 +2,7 @@
 
 import { PrayerReadingPlanCard } from "../../components/PrayerReadingPlanCard";
 import { ReadingPlannerDashboard } from "../../components/ReadingPlannerDashboard";
+import { ReminderManager } from "../../components/ReminderManager";
 import { TodayReadingCard } from "../../components/TodayReadingCard";
 
 export default function PlannerPage() {
@@ -10,6 +11,7 @@ export default function PlannerPage() {
       <ReadingPlannerDashboard />
       <TodayReadingCard />
       <PrayerReadingPlanCard />
+      <ReminderManager />
     </div>
   );
 }
