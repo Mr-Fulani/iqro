@@ -47,6 +47,7 @@ export const config = {
     "/",
     "/quran/:path*",
     "/audio/:path*",
+    "/dua/:path*",
     "/prayer/:path*",
     "/profile/:path*",
     "/login/:path*",

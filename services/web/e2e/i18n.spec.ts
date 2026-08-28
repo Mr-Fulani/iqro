@@ -114,8 +114,9 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
   await expect(page.getByRole("heading", { level: 2, name: "Темы" })).toBeVisible();
   await expect(page.locator(".dua-category-list")).toHaveCSS("display", "grid");
-  await expect(page.locator(".dua-category-chip")).toHaveCount(2);
-  await expect(page.locator(".dua-category-chip").nth(1)).toContainText("1 ду’а");
+  await expect(page.locator(".dua-category-chip")).toHaveCount(1);
+  await expect(page.locator(".dua-category-chip")).toHaveAttribute("href", "/ru/dua/waking-up");
+  await expect(page.locator(".dua-category-chip")).toContainText("1 ду’а");
   expect(await page.locator(".dua-category-list").evaluate(
     (element) => element.scrollWidth <= element.clientWidth,
   )).toBe(true);
@@ -131,14 +132,24 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   const topics = page.locator(".dua-category-list");
   const cards = page.locator(".dua-category-chip");
   await expect(topics).toHaveCSS("display", "grid");
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(1);
   expect(await topics.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   expect(await cards.evaluateAll((elements) => elements.every(
     (element) => element.getBoundingClientRect().width <= element.parentElement!.clientWidth,
   ))).toBe(true);
 
-  await cards.nth(1).click();
-  await expect(cards.nth(1)).toHaveAttribute("aria-pressed", "true");
+  await cards.first().click();
+  await expect(page).toHaveURL("/ru/dua/waking-up");
+  await expect(page.getByRole("heading", {
+    level: 1,
+    name: "Слова поминания при пробуждении ото сна",
+  })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Вернуться ко всем темам" })).toHaveAttribute(
+    "href",
+    "/ru/dua",
+  );
+  await expect(page.locator(".dua-topic-content .dua-entry-card")).toHaveCount(1);
+  await expect(page.locator(".dua-topic-content .dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
 });
 
 test.describe("browser language negotiation", () => {

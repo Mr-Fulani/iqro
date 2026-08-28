@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { DuaEntryList } from "../../components/DuaEntryList";
+import { DuaTopicIcon } from "../../components/DuaTopicIcon";
 import {
   api,
   DuaCategory,
@@ -10,6 +13,7 @@ import {
 } from "../../lib/api";
 import { useI18n } from "../../lib/i18n-context";
 import type { PublishedDuaInitialData } from "../../lib/public-content";
+import { localizedPath } from "../../lib/routing";
 
 function cursorFromUrl(url: string | null): string | undefined {
   if (!url) return undefined;
@@ -32,7 +36,6 @@ export default function DuaPage({
   const [nextCursor, setNextCursor] = useState<string | undefined>(() =>
     cursorFromUrl(initialData?.entries.next ?? null),
   );
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(!initialData);
@@ -66,7 +69,6 @@ export default function DuaPage({
     try {
       const page = await api.getDuaEntries({
         language: locale,
-        category: selectedCategory || undefined,
         q: appliedQuery || undefined,
       });
       setEntries(page.results);
@@ -77,7 +79,7 @@ export default function DuaPage({
     } finally {
       setEntriesLoading(false);
     }
-  }, [appliedQuery, locale, selectedCategory, t]);
+  }, [appliedQuery, locale, t]);
 
   useEffect(() => {
     void loadEntries();
@@ -91,7 +93,6 @@ export default function DuaPage({
   const resetFilters = () => {
     setQuery("");
     setAppliedQuery("");
-    setSelectedCategory("");
   };
 
   const loadMore = async () => {
@@ -100,7 +101,6 @@ export default function DuaPage({
     try {
       const page: PaginatedResponse<DuaEntry> = await api.getDuaEntries({
         language: locale,
-        category: selectedCategory || undefined,
         q: appliedQuery || undefined,
         cursor: nextCursor,
       });
@@ -161,7 +161,7 @@ export default function DuaPage({
             maxLength={120}
           />
           <button className="btn btn-primary" type="submit">{t("dua.searchButton")}</button>
-          {(selectedCategory || appliedQuery) ? (
+          {appliedQuery ? (
             <button className="btn btn-secondary" type="button" onClick={resetFilters}>
               {t("dua.resetFilters")}
             </button>
@@ -174,34 +174,27 @@ export default function DuaPage({
             <p>{t("dua.categoryFilter")}</p>
           </header>
           <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
-            <button
-              type="button"
-              className={`dua-category-chip${selectedCategory === "" ? " is-active" : ""}`}
-              aria-pressed={selectedCategory === ""}
-              onClick={() => setSelectedCategory("")}
-            >
-              <span className="dua-category-title">{t("dua.allCategories")}</span>
-              <span className="dua-category-meta">
-                <span>{formatNumber(categories.length)}</span>
-                <small>{t("dua.categoriesAvailable")}</small>
-              </span>
-            </button>
             {categories.map((category) => (
-              <button
+              <Link
                 key={category.id}
-                type="button"
-                className={`dua-category-chip${selectedCategory === category.slug ? " is-active" : ""}`}
-                aria-pressed={selectedCategory === category.slug}
-                onClick={() => setSelectedCategory(category.slug)}
+                href={localizedPath(locale, `/dua/${category.slug}`)}
+                className="dua-category-chip"
+                aria-label={t("dua.openTopic", { topic: category.title })}
               >
+                <span className="dua-category-card-head">
+                  <DuaTopicIcon sourceNumber={category.source_number} slug={category.slug} />
+                  <span className="dua-category-number">{formatNumber(category.source_number)}</span>
+                </span>
                 <span className="dua-category-title">{category.title}</span>
                 <span className="dua-category-meta">
-                  <span>#{formatNumber(category.source_number)}</span>
                   <small>
                     {t("dua.categoryEntryCount", { count: formatNumber(category.entry_count) })}
                   </small>
+                  <span className="dua-category-arrow" aria-hidden="true">
+                    {locale === "ar" ? "←" : "→"}
+                  </span>
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
@@ -217,76 +210,8 @@ export default function DuaPage({
 
         {entriesLoading ? (
           <div className="alert alert-info">{t("common.loading")}</div>
-        ) : entries.length === 0 ? (
-          <div className="dua-empty">
-            <span aria-hidden="true">🤲</span>
-            <p>{t("dua.empty")}</p>
-          </div>
         ) : (
-          <div className="dua-entry-list">
-            {entries.map((entry) => (
-              <article className="dua-entry-card" key={entry.id}>
-                <header className="dua-entry-head">
-                  <div>
-                    <span className="dua-entry-number">#{formatNumber(entry.source_number)}</span>
-                    <h2>{entry.category.title}</h2>
-                  </div>
-                  <span className="status-chip">
-                    {entry.repetition_label
-                      ? t("dua.repeatSequence", {
-                          count: entry.repetition_label
-                            .split(" · ")
-                            .map((value) => formatNumber(Number(value)))
-                            .join(" · "),
-                        })
-                      : entry.repetitions === 1
-                      ? t("dua.repeatOnce")
-                      : t("dua.repeatCount", { count: formatNumber(entry.repetitions) })}
-                  </span>
-                </header>
-
-                <p className="dua-arabic" lang="ar" dir="rtl">{entry.arabic_text}</p>
-
-                {entry.translation?.transliteration ? (
-                  <div className="dua-translation-block">
-                    <span>{t("dua.transliteration")}</span>
-                    <p>{entry.translation.transliteration}</p>
-                  </div>
-                ) : null}
-
-                {locale !== "ar" && entry.translation ? (
-                  <div className="dua-translation-block dua-meaning">
-                    <span>{t("dua.meaning")}</span>
-                    <p>{entry.translation.meaning_text}</p>
-                  </div>
-                ) : null}
-
-                <details className="dua-provenance">
-                  <summary>{t("dua.sourceAndEvidence")}</summary>
-                  <div className="dua-provenance-body">
-                    {entry.evidence.map((evidence, index) => (
-                      <div key={`${evidence.source_reference}-${index}`}>
-                        <strong>{evidence.source_reference}</strong>
-                        <span>
-                          {evidence.verification_status === "editorially_verified"
-                            ? t("dua.editoriallyVerified")
-                            : t("dua.sourceOnly")}
-                        </span>
-                      </div>
-                    ))}
-                    {entry.source ? (
-                      <p>
-                        {t("dua.sourceEdition")}: {entry.source.title}.{" "}
-                        <a href={entry.source.source_url} target="_blank" rel="noreferrer">
-                          {t("dua.openSource")} ↗
-                        </a>
-                      </p>
-                    ) : null}
-                  </div>
-                </details>
-              </article>
-            ))}
-          </div>
+          <DuaEntryList entries={entries} />
         )}
 
         {nextCursor ? (
