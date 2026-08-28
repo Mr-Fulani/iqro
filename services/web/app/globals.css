@@ -1110,6 +1110,245 @@ input:focus, select:focus, textarea:focus {
   gap: 24px;
 }
 
+/* -------------------------------------------------------------------------
+   Quran memorization
+------------------------------------------------------------------------- */
+.memorization-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.memorization-hero {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.18), transparent 38%),
+    linear-gradient(145deg, #ffffff 0%, #f3fffa 100%);
+}
+
+.memorization-plan-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.memorization-reciter-field,
+.memorization-form-actions {
+  grid-column: span 2;
+}
+
+.memorization-form-actions,
+.memorization-mode-tabs,
+.memorization-audio-actions,
+.memorization-assessment-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.memorization-progress-total {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: var(--text-secondary);
+}
+
+.memorization-progress-total strong {
+  color: var(--primary-text);
+  font-size: 26px;
+}
+
+.memorization-practice {
+  display: grid;
+  gap: 20px;
+}
+
+.memorization-mode-tabs {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.memorization-audio {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--primary-subtle);
+}
+
+.memorization-ayah-list {
+  display: grid;
+  gap: 12px;
+}
+
+.memorization-ayah-card {
+  position: relative;
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 58px 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fffdf8;
+}
+
+.memorization-ayah-number {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font: 700 13px/1 var(--font-sans);
+}
+
+.memorization-arabic {
+  font-family: var(--font-arabic);
+  font-size: clamp(27px, 3.2vw, 38px);
+  line-height: 2;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.memorization-reveal {
+  min-height: 60px;
+  padding: 12px 20px;
+  border: 1px dashed var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.memorization-counter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.memorization-counter > div {
+  display: grid;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.memorization-counter strong {
+  color: var(--text-primary);
+  font-size: 19px;
+}
+
+.memorization-assessment {
+  display: grid;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.memorization-assessment > p {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.memorization-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.memorization-history-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(130px, auto) minmax(120px, auto);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.memorization-history-row strong {
+  color: var(--text-primary);
+}
+
+.reminder-memorization-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--primary-subtle);
+}
+
+.field-help {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.error-text {
+  color: var(--danger, #b91c1c);
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  .memorization-plan-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memorization-reciter-field,
+  .memorization-form-actions {
+    grid-column: 1 / -1;
+  }
+
+  .memorization-history-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 520px) {
+  .memorization-stack {
+    gap: 16px;
+  }
+
+  .memorization-plan-form {
+    grid-template-columns: 1fr;
+  }
+
+  .memorization-plan-form > *,
+  .memorization-form-actions,
+  .memorization-form-actions .btn,
+  .memorization-mode-tabs .btn,
+  .memorization-assessment-actions .btn {
+    width: 100%;
+    grid-column: 1;
+  }
+
+  .memorization-counter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memorization-ayah-card {
+    min-height: 92px;
+    padding: 42px 14px 16px;
+  }
+}
+
 .planner-summary {
   background:
     radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.16), transparent 34%),

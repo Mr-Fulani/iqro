@@ -19,6 +19,7 @@ from quran_backend.modules.accounts.models import (
     UserStatus,
 )
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
+from quran_backend.modules.memorization.models import MemorizationPlan, MemorizationSession
 from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.reading.change_log import append_sync_change
 from quran_backend.modules.reading.habit_services import recalculate_reading_streak
@@ -107,6 +108,7 @@ def merge_guest_into_account(
     _move_devices_and_revoke_sessions(source=source, target=target, counts=counts)
     _merge_consents(source=source, target=target, counts=counts)
     _merge_reading_state(source=source, target=target, counts=counts)
+    _merge_memorization_state(source=source, target=target, counts=counts)
     _merge_reminders(source=source, target=target, counts=counts)
     _merge_prayer_profile(source=source, target=target, counts=counts)
     _merge_feedback(source=source, target=target, counts=counts)
@@ -220,6 +222,48 @@ def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) 
     counts["reading_streaks"] = ReadingStreak.objects.filter(user__in=(source, target)).count()
     ReadingStreak.objects.filter(user__in=(source, target)).delete()
     recalculate_reading_streak(target, reference_date=timezone.now().date())
+
+
+def _merge_memorization_state(*, source: User, target: User, counts: dict[str, int]) -> None:
+    source_plan = MemorizationPlan.objects.select_for_update().filter(user=source).first()
+    if source_plan is None:
+        counts["memorization_plans"] = 0
+        counts["memorization_sessions"] = 0
+        return
+    source_sessions = list(
+        MemorizationSession.objects.select_for_update().filter(user=source).order_by("id")
+    )
+    target_plan = MemorizationPlan.objects.select_for_update().filter(user=target).first()
+    if target_plan is None:
+        source_plan.user = target
+        source_plan.save(update_fields=["user", "updated_at"])
+        MemorizationSession.objects.filter(user=source).update(user=target)
+        counts["memorization_plans"] = 1
+        counts["memorization_sessions"] = len(source_sessions)
+        return
+
+    if _memorization_plan_rank(source_plan) > _memorization_plan_rank(target_plan):
+        for field in (
+            "start_ayah",
+            "end_ayah",
+            "recitation",
+            "daily_repetitions",
+            "pause_seconds",
+            "timezone_name",
+            "client_updated_at",
+            "device",
+        ):
+            setattr(target_plan, field, getattr(source_plan, field))
+        target_plan.revision = max(target_plan.revision, source_plan.revision) + 1
+        target_plan.save()
+    MemorizationSession.objects.filter(user=source).update(user=target, plan=target_plan)
+    source_plan.delete()
+    counts["memorization_plans"] = 1
+    counts["memorization_sessions"] = len(source_sessions)
+
+
+def _memorization_plan_rank(plan: MemorizationPlan) -> tuple[Any, ...]:
+    return (plan.client_updated_at, plan.updated_at, plan.id)
 
 
 def _position_rank(position: ReadingPosition) -> tuple[Any, ...]:

@@ -732,6 +732,69 @@ export type ReadingPlanner = {
   days: ReadingPlannerDay[];
 };
 
+export type MemorizationAssessment = "difficult" | "repeat" | "memorized";
+
+export type MemorizationAyah = {
+  id: string;
+  surah_number: number;
+  ayah_number: number;
+  text_uthmani: string;
+};
+
+export type MemorizationPlan = {
+  id: string;
+  edition_code: string;
+  content_version: string;
+  start_ayah: MemorizationAyah;
+  end_ayah: MemorizationAyah;
+  recitation_id: string | null;
+  reciter: Pick<Reciter, "id" | "name_ar" | "name_en" | "name_ru"> | null;
+  daily_repetitions: number;
+  pause_seconds: number;
+  timezone_name: string;
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MemorizationSession = {
+  id: string;
+  plan_id: string;
+  start_ayah: MemorizationAyah;
+  end_ayah: MemorizationAyah;
+  daily_target_repetitions: number;
+  completed_repetitions: number;
+  assessment: MemorizationAssessment;
+  duration_seconds: number;
+  timezone_name: string;
+  local_date: string;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+};
+
+export type MemorizationDashboard = {
+  timezone_name: string;
+  plan: MemorizationPlan | null;
+  today: {
+    local_date: string;
+    completed_repetitions: number;
+    target_repetitions: number;
+    remaining_repetitions: number;
+    is_completed: boolean;
+    last_assessment: MemorizationAssessment | null;
+    sessions: MemorizationSession[];
+  };
+  recent_days: Array<{
+    local_date: string;
+    completed_repetitions: number;
+    session_count: number;
+    last_assessment: MemorizationAssessment;
+  }>;
+};
+
 export type Bookmark = {
   id: string;
   edition_code: string;
@@ -1485,6 +1548,21 @@ export class ApiClient {
     return this.request<PaginatedResponse<Recitation>>(`/api/v1/recitations${qs}`);
   }
 
+  public async getAllRecitations(
+    params: { reciter_id?: string; quran_edition?: string; style?: string } = {},
+  ): Promise<Recitation[]> {
+    const results: Recitation[] = [];
+    let cursor: string | undefined;
+    for (let pageNumber = 0; pageNumber < 20; pageNumber += 1) {
+      const page = await this.getRecitations({ ...params, cursor });
+      results.push(...(page.results || []));
+      if (!page.next) break;
+      cursor = new URL(page.next, "http://api.local").searchParams.get("cursor") || undefined;
+      if (!cursor) break;
+    }
+    return results;
+  }
+
   public async getTracks(recitationId: string, params: { scope?: string; cursor?: string; page_size?: number } = {}): Promise<PaginatedResponse<AudioTrack>> {
     const query = new URLSearchParams();
     if (params.scope) query.set("scope", params.scope);
@@ -1673,6 +1751,54 @@ export class ApiClient {
       days: String(days),
     });
     return this.request<ReadingPlanner>(`/api/v1/me/reading-planner?${params.toString()}`);
+  }
+
+  public async getMemorizationDashboard(
+    timezoneName: string,
+    recentDays = 14,
+  ): Promise<MemorizationDashboard> {
+    const params = new URLSearchParams({
+      timezone_name: timezoneName,
+      recent_days: String(recentDays),
+    });
+    return this.request<MemorizationDashboard>(
+      `/api/v1/me/memorization?${params.toString()}`,
+      { cache: "no-store" },
+    );
+  }
+
+  public async saveMemorizationPlan(data: {
+    start_ayah_id: string;
+    end_ayah_id: string;
+    recitation_id: string | null;
+    daily_repetitions: number;
+    pause_seconds: number;
+    timezone_name: string;
+    base_revision: number;
+  }): Promise<MemorizationPlan> {
+    return this.request<MemorizationPlan>("/api/v1/me/memorization", {
+      method: "PUT",
+      body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+    });
+  }
+
+  public async createMemorizationSession(data: {
+    id?: string;
+    plan_id: string;
+    completed_repetitions: number;
+    assessment: MemorizationAssessment;
+    duration_seconds: number;
+    timezone_name: string;
+    local_date: string;
+  }): Promise<MemorizationSession> {
+    return this.request<MemorizationSession>("/api/v1/me/memorization-sessions", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        id: data.id || generateUuidV7(),
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
   }
 
   public async getReadingSessions(

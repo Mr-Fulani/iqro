@@ -24,6 +24,7 @@ urlpatterns = [
     path("api/v1/feedback/", include("quran_backend.modules.feedback.urls")),
     path("api/v1/site/", include("quran_backend.modules.website.urls")),
     path("api/v1/", include("quran_backend.modules.reading.urls")),
+    path("api/v1/", include("quran_backend.modules.memorization.urls")),
     path("api/v1/", include("quran_backend.modules.reminders.urls")),
     path("api/schema", SpectacularAPIView.as_view(), name="openapi-schema"),
     path(

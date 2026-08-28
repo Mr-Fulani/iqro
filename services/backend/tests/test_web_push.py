@@ -412,7 +412,7 @@ def test_claim_and_successful_delivery_advance_schedule(
     assert result == "delivered"
     payload = json.loads(captured["data"])
     assert payload["title"] == "Время повторить аяты"
-    assert payload["url"] == "/ru/quran?surah=1&ayah=1"
+    assert payload["url"] == "/ru/memorization?surah=1&start_ayah=1&end_ayah=2"
     assert "secret-capability" in captured["subscription_info"]["endpoint"]
     schedule.refresh_from_db()
     subscription.refresh_from_db()
@@ -554,7 +554,7 @@ def test_review_notification_links_to_the_first_ayah(
 
     assert result == "delivered"
     payload = json.loads(captured["data"])
-    assert payload["url"] == "/ru/quran?surah=1&ayah=1"
+    assert payload["url"] == "/ru/memorization?surah=1&start_ayah=1&end_ayah=2"
 
 
 @pytest.mark.django_db

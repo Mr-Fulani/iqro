@@ -100,6 +100,7 @@ test("header logo replaces Home and the Dua placeholder follows Quran", async ({
     links.map((link) => link.getAttribute("href")),
   )).toEqual([
     "/ru/quran",
+    "/ru/memorization",
     "/ru/planner",
     "/ru/dua",
     "/ru/audio",

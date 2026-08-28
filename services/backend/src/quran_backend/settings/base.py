@@ -273,6 +273,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.audio.apps.AudioConfig",
     "quran_backend.modules.prayer_times.apps.PrayerTimesConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",
+    "quran_backend.modules.memorization.apps.MemorizationConfig",
     "quran_backend.modules.reminders.apps.RemindersConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
     "quran_backend.modules.website.apps.WebsiteConfig",

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   api,
   Ayah,
+  MemorizationPlan,
   Reminder,
   ReminderTimezone,
   Surah,
@@ -50,7 +51,7 @@ const REMINDER_TYPE_LABELS: Record<Reminder["reminder_type"], MessageKey> = {
 
 export function ReminderManager({ variant = "all" }: { variant?: ReminderManagerVariant }) {
   const { session, isLoggedIn } = useAuth();
-  const { locale, t } = useI18n();
+  const { formatNumber, locale, t } = useI18n();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,6 +81,7 @@ export function ReminderManager({ variant = "all" }: { variant?: ReminderManager
   const [reviewAyahs, setReviewAyahs] = useState<Ayah[]>([]);
   const [reviewStartId, setReviewStartId] = useState("");
   const [reviewEndId, setReviewEndId] = useState("");
+  const [memorizationPlan, setMemorizationPlan] = useState<MemorizationPlan | null>(null);
 
   const activeReminders = useMemo(
     () =>
@@ -222,6 +224,31 @@ export function ReminderManager({ variant = "all" }: { variant?: ReminderManager
   }, [surahs.length, variant]);
 
   useEffect(() => {
+    if (variant !== "all" || !isLoggedIn) {
+      setMemorizationPlan(null);
+      return;
+    }
+    let active = true;
+    api.getMemorizationDashboard(browserTimezone(), 7)
+      .then((dashboard) => {
+        if (active) setMemorizationPlan(dashboard.plan);
+      })
+      .catch(() => {
+        if (active) setMemorizationPlan(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn, variant]);
+
+  useEffect(() => {
+    if (!memorizationPlan || editing) return;
+    setReviewSurah(memorizationPlan.start_ayah.surah_number);
+    setReviewStartId(memorizationPlan.start_ayah.id);
+    setReviewEndId(memorizationPlan.end_ayah.id);
+  }, [editing, memorizationPlan]);
+
+  useEffect(() => {
     if (variant !== "all") return;
     let active = true;
     api
@@ -275,6 +302,13 @@ export function ReminderManager({ variant = "all" }: { variant?: ReminderManager
     }
     setError(null);
     setSuccess(null);
+  };
+
+  const useCurrentMemorizationPlan = () => {
+    if (!memorizationPlan) return;
+    setReviewSurah(memorizationPlan.start_ayah.surah_number);
+    setReviewStartId(memorizationPlan.start_ayah.id);
+    setReviewEndId(memorizationPlan.end_ayah.id);
   };
 
   const saveReminder = async (event: FormEvent) => {
@@ -769,6 +803,26 @@ export function ReminderManager({ variant = "all" }: { variant?: ReminderManager
         <div>
           <h4 className="surface-title">{t("reminder.quranTitle")}</h4>
           <p className="surface-subtitle">{t("reminder.quranDescription")}</p>
+        </div>
+        <div className="reminder-memorization-link">
+          {memorizationPlan ? (
+            <>
+              <p className="kpi-desc">
+                {t("reminder.currentMemorizationRange", {
+                  surah: formatNumber(memorizationPlan.start_ayah.surah_number),
+                  start: formatNumber(memorizationPlan.start_ayah.ayah_number),
+                  end: formatNumber(memorizationPlan.end_ayah.ayah_number),
+                })}
+              </p>
+              <button className="btn btn-secondary btn-sm" type="button" onClick={useCurrentMemorizationPlan}>
+                {t("reminder.useMemorizationPlan")}
+              </button>
+            </>
+          ) : (
+            <Link className="btn btn-secondary btn-sm" href={`/${locale}/memorization`}>
+              {t("reminder.openMemorization")}
+            </Link>
+          )}
         </div>
         <div className="form-row">
           <div className="form-group">

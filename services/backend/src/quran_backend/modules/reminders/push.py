@@ -585,10 +585,18 @@ def _notification_url(
             return f"/{locale}/quran?{query}"
         return f"/{locale}/prayer"
     if reminder.reminder_type == ReminderType.QURAN_REVIEW and reminder.start_ayah is not None:
-        return (
-            f"/{locale}/quran?surah={reminder.start_ayah.surah.number}"
-            f"&ayah={reminder.start_ayah.number}"
+        query = urlencode(
+            {
+                "surah": reminder.start_ayah.surah.number,
+                "start_ayah": reminder.start_ayah.number,
+                "end_ayah": (
+                    reminder.end_ayah.number
+                    if reminder.end_ayah is not None
+                    else reminder.start_ayah.number
+                ),
+            }
         )
+        return f"/{locale}/memorization?{query}"
     return f"/{locale}/quran"
 
 
