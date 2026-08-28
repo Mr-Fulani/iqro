@@ -37,6 +37,8 @@ export function PrayerReadingPlanCard() {
   const [pagesPerPrayer, setPagesPerPrayer] = useState(2);
   const [timezoneName, setTimezoneName] = useState(() => browserTimezone());
   const [editing, setEditing] = useState(false);
+  const [editingPrayer, setEditingPrayer] = useState<PrayerReadingPrayer | null>(null);
+  const [actualPages, setActualPages] = useState(2);
   const [loading, setLoading] = useState(false);
   const [busyPrayer, setBusyPrayer] = useState<PrayerReadingPrayer | "plan" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,9 @@ export function PrayerReadingPlanCard() {
 
   const dailyPages = pagesPerPrayer * PRAYERS.length;
   const completionDays = Math.ceil(MUSHAF_PAGES / Math.max(dailyPages, 1));
-  const completed = day?.check_ins.length || 0;
+  const completed = day?.plan
+    ? day.check_ins.filter((item) => item.pages >= day.plan!.pages_per_prayer).length
+    : 0;
   const progressPercent = day?.target_pages
     ? Math.min(100, Math.round((day.achieved_pages / day.target_pages) * 100))
     : 0;
@@ -99,21 +103,54 @@ export function PrayerReadingPlanCard() {
     }
   };
 
-  const togglePrayer = async (prayer: PrayerReadingPrayer) => {
+  const openManualEditor = (prayer: PrayerReadingPrayer) => {
     if (!day?.plan) return;
     const existing = checkIns.get(prayer);
-    setBusyPrayer(prayer);
+    setActualPages(existing?.pages || day.plan.pages_per_prayer);
+    setEditingPrayer(prayer);
+    setError(null);
+  };
+
+  const savePrayerProgress = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!day?.plan || editingPrayer === null || !Number.isInteger(actualPages)
+      || actualPages < 1 || actualPages > MUSHAF_PAGES) return;
+    const existing = checkIns.get(editingPrayer);
+    setBusyPrayer(editingPrayer);
     setError(null);
     try {
       if (existing) {
-        await api.deletePrayerReadingCheckIn(existing.id, existing.revision);
+        await api.updatePrayerReadingCheckIn(existing.id, {
+          pages: actualPages,
+          base_revision: existing.revision,
+        });
       } else {
         await api.createPrayerReadingCheckIn({
-          prayer,
+          prayer: editingPrayer,
           local_date: day.local_date,
           timezone_name: day.timezone_name,
+          pages: actualPages,
         });
       }
+      setEditingPrayer(null);
+      await loadDay(day.timezone_name);
+      window.dispatchEvent(new Event("quran-reading-progress-changed"));
+    } catch (reason) {
+      setError(api.normalizeError(reason));
+    } finally {
+      setBusyPrayer(null);
+    }
+  };
+
+  const removePrayerProgress = async (prayer: PrayerReadingPrayer) => {
+    if (!day?.plan) return;
+    const existing = checkIns.get(prayer);
+    if (!existing) return;
+    setBusyPrayer(prayer);
+    setError(null);
+    try {
+      await api.deletePrayerReadingCheckIn(existing.id, existing.revision);
+      setEditingPrayer(null);
       await loadDay(day.timezone_name);
       window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (reason) {
@@ -220,31 +257,117 @@ export function PrayerReadingPlanCard() {
           <div className="prayer-reading-slots">
             {PRAYERS.map(({ code, label }) => {
               const checkIn = checkIns.get(code);
+              const isComplete = Boolean(
+                checkIn && checkIn.pages >= day.plan!.pages_per_prayer,
+              );
+              const isPartial = Boolean(checkIn && !isComplete);
+              const readerHref = {
+                pathname: localizedPath(locale, "/quran"),
+                query: {
+                  mode: "after-prayer",
+                  prayer: code,
+                  prayer_date: day.local_date,
+                  prayer_timezone: day.timezone_name,
+                  prayer_target: String(day.plan!.pages_per_prayer),
+                  prayer_credited: String(checkIn?.pages || 0),
+                  ...(checkIn
+                    ? {
+                        check_in_id: checkIn.id,
+                        check_in_revision: String(checkIn.revision),
+                      }
+                    : {}),
+                },
+              };
               return (
-                <button
+                <article
                   key={code}
-                  type="button"
-                  className={`prayer-reading-slot ${checkIn ? "is-complete" : ""}`}
-                  onClick={() => void togglePrayer(code)}
-                  disabled={busyPrayer !== null || loading}
-                  aria-pressed={Boolean(checkIn)}
-                  aria-label={
-                    checkIn
-                      ? t("prayerReading.undoPrayer", { prayer: t(label) })
-                      : t("prayerReading.markPrayer", { prayer: t(label), pages: formatNumber(day.plan!.pages_per_prayer) })
-                  }
+                  className={`prayer-reading-slot${isComplete ? " is-complete" : ""}${isPartial ? " is-partial" : ""}`}
                 >
-                  <span className="prayer-reading-check" aria-hidden="true">{checkIn ? "✓" : "+"}</span>
-                  <strong>{t(label)}</strong>
-                  <small>
-                    {checkIn
-                      ? t("prayerReading.readPages", { pages: formatNumber(checkIn.pages) })
-                      : t("prayerReading.addPages", { pages: formatNumber(day.plan!.pages_per_prayer) })}
-                  </small>
-                </button>
+                  <span className="prayer-reading-check" aria-hidden="true">
+                    {isComplete ? "✓" : isPartial ? "◐" : "+"}
+                  </span>
+                  <div className="prayer-reading-slot-copy">
+                    <strong>{t(label)}</strong>
+                    <small>
+                      {t("prayerReading.slotProgress", {
+                        pages: formatNumber(checkIn?.pages || 0),
+                        target: formatNumber(day.plan!.pages_per_prayer),
+                      })}
+                    </small>
+                  </div>
+                  <div className="prayer-reading-slot-actions">
+                    <Link
+                      href={readerHref}
+                      className="btn btn-primary btn-sm"
+                      aria-label={t("prayerReading.readForPrayer", { prayer: t(label) })}
+                    >
+                      {isComplete
+                        ? t("prayerReading.readMore")
+                        : checkIn
+                          ? t("prayerReading.continueSlot")
+                          : t("prayerReading.readNow")}
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => openManualEditor(code)}
+                      disabled={busyPrayer !== null || loading}
+                    >
+                      {checkIn ? t("prayerReading.editActual") : t("prayerReading.recordActual")}
+                    </button>
+                  </div>
+                </article>
               );
             })}
           </div>
+          {editingPrayer && (
+            <form className="prayer-reading-manual-form" onSubmit={savePrayerProgress}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="prayer-reading-manual-pages">
+                  {t("prayerReading.actualFor", {
+                    prayer: t(PRAYERS.find((item) => item.code === editingPrayer)!.label),
+                  })}
+                </label>
+                <input
+                  id="prayer-reading-manual-pages"
+                  type="number"
+                  min={1}
+                  max={MUSHAF_PAGES}
+                  step={1}
+                  value={actualPages}
+                  onChange={(event) => setActualPages(Number(event.target.value))}
+                  disabled={busyPrayer !== null}
+                  required
+                />
+              </div>
+              <div className="prayer-reading-manual-copy">
+                <span>{t("prayerReading.actualHint")}</span>
+              </div>
+              <div className="today-reading-actions">
+                <button type="submit" className="btn btn-primary" disabled={busyPrayer !== null}>
+                  {busyPrayer ? t("common.saving") : t("prayerReading.saveActual")}
+                </button>
+                {checkIns.has(editingPrayer) && (
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => void removePrayerProgress(editingPrayer)}
+                    disabled={busyPrayer !== null}
+                  >
+                    {t("prayerReading.deleteActual")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setEditingPrayer(null)}
+                  disabled={busyPrayer !== null}
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
+            </form>
+          )}
           <div className="prayer-reading-footer">
             <p>{t("prayerReading.calmMotivation")}</p>
             <Link href={localizedPath(locale, "/quran")} className="btn btn-primary">

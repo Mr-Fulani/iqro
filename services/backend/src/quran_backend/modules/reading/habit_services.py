@@ -28,7 +28,7 @@ from quran_backend.modules.reading.models import (
 from quran_backend.modules.reading.services import reading_position_snapshot
 
 MANUAL_BACKDATE_DAYS = 7
-RECALCULATION_VERSION = 1
+RECALCULATION_VERSION = 2
 AMOUNT_QUANTUM = Decimal("0.01")
 PRAYERS_PER_DAY = 5
 
@@ -207,6 +207,7 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
     local_date: date,
     timezone_name: str,
     client_updated_at: datetime,
+    pages: int | None = None,
     device_id: uuid.UUID | None = None,
 ) -> tuple[PrayerReadingCheckIn, bool]:
     User.objects.select_for_update().only("id").get(id=user.id)
@@ -224,6 +225,7 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
         )
     _validate_manual_date(local_date, timezone_name)
     device = _device_for_user(user, device_id)
+    actual_pages = pages if pages is not None else plan.pages_per_prayer
 
     existing_by_id = (
         PrayerReadingCheckIn.objects.select_for_update(of=("self",))
@@ -240,6 +242,7 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
             local_date=local_date,
             timezone_name=timezone_name,
             session_id=session_id,
+            pages=pages,
         ):
             raise PrayerReadingCheckInConflictError
         return existing_by_id, False
@@ -268,7 +271,7 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
             "credited_pages": 0,
             "credited_ayahs": 0,
             "manual_metric": ReadingGoalMetric.PAGES,
-            "manual_amount": Decimal(plan.pages_per_prayer),
+            "manual_amount": Decimal(actual_pages),
             "client_updated_at": client_updated_at,
         },
     )
@@ -279,7 +282,7 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
         prayer=prayer,
         local_date=local_date,
         timezone_name=timezone_name,
-        pages=plan.pages_per_prayer,
+        pages=actual_pages,
         reading_session=session,
         client_updated_at=client_updated_at,
         device=device,
@@ -287,6 +290,65 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
     check_in.full_clean()
     check_in.save(force_insert=True)
     return check_in, True
+
+
+@transaction.atomic
+def update_prayer_reading_check_in(  # noqa: PLR0913
+    *,
+    user: User,
+    check_in_id: uuid.UUID,
+    pages: int,
+    base_revision: int,
+    client_updated_at: datetime,
+    device_id: uuid.UUID | None = None,
+) -> PrayerReadingCheckIn:
+    User.objects.select_for_update().only("id").get(id=user.id)
+    try:
+        check_in = (
+            PrayerReadingCheckIn.objects.select_for_update(of=("self",))
+            .select_related("reading_session", "plan", "device")
+            .get(user=user, id=check_in_id)
+        )
+    except PrayerReadingCheckIn.DoesNotExist as exc:
+        raise PrayerReadingCheckInNotFoundError from exc
+    if check_in.revision != base_revision:
+        raise PrayerReadingCheckInConflictError
+
+    device = _device_for_user(user, device_id)
+    if check_in.pages == pages and check_in.device_id == (
+        device.id if device is not None else None
+    ):
+        return check_in
+
+    session = check_in.reading_session
+    if session is None:
+        raise PrayerReadingCheckInConflictError
+    update_manual_session(
+        user=user,
+        session_id=session.id,
+        base_revision=session.revision,
+        timezone_name=check_in.timezone_name,
+        local_date=check_in.local_date,
+        metric=ReadingGoalMetric.PAGES,
+        amount=Decimal(pages),
+        client_updated_at=client_updated_at,
+        device_id=device_id,
+    )
+    check_in.pages = pages
+    check_in.client_updated_at = client_updated_at
+    check_in.device = device
+    check_in.revision += 1
+    check_in.full_clean()
+    check_in.save(
+        update_fields=[
+            "pages",
+            "client_updated_at",
+            "device",
+            "revision",
+            "updated_at",
+        ]
+    )
+    return check_in
 
 
 @transaction.atomic
@@ -839,7 +901,12 @@ def recalculate_reading_streak(
     reference_date: date,
 ) -> ReadingStreak:
     qualifying_dates = list(
-        GoalProgress.objects.filter(user=user, completed_at__isnull=False)
+        ReadingSession.objects.filter(
+            user=user,
+            status=ReadingSessionStatus.COMPLETED,
+            deleted_at__isnull=True,
+            local_date__lte=reference_date,
+        )
         .order_by("local_date")
         .values_list("local_date", flat=True)
         .distinct()
@@ -975,6 +1042,7 @@ def _prayer_check_in_matches(  # noqa: PLR0913
     local_date: date,
     timezone_name: str,
     session_id: uuid.UUID,
+    pages: int | None,
 ) -> bool:
     return (
         check_in.user_id == user.id
@@ -983,6 +1051,7 @@ def _prayer_check_in_matches(  # noqa: PLR0913
         and check_in.local_date == local_date
         and check_in.timezone_name == timezone_name
         and check_in.reading_session_id == session_id
+        and (pages is None or check_in.pages == pages)
     )
 
 

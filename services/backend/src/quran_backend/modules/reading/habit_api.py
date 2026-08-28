@@ -23,6 +23,7 @@ from quran_backend.modules.reading.habit_serializers import (
     PrayerReadingCheckInCreateSerializer,
     PrayerReadingCheckInDeleteSerializer,
     PrayerReadingCheckInOutputSerializer,
+    PrayerReadingCheckInUpdateSerializer,
     PrayerReadingDayOutputSerializer,
     PrayerReadingPlanOutputSerializer,
     PrayerReadingPlanQuerySerializer,
@@ -57,6 +58,7 @@ from quran_backend.modules.reading.habit_services import (
     set_prayer_reading_plan,
     set_reading_goal,
     update_manual_session,
+    update_prayer_reading_check_in,
 )
 from quran_backend.modules.reading.throttling import (
     ReadingMutationRateThrottle,
@@ -261,6 +263,23 @@ class PrayerReadingCheckInDetailView(
     PrivateNoStoreResponseMixin,
     APIView,
 ):
+    @extend_schema(
+        operation_id="prayer_reading_check_in_update",
+        request=PrayerReadingCheckInUpdateSerializer,
+        responses=PrayerReadingCheckInOutputSerializer,
+        parameters=[OpenApiParameter("check_in_id", uuid.UUID, OpenApiParameter.PATH)],
+    )
+    def patch(self, request: Request, check_in_id: uuid.UUID) -> Response:
+        serializer = PrayerReadingCheckInUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        check_in = update_prayer_reading_check_in(
+            user=_authenticated_user(request),
+            check_in_id=check_in_id,
+            **data,
+        )
+        return Response(prayer_reading_check_in_snapshot(check_in))
+
     @extend_schema(
         operation_id="prayer_reading_check_in_delete",
         request=None,

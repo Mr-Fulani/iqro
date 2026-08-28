@@ -196,6 +196,7 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     assert set(paths["/api/v1/me/prayer-reading-plan"]) == {"get", "put"}
     assert set(paths["/api/v1/me/prayer-reading-check-ins"]) == {"post"}
     assert set(paths["/api/v1/me/prayer-reading-check-ins/{check_in_id}"]) == {
+        "patch",
         "delete"
     }
     assert set(paths["/api/v1/me/reading-sessions"]) == {"get"}
@@ -220,6 +221,10 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     prayer_plan_request = schema["components"]["schemas"]["PrayerReadingPlanWriteRequest"]
     assert prayer_plan_request["additionalProperties"] is False
     assert prayer_plan_request["properties"]["pages_per_prayer"]["maximum"] == 20
+    prayer_check_in_request = schema["components"]["schemas"][
+        "PrayerReadingCheckInCreateRequest"
+    ]
+    assert prayer_check_in_request["properties"]["pages"]["maximum"] == 604
     today_schema = schema["components"]["schemas"]["TodayOutput"]
     assert {"continue_reading", "goal", "progress", "streak"} <= today_schema["properties"].keys()
 

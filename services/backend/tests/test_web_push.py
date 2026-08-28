@@ -421,7 +421,12 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
     assert payload["body"] == (
         "Время намаза. После намаза — 2 стр. Корана по вашему плану."
     )
-    assert payload["url"] == "/ru#prayer-reading-plan"
+    expected_date = occurrence.astimezone(UTC).date().isoformat()
+    assert payload["url"] == (
+        "/ru/quran?mode=after-prayer&prayer=fajr"
+        f"&prayer_date={expected_date}&prayer_timezone=UTC"
+        "&prayer_target=2&prayer_credited=0"
+    )
 
 
 @pytest.mark.django_db

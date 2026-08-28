@@ -7,7 +7,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
+from zoneinfo import ZoneInfo
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from django.conf import settings
@@ -433,7 +434,7 @@ def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
     locale = schedule.subscription.locale
     prayer_reading_plan = (
         PrayerReadingPlan.objects.filter(user_id=reminder.user_id)
-        .only("pages_per_prayer")
+        .only("pages_per_prayer", "timezone_name")
         .first()
         if reminder.reminder_type == ReminderType.PRAYER
         else None
@@ -452,7 +453,8 @@ def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
         "url": _notification_url(
             reminder,
             locale,
-            has_prayer_reading_plan=prayer_reading_plan is not None,
+            prayer_reading_plan=prayer_reading_plan,
+            occurrence_at=schedule.occurrence_at,
         ),
         "tag": f"reminder-{reminder.id}",
         "signal": reminder.signal,
@@ -557,11 +559,28 @@ def _notification_url(
     reminder: ReminderRule,
     locale: str,
     *,
-    has_prayer_reading_plan: bool = False,
+    prayer_reading_plan: PrayerReadingPlan | None = None,
+    occurrence_at: datetime | None = None,
 ) -> str:
     if reminder.reminder_type == ReminderType.PRAYER:
-        if has_prayer_reading_plan:
-            return f"/{locale}#prayer-reading-plan"
+        if prayer_reading_plan is not None and occurrence_at is not None:
+            prayer_at = occurrence_at - timedelta(
+                minutes=reminder.prayer_offset_minutes or 0
+            )
+            prayer_date = prayer_at.astimezone(
+                ZoneInfo(prayer_reading_plan.timezone_name)
+            ).date()
+            query = urlencode(
+                {
+                    "mode": "after-prayer",
+                    "prayer": reminder.prayer_event,
+                    "prayer_date": prayer_date.isoformat(),
+                    "prayer_timezone": prayer_reading_plan.timezone_name,
+                    "prayer_target": prayer_reading_plan.pages_per_prayer,
+                    "prayer_credited": 0,
+                }
+            )
+            return f"/{locale}/quran?{query}"
         return f"/{locale}/prayer"
     if reminder.reminder_type == ReminderType.QURAN_REVIEW and reminder.start_ayah is not None:
         return (

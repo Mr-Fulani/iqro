@@ -610,6 +610,100 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
   await expect(linkedAyah.last()).toHaveClass(/is-selected/);
 });
 
+test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
+  let checkInPayload: Record<string, unknown> | null = null;
+  let automaticSessions = 0;
+  const session = {
+    token_type: "Bearer",
+    access_token: "after-prayer-access-token",
+    expires_in: 900,
+    access_expires_at: "2026-08-28T12:15:00Z",
+    user: {
+      id: "00000000-0000-7000-8000-000000000611",
+      status: "active",
+      preferred_locale: "ru",
+      email: "reader@example.com",
+      deletion_requested_at: null,
+      deletion_scheduled_for: null,
+    },
+    device: {
+      id: "00000000-0000-7000-8000-000000000612",
+      platform: "web",
+      locale: "ru",
+      app_version: "1.0.0",
+      bootstrap_generation: 1,
+    },
+  };
+  const position = {
+    id: "00000000-0000-7000-8000-000000000613",
+    edition_code: "madani-hafs",
+    page_number: 128,
+    ayah: { id: ayahs[0].id, surah_number: 6, ayah_number: 1 },
+    progress_percent: "21.19",
+    revision: 3,
+    last_read_at: "2026-08-28T09:00:00Z",
+    client_updated_at: "2026-08-28T09:00:00Z",
+  };
+
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: session }));
+  await page.route("**/api/v1/me/reading-position/madani-hafs", async (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: position });
+    }
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({ json: { ...position, ...payload, revision: 4 } });
+  });
+  await page.route("**/api/v1/me/prayer-reading-check-ins", (route) => {
+    checkInPayload = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({
+      status: 201,
+      json: {
+        id: checkInPayload.id,
+        prayer: checkInPayload.prayer,
+        local_date: checkInPayload.local_date,
+        timezone_name: checkInPayload.timezone_name,
+        pages: checkInPayload.pages,
+        reading_session_id: checkInPayload.session_id,
+        revision: 1,
+        client_updated_at: checkInPayload.client_updated_at,
+        device_id: session.device.id,
+        created_at: "2026-08-28T09:10:00Z",
+        updated_at: "2026-08-28T09:10:00Z",
+      },
+    });
+  });
+  await page.route("**/api/v1/me/reading-sessions/automatic", (route) => {
+    automaticSessions += 1;
+    return route.fulfill({ status: 201, json: {} });
+  });
+
+  await page.goto(
+    "/quran?surah=6&mode=after-prayer&prayer=fajr&prayer_date=2026-08-28"
+      + "&prayer_timezone=Europe%2FIstanbul&prayer_target=2&prayer_credited=0",
+  );
+
+  const guided = page.getByTestId("prayer-reading-session");
+  await expect(guided.getByRole("heading", { name: "После намаза Фаджр" })).toBeVisible();
+  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(guided.getByLabel("Фактически прочитано — страниц")).toHaveValue("1");
+  await guided.getByLabel("Фактически прочитано — страниц").fill("3");
+  await guided.getByRole("button", { name: "Завершить и сохранить" }).click();
+
+  await expect(guided.getByText("Сохранено: 3 стр. после намаза Фаджр.")).toBeVisible();
+  expect(checkInPayload).toMatchObject({
+    prayer: "fajr",
+    local_date: "2026-08-28",
+    timezone_name: "Europe/Istanbul",
+    pages: 3,
+  });
+  expect(automaticSessions).toBe(0);
+
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});
+
 test("mushaf switcher renders all supported Quran.Foundation font variants", async ({ page }) => {
   await page.goto("/quran?surah=6");
   await page.getByRole("button", { name: /Мусхаф/ }).click();

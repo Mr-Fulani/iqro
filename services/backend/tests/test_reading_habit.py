@@ -157,6 +157,7 @@ def test_manual_session_update_and_delete_recalculate_progress_and_streak() -> N
         },
         format="json",
     )
+    partial_today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
     updated = client.patch(
         reverse("reading:reading-session-detail", kwargs={"session_id": session_id}),
         {
@@ -188,6 +189,8 @@ def test_manual_session_update_and_delete_recalculate_progress_and_streak() -> N
     history = client.get(reverse("reading:reading-session-list"))
 
     assert created.status_code == 201
+    assert partial_today.json()["progress"]["is_completed"] is False
+    assert partial_today.json()["streak"]["current_count"] == 1
     assert updated.status_code == 200
     assert updated.json()["revision"] == 2
     assert completed_today.json()["progress"]["is_completed"] is True
@@ -271,7 +274,7 @@ def test_goal_revision_and_manual_date_validation_are_fail_closed() -> None:
     assert future.json()["field_errors"]["local_date"] == "Future reading cannot be recorded."
 
 
-def test_prayer_reading_plan_check_ins_are_idempotent_and_reversible() -> None:
+def test_prayer_reading_plan_check_ins_are_flexible_idempotent_and_reversible() -> None:
     user = User.objects.create_user()
     client = _authenticated_client(user)
     today = timezone.now().date().isoformat()
@@ -300,6 +303,7 @@ def test_prayer_reading_plan_check_ins_are_idempotent_and_reversible() -> None:
         "id": str(check_in_id),
         "session_id": str(session_id),
         "prayer": "fajr",
+        "pages": 1,
         "local_date": today,
         "timezone_name": "UTC",
         "client_updated_at": timezone.now().isoformat(),
@@ -314,17 +318,26 @@ def test_prayer_reading_plan_check_ins_are_idempotent_and_reversible() -> None:
         {**payload, "id": str(uuid.uuid7()), "session_id": str(uuid.uuid7())},
         format="json",
     )
-    day = client.get(reverse("reading:prayer-reading-plan"))
-    reading_today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
-    delete_url = reverse(
+    detail_url = reverse(
         "reading:prayer-reading-check-in-detail",
         kwargs={"check_in_id": check_in_id},
     )
+    updated = client.patch(
+        detail_url,
+        {
+            "pages": 3,
+            "base_revision": 1,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    day = client.get(reverse("reading:prayer-reading-plan"))
+    reading_today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
     removed = client.delete(
-        f"{delete_url}?{
+        f"{detail_url}?{
             urlencode(
                 {
-                    'base_revision': 1,
+                    'base_revision': 2,
                     'client_updated_at': timezone.now().isoformat(),
                 }
             )
@@ -338,15 +351,18 @@ def test_prayer_reading_plan_check_ins_are_idempotent_and_reversible() -> None:
     assert plan.status_code == 201
     assert plan.json()["pages_per_prayer"] == 2
     assert checked.status_code == 201
-    assert checked.json()["pages"] == 2
+    assert checked.json()["pages"] == 1
     assert duplicate_slot.status_code == 200
     assert duplicate_slot.json()["id"] == str(check_in_id)
+    assert updated.status_code == 200
+    assert updated.json()["pages"] == 3
+    assert updated.json()["revision"] == 2
     assert ReadingSession.objects.filter(id=session_id).count() == 1
-    assert day.json()["achieved_pages"] == 2
+    assert day.json()["achieved_pages"] == 3
     assert day.json()["target_pages"] == 10
-    assert day.json()["remaining_pages"] == 8
+    assert day.json()["remaining_pages"] == 7
     assert [item["prayer"] for item in day.json()["check_ins"]] == ["fajr"]
-    assert reading_today.json()["progress"]["achieved_amount"] == "2.00"
+    assert reading_today.json()["progress"]["achieved_amount"] == "3.00"
     assert removed.status_code == 204
     assert after_delete.json()["achieved_pages"] == 0
     assert after_delete.json()["check_ins"] == []

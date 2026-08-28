@@ -59,9 +59,9 @@ function todaySnapshot(achieved: number, hasGoal: boolean) {
         }
       : null,
     streak: {
-      current_count: achieved >= 3 ? 1 : 0,
-      longest_count: achieved >= 3 ? 1 : 0,
-      last_qualifying_date: achieved >= 3 ? "2026-08-28" : null,
+      current_count: achieved > 0 ? 1 : 0,
+      longest_count: achieved > 0 ? 1 : 0,
+      last_qualifying_date: achieved > 0 ? "2026-08-28" : null,
     },
   };
 }
@@ -153,12 +153,13 @@ async function installReadingMocks(page: Page) {
     if (url.pathname === "/api/v1/me/prayer-reading-check-ins" && request.method() === "POST") {
       const payload = request.postDataJSON() as Record<string, unknown>;
       writes.push(payload);
+      const pages = Number(payload.pages || prayerPlan?.pages_per_prayer || 2);
       const checkIn = {
         id: payload.id,
         prayer: payload.prayer,
         local_date: payload.local_date,
         timezone_name: payload.timezone_name,
-        pages: Number(prayerPlan?.pages_per_prayer || 2),
+        pages,
         reading_session_id: payload.session_id,
         revision: 1,
         client_updated_at: payload.client_updated_at,
@@ -167,7 +168,24 @@ async function installReadingMocks(page: Page) {
         updated_at: "2026-08-28T09:10:00Z",
       };
       prayerCheckIns[String(payload.prayer)] = checkIn;
+      achieved += pages;
       return route.fulfill({ status: 201, json: checkIn });
+    }
+    if (
+      url.pathname.startsWith("/api/v1/me/prayer-reading-check-ins/") &&
+      request.method() === "PATCH"
+    ) {
+      const payload = request.postDataJSON() as Record<string, unknown>;
+      writes.push(payload);
+      const checkInId = url.pathname.split("/").at(-1);
+      const entry = Object.entries(prayerCheckIns).find(([, item]) => item.id === checkInId);
+      if (!entry) return route.fulfill({ status: 404, json: { detail: "Not found" } });
+      const previousPages = Number(entry[1].pages);
+      entry[1].pages = Number(payload.pages);
+      entry[1].revision = Number(entry[1].revision) + 1;
+      entry[1].client_updated_at = payload.client_updated_at;
+      achieved += Number(payload.pages) - previousPages;
+      return route.fulfill({ json: entry[1] });
     }
     if (
       url.pathname.startsWith("/api/v1/me/prayer-reading-check-ins/") &&
@@ -175,7 +193,10 @@ async function installReadingMocks(page: Page) {
     ) {
       const checkInId = url.pathname.split("/").at(-1);
       const entry = Object.entries(prayerCheckIns).find(([, item]) => item.id === checkInId);
-      if (entry) delete prayerCheckIns[entry[0]];
+      if (entry) {
+        achieved -= Number(entry[1].pages);
+        delete prayerCheckIns[entry[0]];
+      }
       return route.fulfill({ status: 204, body: "" });
     }
     return route.fallback();
@@ -211,7 +232,7 @@ test("Today creates a daily goal and adds paper Mushaf progress", async ({ page 
   expect(String(writes[1].id)).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-test("prayer reading plan calculates the honest pace and tracks five prayer slots", async ({ page }) => {
+test("prayer reading plan keeps partial and extra pages honest for each prayer", async ({ page }) => {
   const writes = await installReadingMocks(page);
   await page.goto("/");
 
@@ -221,20 +242,36 @@ test("prayer reading plan calculates the honest pace and tracks five prayer slot
   await expect(plan.getByText("≈ 61")).toBeVisible();
   await plan.getByRole("button", { name: "Сохранить план" }).click();
 
-  await expect(plan.getByText("Сегодня: 0 из 5 намазов")).toBeVisible();
-  const fajr = plan.getByRole("button", { name: /после намаза Фаджр/ });
-  await fajr.click();
+  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
+  const fajr = plan.locator(".prayer-reading-slot").filter({ hasText: "Фаджр" });
+  await expect(fajr.getByText("0 из 2 стр.")).toBeVisible();
+  await expect(fajr.getByRole("link", { name: "Открыть чтение после намаза Фаджр" }))
+    .toHaveAttribute("href", /mode=after-prayer.*prayer=fajr/);
 
-  await expect(plan.getByText("Сегодня: 1 из 5 намазов")).toBeVisible();
-  await expect(plan.getByText("2 / 10 стр.")).toBeVisible();
-  await expect(fajr).toHaveAttribute("aria-pressed", "true");
+  await fajr.getByRole("button", { name: "Добавить вручную" }).click();
+  await plan.getByLabel("Сколько прочитано после намаза Фаджр").fill("1");
+  await plan.getByRole("button", { name: "Сохранить" }).click();
+
+  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
+  await expect(plan.getByText("1 / 10 стр.")).toBeVisible();
+  await expect(fajr.getByText("1 из 2 стр.")).toBeVisible();
+
+  await fajr.getByRole("button", { name: "Изменить" }).click();
+  await plan.getByLabel("Сколько прочитано после намаза Фаджр").fill("3");
+  await plan.getByRole("button", { name: "Сохранить" }).click();
+
+  await expect(plan.getByText("Сегодня выполнена норма после 1 из 5 намазов")).toBeVisible();
+  await expect(plan.getByText("3 / 10 стр.")).toBeVisible();
+  await expect(fajr.getByText("3 из 2 стр.")).toBeVisible();
   expect(writes[0]).toMatchObject({ pages_per_prayer: 2, base_revision: 0 });
-  expect(writes[1]).toMatchObject({ prayer: "fajr", local_date: "2026-08-28" });
+  expect(writes[1]).toMatchObject({ prayer: "fajr", local_date: "2026-08-28", pages: 1 });
   expect(String(writes[1].id)).toMatch(/^[0-9a-f-]{36}$/);
   expect(String(writes[1].session_id)).toMatch(/^[0-9a-f-]{36}$/);
+  expect(writes[2]).toMatchObject({ pages: 3, base_revision: 1 });
 
-  await fajr.click();
-  await expect(plan.getByText("Сегодня: 0 из 5 намазов")).toBeVisible();
+  await fajr.getByRole("button", { name: "Изменить" }).click();
+  await plan.getByRole("button", { name: "Удалить отметку" }).click();
+  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
   await expect(plan.getByText("0 / 10 стр.")).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 760 });

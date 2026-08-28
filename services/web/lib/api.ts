@@ -1419,6 +1419,7 @@ export class ApiClient {
     prayer: PrayerReadingPrayer;
     local_date: string;
     timezone_name: string;
+    pages?: number;
   }): Promise<PrayerReadingCheckIn> {
     return this.request<PrayerReadingCheckIn>("/api/v1/me/prayer-reading-check-ins", {
       method: "POST",
@@ -1429,6 +1430,19 @@ export class ApiClient {
         client_updated_at: new Date().toISOString(),
       }),
     });
+  }
+
+  public async updatePrayerReadingCheckIn(
+    checkInId: string,
+    data: { pages: number; base_revision: number },
+  ): Promise<PrayerReadingCheckIn> {
+    return this.request<PrayerReadingCheckIn>(
+      `/api/v1/me/prayer-reading-check-ins/${encodeURIComponent(checkInId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+      },
+    );
   }
 
   public async deletePrayerReadingCheckIn(

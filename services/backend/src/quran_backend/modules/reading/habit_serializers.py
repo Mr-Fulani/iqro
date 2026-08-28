@@ -153,6 +153,7 @@ class PrayerReadingCheckInCreateSerializer(StrictFieldsSerializer):
     id = UUIDv7Field()
     session_id = UUIDv7Field()
     prayer = serializers.ChoiceField(choices=PrayerReadingPrayer.choices)
+    pages = serializers.IntegerField(min_value=1, max_value=604, required=False)
     local_date = serializers.DateField()
     timezone_name = serializers.CharField(max_length=64)
     client_updated_at = serializers.DateTimeField()
@@ -160,6 +161,13 @@ class PrayerReadingCheckInCreateSerializer(StrictFieldsSerializer):
 
     def validate_timezone_name(self, value: str) -> str:
         return _validate_timezone_name(value)
+
+
+class PrayerReadingCheckInUpdateSerializer(StrictFieldsSerializer):
+    pages = serializers.IntegerField(min_value=1, max_value=604)
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class PrayerReadingCheckInDeleteSerializer(StrictFieldsSerializer):

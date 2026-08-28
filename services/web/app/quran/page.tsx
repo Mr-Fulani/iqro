@@ -15,6 +15,10 @@ import {
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
 import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
+import {
+  PrayerReadingSessionBar,
+  type PrayerReadingSessionConfig,
+} from "../../components/PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
 import type {
   AudioPlayerControlRequest,
@@ -32,6 +36,7 @@ import {
   QuranFoundationMushafPage,
   RubElHizb,
   Surah,
+  type PrayerReadingPrayer,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
@@ -42,13 +47,66 @@ function positiveInteger(value: string | null): number | null {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function nonNegativeInteger(value: string | null): number | null {
+  if (value === null || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+const PRAYER_READING_PRAYERS = new Set<PrayerReadingPrayer>([
+  "fajr",
+  "dhuhr",
+  "asr",
+  "maghrib",
+  "isha",
+]);
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function QuranContent() {
   const searchParams = useSearchParams();
   const deepLinkSurah = positiveInteger(searchParams.get("surah")) || 1;
   const deepLinkAyah = positiveInteger(searchParams.get("ayah"));
   const deepLinkKey = deepLinkAyah === null ? null : `${deepLinkSurah}:${deepLinkAyah}`;
 
-  const { isLoggedIn, loginGuest } = useAuth();
+  const prayerReadingConfig = useMemo<PrayerReadingSessionConfig | null>(() => {
+    if (searchParams.get("mode") !== "after-prayer") return null;
+    const prayer = searchParams.get("prayer") as PrayerReadingPrayer | null;
+    const localDate = searchParams.get("prayer_date");
+    const timezoneName = searchParams.get("prayer_timezone");
+    const targetPages = positiveInteger(searchParams.get("prayer_target"));
+    const creditedPages = nonNegativeInteger(searchParams.get("prayer_credited")) ?? 0;
+    const checkInId = searchParams.get("check_in_id");
+    const checkInRevision = positiveInteger(searchParams.get("check_in_revision"));
+    const hasValidExistingCheckIn = checkInId !== null || checkInRevision !== null
+      ? Boolean(checkInId && UUID_PATTERN.test(checkInId) && checkInRevision)
+      : true;
+    if (
+      prayer === null
+      || !PRAYER_READING_PRAYERS.has(prayer)
+      || localDate === null
+      || !/^\d{4}-\d{2}-\d{2}$/.test(localDate)
+      || timezoneName === null
+      || timezoneName.length > 64
+      || targetPages === null
+      || targetPages > 20
+      || creditedPages > 604
+      || !hasValidExistingCheckIn
+    ) {
+      return null;
+    }
+    return {
+      prayer,
+      localDate,
+      timezoneName,
+      targetPages,
+      creditedPages,
+      checkInId,
+      checkInRevision,
+    };
+  }, [searchParams]);
+
+  const { isLoggedIn, isLoading: authLoading, loginGuest, session } = useAuth();
   const { formatNumber, locale, t } = useI18n();
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
@@ -76,6 +134,7 @@ function QuranContent() {
   });
   const pendingNavigationPage = useRef<number | null>(null);
   const handledDeepLink = useRef<string | null>(null);
+  const handledPrayerReadingStart = useRef(false);
   const ayahPlaybackRequestId = useRef(0);
   const playerControlRequestId = useRef(0);
   const selectedFoundationMushaf = useMemo(
@@ -85,7 +144,10 @@ function QuranContent() {
   const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
 
   const [viewMode, setViewMode] = useState<"text" | "mushaf">(
-    deepLinkAyah === null ? "text" : "mushaf",
+    deepLinkAyah === null && prayerReadingConfig === null ? "text" : "mushaf",
+  );
+  const [prayerReadingReady, setPrayerReadingReady] = useState(
+    prayerReadingConfig === null,
   );
   const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
   const previousPage = useRef(currentPage);
@@ -197,6 +259,39 @@ function QuranContent() {
     setCurrentPage(linkedAyah.pages[0]);
     handledDeepLink.current = deepLinkKey;
   }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah]);
+
+  useEffect(() => {
+    if (
+      prayerReadingConfig === null
+      || handledPrayerReadingStart.current
+      || authLoading
+      || !selectedEdition
+    ) {
+      return;
+    }
+    handledPrayerReadingStart.current = true;
+    setViewMode("mushaf");
+    if (!session) {
+      setPrayerReadingReady(true);
+      return;
+    }
+    api.getReadingPosition(selectedEdition)
+      .then((position) => {
+        const positionSurah = position.ayah?.surah_number || selectedSurah;
+        setCurrentPage(position.page_number);
+        if (positionSurah === selectedSurah) {
+          return;
+        }
+        pendingNavigationPage.current = position.page_number;
+        setSelectedSurah(positionSurah);
+      })
+      .catch(() => {
+        // A new reader starts from the first available Mushaf page.
+      })
+      .finally(() => {
+        setPrayerReadingReady(true);
+      });
+  }, [authLoading, prayerReadingConfig, selectedEdition, selectedSurah, session]);
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
@@ -464,7 +559,20 @@ function QuranContent() {
 
   return (
     <div className={`quran-page-layout${viewMode === "mushaf" ? " is-mushaf-mode" : ""}`}>
-      <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
+      {prayerReadingConfig === null ? (
+        <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
+      ) : prayerReadingReady ? (
+        <PrayerReadingSessionBar
+          config={prayerReadingConfig}
+          currentPage={currentPage}
+          edition={selectedEdition}
+          surah={selectedSurah}
+        />
+      ) : (
+        <section className="surface prayer-reading-session" aria-live="polite">
+          {t("common.loading")}
+        </section>
+      )}
       {/* Control Bar */}
       <section className="surface quran-control-surface">
         <div className="surface-head" style={{ marginBottom: 16 }}>

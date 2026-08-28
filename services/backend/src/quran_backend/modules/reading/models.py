@@ -697,7 +697,7 @@ class PrayerReadingCheckIn(BaseModel):
                 name="prayer_reading_check_in_daily_prayer_unique",
             ),
             models.CheckConstraint(
-                condition=models.Q(pages__gte=1, pages__lte=20),
+                condition=models.Q(pages__gte=1, pages__lte=604),
                 name="prayer_reading_check_in_pages_range",
             ),
             models.CheckConstraint(
