@@ -288,6 +288,9 @@ test("logout all sessions requires confirmation and clears the web session", asy
   });
 
   await page.goto("/profile");
+  await page.evaluate(() => {
+    localStorage.setItem("quran_platform_reading_sessions_v1", "[]");
+  });
   await page.getByRole("button", { name: "Выйти на всех устройствах" }).click();
   await expect(page.getByText("Завершить все сессии?")).toBeVisible();
   expect(logoutAllCalls).toBe(0);
@@ -299,6 +302,9 @@ test("logout all sessions requires confirmation and clears the web session", asy
 
   await expect(page.getByRole("heading", { name: "Личный кабинет читателя" })).toBeVisible();
   expect(logoutAllCalls).toBe(1);
+  expect(
+    await page.evaluate(() => localStorage.getItem("quran_platform_reading_sessions_v1")),
+  ).toBeNull();
 });
 
 test("account cabinet lists devices and revokes another device after confirmation", async ({

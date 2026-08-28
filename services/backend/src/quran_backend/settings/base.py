@@ -494,6 +494,11 @@ SPECTACULAR_SETTINGS = {
         "ReadingPositionEntityTypeEnum": ["reading_position"],
         "BookmarkEntityTypeEnum": ["bookmark"],
         "ReminderEntityTypeEnum": ["reminder"],
+        "ReadingGoalMetricEnum": [
+            ("minutes", "Minutes"),
+            ("pages", "Pages"),
+            ("ayahs", "Ayahs"),
+        ],
         "SyncUpsertActionEnum": ["upsert"],
         "SyncDeleteActionEnum": ["delete"],
         "SyncEntityTypeEnum": [

@@ -21,9 +21,15 @@ from quran_backend.modules.accounts.models import (
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
 from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.reading.change_log import append_sync_change
+from quran_backend.modules.reading.habit_services import recalculate_reading_streak
 from quran_backend.modules.reading.models import (
     Bookmark,
+    GoalProgress,
+    ReadingGoal,
+    ReadingGoalStatus,
     ReadingPosition,
+    ReadingSession,
+    ReadingStreak,
     RetiredBookmarkId,
     SyncAction,
     SyncChange,
@@ -187,9 +193,43 @@ def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) 
         retired_count += 1
     counts["retired_bookmark_ids"] = retired_count
 
+    source_active_goal = (
+        ReadingGoal.objects.select_for_update()
+        .filter(user=source, status=ReadingGoalStatus.ACTIVE)
+        .first()
+    )
+    target_active_goal = (
+        ReadingGoal.objects.select_for_update()
+        .filter(user=target, status=ReadingGoalStatus.ACTIVE)
+        .first()
+    )
+    if source_active_goal is not None and target_active_goal is not None:
+        if _goal_rank(source_active_goal) > _goal_rank(target_active_goal):
+            _archive_goal_for_merge(target_active_goal)
+        else:
+            _archive_goal_for_merge(source_active_goal)
+
+    counts["reading_goals"] = ReadingGoal.objects.filter(user=source).update(user=target)
+    counts["reading_sessions"] = ReadingSession.objects.filter(user=source).update(user=target)
+    counts["goal_progress"] = GoalProgress.objects.filter(user=source).update(user=target)
+    counts["reading_streaks"] = ReadingStreak.objects.filter(user__in=(source, target)).count()
+    ReadingStreak.objects.filter(user__in=(source, target)).delete()
+    recalculate_reading_streak(target, reference_date=timezone.now().date())
+
 
 def _position_rank(position: ReadingPosition) -> tuple[Any, ...]:
     return (position.client_updated_at, position.last_read_at, position.updated_at, position.id)
+
+
+def _goal_rank(goal: ReadingGoal) -> tuple[Any, ...]:
+    return (goal.client_updated_at, goal.updated_at, goal.id)
+
+
+def _archive_goal_for_merge(goal: ReadingGoal) -> None:
+    goal.status = ReadingGoalStatus.ARCHIVED
+    goal.ended_on = max(goal.started_on, timezone.now().date())
+    goal.revision += 1
+    goal.save(update_fields=["status", "ended_on", "revision", "updated_at"])
 
 
 def _copy_position(*, source: ReadingPosition, target: ReadingPosition) -> None:

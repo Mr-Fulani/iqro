@@ -516,6 +516,71 @@ export type ReadingPosition = {
   client_updated_at: string;
 };
 
+export type ReadingGoalMetric = "minutes" | "pages" | "ayahs";
+
+export type ReadingGoal = {
+  id: string;
+  metric: ReadingGoalMetric;
+  target_amount: string;
+  timezone_name: string;
+  started_on: string;
+  ended_on: string | null;
+  status: "active" | "archived";
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalProgress = {
+  goal_id: string;
+  local_date: string;
+  metric: ReadingGoalMetric;
+  target_amount: string;
+  achieved_amount: string;
+  remaining_amount: string;
+  is_completed: boolean;
+  completed_at: string | null;
+};
+
+export type ReadingStreak = {
+  current_count: number;
+  longest_count: number;
+  last_qualifying_date: string | null;
+};
+
+export type ReadingToday = {
+  local_date: string;
+  timezone_name: string;
+  continue_reading: ReadingPosition | null;
+  goal: ReadingGoal | null;
+  progress: GoalProgress | null;
+  streak: ReadingStreak;
+};
+
+export type ReadingSession = {
+  id: string;
+  goal_id: string | null;
+  source: "automatic" | "manual";
+  status: "active" | "completed" | "discarded";
+  timezone_name: string;
+  local_date: string;
+  started_at: string | null;
+  ended_at: string | null;
+  active_seconds: number;
+  credited_pages: number;
+  credited_ayahs: number;
+  manual_metric: ReadingGoalMetric | null;
+  manual_amount: string | null;
+  revision: number;
+  client_updated_at: string;
+  device_id: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Bookmark = {
   id: string;
   edition_code: string;
@@ -783,6 +848,10 @@ const API_ERROR_MESSAGES: Record<string, MessageKey> = {
   current_device_revoke_conflict: "error.currentDevice",
   device_not_found: "error.deviceNotFound",
   sync_cursor_expired: "error.cursorExpired",
+  reading_goal_revision_conflict: "reading.goalConflict",
+  reading_session_revision_conflict: "reading.sessionConflict",
+  reading_session_conflict: "reading.sessionConflict",
+  reading_rate_limited: "error.rateLimited",
 };
 
 export class ApiError extends Error {
@@ -1265,8 +1334,67 @@ export class ApiClient {
   }
 
   // -------------------------------------------------------------------------
-  // Reading Position, Bookmarks & Sync
+  // Reading Habit, Position, Bookmarks & Sync
   // -------------------------------------------------------------------------
+  public async getReadingToday(timezoneName?: string): Promise<ReadingToday> {
+    const params = new URLSearchParams();
+    if (timezoneName) params.set("timezone_name", timezoneName);
+    const query = params.size ? `?${params.toString()}` : "";
+    return this.request<ReadingToday>(`/api/v1/me/today${query}`, { cache: "no-store" });
+  }
+
+  public async setReadingGoal(data: {
+    metric: ReadingGoalMetric;
+    target_amount: number | string;
+    timezone_name: string;
+    base_revision: number;
+  }): Promise<ReadingGoal> {
+    return this.request<ReadingGoal>("/api/v1/me/reading-goal", {
+      method: "PUT",
+      body: JSON.stringify({
+        ...data,
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
+  }
+
+  public async createManualReadingSession(data: {
+    metric: ReadingGoalMetric;
+    amount: number | string;
+    timezone_name: string;
+    local_date: string;
+  }): Promise<ReadingSession> {
+    const now = new Date().toISOString();
+    return this.request<ReadingSession>("/api/v1/me/reading-sessions/manual", {
+      method: "POST",
+      body: JSON.stringify({
+        id: generateUuidV7(),
+        ...data,
+        client_updated_at: now,
+      }),
+    });
+  }
+
+  public async createAutomaticReadingSession(data: {
+    id: string;
+    timezone_name: string;
+    started_at: string;
+    ended_at: string;
+    active_seconds: number;
+    credited_pages?: number;
+    credited_ayahs?: number;
+    client_updated_at: string;
+  }): Promise<ReadingSession> {
+    return this.request<ReadingSession>("/api/v1/me/reading-sessions/automatic", {
+      method: "POST",
+      body: JSON.stringify({
+        credited_pages: 0,
+        credited_ayahs: 0,
+        ...data,
+      }),
+    });
+  }
+
   public async getReadingPosition(edition: string): Promise<ReadingPosition> {
     const position = await this.request<ReadingPosition>(`/api/v1/me/reading-position/${edition}`);
     const userId = this.session?.user.id;

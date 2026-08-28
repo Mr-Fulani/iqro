@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -23,7 +24,15 @@ from quran_backend.modules.accounts.models import (
     User,
     UserStatus,
 )
-from quran_backend.modules.reading.models import Bookmark
+from quran_backend.modules.reading.habit_services import record_manual_session, set_reading_goal
+from quran_backend.modules.reading.models import (
+    Bookmark,
+    GoalProgress,
+    ReadingGoal,
+    ReadingGoalMetric,
+    ReadingSession,
+    ReadingStreak,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -308,6 +317,25 @@ def test_due_deletion_anonymizes_account_and_removes_synced_data(
         client_updated_at=timezone.now(),
         device=device,
     )
+    goal, _created = set_reading_goal(
+        user=user,
+        metric=ReadingGoalMetric.MINUTES,
+        target_amount=Decimal("1"),
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=timezone.now(),
+        device_id=device.id,
+    )
+    reading_session, _created = record_manual_session(
+        user=user,
+        session_id=uuid.uuid7(),
+        timezone_name="UTC",
+        local_date=timezone.now().date(),
+        metric=ReadingGoalMetric.MINUTES,
+        amount=Decimal("1"),
+        client_updated_at=timezone.now(),
+        device_id=device.id,
+    )
     requested_at = timezone.now() - timedelta(days=8)
     User.objects.filter(id=user.id).update(
         status=UserStatus.PENDING_DELETION,
@@ -330,3 +358,7 @@ def test_due_deletion_anonymizes_account_and_removes_synced_data(
     assert not Device.objects.filter(user=user).exists()
     assert not Consent.objects.filter(user=user).exists()
     assert not Bookmark.objects.filter(id=bookmark.id).exists()
+    assert not ReadingSession.objects.filter(id=reading_session.id).exists()
+    assert not GoalProgress.objects.filter(goal_id=goal.id).exists()
+    assert not ReadingGoal.objects.filter(id=goal.id).exists()
+    assert not ReadingStreak.objects.filter(user=user).exists()

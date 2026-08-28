@@ -15,6 +15,7 @@ import { clearSyncState } from "./sync-state";
 import { clearPrayerLocationPreference } from "./prayer-location";
 import { useI18n } from "./i18n-context";
 import { rememberPostAuthReturnPath } from "./auth-navigation";
+import { clearReadingActivityQueue } from "./reading-activity-queue";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -167,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore network errors on logout
     } finally {
       clearPrayerLocationPreference(userId);
+      clearReadingActivityQueue();
       setSession(null);
       setIsLoading(false);
     }
@@ -179,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.logoutAll();
       clearPrayerLocationPreference(userId);
+      clearReadingActivityQueue();
       setSession(null);
       return true;
     } catch (err) {
@@ -194,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const next = await api.requestAccountDeletion(challengeId);
+      clearReadingActivityQueue();
       sessionStorage.setItem(
         ACCOUNT_LIFECYCLE_NOTICE_KEY,
         t("auth.deletionScheduledNotice"),

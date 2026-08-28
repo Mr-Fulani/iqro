@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ReciterAvatar } from "../components/ReciterAvatar";
+import { TodayReadingCard } from "../components/TodayReadingCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -161,6 +162,8 @@ export default function HomePage() {
           </button>
         </div>
       </section>
+
+      <TodayReadingCard />
 
       {/* Reader and Quran catalog summary */}
       <section className="kpi-grid">

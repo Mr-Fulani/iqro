@@ -9,6 +9,14 @@ from quran_backend.modules.reading.api import (
     SyncPullView,
     SyncPushView,
 )
+from quran_backend.modules.reading.habit_api import (
+    AutomaticReadingSessionCreateView,
+    ManualReadingSessionCreateView,
+    ManualReadingSessionDetailView,
+    ReadingGoalView,
+    ReadingSessionListView,
+    TodayView,
+)
 
 app_name = "reading"
 
@@ -23,6 +31,28 @@ urlpatterns = [
         "me/bookmarks/<uuid:bookmark_id>",
         BookmarkDetailView.as_view(),
         name="bookmark-detail",
+    ),
+    path("me/today", TodayView.as_view(), name="today"),
+    path("me/reading-goal", ReadingGoalView.as_view(), name="reading-goal"),
+    path(
+        "me/reading-sessions",
+        ReadingSessionListView.as_view(),
+        name="reading-session-list",
+    ),
+    path(
+        "me/reading-sessions/automatic",
+        AutomaticReadingSessionCreateView.as_view(),
+        name="reading-session-automatic",
+    ),
+    path(
+        "me/reading-sessions/manual",
+        ManualReadingSessionCreateView.as_view(),
+        name="reading-session-manual",
+    ),
+    path(
+        "me/reading-sessions/<uuid:session_id>",
+        ManualReadingSessionDetailView.as_view(),
+        name="reading-session-detail",
     ),
     path("sync/push", SyncPushView.as_view(), name="sync-push"),
     path("sync/pull", SyncPullView.as_view(), name="sync-pull"),

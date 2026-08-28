@@ -268,7 +268,11 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
     from quran_backend.modules.prayer_times.models import PrayerProfile  # noqa: PLC0415
     from quran_backend.modules.reading.models import (  # noqa: PLC0415
         Bookmark,
+        GoalProgress,
+        ReadingGoal,
         ReadingPosition,
+        ReadingSession,
+        ReadingStreak,
         RetiredBookmarkId,
         SyncChange,
         SyncOperation,
@@ -286,6 +290,10 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
     ReminderRule.objects.filter(user=user).delete()
     RetiredReminderId.objects.filter(user=user).delete()
     PrayerProfile.objects.filter(user=user).delete()
+    ReadingSession.objects.filter(user=user).delete()
+    GoalProgress.objects.filter(user=user).delete()
+    ReadingGoal.objects.filter(user=user).delete()
+    ReadingStreak.objects.filter(user=user).delete()
     ReadingPosition.objects.filter(user=user).delete()
     Bookmark.objects.filter(user=user).delete()
     RetiredBookmarkId.objects.filter(user=user).delete()

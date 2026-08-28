@@ -184,6 +184,38 @@ def test_polymorphic_sync_output_fields_are_safe_at_runtime() -> None:
     assert reminder_full_resync["entities"] == [reminder]
 
 
+def test_openapi_declares_reading_habit_contracts() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    assert set(paths["/api/v1/me/today"]) == {"get"}
+    assert set(paths["/api/v1/me/reading-goal"]) == {"get", "put", "delete"}
+    assert set(paths["/api/v1/me/reading-sessions"]) == {"get"}
+    assert set(paths["/api/v1/me/reading-sessions/automatic"]) == {"post"}
+    assert set(paths["/api/v1/me/reading-sessions/manual"]) == {"post"}
+    assert set(paths["/api/v1/me/reading-sessions/{session_id}"]) == {
+        "patch",
+        "delete",
+    }
+    goal_request = schema["components"]["schemas"]["ReadingGoalWriteRequest"]
+    assert goal_request["additionalProperties"] is False
+    assert set(goal_request["required"]) >= {
+        "metric",
+        "target_amount",
+        "timezone_name",
+        "base_revision",
+        "client_updated_at",
+    }
+    automatic_request = schema["components"]["schemas"]["AutomaticReadingSessionCreateRequest"]
+    assert automatic_request["properties"]["active_seconds"]["maximum"] == 86_400
+    assert automatic_request["properties"]["credited_pages"]["maximum"] == 604
+    today_schema = schema["components"]["schemas"]["TodayOutput"]
+    assert {"continue_reading", "goal", "progress", "streak"} <= today_schema["properties"].keys()
+
+
 def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
     schema = cast(
         dict[str, Any],

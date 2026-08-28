@@ -15,6 +15,7 @@ import {
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
 import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
+import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -463,6 +464,7 @@ function QuranContent() {
 
   return (
     <div className={`quran-page-layout${viewMode === "mushaf" ? " is-mushaf-mode" : ""}`}>
+      <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
       {/* Control Bar */}
       <section className="surface quran-control-surface">
         <div className="surface-head" style={{ marginBottom: 16 }}>
