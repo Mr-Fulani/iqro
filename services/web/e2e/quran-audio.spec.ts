@@ -153,7 +153,95 @@ const translationEditions = [
       attribution: "Quran data provided by Quran Foundation.",
     },
   },
+  {
+    source_id: 78,
+    slug: "ru-ministry-of-awqaf",
+    language_code: "ru",
+    language_name: "russian",
+    name: "Ministry of Awqaf, Egypt",
+    author_name: "Ministry of Awqaf, Egypt",
+    active_version: {
+      sync_sequence: 1408,
+      schema_version: "1",
+      checksum_sha256: "c".repeat(64),
+      ayah_count: 6236,
+      published_at: "2026-08-28T00:00:00Z",
+    },
+    source: {
+      name: "Quran.Foundation Content API",
+      url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/translations/",
+      license_name: "Quran.Foundation Developer Terms",
+      license_url: "https://api-docs.quran.foundation/legal/developer-terms/",
+      attribution: "Quran data provided by Quran Foundation.",
+    },
+  },
+  {
+    source_id: 79,
+    slug: "ru-abu-adel",
+    language_code: "ru",
+    language_name: "russian",
+    name: "Abu Adel",
+    author_name: "Abu Adel",
+    active_version: {
+      sync_sequence: 1408,
+      schema_version: "1",
+      checksum_sha256: "b".repeat(64),
+      ayah_count: 6236,
+      published_at: "2026-08-28T00:00:00Z",
+    },
+    source: {
+      name: "Quran.Foundation Content API",
+      url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/translations/",
+      license_name: "Quran.Foundation Developer Terms",
+      license_url: "https://api-docs.quran.foundation/legal/developer-terms/",
+      attribution: "Quran data provided by Quran Foundation.",
+    },
+  },
 ];
+
+const tafsirEditions = [
+  {
+    source_id: 16,
+    slug: "ar-tafsir-muyassar",
+    language_code: "ar",
+    language_name: "arabic",
+    name: "Tafsir Muyassar",
+    author_name: "المیسر",
+  },
+  {
+    source_id: 169,
+    slug: "en-tafisr-ibn-kathir",
+    language_code: "en",
+    language_name: "english",
+    name: "Ibn Kathir (Abridged)",
+    author_name: "Hafiz Ibn Kathir",
+  },
+  {
+    source_id: 170,
+    slug: "ru-tafseer-al-saddi",
+    language_code: "ru",
+    language_name: "russian",
+    name: "Al-Sa'di",
+    author_name: "Saddi",
+  },
+].map((edition) => ({
+  ...edition,
+  active_version: {
+    sync_sequence: 1408,
+    schema_version: "1",
+    checksum_sha256: "a".repeat(64),
+    record_count: 6236,
+    covered_ayah_count: 6236,
+    published_at: "2026-08-28T00:00:00Z",
+  },
+  source: {
+    name: "Quran.Foundation Content API",
+    url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/tafsirs/",
+    license_name: "Quran.Foundation Developer Terms",
+    license_url: "https://api-docs.quran.foundation/legal/developer-terms/",
+    attribution: "Quran data provided by Quran Foundation.",
+  },
+}));
 
 const translatedAyahs = [
   { verse_key: "6:1", surah_number: 6, ayah_number: 1, text: "Хвала Аллаху", foot_notes: [] },
@@ -465,7 +553,15 @@ async function installApiMocks(page: Page) {
         },
       });
     } else if (path === "/api/v1/quran/translations") {
-      await route.fulfill({ json: translationEditions });
+      const language = url.searchParams.get("language");
+      await route.fulfill({
+        json: translationEditions.filter((edition) => edition.language_code === language),
+      });
+    } else if (path === "/api/v1/quran/tafsirs") {
+      const language = url.searchParams.get("language");
+      await route.fulfill({
+        json: tafsirEditions.filter((edition) => edition.language_code === language),
+      });
     } else if (path === "/api/v1/quran/translations/45/surahs/6") {
       await route.fulfill({ json: translatedAyahs });
     } else if (path === "/api/v1/quran/translations/20/surahs/6") {
@@ -512,30 +608,15 @@ test("reader shows a saved semantic translation in text and Mushaf modes", async
 
   const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
   await expect(translationToggle).toBeChecked();
-  await expect(page.getByLabel("Перевод и автор")).toHaveValue("45");
+  const translationSelect = page.getByLabel("Перевод и автор");
+  await expect(translationSelect).toHaveValue("45");
+  await expect(translationSelect.locator("option")).toHaveCount(3);
+  await expect(translationSelect.locator('option[value="20"]')).toHaveCount(0);
+  const tafsirSelect = page.getByLabel("Тафсир и автор");
+  await expect(tafsirSelect).toHaveValue("170");
+  await expect(tafsirSelect.locator("option")).toHaveCount(1);
   await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
   await expect(page.getByText("Он сотворил вас", { exact: true })).toBeVisible();
-
-  await page.getByLabel("Перевод и автор").selectOption("20");
-  const firstAyah = page.locator(".ayah-card").first();
-  await expect(
-    firstAyah.getByText(
-      "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await firstAyah.getByText("Сноски переводчика (2)", { exact: true }).click();
-  await expect(
-    firstAyah.getByText("Allāh is the proper name belonging only to the Almighty God.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    firstAyah.getByText("Ar-Raḥmān and ar-Raḥeem are names derived from mercy.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page.getByLabel("Перевод и автор").selectOption("45");
 
   await translationToggle.uncheck();
   await expect(page.getByText("Хвала Аллаху", { exact: true })).toHaveCount(0);
@@ -553,13 +634,37 @@ test("reader shows a saved semantic translation in text and Mushaf modes", async
   );
 });
 
+test("English reader keeps English translations and footnotes isolated", async ({ page }) => {
+  await page.goto("/en/quran?surah=6");
+
+  const translationSelect = page.getByLabel("Translation and author");
+  await expect(translationSelect).toHaveValue("20");
+  await expect(translationSelect.locator("option")).toHaveCount(1);
+  await expect(translationSelect.locator('option[value="45"]')).toHaveCount(0);
+  const firstAyah = page.locator(".ayah-card").first();
+  await expect(
+    firstAyah.getByText(
+      "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await firstAyah.getByText("Translator notes (2)", { exact: true }).click();
+  await expect(
+    firstAyah.getByText("Allāh is the proper name belonging only to the Almighty God.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
 test("arabic reader does not select an English translation automatically", async ({ page }) => {
   await page.goto("/ar/quran?surah=6");
 
   const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
   const translationSelect = page.locator("#translation-edition").filter({ visible: true });
   await expect(translationToggle).not.toBeChecked();
+  await expect(translationToggle).toBeDisabled();
   await expect(translationSelect).toHaveValue("");
+  await expect(translationSelect).toBeDisabled();
   await expect(
     page
       .getByText(
@@ -569,17 +674,10 @@ test("arabic reader does not select an English translation automatically", async
       .filter({ visible: true }),
   ).toBeVisible();
 
-  await translationToggle.check();
-  await expect(translationSelect).toHaveValue("");
-  await translationSelect.selectOption("20");
-  await expect(
-    page
-      .getByText(
-        "In the name of Allāh, [1] the Entirely Merciful, the Especially Merciful. [2]",
-        { exact: true },
-      )
-      .filter({ visible: true }),
-  ).toBeVisible();
+  const tafsirSelect = page.getByLabel("التفسير والمؤلف");
+  await expect(tafsirSelect).toHaveValue("16");
+  await expect(tafsirSelect.locator("option")).toHaveCount(1);
+  await expect(tafsirSelect.locator('option[value="169"]')).toHaveCount(0);
 });
 
 test("catalog loads all 114 surahs and starts the first track on one click", async ({ page }) => {

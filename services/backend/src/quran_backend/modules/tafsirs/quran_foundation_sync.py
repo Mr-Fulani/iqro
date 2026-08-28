@@ -303,11 +303,6 @@ def _replace_snapshot(
         covered_ranks.update(range(row["start_verse_id"], row["end_verse_id"] + 1))
         normalized.append(row)
     _validate_grouped_tafsir_texts(normalized)
-    if covered_ranks != set(range(1, len(ordered_keys) + 1)):
-        raise QuranFoundationError(
-            "Quran.Foundation Tafsir snapshot does not cover the published Quran."
-        )
-
     language_name = _required_string(metadata.get("language_name"), "Tafsir language")
     language_code = LANGUAGE_CODES.get(language_name.lower())
     if language_code is None:

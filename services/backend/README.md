@@ -50,14 +50,16 @@ Production Content Sync всех доступных Quran.Foundation Mushaf layo
 checkpoint refresh и полный возобновляемый chapter-reciter import описаны в
 [docs/quran-foundation-content.md](docs/quran-foundation-content.md).
 
-Смысловые переводы хранятся в отдельном версионированном домене. По умолчанию Content Sync
-следит за Saheeh International (`20`), Elmir Kuliev (`45`) и Diyanet (`77`), сверяет каждый
-snapshot с координатами опубликованного Корана и атомарно переключает активную версию.
+Смысловые переводы хранятся в отдельном версионированном домене. Allowlist Content Sync
+содержит все 15 проверенных English/Russian/Turkish translation-ресурсов активных языков сайта,
+сверяет каждый snapshot с координатами опубликованного Корана и атомарно переключает активную
+версию. Транслитерация и Tafsir-in-translation-mode не смешиваются со смысловыми переводами.
 Операторский запуск: `python manage.py sync_quran_foundation_translations --force`.
 Решение по источникам и правам: [docs/sign-offs/quran-foundation-translations-2026-08-28.md](docs/sign-offs/quran-foundation-translations-2026-08-28.md).
 
 Тафсиры хранятся в независимом версионированном домене с авторскими диапазонами аятов.
-Staging-набор: Al-Muyassar (`16`), сокращённый Ibn Kathir (`169`) и Al-Sa'di (`170`).
+Staging allowlist содержит все 13 Arabic/English/Russian Tafsir-ресурсов провайдера; частичное
+покрытие хранится явно и не подменяется текстом другого языка.
 Операторский запуск: `python manage.py sync_quran_foundation_tafsirs --force`.
 Техническое решение и production-gate: [docs/sign-offs/quran-foundation-tafsirs-2026-08-28.md](docs/sign-offs/quran-foundation-tafsirs-2026-08-28.md).
 

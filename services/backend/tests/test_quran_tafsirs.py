@@ -262,23 +262,23 @@ def test_empty_provider_bootstrap_self_heals_missing_local_tafsir() -> None:
 
 
 @pytest.mark.django_db
-def test_incomplete_tafsir_does_not_publish_or_advance_checkpoint() -> None:
+def test_partial_provider_tafsir_publishes_reported_coverage() -> None:
     snapshot = _snapshot()
     snapshot["records"][0]["group_verse_key_to"] = "1:1"
     snapshot["records"][0]["group_verses_count"] = 1
     snapshot["records"][0]["end_verse_id"] = 1
 
-    with pytest.raises(QuranFoundationError, match="does not cover"):
-        sync_quran_foundation_tafsirs(
-            resource_ids=(16,),
-            client=FakeTafsirClient(snapshot=snapshot),
-            expected_verse_keys={"1:1", "1:2"},
-        )
+    result = sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=snapshot),
+        expected_verse_keys={"1:1", "1:2"},
+    )
 
-    assert not TafsirEdition.objects.exists()
+    assert result.versions_created == 1
+    assert TafsirEditionVersion.objects.get().covered_ayah_count == 1
     state = QuranFoundationTafsirSyncState.objects.get(environment="production")
-    assert state.sync_token == ""
-    assert state.consecutive_failures == 1
+    assert state.sync_token == "tafsir-checkpoint-1"
+    assert state.consecutive_failures == 0
 
 
 @pytest.mark.django_db

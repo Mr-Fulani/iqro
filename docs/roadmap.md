@@ -333,9 +333,11 @@ multi-client MVP остаётся на этапах B–D.
 - [ ] Playback state sync при сохранении device-local очереди.
 - [ ] Flutter local prayer calculation и notification scheduler с timezone/location reschedule.
 - [x] Versioned translation schema/API/UI и Quran.Foundation Content Sync; каждый перевод имеет
-  собственные права, attribution, locale, immutable version и publication status.
+  собственные права, attribution, locale, immutable version и publication status; подключены
+  все проверенные смысловые ресурсы активных языков, UI-каталог фильтруется текущей локалью.
 - [x] Versioned tafsir schema/API/UI и provider catalog sync; тафсир не смешивается со
-  смысловыми переводами, сохраняет авторские диапазоны и загружается по запросу.
+  смысловыми переводами, сохраняет авторские диапазоны/частичное покрытие и загружается по
+  запросу; подключены все provider-ресурсы активных языков сайта.
 - [ ] Получить отдельный религиозный/editorial sign-off выбранных Tafsir editions перед
   включением `QF_TAFSIR_SYNC_ENABLED` в публичном production.
 - [ ] Reading sessions, goals и streaks.

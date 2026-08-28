@@ -404,7 +404,7 @@ function QuranContent() {
     const preferencePromise = session
       ? api.getQuranReaderPreference(locale)
       : Promise.resolve(null);
-    Promise.all([api.getTranslations(), api.getTafsirs(), preferencePromise])
+    Promise.all([api.getTranslations(locale), api.getTafsirs(locale), preferencePromise])
       .then(([translationCatalog, tafsirCatalog, serverPreference]) => {
         if (cancelled) return;
         setTranslationEditions(translationCatalog);
@@ -1197,7 +1197,7 @@ function QuranContent() {
               ) : null}
               {translationEditions.map((edition) => (
                 <option key={edition.source_id} value={edition.source_id}>
-                  [{edition.language_code.toUpperCase()}] {edition.name} · {edition.author_name}
+                  {edition.name} · {edition.author_name}
                 </option>
               ))}
             </select>
@@ -1208,6 +1208,11 @@ function QuranContent() {
               <a href={selectedTranslation.source.url} target="_blank" rel="noreferrer">
                 {selectedTranslation.source.attribution}
               </a>
+            </p>
+          )}
+          {locale === "ar" && translationEditions.length === 0 && (
+            <p className="translation-context-note">
+              {t("quran.translationArabicTafsirNotice")}
             </p>
           )}
           {translationError && (
@@ -1253,7 +1258,7 @@ function QuranContent() {
               ) : null}
               {tafsirEditions.map((edition) => (
                 <option key={edition.source_id} value={edition.source_id}>
-                  [{edition.language_code.toUpperCase()}] {edition.name} · {edition.author_name}
+                  {edition.name} · {edition.author_name}
                 </option>
               ))}
             </select>

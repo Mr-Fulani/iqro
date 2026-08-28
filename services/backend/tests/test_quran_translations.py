@@ -192,6 +192,27 @@ def test_bootstrap_publishes_immutable_translation_and_checkpoint() -> None:
 
 
 @pytest.mark.django_db
+def test_bootstrap_generates_stable_slug_when_provider_slug_is_blank() -> None:
+    client = FakeTranslationClient()
+    original_list = client.list_translations
+
+    def list_without_slug(*, language: str = "en") -> list[dict[str, Any]]:
+        rows = original_list(language=language)
+        rows[0]["slug"] = ""
+        return rows
+
+    client.list_translations = list_without_slug  # type: ignore[method-assign]
+
+    sync_quran_foundation_translations(
+        resource_ids=(45,),
+        client=client,
+        expected_verse_keys={"1:1", "1:2"},
+    )
+
+    assert TranslationEdition.objects.get().slug == "quran-foundation-translation-45"
+
+
+@pytest.mark.django_db
 def test_incremental_no_change_keeps_version_and_advances_checkpoint() -> None:
     sync_quran_foundation_translations(
         resource_ids=(45,),

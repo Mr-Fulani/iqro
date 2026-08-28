@@ -2,18 +2,35 @@
 
 ## Решение
 
-Для первого web-релиза смысловых переводов используются три production-ресурса
-Quran.Foundation Content API:
+Для web-релиза используются все 15 смысловых translation-ресурсов Quran.Foundation
+Content API на активных языках интерфейса (`en`, `ru`, `tr`):
 
 | Язык | Resource ID | Издание | Автор / организация | Slug |
 |---|---:|---|---|---|
+| English | `19` | M. Pickthall | Mohammed Marmaduke William Pickthall | `quran.en.pickthall` |
 | English | `20` | Saheeh International | Saheeh International | `en-sahih-international` |
+| English | `22` | A. Yusuf Ali | Abdullah Yusuf Ali | `quran.en.yusufali` |
+| English | `84` | T. Usmani | Mufti Taqi Usmani | `en-taqi-usmani` |
+| English | `85` | M.A.S. Abdel Haleem | Abdul Haleem | `en-haleem` |
+| English | `95` | A. Maududi (Tafhim commentary) | Sayyid Abul Ala Maududi | `en-al-maududi` |
+| English | `203` | Al-Hilali & Khan | M. al-Hilali & M. Muhsin Khan | generated from resource ID |
 | Русский | `45` | Elmir Kuliev | Elmir Kuliev | `quran.ru.kuliev` |
+| Русский | `78` | Ministry of Awqaf, Egypt | Ministry of Awqaf, Egypt | `ru-ministry-of-awqaf` |
+| Русский | `79` | Abu Adel | Abu Adel | `ru-abu-adel` |
+| Türkçe | `52` | Elmalili Hamdi Yazir | Elmalili Hamdi Yazir | `tr-hamdi` |
 | Türkçe | `77` | Turkish Translation (Diyanet) | Diyanet Isleri | `quran.tr.diyanet` |
+| Türkçe | `112` | Shaban Britch | Shaban Britch | generated from resource ID |
+| Türkçe | `124` | Muslim Shahin | Muslim Shahin | generated from resource ID |
+| Türkçe | `210` | Dar Al-Salam Center | Dar Al-Salam Center | generated from resource ID |
 
 Арабский resource `1014` («Tafsir Al-Muyasser in Translation Mode») не публикуется как
-смысловой перевод. Отдельный Tafsir MVP использует настоящий Tafsir resource `16` и описан
-в [решении по staging Тафсиру](quran-foundation-tafsirs-2026-08-28.md).
+смысловой перевод: он доступен в отдельном Tafsir-разделе через настоящий resource `16`.
+English resource `57` является транслитерацией, а не смысловым переводом, поэтому будет
+подключён позже отдельной функцией чтения, но не смешивается с переводами.
+
+Каталог UI всегда запрашивается с текущей локалью. Поэтому русскоязычный интерфейс показывает
+только три русских перевода, английский — семь английских, турецкий — пять турецких; в арабском
+интерфейсе смысловой перевод выключен, а объяснения находятся в отдельном Tafsir-блоке.
 
 ## Контракт хранения и обновления
 
@@ -44,7 +61,7 @@ Quran.Foundation Developer Terms разрешают показывать Quran c
 - [Translation catalog](https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/translations/)
 - [Translation snapshots](https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/resources-snapshot/)
 
-## Ограничения первой версии
+## Ограничения и правила интерфейса
 
 - Выбор перевода и Тафсира синхронизируется с аккаунтом через revisioned preference contract,
   отдельно для каждого языка интерфейса. Web storage остаётся fallback без активной сессии.
@@ -54,5 +71,5 @@ Quran.Foundation Developer Terms разрешают показывать Quran c
   Номера `[1]`, `[2]` в тексте соответствуют порядку пояснений в этом списке.
 - Перевод не подвергается автоматическому машинному переводу. Блоки UI помечены
   `translate="no"`.
-- Публикация дополнительных переводов требует проверки прав, качества, атрибуции и языка;
-  наличие ресурса в provider catalog само по себе не означает автоматическую публикацию.
+- Новые provider-ресурсы не включаются автоматически. Allowlist обновляется только после
+  проверки типа ресурса, языка, полноты, атрибуции и технического staging-аудита.

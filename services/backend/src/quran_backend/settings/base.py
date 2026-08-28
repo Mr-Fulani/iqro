@@ -187,7 +187,15 @@ QURAN_QF_TRANSLATION_SYNC_ENABLED = env_bool(
 )
 try:
     QURAN_QF_TRANSLATION_RESOURCE_IDS = tuple(
-        sorted({int(value) for value in env_list("QF_TRANSLATION_RESOURCE_IDS", "20,45,77")})
+        sorted(
+            {
+                int(value)
+                for value in env_list(
+                    "QF_TRANSLATION_RESOURCE_IDS",
+                    "19,20,22,45,52,77,78,79,84,85,95,112,124,203,210",
+                )
+            }
+        )
     )
 except ValueError as exc:
     raise ImproperlyConfigured(
@@ -205,7 +213,15 @@ QURAN_QF_TAFSIR_SYNC_ENABLED = env_bool(
 )
 try:
     QURAN_QF_TAFSIR_RESOURCE_IDS = tuple(
-        sorted({int(value) for value in env_list("QF_TAFSIR_RESOURCE_IDS", "16,169,170")})
+        sorted(
+            {
+                int(value)
+                for value in env_list(
+                    "QF_TAFSIR_RESOURCE_IDS",
+                    "14,15,16,90,91,93,94,168,169,170,817,925,926",
+                )
+            }
+        )
     )
 except ValueError as exc:
     raise ImproperlyConfigured(

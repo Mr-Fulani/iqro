@@ -310,11 +310,14 @@ def _replace_snapshot(
         provider=PROVIDER,
         source_id=resource_id,
         defaults={
-            "slug": _required_string(metadata.get("slug"), "translation slug"),
+            "slug": _provider_slug(metadata.get("slug"), resource_id),
             "language_code": language_code,
             "language_name": language_name,
             "name": _required_string(metadata.get("name"), "translation name"),
-            "author_name": _required_string(metadata.get("author_name"), "translation author"),
+            "author_name": _required_string(
+                metadata.get("author_name") or metadata.get("name"),
+                "translation author",
+            ),
             "source_name": SOURCE_NAME,
             "source_url": SOURCE_URL,
             "license_name": LICENSE_NAME,
@@ -425,6 +428,12 @@ def _required_string(value: object, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise QuranFoundationError(f"Quran.Foundation returned an invalid {label}.")
     return value.strip()
+
+
+def _provider_slug(value: object, resource_id: int) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return f"quran-foundation-translation-{resource_id}"
 
 
 def _positive_int(value: object, label: str) -> int:
