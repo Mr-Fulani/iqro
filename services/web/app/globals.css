@@ -1314,6 +1314,11 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary-subtle);
 }
 
+.tafsir-settings {
+  border-color: color-mix(in srgb, var(--primary-border) 72%, #d7b56d);
+  background: color-mix(in srgb, var(--primary-subtle) 82%, #fff8e8);
+}
+
 .translation-toggle {
   display: flex;
   align-items: center;
@@ -1394,6 +1399,53 @@ input:focus, select:focus, textarea:focus {
   margin: 0;
 }
 
+.ayah-tafsir {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.ayah-tafsir-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ayah-tafsir-toolbar > div {
+  display: grid;
+  gap: 3px;
+}
+
+.ayah-tafsir-toolbar span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ayah-tafsir-content {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary-border) 72%, #d7b56d);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 88%, #fff8e8);
+}
+
+.ayah-tafsir-content > span {
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ayah-tafsir-content p {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
 .translation-footnotes {
   margin-top: 10px;
   padding: 10px 12px;
@@ -1442,6 +1494,11 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--primary-border);
   border-radius: var(--radius-lg);
   background: var(--primary-subtle);
+}
+
+.mushaf-tafsir-panel {
+  border-color: color-mix(in srgb, var(--primary-border) 72%, #d7b56d);
+  background: color-mix(in srgb, var(--primary-subtle) 82%, #fff8e8);
 }
 
 .mushaf-translation-heading {
@@ -1505,6 +1562,11 @@ input:focus, select:focus, textarea:focus {
   .mushaf-translation-list article {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .ayah-tafsir-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

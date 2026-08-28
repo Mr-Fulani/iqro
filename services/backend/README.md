@@ -56,6 +56,11 @@ snapshot с координатами опубликованного Корана
 Операторский запуск: `python manage.py sync_quran_foundation_translations --force`.
 Решение по источникам и правам: [docs/sign-offs/quran-foundation-translations-2026-08-28.md](docs/sign-offs/quran-foundation-translations-2026-08-28.md).
 
+Тафсиры хранятся в независимом версионированном домене с авторскими диапазонами аятов.
+Staging-набор: Al-Muyassar (`16`), сокращённый Ibn Kathir (`169`) и Al-Sa'di (`170`).
+Операторский запуск: `python manage.py sync_quran_foundation_tafsirs --force`.
+Техническое решение и production-gate: [docs/sign-offs/quran-foundation-tafsirs-2026-08-28.md](docs/sign-offs/quran-foundation-tafsirs-2026-08-28.md).
+
 Версионированный каталог методов намаза, stateless-расчёт одного дня, high-latitude/polar
 правила, pinned tzdata и privacy contract для координат описаны в
 [docs/prayer-api.md](docs/prayer-api.md).

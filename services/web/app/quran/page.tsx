@@ -26,7 +26,9 @@ import type {
 } from "../../components/SegmentedAudioPlayer";
 import {
   api,
+  ApiError,
   Ayah,
+  type AyahTafsir,
   Hizb,
   Juz,
   MushafPage,
@@ -35,6 +37,7 @@ import {
   QuranFoundationMushaf,
   QuranFoundationMushafPage,
   QuranTranslationEdition,
+  type QuranTafsirEdition,
   RubElHizb,
   Surah,
   type AyahTranslation,
@@ -66,11 +69,18 @@ const PRAYER_READING_PRAYERS = new Set<PrayerReadingPrayer>([
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const TRANSLATION_PREFERENCE_KEY_PREFIX = "iqro_quran_translation_v2";
+const READER_PREFERENCE_KEY_PREFIX = "iqro_quran_reader_preference_v1";
 const DEFAULT_TRANSLATION_BY_LOCALE: Record<string, number | null> = {
   ar: null,
   en: 20,
   ru: 45,
   tr: 77,
+};
+const DEFAULT_TAFSIR_BY_LOCALE: Record<string, number | null> = {
+  ar: 16,
+  en: 169,
+  ru: 170,
+  tr: null,
 };
 
 type TranslationPreference = {
@@ -78,11 +88,18 @@ type TranslationPreference = {
   sourceId: number | null;
 };
 
+type ReaderPreference = {
+  translationEnabled: boolean;
+  translationSourceId: number | null;
+  tafsirEnabled: boolean;
+  tafsirSourceId: number | null;
+};
+
 function translationPreferenceKey(locale: string): string {
   return `${TRANSLATION_PREFERENCE_KEY_PREFIX}:${locale}`;
 }
 
-function readTranslationPreference(locale: string): TranslationPreference | null {
+function readLegacyTranslationPreference(locale: string): TranslationPreference | null {
   try {
     const raw = window.localStorage.getItem(translationPreferenceKey(locale));
     if (!raw) return null;
@@ -95,8 +112,61 @@ function readTranslationPreference(locale: string): TranslationPreference | null
   }
 }
 
-function writeTranslationPreference(locale: string, preference: TranslationPreference): void {
-  window.localStorage.setItem(translationPreferenceKey(locale), JSON.stringify(preference));
+function readerPreferenceKey(locale: string): string {
+  return `${READER_PREFERENCE_KEY_PREFIX}:${locale}`;
+}
+
+function readReaderPreference(locale: string): ReaderPreference | null {
+  try {
+    const raw = window.localStorage.getItem(readerPreferenceKey(locale));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ReaderPreference>;
+    if (
+      typeof parsed.translationEnabled !== "boolean"
+      || typeof parsed.tafsirEnabled !== "boolean"
+      || (parsed.translationSourceId !== null && !Number.isSafeInteger(parsed.translationSourceId))
+      || (parsed.tafsirSourceId !== null && !Number.isSafeInteger(parsed.tafsirSourceId))
+    ) {
+      return null;
+    }
+    return {
+      translationEnabled: parsed.translationEnabled,
+      translationSourceId: parsed.translationSourceId ?? null,
+      tafsirEnabled: parsed.tafsirEnabled,
+      tafsirSourceId: parsed.tafsirSourceId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeReaderPreference(locale: string, preference: ReaderPreference): void {
+  try {
+    window.localStorage.setItem(readerPreferenceKey(locale), JSON.stringify(preference));
+  } catch {
+    // Server persistence remains authoritative when browser storage is unavailable.
+  }
+}
+
+function preferenceFingerprint(preference: ReaderPreference): string {
+  return JSON.stringify(preference);
+}
+
+function tafsirForVerse(
+  tafsirs: AyahTafsir[],
+  surahNumber: number,
+  ayahNumber: number,
+): AyahTafsir | undefined {
+  const verseKey = `${surahNumber}:${ayahNumber}`;
+  const exact = tafsirs.find((tafsir) => tafsir.verse_key === verseKey);
+  if (exact) return exact;
+  return tafsirs.find(
+    (tafsir) =>
+      tafsir.start_surah_number === surahNumber
+      && tafsir.end_surah_number === surahNumber
+      && tafsir.start_ayah_number <= ayahNumber
+      && tafsir.end_ayah_number >= ayahNumber,
+  );
 }
 
 function translationFootnoteTexts(footNotes: AyahTranslation["foot_notes"]): string[] {
@@ -204,7 +274,18 @@ function QuranContent() {
   >({});
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState(false);
-  const translationPreferenceLocale = useRef<string | null>(null);
+  const [tafsirEditions, setTafsirEditions] = useState<QuranTafsirEdition[]>([]);
+  const [selectedTafsirId, setSelectedTafsirId] = useState<number | null>(null);
+  const [tafsirEnabled, setTafsirEnabled] = useState(false);
+  const [tafsirRecords, setTafsirRecords] = useState<AyahTafsir[]>([]);
+  const [tafsirLoading, setTafsirLoading] = useState(false);
+  const [tafsirError, setTafsirError] = useState(false);
+  const [expandedTafsirVerse, setExpandedTafsirVerse] = useState<string | null>(null);
+  const [preferenceSyncError, setPreferenceSyncError] = useState(false);
+  const readerPreferenceLocale = useRef<string | null>(null);
+  const readerPreferenceRevisions = useRef<Record<string, number>>({});
+  const readerPreferenceFingerprints = useRef<Record<string, string>>({});
+  const readerPreferenceSaveChain = useRef<Promise<void>>(Promise.resolve());
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
@@ -239,6 +320,10 @@ function QuranContent() {
       translationEditions.find((edition) => edition.source_id === selectedTranslationId) || null,
     [selectedTranslationId, translationEditions],
   );
+  const selectedTafsir = useMemo(
+    () => tafsirEditions.find((edition) => edition.source_id === selectedTafsirId) || null,
+    [selectedTafsirId, tafsirEditions],
+  );
   const mushafVerseKeys = useMemo(() => {
     if (foundationMushafPage) return expandVerseMapping(foundationMushafPage.verse_mapping);
     if (mushafPage) {
@@ -267,6 +352,22 @@ function QuranContent() {
     () => mushafVerseKeys.map((key) => translationsByVerse[key]).filter(Boolean),
     [mushafVerseKeys, translationsByVerse],
   );
+  const tafsirsByVerse = useMemo(() => {
+    const entries = [
+      ...ayahs.map((ayah) => `${ayah.surah_number}:${ayah.number}`),
+      ...mushafVerseKeys,
+    ].map((key) => {
+      const [surahNumber, ayahNumber] = key.split(":").map(Number);
+      return [key, tafsirForVerse(tafsirRecords, surahNumber, ayahNumber)] as const;
+    });
+    return Object.fromEntries(entries.filter((entry) => entry[1] !== undefined)) as Record<
+      string,
+      AyahTafsir
+    >;
+  }, [ayahs, mushafVerseKeys, tafsirRecords]);
+  const selectedMushafTafsir = selectedMushafAyah
+    ? tafsirsByVerse[selectedMushafAyah]
+    : undefined;
   const [prayerReadingReady, setPrayerReadingReady] = useState(
     prayerReadingConfig === null,
   );
@@ -296,50 +397,152 @@ function QuranContent() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;
     let cancelled = false;
-    translationPreferenceLocale.current = null;
+    readerPreferenceLocale.current = null;
     setTranslationPreferenceReady(false);
-    api
-      .getTranslations()
-      .then((catalog) => {
+    const preferencePromise = session
+      ? api.getQuranReaderPreference(locale)
+      : Promise.resolve(null);
+    Promise.all([api.getTranslations(), api.getTafsirs(), preferencePromise])
+      .then(([translationCatalog, tafsirCatalog, serverPreference]) => {
         if (cancelled) return;
-        setTranslationEditions(catalog);
-        const saved = readTranslationPreference(locale);
-        const savedEdition = catalog.find((edition) => edition.source_id === saved?.sourceId);
-        const localeDefaultId = DEFAULT_TRANSLATION_BY_LOCALE[locale] ?? null;
-        const localeDefault = catalog.find((edition) => edition.source_id === localeDefaultId);
-        const fallback =
-          locale === "ar"
-            ? undefined
-            : catalog.find((edition) => edition.language_code === locale) || catalog[0];
-        setSelectedTranslationId(
-          savedEdition?.source_id ?? localeDefault?.source_id ?? fallback?.source_id ?? null,
-        );
-        setTranslationEnabled(saved?.enabled ?? locale !== "ar");
+        setTranslationEditions(translationCatalog);
+        setTafsirEditions(tafsirCatalog);
+        const localPreference = readReaderPreference(locale);
+        const legacyTranslation = readLegacyTranslationPreference(locale);
+        const hasServerPreference = Boolean(serverPreference && serverPreference.revision > 0);
+        const requestedTranslationId = hasServerPreference
+          ? serverPreference?.translation_source_id ?? null
+          : localPreference?.translationSourceId
+            ?? legacyTranslation?.sourceId
+            ?? DEFAULT_TRANSLATION_BY_LOCALE[locale]
+            ?? null;
+        const requestedTafsirId = hasServerPreference
+          ? serverPreference?.tafsir_source_id ?? null
+          : localPreference?.tafsirSourceId
+            ?? DEFAULT_TAFSIR_BY_LOCALE[locale]
+            ?? null;
+        const translationFallback = locale === "ar"
+          ? undefined
+          : translationCatalog.find((edition) => edition.language_code === locale);
+        const translationId = translationCatalog.find(
+          (edition) => edition.source_id === requestedTranslationId,
+        )?.source_id ?? translationFallback?.source_id ?? null;
+        const tafsirId = tafsirCatalog.find(
+          (edition) => edition.source_id === requestedTafsirId,
+        )?.source_id ?? null;
+        const resolved: ReaderPreference = {
+          translationEnabled: Boolean(
+            translationId
+            && (hasServerPreference
+              ? serverPreference?.translation_enabled
+              : localPreference?.translationEnabled
+                ?? legacyTranslation?.enabled
+                ?? locale !== "ar"),
+          ),
+          translationSourceId: translationId,
+          tafsirEnabled: Boolean(
+            tafsirId
+            && (hasServerPreference
+              ? serverPreference?.tafsir_enabled
+              : localPreference?.tafsirEnabled ?? false),
+          ),
+          tafsirSourceId: tafsirId,
+        };
+        setSelectedTranslationId(resolved.translationSourceId);
+        setTranslationEnabled(resolved.translationEnabled);
+        setSelectedTafsirId(resolved.tafsirSourceId);
+        setTafsirEnabled(resolved.tafsirEnabled);
         setTranslationError(false);
-        translationPreferenceLocale.current = locale;
+        setTafsirError(false);
+        setPreferenceSyncError(false);
+        const preferenceKey = `${session?.user.id ?? "local"}:${locale}`;
+        readerPreferenceRevisions.current[preferenceKey] = serverPreference?.revision ?? 0;
+        readerPreferenceFingerprints.current[preferenceKey] = hasServerPreference
+          ? preferenceFingerprint(resolved)
+          : "";
+        readerPreferenceLocale.current = locale;
         setTranslationPreferenceReady(true);
       })
       .catch(() => {
         if (cancelled) return;
         setTranslationEditions([]);
+        setTafsirEditions([]);
         setSelectedTranslationId(null);
+        setSelectedTafsirId(null);
         setTranslationEnabled(false);
+        setTafsirEnabled(false);
         setTranslationError(true);
-        translationPreferenceLocale.current = null;
+        setTafsirError(true);
+        readerPreferenceLocale.current = null;
       });
     return () => {
       cancelled = true;
     };
-  }, [locale]);
+  }, [authLoading, locale, session]);
 
   useEffect(() => {
-    if (!translationPreferenceReady || translationPreferenceLocale.current !== locale) return;
-    writeTranslationPreference(locale, {
-      enabled: translationEnabled,
-      sourceId: selectedTranslationId,
-    });
-  }, [locale, selectedTranslationId, translationEnabled, translationPreferenceReady]);
+    if (!translationPreferenceReady || readerPreferenceLocale.current !== locale) return;
+    const desired: ReaderPreference = {
+      translationEnabled: translationEnabled && selectedTranslationId !== null,
+      translationSourceId: selectedTranslationId,
+      tafsirEnabled: tafsirEnabled && selectedTafsirId !== null,
+      tafsirSourceId: selectedTafsirId,
+    };
+    writeReaderPreference(locale, desired);
+    if (!session) return;
+    const preferenceKey = `${session.user.id}:${locale}`;
+    const fingerprint = preferenceFingerprint(desired);
+    if (readerPreferenceFingerprints.current[preferenceKey] === fingerprint) return;
+
+    const timer = window.setTimeout(() => {
+      const persist = async () => {
+        const body = {
+          base_revision: readerPreferenceRevisions.current[preferenceKey] ?? 0,
+          translation_enabled: desired.translationEnabled,
+          translation_source_id: desired.translationSourceId,
+          tafsir_enabled: desired.tafsirEnabled,
+          tafsir_source_id: desired.tafsirSourceId,
+          client_updated_at: new Date().toISOString(),
+        };
+        try {
+          const saved = await api.putQuranReaderPreference(locale, body);
+          readerPreferenceRevisions.current[preferenceKey] = saved.revision;
+        } catch (error) {
+          if (
+            !(error instanceof ApiError)
+            || error.code !== "quran_reader_preference_revision_conflict"
+          ) {
+            throw error;
+          }
+          const latest = await api.getQuranReaderPreference(locale);
+          const saved = await api.putQuranReaderPreference(locale, {
+            ...body,
+            base_revision: latest.revision,
+          });
+          readerPreferenceRevisions.current[preferenceKey] = saved.revision;
+        }
+        readerPreferenceFingerprints.current[preferenceKey] = fingerprint;
+        if (readerPreferenceLocale.current === locale) setPreferenceSyncError(false);
+      };
+      readerPreferenceSaveChain.current = readerPreferenceSaveChain.current
+        .catch(() => undefined)
+        .then(persist)
+        .catch(() => {
+          if (readerPreferenceLocale.current === locale) setPreferenceSyncError(true);
+        });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [
+    locale,
+    selectedTafsirId,
+    selectedTranslationId,
+    session,
+    tafsirEnabled,
+    translationEnabled,
+    translationPreferenceReady,
+  ]);
 
   useEffect(() => {
     if (!translationEnabled || selectedTranslationId === null) {
@@ -376,6 +579,41 @@ function QuranContent() {
     // translationSurahKey is a stable dependency for the computed surah list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTranslationId, translationEnabled, translationSurahKey]);
+
+  useEffect(() => {
+    setExpandedTafsirVerse(null);
+    if (!tafsirEnabled || selectedTafsirId === null) {
+      setTafsirRecords([]);
+      setTafsirLoading(false);
+      if (selectedTafsirId !== null) setTafsirError(false);
+      return;
+    }
+    let cancelled = false;
+    setTafsirLoading(true);
+    setTafsirError(false);
+    Promise.all(
+      requiredTranslationSurahs.map((surah) => api.getSurahTafsir(selectedTafsirId, surah)),
+    )
+      .then((surahTafsirs) => {
+        if (cancelled) return;
+        const unique = new Map(
+          surahTafsirs.flat().map((tafsir) => [tafsir.verse_key, tafsir]),
+        );
+        setTafsirRecords([...unique.values()]);
+        setTafsirLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTafsirRecords([]);
+        setTafsirLoading(false);
+        setTafsirError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // translationSurahKey is shared by translation and Tafsir page requirements.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTafsirId, tafsirEnabled, translationSurahKey]);
 
   // Display variants are independent from the published Quran text edition.
   useEffect(() => {
@@ -972,12 +1210,73 @@ function QuranContent() {
               </a>
             </p>
           )}
-          {locale === "ar" && (
-            <p className="translation-context-note">{t("quran.translationArabicTafsirNotice")}</p>
-          )}
           {translationError && (
             <p className="translation-error" role="status">
               {t("quran.translationError")}
+            </p>
+          )}
+        </div>
+
+        <div className="translation-settings tafsir-settings" style={{ marginTop: 12 }}>
+          <label className="translation-toggle" htmlFor="tafsir-enabled">
+            <input
+              id="tafsir-enabled"
+              type="checkbox"
+              checked={tafsirEnabled}
+              onChange={(event) => setTafsirEnabled(event.target.checked)}
+              disabled={tafsirEditions.length === 0 || selectedTafsirId === null}
+            />
+            <span>
+              <strong>{t("quran.tafsirToggle")}</strong>
+              <small>{t("quran.tafsirHelp")}</small>
+            </span>
+          </label>
+          <div className="translation-edition-control">
+            <label className="form-label" htmlFor="tafsir-edition">
+              {t("quran.tafsirEdition")}
+            </label>
+            <select
+              id="tafsir-edition"
+              value={selectedTafsirId ?? ""}
+              onChange={(event) => {
+                const sourceId = Number(event.target.value);
+                setSelectedTafsirId(
+                  Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
+                );
+              }}
+              disabled={tafsirEditions.length === 0}
+            >
+              {tafsirEditions.length === 0 ? (
+                <option value="">{t("quran.tafsirUnavailable")}</option>
+              ) : selectedTafsirId === null ? (
+                <option value="">{t("quran.tafsirChoose")}</option>
+              ) : null}
+              {tafsirEditions.map((edition) => (
+                <option key={edition.source_id} value={edition.source_id}>
+                  [{edition.language_code.toUpperCase()}] {edition.name} · {edition.author_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedTafsir && (
+            <p className="translation-source-note">
+              {selectedTafsir.name} · {selectedTafsir.author_name}.{" "}
+              <a href={selectedTafsir.source.url} target="_blank" rel="noreferrer">
+                {selectedTafsir.source.attribution}
+              </a>
+            </p>
+          )}
+          {locale === "tr" && !tafsirEditions.some((edition) => edition.language_code === "tr") && (
+            <p className="translation-context-note">{t("quran.tafsirTurkishUnavailable")}</p>
+          )}
+          {tafsirError && (
+            <p className="translation-error" role="status">
+              {t("quran.tafsirError")}
+            </p>
+          )}
+          {preferenceSyncError && (
+            <p className="translation-context-note" role="status">
+              {t("quran.preferenceSyncError")}
             </p>
           )}
         </div>
@@ -1102,6 +1401,8 @@ function QuranContent() {
                 const isAyahActive = playingMushafAyah === ayahKey;
                 const isAyahPlaying = isAyahActive && isAudioPlaying;
                 const isAyahRepeating = isAyahActive && audioSettings.repeatMode === "ayah";
+                const ayahTafsir = tafsirsByVerse[ayahKey];
+                const isTafsirExpanded = expandedTafsirVerse === ayahKey;
                 const playbackActionLabel = isAyahPlaying
                   ? t("player.pausePlayback")
                   : isAyahActive
@@ -1191,6 +1492,44 @@ function QuranContent() {
                             />
                           </>
                         ) : null}
+                      </div>
+                    )}
+                    {tafsirEnabled && (
+                      <div className="ayah-tafsir notranslate" translate="no">
+                        <div className="ayah-tafsir-toolbar">
+                          <div>
+                            <strong>{t("quran.tafsirToggle")}</strong>
+                            <span>{selectedTafsir?.name}</span>
+                          </div>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            type="button"
+                            onClick={() => setExpandedTafsirVerse(
+                              isTafsirExpanded ? null : ayahKey,
+                            )}
+                            disabled={tafsirLoading || !ayahTafsir}
+                            aria-expanded={isTafsirExpanded}
+                          >
+                            {tafsirLoading
+                              ? t("quran.tafsirLoading")
+                              : isTafsirExpanded
+                                ? t("quran.tafsirClose")
+                                : t("quran.tafsirOpen")}
+                          </button>
+                        </div>
+                        {isTafsirExpanded && ayahTafsir && (
+                          <div className="ayah-tafsir-content">
+                            <span>
+                              {ayahTafsir.group_verses_count > 1
+                                ? t("quran.tafsirRange", {
+                                    from: ayahTafsir.start_verse_key,
+                                    to: ayahTafsir.end_verse_key,
+                                  })
+                                : t("quran.tafsirForAyah", { ayah: ayahTafsir.verse_key })}
+                            </span>
+                            <p>{ayahTafsir.text}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </article>
@@ -1405,6 +1744,40 @@ function QuranContent() {
                 <p className="ayah-translation-status">
                   {t("quran.translationPageUnavailable")}
                 </p>
+              )}
+            </aside>
+          )}
+          {tafsirEnabled && (
+            <aside
+              className="mushaf-translation-panel mushaf-tafsir-panel notranslate"
+              translate="no"
+              aria-label={t("quran.tafsirToggle")}
+            >
+              <div className="mushaf-translation-heading">
+                <div>
+                  <span className="eyebrow">{t("quran.tafsirToggle")}</span>
+                  <strong>{selectedTafsir?.name}</strong>
+                </div>
+                {selectedMushafAyah && <span>{selectedMushafAyah}</span>}
+              </div>
+              {tafsirLoading ? (
+                <p className="ayah-translation-status">{t("quran.tafsirLoading")}</p>
+              ) : !selectedMushafAyah ? (
+                <p className="ayah-translation-status">{t("quran.tafsirSelectAyah")}</p>
+              ) : selectedMushafTafsir ? (
+                <div className="ayah-tafsir-content">
+                  <span>
+                    {selectedMushafTafsir.group_verses_count > 1
+                      ? t("quran.tafsirRange", {
+                          from: selectedMushafTafsir.start_verse_key,
+                          to: selectedMushafTafsir.end_verse_key,
+                        })
+                      : t("quran.tafsirForAyah", { ayah: selectedMushafTafsir.verse_key })}
+                  </span>
+                  <p>{selectedMushafTafsir.text}</p>
+                </div>
+              ) : (
+                <p className="ayah-translation-status">{t("quran.tafsirAyahUnavailable")}</p>
               )}
             </aside>
           )}

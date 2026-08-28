@@ -102,15 +102,9 @@ def get_prayer_reading_day(
     *,
     fallback_timezone_name: str | None = None,
 ) -> dict[str, Any]:
-    plan = (
-        PrayerReadingPlan.objects.filter(user=user)
-        .select_related("device")
-        .first()
-    )
+    plan = PrayerReadingPlan.objects.filter(user=user).select_related("device").first()
     timezone_name = (
-        plan.timezone_name
-        if plan is not None
-        else fallback_timezone_name or user.timezone or "UTC"
+        plan.timezone_name if plan is not None else fallback_timezone_name or user.timezone or "UTC"
     )
     local_date = _local_date(timezone.now(), timezone_name)
     check_ins = (

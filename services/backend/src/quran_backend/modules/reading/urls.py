@@ -20,10 +20,16 @@ from quran_backend.modules.reading.habit_api import (
     ReadingSessionListView,
     TodayView,
 )
+from quran_backend.modules.reading.reader_preference_api import QuranReaderPreferenceView
 
 app_name = "reading"
 
 urlpatterns = [
+    path(
+        "me/quran-reader-preferences/<str:locale>",
+        QuranReaderPreferenceView.as_view(),
+        name="quran-reader-preference",
+    ),
     path(
         "me/reading-position/<slug:edition>",
         ReadingPositionView.as_view(),

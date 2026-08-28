@@ -27,6 +27,7 @@ from quran_backend.modules.reading.models import (
     GoalProgress,
     PrayerReadingCheckIn,
     PrayerReadingPlan,
+    QuranReaderPreference,
     ReadingGoal,
     ReadingGoalStatus,
     ReadingPosition,
@@ -214,6 +215,7 @@ def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) 
     counts["reading_goals"] = ReadingGoal.objects.filter(user=source).update(user=target)
     counts["reading_sessions"] = ReadingSession.objects.filter(user=source).update(user=target)
     _merge_prayer_reading_state(source=source, target=target, counts=counts)
+    _merge_quran_reader_preferences(source=source, target=target, counts=counts)
     counts["goal_progress"] = GoalProgress.objects.filter(user=source).update(user=target)
     counts["reading_streaks"] = ReadingStreak.objects.filter(user__in=(source, target)).count()
     ReadingStreak.objects.filter(user__in=(source, target)).delete()
@@ -240,9 +242,7 @@ def _merge_prayer_reading_state(
         counts["prayer_reading_check_ins"] = 0
         return
     source_check_ins = list(
-        PrayerReadingCheckIn.objects.select_for_update()
-        .filter(user=source)
-        .order_by("id")
+        PrayerReadingCheckIn.objects.select_for_update().filter(user=source).order_by("id")
     )
     target_plan = PrayerReadingPlan.objects.select_for_update().filter(user=target).first()
     if target_plan is None:
@@ -284,10 +284,13 @@ def _merge_prayer_reading_state(
             target_check_in.reading_session = source_check_in.reading_session
             target_check_in.client_updated_at = source_check_in.client_updated_at
             target_check_in.device = source_check_in.device
-            target_check_in.revision = max(
-                target_check_in.revision,
-                source_check_in.revision,
-            ) + 1
+            target_check_in.revision = (
+                max(
+                    target_check_in.revision,
+                    source_check_in.revision,
+                )
+                + 1
+            )
             target_check_in.save()
         source_check_in.delete()
     source_plan.delete()
@@ -301,6 +304,55 @@ def _prayer_reading_plan_rank(plan: PrayerReadingPlan) -> tuple[Any, ...]:
 
 def _prayer_reading_check_in_rank(check_in: PrayerReadingCheckIn) -> tuple[Any, ...]:
     return (check_in.client_updated_at, check_in.updated_at, check_in.id)
+
+
+def _merge_quran_reader_preferences(
+    *,
+    source: User,
+    target: User,
+    counts: dict[str, int],
+) -> None:
+    preferences = list(
+        QuranReaderPreference.objects.select_for_update()
+        .filter(user=source)
+        .order_by("locale", "id")
+    )
+    for source_preference in preferences:
+        target_preference = (
+            QuranReaderPreference.objects.select_for_update()
+            .filter(user=target, locale=source_preference.locale)
+            .first()
+        )
+        if target_preference is None:
+            source_preference.user = target
+            source_preference.save(update_fields=["user", "updated_at"])
+            continue
+        if _quran_reader_preference_rank(source_preference) > _quran_reader_preference_rank(
+            target_preference
+        ):
+            for field in (
+                "translation_enabled",
+                "translation_source_id",
+                "tafsir_enabled",
+                "tafsir_source_id",
+                "client_updated_at",
+                "device",
+            ):
+                setattr(target_preference, field, getattr(source_preference, field))
+            target_preference.revision = (
+                max(
+                    target_preference.revision,
+                    source_preference.revision,
+                )
+                + 1
+            )
+            target_preference.save()
+        source_preference.delete()
+    counts["quran_reader_preferences"] = len(preferences)
+
+
+def _quran_reader_preference_rank(preference: QuranReaderPreference) -> tuple[Any, ...]:
+    return (preference.client_updated_at, preference.updated_at, preference.id)
 
 
 def _archive_goal_for_merge(goal: ReadingGoal) -> None:

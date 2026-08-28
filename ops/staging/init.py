@@ -187,6 +187,8 @@ def build_overrides(
         "DJANGO_EMAIL_USE_TLS": "false",
         "DJANGO_DEFAULT_FROM_EMAIL": f"Quran Staging <{acme_email}>",
         "QF_AUDIO_SYNC_ENABLED": "false",
+        "QF_TAFSIR_SYNC_ENABLED": "false",
+        "QF_TAFSIR_RESOURCE_IDS": "16,169,170",
         "WEB_PUSH_ENABLED": "false",
         "WEB_PUSH_VAPID_PUBLIC_KEY": "",
         "WEB_PUSH_VAPID_PRIVATE_KEY": "",

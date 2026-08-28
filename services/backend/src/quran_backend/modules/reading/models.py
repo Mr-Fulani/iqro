@@ -780,6 +780,66 @@ class GoalProgress(BaseModel):
             raise ValidationError({"goal": "Goal must belong to the same user."})
 
 
+class QuranReaderPreference(BaseModel):
+    """Account-synced Quran reader display preferences for one interface locale."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quran_reader_preferences",
+    )
+    locale = models.CharField(max_length=8)
+    translation_enabled = models.BooleanField(default=False)
+    translation_source_id = models.PositiveIntegerField(null=True, blank=True)
+    tafsir_enabled = models.BooleanField(default=False)
+    tafsir_source_id = models.PositiveIntegerField(null=True, blank=True)
+    client_updated_at = models.DateTimeField()
+    revision = models.PositiveBigIntegerField(default=1)
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="quran_reader_preferences",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "quran_reader_preference"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "locale"],
+                name="quran_reader_preference_user_locale_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(locale__in=["ar", "en", "ru", "tr"]),
+                name="quran_reader_preference_supported_locale",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(revision__gte=1),
+                name="quran_reader_preference_revision_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(translation_enabled=False)
+                    | models.Q(translation_source_id__isnull=False)
+                ),
+                name="quran_reader_preference_translation_shape",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(tafsir_enabled=False) | models.Q(tafsir_source_id__isnull=False)
+                ),
+                name="quran_reader_preference_tafsir_shape",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        device = self.device
+        if device is not None and device.user_id != self.user_id:
+            raise ValidationError({"device": "Device must belong to the same user."})
+
+
 class ReadingStreak(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

@@ -517,8 +517,7 @@ def _localized_message(
                     "Quran pages from your plan."
                 ),
                 "ar": (
-                    f"حان وقت الصلاة. بعدها اقرأ {pages_after_prayer} صفحات من القرآن "
-                    "وفق خطتك."
+                    f"حان وقت الصلاة. بعدها اقرأ {pages_after_prayer} صفحات من القرآن وفق خطتك."
                 ),
                 "tr": (
                     f"Namaz vakti geldi. Sonrasında planınızdaki {pages_after_prayer} "  # noqa: RUF001
@@ -564,12 +563,8 @@ def _notification_url(
 ) -> str:
     if reminder.reminder_type == ReminderType.PRAYER:
         if prayer_reading_plan is not None and occurrence_at is not None:
-            prayer_at = occurrence_at - timedelta(
-                minutes=reminder.prayer_offset_minutes or 0
-            )
-            prayer_date = prayer_at.astimezone(
-                ZoneInfo(prayer_reading_plan.timezone_name)
-            ).date()
+            prayer_at = occurrence_at - timedelta(minutes=reminder.prayer_offset_minutes or 0)
+            prayer_date = prayer_at.astimezone(ZoneInfo(prayer_reading_plan.timezone_name)).date()
             query = urlencode(
                 {
                     "mode": "after-prayer",

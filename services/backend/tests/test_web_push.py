@@ -418,9 +418,7 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
     payload = json.loads(captured["data"])
     assert result == "delivered"
     assert payload["title"] == "Фаджр"
-    assert payload["body"] == (
-        "Время намаза. После намаза — 2 стр. Корана по вашему плану."
-    )
+    assert payload["body"] == ("Время намаза. После намаза — 2 стр. Корана по вашему плану.")
     expected_date = occurrence.astimezone(UTC).date().isoformat()
     assert payload["url"] == (
         "/ru/quran?mode=after-prayer&prayer=fajr"

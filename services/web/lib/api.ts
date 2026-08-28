@@ -218,6 +218,52 @@ export type AyahTranslation = {
     Record<string, unknown>;
 };
 
+export type QuranTafsirEdition = {
+  source_id: number;
+  slug: string;
+  language_code: string;
+  language_name: string;
+  name: string;
+  author_name: string;
+  active_version: {
+    sync_sequence: number;
+    schema_version: string;
+    checksum_sha256: string;
+    record_count: number;
+    covered_ayah_count: number;
+    published_at: string;
+  };
+  source: QuranTranslationEdition["source"];
+};
+
+export type AyahTafsir = {
+  verse_key: string;
+  surah_number: number;
+  ayah_number: number;
+  start_verse_key: string;
+  end_verse_key: string;
+  start_surah_number: number;
+  start_ayah_number: number;
+  end_surah_number: number;
+  end_ayah_number: number;
+  group_verses_count: number;
+  text: string;
+};
+
+export type QuranReaderPreference = {
+  id: string | null;
+  locale: SupportedLocale;
+  translation_enabled: boolean;
+  translation_source_id: number | null;
+  tafsir_enabled: boolean;
+  tafsir_source_id: number | null;
+  revision: number;
+  client_updated_at: string | null;
+  device_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type PageAssetVariant = {
   url: string;
   width: number;
@@ -1308,6 +1354,45 @@ export class ApiClient {
   ): Promise<AyahTranslation[]> {
     return this.request<AyahTranslation[]>(
       `/api/v1/quran/translations/${translationId}/surahs/${surahNumber}`,
+    );
+  }
+
+  public async getTafsirs(language?: string): Promise<QuranTafsirEdition[]> {
+    const query = language ? `?language=${encodeURIComponent(language)}` : "";
+    return this.request<QuranTafsirEdition[]>(`/api/v1/quran/tafsirs${query}`);
+  }
+
+  public async getSurahTafsir(
+    tafsirId: number,
+    surahNumber: number,
+  ): Promise<AyahTafsir[]> {
+    return this.request<AyahTafsir[]>(
+      `/api/v1/quran/tafsirs/${tafsirId}/surahs/${surahNumber}`,
+    );
+  }
+
+  public async getQuranReaderPreference(
+    locale: SupportedLocale,
+  ): Promise<QuranReaderPreference> {
+    return this.request<QuranReaderPreference>(
+      `/api/v1/me/quran-reader-preferences/${locale}`,
+    );
+  }
+
+  public async putQuranReaderPreference(
+    locale: SupportedLocale,
+    data: {
+      base_revision: number;
+      translation_enabled: boolean;
+      translation_source_id: number | null;
+      tafsir_enabled: boolean;
+      tafsir_source_id: number | null;
+      client_updated_at: string;
+    },
+  ): Promise<QuranReaderPreference> {
+    return this.request<QuranReaderPreference>(
+      `/api/v1/me/quran-reader-preferences/${locale}`,
+      { method: "PUT", body: JSON.stringify(data) },
     );
   }
 

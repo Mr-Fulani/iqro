@@ -195,10 +195,7 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     assert set(paths["/api/v1/me/reading-goal"]) == {"get", "put", "delete"}
     assert set(paths["/api/v1/me/prayer-reading-plan"]) == {"get", "put"}
     assert set(paths["/api/v1/me/prayer-reading-check-ins"]) == {"post"}
-    assert set(paths["/api/v1/me/prayer-reading-check-ins/{check_in_id}"]) == {
-        "patch",
-        "delete"
-    }
+    assert set(paths["/api/v1/me/prayer-reading-check-ins/{check_in_id}"]) == {"patch", "delete"}
     assert set(paths["/api/v1/me/reading-sessions"]) == {"get"}
     assert set(paths["/api/v1/me/reading-sessions/automatic"]) == {"post"}
     assert set(paths["/api/v1/me/reading-sessions/manual"]) == {"post"}
@@ -221,12 +218,34 @@ def test_openapi_declares_reading_habit_contracts() -> None:
     prayer_plan_request = schema["components"]["schemas"]["PrayerReadingPlanWriteRequest"]
     assert prayer_plan_request["additionalProperties"] is False
     assert prayer_plan_request["properties"]["pages_per_prayer"]["maximum"] == 20
-    prayer_check_in_request = schema["components"]["schemas"][
-        "PrayerReadingCheckInCreateRequest"
-    ]
+    prayer_check_in_request = schema["components"]["schemas"]["PrayerReadingCheckInCreateRequest"]
     assert prayer_check_in_request["properties"]["pages"]["maximum"] == 604
     today_schema = schema["components"]["schemas"]["TodayOutput"]
     assert {"continue_reading", "goal", "progress", "streak"} <= today_schema["properties"].keys()
+
+
+def test_openapi_declares_tafsir_and_account_reader_preferences() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    assert set(paths["/api/v1/quran/tafsirs"]) == {"get"}
+    assert set(paths["/api/v1/quran/tafsirs/{tafsir}/surahs/{surah}"]) == {"get"}
+    preference_path = paths["/api/v1/me/quran-reader-preferences/{locale}"]
+    assert set(preference_path) == {"get", "put"}
+    request = schema["components"]["schemas"]["QuranReaderPreferenceWriteRequest"]
+    assert request["additionalProperties"] is False
+    assert set(request["required"]) == {
+        "base_revision",
+        "client_updated_at",
+        "tafsir_enabled",
+        "tafsir_source_id",
+        "translation_enabled",
+        "translation_source_id",
+    }
+    assert request["properties"]["base_revision"]["minimum"] == 0
 
 
 def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
