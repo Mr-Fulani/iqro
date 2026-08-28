@@ -217,6 +217,7 @@ test("prayer reading plan calculates the honest pace and tracks five prayer slot
 
   const plan = page.getByTestId("prayer-reading-plan");
   await expect(plan.getByRole("heading", { name: "Чтение после намаза" })).toBeVisible();
+  await expect(plan.getByTestId("pages-per-prayer-value")).toHaveText("2");
   await expect(plan.getByText("≈ 61")).toBeVisible();
   await plan.getByRole("button", { name: "Сохранить план" }).click();
 

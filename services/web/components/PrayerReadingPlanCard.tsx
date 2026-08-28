@@ -148,7 +148,7 @@ export function PrayerReadingPlanCard() {
 
       <div className="prayer-reading-math" aria-label={t("prayerReading.forecastLabel")}>
         <div>
-          <strong>{formatNumber(pagesPerPrayer)} × 5</strong>
+          <strong data-testid="pages-per-prayer-value">{formatNumber(pagesPerPrayer)}</strong>
           <span>{t("prayerReading.pagesAfterEach")}</span>
         </div>
         <div>
