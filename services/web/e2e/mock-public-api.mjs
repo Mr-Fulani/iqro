@@ -224,6 +224,7 @@ function duaEntry(language) {
     category: { source_number: 1, slug: "waking-up", title: localized.title },
     arabic_text: "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
     repetitions: 1,
+    repetition_label: "",
     translation: {
       language_code: language,
       meaning_text: localized.meaning,
@@ -310,8 +311,8 @@ const server = createServer(async (request, response) => {
       slug: "hisn-al-muslim",
       version: "test-v1",
       schema_version: 1,
-      category_count: 10,
-      entry_count: 10,
+      category_count: 132,
+      entry_count: 267,
       published_at: publishedAt,
       source: duaSource(language),
     }]);

@@ -309,6 +309,7 @@ export type DuaEntry = {
   };
   arabic_text: string;
   repetitions: number;
+  repetition_label: string;
   translation: {
     language_code: SupportedLocale;
     meaning_text: string;

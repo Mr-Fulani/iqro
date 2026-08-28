@@ -126,6 +126,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
             "category",
             "arabic_text",
             "repetitions",
+            "repetition_label",
             "translation",
             "evidence",
             "source",

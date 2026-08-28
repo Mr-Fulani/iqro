@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from quran_backend.modules.dua.importer import (
     DuaSnapshotError,
+    bundled_full_snapshot_path,
     bundled_starter_snapshot_path,
     import_dua_snapshot,
     load_dua_snapshot,
@@ -28,14 +29,16 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
 
     assert catalog.status_code == 200
     assert catalog.json()[0]["slug"] == "hisn-al-muslim"
-    assert catalog.json()[0]["entry_count"] == 10
+    assert catalog.json()[0]["version"] == "hisn-full-2026-08-28"
+    assert catalog.json()[0]["category_count"] == 132
+    assert catalog.json()[0]["entry_count"] == 267
     assert catalog.json()[0]["source"]["title"] == "Молитвы из Корана и Сунны"
     assert catalog["Cache-Control"].startswith("public")
     assert catalog["ETag"].startswith('W/"')
 
     assert categories.status_code == 200
     assert categories.json()[0]["title"] == "Слова поминания при пробуждении ото сна"
-    assert categories.json()[0]["entry_count"] == 1
+    assert categories.json()[0]["entry_count"] == 4
 
     assert entries.status_code == 200
     first = entries.json()["results"][0]
@@ -44,6 +47,16 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
     assert first["translation"]["transliteration"].startswith("Аль-хамду")
     assert first["source"]["source_url"] == "https://islamhouse.com/ru/books/888254"
     assert first["evidence"][0]["verification_status"] == "source_only"
+
+    repeated_entry = DuaEntry.objects.get(
+        collection_version__collection__active_version__isnull=False,
+        collection_version__version="hisn-full-2026-08-28",
+        source_number=106,
+    )
+    repeated = api_client.get(f"/api/v1/dua/entries/{repeated_entry.pk}?language=ru")
+    assert repeated.status_code == 200
+    assert repeated.json()["repetitions"] == 33
+    assert repeated.json()["repetition_label"] == "33 · 33 · 34"
 
     cached = api_client.get(
         "/api/v1/dua/collections?language=ru",
@@ -89,14 +102,14 @@ def test_dua_api_rejects_unsupported_language_and_hides_drafts(api_client: APICl
 
 @pytest.mark.django_db
 def test_dua_snapshot_import_is_idempotent_and_checksum_protected() -> None:
-    snapshot = load_dua_snapshot(bundled_starter_snapshot_path())
+    snapshot = load_dua_snapshot(bundled_full_snapshot_path())
 
     result = import_dua_snapshot(snapshot, publish=True)
 
     assert result.created is False
     assert result.published is True
-    assert result.category_count == 10
-    assert result.entry_count == 10
+    assert result.category_count == 132
+    assert result.entry_count == 267
 
     modified = deepcopy(snapshot)
     modified["sources"][0]["title"] = "Changed after publication"
@@ -112,7 +125,7 @@ def test_dua_snapshot_import_publishes_new_version_and_withdraws_previous() -> N
     result = import_dua_snapshot(snapshot, publish=True)
 
     collection = DuaCollection.objects.get(slug="hisn-al-muslim")
-    previous = DuaCollectionVersion.objects.get(version="hisn-starter-2026-08-28")
+    previous = DuaCollectionVersion.objects.get(version="hisn-full-2026-08-28")
     assert result.created is True
     assert result.published is True
     assert collection.active_version is not None
@@ -122,8 +135,23 @@ def test_dua_snapshot_import_publishes_new_version_and_withdraws_previous() -> N
 
 
 def test_dua_snapshot_requires_all_supported_languages() -> None:
-    snapshot = load_dua_snapshot(bundled_starter_snapshot_path())
+    snapshot = load_dua_snapshot(bundled_full_snapshot_path())
     snapshot["entries"][0]["translations"] = snapshot["entries"][0]["translations"][:-1]
 
     with pytest.raises(DuaSnapshotError, match="missing translations: tr"):
         validate_dua_snapshot(snapshot)
+
+
+def test_full_dua_snapshot_has_complete_numbering_and_locales() -> None:
+    snapshot = load_dua_snapshot(bundled_full_snapshot_path())
+
+    assert snapshot["version"] == "hisn-full-2026-08-28"
+    assert [item["source_number"] for item in snapshot["categories"]] == list(range(1, 133))
+    assert [item["source_number"] for item in snapshot["entries"]] == list(range(1, 268))
+    assert all(
+        {translation["language"] for translation in item["translations"]}
+        == {"ar", "en", "ru", "tr"}
+        for item in [*snapshot["categories"], *snapshot["entries"]]
+    )
+    assert snapshot["entries"][105]["repetition_label"] == "33 · 33 · 34"
+    validate_dua_snapshot(snapshot)

@@ -337,6 +337,7 @@ FIELD_LABELS: dict[str, str] = {
     "reporter": "Автор обращения",
     "request_fingerprint": "Отпечаток запроса",
     "repetitions": "Количество повторений",
+    "repetition_label": "Схема повторений",
     "requester": "Инициатор входа",
     "resolved_at": "Решено",
     "resource_content_id": "ID содержимого ресурса",

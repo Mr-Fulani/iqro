@@ -129,11 +129,11 @@ export default function DuaPage({
 
         <div className="dua-catalog-summary">
           <div>
-            <strong>{formatNumber(collection?.entry_count ?? 10)}</strong>
+            <strong>{formatNumber(collection?.entry_count ?? 267)}</strong>
             <span>{t("dua.entriesAvailable")}</span>
           </div>
           <div>
-            <strong>{formatNumber(collection?.category_count ?? 10)}</strong>
+            <strong>{formatNumber(collection?.category_count ?? 132)}</strong>
             <span>{t("dua.categoriesAvailable")}</span>
           </div>
           <p>{t("dua.starterNotice")}</p>
@@ -216,7 +216,14 @@ export default function DuaPage({
                     <h2>{entry.category.title}</h2>
                   </div>
                   <span className="status-chip">
-                    {entry.repetitions === 1
+                    {entry.repetition_label
+                      ? t("dua.repeatSequence", {
+                          count: entry.repetition_label
+                            .split(" · ")
+                            .map((value) => formatNumber(Number(value)))
+                            .join(" · "),
+                        })
+                      : entry.repetitions === 1
                       ? t("dua.repeatOnce")
                       : t("dua.repeatCount", { count: formatNumber(entry.repetitions) })}
                   </span>

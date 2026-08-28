@@ -200,6 +200,7 @@ class DuaEntry(BaseModel):
     slug = models.SlugField(max_length=120)
     arabic_text = models.TextField()
     repetitions = models.PositiveSmallIntegerField(default=1)
+    repetition_label = models.CharField(max_length=32, blank=True)
     sort_order = models.PositiveSmallIntegerField()
 
     class Meta:

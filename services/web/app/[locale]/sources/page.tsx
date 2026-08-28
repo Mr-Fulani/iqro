@@ -76,7 +76,7 @@ export default async function SourcesPage({ params }: { params: Promise<RoutePar
           <article>
             <h3>Hisn al-Muslim · IslamHouse</h3>
             <dl>
-              <div><dt>{copy.version}</dt><dd>hisn-starter-2026-08-28</dd></div>
+              <div><dt>{copy.version}</dt><dd>hisn-full-2026-08-28</dd></div>
               <div><dt>{copy.source}</dt><dd><a href={DUA_SOURCE_URLS[locale]} target="_blank" rel="noreferrer">IslamHouse</a></dd></div>
               <div><dt>{copy.license}</dt><dd><a href="https://d1.islamhouse.com/html/faq.htm" target="_blank" rel="noreferrer">IslamHouse FAQ</a></dd></div>
             </dl>

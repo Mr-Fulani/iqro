@@ -43,6 +43,10 @@ def bundled_starter_snapshot_path() -> Path:
     return Path(__file__).with_name("data") / "hisn_al_muslim_starter_v1.json"
 
 
+def bundled_full_snapshot_path() -> Path:
+    return Path(__file__).with_name("data") / "hisn_al_muslim_full_v1.json"
+
+
 def load_dua_snapshot(path: str | Path) -> dict[str, Any]:
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -164,6 +168,9 @@ def _validate_entries(entries: Any, *, category_numbers: set[int]) -> None:
         repetitions = entry.get("repetitions", 1)
         if not isinstance(repetitions, int) or repetitions < 1:
             raise DuaSnapshotError(f"Entry {source_number} has invalid repetitions.")
+        repetition_label = entry.get("repetition_label", "")
+        if not isinstance(repetition_label, str) or len(repetition_label) > 32:
+            raise DuaSnapshotError(f"Entry {source_number} has an invalid repetition label.")
         _require_non_empty_string(entry, "slug")
         _require_non_empty_string(entry, "arabic_text")
         _validate_translations(
@@ -289,6 +296,7 @@ def import_dua_snapshot(snapshot: dict[str, Any], *, publish: bool = False) -> D
             slug=entry_payload["slug"],
             arabic_text=entry_payload["arabic_text"],
             repetitions=entry_payload.get("repetitions", 1),
+            repetition_label=entry_payload.get("repetition_label", ""),
             sort_order=sort_order,
         )
         for translation in entry_payload["translations"]:

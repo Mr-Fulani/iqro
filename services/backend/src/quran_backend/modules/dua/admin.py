@@ -56,7 +56,14 @@ class DuaCategoryTranslationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(DuaEntry)
 class DuaEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("source_number", "slug", "category", "repetitions", "sort_order")
+    list_display = (
+        "source_number",
+        "slug",
+        "category",
+        "repetitions",
+        "repetition_label",
+        "sort_order",
+    )
     list_filter = ("collection_version", "category")
     search_fields = ("slug", "arabic_text", "translations__meaning_text")
 

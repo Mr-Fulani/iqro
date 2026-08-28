@@ -388,6 +388,8 @@ matrix.
 
 - [x] Реализовать отдельный домен `dua`: collections, entries, sources, translations,
   categories, publication и withdrawal.
+- [x] Опубликовать полный versioned-каталог «Хисн аль-Муслим»: 267 карточек, 132 темы,
+  языковые издания RU/EN/AR/TR, повторения и provenance источников.
 - [ ] Добавить bookmarks/collections/offline manifests для дуа через типизированные ссылки.
 - [ ] Создать `library` как read-model витрину, а не универсальное хранилище контента.
 - [ ] Добавить поиск с domain filters, locale и versioned index.
