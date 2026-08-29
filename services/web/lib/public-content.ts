@@ -291,7 +291,6 @@ export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[
 export type PublishedDuaInitialData = {
   collections: DuaCollection[];
   categories: DuaCategory[];
-  entries: PaginatedResponse<DuaEntry>;
 };
 
 export type PublishedDuaCategoryData = {
@@ -313,7 +312,7 @@ export const getPublishedDuaCategories = cache(
 export const getPublishedDuaInitialData = cache(
   async (locale: SupportedLocale): Promise<PublishedDuaInitialData> => {
     const language = encodeURIComponent(locale);
-    const [collections, categories, entries] = await Promise.all([
+    const [collections, categories] = await Promise.all([
       fetchPublishedJson<DuaCollection[]>(
         `/api/v1/dua/collections?language=${language}`,
         ["dua:catalog", `dua:locale:${locale}`],
@@ -322,15 +321,10 @@ export const getPublishedDuaInitialData = cache(
         `/api/v1/dua/categories?language=${language}`,
         ["dua:catalog", `dua:locale:${locale}`],
       ),
-      fetchPublishedJson<PaginatedResponse<DuaEntry>>(
-        `/api/v1/dua/entries?language=${language}&page_size=20`,
-        ["dua:catalog", `dua:locale:${locale}`],
-      ),
     ]);
     return {
       collections: assertArray(collections, "Dua collection list"),
       categories: assertArray(categories, "Dua category list"),
-      entries: assertPage(entries, "Dua entry"),
     };
   },
 );

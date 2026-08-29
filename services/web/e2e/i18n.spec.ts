@@ -120,7 +120,12 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   expect(await page.locator(".dua-category-list").evaluate(
     (element) => element.scrollWidth <= element.clientWidth,
   )).toBe(true);
-  await expect(page.getByRole("heading", { level: 2, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
+  await expect(page.locator(".dua-entry-card")).toHaveCount(0);
+  await expect(page.locator(".dua-arabic")).toHaveCount(0);
+
+  await page.locator(".dua-category-chip").click();
+  await expect(page).toHaveURL("/ru/dua/waking-up");
+  await expect(page.getByRole("heading", { level: 1, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
   await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
   await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
 });
@@ -137,6 +142,13 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   expect(await cards.evaluateAll((elements) => elements.every(
     (element) => element.getBoundingClientRect().width <= element.parentElement!.clientWidth,
   ))).toBe(true);
+
+  await page.getByLabel("Поиск по темам ду’а").fill("несуществующая тема");
+  await page.getByRole("button", { name: "Найти" }).click();
+  await expect(cards).toHaveCount(0);
+  await expect(page.getByText("Темы по этому запросу не найдены.")).toBeVisible();
+  await page.getByRole("button", { name: "Сбросить" }).click();
+  await expect(cards).toHaveCount(1);
 
   await cards.first().click();
   await expect(page).toHaveURL("/ru/dua/waking-up");

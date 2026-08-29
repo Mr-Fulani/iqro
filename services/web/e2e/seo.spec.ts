@@ -155,13 +155,13 @@ test("published surah and ayah routes render indexable Quran text on the server"
   await expect(page.locator(".seo-single-ayah")).toContainText("بِسْمِ اللَّهِ");
 });
 
-test("published Dua catalog renders localized Arabic text and provenance on the server", async ({ request }) => {
+test("published Dua catalog renders topic cards and provenance on the server", async ({ request }) => {
   const response = await request.get("/ru/dua");
 
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain("Слова поминания при пробуждении ото сна");
-  expect(html).toContain("الْحَمْدُ للَّهِ");
+  expect(html).not.toContain("الْحَمْدُ للَّهِ");
   expect(html).toContain("Молитвы из Корана и Сунны");
   expect(html).toContain("https://islamhouse.com/ru/books/888254");
   expect(html).toContain('href="/ru/dua/waking-up"');

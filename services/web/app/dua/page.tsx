@@ -1,28 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { DuaEntryList } from "../../components/DuaEntryList";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DuaTopicIcon } from "../../components/DuaTopicIcon";
 import {
   api,
   DuaCategory,
   DuaCollection,
-  DuaEntry,
-  PaginatedResponse,
 } from "../../lib/api";
 import { useI18n } from "../../lib/i18n-context";
 import type { PublishedDuaInitialData } from "../../lib/public-content";
 import { localizedPath } from "../../lib/routing";
-
-function cursorFromUrl(url: string | null): string | undefined {
-  if (!url) return undefined;
-  try {
-    return new URL(url, "http://iqro.local").searchParams.get("cursor") || undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export default function DuaPage({
   initialData,
@@ -32,15 +20,10 @@ export default function DuaPage({
   const { formatNumber, locale, t } = useI18n();
   const [collections, setCollections] = useState<DuaCollection[]>(initialData?.collections ?? []);
   const [categories, setCategories] = useState<DuaCategory[]>(initialData?.categories ?? []);
-  const [entries, setEntries] = useState<DuaEntry[]>(initialData?.entries.results ?? []);
-  const [nextCursor, setNextCursor] = useState<string | undefined>(() =>
-    cursorFromUrl(initialData?.entries.next ?? null),
-  );
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(!initialData);
-  const [entriesLoading, setEntriesLoading] = useState(!initialData);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -62,28 +45,16 @@ export default function DuaPage({
     return () => {
       active = false;
     };
-  }, [locale, t]);
+  }, [catalogReloadKey, locale, t]);
 
-  const loadEntries = useCallback(async () => {
-    setEntriesLoading(true);
-    try {
-      const page = await api.getDuaEntries({
-        language: locale,
-        q: appliedQuery || undefined,
-      });
-      setEntries(page.results);
-      setNextCursor(cursorFromUrl(page.next));
-      setError("");
-    } catch {
-      setError(t("dua.unavailable"));
-    } finally {
-      setEntriesLoading(false);
-    }
-  }, [appliedQuery, locale, t]);
-
-  useEffect(() => {
-    void loadEntries();
-  }, [loadEntries]);
+  const visibleCategories = useMemo(() => {
+    const normalizedQuery = appliedQuery.toLocaleLowerCase(locale).trim();
+    if (!normalizedQuery) return categories;
+    return categories.filter((category) =>
+      category.title.toLocaleLowerCase(locale).includes(normalizedQuery)
+      || String(category.source_number) === normalizedQuery,
+    );
+  }, [appliedQuery, categories, locale]);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -93,24 +64,6 @@ export default function DuaPage({
   const resetFilters = () => {
     setQuery("");
     setAppliedQuery("");
-  };
-
-  const loadMore = async () => {
-    if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const page: PaginatedResponse<DuaEntry> = await api.getDuaEntries({
-        language: locale,
-        q: appliedQuery || undefined,
-        cursor: nextCursor,
-      });
-      setEntries((current) => [...current, ...page.results]);
-      setNextCursor(cursorFromUrl(page.next));
-    } catch {
-      setError(t("dua.unavailable"));
-    } finally {
-      setLoadingMore(false);
-    }
   };
 
   const collection = collections[0];
@@ -149,7 +102,7 @@ export default function DuaPage({
         ) : null}
       </section>
 
-      <section className="surface dua-browser" aria-busy={catalogLoading || entriesLoading}>
+      <section className="surface dua-browser" aria-busy={catalogLoading}>
         <form className="dua-search" onSubmit={handleSearch}>
           <label className="sr-only" htmlFor="dua-search-input">{t("dua.searchLabel")}</label>
           <input
@@ -174,7 +127,7 @@ export default function DuaPage({
             <p>{t("dua.categoryFilter")}</p>
           </header>
           <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
-            {categories.map((category) => (
+            {visibleCategories.map((category) => (
               <Link
                 key={category.id}
                 href={localizedPath(locale, `/dua/${category.slug}`)}
@@ -197,32 +150,25 @@ export default function DuaPage({
               </Link>
             ))}
           </div>
+          {!catalogLoading && visibleCategories.length === 0 ? (
+            <div className="dua-empty">
+              <span aria-hidden="true">⌕</span>
+              <p>{t("dua.noTopics")}</p>
+            </div>
+          ) : null}
         </div>
 
         {error ? (
           <div className="alert alert-error" role="alert">
             <span>{error}</span>
-            <button className="btn btn-sm btn-secondary" type="button" onClick={() => void loadEntries()}>
+            <button
+              className="btn btn-sm btn-secondary"
+              type="button"
+              onClick={() => setCatalogReloadKey((current) => current + 1)}
+            >
               {t("dua.retry")}
             </button>
           </div>
-        ) : null}
-
-        {entriesLoading ? (
-          <div className="alert alert-info">{t("common.loading")}</div>
-        ) : (
-          <DuaEntryList entries={entries} />
-        )}
-
-        {nextCursor ? (
-          <button
-            className="btn btn-secondary dua-load-more"
-            type="button"
-            disabled={loadingMore}
-            onClick={() => void loadMore()}
-          >
-            {loadingMore ? t("common.loading") : t("dua.loadMore")}
-          </button>
         ) : null}
       </section>
     </div>
