@@ -144,7 +144,6 @@ export function SegmentedAudioPlayer({
   const [activeRequest, setActiveRequest] = useState<AudioPlaybackRequest | null>(null);
   const [activePlan, setActivePlan] = useState<RuntimePlan | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   const [status, setStatus] = useState<StatusMessage>({ key: "player.status.idle" });
   const [error, setError] = useState<string | null>(null);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
@@ -306,7 +305,6 @@ export function SegmentedAudioPlayer({
       planRef.current = null;
       setActiveRequest(null);
       setActivePlan(null);
-      setHasStarted(false);
       hasStartedRef.current = false;
       setRangeStartAyah(null);
       setRangeEndAyah(null);
@@ -327,7 +325,6 @@ export function SegmentedAudioPlayer({
     planRef.current = nextPlan;
     setActiveRequest(request);
     setActivePlan(nextPlan);
-    setHasStarted(false);
     hasStartedRef.current = false;
     setRangeStartAyah(nextSegments[0]?.ayah_number ?? null);
     setRangeEndAyah(nextSegments[nextSegments.length - 1]?.ayah_number ?? null);
@@ -665,7 +662,6 @@ export function SegmentedAudioPlayer({
       ? t("common.ayah", { ayah: `${activeAyah.surah_number}:${activeAyah.ayah_number}` })
       : activeRequest?.title || t("player.noAudio");
   const statusLabel = t(status.key, status.variables);
-  const playbackActionLabel = hasStarted ? t("player.continue") : t("player.play");
   const settingsActionLabel = settingsOpen ? t("player.hideSettings") : t("player.showSettings");
 
   return (
@@ -690,17 +686,6 @@ export function SegmentedAudioPlayer({
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="segmented-audio-native-controls">
-        <button
-          className="btn btn-secondary btn-sm segmented-audio-resume"
-          type="button"
-          onClick={resumePlayback}
-          disabled={!activeRequest || isPlaying}
-          aria-label={`▶ ${playbackActionLabel}`}
-          title={compact ? playbackActionLabel : undefined}
-        >
-          <span aria-hidden="true">▶</span>
-          <span className="segmented-audio-resume-label">{playbackActionLabel}</span>
-        </button>
         <audio
           ref={audioRef}
           controls
@@ -709,7 +694,6 @@ export function SegmentedAudioPlayer({
           onPlay={() => {
             pendingPauseStatusRef.current = null;
             hasStartedRef.current = true;
-            setHasStarted(true);
             setIsPlaying(true);
             onPlayingChangeRef.current?.(true);
             setStatus({ key: "player.status.playing" });

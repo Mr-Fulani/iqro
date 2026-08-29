@@ -22,6 +22,14 @@ type AudioPlayerContextValue = {
   isPlaying: boolean;
   startPlayback: (request: AudioPlaybackRequest) => void;
   clearPlayback: () => void;
+  setReciterControls: (controls: AudioPlayerReciterControls | null) => void;
+};
+
+export type AudioPlayerReciterControls = {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
+  onChange: (value: string) => void;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -32,6 +40,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [reciterControls, setRegisteredReciterControls] =
+    useState<AudioPlayerReciterControls | null>(null);
 
   const startPlayback = useCallback((nextRequest: AudioPlaybackRequest) => {
     setRequest(nextRequest);
@@ -42,16 +52,22 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setIsPlaying(false);
   }, []);
 
+  const setReciterControls = useCallback((controls: AudioPlayerReciterControls | null) => {
+    setRegisteredReciterControls(controls);
+  }, []);
+
   const value = useMemo<AudioPlayerContextValue>(() => ({
     request,
     isPlaying,
     startPlayback,
     clearPlayback,
-  }), [clearPlayback, isPlaying, request, startPlayback]);
+    setReciterControls,
+  }), [clearPlayback, isPlaying, request, setReciterControls, startPlayback]);
 
   const isAudioPage = stripLocalePrefix(pathname) === "/audio";
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
+  const showReciterControls = Boolean(reciterControls?.options.length);
   const modeActionLabel = expanded
     ? t("player.collapseWidget")
     : t("player.expandWidget");
@@ -62,33 +78,44 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       {showPlayer && (
         <>
           <div
-            className={`global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}`}
+            className={`global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}`}
             aria-hidden="true"
           />
           <aside
-            className={`global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}`}
+            className={`global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}`}
             aria-label={t("player.dockAria")}
             data-testid="global-audio-player"
           >
-            <div className="global-audio-player-head">
-              <div>
-                <p className="eyebrow">{t("player.dockEyebrow")}</p>
-                <strong>{t("audio.playerTitle")}</strong>
+            {(showReciterControls || expanded) && (
+              <div className="global-audio-player-head">
+                {showReciterControls && reciterControls && (
+                  <select
+                    className="global-audio-player-reciter-select"
+                    value={reciterControls.value}
+                    onChange={(event) => reciterControls.onChange(event.target.value)}
+                    disabled={reciterControls.disabled}
+                    aria-label={t("player.reciterSwitch")}
+                  >
+                    {reciterControls.options.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                )}
+                {expanded && (
+                  <button
+                    className="btn btn-secondary btn-sm global-audio-player-size-toggle"
+                    type="button"
+                    aria-expanded="true"
+                    aria-label={modeActionLabel}
+                    title={modeActionLabel}
+                    onClick={() => setExpanded(false)}
+                  >
+                    <span aria-hidden="true">▾</span>
+                    <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
+                  </button>
+                )}
               </div>
-              {expanded && (
-                <button
-                  className="btn btn-secondary btn-sm global-audio-player-size-toggle"
-                  type="button"
-                  aria-expanded="true"
-                  aria-label={modeActionLabel}
-                  title={modeActionLabel}
-                  onClick={() => setExpanded(false)}
-                >
-                  <span aria-hidden="true">▾</span>
-                  <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
-                </button>
-              )}
-            </div>
+            )}
             <SegmentedAudioPlayer
               request={request}
               className="audio-player-bar global-audio-player-bar"

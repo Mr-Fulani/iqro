@@ -3218,10 +3218,14 @@ input:focus, select:focus, textarea:focus {
 
 .global-audio-player-dock.is-compact {
   display: grid;
-  grid-template-columns: minmax(126px, 148px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 10px 14px;
+}
+
+.global-audio-player-dock.is-compact.has-reciter-controls {
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) auto;
 }
 
 .global-audio-player-head {
@@ -3238,6 +3242,15 @@ input:focus, select:focus, textarea:focus {
   padding-inline-end: 14px;
   border-inline-end: 1px solid var(--border);
   margin-bottom: 0;
+}
+
+.global-audio-player-reciter-select {
+  width: min(360px, 100%);
+  min-width: 0;
+  min-height: 40px;
+  font-weight: 650;
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
 }
 
 .global-audio-player-head strong {
@@ -3295,7 +3308,6 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
-.global-audio-player-dock.is-compact .segmented-audio-native-controls .btn,
 .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
 .global-audio-player-actions .btn {
   flex: 0 0 auto;
@@ -3352,7 +3364,11 @@ input:focus, select:focus, textarea:focus {
   }
 
   .global-audio-player-dock.is-compact .global-audio-player-head {
-    display: none;
+    grid-column: 1 / -1;
+    padding-inline-end: 0;
+    padding-bottom: 8px;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .global-audio-player-dock.is-compact .segmented-audio-player {
@@ -3440,6 +3456,37 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-md);
   background: #ffffff;
   transition: all 0.15s ease;
+}
+
+.track-row-main {
+  display: grid;
+  grid-template-columns: auto minmax(120px, auto) minmax(140px, 1fr);
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.track-row-copy {
+  min-width: 0;
+}
+
+.track-surah-name-ar {
+  justify-self: center;
+  padding-inline: 18px;
+  color: var(--primary);
+  font-family: var(--font-arabic);
+  font-size: clamp(22px, 2.2vw, 32px);
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.track-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 .track-row:hover {
@@ -4929,6 +4976,23 @@ input:focus, select:focus, textarea:focus {
     gap: 10px;
   }
 
+  .track-row-main {
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .track-surah-name-ar {
+    grid-column: 2;
+    justify-self: start;
+    padding-inline: 0;
+    font-size: 22px;
+  }
+
+  .track-row-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .profile-bookmark-link,
   .profile-bookmark-actions {
     width: 100%;
@@ -5079,13 +5143,11 @@ input:focus, select:focus, textarea:focus {
     height: 40px;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-resume-label,
   .global-audio-player-dock.is-compact .segmented-audio-settings-label,
   .global-audio-player-link-label {
     display: none;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-resume,
   .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
   .global-audio-player-actions .btn {
     width: 36px;
@@ -5223,9 +5285,24 @@ input:focus, select:focus, textarea:focus {
     height: 158px;
   }
 
+  .global-audio-player-spacer.is-compact.has-reciter-controls {
+    height: 208px;
+  }
+
+  .global-audio-player-dock.is-compact.has-reciter-controls .global-audio-player-head {
+    grid-row: 1;
+  }
+
+  .global-audio-player-dock.is-compact.has-reciter-controls .segmented-audio-player {
+    grid-row: 2 / span 2;
+  }
+
+  .global-audio-player-dock.is-compact:not(.has-reciter-controls) .segmented-audio-player {
+    grid-row: 1 / span 2;
+  }
+
   .global-audio-player-dock.is-compact .segmented-audio-player {
     grid-column: 1;
-    grid-row: 1 / span 2;
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
@@ -5245,9 +5322,16 @@ input:focus, select:focus, textarea:focus {
     gap: 6px;
   }
 
+  .global-audio-player-dock.has-reciter-controls .global-audio-player-actions {
+    grid-row: 2 / span 2;
+  }
+
+  .global-audio-player-dock:not(.has-reciter-controls) .global-audio-player-actions {
+    grid-row: 1 / span 2;
+  }
+
   .global-audio-player-actions {
     grid-column: 2;
-    grid-row: 1 / span 2;
     align-self: center;
     flex-direction: column;
   }

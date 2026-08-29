@@ -1,13 +1,14 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   AudioTrack,
   Recitation,
   Reciter,
 } from "../../lib/api";
+import type { Surah } from "../../lib/api";
 import { ReciterAvatar } from "../../components/ReciterAvatar";
 import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
 import { useAudioPlayer } from "../../lib/audio-player-context";
@@ -30,18 +31,32 @@ export default function AudioPage() {
   const searchParams = useSearchParams();
   const requestedReciterId = searchParams.get("reciter");
   const { locale, t, formatNumber } = useI18n();
-  const { request: playerRequest, isPlaying, startPlayback } = useAudioPlayer();
+  const {
+    request: playerRequest,
+    isPlaying,
+    startPlayback,
+    clearPlayback,
+    setReciterControls,
+  } = useAudioPlayer();
   const [reciterSources, setReciterSources] = useState<Reciter[]>([]);
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [selectedReciterId, setSelectedReciterId] = useState<string>("");
   const [recitations, setRecitations] = useState<Recitation[]>([]);
   const [selectedRecitationId, setSelectedRecitationId] = useState<string>("");
   const [tracks, setTracks] = useState<AudioTrack[]>([]);
+  const [surahs, setSurahs] = useState<Surah[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const pendingReciterPlaybackRef = useRef<{
+    reciterId: string;
+    surahNumber: number;
+    kind: AudioPlaybackRequest["kind"];
+    startAyah?: number;
+    endAyah?: number;
+  } | null>(null);
 
   // Load reciters on mount
   useEffect(() => {
@@ -127,22 +142,142 @@ export default function AudioPage() {
 
   const selectedReciter = reciters.find((r) => r.id === selectedReciterId);
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
-  const reciterName = (reciter: Reciter) =>
-    locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
-  const reciterSecondaryName = (reciter: Reciter) =>
-    locale === "ar" ? reciter.name_en : reciter.name_ar;
+  const reciterName = useCallback(
+    (reciter: Reciter) => {
+      const localizedName = locale === "ar"
+        ? reciter.name_ar
+        : locale === "ru"
+          ? reciter.name_ru
+          : reciter.name_en;
+      return localizedName || reciter.name_en || reciter.name_ar;
+    },
+    [locale],
+  );
+  const reciterSecondaryName = useCallback(
+    (reciter: Reciter) => locale === "ar" ? reciter.name_en : reciter.name_ar,
+    [locale],
+  );
 
-  const selectReciter = (reciterId: string) => {
+  const rememberCurrentTrackFor = useCallback((reciterId: string) => {
+    const surahNumber = playerRequest?.track.surah_number;
+    pendingReciterPlaybackRef.current = surahNumber
+      ? {
+          reciterId,
+          surahNumber,
+          kind: playerRequest.kind,
+          startAyah: playerRequest.startAyah,
+          endAyah: playerRequest.endAyah,
+        }
+      : null;
+    clearPlayback();
+  }, [clearPlayback, playerRequest]);
+
+  const selectReciter = useCallback((reciterId: string) => {
+    if (reciterId === selectedReciterId) return;
     const reciter = reciters.find((item) => item.id === reciterId);
     if (reciter) rememberReciterPreference(reciter);
+    rememberCurrentTrackFor(reciterId);
+    setRecitations([]);
+    setSelectedRecitationId("");
+    setTracks([]);
     setSelectedReciterId(reciterId);
-  };
+  }, [reciters, rememberCurrentTrackFor, selectedReciterId]);
 
-  const selectRecitation = (recitationId: string) => {
+  const selectRecitation = useCallback((recitationId: string) => {
+    if (recitationId === selectedRecitationId) return;
     const recitation = recitations.find((item) => item.id === recitationId);
     if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    rememberCurrentTrackFor(selectedReciterId);
+    setTracks([]);
     setSelectedRecitationId(recitationId);
-  };
+  }, [recitations, rememberCurrentTrackFor, selectedRecitationId, selectedReciterId]);
+
+  const reciterControlOptions = useMemo(() => reciters.map((reciter) => ({
+    value: reciter.id,
+    label: `${reciterName(reciter)} — ${reciter.name_ar}`,
+  })), [reciterName, reciters]);
+
+  useEffect(() => {
+    setReciterControls({
+      value: selectedReciterId,
+      options: reciterControlOptions,
+      disabled: reciters.length === 0,
+      onChange: selectReciter,
+    });
+    return () => setReciterControls(null);
+  }, [reciterControlOptions, reciters.length, selectReciter, selectedReciterId, setReciterControls]);
+
+  useEffect(() => {
+    const editionCode = selectedRecitation?.quran_edition.code;
+    if (!editionCode) {
+      setSurahs([]);
+      return;
+    }
+    let cancelled = false;
+    api.getSurahs(editionCode)
+      .then((items) => {
+        if (!cancelled) setSurahs(items);
+      })
+      .catch(() => {
+        if (!cancelled) setSurahs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRecitation?.quran_edition.code]);
+
+  useEffect(() => {
+    const pending = pendingReciterPlaybackRef.current;
+    if (
+      !pending ||
+      !selectedRecitation ||
+      !selectedReciter ||
+      pending.reciterId !== selectedReciterId
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingTrackId(`reciter-switch-${pending.surahNumber}`);
+    setError(null);
+    api.getSurahPlayback(selectedRecitation.id, pending.surahNumber)
+      .then((playback) => {
+        if (cancelled || pendingReciterPlaybackRef.current !== pending) return;
+        requestIdRef.current += 1;
+        startPlayback({
+          requestId: requestIdRef.current,
+          track: playback.track,
+          segments: playback.segments || [],
+          kind: pending.kind,
+          startAyah: pending.startAyah,
+          endAyah: pending.endAyah,
+          title: pending.kind === "ayah" && pending.startAyah
+            ? t("common.ayah", { ayah: `${pending.surahNumber}:${pending.startAyah}` })
+            : t("common.surah", { surah: pending.surahNumber }),
+          artist: reciterName(selectedReciter),
+          album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+          autoPlay: false,
+        });
+        pendingReciterPlaybackRef.current = null;
+      })
+      .catch((reason) => {
+        if (!cancelled) {
+          pendingReciterPlaybackRef.current = null;
+          setError(api.normalizeError(reason));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTrackId(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reciterName, selectedRecitation, selectedReciter, selectedReciterId, startPlayback, t]);
+
+  const surahByNumber = useMemo(
+    () => new Map(surahs.map((surah) => [surah.number, surah])),
+    [surahs],
+  );
 
   const handlePlayTrack = async (track: AudioTrack) => {
     if (!track.surah_number || !selectedRecitation) return;
@@ -322,6 +457,9 @@ export default function AudioPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tracks.map((track) => {
               const isSelected = playerRequest?.track.id === track.id;
+              const trackSurah = track.surah_number
+                ? surahByNumber.get(track.surah_number)
+                : undefined;
               return (
                 <div
                   key={track.id}
@@ -331,11 +469,11 @@ export default function AudioPage() {
                     background: isSelected ? "var(--primary-subtle)" : undefined,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div className="track-row-main">
                     <span className="ayah-badge" style={{ background: isSelected ? "var(--primary)" : undefined, color: isSelected ? "#fff" : undefined }}>
                       {track.surah_number || "♪"}
                     </span>
-                    <div>
+                    <div className="track-row-copy">
                       <strong>
                         {track.surah_number ? t("common.surah", { surah: track.surah_number }) : track.scope}
                       </strong>
@@ -344,9 +482,14 @@ export default function AudioPage() {
                         {formatDuration(track.duration_ms)}
                       </p>
                     </div>
+                    {trackSurah?.name_ar && (
+                      <span className="track-surah-name-ar" lang="ar" dir="rtl">
+                        {trackSurah.name_ar}
+                      </span>
+                    )}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="track-row-actions">
                     <button
                       className={`btn ${isSelected && isPlaying ? "btn-primary" : "btn-secondary"} btn-sm`}
                       onClick={() => void handlePlayTrack(track)}

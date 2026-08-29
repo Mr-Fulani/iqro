@@ -27,6 +27,22 @@ const recitation = {
   timings: { available: true, segment_count: 6236 },
 };
 
+const alternateReciter = {
+  id: "00000000-0000-7000-8000-000000000006",
+  slug: "qf-6-mahmoud-khaleel-al-husary",
+  name_ar: "محمود خليل الحصري",
+  name_en: "Mahmoud Khaleel Al-Husary",
+  name_ru: "Махмуд Халиль Аль-Хусари",
+  country_code: "EG",
+};
+
+const alternateRecitation = {
+  ...recitation,
+  id: "00000000-0000-7000-8000-000000001006",
+  code: "qf-6-murattal",
+  reciter: alternateReciter,
+};
+
 const tracks = Array.from({ length: 114 }, (_, index) => {
   const surah = index + 1;
   const asset = {
@@ -57,6 +73,21 @@ const tracks = Array.from({ length: 114 }, (_, index) => {
         asset,
       },
     ],
+  };
+});
+
+const alternateTracks = tracks.map((track, index) => {
+  const surahNumber = index + 1;
+  const asset = {
+    ...track.asset,
+    url: `https://audio.example.test/husary/${String(surahNumber).padStart(3, "0")}.mp3`,
+  };
+  return {
+    ...track,
+    id: `00000000-0000-7000-8300-${String(surahNumber).padStart(12, "0")}`,
+    recitation_id: alternateRecitation.id,
+    asset,
+    renditions: track.renditions.map((rendition) => ({ ...rendition, asset })),
   };
 });
 
@@ -93,6 +124,17 @@ const surah = {
   revelation_type: "meccan",
   ayah_count: 165,
   first_page: 128,
+};
+
+const surahOne = {
+  id: "00000000-0000-7000-8000-000000000001",
+  number: 1,
+  name_ar: "الفاتحة",
+  name_en: "Al-Fatihah",
+  name_ru: "Аль-Фатиха",
+  revelation_type: "meccan",
+  ayah_count: 7,
+  first_page: 1,
 };
 
 const ayahs = [1, 2].map((number) => ({
@@ -519,11 +561,17 @@ async function installApiMocks(page: Page) {
     const path = url.pathname;
 
     if (path === "/api/v1/reciters") {
-      await route.fulfill({ json: paginated([reciter]) });
+      await route.fulfill({ json: paginated([reciter, alternateReciter]) });
     } else if (path === "/api/v1/recitations") {
-      await route.fulfill({ json: paginated([recitation]) });
+      const requestedReciterId = url.searchParams.get("reciter_id");
+      const availableRecitations = [recitation, alternateRecitation].filter(
+        (item) => !requestedReciterId || item.reciter.id === requestedReciterId,
+      );
+      await route.fulfill({ json: paginated(availableRecitations) });
     } else if (path === `/api/v1/recitations/${recitation.id}/tracks`) {
       await route.fulfill({ json: paginated(tracks) });
+    } else if (path === `/api/v1/recitations/${alternateRecitation.id}/tracks`) {
+      await route.fulfill({ json: paginated(alternateTracks) });
     } else if (path.startsWith(`/api/v1/recitations/${recitation.id}/surahs/`)) {
       const surahNumber = Number(path.split("/").at(-1));
       const track = tracks[surahNumber - 1];
@@ -532,6 +580,21 @@ async function installApiMocks(page: Page) {
           track,
           segments: [1, 2].map((ayahNumber) => ({
             ayah_id: `00000000-0000-7000-8500-${String(surahNumber * 10 + ayahNumber).padStart(12, "0")}`,
+            surah_number: surahNumber,
+            ayah_number: ayahNumber,
+            start_ms: (ayahNumber - 1) * 1_000,
+            end_ms: ayahNumber * 1_000,
+          })),
+        },
+      });
+    } else if (path.startsWith(`/api/v1/recitations/${alternateRecitation.id}/surahs/`)) {
+      const surahNumber = Number(path.split("/").at(-1));
+      const track = alternateTracks[surahNumber - 1];
+      await route.fulfill({
+        json: {
+          track,
+          segments: [1, 2].map((ayahNumber) => ({
+            ayah_id: `00000000-0000-7000-8600-${String(surahNumber * 10 + ayahNumber).padStart(12, "0")}`,
             surah_number: surahNumber,
             ayah_number: ayahNumber,
             start_ms: (ayahNumber - 1) * 1_000,
@@ -576,7 +639,7 @@ async function installApiMocks(page: Page) {
       const pageNumber = Number(parts[8]);
       await route.fulfill({ json: foundationPage(sourceId, pageNumber) });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs") {
-      await route.fulfill({ json: [surah] });
+      await route.fulfill({ json: [surahOne, surah] });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/6/ayahs") {
       await route.fulfill({ json: ayahs });
     } else if (path === "/api/v1/quran/editions/madani-hafs/surahs/1/ayahs") {
@@ -690,10 +753,13 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await expect(page.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toHaveCount(0);
   const reciterCards = page.getByTestId("audio-reciter");
-  await expect(reciterCards).toHaveCount(1);
+  await expect(reciterCards).toHaveCount(2);
   await expect(reciterCards.first()).toHaveAttribute("aria-pressed", "true");
   await expect(reciterCards.first().getByTestId("reciter-avatar")).toBeVisible();
   const player = page.getByTestId("global-audio-player");
+  await expect(player.getByText("Сейчас в плеере", { exact: true })).toHaveCount(0);
+  await expect(player.getByText("Расширенный аудиоплеер", { exact: true })).toHaveCount(0);
+  await expect(player.getByLabel("Быстрая смена чтеца")).toHaveValue(reciter.id);
   expect((await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("button", { name: "Развернуть плеер", exact: true })).toBeVisible();
   await expect(player.getByLabel("Режим повтора")).toBeHidden();
@@ -707,6 +773,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
   await expect(page.getByText("Найдено треков: 114")).toBeVisible();
+  await expect(page.locator(".track-row").first().getByText("الفاتحة", { exact: true })).toBeVisible();
   const listenButtons = page.getByRole("button", { name: "Слушать", exact: true });
   await expect(listenButtons).toHaveCount(114);
 
@@ -726,6 +793,33 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
   await expect(player.getByLabel("Режим повтора")).toBeVisible();
   expect((await player.boundingBox())!.height).toBeGreaterThan(200);
+});
+
+test("switching the reciter stops the old source and prepares the same surah for the new voice", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const audio = player.locator("audio");
+  await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  await page.locator("#audio-reciter-select").selectOption(alternateReciter.id);
+
+  await expect(player.getByLabel("Быстрая смена чтеца")).toHaveValue(alternateReciter.id);
+  await expect(audio).toHaveAttribute("src", alternateTracks[0].asset.url);
+  await expect(player.getByText("Готово к воспроизведению", { exact: true })).toBeVisible();
+  await expect(player.locator(".segmented-audio-summary .kpi-desc")).toContainText(
+    "Махмуд Халиль Аль-Хусари",
+  );
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  await player.getByLabel("Быстрая смена чтеца").selectOption(reciter.id);
+  await expect(page.locator("#audio-reciter-select")).toHaveValue(reciter.id);
+  await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
+  await expect(player.getByText("Готово к воспроизведению", { exact: true })).toBeVisible();
 });
 
 test("audio widget survives route navigation and pauses at the current position", async ({ page }) => {
@@ -764,7 +858,8 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect.poll(async () => (await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toBeVisible();
 
-  await player.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
+  await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
@@ -774,13 +869,11 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
 
   const player = page.getByTestId("global-audio-player");
-  const resumeButton = player.getByRole("button", { name: "▶ Продолжить", exact: true });
   const settingsButton = player.getByRole("button", { name: "Повтор, диапазон и таймер", exact: true });
   const audio = player.locator("audio");
   await expect(player).toBeVisible();
-  await expect(resumeButton).toBeVisible();
+  await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
   await expect(settingsButton).toBeVisible();
-  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -788,14 +881,12 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   );
 
   await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
-  expect((await resumeButton.boundingBox())!.width).toBeGreaterThan(40);
   expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
   await page.locator('.brand-link[href="/ru"]').click();
   await expect(page).toHaveURL("/ru");
-  expect((await resumeButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
@@ -833,7 +924,7 @@ test("mushaf selects every fragment of an ayah and starts ayah playback", async 
   await page.getByRole("button", { name: /Мусхаф/ }).click();
 
   const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
-  await expect(recitationSelect.locator("option")).toHaveCount(1);
+  await expect(recitationSelect.locator("option")).toHaveCount(2);
   const ayahRegions = page.getByRole("button", { name: "Аят 6:2", exact: true });
   await expect(ayahRegions).toHaveCount(2);
 
@@ -1206,7 +1297,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
 
   const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
   await expect(recitationSelect).toBeVisible();
-  await expect(recitationSelect.locator("option")).toHaveCount(1);
+  await expect(recitationSelect.locator("option")).toHaveCount(2);
 
   const firstAyah = page.locator(".ayah-card").first();
   const secondAyah = page.locator(".ayah-card").nth(1);
@@ -1337,7 +1428,7 @@ test("player preserves the cursor after interruption and registers Media Session
     media.dispatchEvent(new Event("pause"));
   });
   await expect(page.getByText("Пауза · позиция сохранена", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "▶ Продолжить", exact: true }).click();
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
   expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(1.4);
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
 
