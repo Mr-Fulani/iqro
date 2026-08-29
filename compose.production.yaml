@@ -342,6 +342,9 @@ services:
   db-backup-offsite:
     <<: *app-security
     image: ${BACKEND_IMAGE:-quran-platform-backend:${APP_VERSION:-local}}
+    # Local dumps are deliberately mode 0600. This short-lived, read-only
+    # operations container must use the same root identity that creates them.
+    user: "0:0"
     profiles: ["ops"]
     restart: "no"
     entrypoint: ["python", "/ops/offsite.py", "upload"]

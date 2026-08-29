@@ -40,16 +40,34 @@ credential and recovery/alert test are recorded.
 - Dependency audits: npm and hash-verified production Python requirements reported no known
   vulnerabilities. Container image scanning remains an exact-commit CI gate.
 
-## External gates still required
+## External gate status
 
 | Gate | Evidence required | Current state on 29 August 2026 |
 |---|---|---|
 | GitHub source mirror | configured remote, authenticated push and green exact-commit CI | Local `gh` credential is invalid and the repository has no remote |
-| Private offsite bucket | separate bucket/token, successful upload, full download and restore | Code/preflight ready; bucket and scoped token not configured |
-| Dead-man uptime monitor | success/failure URL, enabled timer and delivered test alert | Code/timer ready; external monitor URL not configured |
+| Private offsite bucket | separate bucket/token, successful upload, full download and restore | Complete: private `iqro-postgres-backups`, bucket-scoped object token restricted to the host IP, verified upload/download and isolated restore drill |
+| Dead-man uptime monitor | success/failure URL, enabled timer and delivered test alert | Complete: Healthchecks.io check and five-minute timer active; failure, recovery and inbox delivery verified |
 | Full observability delivery | deployed metrics/log backend and routed synthetic alert | Opt-in stack exists; not kept on the 4 GiB budget host |
 | Quran content acceptance | provenance-safe candidate and religious/legal/product sign-offs | `madani-hafs@1.0.2` remains staging-only |
 | Exact release security | GitHub dependency audits and Trivy on the release commit | Local npm/Python audits pass; container scan and exact-commit CI require GitHub authentication/remote |
+
+## Activated offsite backup evidence
+
+- The first verified object is `quran_staging_20260829T161447Z.dump` (86.62 MB), accompanied by
+  its SHA-256 sidecar and `latest.json` recovery manifest under the environment-specific prefix.
+- Cloudflare R2 reports Standard storage and disabled public access for the separate backup
+  bucket. The one-year token is limited to object read/write for that bucket and requests from
+  the staging host IP.
+- Full-download hashing and restoration into an isolated temporary PostgreSQL database passed on
+  29 August 2026. No working database was modified by the drill.
+- `quran-backup@staging.timer` is enabled and active. It runs the local backup, offsite upload and
+  bounded 30-day application retention daily; the next scheduled run is visible through
+  `systemctl list-timers quran-backup@staging.timer`.
+- `quran-heartbeat@staging.timer` is enabled and runs every five minutes. A manual run verified the
+  public site, readiness JSON, local backup freshness and external ping delivery.
+- An explicit failure/recovery drill produced the expected `up -> down -> up` transitions and a
+  14-second recorded downtime. The operator confirmed receipt of both the email alert and the
+  recovery notification on 29 August 2026.
 
 ## Activation sequence
 
@@ -71,7 +89,7 @@ credential and recovery/alert test are recorded.
 
    ```bash
    install -d -m 0700 /etc/iqro
-   python3 ops/monitoring/configure.py \
+   python3 -m ops.monitoring.configure \
      --output /etc/iqro/staging-heartbeat.env \
      --site-url https://staging.iqro.forum \
      --backup-dir /opt/quran/backups/staging
