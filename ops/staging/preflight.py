@@ -8,9 +8,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 try:
-    from ops.staging.init import NOT_CONFIGURED, SECRET_KEYS
+    from ops.staging.init import BACKUP_NOT_CONFIGURED, NOT_CONFIGURED, SECRET_KEYS
 except ModuleNotFoundError:  # Direct execution: python ops/staging/preflight.py
-    from init import NOT_CONFIGURED, SECRET_KEYS
+    from init import BACKUP_NOT_CONFIGURED, NOT_CONFIGURED, SECRET_KEYS
 
 DEFAULT_ENV = Path("ops/staging/staging.env")
 
@@ -48,7 +48,7 @@ def _https_host(value: str) -> str | None:
 
 
 def validate(
-    values: dict[str, str], *, require_media: bool
+    values: dict[str, str], *, require_media: bool, require_offsite_backup: bool = False
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -200,6 +200,50 @@ def validate(
                 message + "; text/API staging may start, media release may not"
             )
 
+    backup_keys = (
+        "BACKUP_OBJECT_STORAGE_ENDPOINT_URL",
+        "BACKUP_OBJECT_STORAGE_BUCKET",
+        "BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID",
+        "BACKUP_OBJECT_STORAGE_SECRET_ACCESS_KEY",
+    )
+    backup_placeholders = [
+        key
+        for key in backup_keys
+        if not values.get(key) or BACKUP_NOT_CONFIGURED in values.get(key, "")
+    ]
+    if backup_placeholders:
+        message = "offsite backup is not configured: " + ", ".join(backup_placeholders)
+        if require_offsite_backup:
+            errors.append(message)
+        else:
+            warnings.append(message + "; local backups remain on the application host")
+    else:
+        if _https_host(values["BACKUP_OBJECT_STORAGE_ENDPOINT_URL"]) is None:
+            errors.append("BACKUP_OBJECT_STORAGE_ENDPOINT_URL must be HTTPS")
+        if (
+            values["BACKUP_OBJECT_STORAGE_BUCKET"]
+            == values["MEDIA_OBJECT_STORAGE_BUCKET"]
+        ):
+            errors.append("offsite backups must not reuse the public media bucket")
+        if (
+            values["BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID"]
+            == values["MEDIA_OBJECT_STORAGE_ACCESS_KEY_ID"]
+        ):
+            errors.append("offsite backups must use a separately scoped storage token")
+        if values.get("BACKUP_ENVIRONMENT") != "staging":
+            errors.append("staging offsite backups must use BACKUP_ENVIRONMENT=staging")
+        try:
+            backup_retention_days = int(
+                values.get("BACKUP_OBJECT_STORAGE_RETENTION_DAYS", "")
+            )
+        except ValueError:
+            errors.append("BACKUP_OBJECT_STORAGE_RETENTION_DAYS must be an integer")
+        else:
+            if not 7 <= backup_retention_days <= 3650:
+                errors.append(
+                    "BACKUP_OBJECT_STORAGE_RETENTION_DAYS must be between 7 and 3650"
+                )
+
     for key, value in values.items():
         if "replace-me" in value.lower():
             errors.append(f"placeholder remains in {key}")
@@ -212,6 +256,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV)
     parser.add_argument("--require-media", action="store_true")
+    parser.add_argument("--require-offsite-backup", action="store_true")
     return parser
 
 
@@ -233,7 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         mode = stat.S_IMODE(args.env_file.stat().st_mode)
         if mode & 0o077:
             errors.append(f"{args.env_file} permissions must be 0600, found {mode:04o}")
-    validation_errors, warnings = validate(values, require_media=args.require_media)
+    validation_errors, warnings = validate(
+        values,
+        require_media=args.require_media,
+        require_offsite_backup=args.require_offsite_backup,
+    )
     errors.extend(validation_errors)
     for warning in warnings:
         print(f"WARN: {warning}")

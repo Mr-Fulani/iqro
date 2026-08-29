@@ -339,6 +339,54 @@ services:
     pids_limit: 64
     logging: *default-logging
 
+  db-backup-offsite:
+    <<: *app-security
+    image: ${BACKEND_IMAGE:-quran-platform-backend:${APP_VERSION:-local}}
+    profiles: ["ops"]
+    restart: "no"
+    entrypoint: ["python", "/ops/offsite.py", "upload"]
+    environment:
+      BACKUP_DIR: /backups
+      BACKUP_ENVIRONMENT: ${BACKUP_ENVIRONMENT:-production}
+      BACKUP_OBJECT_STORAGE_ENDPOINT_URL: ${BACKUP_OBJECT_STORAGE_ENDPOINT_URL:-}
+      BACKUP_OBJECT_STORAGE_BUCKET: ${BACKUP_OBJECT_STORAGE_BUCKET:-}
+      BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID: ${BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      BACKUP_OBJECT_STORAGE_SECRET_ACCESS_KEY: ${BACKUP_OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      BACKUP_OBJECT_STORAGE_REGION: ${BACKUP_OBJECT_STORAGE_REGION:-auto}
+      BACKUP_OBJECT_STORAGE_ADDRESSING_STYLE: ${BACKUP_OBJECT_STORAGE_ADDRESSING_STYLE:-path}
+      BACKUP_OBJECT_STORAGE_PREFIX: ${BACKUP_OBJECT_STORAGE_PREFIX:-quran-platform/postgres}
+      BACKUP_OBJECT_STORAGE_RETENTION_DAYS: ${BACKUP_OBJECT_STORAGE_RETENTION_DAYS:-30}
+    volumes:
+      - ./ops/postgres:/ops:ro
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups:ro
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cpus: 0.25
+    mem_limit: 256m
+    pids_limit: 64
+    logging: *default-logging
+
+  db-backup-offsite-verify:
+    extends:
+      service: db-backup-offsite
+    entrypoint: ["python", "/ops/offsite.py", "verify"]
+
+  db-backup-offsite-download:
+    extends:
+      service: db-backup-offsite
+    user: "0:0"
+    read_only: true
+    entrypoint:
+      - python
+      - /ops/offsite.py
+      - download
+      - --output
+      - /backups/offsite_restore.dump
+      - --replace
+    volumes:
+      - ./ops/postgres:/ops:ro
+      - ${QURAN_BACKUP_DIR:-./backups}:/backups
+
   db-backup-verify:
     image: ${POSTGRES_IMAGE:-quran-platform-postgres:${APP_VERSION:-local}}
     profiles: ["ops"]

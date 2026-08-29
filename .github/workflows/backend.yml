@@ -1,6 +1,11 @@
 name: Backend CI
 
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "services/backend/**"
@@ -61,7 +66,12 @@ jobs:
           sh -n ops/postgres/verify.sh
           sh -n ops/postgres/restore-check.sh
           sh -n ops/postgres/restore.sh
+          sh -n ops/systemd/install.sh
+          python -m ops.staging.test_config
           python -m unittest \
+            ops.postgres.test_offsite \
+            ops.monitoring.test_heartbeat \
+            ops.systemd.test_units \
             ops.load.test_smoke \
             ops.load.test_capacity \
             ops.load.test_audio_capacity \

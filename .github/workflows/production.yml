@@ -1,6 +1,11 @@
 name: Production Compose CI
 
+concurrency:
+  group: production-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "compose.production.yaml"
@@ -12,8 +17,10 @@ on:
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/monitoring/**"
       - "ops/scaling/**"
       - "ops/staging/**"
+      - "ops/systemd/**"
       - "Makefile"
       - "docs/production.md"
       - "docs/staging.md"
@@ -30,8 +37,10 @@ on:
       - "ops/gateway/**"
       - "ops/postgres/**"
       - "ops/observability/**"
+      - "ops/monitoring/**"
       - "ops/scaling/**"
       - "ops/staging/**"
+      - "ops/systemd/**"
       - "Makefile"
       - "docs/production.md"
       - "docs/staging.md"

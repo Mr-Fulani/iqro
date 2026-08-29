@@ -18,6 +18,15 @@ DEFAULT_CORS_OUTPUT = Path("ops/staging/r2-cors.json")
 ACCOUNT_ID_RE = re.compile(r"^[a-fA-F0-9]{32}$")
 
 
+def _single_line_secret(value: str, label: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{label} is required")
+    if any(character in normalized for character in ("\x00", "\r", "\n")):
+        raise ValueError(f"{label} must be a single-line value")
+    return normalized
+
+
 def _replace_values(text: str, replacements: dict[str, str]) -> str:
     lines: list[str] = []
     replaced: set[str] = set()
@@ -113,19 +122,17 @@ def main(argv: list[str] | None = None) -> int:
     secret_key = os.getenv("STAGING_R2_SECRET_ACCESS_KEY") or getpass.getpass(
         "R2 Secret Access Key: "
     )
-    if not access_key.strip() or not secret_key.strip():
-        print("ERROR: both R2 credentials are required", file=sys.stderr)
-        return 2
-
     try:
+        access_key = _single_line_secret(access_key, "R2 Access Key ID")
+        secret_key = _single_line_secret(secret_key, "R2 Secret Access Key")
         original = args.env_file.read_text(encoding="utf-8")
         replacements = {
             "MEDIA_OBJECT_STORAGE_ENDPOINT_URL": (
                 f"https://{account_id}.r2.cloudflarestorage.com/"
             ),
             "MEDIA_OBJECT_STORAGE_BUCKET": bucket,
-            "MEDIA_OBJECT_STORAGE_ACCESS_KEY_ID": access_key.strip(),
-            "MEDIA_OBJECT_STORAGE_SECRET_ACCESS_KEY": secret_key.strip(),
+            "MEDIA_OBJECT_STORAGE_ACCESS_KEY_ID": access_key,
+            "MEDIA_OBJECT_STORAGE_SECRET_ACCESS_KEY": secret_key,
         }
         updated = _replace_values(original, replacements)
         parsed, parse_errors = load_env(args.env_file)

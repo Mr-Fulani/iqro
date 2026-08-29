@@ -1,0 +1,16 @@
+[Unit]
+Description=IQRO %i PostgreSQL local and offsite backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/quran/Makefile
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/quran
+ExecStart=/usr/bin/flock -n /run/lock/iqro-%i-backup.lock /usr/bin/make -C /opt/quran %i-backup-offsite
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+TimeoutStartSec=2h

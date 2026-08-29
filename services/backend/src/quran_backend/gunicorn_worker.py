@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from uvicorn.workers import UvicornWorker
+from uvicorn_worker import UvicornWorker  # type: ignore[import-untyped]
 
 
 def _positive_env_int(name: str, default: int) -> int:
@@ -16,7 +16,7 @@ def _positive_env_int(name: str, default: int) -> int:
     return value
 
 
-class BoundedUvicornWorker(UvicornWorker):
+class BoundedUvicornWorker(UvicornWorker):  # type: ignore[misc]
     """Uvicorn worker with explicit per-process request backpressure."""
 
     CONFIG_KWARGS: dict[str, Any] = {  # noqa: RUF012

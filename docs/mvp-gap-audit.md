@@ -1,6 +1,6 @@
 # P0/MVP gap audit
 
-Дата аудита: 25 августа 2026 года
+Дата актуализации: 29 августа 2026 года
 
 Аудируемый baseline: репозиторий после backend+web среза локализации от 25 августа 2026 года
 
@@ -49,9 +49,10 @@ runtime. Основной незакрытый объём находится в 
   [source lock](../services/backend/docs/quran-sources.lock.json) и dataset manifest.
 - В media-каталоге присутствуют 604 versioned WebP-страницы и asset manifest с SHA-256.
 - Backend предоставляет Quran, audio, guest auth, reading/sync, prayer/profile,
-  reminders, feedback, health/metrics и OpenAPI endpoints.
-- Полный backend test suite: 545 passed, 6 skipped; суммарное покрытие 84,76%.
-- Web имеет 48 Playwright cases, включая verified-email merge без credentials в
+  reminders, memorization, dua, translations, tafsirs, feedback, health/metrics и OpenAPI
+  endpoints.
+- Полный backend test suite: 646 passed, 6 skipped; суммарное покрытие 83,13%.
+- Web имеет 80 Playwright cases, включая verified-email merge без credentials в
   `localStorage`, bookmark revision contracts, reporter feedback lifecycle, prayer-profile и
   reminder contracts, durable sync outbox/cursor/full-resync, многосегментный аят 6:2,
   viewport matrix 375/768/1440 px, переходы по juz/hizb/rub/ayah, расширенный аудиоплеер,
@@ -61,8 +62,10 @@ runtime. Основной незакрытый объём находится в 
   canonical/hreflang/page metadata, private `noindex`, robots/localized sitemap/manifest/social
   assets, server-rendered глубокие страницы опубликованных сур/аятов, versioned Quran content
   sitemap с отсечением draft/stale versions, server-rendered каталог опубликованных чтецов и
-  декламаций, versioned audio sitemap только для streamable complete releases и переход с
-  иллюстративного аватара чтеца на выбранный аудиокаталог.
+  декламаций, versioned audio sitemap только для streamable complete releases, чтение после
+  намаза, planner/history, переводы/сноски/тафсиры, заучивание, полный каталог ду’а, общее
+  избранное, persistent выбор Мусхафа/чтеца и переход с иллюстративного аватара чтеца на
+  выбранный аудиокаталог.
 - Production Compose ранее прошёл isolated runtime smoke: migrations/static gates,
   frontend/API/media, HTTPS proxy path, resource limits и 120/120 read-only запросов.
 - Live web smoke development-окружения повторно подтвердил загрузку Quran.Foundation catalog,
@@ -124,7 +127,7 @@ runtime. Основной незакрытый объём находится в 
 | Method/asr/timezone/high-latitude/adjustments доступны | 🟡 | Backend и web profile UI закрывают полный контракт; Flutter local parity отсутствует |
 | Результаты совпадают с golden cases | ✅ | Есть engine golden tests и pinned config/tzdb metadata |
 | Координаты не логируются и не сохраняются без consent | ✅ | Calculate request redaction тестируется; `PrayerProfile` не содержит location fields, а округлённые координаты появляются только в device Web Push subscription после отдельного browser permission |
-| Локальные уведомления работают offline | 🟡 | Web Push доставляет prayer/reading/review при закрытой вкладке, но требует сеть; полноценный offline scheduler остаётся задачей Flutter |
+| Локальные уведомления работают offline | 🟡 | Web Push доставляет prayer/review при закрытой вкладке и независимо добавляет предложение чтения после намаза; отдельное ежедневное reading-напоминание отключено, Web Push требует сеть, полноценный offline scheduler остаётся задачей Flutter |
 | Timezone/location change перепланирует уведомления | 🟡 | Web-подписка обновляет IANA timezone при открытии кабинета; location можно обновить явно, а изменение prayer profile перепланирует серверную очередь; native reschedule отсутствует |
 
 ### Синхронизация
@@ -163,10 +166,10 @@ runtime. Основной незакрытый объём находится в 
 |---|:---:|---|
 | OpenAPI и SDK/contracts проходят CI | 🟡 | OpenAPI validation есть; generated SDK/compatibility gate отсутствует |
 | SLO доказаны на проектном пике | 🟡 | Strict budget CX23 Quran read подтвердил 10 saturated clients: 4 612 запросов за 2 минуты, 0% ошибок, p95 682 ms; 12 clients превысили p95. Synthetic warm R2 audio доказал 25 playback clients и деградацию с 30; bounded one-shot real-audio probe подтвердил delivery 3/3 QF assets, но metadata consistency только 2/3; изолированный guest auth/reading sync подтвердил 8 тяжёлых stateful clients и p95 boundary на 10; realistic mixed — `20 readers + 4 sync users` без ошибок; new registered email account + sync — 4 active users с boundary на 6/8. Полный разрешённый multi-surah audio release, existing-account/multi-device identity и production-sized S0/S1 ещё не измерены |
-| Restore drill подтверждает RPO/RTO | 🟡 | Backup/verify/restore-check реализованы; нет расписания и доказательства RPO 15 минут/RTO 4 часа |
-| Нет critical/high vulnerabilities | 🟡 | Блокирующие `npm audit`, hash-verified backend `pip-audit` и Trivy для всех пяти production-образов добавлены; нужен зелёный GitHub CI на release commit |
+| Restore drill подтверждает RPO/RTO | 🟡 | Local и private-S3 upload/full-download/restore-check реализованы вместе с persistent systemd timer; отдельный bucket/token ещё не подключены, timer не активирован и RPO 15 минут/RTO 4 часа не измерены |
+| Нет critical/high vulnerabilities | 🟡 | Локальные `npm audit` и hash-verified backend `pip-audit` не нашли известных уязвимостей; блокирующий Trivy для всех пяти production-образов добавлен, но нужен зелёный GitHub CI на release commit |
 | Web performance/a11y regression budget | ✅ | Lighthouse блокирует регрессии на standalone production build для landing RU/EN/AR/TR и опубликованной суры RU/AR, включая RTL, Core Web Vitals и resource budgets |
-| Browser E2E проверяет deployable web artifact | 🟡 | Все 62 сценария проходят на dev/standalone; реальный staging smoke подтвердил RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404 и SEO; временная noindex-активация dataset подтвердила content-backed SSR/API, но полный production browser journey ещё открыт |
+| Browser E2E проверяет deployable web artifact | 🟡 | Единый набор из 80 сценариев локально прошёл и для dev, и для standalone production artifact; реальный staging smoke подтвердил RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404 и SEO; временная noindex-активация dataset подтвердила content-backed SSR/API, но staging-прогон точного release commit и production browser journey ещё открыты |
 | Runbooks, dashboards и alerts доступны | 🟡 | Versioned dashboard/rules и runbook готовы; production deployment, provider telemetry, on-call ownership и synthetic delivery ещё не подтверждены |
 | Privacy/license/religious launch checklist пройден | ⏸ | Требует внешнего продуктового, правового и религиозно-редакционного sign-off |
 
@@ -177,8 +180,8 @@ runtime. Основной незакрытый объём находится в 
   лимиты данных и retention-настройки.
 - Документация prayer/reminders уточнена: versioned профиль не содержит location, а округлённые
   координаты сохраняются только после отдельного browser consent внутри device Web Push
-  subscription. Масштабируемая очередь исполняет prayer/reading/review; рассчитанные времена не
-  входят в публичные snapshots.
+  subscription. Масштабируемая очередь исполняет prayer/review, а предложение чтения после
+  намаза управляется независимо; рассчитанные времена не входят в публичные snapshots.
 - Ссылка на этот аудит добавлена в корневой README, чтобы старый unchecked checklist больше
   не использовался как источник фактической готовности.
 - Web bookmark/feedback contracts приведены к OpenAPI: bookmark PATCH/DELETE используют
@@ -244,9 +247,10 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 2. ✅ Web player state machine: repeat/range, паузы, скорость, sleep timer, browser interruption
    recovery и Media Session controls. Flutter background audio, native audio focus и system
    media controls остаются отдельной mobile-задачей.
-3. ✅ Web Push для prayer/Quran reading/review при закрытой вкладке, включая отдельный location
-   opt-in и пять ежедневных prayer toggles. Flutter local prayer parity и полностью offline
-   notification scheduler остаются следующей задачей.
+3. ✅ Web Push для prayer/review при закрытой вкладке, включая отдельный location opt-in,
+   пять ежедневных prayer toggles и независимо отключаемое предложение чтения после намаза.
+   Flutter local prayer parity и полностью offline notification scheduler остаются следующей
+   задачей.
 
 ### P0-D — продуктовые домены
 
@@ -301,9 +305,10 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 
 ### P1 — functional expansion после multi-client MVP
 
-1. `memorization`: карточки слов, аятов и диапазонов, versioned content references,
-   интервальное повторение и offline review queue Flutter.
-2. `dua`: отдельные сборники, источники, переводы, категории, publication и manifests.
+1. `memorization`: базовые планы аятов, repetitions, sessions/assessment и web progress уже
+   готовы; далее deck/card templates, versioned SRS и offline review queue Flutter.
+2. `dua`: versioned «Хисн аль-Муслим», RU/EN/AR/TR, темы, audio и account favorites готовы;
+   далее пользовательские collections, общий durable outbox и offline manifests.
 3. `library/search`: типизированные read-модели дуа, хадисов, книг и образовательных
    подборок без универсальной таблицы контента.
 4. Каждый новый домен проходит extension contract: license/source, versioning, review,
@@ -314,7 +319,7 @@ provenance-safe immutable кандидата и трёх внешних sign-off
 - Наличие поля checksum без client installer не закрывает offline integrity.
 - Verified email, guest merge и device/deletion lifecycle не закрывают безопасную смену/unlink
   identity и дополнительные OAuth providers.
-- Наличие Web Push для prayer/reading/review не означает полностью offline-доставку без сети или
+- Наличие Web Push для prayer/review не означает полностью offline-доставку без сети или
   готовый native mobile scheduler.
 - Наличие versioned metrics/dashboard/rules без deployment, внешней телеметрии и проверенной
   доставки alert не означает operational monitoring.

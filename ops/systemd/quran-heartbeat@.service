@@ -1,0 +1,19 @@
+[Unit]
+Description=IQRO %i external heartbeat and backup freshness check
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/quran/ops/monitoring/heartbeat.py
+ConditionPathExists=/etc/iqro/%i-heartbeat.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/quran
+EnvironmentFile=/etc/iqro/%i-heartbeat.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/quran/ops/monitoring/heartbeat.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/opt/quran
+TimeoutStartSec=2m

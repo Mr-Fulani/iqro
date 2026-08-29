@@ -7,9 +7,15 @@ import tempfile
 from pathlib import Path
 
 from ops.staging.configure_email import _resend_replacements
-from ops.staging.configure_media import _replace_values, build_cors
+from ops.staging.configure_media import _replace_values, _single_line_secret, build_cors
 from ops.staging.configure_web_push import generate_vapid_keys
-from ops.staging.init import NOT_CONFIGURED, SECRET_KEYS, _render, build_overrides
+from ops.staging.init import (
+    BACKUP_NOT_CONFIGURED,
+    NOT_CONFIGURED,
+    SECRET_KEYS,
+    _render,
+    build_overrides,
+)
 from ops.staging.preflight import load_env, validate
 
 TEMPLATE = """\
@@ -66,8 +72,9 @@ def test_generated_config_passes_basic_preflight_with_media_warning() -> None:
     errors, warnings = validate(values, require_media=False)
 
     assert errors == []
-    assert len(warnings) == 1
-    assert "R2 is not configured" in warnings[0]
+    assert len(warnings) == 2
+    assert any("R2 is not configured" in warning for warning in warnings)
+    assert any("offsite backup is not configured" in warning for warning in warnings)
     assert len({values[key] for key in SECRET_KEYS}) == len(SECRET_KEYS)
 
 
@@ -77,7 +84,8 @@ def test_generated_config_passes_strict_media_preflight() -> None:
     errors, warnings = validate(values, require_media=True)
 
     assert errors == []
-    assert warnings == []
+    assert len(warnings) == 1
+    assert "offsite backup is not configured" in warnings[0]
     assert values["RESTORE_CHECK_DATABASE"] == "quran_restore_check_staging"
 
 
@@ -85,6 +93,35 @@ def test_strict_preflight_rejects_unconfigured_media() -> None:
     errors, _ = validate(_overrides(media_ready=False), require_media=True)
 
     assert any("R2 is not configured" in error for error in errors)
+
+
+def test_strict_preflight_requires_a_separate_offsite_bucket_and_token() -> None:
+    values = _overrides(media_ready=True)
+    errors, _ = validate(
+        values,
+        require_media=True,
+        require_offsite_backup=True,
+    )
+    assert any("offsite backup is not configured" in error for error in errors)
+
+    values.update(
+        {
+            "BACKUP_OBJECT_STORAGE_ENDPOINT_URL": (
+                "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com"
+            ),
+            "BACKUP_OBJECT_STORAGE_BUCKET": "quran-staging-backups",
+            "BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID": "backup-access",
+            "BACKUP_OBJECT_STORAGE_SECRET_ACCESS_KEY": "backup-secret",
+        }
+    )
+    assert BACKUP_NOT_CONFIGURED not in "".join(values.values())
+    errors, warnings = validate(
+        values,
+        require_media=True,
+        require_offsite_backup=True,
+    )
+    assert errors == []
+    assert warnings == []
 
 
 def test_render_and_load_do_not_duplicate_overrides(tmp_path: Path) -> None:
@@ -127,6 +164,17 @@ def test_media_configuration_and_cors_are_derived_from_staging_origins() -> None
     ]
 
 
+def test_storage_credentials_cannot_inject_env_lines() -> None:
+    assert _single_line_secret("  access-key  ", "Access key") == "access-key"
+    for value in ("secret\nINJECTED=true", "secret\rINJECTED=true", "secret\x00tail"):
+        try:
+            _single_line_secret(value, "Secret key")
+        except ValueError as exc:
+            assert "single-line" in str(exc)
+        else:
+            raise AssertionError("control characters must be rejected")
+
+
 def test_resend_configuration_enables_external_smtp_without_exposing_the_key() -> None:
     values = _overrides(media_ready=True)
     values.update(
@@ -139,7 +187,8 @@ def test_resend_configuration_enables_external_smtp_without_exposing_the_key() -
     errors, warnings = validate(values, require_media=True)
 
     assert errors == []
-    assert warnings == []
+    assert len(warnings) == 1
+    assert "offsite backup is not configured" in warnings[0]
     assert values["STAGING_EMAIL_DELIVERY_MODE"] == "smtp"
     assert values["DJANGO_EMAIL_HOST"] == "smtp.resend.com"
     assert values["DJANGO_DEFAULT_FROM_EMAIL"] == "IQRO <login@auth.iqro.forum>"
@@ -162,7 +211,8 @@ def test_generated_vapid_keys_enable_web_push_preflight() -> None:
     private_der = base64.urlsafe_b64decode(private_key + "==")
 
     assert errors == []
-    assert warnings == []
+    assert len(warnings) == 1
+    assert "offsite backup is not configured" in warnings[0]
     assert len(public_raw) == 65
     assert public_raw[0] == 4
     assert private_der.startswith(b"0")
@@ -172,7 +222,9 @@ def main() -> int:
     test_generated_config_passes_basic_preflight_with_media_warning()
     test_generated_config_passes_strict_media_preflight()
     test_strict_preflight_rejects_unconfigured_media()
+    test_strict_preflight_requires_a_separate_offsite_bucket_and_token()
     test_media_configuration_and_cors_are_derived_from_staging_origins()
+    test_storage_credentials_cannot_inject_env_lines()
     test_resend_configuration_enables_external_smtp_without_exposing_the_key()
     test_generated_vapid_keys_enable_web_push_preflight()
     with tempfile.TemporaryDirectory(prefix="quran-staging-test-") as directory:

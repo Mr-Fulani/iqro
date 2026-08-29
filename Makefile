@@ -12,7 +12,7 @@ STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.
 STAGING_RUNTIME_POSTGRES_IMAGE ?= $(shell container_id="$$( $(STAGING_COMPOSE) ps -q postgres 2>/dev/null )"; if [ -n "$$container_id" ]; then docker inspect --format '{{.Config.Image}}' "$$container_id" 2>/dev/null; fi)
 STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING_COMPOSE)
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
 
 # Запуск с сохранением данных базы данных
 up:
@@ -103,6 +103,16 @@ production-backup:
 production-backup-verify:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
 
+production-backup-offsite: production-backup
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite
+
+production-backup-offsite-verify:
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
+
+production-backup-offsite-restore-check:
+	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
+	BACKUP_FILE=/backups/offsite_restore.dump $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+
 production-restore-check:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
@@ -135,6 +145,15 @@ staging-media-configure:
 staging-media-preflight:
 	python3 ops/staging/preflight.py --env-file "$(STAGING_ENV)" --require-media
 
+staging-backup-offsite-configure:
+	python3 ops/staging/configure_backup.py \
+		--env-file "$(STAGING_ENV)" \
+		--account-id "$(STAGING_BACKUP_R2_ACCOUNT_ID)" \
+		--bucket "$(STAGING_BACKUP_R2_BUCKET)"
+
+staging-backup-offsite-preflight:
+	python3 ops/staging/preflight.py --env-file "$(STAGING_ENV)" --require-offsite-backup
+
 staging-config: staging-preflight
 	$(STAGING_COMPOSE) config --quiet
 
@@ -161,6 +180,16 @@ staging-backup: staging-runtime-postgres-image
 
 staging-backup-verify: staging-runtime-postgres-image
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-verify
+
+staging-backup-offsite: staging-runtime-postgres-image staging-backup-offsite-preflight staging-backup
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite
+
+staging-backup-offsite-verify: staging-runtime-postgres-image staging-backup-offsite-preflight
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
+
+staging-backup-offsite-restore-check: staging-runtime-postgres-image staging-backup-offsite-preflight
+	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
+	BACKUP_FILE=/backups/offsite_restore.dump $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-restore-check: staging-runtime-postgres-image
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
@@ -258,3 +287,40 @@ ops-mixed-capacity:
 
 ops-registered-capacity:
 	python3 ops/load/registered_capacity.py $(REGISTERED_CAPACITY_ARGS)
+
+release-ops-check:
+	sh -n ops/postgres/backup.sh
+	sh -n ops/postgres/verify.sh
+	sh -n ops/postgres/restore-check.sh
+	sh -n ops/postgres/restore.sh
+	sh -n ops/systemd/install.sh
+	python3 -m ops.staging.test_config
+	python3 -m unittest \
+		ops.postgres.test_offsite \
+		ops.monitoring.test_heartbeat \
+		ops.systemd.test_units \
+		ops.load.test_smoke \
+		ops.load.test_capacity \
+		ops.load.test_audio_capacity \
+		ops.load.test_sync_capacity \
+		ops.gateway.test_config \
+		ops.media.test_contract \
+		ops.observability.test_render_config \
+		ops.scaling.test_validate
+	APP_VERSION=release-check PRODUCTION_ENV_FILE=./services/backend/.env.production.example \
+		docker compose --env-file services/backend/.env.production.example \
+		-f compose.production.yaml config --quiet
+
+release-web-check:
+	cd $(WEB_DIR) && npm run lint
+	cd $(WEB_DIR) && npm run typecheck
+	cd $(WEB_DIR) && npm run test:cache
+	cd $(WEB_DIR) && npm run build
+	cd $(WEB_DIR) && npm run test:e2e
+	cd $(WEB_DIR) && npm run test:e2e:production
+	cd $(WEB_DIR) && npm run test:lighthouse
+
+release-check: release-ops-check backend-check backend-test release-web-check
+
+systemd-install:
+	sudo sh ops/systemd/install.sh "$(CURDIR)/ops/systemd"

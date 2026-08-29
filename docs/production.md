@@ -18,8 +18,9 @@ stateless API/web/worker replicas за load balancer, подключает manag
 [архитектура расширения и масштабирования](architecture-and-scaling.md).
 
 Домен/TLS, внешний uptime/error monitoring, доставляемый on-call и offsite-хранилище резервных
-копий пока намеренно не включены. В репозитории есть opt-in Prometheus/Grafana/Alertmanager
-baseline, но его фактический deployment не заменяет эти launch evidence.
+копий требуют отдельной deployment-настройки. В репозитории есть opt-in
+Prometheus/Grafana/Alertmanager baseline, private S3 offsite pipeline, full-download restore
+drill и лёгкий dead-man heartbeat, но их наличие в коде не заменяет launch evidence.
 
 Для ограниченного Web MVP существующие staging capacity reports приняты как нижняя измеренная
 граница; дополнительные production-sized/load/soak исследования перенесены post-MVP. Это не
@@ -53,6 +54,8 @@ chmod 600 services/backend/.env.production
 - `MEDIA_CDN_REQUIRED_ORIGINS`: точные origins публичного web, staging и Telegram Mini App,
   которые обязаны присутствовать в CDN contract report;
 - `PUBLIC_MEDIA_BASE_URL` и `PUBLIC_AUDIO_BASE_URL`: HTTPS custom-domain CDN, а не API/gateway.
+- `BACKUP_OBJECT_STORAGE_*`: отдельный private bucket и отдельный scoped token, не совпадающие
+  с media bucket/token; `BACKUP_ENVIRONMENT` и bounded retention.
 
 Production settings и `docker compose config` fail closed без этих значений. Credentials должны
 иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.
@@ -89,6 +92,13 @@ standalone production build и запускает детерминированн
 cd services/web
 npm run test:e2e:production
 npm run test:lighthouse
+```
+
+Единый локальный gate запускается из корня и намеренно используется один раз для крупного
+release-кандидата:
+
+```bash
+make release-check
 ```
 
 По умолчанию gateway слушает только `127.0.0.1:3000`. Это безопасная настройка для

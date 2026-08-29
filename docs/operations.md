@@ -7,6 +7,47 @@ bucket описаны в пошаговом [staging runbook](staging.md). Эт�
 Этот runbook покрывает наблюдаемость backend, резервные копии PostgreSQL, ограниченный
 нагрузочный smoke-тест и staged capacity harness. Команды выполняются из корня репозитория.
 
+## Offsite PostgreSQL backup
+
+Локальный dump на application host не является disaster-recovery копией. Offsite pipeline
+использует отдельный private S3-compatible bucket и отдельный scoped token. Публичный media
+bucket, его custom domain и media credential переиспользовать запрещено.
+
+`make production-backup-offsite` сначала создаёт atomic custom-format dump и SHA-256, затем
+загружает оба файла под immutable timestamp keys, проверяет remote size/checksum metadata и
+обновляет `latest.json`. Обычная ежедневная проверка не скачивает всю базу обратно:
+
+```bash
+make production-backup-offsite
+```
+
+Full-download verification и реальный restore в одноразовую изолированную БД выполняются
+отдельно во время release/ежемесячного recovery drill:
+
+```bash
+make production-backup-offsite-verify
+make production-backup-offsite-restore-check
+```
+
+Retention удаляет только распознанные timestamp dump/checksum objects внутри точного
+environment prefix. Активный manifest target всегда сохраняется. Bucket lifecycle/versioning
+можно добавить как дополнительную provider-защиту, но он не заменяет команды download/restore.
+
+Systemd templates в `ops/systemd/` запускают backup ежедневно с persistent timer и `flock`.
+Они устанавливаются, но не включаются до успешного ручного offsite restore-check.
+
+## Lightweight external heartbeat
+
+На budget host постоянный monitoring stack не помещается вместе с приложением. Скрипт
+`ops/monitoring/heartbeat.py` каждые пять минут проверяет public site, readiness JSON и свежесть
+локального backup, затем вызывает secret success URL внешнего dead-man monitor. Если весь host
+или сеть исчезают, внешний сервис видит пропуск heartbeat. Failure URL позволяет отдельно
+зафиксировать локально обнаруженную ошибку.
+
+Heartbeat URL хранится только в `/etc/iqro/<environment>-heartbeat.env` с mode `0600`; URL не
+печатается в лог и не помещается в Git. Перед release нужно вручную подтвердить не только
+успешный ping, но и фактическую доставку alert после намеренного пропуска timer window.
+
 ## Operational health и Prometheus
 
 Liveness и readiness остаются публичными:

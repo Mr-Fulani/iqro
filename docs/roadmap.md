@@ -1,6 +1,6 @@
 # План и roadmap Quran Platform
 
-Дата обновления: 27 августа 2026 года
+Дата обновления: 29 августа 2026 года
 
 Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Текущий
 статус реализации по P0 остаётся в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
@@ -11,7 +11,8 @@ capacity-прогонов, оценка стартового DAU и пороги
 ## Текущий release verdict для web
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 62 Playwright-сценария проходят как на dev server, так и на standalone
+ESLint, TypeScript и 80 Playwright-сценариев доступны в одном regression-наборе для dev server
+и standalone
 production bundle. Это ещё не означает готовность
 публичного индексируемого production-MVP:
 
@@ -23,7 +24,9 @@ production bundle. Это ещё не означает готовность
   закрыт; field Core Web Vitals и финальный legal/license/religious sign-off проверяются
   после deployment;
 - staging-домен/TLS, noindex, локальный backup/restore drill и budget deployment уже проверены;
-  внешний мониторинг, offsite backup и обязательные контентные sign-off остаются открытыми
+  provider-neutral offsite upload/full-download/restore pipeline и лёгкий dead-man heartbeat
+  добавлены, но внешний monitor URL, отдельный приватный backup bucket/token и обязательные
+  контентные sign-off остаются открытыми
   release gates;
 - strict budget Quran read workload прошёл на CX23 при 10 непрерывно активных saturated
   клиентах: 4 612 запросов за две минуты, 0% ошибок, p95 682 ms; 12 клиентов превысили p95;
@@ -95,7 +98,7 @@ flowchart LR
   делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
   Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
   временного `r2.dev`; CDN contract зелёный, повторный Range-запрос подтверждён как cache HIT.
-- [x] Реализовать браузерные напоминания о намазе, чтении и повторении аятов: opt-in Web Push,
+- [x] Реализовать браузерные напоминания о намазе и повторении аятов: opt-in Web Push,
   Service Worker, VAPID, privacy-safe device subscription, отдельный consent на округлённую
   геолокацию для ежедневного серверного расчёта пяти намазов, локализованный deep link,
   indexed due queue с claim/retry и горизонтально масштабируемые Celery workers. Полностью
@@ -238,13 +241,15 @@ flowchart LR
   в production, clickjacking/MIME/referrer/permissions policy и HSTS; отдельный Telegram Mini
   App origin должен получить собственный `frame-ancestors`, а не ослаблять web policy.
 - [ ] Подключить внешний uptime/error monitoring, dashboards/alerts и offsite backup с
-  проверенным restore.
+  проверенным restore. Код offsite upload/full-download/restore, отдельный strict preflight,
+  dead-man heartbeat и systemd timers готовы; внешний bucket/token, monitor URL, timer activation
+  и доставленный тестовый alert остаются deployment evidence.
 - [x] Добавить SEO/metadata/robots/sitemap regression tests.
 - [x] Добавить блокирующие Lighthouse budgets для landing RU/EN/AR/TR и опубликованной суры
   RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
   transfer size и request count на standalone production build.
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
-  проходит те же 62 сценария, что быстрый dev/mock слой. Реальный staging smoke подтвердил
+  использует те же 80 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
   RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
   RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` временно активирован только на
   noindex staging; content-backed SSR/API и глубокая сура отвечают `200`. Полный browser journey
@@ -371,7 +376,10 @@ P1-этап начинается после готовности и запуск
 
 Цель: добавить обучение без изменения канонического Quran-домена.
 
-- [ ] Создать домен `memorization`: deck, card template, review schedule, attempt и progress.
+- [x] Создать базовый домен `memorization`: синхронизируемый план аятов, чтец, количество
+  повторений, session/attempt, самооценка, прогресс и сброс сегодняшних счётчиков.
+- [ ] Расширить базовый memorization flow до versioned deck/card templates и полноценного
+  интервального review schedule.
 - [ ] Поддержать карточки слов, аятов и диапазонов через versioned content references.
 - [ ] Зафиксировать источники морфологии/переводов и отдельный редакционный sign-off.
 - [ ] Реализовать интервальное повторение как версионированную стратегию, а не скрытую
@@ -390,7 +398,9 @@ matrix.
   categories, publication и withdrawal.
 - [x] Опубликовать полный versioned-каталог «Хисн аль-Муслим»: 267 карточек, 132 темы,
   языковые издания RU/EN/AR/TR, повторения и provenance источников.
-- [ ] Добавить bookmarks/collections/offline manifests для дуа через типизированные ссылки.
+- [x] Добавить account-synced избранные ду’а и единый кабинет с переходом к сохранённой карточке.
+- [ ] Добавить пользовательские collections и offline manifests для ду’а через типизированные
+  ссылки и общий durable outbox.
 - [ ] Создать `library` как read-model витрину, а не универсальное хранилище контента.
 - [ ] Добавить поиск с domain filters, locale и versioned index.
 - [ ] Подключать хадисы, книги и образовательные подборки отдельными доменами по тому же

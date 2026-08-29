@@ -1,6 +1,11 @@
 name: Web CI
 
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "services/web/**"

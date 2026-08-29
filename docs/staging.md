@@ -394,14 +394,31 @@ ssh -L 3001:127.0.0.1:3001 <USER>@<PUBLIC_VPS_IP>
 make staging-observability-down
 ```
 
-До первого release window выполнить:
+До первого release window выполнить локальный и offsite restore drill. Offsite bucket и token
+обязаны быть отдельными от публичного media bucket/token:
 
 ```bash
 make staging-backup
 # Первая команда печатает точный BACKUP_FILE; передайте его двум следующим:
 make staging-backup-verify BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
 make staging-restore-check BACKUP_FILE=/backups/quran_staging_TIMESTAMP.dump
+make staging-backup-offsite
+make staging-backup-offsite-verify
+make staging-backup-offsite-restore-check
 ```
+
+Одноразовая настройка отдельного private R2 bucket выполняется без вывода credentials:
+
+```bash
+make staging-backup-offsite-configure \
+  STAGING_BACKUP_R2_ACCOUNT_ID=<account-id> \
+  STAGING_BACKUP_R2_BUCKET=<private-backup-bucket>
+```
+
+Для budget host постоянный Prometheus/Grafana stack заменяется лёгким внешним dead-man
+heartbeat: локальная команда проверяет публичный site/readiness и свежесть backup, а внешний
+сервис поднимает тревогу при пропуске heartbeat. Настройка и systemd activation описаны в
+[release hardening record](release/release-hardening-2026-08-29.md).
 
 После этого по порядку запускаются public-read, audio-CDN и disposable auth/sync сценарии из
 [operations runbook](operations.md#staged-public-read-capacity-test). Число стабильных
@@ -495,7 +512,9 @@ Staging считается созданным, когда одновременн
 - на стандартном профиле Grafana доступна через SSH tunnel и alert delivery проверена; на
   budget-профиле сохранены health/metrics/load reports, а полный observability gate остаётся
   открытым до production-sized среды;
-- backup → verify → restore-check выполнены;
+- local backup → verify → restore-check и offsite upload → full-download → restore-check
+  выполнены; daily timer активен;
+- внешний dead-man monitor получил успешный heartbeat и проверенное тестовое оповещение;
 - integration E2E и пять capacity harness — public-read, audio, isolated sync, mixed и
   registered-user — дали сохранённые reports.
 

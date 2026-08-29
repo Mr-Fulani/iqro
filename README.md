@@ -47,6 +47,8 @@ smoke и staged read-only capacity harness описаны в
 [операционном runbook](docs/operations.md).
 Production Compose без hot reload и bind-mount исходников описан в
 [руководстве по production-запуску](docs/production.md).
+Текущее состояние offsite backup, внешнего heartbeat, GitHub CI и оставшиеся внешние gates
+зафиксированы в [release hardening record](docs/release/release-hardening-2026-08-29.md).
 Создание первой публичной тестовой среды от пустого VPS до DNS/TLS/R2 описано в
 [пошаговом staging runbook](docs/staging.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в

@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 DEFAULT_TEMPLATE = Path("services/backend/.env.production.example")
 DEFAULT_OUTPUT = Path("ops/staging/staging.env")
 NOT_CONFIGURED = "staging-r2-not-configured"
+BACKUP_NOT_CONFIGURED = "staging-backup-r2-not-configured"
 
 SECRET_KEYS = (
     "DATABASE_PASSWORD",
@@ -198,6 +199,15 @@ def build_overrides(
         "GATEWAY_PORT": "3000",
         "QURAN_MEDIA_DIR": "./media/staging",
         "QURAN_BACKUP_DIR": "./backups/staging",
+        "BACKUP_ENVIRONMENT": "staging",
+        "BACKUP_OBJECT_STORAGE_ENDPOINT_URL": f"https://{BACKUP_NOT_CONFIGURED}.invalid",
+        "BACKUP_OBJECT_STORAGE_BUCKET": BACKUP_NOT_CONFIGURED,
+        "BACKUP_OBJECT_STORAGE_ACCESS_KEY_ID": BACKUP_NOT_CONFIGURED,
+        "BACKUP_OBJECT_STORAGE_SECRET_ACCESS_KEY": BACKUP_NOT_CONFIGURED,
+        "BACKUP_OBJECT_STORAGE_REGION": "auto",
+        "BACKUP_OBJECT_STORAGE_ADDRESSING_STYLE": "path",
+        "BACKUP_OBJECT_STORAGE_PREFIX": "quran-platform/postgres",
+        "BACKUP_OBJECT_STORAGE_RETENTION_DAYS": "30",
         "RESTORE_CHECK_DATABASE": "quran_restore_check_staging",
         "STAGING_HOST": host,
         "STAGING_MEDIA_HOST": media_host,
