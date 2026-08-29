@@ -7,7 +7,7 @@ import { api, type DuaEntry } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
-import { FavoriteHeartIcon } from "./FavoriteHeartIcon";
+import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 
 function entryKey(entry: DuaEntry): string {
   return `${entry.collection}:${entry.source_number}`;
@@ -214,7 +214,7 @@ export function DuaEntryList({
                     aria-busy={favoriteBusy}
                     disabled={favoriteBusy || authLoading}
                   >
-                    <FavoriteHeartIcon active={favorite} />
+                    <FavoriteBookmarkIcon active={favorite} />
                   </button>
                 </div>
                 {!compact ? (

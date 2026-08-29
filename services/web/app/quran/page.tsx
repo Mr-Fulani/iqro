@@ -20,7 +20,7 @@ import {
   type PrayerReadingSessionConfig,
 } from "../../components/PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
-import { FavoriteHeartIcon } from "../../components/FavoriteHeartIcon";
+import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -870,13 +870,6 @@ function QuranContent() {
         if (cancelled) return;
         setMushafPage(pageData);
         setMushafPageLoading(false);
-        setSelectedMushafAyah((selectedAyah) => {
-          if (!selectedAyah) return null;
-          const isOnLoadedPage = pageData.regions.some(
-            (region) => `${region.ayah.surah}:${region.ayah.number}` === selectedAyah,
-          );
-          return isOnLoadedPage ? selectedAyah : null;
-        });
       })
       .catch(() => {
         if (cancelled) return;
@@ -963,11 +956,10 @@ function QuranContent() {
     const ayah = ayahs.find((item) => item.number === ayahNumber);
     if (!ayah) return;
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
-    pendingTextAyah.current = ayahKey;
-    setViewMode("text");
+    pendingTextAyah.current = viewMode === "text" ? ayahKey : null;
     setSelectedMushafAyah(ayahKey);
     if (ayah.pages.length > 0) setCurrentPage(ayah.pages[0]);
-  }, [ayahs, selectedSurah]);
+  }, [ayahs, selectedSurah, viewMode]);
 
   useEffect(() => {
     const ayahKey = pendingTextAyah.current;
@@ -1027,6 +1019,7 @@ function QuranContent() {
 
   const turnMushafPage = useCallback((direction: "next" | "previous") => {
     setPageTurnDirection(direction);
+    setSelectedMushafAyah(null);
     setCurrentPage((page) => direction === "next"
       ? Math.min(mushafPageCount, page + 1)
       : Math.max(1, page - 1));
@@ -1257,9 +1250,13 @@ function QuranContent() {
               id="surah-navigation"
               value={selectedSurah}
               onChange={(event) => {
-                setViewMode("text");
-                setSelectedMushafAyah(null);
-                setSelectedSurah(Number(event.target.value));
+                const targetSurah = Number(event.target.value);
+                const targetAyahKey = `${targetSurah}:1`;
+                const targetPage = surahs.find((item) => item.number === targetSurah)?.first_page;
+                pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
+                setSelectedMushafAyah(targetAyahKey);
+                if (targetPage) setCurrentPage(targetPage);
+                setSelectedSurah(targetSurah);
               }}
               disabled={surahs.length === 0}
             >
@@ -1286,9 +1283,10 @@ function QuranContent() {
                 min={1}
                 max={mushafPageCount}
                 value={currentPage}
-                onChange={(e) =>
-                  setCurrentPage(Math.min(mushafPageCount, Math.max(1, Number(e.target.value))))
-                }
+                onChange={(e) => {
+                  setSelectedMushafAyah(null);
+                  setCurrentPage(Math.min(mushafPageCount, Math.max(1, Number(e.target.value))));
+                }}
                 style={{ textAlign: "center", fontWeight: 700 }}
               />
               <button
@@ -1597,22 +1595,13 @@ function QuranContent() {
                             <span aria-hidden="true">🔁</span>
                           </button>
                           <button
-                            className="btn btn-sm ayah-icon-button ayah-speed-button"
+                            className={`btn btn-sm ayah-icon-button ayah-speed-button${audioSettings.playbackRate !== 1 ? " is-active" : ""}`}
                             type="button"
                             onClick={() => sendPlayerControl("cycle-speed")}
                             aria-label={`${t("player.speedAria")}: ${formatNumber(audioSettings.playbackRate)}×`}
                             title={`${t("player.speedAria")}: ${formatNumber(audioSettings.playbackRate)}×`}
                           >
                             {formatNumber(audioSettings.playbackRate)}×
-                          </button>
-                          <button
-                            className="btn btn-sm ayah-icon-button"
-                            type="button"
-                            onClick={() => void handleSavePosition(ayah.number)}
-                            aria-label={t("quran.markReadTitle")}
-                            title={t("quran.markReadTitle")}
-                          >
-                            <span aria-hidden="true">📍</span>
                           </button>
                           <button
                             className={`btn btn-sm ayah-icon-button quran-favorite-button${savedBookmark ? " is-saved" : ""}${bookmarkAnimating ? " is-animating" : ""}`}
@@ -1628,7 +1617,7 @@ function QuranContent() {
                             aria-busy={bookmarkBusy || !bookmarkStateReady}
                             disabled={bookmarkBusy || !bookmarkStateReady}
                           >
-                            <FavoriteHeartIcon active={Boolean(savedBookmark)} />
+                            <FavoriteBookmarkIcon active={Boolean(savedBookmark)} />
                           </button>
                         </div>
                       </div>

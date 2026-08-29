@@ -18,6 +18,7 @@ import { useI18n } from "../../lib/i18n-context";
 import { MessageKey } from "../../lib/i18n";
 import { localizedPath } from "../../lib/routing";
 import { DuaEntryList } from "../../components/DuaEntryList";
+import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
 
 type FavoriteFilter = "all" | "dua" | "quran";
 
@@ -644,7 +645,9 @@ export default function ProfilePage() {
                           className="profile-bookmark-link"
                           aria-label={t("profile.openSavedQuran", { title: bookmarkTitle(bm) })}
                         >
-                          <span className="ayah-badge" aria-hidden="true">🔖</span>
+                          <span className="ayah-badge profile-saved-icon" aria-hidden="true">
+                            <FavoriteBookmarkIcon active />
+                          </span>
                           <span className="profile-bookmark-copy">
                             <strong>{bookmarkTitle(bm)}</strong>
                             <span>

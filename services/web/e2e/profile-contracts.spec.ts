@@ -261,6 +261,8 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await expect(page.locator(".profile-favorites .dua-entry-list.is-compact")).toBeVisible();
   await expect(page.locator(".profile-favorites .dua-arabic")).toHaveCount(0);
   await expect(page.locator(".profile-favorites .dua-translation-block")).toHaveCount(0);
+  await expect(page.locator(".profile-favorites .favorite-bookmark-icon")).toHaveCount(2);
+  await expect(page.locator(".profile-favorites .favorite-heart-icon")).toHaveCount(0);
   await expect(page.getByText("Тестовая закладка")).toBeVisible();
   await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна" })).toHaveAttribute(
     "href",

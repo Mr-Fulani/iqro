@@ -2264,8 +2264,7 @@ input:focus, select:focus, textarea:focus {
   color: var(--primary-text);
 }
 
-.ayah-icon-button.is-active,
-.ayah-play-button {
+.ayah-icon-button.is-active {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -2276,33 +2275,33 @@ input:focus, select:focus, textarea:focus {
   overflow: visible;
 }
 
-.quran-favorite-button .favorite-heart-icon {
+.quran-favorite-button .favorite-bookmark-icon {
   width: 21px;
   height: 21px;
   transition: color 180ms ease, fill 180ms ease, transform 180ms ease;
 }
 
 .quran-favorite-button.is-saved {
-  border-color: #ed4956;
-  color: #ed4956;
-  background: #fff6f7;
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-subtle);
 }
 
 .quran-favorite-button.is-saved:hover,
 .quran-favorite-button.is-saved:focus-visible {
-  border-color: #d93645;
-  color: #d93645;
-  background: #ffecef;
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+  background: color-mix(in srgb, var(--primary-subtle) 72%, var(--primary) 28%);
 }
 
-.quran-favorite-button.is-animating .favorite-heart-icon {
+.quran-favorite-button.is-animating .favorite-bookmark-icon {
   animation: quran-favorite-pop 620ms cubic-bezier(0.2, 0.9, 0.3, 1.35);
 }
 
 .quran-favorite-button.is-animating::after {
   position: absolute;
   inset: 3px;
-  border: 2px solid #ed4956;
+  border: 2px solid var(--primary);
   border-radius: 50%;
   content: "";
   pointer-events: none;
@@ -2322,7 +2321,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .quran-favorite-button.is-animating .favorite-heart-icon,
+  .quran-favorite-button.is-animating .favorite-bookmark-icon,
   .quran-favorite-button.is-animating::after {
     animation: none;
   }
@@ -3802,6 +3801,12 @@ input:focus, select:focus, textarea:focus {
   transform: translateY(-1px);
 }
 
+.profile-saved-icon .favorite-bookmark-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+}
+
 .profile-bookmark-link:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--primary) 28%, transparent);
   outline-offset: 1px;
@@ -4187,10 +4192,10 @@ input:focus, select:focus, textarea:focus {
 .dua-favorite-action.is-active,
 .dua-favorite-action:hover,
 .dua-favorite-action:focus-visible {
-  border-color: #bb6372;
+  border-color: var(--primary);
   color: #fff;
-  background: #a94355;
-  box-shadow: 0 7px 18px rgb(169 67 85 / 22%);
+  background: var(--primary);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .dua-icon-action:focus-visible {
