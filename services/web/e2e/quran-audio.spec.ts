@@ -1116,6 +1116,98 @@ test("Quran favorite uses an animated bookmark and toggles the saved ayah", asyn
   expect(deleteRequested).toBe(true);
 });
 
+test("reading place retries a revision conflict and saves the visible ayah", async ({ page }) => {
+  const session = {
+    token_type: "Bearer",
+    access_token: "reading-place-access-token",
+    expires_in: 900,
+    access_expires_at: "2026-08-29T10:15:00Z",
+    user: {
+      id: "00000000-0000-7000-8000-000000000711",
+      status: "active",
+      preferred_locale: "ru",
+      email: "reader@example.com",
+    },
+    device: {
+      id: "00000000-0000-7000-8000-000000000712",
+      platform: "web",
+      locale: "ru",
+      app_version: "1.0.0",
+      bootstrap_generation: 1,
+    },
+  };
+  let revision = 4;
+  const putPayloads: Record<string, unknown>[] = [];
+  const readingPosition = () => ({
+    id: "00000000-0000-7000-8000-000000000713",
+    edition_code: "madani-hafs",
+    page_number: 128,
+    ayah: {
+      id: ayahs[0].id,
+      surah_number: 6,
+      ayah_number: 1,
+    },
+    progress_percent: "21.19",
+    revision,
+    last_read_at: "2026-08-29T09:00:00Z",
+    client_updated_at: "2026-08-29T09:00:00Z",
+  });
+
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: session }));
+  await page.route("**/api/v1/me/reading-position/madani-hafs", async (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: readingPosition() });
+    }
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    putPayloads.push(payload);
+    if (putPayloads.length === 1) {
+      expect(payload.base_revision).toBe(4);
+      revision = 5;
+      return route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        json: {
+          status: 409,
+          code: "sync_revision_conflict",
+          detail: "Sync conflict: revision_mismatch.",
+        },
+      });
+    }
+    expect(payload.base_revision).toBe(5);
+    revision = 6;
+    return route.fulfill({ json: {
+      ...readingPosition(),
+      page_number: Number(payload.page_number),
+      ayah: {
+        id: ayahs[1].id,
+        surah_number: Number(payload.surah_number),
+        ayah_number: Number(payload.ayah_number),
+      },
+    } });
+  });
+
+  await page.goto("/quran?surah=6");
+  await page.getByLabel(/Аят суры/).selectOption("2");
+  const saveButton = page.getByRole("button", { name: "📍 Запомнить место" });
+  await expect(saveButton).toHaveAttribute(
+    "title",
+    "Запомнить текущую страницу и аят, чтобы продолжить отсюда позже на любом устройстве",
+  );
+  await saveButton.click();
+
+  await expect(page.getByText(
+    "Место чтения запомнено: сура 6, страница 128",
+    { exact: true },
+  )).toBeVisible();
+  expect(putPayloads).toHaveLength(2);
+  expect(putPayloads[1]).toMatchObject({
+    page_number: 128,
+    surah_number: 6,
+    ayah_number: 2,
+    base_revision: 5,
+  });
+});
+
 test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {
   await page.goto("/quran?surah=6");
 
@@ -1419,6 +1511,7 @@ test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", asy
 });
 
 test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 600 });
   const nextSurah = {
     ...surah,
     id: "00000000-0000-7000-8000-000000000007",
@@ -1478,13 +1571,22 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text")).toContainText(
     "هُوَ ٱلَّذِى خَلَقَكُم",
   );
+  await expect.poll(() => page.locator("#quran-ayah-6-2").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top < window.innerHeight && rect.bottom > 0;
+  })).toBe(true);
 
   await page.getByRole("button", { name: /Мусхаф/ }).click();
   await page.getByLabel("Выбор суры (1–114)").selectOption("7");
   await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
   await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "151");
   await expect(page.getByText("Выбран аят 7:1", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Аят 7:1", exact: true })).toHaveClass(/is-selected/);
+  const selectedMushafAyah = page.getByRole("button", { name: "Аят 7:1", exact: true });
+  await expect(selectedMushafAyah).toHaveClass(/is-selected/);
+  await expect.poll(() => selectedMushafAyah.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top < window.innerHeight && rect.bottom > 0;
+  })).toBe(true);
 
   await page.getByLabel("Выбор суры (1–114)").selectOption("6");
   await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
