@@ -161,7 +161,13 @@ test("sync push drains the durable outbox and advances only the pull cursor", as
 
   await page.goto("/profile");
   await expect(page.getByText("Изменения ожидают отправки")).toBeVisible();
-  await page.getByRole("button", { name: /Офлайн-синхронизация/ }).click();
+  await expect(
+    page.getByText(
+      "Отправить локальные изменения и получить обновления аккаунта, включая изменения с других устройств.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Синхронизировать данные/ }).click();
   await expect(page.getByText(/отправлено: 1, получено изменений: 1/)).toBeVisible();
   expect(pushedPayload).toEqual({ operations: [operation] });
   const state = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "{}"), storageKey);
@@ -218,7 +224,7 @@ test("network failure queues a bookmark mutation for a later sync push", async (
   await expect(page.getByText(/Сеть недоступна. Изменение сохранено/)).toBeVisible();
   await expect(page.getByText("Изменения ожидают отправки")).toBeVisible();
 
-  await page.getByRole("button", { name: /Офлайн-синхронизация/ }).click();
+  await page.getByRole("button", { name: /Синхронизировать данные/ }).click();
   await expect(page.getByText(/отправлено: 1/)).toBeVisible();
   expect(patchAttempts).toBe(1);
   expect(pushedOperation).toMatchObject({
@@ -303,7 +309,7 @@ test("revision conflict is rebased onto the server entity with a new operation i
   });
 
   await page.goto("/profile");
-  await page.getByRole("button", { name: /Офлайн-синхронизация/ }).click();
+  await page.getByRole("button", { name: /Синхронизировать данные/ }).click();
   await expect(page.getByText(/отправлено: 1/)).toBeVisible();
   expect(attempts).toHaveLength(2);
   expect(attempts[0]).toMatchObject({ operation_id: original.operation_id, base_revision: 2 });
@@ -394,7 +400,7 @@ test("expired cursor completes every full-resync page before resuming incrementa
   });
 
   await page.goto("/profile");
-  await page.getByRole("button", { name: /Офлайн-синхронизация/ }).click();
+  await page.getByRole("button", { name: /Синхронизировать данные/ }).click();
   await expect(page.getByText(/полная сверка: 1 объектов/)).toBeVisible();
   const state = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "{}"), storageKey);
   expect(state.cursor).toBe(10);

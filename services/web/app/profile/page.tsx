@@ -391,14 +391,20 @@ export default function ProfilePage() {
           </div>
 
           <div className="responsive-actions">
-            <button
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => void handleSyncPull()}
-              disabled={loadingSync}
-            >
-              {loadingSync ? t("profile.syncing") : t("profile.offlineSync")}
-              {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
-            </button>
+            <div className="profile-sync-action">
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={() => void handleSyncPull()}
+                disabled={loadingSync}
+                aria-describedby="profile-sync-description"
+              >
+                {loadingSync ? t("profile.syncing") : t("profile.syncData")}
+                {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
+              </button>
+              <span id="profile-sync-description" className="profile-sync-help">
+                {t("profile.syncDescription")}
+              </span>
+            </div>
             {isGuest ? (
               <Link href={localizedPath(locale, "/login")} className="btn btn-primary btn-sm">
                 {t("auth.emailLogin")}
