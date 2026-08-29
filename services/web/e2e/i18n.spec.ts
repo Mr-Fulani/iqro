@@ -1,16 +1,45 @@
 import { expect, test } from "@playwright/test";
 
-async function expectSingleRowHeader(page: import("@playwright/test").Page) {
-  const centers = await page.locator(
-    ".app-header > .brand-block, .app-header > .app-menu, .app-header > .header-actions",
-  ).evaluateAll((elements) => elements.map((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.y + rect.height / 2;
-  }));
-  expect(Math.max(...centers) - Math.min(...centers)).toBeLessThan(8);
-  expect(await page.locator(".app-header").evaluate(
-    (element) => element.scrollWidth <= element.clientWidth,
-  )).toBe(true);
+async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page) {
+  const layout = await page.locator(".app-header").evaluate((header) => {
+    const box = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    };
+    return {
+      fits: header.scrollWidth <= header.clientWidth,
+      groups: [...header.children].map(box),
+      menu: box(header.querySelector(".app-menu")!),
+      links: [...header.querySelectorAll(".menu-link")].map(box),
+      actions: [...header.querySelectorAll(".header-actions > *")].map(box),
+    };
+  });
+  const overlaps = (
+    left: { left: number; right: number; top: number; bottom: number },
+    right: { left: number; right: number; top: number; bottom: number },
+  ) => Math.min(left.right, right.right) - Math.max(left.left, right.left) > 0.5
+    && Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top) > 0.5;
+
+  expect(layout.fits).toBe(true);
+  for (let left = 0; left < layout.groups.length; left += 1) {
+    for (let right = left + 1; right < layout.groups.length; right += 1) {
+      expect(overlaps(layout.groups[left], layout.groups[right])).toBe(false);
+    }
+  }
+  for (const link of layout.links) {
+    expect(link.left).toBeGreaterThanOrEqual(layout.menu.left - 1);
+    expect(link.right).toBeLessThanOrEqual(layout.menu.right + 1);
+  }
+  for (let left = 0; left < layout.links.length; left += 1) {
+    for (let right = left + 1; right < layout.links.length; right += 1) {
+      expect(overlaps(layout.links[left], layout.links[right])).toBe(false);
+    }
+  }
+  for (let left = 0; left < layout.actions.length; left += 1) {
+    for (let right = left + 1; right < layout.actions.length; right += 1) {
+      expect(overlaps(layout.actions[left], layout.actions[right])).toBe(false);
+    }
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -24,7 +53,7 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   const language = page.getByTestId("language-switcher");
   await expect(language).toHaveValue("ru");
   await expect(page.getByRole("heading", { name: "Вход в аккаунт" })).toBeVisible();
-  await expectSingleRowHeader(page);
+  await expectHeaderWithoutOverlap(page);
 
   await language.selectOption("en");
   await expect(page).toHaveURL("/en/login");
@@ -32,7 +61,7 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page).toHaveTitle("Account sign-in | Quran Platform");
   await expect(page.getByRole("heading", { name: "Account sign-in" })).toBeVisible();
-  await expectSingleRowHeader(page);
+  await expectHeaderWithoutOverlap(page);
 
   await page.reload();
   await expect(page.getByTestId("language-switcher")).toHaveValue("en");
@@ -44,17 +73,17 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page).toHaveTitle("تسجيل الدخول | Quran Platform");
   await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
-  await expectSingleRowHeader(page);
+  await expectHeaderWithoutOverlap(page);
 
   await page.getByTestId("language-switcher").selectOption("tr");
   await expect(page).toHaveURL("/tr/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "tr");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByRole("heading", { name: "Hesaba giriş" })).toBeVisible();
-  await expectSingleRowHeader(page);
+  await expectHeaderWithoutOverlap(page);
 });
 
-test("authenticated Russian header stays on one row with the logout action", async ({ page }) => {
+test("authenticated Russian header keeps navigation clear of account actions", async ({ page }) => {
   await page.unroute("**/api/web-auth/refresh");
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({
     json: {
@@ -79,13 +108,16 @@ test("authenticated Russian header stays on one row with the logout action", asy
       },
     },
   }));
-  await page.setViewportSize({ width: 875, height: 900 });
+  await page.setViewportSize({ width: 1250, height: 900 });
 
   await page.goto("/login");
 
   await expect(page.getByTestId("language-switcher")).toHaveValue("ru");
   await expect(page.locator(".app-header").getByRole("button", { name: "Выйти" })).toBeVisible();
-  await expectSingleRowHeader(page);
+  for (const width of [1250, 900, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectHeaderWithoutOverlap(page);
+  }
 });
 
 test("header logo replaces Home and the published Dua catalog follows Quran", async ({ page }) => {
