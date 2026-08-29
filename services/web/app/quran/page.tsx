@@ -98,6 +98,14 @@ type ReaderPreference = {
   tafsirSourceId: number | null;
 };
 
+type ReadingPlaceCandidate = {
+  editionCode: string;
+  pageNumber: number;
+  surahNumber?: number;
+  ayahNumber?: number;
+  requestId: number;
+};
+
 function translationPreferenceKey(locale: string): string {
   return `${TRANSLATION_PREFERENCE_KEY_PREFIX}:${locale}`;
 }
@@ -413,11 +421,68 @@ function QuranContent() {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
-  const [positionSaving, setPositionSaving] = useState(false);
+  const [readingPlaceCandidate, setReadingPlaceCandidate] = useState<ReadingPlaceCandidate | null>(null);
+  const readingPlaceRequestId = useRef(0);
+  const readingPlaceSaveChain = useRef<Promise<void>>(Promise.resolve());
+  const textScrollIntent = useRef(false);
   const [savedAyahBookmarks, setSavedAyahBookmarks] = useState<Record<string, Bookmark>>({});
   const [bookmarkStateReady, setBookmarkStateReady] = useState(false);
   const [bookmarkBusyKeys, setBookmarkBusyKeys] = useState<Set<string>>(new Set());
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
+
+  const queueReadingPlace = useCallback((candidate: Omit<ReadingPlaceCandidate, "editionCode" | "requestId">) => {
+    readingPlaceRequestId.current += 1;
+    setReadingPlaceCandidate({
+      ...candidate,
+      editionCode: selectedEdition,
+      requestId: readingPlaceRequestId.current,
+    });
+  }, [selectedEdition]);
+
+  useEffect(() => {
+    if (authLoading || readingPlaceCandidate === null) return;
+    const candidate = readingPlaceCandidate;
+    const timeout = window.setTimeout(() => {
+      const persistReadingPlace = async () => {
+        if (!api.getSession() && !(await loginGuest())) return;
+        const currentRevision = async () => {
+          try {
+            return (await api.getReadingPosition(candidate.editionCode)).revision;
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 404) return 0;
+            throw error;
+          }
+        };
+        const save = (baseRevision: number) => api.saveReadingPosition(candidate.editionCode, {
+          page_number: candidate.pageNumber,
+          ...(candidate.surahNumber !== undefined && candidate.ayahNumber !== undefined
+            ? {
+                surah_number: candidate.surahNumber,
+                ayah_number: candidate.ayahNumber,
+              }
+            : {}),
+          progress_percent: ((candidate.pageNumber / 604) * 100).toFixed(2),
+          base_revision: baseRevision,
+        });
+
+        let baseRevision = await currentRevision();
+        try {
+          await save(baseRevision);
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.code !== "sync_revision_conflict") throw error;
+          baseRevision = await currentRevision();
+          await save(baseRevision);
+        }
+      };
+
+      readingPlaceSaveChain.current = readingPlaceSaveChain.current
+        .catch(() => undefined)
+        .then(persistReadingPlace)
+        .catch(() => undefined);
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [authLoading, loginGuest, readingPlaceCandidate]);
 
   // Load Editions
   useEffect(() => {
@@ -976,6 +1041,11 @@ function QuranContent() {
   const navigateToDivision = useCallback((division: QuranDivision) => {
     const targetSurah = division.start_ayah.surah;
     const targetAyah = division.start_ayah.number;
+    queueReadingPlace({
+      pageNumber: division.start_page,
+      surahNumber: targetSurah,
+      ayahNumber: targetAyah,
+    });
     pendingMushafAyah.current = `${targetSurah}:${targetAyah}`;
     setViewMode("mushaf");
     setSelectedMushafAyah(`${targetSurah}:${targetAyah}`);
@@ -985,7 +1055,7 @@ function QuranContent() {
     }
     pendingNavigationPage.current = division.start_page;
     setSelectedSurah(targetSurah);
-  }, [selectedSurah]);
+  }, [queueReadingPlace, selectedSurah]);
 
   const navigateToAyah = useCallback((ayahNumber: number) => {
     const ayah = ayahs.find((item) => item.number === ayahNumber);
@@ -994,8 +1064,15 @@ function QuranContent() {
     pendingTextAyah.current = viewMode === "text" ? ayahKey : null;
     pendingMushafAyah.current = viewMode === "mushaf" ? ayahKey : null;
     setSelectedMushafAyah(ayahKey);
-    if (ayah.pages.length > 0) setCurrentPage(ayah.pages[0]);
-  }, [ayahs, selectedSurah, viewMode]);
+    if (ayah.pages.length > 0) {
+      setCurrentPage(ayah.pages[0]);
+      queueReadingPlace({
+        pageNumber: ayah.pages[0],
+        surahNumber: selectedSurah,
+        ayahNumber,
+      });
+    }
+  }, [ayahs, queueReadingPlace, selectedSurah, viewMode]);
 
   useEffect(() => {
     const ayahKey = pendingTextAyah.current;
@@ -1008,15 +1085,88 @@ function QuranContent() {
     });
   }, [ayahs, selectedMushafAyah, viewMode]);
 
+  useEffect(() => {
+    if (viewMode !== "text" || ayahs.length === 0) return;
+    let scrollTimeout: number | undefined;
+    const markScrollIntent = () => {
+      textScrollIntent.current = true;
+    };
+    const rememberVisibleAyah = () => {
+      if (!textScrollIntent.current) return;
+      window.clearTimeout(scrollTimeout);
+      scrollTimeout = window.setTimeout(() => {
+        const visibleAyah = ayahs
+          .map((ayah) => {
+            const element = document.getElementById(
+              `quran-ayah-${ayah.surah_number}-${ayah.number}`,
+            );
+            if (!element) return null;
+            const rect = element.getBoundingClientRect();
+            if (rect.bottom <= 0 || rect.top >= window.innerHeight) return null;
+            return {
+              ayah,
+              distance: Math.abs((rect.top + rect.bottom) / 2 - window.innerHeight / 2),
+            };
+          })
+          .filter((candidate): candidate is { ayah: Ayah; distance: number } => Boolean(candidate))
+          .sort((left, right) => left.distance - right.distance)[0]?.ayah;
+        const pageNumber = visibleAyah?.pages[0];
+        if (!visibleAyah || pageNumber === undefined) return;
+        setCurrentPage(pageNumber);
+        queueReadingPlace({
+          pageNumber,
+          surahNumber: visibleAyah.surah_number,
+          ayahNumber: visibleAyah.number,
+        });
+      }, 350);
+    };
+
+    window.addEventListener("wheel", markScrollIntent, { passive: true });
+    window.addEventListener("touchstart", markScrollIntent, { passive: true });
+    window.addEventListener("pointerdown", markScrollIntent, { passive: true });
+    window.addEventListener("keydown", markScrollIntent);
+    window.addEventListener("scroll", rememberVisibleAyah, { passive: true });
+    return () => {
+      window.clearTimeout(scrollTimeout);
+      window.removeEventListener("wheel", markScrollIntent);
+      window.removeEventListener("touchstart", markScrollIntent);
+      window.removeEventListener("pointerdown", markScrollIntent);
+      window.removeEventListener("keydown", markScrollIntent);
+      window.removeEventListener("scroll", rememberVisibleAyah);
+    };
+  }, [ayahs, queueReadingPlace, viewMode]);
+
+  const handleSelectMushafAyah = useCallback((ayahKey: string) => {
+    setSelectedMushafAyah(ayahKey);
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    if (!Number.isSafeInteger(surahNumber) || !Number.isSafeInteger(ayahNumber)) return;
+    const knownAyah = ayahs.find(
+      (ayah) => ayah.surah_number === surahNumber && ayah.number === ayahNumber,
+    );
+    queueReadingPlace({
+      pageNumber: knownAyah?.pages.find((page) => page === currentPage)
+        ?? knownAyah?.pages[0]
+        ?? currentPage,
+      surahNumber,
+      ayahNumber,
+    });
+  }, [ayahs, currentPage, queueReadingPlace]);
+
   const handlePlayAyah = useCallback((ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    const ayah = ayahs.find((item) => item.number === ayahNumber);
     ayahPlaybackRequestId.current += 1;
     setSelectedMushafAyah(ayahKey);
+    queueReadingPlace({
+      pageNumber: ayah?.pages[0] ?? currentPage,
+      surahNumber: selectedSurah,
+      ayahNumber,
+    });
     setPlayAyahRequest({
       requestId: ayahPlaybackRequestId.current,
       ayahKey,
     });
-  }, [selectedSurah]);
+  }, [ayahs, currentPage, queueReadingPlace, selectedSurah]);
 
   const sendPlayerControl = useCallback((action: AudioPlayerControlRequest["action"]) => {
     playerControlRequestId.current += 1;
@@ -1054,12 +1204,14 @@ function QuranContent() {
   ]);
 
   const turnMushafPage = useCallback((direction: "next" | "previous") => {
+    const nextPage = direction === "next"
+      ? Math.min(mushafPageCount, currentPage + 1)
+      : Math.max(1, currentPage - 1);
     setPageTurnDirection(direction);
     setSelectedMushafAyah(null);
-    setCurrentPage((page) => direction === "next"
-      ? Math.min(mushafPageCount, page + 1)
-      : Math.max(1, page - 1));
-  }, [mushafPageCount]);
+    setCurrentPage(nextPage);
+    queueReadingPlace({ pageNumber: nextPage });
+  }, [currentPage, mushafPageCount, queueReadingPlace]);
 
   const handleMushafPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const target = event.target as Element;
@@ -1078,88 +1230,6 @@ function QuranContent() {
     // the next page, while dragging it to the left returns to the previous one.
     turnMushafPage(deltaX > 0 ? "next" : "previous");
   }, [turnMushafPage]);
-
-  const handleSavePosition = async () => {
-    if (positionSaving) return;
-    if (!isLoggedIn) {
-      const res = await loginGuest();
-      if (!res) {
-        setFeedbackMessage({ text: t("quran.savePositionLoginError"), type: "err" });
-        return;
-      }
-    }
-
-    setPositionSaving(true);
-    try {
-      let positionAyah = viewMode === "text"
-        ? ayahs
-            .map((ayah) => {
-              const element = document.getElementById(
-                `quran-ayah-${ayah.surah_number}-${ayah.number}`,
-              );
-              if (!element) return null;
-              const rect = element.getBoundingClientRect();
-              if (rect.bottom <= 0 || rect.top >= window.innerHeight) return null;
-              return {
-                ayah,
-                distance: Math.abs((rect.top + rect.bottom) / 2 - window.innerHeight / 2),
-              };
-            })
-            .filter((candidate): candidate is { ayah: Ayah; distance: number } => Boolean(candidate))
-            .sort((left, right) => left.distance - right.distance)[0]?.ayah
-        : undefined;
-      if (!positionAyah && selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah)) {
-        const [surahNumber, ayahNumber] = selectedMushafAyah.split(":").map(Number);
-        positionAyah = ayahs.find(
-          (ayah) => ayah.surah_number === surahNumber && ayah.number === ayahNumber,
-        );
-      }
-      positionAyah ||= ayahs.find((ayah) => ayah.pages.includes(currentPage));
-      const pageNumber = viewMode === "text" && positionAyah?.pages[0]
-        ? positionAyah.pages[0]
-        : currentPage;
-      const progress = ((pageNumber / 604) * 100).toFixed(2);
-      const save = (baseRevision: number) => api.saveReadingPosition(selectedEdition, {
-        page_number: pageNumber,
-        ...(positionAyah
-          ? {
-              surah_number: positionAyah.surah_number,
-              ayah_number: positionAyah.number,
-            }
-          : {}),
-        progress_percent: progress,
-        base_revision: baseRevision,
-      });
-      const currentRevision = async () => {
-        try {
-          return (await api.getReadingPosition(selectedEdition)).revision;
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 404) return 0;
-          throw error;
-        }
-      };
-      let baseRevision = await currentRevision();
-      try {
-        await save(baseRevision);
-      } catch (error) {
-        if (!(error instanceof ApiError) || error.code !== "sync_revision_conflict") throw error;
-        baseRevision = await currentRevision();
-        await save(baseRevision);
-      }
-      setFeedbackMessage({
-        text: t("quran.positionSaved", {
-          surah: positionAyah?.surah_number ?? selectedSurah,
-          page: pageNumber,
-        }),
-        type: "ok",
-      });
-      setTimeout(() => setFeedbackMessage(null), 4000);
-    } catch (err) {
-      setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
-    } finally {
-      setPositionSaving(false);
-    }
-  };
 
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
@@ -1282,14 +1352,6 @@ function QuranContent() {
             >
               {t("quran.mushafView", { page: currentPage })}
             </button>
-            <button
-              className="btn btn-outline-primary"
-              onClick={() => void handleSavePosition()}
-              title={t("quran.savePositionTitle")}
-              disabled={positionSaving}
-            >
-              {positionSaving ? t("common.saving") : t("quran.savePosition")}
-            </button>
           </div>
         </div>
 
@@ -1353,7 +1415,14 @@ function QuranContent() {
                 pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
                 pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
                 setSelectedMushafAyah(targetAyahKey);
-                if (targetPage) setCurrentPage(targetPage);
+                if (targetPage) {
+                  setCurrentPage(targetPage);
+                  queueReadingPlace({
+                    pageNumber: targetPage,
+                    surahNumber: targetSurah,
+                    ayahNumber: 1,
+                  });
+                }
                 setSelectedSurah(targetSurah);
               }}
               disabled={surahs.length === 0}
@@ -1382,8 +1451,13 @@ function QuranContent() {
                 max={mushafPageCount}
                 value={currentPage}
                 onChange={(e) => {
+                  const nextPage = Math.min(
+                    mushafPageCount,
+                    Math.max(1, Number(e.target.value)),
+                  );
                   setSelectedMushafAyah(null);
-                  setCurrentPage(Math.min(mushafPageCount, Math.max(1, Number(e.target.value))));
+                  setCurrentPage(nextPage);
+                  queueReadingPlace({ pageNumber: nextPage });
                 }}
                 style={{ textAlign: "center", fontWeight: 700 }}
               />
@@ -1851,7 +1925,7 @@ function QuranContent() {
                     surahs={surahs}
                     selectedAyahKey={selectedMushafAyah}
                     playingAyahKey={playingMushafAyah}
-                    onSelectAyah={setSelectedMushafAyah}
+                    onSelectAyah={handleSelectMushafAyah}
                   />
                 </div>
               ) : null
@@ -1894,11 +1968,11 @@ function QuranContent() {
                           tabIndex={0}
                           aria-label={t("common.ayah", { ayah: key })}
                           data-ayah-key={key}
-                          onClick={() => setSelectedMushafAyah(key)}
+                          onClick={() => handleSelectMushafAyah(key)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              setSelectedMushafAyah(key);
+                              handleSelectMushafAyah(key);
                             }
                           }}
                         >

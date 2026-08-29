@@ -1116,7 +1116,7 @@ test("Quran favorite uses an animated bookmark and toggles the saved ayah", asyn
   expect(deleteRequested).toBe(true);
 });
 
-test("reading place retries a revision conflict and saves the visible ayah", async ({ page }) => {
+test("reading place is remembered automatically and retries a revision conflict", async ({ page }) => {
   const session = {
     token_type: "Bearer",
     access_token: "reading-place-access-token",
@@ -1187,19 +1187,12 @@ test("reading place retries a revision conflict and saves the visible ayah", asy
   });
 
   await page.goto("/quran?surah=6");
-  await page.getByLabel(/Аят суры/).selectOption("2");
-  const saveButton = page.getByRole("button", { name: "📍 Запомнить место" });
-  await expect(saveButton).toHaveAttribute(
-    "title",
-    "Запомнить текущую страницу и аят, чтобы продолжить отсюда позже на любом устройстве",
-  );
-  await saveButton.click();
+  await expect(page.getByRole("button", { name: "📍 Запомнить место" })).toHaveCount(0);
+  await page.waitForTimeout(1500);
+  expect(putPayloads).toHaveLength(0);
 
-  await expect(page.getByText(
-    "Место чтения запомнено: сура 6, страница 128",
-    { exact: true },
-  )).toBeVisible();
-  expect(putPayloads).toHaveLength(2);
+  await page.getByLabel(/Аят суры/).selectOption("2");
+  await expect.poll(() => putPayloads.length, { timeout: 7000 }).toBe(2);
   expect(putPayloads[1]).toMatchObject({
     page_number: 128,
     surah_number: 6,
