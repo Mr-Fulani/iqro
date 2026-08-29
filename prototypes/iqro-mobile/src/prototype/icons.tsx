@@ -7,7 +7,8 @@ type IconName =
   | "check" | "refresh" | "trash" | "globe" | "volume" | "skipBack"
   | "skipForward" | "list" | "shield" | "info" | "flame" | "calendar"
   | "spark" | "arch" | "droplet" | "sunrise" | "download" | "close"
-  | "more" | "layers" | "edit" | "logout" | "mail" | "device" | "wifiOff";
+  | "more" | "layers" | "edit" | "logout" | "mail" | "device" | "wifiOff"
+  | "share" | "gift" | "link" | "copy";
 
 const paths: Record<IconName, ReactNode> = {
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>,
@@ -56,6 +57,10 @@ const paths: Record<IconName, ReactNode> = {
   mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
   device: <><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></>,
   wifiOff: <><path d="m3 3 18 18M5 12a11 11 0 0 1 2.5-1.7M9.5 8.2A11 11 0 0 1 19 12M8.5 16a5 5 0 0 1 7 0M12 20h.01"/></>,
+  share: <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></>,
+  gift: <><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M12 9v12M3 13h18M8.5 9C6 9 5 7.7 5 6.4 5 5.1 6 4 7.4 4 9.3 4 12 9 12 9m3.5 0C18 9 19 7.7 19 6.4 19 5.1 18 4 16.6 4 14.7 4 12 9 12 9"/></>,
+  link: <><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"/></>,
+  copy: <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></>,
 };
 
 export function Icon({ name, size = 22, filled = false, ...props }: SVGProps<SVGSVGElement> & { name: IconName; size?: number; filled?: boolean }) {

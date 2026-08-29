@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconButton, Screen, TopBar } from "../components";
-import { alFatihaAyahs, reciters, surahs } from "../data";
+import { alBaqarahPageTwoAyahs, alFatihaAyahs, reciters, surahs } from "../data";
 import { Icon } from "../icons";
 import { l, number } from "../i18n";
 import { usePrototype } from "../store";
@@ -116,19 +116,121 @@ export function ReaderScreen() {
 }
 
 export function MushafScreen() {
-  const { state, setState, navigate } = usePrototype();
+  const { state, setState, navigate, goBack } = usePrototype();
   const locale = state.locale;
+  const [chromeVisible, setChromeVisible] = useState(false);
+  const [turnDirection, setTurnDirection] = useState<"next" | "previous" | null>(null);
+  const [currentPage, setCurrentPage] = useState(state.lastPosition.page === 2 ? 2 : 1);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const turnTimer = useRef<number | null>(null);
+  const pageSwapTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (turnTimer.current !== null) window.clearTimeout(turnTimer.current);
+    if (pageSwapTimer.current !== null) window.clearTimeout(pageSwapTimer.current);
+  }, []);
+
+  const turnPage = (direction: "next" | "previous") => {
+    if (turnDirection) return;
+    const targetPage = direction === "next" ? Math.min(2, currentPage + 1) : Math.max(1, currentPage - 1);
+    if (targetPage === currentPage) return;
+    setChromeVisible(false);
+    setTurnDirection(direction);
+    if (turnTimer.current !== null) window.clearTimeout(turnTimer.current);
+    if (pageSwapTimer.current !== null) window.clearTimeout(pageSwapTimer.current);
+    pageSwapTimer.current = window.setTimeout(() => {
+      setCurrentPage(targetPage);
+      setState((current) => ({
+        ...current,
+        selectedAyah: 1,
+        lastPosition: { surah: targetPage === 1 ? 1 : 2, ayah: 1, page: targetPage },
+      }));
+    }, 300);
+    turnTimer.current = window.setTimeout(() => setTurnDirection(null), 620);
+  };
+
+  const toggleChrome = () => setChromeVisible((visible) => !visible);
+  const pageTwo = currentPage === 2;
+  const pageAyahs = pageTwo ? alBaqarahPageTwoAyahs : alFatihaAyahs;
+  const pageSurah = pageTwo
+    ? l(locale, { ru: "Аль-Бакара", en: "Al-Baqara", ar: "البقرة", tr: "Bakara" })
+    : l(locale, { ru: "Аль-Фатиха", en: "Al-Faatiha", ar: "الفاتحة", tr: "Fâtiha" });
+  const pageLabel = l(locale, {
+    ru: `Страница ${currentPage}`,
+    en: `Page ${currentPage}`,
+    ar: `الصفحة ${number("ar", currentPage)}`,
+    tr: `Sayfa ${currentPage}`,
+  });
+
   return (
-    <Screen className="mushaf-screen" nav={false}>
-      <TopBar title={l(locale, { ru: "Страница 1", en: "Page 1", ar: "الصفحة ١", tr: "Sayfa 1" })} subtitle={l(locale, { ru: "Джуз 1 · Аль-Фатиха", en: "Juz 1 · Al-Faatiha", ar: "الجزء ١ · الفاتحة", tr: "Cüz 1 · Fâtiha" })} back action={<IconButton label="Open text reader" onClick={() => navigate("reader")}><Icon name="list" /></IconButton>} />
-      <div className="mushaf-controls"><button onClick={() => setState((current) => ({ ...current, mushafZoom: Math.max(.82, current.mushafZoom - .08) }))} aria-label="Zoom out">−</button><input type="range" min="82" max="132" value={Math.round(state.mushafZoom * 100)} onChange={(event) => setState((current) => ({ ...current, mushafZoom: Number(event.target.value) / 100 }))}/><button onClick={() => setState((current) => ({ ...current, mushafZoom: Math.min(1.32, current.mushafZoom + .08) }))} aria-label="Zoom in">+</button><span>{Math.round(state.mushafZoom * 100)}%</span></div>
-      <div className="mushaf-viewport">
-        <article className="mushaf-paper" style={{ transform: `scale(${state.mushafZoom})` }} aria-label="Mushaf page 1">
-          <div className="mushaf-border"><div className="mushaf-title" lang="ar" dir="rtl">سُورَةُ الفَاتِحَة</div><div className="mushaf-basmala" lang="ar" dir="rtl">{alFatihaAyahs[0]}</div><div className="mushaf-lines" lang="ar" dir="rtl">{alFatihaAyahs.slice(1).map((ayah, index) => <button key={ayah} className={state.selectedAyah === index + 2 ? "is-highlighted" : ""} onClick={() => setState((current) => ({ ...current, selectedAyah: index + 2, lastPosition: { surah: 1, ayah: index + 2, page: 1 } }))}>{ayah}<span>{number("ar", index + 2)}</span></button>)}</div><div className="mushaf-page-number">١</div></div>
+    <Screen className={`mushaf-screen ${chromeVisible ? "is-chrome-visible" : "is-immersive"}`} nav={false}>
+      <section
+        className="mushaf-reader"
+        aria-label={l(locale, { ru: "Полноэкранная страница Мусхафа", en: "Full-screen Mushaf page", ar: "صفحة المصحف بملء الشاشة", tr: "Tam ekran Mushaf sayfası" })}
+        tabIndex={0}
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest("[data-mushaf-control]")) return;
+          pointerStart.current = { x: event.clientX, y: event.clientY };
+        }}
+        onPointerUp={(event) => {
+          if ((event.target as HTMLElement).closest("[data-mushaf-control]")) return;
+          const start = pointerStart.current;
+          pointerStart.current = null;
+          if (!start) return;
+          const deltaX = event.clientX - start.x;
+          const deltaY = event.clientY - start.y;
+          if (Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+            turnPage(deltaX > 0 ? "next" : "previous");
+            return;
+          }
+          if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) toggleChrome();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight") turnPage("next");
+          if (event.key === "ArrowLeft") turnPage("previous");
+          if (event.key === "Enter" || event.key === " ") toggleChrome();
+        }}
+      >
+        <article className={`mushaf-full-page ${pageTwo ? "is-dense" : ""} ${turnDirection ? `is-turning-${turnDirection}` : ""}`} aria-label={`Mushaf page ${currentPage}`}>
+          <div className="mushaf-page-frame">
+            <div className="mushaf-page-heading" lang="ar" dir="rtl"><span>{pageTwo ? "٢" : "١"}</span><strong>{pageTwo ? "سُورَةُ البَقَرَة" : "سُورَةُ الفَاتِحَة"}</strong><span>{pageTwo ? "٥" : "٧"}</span></div>
+            <div className="mushaf-page-content" style={{ "--mushaf-zoom": pageTwo ? state.mushafZoom * .92 : state.mushafZoom } as React.CSSProperties}>
+              {!pageTwo ? <div className="mushaf-basmala" lang="ar" dir="rtl">{pageAyahs[0]}<span className={state.selectedAyah === 1 ? "is-highlighted" : ""}>{number("ar", 1)}</span></div> : null}
+              <div className="mushaf-lines" lang="ar" dir="rtl">{pageAyahs.slice(pageTwo ? 0 : 1).map((ayah, index) => {
+                const ayahNumber = index + (pageTwo ? 1 : 2);
+                return <span key={ayah} className={state.selectedAyah === ayahNumber ? "is-highlighted" : ""}>{ayah}<i>{number("ar", ayahNumber)}</i></span>;
+              })}</div>
+            </div>
+            <div className="mushaf-page-footer"><span>الحزب ١</span><strong>{number("ar", currentPage)}</strong><span>الجزء ١</span></div>
+          </div>
         </article>
-      </div>
-      <div className="swipe-hint"><Icon name="arrow"/><span>{l(locale, { ru: "Смахните для перехода между страницами", en: "Swipe between pages", ar: "اسحب للتنقل بين الصفحات", tr: "Sayfalar arasında kaydırın" })}</span><Icon name="chevron"/></div>
-      <div className="mushaf-bottom"><button onClick={() => setState((current) => ({ ...current, player: { ...current.player, active: true, playing: !current.player.playing, ayah: current.selectedAyah, reciterId: current.selectedReciter } }))}><Icon name={state.player.playing ? "pause" : "play"} filled /><span><strong>{locale === "ar" ? "الفاتحة" : "Аль-Фатиха"} · {number(locale, state.selectedAyah)}</strong><small>{l(locale, { ru: "Нажмите аят, чтобы выбрать", en: "Tap an ayah to select", ar: "اضغط على آية لتحديدها", tr: "Seçmek için ayete dokunun" })}</small></span></button><IconButton label="Quick jump" onClick={() => setState((current) => ({ ...current, previousRoute: "mushaf", route: "quran", modal: "quick-jump" }))}><Icon name="layers" /></IconButton></div>
+
+        {!chromeVisible ? <div className="mushaf-tap-hint" aria-hidden="true"><Icon name="more"/><span>{l(locale, { ru: "Коснитесь, чтобы показать меню", en: "Tap to show controls", ar: "اضغط لإظهار الأدوات", tr: "Menüyü göstermek için dokunun" })}</span></div> : null}
+
+        <header className="mushaf-reader-top" data-mushaf-control aria-hidden={!chromeVisible}>
+          <IconButton label="Back" onClick={goBack}><Icon name="arrow" /></IconButton>
+          <span><strong>{pageLabel}</strong><small>{l(locale, { ru: `Джуз 1 · ${pageSurah}`, en: `Juz 1 · ${pageSurah}`, ar: `الجزء ١ · ${pageSurah}`, tr: `Cüz 1 · ${pageSurah}` })}</small></span>
+          <IconButton label="Open text reader" onClick={() => navigate("reader")}><Icon name="list" /></IconButton>
+        </header>
+
+        <footer className="mushaf-reader-bottom" data-mushaf-control aria-hidden={!chromeVisible}>
+          <div className="mushaf-playback-row">
+            <button onClick={() => setState((current) => ({ ...current, player: { ...current.player, active: true, playing: !current.player.playing, ayah: current.selectedAyah, reciterId: current.selectedReciter } }))}><Icon name={state.player.playing ? "pause" : "play"} filled /><span><strong>{pageSurah} · {number(locale, state.selectedAyah)}</strong><small>{l(locale, { ru: "Прослушать текущую страницу", en: "Listen to this page", ar: "استمع إلى الصفحة الحالية", tr: "Bu sayfayı dinle" })}</small></span></button>
+            <IconButton label="Quick jump" onClick={() => setState((current) => ({ ...current, previousRoute: "mushaf", route: "quran", modal: "quick-jump" }))}><Icon name="layers" /></IconButton>
+          </div>
+          <div className="mushaf-reading-tools">
+            <button aria-label="Zoom out" onClick={() => setState((current) => ({ ...current, mushafZoom: Math.max(.88, current.mushafZoom - .06) }))}>−</button>
+            <input aria-label="Mushaf zoom" type="range" min="88" max="124" value={Math.round(state.mushafZoom * 100)} onChange={(event) => setState((current) => ({ ...current, mushafZoom: Number(event.target.value) / 100 }))}/>
+            <button aria-label="Zoom in" onClick={() => setState((current) => ({ ...current, mushafZoom: Math.min(1.24, current.mushafZoom + .06) }))}>+</button>
+            <span>{Math.round(state.mushafZoom * 100)}%</span>
+          </div>
+          <div className="mushaf-page-navigation">
+            <IconButton label="Previous page" onClick={() => turnPage("previous")}><Icon name="arrow" /></IconButton>
+            <span><strong>{number(locale, currentPage)}</strong><small>/ {number(locale, 604)}</small></span>
+            <IconButton label="Next page" onClick={() => turnPage("next")}><Icon name="chevron" /></IconButton>
+          </div>
+        </footer>
+      </section>
     </Screen>
   );
 }

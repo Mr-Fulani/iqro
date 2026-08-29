@@ -32,7 +32,7 @@ function isLocale(value: string | null): value is Locale {
 const routes: Route[] = [
   "onboarding-language", "onboarding-goal", "onboarding-norm", "home", "quran", "reader",
   "mushaf", "audio", "player", "plan", "prayer-reading", "prayer", "memorization", "dua",
-  "dua-topic", "dua-entry", "favorites", "more", "account", "settings",
+  "dua-topic", "dua-entry", "favorites", "more", "account", "share", "settings",
 ];
 
 function isRoute(value: string | null): value is Route {
@@ -105,6 +105,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         "dua-entry": "dua-topic",
         favorites: "more",
         account: "more",
+        share: "settings",
       };
       return {
         ...current,

@@ -278,6 +278,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.dua.apps.DuaConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
     "quran_backend.modules.website.apps.WebsiteConfig",
+    "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
 ]
 
 MIDDLEWARE = [
@@ -514,6 +515,9 @@ REST_FRAMEWORK: dict[str, Any] = {
             "300/hour",
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
+        "share_event": os.getenv("QURAN_SHARE_EVENT_RATE", "120/hour"),
+        "referral_link": os.getenv("QURAN_REFERRAL_LINK_RATE", "30/hour"),
+        "referral_redirect": os.getenv("QURAN_REFERRAL_REDIRECT_RATE", "300/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
         "prayer_profile_mutation": os.getenv(
             "QURAN_PRAYER_PROFILE_MUTATION_RATE",

@@ -22,6 +22,7 @@ export type Route =
   | "favorites"
   | "more"
   | "account"
+  | "share"
   | "settings";
 
 export type SystemState =

@@ -52,9 +52,10 @@ Production Flutter should use semantic text styles with `TextScaler`, test 100%,
 | Content card | neutral, emerald, sand, lavender; disabled future card uses `Soon` badge |
 | Segmented control | Text/Mushaf and filters; selected state uses label, fill, and contrast |
 | Ayah card | Arabic, ayah marker, bookmark, play, translation/footnote availability |
-| Mushaf page | full-page Arabic flow, zoom, selected ayah highlight, bottom controls |
+| Mushaf page | edge-to-edge immersive Arabic flow, tap-to-toggle chrome, swipe/page-turn transition, zoom, selected ayah highlight |
 | Compact player | content identity, reciter, play/pause; never overlaps bottom navigation |
 | Full player | artwork, progress, transport, repeat/range, speed, pause, timer |
+| Share and invite | native share CTA, copyable fallback URL, explicit local/remote source, disconnected referral state, backend-readiness list |
 | Toggle row | title, supporting copy, accessible switch state; prayer toggles are independent |
 | Bottom sheet | drag handle, title, scrollable body, safe-area padding |
 | Confirmation dialog | destructive title, consequence, cancel and explicit action |
@@ -70,6 +71,7 @@ Production Flutter should use semantic text styles with `TextScaler`, test 100%,
 5. Player continuity is global, but content-source changes stop incompatible playback.
 6. Bookmark/favorite controls expose pressed state to assistive technology.
 7. Prayer notification controls are separate per prayer; the after-prayer prompt is a sixth, separate rule.
+8. Mushaf reading starts with application chrome hidden. One tap toggles both control bars; a page turn returns to the distraction-free state.
 
 ## 7. State patterns
 

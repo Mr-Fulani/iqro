@@ -4,7 +4,7 @@
 
 IQRO mobile is a calm daily practice companion around the Quran. The product is organized around one primary loop: open the app, see the next meaningful action, complete a small reading or listening session, and understand the day's progress without navigating a content portal.
 
-The prototype is local and interactive. It validates information architecture, state transitions, responsive behavior, Arabic RTL, dark theme, and the fit with the existing backend. It does not introduce production APIs, real authentication, notifications, downloads, or analytics.
+The prototype is an interactive web product preview that can run locally or in a private deployment. It validates information architecture, state transitions, responsive behavior, Arabic RTL, dark theme, and the fit with the existing backend. It is not the released Flutter client and does not provide real authentication, notifications, or offline downloads; server-backed sharing remains an adapter boundary with a bundled fallback.
 
 ### Principles
 
@@ -70,7 +70,9 @@ More
 ├── Dua
 ├── Unified favorites
 ├── Account and devices
-└── Settings and system-state lab
+└── Settings
+    ├── Share and invite
+    └── system-state lab
 ```
 
 ## 3. Core journeys
@@ -94,8 +96,9 @@ More
 
 1. Switch the Quran catalog to the persisted `Mushaf` mode and choose a Mushaf edition.
 2. Open quick jump, enter surah and ayah (or page/juz), and confirm.
-3. The page opens with the target ayah visually selected.
-4. Zoom changes are independent from the selected ayah, and the current page/ayah position persists.
+3. The page opens as an edge-to-edge immersive reading surface with application chrome hidden and the target ayah visually selected.
+4. A single tap toggles the top and bottom reading controls. A horizontal swipe or page-arrow action hides the controls and runs the page-turn transition.
+5. Zoom changes are independent from the selected ayah, and the current page/ayah position persists.
 
 ### 3.4 Change reciter and start playback
 
@@ -144,8 +147,22 @@ The prototype uses local mock state, but its boundaries follow the current OpenA
 | Prayer schedule and reminders | `/api/v1/prayer/methods`, `/prayer/calculate`, `/me/prayer-profile`, `/me/reminders`, `/me/web-push` | Calculation/profile is cached by date, location parameters, method, timezone, and Asr rule. Native reminders are scheduled locally from synced rules; notification permission remains platform-owned. |
 | Memorization | `GET/PUT /api/v1/me/memorization`, `POST /me/memorization-sessions` | Range and current counters work locally. Queue completed sessions. Spaced repetition is explicitly future scope. |
 | Dua | `/api/v1/dua/collections`, `/dua/categories`, `/dua/entries`, `/dua/entries/{id}`, `/me/dua-favorites` | Cache the approved collection index and recently opened entries. Favorites are local-first with stable collection slug/source number identity. |
+| Share and invite | No production endpoint exists yet. The prototype uses a typed `ShareGateway`, a local fallback campaign, the native share sheet, and a local analytics outbox. | Basic sharing works without an account. Referral codes, rewards, short links, and authoritative metrics remain server-owned and must never be calculated by the client. |
 | Cross-device synchronization | `POST /api/v1/sync/push`, `GET /api/v1/sync/pull` | Persist an ordered outbox and pull cursor. Push first, pull until complete, acknowledge only server-confirmed mutations, handle expired cursors with full resync, and retain server tombstones. |
 | Support | `/api/v1/feedback/tickets` and message/close/reopen endpoints | Draft text can be local; ticket creation and status changes require online confirmation. |
+
+### Proposed share/referral contract — not implemented
+
+The client boundary is ready for a future backend adapter. Endpoint names remain a backend design decision, but the response models should cover:
+
+- share configuration: versioned campaign ID, locale, title, message, canonical download URL, optional expiry/TTL;
+- personal referral creation: opaque code and short URL bound to the authenticated account without exposing personal data;
+- referral summary: invited, qualified, and server-calculated reward balance;
+- event ingestion: idempotent event ID, campaign ID, action, result, timestamp, and coarse account mode;
+- short-link resolution and attribution performed on the server;
+- reward qualification and anti-abuse rules performed only on the server.
+
+The mobile client keeps a small event outbox so sharing never fails when analytics is offline. Remote copy must always fall back to a bundled localized default.
 
 ### Explicitly future, not simulated as complete
 
@@ -154,6 +171,7 @@ The prototype uses local mock state, but its boundaries follow the current OpenA
 - Full Quran/Mushaf offline packages: current endpoints support reading slices, not a signed package lifecycle.
 - Advanced spaced repetition: the current memorization contract does not define a full scheduler.
 - Lock-screen and native media controls: UI mapping is demonstrated, but implementation belongs to the Flutter platform layer.
+- Referral links, promo codes, invite rewards, server analytics, and dynamic short links: the client adapter exists, but no backend capability is claimed.
 
 ## 5. Local data and synchronization model
 

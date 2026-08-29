@@ -1,6 +1,6 @@
 # IQRO mobile UX prototype
 
-Local-only interactive product prototype for the future IQRO Flutter application. It does not call or modify the production backend, does not change the current web application, and is not configured as a released mobile client.
+Interactive product prototype for the future IQRO Flutter application. It remains isolated from the current web application and is not a released mobile client. It can run locally or be published as a private product preview; the bundled adapter keeps the experience usable without a backend connection.
 
 ## Run locally
 

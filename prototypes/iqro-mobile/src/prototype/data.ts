@@ -26,6 +26,15 @@ export const alFatihaAyahs = [
   "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
 ] as const;
 
+// Canonical Uthmani text for Madani Mushaf page 2 from the same dataset.
+export const alBaqarahPageTwoAyahs = [
+  "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ الٓمٓ",
+  "ذَٰلِكَ ٱلْكِتَٰبُ لَا رَيْبَ فِيهِ هُدًى لِّلْمُتَّقِينَ",
+  "ٱلَّذِينَ يُؤْمِنُونَ بِٱلْغَيْبِ وَيُقِيمُونَ ٱلصَّلَوٰةَ وَمِمَّا رَزَقْنَٰهُمْ يُنفِقُونَ",
+  "وَٱلَّذِينَ يُؤْمِنُونَ بِمَآ أُنزِلَ إِلَيْكَ وَمَآ أُنزِلَ مِن قَبْلِكَ وَبِٱلْـَٔاخِرَةِ هُمْ يُوقِنُونَ",
+  "أُو۟لَٰٓئِكَ عَلَىٰ هُدًى مِّن رَّبِّهِمْ وَأُو۟لَٰٓئِكَ هُمُ ٱلْمُفْلِحُونَ",
+] as const;
+
 export const reciters = [
   { id: "alafasy", ar: "مشاري راشد العفاسي", en: "Mishari Rashid Alafasy", ru: "Мишари Рашид аль-Афаси", tr: "Mishari Rashid Alafasy", initials: "MA" },
   { id: "husary", ar: "محمود خليل الحصري", en: "Mahmoud Khalil Al-Husary", ru: "Махмуд Халиль аль-Хусари", tr: "Mahmoud Khalil Al-Husary", initials: "MH" },

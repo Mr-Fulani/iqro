@@ -15,6 +15,7 @@ import {
 import { OnboardingGoal, OnboardingLanguage, OnboardingNorm } from "./screens/Onboarding";
 import { MemorizationScreen, PlanScreen, PrayerReadingScreen, PrayerScreen } from "./screens/Plan";
 import { MushafScreen, QuranScreen, ReaderScreen } from "./screens/Quran";
+import { ShareScreen } from "./features/share/ShareScreen";
 
 function ActiveScreen() {
   const { state } = usePrototype();
@@ -38,6 +39,7 @@ function ActiveScreen() {
     favorites: <FavoritesScreen />,
     more: <MoreScreen />,
     account: <AccountScreen />,
+    share: <ShareScreen />,
     settings: <SettingsScreen />,
   }[state.route];
 

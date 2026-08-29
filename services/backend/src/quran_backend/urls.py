@@ -12,6 +12,7 @@ configure_russian_admin()
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include("quran_backend.modules.share_referrals.urls")),
     path("api/v1/", include("quran_backend.modules.core.urls")),
     path("api/v1/", include("quran_backend.modules.accounts.user_urls")),
     path("api/v1/auth/", include("quran_backend.modules.accounts.urls")),

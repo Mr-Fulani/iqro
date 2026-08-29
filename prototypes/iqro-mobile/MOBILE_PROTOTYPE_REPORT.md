@@ -5,12 +5,12 @@
 - A standalone interactive mobile prototype under `prototypes/iqro-mobile`.
 - RU, EN, AR RTL, and TR UI; light and dark themes.
 - 360, 390, and 430 px responsive shells with safe-area handling.
-- Onboarding, Home, Quran catalog, Text reader, Mushaf, Audio, full/compact player, Plan, after-prayer reading, Prayer, Memorization, Dua, Favorites, Account, and Settings.
+- Onboarding, Home, Quran catalog, Text reader, Mushaf, Audio, full/compact player, Plan, after-prayer reading, Prayer, Memorization, Dua, Favorites, Account, Settings, and a backend-ready Share/Invite feature.
 - Persisted mock state and deterministic query parameters for walkthroughs and screenshots.
 - Explicit loading, offline, API failure, expired session, sync conflict, denied permission, missing audio, and missing offline content states.
 - Backend contract matrix and a Flutter-oriented architecture boundary.
 
-No backend or current web code was changed. No deployment was performed.
+The current web product was not changed. A separate backend-ready share/referral module now implements the documented server boundary, while the prototype continues to work from its bundled fallback when that API is unavailable. The prototype is suitable for a private product-preview deployment; it is not a released mobile client.
 
 ## What was inherited from the current web product
 
@@ -27,6 +27,7 @@ No backend or current web code was changed. No deployment was performed.
 - Text and Mushaf readers are first-class persisted modes with a mobile quick-jump sheet.
 - Plan and after-prayer check-ins are joined into one daily progress language.
 - Settings exposes mobile-owned concerns: language/RTL, theme, content defaults, permission states, offline copy, devices, and sync wording.
+- Share/Invite uses a typed gateway: native sharing and fallback copy work locally, while referral codes, rewards, remote copy, short links, and authoritative analytics remain replaceable server adapters.
 - Future modules are visible but disabled with `Soon`, protecting scope while preserving the product map.
 
 ## Suggested Flutter decomposition
@@ -51,6 +52,7 @@ apps/iqro_mobile
     ├── memorization/
     ├── dua/
     ├── favorites/
+    ├── share/           # native share port, campaign/referral gateway, event outbox
     └── account/
 ```
 
@@ -68,6 +70,7 @@ Each feature owns presentation state and use cases. Repositories expose domain o
 8. Decide guest-to-account merge policy and user-facing behavior when local and server progress differ.
 9. Approve privacy/retention rules for reading history, prayer profile/location inputs, device inventory, notification tokens, and analytics.
 10. Confirm that Books, Quizzes, and Q&A remain post-launch until content governance and backend contracts are ready.
+11. Approve the referral qualification rules, rewards, anti-abuse policy, dynamic-link provider, campaign ownership, and analytics retention before enabling server-backed invitations.
 
 ## Verification performed
 
