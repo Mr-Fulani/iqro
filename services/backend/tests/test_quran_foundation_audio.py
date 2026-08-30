@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -208,6 +209,42 @@ def test_imports_external_quran_foundation_audio_as_streaming_only(
     assert rendition.checksum_sha256 == ""
     assert rendition.external_url.endswith("/qdc/test/murattal/1.mp3")
     assert track.segments.count() == 2
+
+
+@pytest.mark.django_db
+def test_import_applies_curated_multilingual_reciter_profile_on_a_fresh_database(
+    quran_dataset: dict[str, Any],
+) -> None:
+    prepared = prepare_quran_foundation_recitation(
+        FakeQuranFoundationClient(),
+        reciter_id=7,
+        surah_numbers=[1],
+        quran_version=quran_dataset["version"],
+    )
+    prepared = replace(
+        prepared,
+        source_id=13,
+        name_ar="سعد الغامدي",
+        name_en="Saad al-Ghamdi",
+        name_ru="Саад аль-Гамди",
+    )
+
+    result = import_quran_foundation_recitation(
+        prepared,
+        quran_version=quran_dataset["version"],
+        content_version="2026.08.30-curated-profile",
+        environment_name="prelive",
+        publish=False,
+    )
+
+    reciter = result.recitation.reciter
+    assert reciter.name_tr == "Saad el-Gamidi"
+    assert reciter.biography_ar
+    assert reciter.biography_en
+    assert reciter.biography_ru
+    assert reciter.biography_tr
+    assert reciter.country_code == "SA"
+    assert reciter.profile_source_url == "https://quran.com/en/reciters/13"
 
 
 @pytest.mark.django_db

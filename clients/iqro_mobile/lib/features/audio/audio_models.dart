@@ -7,6 +7,11 @@ class Reciter {
     required this.nameAr,
     required this.nameEn,
     required this.nameRu,
+    required this.nameTr,
+    required this.biographyAr,
+    required this.biographyEn,
+    required this.biographyRu,
+    required this.biographyTr,
     this.portraitUrl,
     this.countryCode,
   });
@@ -18,6 +23,11 @@ class Reciter {
       nameAr: json['name_ar']?.toString() ?? '',
       nameEn: json['name_en']?.toString() ?? '',
       nameRu: json['name_ru']?.toString() ?? '',
+      nameTr: json['name_tr']?.toString() ?? '',
+      biographyAr: json['biography_ar']?.toString() ?? '',
+      biographyEn: json['biography_en']?.toString() ?? '',
+      biographyRu: json['biography_ru']?.toString() ?? '',
+      biographyTr: json['biography_tr']?.toString() ?? '',
       portraitUrl: json['portrait_url']?.toString(),
       countryCode: json['country_code']?.toString(),
     );
@@ -28,13 +38,26 @@ class Reciter {
   final String nameAr;
   final String nameEn;
   final String nameRu;
+  final String nameTr;
+  final String biographyAr;
+  final String biographyEn;
+  final String biographyRu;
+  final String biographyTr;
   final String? portraitUrl;
   final String? countryCode;
 
   String nameFor(String locale) {
     if (locale == 'ar' && nameAr.isNotEmpty) return nameAr;
     if (locale == 'ru' && nameRu.isNotEmpty) return nameRu;
+    if (locale == 'tr' && nameTr.isNotEmpty) return nameTr;
     return nameEn.isNotEmpty ? nameEn : nameAr;
+  }
+
+  String biographyFor(String locale) {
+    if (locale == 'ar' && biographyAr.isNotEmpty) return biographyAr;
+    if (locale == 'ru' && biographyRu.isNotEmpty) return biographyRu;
+    if (locale == 'tr' && biographyTr.isNotEmpty) return biographyTr;
+    return biographyEn;
   }
 
   String get initials {

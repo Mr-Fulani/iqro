@@ -532,10 +532,12 @@ export type Reciter = {
   name_ar: string;
   name_en: string;
   name_ru: string;
+  name_tr?: string;
   country_code: string;
   biography_ar?: string;
   biography_en?: string;
   biography_ru?: string;
+  biography_tr?: string;
   portrait_url?: string | null;
 };
 
@@ -887,7 +889,7 @@ export type MemorizationPlan = {
   start_ayah: MemorizationAyah;
   end_ayah: MemorizationAyah;
   recitation_id: string | null;
-  reciter: Pick<Reciter, "id" | "name_ar" | "name_en" | "name_ru"> | null;
+  reciter: Pick<Reciter, "id" | "name_ar" | "name_en" | "name_ru" | "name_tr"> | null;
   daily_repetitions: number;
   pause_seconds: number;
   timezone_name: string;

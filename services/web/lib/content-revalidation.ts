@@ -4,6 +4,7 @@ import { isEditionCode, isUuid } from "./public-content";
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const QURAN_ACTIONS = new Set(["published", "activated", "withdrawn"]);
 const AUDIO_ACTIONS = new Set(["published", "withdrawn"]);
+const RECITER_ACTIONS = new Set(["created", "updated"]);
 const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
 
@@ -22,6 +23,12 @@ type AudioContentChange = {
   version: string;
 };
 
+type ReciterContentChange = {
+  type: "audio.reciter.changed";
+  action: string;
+  reciter_id: string;
+};
+
 type SocialProfilesChange = {
   type: "site.social_profiles.changed";
   action: string;
@@ -37,6 +44,7 @@ type DuaContentChange = {
 export type ContentChange =
   | QuranContentChange
   | AudioContentChange
+  | ReciterContentChange
   | DuaContentChange
   | SocialProfilesChange;
 
@@ -81,6 +89,17 @@ export function parseContentChange(value: unknown): ContentChange | null {
       !VERSION_PATTERN.test(value.version)
     ) return null;
     return value as AudioContentChange;
+  }
+
+  if (value.type === "audio.reciter.changed") {
+    if (!hasExactKeys(value, ["type", "action", "reciter_id"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !RECITER_ACTIONS.has(value.action) ||
+      typeof value.reciter_id !== "string" ||
+      !isUuid(value.reciter_id)
+    ) return null;
+    return value as ReciterContentChange;
   }
 
   if (value.type === "site.social_profiles.changed") {
@@ -135,6 +154,17 @@ export function revalidateContentChange(change: ContentChange): void {
     expireTag("dua:catalog");
     revalidatePath("/[locale]/dua", "page");
     revalidatePath("/[locale]/dua/[category]", "page");
+    return;
+  }
+
+  if (change.type === "audio.reciter.changed") {
+    expireTag("audio:reciters");
+    expireTag(`audio:reciter:${change.reciter_id}`);
+    expireTag("audio:recitations");
+    revalidatePath("/[locale]/audio/reciters", "page");
+    revalidatePath("/[locale]/audio/reciters/[reciter]", "page");
+    revalidatePath("/[locale]/audio/recitations/[recitation]", "page");
+    revalidatePath("/sitemaps/audio/sitemap.xml");
     return;
   }
 

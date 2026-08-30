@@ -68,9 +68,13 @@ class Reciter(BaseModel):
     name_ar = models.CharField(max_length=255)
     name_en = models.CharField(max_length=255)
     name_ru = models.CharField(max_length=255)
+    name_tr = models.CharField(max_length=255, blank=True)
     biography_ar = models.TextField(blank=True)
     biography_en = models.TextField(blank=True)
     biography_ru = models.TextField(blank=True)
+    biography_tr = models.TextField(blank=True)
+    profile_source_url = models.URLField(max_length=1000, blank=True)
+    profile_source_checked_on = models.DateField(null=True, blank=True)
     country_code = models.CharField(max_length=2, blank=True)
     portrait_object_key = models.CharField(
         max_length=512,

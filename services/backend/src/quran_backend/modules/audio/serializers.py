@@ -30,13 +30,6 @@ def public_audio_url(object_key: str) -> str:
 
 class ReciterSummarySerializer(serializers.ModelSerializer[Reciter]):
     slug = serializers.CharField(source="code", read_only=True)
-
-    class Meta:
-        model = Reciter
-        fields = ("id", "slug", "name_ar", "name_en", "name_ru", "country_code")
-
-
-class ReciterDetailSerializer(ReciterSummarySerializer):
     portrait_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -47,10 +40,8 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
             "name_ar",
             "name_en",
             "name_ru",
+            "name_tr",
             "country_code",
-            "biography_ar",
-            "biography_en",
-            "biography_ru",
             "portrait_url",
         )
 
@@ -59,6 +50,25 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
         if not obj.portrait_object_key:
             return None
         return public_audio_url(obj.portrait_object_key)
+
+
+class ReciterDetailSerializer(ReciterSummarySerializer):
+    class Meta:
+        model = Reciter
+        fields = (
+            "id",
+            "slug",
+            "name_ar",
+            "name_en",
+            "name_ru",
+            "name_tr",
+            "country_code",
+            "biography_ar",
+            "biography_en",
+            "biography_ru",
+            "biography_tr",
+            "portrait_url",
+        )
 
 
 class QuranEditionAudioReferenceSerializer(serializers.ModelSerializer[QuranEditionVersion]):

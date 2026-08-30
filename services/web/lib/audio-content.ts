@@ -4,12 +4,14 @@ import type { Locale } from "./i18n";
 export function reciterName(reciter: Reciter, locale: Locale): string {
   if (locale === "ar") return reciter.name_ar;
   if (locale === "ru") return reciter.name_ru;
+  if (locale === "tr") return reciter.name_tr || reciter.name_en;
   return reciter.name_en;
 }
 
 export function reciterBiography(reciter: Reciter, locale: Locale): string {
   if (locale === "ar") return reciter.biography_ar || "";
   if (locale === "ru") return reciter.biography_ru || "";
+  if (locale === "tr") return reciter.biography_tr || reciter.biography_en || "";
   return reciter.biography_en || "";
 }
 

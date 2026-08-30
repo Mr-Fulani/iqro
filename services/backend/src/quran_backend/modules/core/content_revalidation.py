@@ -59,6 +59,16 @@ def enqueue_audio_content_change(
     )
 
 
+def enqueue_reciter_content_change(*, action: str, reciter_id: object) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "audio.reciter.changed",
+            "action": action,
+            "reciter_id": str(reciter_id),
+        }
+    )
+
+
 def enqueue_dua_content_change(
     *,
     action: str,

@@ -11,6 +11,7 @@ import {
   Surah,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant } from "../lib/reciter-catalog";
 import {
@@ -66,9 +67,7 @@ export function MemorizationWorkspace() {
     return surah.name_en;
   }, [locale]);
   const reciterName = useCallback((recitation: Recitation) => {
-    if (locale === "ar") return recitation.reciter.name_ar;
-    if (locale === "ru") return recitation.reciter.name_ru;
-    return recitation.reciter.name_en;
+    return localizedReciterName(recitation.reciter, locale);
   }, [locale]);
 
   const applyPlan = useCallback((next: MemorizationDashboard) => {

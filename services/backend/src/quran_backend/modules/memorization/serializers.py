@@ -66,6 +66,7 @@ class MemorizationReciterOutputSerializer(serializers.Serializer[Any]):
     name_ar = serializers.CharField()
     name_en = serializers.CharField()
     name_ru = serializers.CharField()
+    name_tr = serializers.CharField()
 
 
 class MemorizationPlanOutputSerializer(serializers.Serializer[Any]):

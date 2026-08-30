@@ -10,6 +10,7 @@ import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "..
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { groupRecitersByPerson } from "../lib/reciter-catalog";
+import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { rememberReciterPreference } from "../lib/reciter-preference";
 import { localizedPath } from "../lib/routing";
@@ -137,8 +138,7 @@ export default function HomePage() {
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
     locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
-  const reciterName = (reciter: Reciter) =>
-    locale === "ar" ? reciter.name_ar : locale === "ru" ? reciter.name_ru : reciter.name_en;
+  const reciterName = (reciter: Reciter) => localizedReciterName(reciter, locale);
   const reciterSecondaryName = (reciter: Reciter) => {
     const primary = reciterName(reciter);
     const secondary = locale === "ar" ? reciter.name_en : reciter.name_ar;

@@ -93,10 +93,12 @@ const reciter = {
   name_ar: "ماهر المعيقلي",
   name_en: "Maher al-Muaiqly",
   name_ru: "Махер аль-Муайкли",
+  name_tr: "Mahir el-Muaykli",
   country_code: "SA",
   biography_ar: "قارئ وإمام من المملكة العربية السعودية.",
   biography_en: "A Quran reciter and imam from Saudi Arabia.",
   biography_ru: "Чтец Корана и имам из Саудовской Аравии.",
+  biography_tr: "Suudi Arabistanlı Kur'an okuyucusu ve imamdır.",
   portrait_url: null,
 };
 

@@ -63,9 +63,11 @@ def published_audio_dataset(quran_dataset: dict[str, Any]) -> dict[str, Any]:
         name_ar="قارئ الاختبار",
         name_en="Test Reciter",
         name_ru="Тестовый чтец",
+        name_tr="Test Okuyucu",
         biography_ar="سيرة تجريبية",
         biography_en="Synthetic biography.",
         biography_ru="Тестовая биография.",
+        biography_tr="Test biyografisi.",
         country_code="SA",
         portrait_object_key="audio/reciters/test-reciter.webp",
     )
@@ -271,6 +273,7 @@ def _create_second_public_recitation(
 
 
 @pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
 def test_anonymous_clients_can_read_audio_catalog_and_details(
     published_audio_dataset: dict[str, Any],
 ) -> None:
@@ -288,10 +291,19 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
 
     assert reciter_list.status_code == 200
     assert reciter_list.json()["results"][0]["id"] == str(reciter.id)
+    assert reciter_list.json()["results"][0]["name_tr"] == "Test Okuyucu"
+    assert reciter_list.json()["results"][0]["portrait_url"] == (
+        "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
+    )
     assert reciter_detail.status_code == 200
     assert reciter_detail.json()["slug"] == "test-reciter"
+    assert reciter_detail.json()["name_tr"] == "Test Okuyucu"
+    assert reciter_detail.json()["biography_tr"] == "Test biyografisi."
     assert recitation_list.status_code == 200
     assert recitation_list.json()["results"][0]["id"] == str(recitation.id)
+    assert recitation_list.json()["results"][0]["reciter"]["portrait_url"] == (
+        "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
+    )
     assert recitation_detail.status_code == 200
     assert recitation_detail.json()["style"] == "murattal"
     assert recitation_detail.json()["source"]["url"] == ("https://example.test/sources/audio")

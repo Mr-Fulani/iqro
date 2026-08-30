@@ -209,6 +209,12 @@ test("published reciter and recitation routes render the licensed audio catalog 
     `/ru/audio/recitations/${recitationId}`,
   );
 
+  const turkishReciterResponse = await request.get(`/tr/audio/reciters/${reciterId}`);
+  expect(turkishReciterResponse.ok()).toBe(true);
+  const turkishReciterHtml = await turkishReciterResponse.text();
+  expect(turkishReciterHtml).toContain("Mahir el-Muaykli");
+  expect(turkishReciterHtml).toContain("Suudi Arabistanlı Kur'an okuyucusu ve imamdır.");
+
   const recitationResponse = await request.get(`/ru/audio/recitations/${recitationId}`);
   expect(recitationResponse.ok()).toBe(true);
   const recitationHtml = await recitationResponse.text();
@@ -391,6 +397,18 @@ test("content revalidation accepts only authenticated allowlisted events", async
   });
   expect(acceptedSocial.ok()).toBe(true);
   expect(await acceptedSocial.json()).toEqual({ accepted: true, type: socialEvent.type });
+
+  const reciterEvent = {
+    type: "audio.reciter.changed",
+    action: "updated",
+    reciter_id: "00000000-0000-7000-8000-000000000159",
+  };
+  const acceptedReciter = await request.post(endpoint, {
+    data: reciterEvent,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(acceptedReciter.ok()).toBe(true);
+  expect(await acceptedReciter.json()).toEqual({ accepted: true, type: reciterEvent.type });
 
   const duaEvent = {
     type: "dua.collection.changed",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Recitation, SurahPlayback } from "../lib/api";
+import { reciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant } from "../lib/reciter-catalog";
 import {
@@ -68,11 +69,7 @@ export function MushafAudioPlayer({
       : recitation.style === "mujawwad"
         ? t("audio.style.mujawwad")
         : t("audio.style.murattal");
-    const reciter = locale === "ar"
-      ? recitation.reciter.name_ar
-      : locale === "ru"
-        ? recitation.reciter.name_ru
-        : recitation.reciter.name_en;
+    const reciter = reciterName(recitation.reciter, locale);
     return `${reciter || recitation.reciter.name_en} · ${style}`;
   }, [locale, t]);
 

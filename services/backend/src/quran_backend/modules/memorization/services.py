@@ -318,6 +318,7 @@ def plan_snapshot(plan: MemorizationPlan) -> dict[str, Any]:
                 "name_ar": reciter.name_ar,
                 "name_en": reciter.name_en,
                 "name_ru": reciter.name_ru,
+                "name_tr": reciter.name_tr,
             }
             if reciter is not None
             else None

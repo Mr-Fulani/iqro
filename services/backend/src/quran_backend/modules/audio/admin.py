@@ -1,9 +1,15 @@
+# ruff: noqa: RUF001 -- Admin copy intentionally uses Cyrillic characters.
+
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, ClassVar, cast
 
+from django import forms
 from django.contrib import admin
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest
+from django.utils.html import format_html
 
 from quran_backend.modules.audio.models import (
     AudioRendition,
@@ -17,7 +23,125 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     Reciter,
 )
-from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
+from quran_backend.modules.audio.portrait_upload import (
+    ReciterPortraitUploadError,
+    upload_reciter_portrait,
+)
+from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.content_revalidation import (
+    enqueue_audio_content_change,
+    enqueue_reciter_content_change,
+)
+from quran_backend.modules.core.object_storage import ObjectStorageError
+
+logger = logging.getLogger(__name__)
+
+
+class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    portrait_upload = forms.FileField(
+        required=False,
+        label="Загрузить новый портрет",
+        help_text=(
+            "Выберите WebP, JPEG или PNG размером до 2 МБ. "
+            "Файл будет загружен в media-хранилище автоматически."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg,image/png"}),
+    )
+    remove_portrait = forms.BooleanField(
+        required=False,
+        label="Удалить текущий портрет",
+        help_text="Убирает портрет из профиля. Загруженный immutable-файл не удаляется из CDN.",
+    )
+
+    class Meta:
+        model = Reciter
+        fields = (
+            "code",
+            "name_ar",
+            "name_en",
+            "name_ru",
+            "name_tr",
+            "biography_ar",
+            "biography_en",
+            "biography_ru",
+            "biography_tr",
+            "profile_source_url",
+            "profile_source_checked_on",
+            "country_code",
+            "is_active",
+        )
+        labels: ClassVar[dict[str, str]] = {
+            "code": "Код чтеца",
+            "name_ar": "Имя на арабском",
+            "name_en": "Имя на английском",
+            "name_ru": "Имя на русском",
+            "name_tr": "Имя на турецком",
+            "biography_ar": "Биография на арабском",
+            "biography_en": "Биография на английском",
+            "biography_ru": "Биография на русском",
+            "biography_tr": "Биография на турецком",
+            "profile_source_url": "Публичный источник данных",
+            "profile_source_checked_on": "Источник проверен",
+            "country_code": "Код страны",
+            "is_active": "Показывать чтеца пользователям",
+        }
+        help_texts: ClassVar[dict[str, str]] = {
+            "code": "Постоянный уникальный код латиницей, например saad-al-ghamdi.",
+            "name_tr": "Если не заполнено, турецкий интерфейс покажет английское имя.",
+            "biography_tr": ("Если не заполнено, турецкий интерфейс покажет английскую биографию."),
+            "profile_source_url": (
+                "Ссылка для проверки биографических фактов. Тексты IQRO — самостоятельные краткие "
+                "описания, а не копии материала источника."
+            ),
+            "profile_source_checked_on": "Дата последней ручной проверки источника.",
+            "country_code": "Двухбуквенный ISO-код страны, например SA или EG.",
+        }
+
+    _uploaded_portrait_key: str | None = None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        if not self.instance.portrait_object_key:
+            self.fields["remove_portrait"].disabled = True
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        uploaded = cleaned.get("portrait_upload")
+        remove = cleaned.get("remove_portrait") is True
+        if uploaded and remove:
+            self.add_error(
+                "portrait_upload",
+                "Выберите загрузку нового портрета или удаление текущего, но не оба действия.",
+            )
+            return cleaned
+        if uploaded and not self.errors:
+            try:
+                result = upload_reciter_portrait(
+                    uploaded,
+                    reciter_code=str(cleaned.get("code") or ""),
+                )
+            except ReciterPortraitUploadError as exc:
+                self.add_error("portrait_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Reciter portrait upload failed")
+                self.add_error(
+                    "portrait_upload",
+                    "Не удалось загрузить портрет в media-хранилище. Повторите позже.",
+                )
+            else:
+                self._uploaded_portrait_key = result.object_key
+        return cleaned
+
+    def save(self, commit: bool = True) -> Reciter:
+        instance = cast("Reciter", super().save(commit=False))
+        if self.cleaned_data.get("remove_portrait") is True:
+            instance.portrait_object_key = ""
+        elif self._uploaded_portrait_key is not None:
+            instance.portrait_object_key = self._uploaded_portrait_key
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 class QuranFoundationReadOnlyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
@@ -96,10 +220,103 @@ class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(Reciter)
 class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("code", "name_ar", "name_en", "name_ru", "country_code", "is_active")
+    form = ReciterAdminForm
+    list_display = (
+        "portrait_available",
+        "code",
+        "name_ar",
+        "name_en",
+        "name_ru",
+        "name_tr",
+        "country_code",
+        "is_active",
+    )
     list_filter = ("is_active", "country_code")
-    search_fields = ("=code", "name_ar", "name_en", "name_ru")
-    readonly_fields = ("id", "created_at", "updated_at")
+    search_fields = ("=code", "name_ar", "name_en", "name_ru", "name_tr")
+    readonly_fields = (
+        "portrait_preview",
+        "portrait_storage_key",
+        "id",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Основная информация",
+            {
+                "fields": (
+                    "code",
+                    "name_ar",
+                    "name_en",
+                    "name_ru",
+                    "name_tr",
+                    "country_code",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Биографии",
+            {
+                "fields": (
+                    "biography_ar",
+                    "biography_en",
+                    "biography_ru",
+                    "biography_tr",
+                )
+            },
+        ),
+        (
+            "Источник данных",
+            {"fields": ("profile_source_url", "profile_source_checked_on")},
+        ),
+        (
+            "Портрет чтеца",
+            {"fields": ("portrait_preview", "portrait_upload", "remove_portrait")},
+        ),
+        (
+            "Служебная информация",
+            {
+                "classes": ("collapse",),
+                "fields": ("portrait_storage_key", "id", "created_at", "updated_at"),
+            },
+        ),
+    )
+
+    @admin.display(boolean=True, description="Портрет")
+    def portrait_available(self, obj: Reciter) -> bool:
+        return bool(obj.portrait_object_key)
+
+    @admin.display(description="Текущий портрет")
+    def portrait_preview(self, obj: Reciter | None) -> str:
+        if obj is None or not obj.portrait_object_key:
+            return "Портрет ещё не загружен"
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener noreferrer">'
+            '<img src="{}" alt="" width="160" height="160" '
+            'style="object-fit:cover;border-radius:18px" /></a>',
+            public_audio_url(obj.portrait_object_key),
+            public_audio_url(obj.portrait_object_key),
+        )
+
+    @admin.display(description="Адрес файла в хранилище (служебное поле)")
+    def portrait_storage_key(self, obj: Reciter | None) -> str:
+        if obj is None or not obj.portrait_object_key:
+            return "—"
+        return obj.portrait_object_key
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Reciter,
+        form: Any,
+        change: bool,
+    ) -> None:
+        super().save_model(request, obj, form, change)
+        enqueue_reciter_content_change(
+            action="updated" if change else "created",
+            reciter_id=obj.id,
+        )
 
 
 @admin.register(RecitationEdition)

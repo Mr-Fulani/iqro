@@ -28,6 +28,7 @@ from quran_backend.modules.audio.quran_foundation import (
     ALLOWED_AUDIO_HOSTS,
     QuranFoundationError,
 )
+from quran_backend.modules.audio.reciter_profiles import RECITER_PROFILES
 from quran_backend.modules.core.content_revalidation import enqueue_audio_content_change
 from quran_backend.modules.quran.models import Ayah, QuranEditionVersion
 
@@ -193,13 +194,20 @@ def import_quran_foundation_recitation(
     _ensure_riwayah_compatible(prepared.source_qirat, quran_version)
 
     reciter_code = f"qf-{prepared.source_id}-{slugify(prepared.name_en)[:48]}"
-    reciter, _ = Reciter.objects.get_or_create(
-        code=reciter_code,
-        defaults={
+    curated_profile = RECITER_PROFILES.get(reciter_code)
+    reciter_defaults = (
+        dict(curated_profile)
+        if curated_profile is not None
+        else {
             "name_ar": prepared.name_ar,
             "name_en": prepared.name_en,
             "name_ru": prepared.name_ru,
-        },
+            "name_tr": prepared.name_en,
+        }
+    )
+    reciter, _ = Reciter.objects.get_or_create(
+        code=reciter_code,
+        defaults=reciter_defaults,
     )
     quran_version_key = str(quran_version.pk).replace("-", "")[:12]
     recitation_code = f"qf-{prepared.source_id}-{prepared.style}-{quran_version_key}"

@@ -9,6 +9,7 @@ from django.test import override_settings
 from quran_backend.modules.core.content_revalidation import (
     enqueue_content_revalidation,
     enqueue_dua_content_change,
+    enqueue_reciter_content_change,
 )
 from quran_backend.modules.core.tasks import notify_web_content_change_task
 
@@ -117,6 +118,33 @@ def test_revalidation_event_is_enqueued_only_after_commit(
         assert queued == []
 
     assert queued == [event]
+
+
+@pytest.mark.django_db
+@override_settings(
+    WEB_CONTENT_REVALIDATION_URL=TEST_URL,
+    WEB_CONTENT_REVALIDATION_SECRET=TEST_SECRET,
+)
+def test_reciter_change_uses_a_scoped_revalidation_event(
+    django_capture_on_commit_callbacks: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queued: list[dict[str, str]] = []
+    monkeypatch.setattr(notify_web_content_change_task, "delay", queued.append)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        enqueue_reciter_content_change(
+            action="updated",
+            reciter_id="00000000-0000-7000-8000-000000000159",
+        )
+
+    assert queued == [
+        {
+            "type": "audio.reciter.changed",
+            "action": "updated",
+            "reciter_id": "00000000-0000-7000-8000-000000000159",
+        }
+    ]
 
 
 @pytest.mark.django_db

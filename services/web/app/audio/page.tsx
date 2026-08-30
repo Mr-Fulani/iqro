@@ -11,6 +11,7 @@ import {
 import type { Surah } from "../../lib/api";
 import { ReciterAvatar } from "../../components/ReciterAvatar";
 import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
+import { reciterName as localizedReciterName } from "../../lib/audio-content";
 import { useAudioPlayer } from "../../lib/audio-player-context";
 import { useI18n } from "../../lib/i18n-context";
 import {
@@ -143,14 +144,7 @@ export default function AudioPage() {
   const selectedReciter = reciters.find((r) => r.id === selectedReciterId);
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
   const reciterName = useCallback(
-    (reciter: Reciter) => {
-      const localizedName = locale === "ar"
-        ? reciter.name_ar
-        : locale === "ru"
-          ? reciter.name_ru
-          : reciter.name_en;
-      return localizedName || reciter.name_en || reciter.name_ar;
-    },
+    (reciter: Reciter) => localizedReciterName(reciter, locale) || reciter.name_ar,
     [locale],
   );
   const reciterSecondaryName = useCallback(

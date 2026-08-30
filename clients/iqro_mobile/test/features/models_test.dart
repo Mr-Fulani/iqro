@@ -50,6 +50,30 @@ void main() {
     expect(page.firstAyahReference, (surah: 2, ayah: 1));
   });
 
+  test('Reciter uses Turkish content with an English fallback', () {
+    final localized = Reciter.fromJson(<String, Object?>{
+      'id': 'reciter',
+      'slug': 'saad-al-ghamdi',
+      'name_ar': 'سعد الغامدي',
+      'name_en': 'Saad al-Ghamdi',
+      'name_ru': 'Саад аль-Гамди',
+      'name_tr': 'Saad el-Gamidi',
+      'biography_en': 'English biography',
+      'biography_tr': 'Türkçe biyografi',
+    });
+    final fallback = Reciter.fromJson(<String, Object?>{
+      'id': 'fallback',
+      'slug': 'fallback-reciter',
+      'name_en': 'English name',
+      'biography_en': 'English biography',
+    });
+
+    expect(localized.nameFor('tr'), 'Saad el-Gamidi');
+    expect(localized.biographyFor('tr'), 'Türkçe biyografi');
+    expect(fallback.nameFor('tr'), 'English name');
+    expect(fallback.biographyFor('tr'), 'English biography');
+  });
+
   test('Prayer method reads localized name and server defaults', () {
     final method = PrayerMethod.fromJson(<String, Object?>{
       'id': 'method-id',
