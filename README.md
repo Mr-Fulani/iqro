@@ -11,10 +11,10 @@
 
 - `services/backend` — Django API и фоновые задачи;
 - `services/web` — Next.js-клиент для Корана, Мусхафа, аудио и личного кабинета;
+- `clients/iqro_mobile` — нативный Flutter-клиент Android с local-first хранением;
 - `ops` — проверяемые сценарии мониторинга, резервного копирования, load/capacity и managed
   media CDN contracts;
 - `thoughts/shared/specs` — утверждённые продуктовые и технические спецификации;
-- мобильный Flutter-клиент будет добавлен отдельным workspace-пакетом;
 - Telegram Mini App будет использовать общий API и типизированные web/domain пакеты, но
   отдельные Telegram auth/deployment adapters.
 
@@ -25,6 +25,11 @@ Quran.Foundation, безопасную гостевую авторизацию, 
 и 132 тем, а также операторский workflow.
 На web доступны воспроизведение целой суры и поаятное воспроизведение непосредственно в
 Мусхафе.
+
+## Быстрый старт Flutter-клиента
+
+Инструкция по запуску на Android, сборке тестового APK и архитектуре находится в
+[`clients/iqro_mobile/README.md`](clients/iqro_mobile/README.md).
 
 ## Быстрый старт backend
 

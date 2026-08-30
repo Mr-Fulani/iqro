@@ -1,0 +1,500 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Turkish (`tr`).
+class AppLocalizationsTr extends AppLocalizations {
+  AppLocalizationsTr([String locale = 'tr']) : super(locale);
+
+  @override
+  String get appName => 'IQRO';
+
+  @override
+  String get navHome => 'Ana sayfa';
+
+  @override
+  String get navQuran => 'Kur\'an';
+
+  @override
+  String get navPlan => 'Plan';
+
+  @override
+  String get navAudio => 'Ses';
+
+  @override
+  String get navMore => 'Daha';
+
+  @override
+  String get back => 'Geri';
+
+  @override
+  String get open => 'Aç';
+
+  @override
+  String get save => 'Kaydet';
+
+  @override
+  String get cancel => 'İptal';
+
+  @override
+  String get close => 'Kapat';
+
+  @override
+  String get retry => 'Tekrar dene';
+
+  @override
+  String get continueLabel => 'Devam';
+
+  @override
+  String get done => 'Bitti';
+
+  @override
+  String get soon => 'Yakında';
+
+  @override
+  String get search => 'Ara';
+
+  @override
+  String get settings => 'Ayarlar';
+
+  @override
+  String get welcomeTitle => 'Huzurlu bir günlük pratik';
+
+  @override
+  String get welcomeBody =>
+      'Tek, özel ve odaklı uygulamada okuyun, dinleyin ve ritminizi koruyun.';
+
+  @override
+  String get chooseLanguage => 'Dil seçin';
+
+  @override
+  String get chooseGoal => 'Neye odaklanmak istersiniz?';
+
+  @override
+  String get goalReading => 'Günlük okuma';
+
+  @override
+  String get goalMemorization => 'Ezber';
+
+  @override
+  String get goalPrayer => 'Namaz desteği';
+
+  @override
+  String get goalDua => 'Dua';
+
+  @override
+  String get dailyNorm => 'Rahat bir günlük hedef seçin';
+
+  @override
+  String get minutes => 'dakika';
+
+  @override
+  String get pages => 'sayfa';
+
+  @override
+  String get ayahs => 'ayet';
+
+  @override
+  String get startAsGuest => 'Özel olarak başla';
+
+  @override
+  String get guestNote =>
+      'İlerlemeniz bu cihazda kaydedilir. Daha sonra hesap bağlayabilirsiniz.';
+
+  @override
+  String get greeting => 'Selamün aleyküm';
+
+  @override
+  String get continueReading => 'Okumaya devam et';
+
+  @override
+  String get read => 'Oku';
+
+  @override
+  String get savedAutomatically => 'Konum otomatik kaydedildi';
+
+  @override
+  String get nextPrayer => 'Sonraki namaz';
+
+  @override
+  String get yourRhythm => 'Ritminiz';
+
+  @override
+  String get today => 'Bugün';
+
+  @override
+  String get openPlan => 'Planı aç';
+
+  @override
+  String get calmPace => 'Sakin bir tempo';
+
+  @override
+  String get afterPrayer => 'Namaz sonrası';
+
+  @override
+  String get memorization => 'Ezber';
+
+  @override
+  String get recentReciter => 'Son kâri';
+
+  @override
+  String get duaOfDay => 'Günün duası';
+
+  @override
+  String get readingAsGuest => 'Misafir olarak okuyorsunuz';
+
+  @override
+  String get guestSyncHint => 'Başka cihazda devam etmek için giriş yapın';
+
+  @override
+  String get quranSubtitle => 'Medine Mushafı · Hafs';
+
+  @override
+  String get alFatiha => 'Fâtiha';
+
+  @override
+  String get textMode => 'Metin';
+
+  @override
+  String get mushafMode => 'Mushaf';
+
+  @override
+  String get selectedMushaf => 'Seçili Mushaf';
+
+  @override
+  String get continueSaved => 'Kayıtlı yerden devam et';
+
+  @override
+  String get surahs => 'Sureler';
+
+  @override
+  String get juz => 'Cüz';
+
+  @override
+  String get page => 'Sayfa';
+
+  @override
+  String get surah => 'Sure';
+
+  @override
+  String get ayah => 'Ayet';
+
+  @override
+  String get quickJump => 'Hızlı geçiş';
+
+  @override
+  String get navigation => 'Gezinme';
+
+  @override
+  String get meccan => 'Mekkî';
+
+  @override
+  String get medinan => 'Medenî';
+
+  @override
+  String get noQuranData => 'Kur\'an kataloğu kullanılamıyor';
+
+  @override
+  String get offlineUsingCache => 'Çevrimdışı — kayıtlı içerik gösteriliyor';
+
+  @override
+  String get readerSettings => 'Okuma ayarları';
+
+  @override
+  String get translation => 'Meal';
+
+  @override
+  String get tafsir => 'Tefsir';
+
+  @override
+  String get loadOnDemand => 'İstek üzerine yükle';
+
+  @override
+  String get translationUnavailable =>
+      'Bu dil için onaylı bir meal henüz bağlı değil.';
+
+  @override
+  String get tafsirUnavailable =>
+      'Tefsir, onaylı bir kaynak seçildikten sonra kullanılabilir.';
+
+  @override
+  String get bookmarkAdded => 'Favorilere eklendi';
+
+  @override
+  String get bookmarkRemoved => 'Yer imi kaldırıldı';
+
+  @override
+  String get listen => 'Dinle';
+
+  @override
+  String get tapForControls => 'Menüyü göstermek için dokunun';
+
+  @override
+  String get zoom => 'Yakınlaştırma';
+
+  @override
+  String get listenPage => 'Bu sayfayı dinle';
+
+  @override
+  String get audioTitle => 'Kur\'an\'ı dinleyin';
+
+  @override
+  String get chooseReciter => 'Kâri seçin';
+
+  @override
+  String get allReciters => 'Tüm kâriler';
+
+  @override
+  String get noAudio => 'Oynatılabilir ses yok';
+
+  @override
+  String get nowPlaying => 'Şimdi çalıyor';
+
+  @override
+  String get play => 'Oynat';
+
+  @override
+  String get pause => 'Duraklat';
+
+  @override
+  String get speed => 'Hız';
+
+  @override
+  String get range => 'Aralık';
+
+  @override
+  String get sleepTimer => 'Uyku zamanlayıcısı';
+
+  @override
+  String get repeat => 'Tekrar';
+
+  @override
+  String get repeatOff => 'Tekrar kapalı';
+
+  @override
+  String get repeatOn => 'Tekrar açık';
+
+  @override
+  String get off => 'Kapalı';
+
+  @override
+  String get backgroundPlayback => 'Arka plan ve kilit ekranı kontrolleri';
+
+  @override
+  String get dailyPlan => 'Günlük plan';
+
+  @override
+  String get dailyGoal => 'Günlük hedef';
+
+  @override
+  String get completed => 'Tamamlandı';
+
+  @override
+  String get remaining => 'Kalan';
+
+  @override
+  String get history => 'Geçmiş';
+
+  @override
+  String get manualEntry => 'Okuma ekle';
+
+  @override
+  String get addPages => 'Sayfa ekle';
+
+  @override
+  String get afterPrayerPlan => 'Namaz sonrası plan';
+
+  @override
+  String get prayer => 'Namaz vakitleri';
+
+  @override
+  String get calculationMethod => 'Hesaplama yöntemi';
+
+  @override
+  String get prayerLocationPrivacy =>
+      'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
+
+  @override
+  String get useMyLocation => 'Konumumu kullan';
+
+  @override
+  String get locationDenied =>
+      'Konum erişimi kapalı. Android ayarlarından açabilirsiniz.';
+
+  @override
+  String get prayerUnavailable => 'Namaz vakitleri henüz hesaplanmadı';
+
+  @override
+  String get fajr => 'İmsak';
+
+  @override
+  String get dhuhr => 'Öğle';
+
+  @override
+  String get asr => 'İkindi';
+
+  @override
+  String get maghrib => 'Akşam';
+
+  @override
+  String get isha => 'Yatsı';
+
+  @override
+  String get memorizationTitle => 'Ezber çalışması';
+
+  @override
+  String get repetitionTarget => 'Tekrar';
+
+  @override
+  String get again => 'Tekrar';
+
+  @override
+  String get hard => 'Zor';
+
+  @override
+  String get good => 'İyi';
+
+  @override
+  String get resetToday => 'Bugünü sıfırla';
+
+  @override
+  String get resetConfirm => 'Yalnızca bugünkü tekrar sonucu silinsin mi?';
+
+  @override
+  String get dua => 'Dua';
+
+  @override
+  String get duaSubtitle => 'Doğrulanmış Hisnü\'l-Müslim koleksiyonu';
+
+  @override
+  String get favorites => 'Favoriler';
+
+  @override
+  String get all => 'Tümü';
+
+  @override
+  String get emptyFavorites => 'Bir ayet veya duayı kaydedin; burada görünsün.';
+
+  @override
+  String get account => 'Hesap';
+
+  @override
+  String get personalProfile => 'Kişisel profil';
+
+  @override
+  String get signIn => 'Giriş yap';
+
+  @override
+  String get email => 'E-posta';
+
+  @override
+  String get verificationCode => 'Doğrulama kodu';
+
+  @override
+  String get sendCode => 'Kodu gönder';
+
+  @override
+  String get verify => 'Doğrula';
+
+  @override
+  String get signOut => 'Çıkış yap';
+
+  @override
+  String get devices => 'Cihazlar';
+
+  @override
+  String get syncNow => 'Şimdi eşitle';
+
+  @override
+  String get syncHint =>
+      'Yerel değişiklikleri gönderin ve diğer cihazlardan güncellemeleri alın.';
+
+  @override
+  String get language => 'Dil';
+
+  @override
+  String get theme => 'Tema';
+
+  @override
+  String get systemTheme => 'Sistem';
+
+  @override
+  String get lightTheme => 'Açık';
+
+  @override
+  String get darkTheme => 'Koyu';
+
+  @override
+  String get shareApp => 'IQRO\'yu paylaş';
+
+  @override
+  String get shareTitle => 'Sevdiklerinizi IQRO\'ya davet edin';
+
+  @override
+  String get shareBody =>
+      'Kur\'an\'ı okumak ve dinlemek için huzurlu bir yolu paylaşın.';
+
+  @override
+  String get shareButton => 'Uygulamayı paylaş';
+
+  @override
+  String get copyLink => 'Bağlantıyı kopyala';
+
+  @override
+  String get linkCopied => 'Bağlantı kopyalandı';
+
+  @override
+  String get referralSummary => 'Davetleriniz';
+
+  @override
+  String get invited => 'Davet edilen';
+
+  @override
+  String get qualified => 'Onaylanan';
+
+  @override
+  String get rewardBalance => 'Ödül bakiyesi';
+
+  @override
+  String get referralRequiresAccount =>
+      'Kişisel davet bağlantısı e-posta doğrulamasından sonra açılır.';
+
+  @override
+  String get remoteCopy => 'Kampanya metni IQRO tarafından yönetiliyor';
+
+  @override
+  String get bundledCopy => 'Yerleşik paylaşım metni kullanılıyor';
+
+  @override
+  String get networkError => 'IQRO\'ya ulaşılamadı';
+
+  @override
+  String get sessionExpired =>
+      'Oturumunuz sona erdi. Çevrimdışı çalışmalarınız güvende.';
+
+  @override
+  String get syncConflict => 'Diğer cihazınızda daha yeni ilerleme var.';
+
+  @override
+  String get loading => 'Yükleniyor…';
+
+  @override
+  String get offline => 'Çevrimdışı';
+
+  @override
+  String get moreTools => 'Pratik ve araçlar';
+
+  @override
+  String get books => 'Kitaplar';
+
+  @override
+  String get quizzes => 'Testler';
+
+  @override
+  String get support => 'Destek';
+
+  @override
+  String get privacy => 'Gizlilik';
+}
