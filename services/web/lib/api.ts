@@ -134,6 +134,54 @@ export type EmailVerificationResponse = GuestBootstrapResponse & {
 };
 
 // ---------------------------------------------------------------------------
+// Share & Referral Types
+// ---------------------------------------------------------------------------
+export type ShareCampaignConfig = {
+  key: string;
+  config_version: number;
+  updated_at: string;
+  locale: SupportedLocale;
+  title: string;
+  message: string;
+  cta_label: string;
+  canonical_download_url: string;
+  ios_url: string;
+  android_url: string;
+  referral_enabled: boolean;
+};
+
+export type ShareConfigResponse = {
+  available: boolean;
+  fallback_reason: string | null;
+  requested_locale: string;
+  used_fallback: boolean;
+  campaign: ShareCampaignConfig | null;
+};
+
+export type ReferralLink = {
+  campaign_key: string;
+  code: string;
+  short_url: string;
+  is_enabled: boolean;
+  created_at: string;
+};
+
+export type ReferralSummary = {
+  campaign_key: string;
+  invited: number;
+  qualified: number;
+  reward_balance: number;
+  pending_reward: number;
+};
+
+export type ShareEventInput = {
+  campaignKey: string;
+  referralCode?: string;
+  action: "open-system-share" | "copy-link" | "copy-code";
+  result: "shared" | "copied" | "dismissed" | "unavailable";
+};
+
+// ---------------------------------------------------------------------------
 // Quran Catalog & Mushaf Types
 // ---------------------------------------------------------------------------
 export type QuranEditionVersion = {
@@ -2588,6 +2636,40 @@ export class ApiClient {
     return this.request<FeedbackTicketDetail>(`/api/v1/feedback/tickets/${publicId}/reopen`, {
       method: "POST",
       body: JSON.stringify({ reason: reason || this.message("api.reopenedByUser") }),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Share & Referrals
+  // -------------------------------------------------------------------------
+  public async getShareConfig(locale: SupportedLocale = this.locale): Promise<ShareConfigResponse> {
+    const params = new URLSearchParams({ locale });
+    return this.request<ShareConfigResponse>(`/api/v1/share/config?${params}`);
+  }
+
+  public async getOrCreateReferralLink(campaignKey: string): Promise<ReferralLink> {
+    return this.request<ReferralLink>("/api/v1/me/referrals/links", {
+      method: "POST",
+      body: JSON.stringify({ campaign_key: campaignKey }),
+    });
+  }
+
+  public async getReferralSummary(campaignKey: string): Promise<ReferralSummary> {
+    const params = new URLSearchParams({ campaign: campaignKey });
+    return this.request<ReferralSummary>(`/api/v1/me/referrals/summary?${params}`);
+  }
+
+  public async trackShareEvent(input: ShareEventInput): Promise<void> {
+    await this.request("/api/v1/share/events", {
+      method: "POST",
+      body: JSON.stringify({
+        eventId: generateUuidV7(),
+        campaignId: input.campaignKey,
+        referral_code: input.referralCode || "",
+        action: input.action,
+        result: input.result,
+        occurredAt: new Date().toISOString(),
+      }),
     });
   }
 }

@@ -286,34 +286,34 @@ class ReferralLink(BaseModel):
 
 
 class ShareEventAction(models.TextChoices):
-    OPENED = "opened", "Opened"
-    SHARE_SHEET_OPENED = "share_sheet_opened", "Share sheet opened"
-    LINK_COPIED = "link_copied", "Link copied"
-    REFERRAL_CODE_COPIED = "referral_code_copied", "Referral code copied"
-    SHARE_COMPLETED = "share_completed", "Share completed"
-    REFERRAL_CODE_ENTERED = "referral_code_entered", "Referral code entered"
+    OPENED = "opened", "Открыл раздел приглашений"
+    SHARE_SHEET_OPENED = "share_sheet_opened", "Открыл системное меню «Поделиться»"
+    LINK_COPIED = "link_copied", "Скопировал ссылку"
+    REFERRAL_CODE_COPIED = "referral_code_copied", "Скопировал промокод"
+    SHARE_COMPLETED = "share_completed", "Отправил приглашение"
+    REFERRAL_CODE_ENTERED = "referral_code_entered", "Ввёл промокод"
 
 
 class ShareEventResult(models.TextChoices):
-    STARTED = "started", "Started"
-    SUCCEEDED = "succeeded", "Succeeded"
-    CANCELLED = "cancelled", "Cancelled"
-    FAILED = "failed", "Failed"
+    STARTED = "started", "Начато"
+    SUCCEEDED = "succeeded", "Успешно"
+    CANCELLED = "cancelled", "Отменено пользователем"
+    FAILED = "failed", "Ошибка"
 
 
 class ShareEventChannel(models.TextChoices):
-    SYSTEM = "system", "System share sheet"
-    COPY = "copy", "Copy"
+    SYSTEM = "system", "Системное меню устройства"
+    COPY = "copy", "Копирование"
     WHATSAPP = "whatsapp", "WhatsApp"
     TELEGRAM = "telegram", "Telegram"
-    EMAIL = "email", "Email"
-    SMS = "sms", "SMS"
-    OTHER = "other", "Other"
+    EMAIL = "email", "Электронная почта"
+    SMS = "sms", "Сообщение SMS"
+    OTHER = "other", "Другой канал"
 
 
 class AccountMode(models.TextChoices):
-    GUEST = "guest", "Guest"
-    VERIFIED = "verified", "Verified account"
+    GUEST = "guest", "Гостевой профиль"
+    VERIFIED = "verified", "Подтверждённый аккаунт"
 
 
 class ShareEvent(BaseModel):
@@ -414,8 +414,8 @@ class ReferralClick(BaseModel):
 
 
 class AttributionSource(models.TextChoices):
-    MANUAL_ADMIN = "manual_admin", "Manual admin review"
-    SIGNUP_HOOK = "signup_hook", "Verified signup hook"
+    MANUAL_ADMIN = "manual_admin", "Подтверждено сотрудником"
+    SIGNUP_HOOK = "signup_hook", "Подтверждено сервером при регистрации"
 
 
 class ReferralAttribution(BaseModel):
@@ -484,10 +484,10 @@ class ReferralAttribution(BaseModel):
 
 
 class QualificationStatus(models.TextChoices):
-    PENDING = "pending", "Pending review"
-    QUALIFIED = "qualified", "Qualified"
-    REJECTED = "rejected", "Rejected"
-    REVERSED = "reversed", "Reversed"
+    PENDING = "pending", "Ожидает проверки"
+    QUALIFIED = "qualified", "Подтверждено"
+    REJECTED = "rejected", "Отклонено"
+    REVERSED = "reversed", "Отменено после подтверждения"
 
 
 class ReferralQualification(BaseModel):
@@ -526,9 +526,9 @@ class ReferralQualification(BaseModel):
 
 
 class RewardStatus(models.TextChoices):
-    PENDING = "pending", "Pending approval"
-    APPROVED = "approved", "Approved"
-    REVERSED = "reversed", "Reversed"
+    PENDING = "pending", "Ожидает одобрения"
+    APPROVED = "approved", "Начислено"
+    REVERSED = "reversed", "Отменено"
 
 
 class ReferralReward(BaseModel):
@@ -621,9 +621,9 @@ class ReferralReward(BaseModel):
 
 
 class RewardAuditAction(models.TextChoices):
-    CREATED = "created", "Created pending"
-    APPROVED = "approved", "Approved"
-    REVERSED = "reversed", "Reversed"
+    CREATED = "created", "Создан ожидающий бонус"
+    APPROVED = "approved", "Бонус начислен"
+    REVERSED = "reversed", "Бонус отменён"
 
 
 class ReferralRewardAudit(BaseModel):

@@ -1,16 +1,17 @@
 # ruff: noqa: RUF001
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar, cast
 
 from django import forms
 from django.contrib import admin, messages
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpRequest
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
-from quran_backend.modules.accounts.models import UserStatus
+from quran_backend.modules.accounts.models import User, UserStatus
 from quran_backend.modules.share_referrals.exceptions import ReferralConflict
 from quran_backend.modules.share_referrals.models import (
     AttributionSource,
@@ -36,16 +37,119 @@ from quran_backend.modules.share_referrals.services import (
 )
 
 
+class ShareCampaignAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    class Meta:
+        model = ShareCampaign
+        fields = (
+            "key",
+            "internal_name",
+            "is_active",
+            "starts_at",
+            "ends_at",
+            "canonical_download_url",
+            "ios_url",
+            "android_url",
+            "short_link_base_url",
+            "referral_enabled",
+            "reward_points",
+            "priority",
+        )
+        labels: ClassVar[dict[str, str]] = {
+            "internal_name": "Название кампании в админке",
+            "key": "Код кампании",
+            "is_active": "Показывать пользователям",
+            "starts_at": "Начать показ",
+            "ends_at": "Закончить показ",
+            "canonical_download_url": "Куда ведёт приглашение",
+            "ios_url": "Ссылка на приложение в App Store",
+            "android_url": "Ссылка на приложение в Google Play",
+            "short_link_base_url": "Адрес коротких ссылок",
+            "referral_enabled": "Выдавать персональные ссылки и промокоды",
+            "reward_points": "Бонус пригласившему пользователю",
+            "priority": "Приоритет кампании",
+        }
+        help_texts: ClassVar[dict[str, str]] = {
+            "internal_name": "Видно только сотрудникам, например «Основная кампания IQRO».",
+            "key": (
+                "Короткий постоянный код латиницей, например app-invite. "
+                "После запуска кампании его не меняют."
+            ),
+            "is_active": (
+                "Включайте только после заполнения ссылки и текстов минимум "
+                "на русском и английском."
+            ),
+            "starts_at": "Оставьте пустым, если кампания должна начать работать сразу.",
+            "ends_at": "Оставьте пустым, если у кампании нет даты окончания.",
+            "canonical_download_url": (
+                "Безопасный HTTPS-адрес страницы скачивания или IQRO. "
+                "Все короткие ссылки ведут сюда."
+            ),
+            "ios_url": "Можно оставить пустым, пока приложение не опубликовано в App Store.",
+            "android_url": "Можно оставить пустым, пока приложение не опубликовано в Google Play.",
+            "short_link_base_url": (
+                "Например https://iqro.example/r. Если пусто, используется адрес текущего сайта."
+            ),
+            "referral_enabled": (
+                "Разрешает подтверждённым пользователям получать свою ссылку в личном кабинете."
+            ),
+            "reward_points": (
+                "Количество внутренних баллов после подтверждения приглашения. "
+                "Укажите 0, если бонусов нет."
+            ),
+            "priority": (
+                "Если одновременно работают несколько кампаний, показывается кампания "
+                "с большим числом."
+            ),
+        }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["key"].widget.attrs["placeholder"] = "app-invite"
+        self.fields["canonical_download_url"].widget.attrs["placeholder"] = (
+            "https://iqro.example/download"
+        )
+        self.fields["short_link_base_url"].widget.attrs["placeholder"] = "https://iqro.example/r"
+
+
+class ShareCampaignCopyAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    locale = forms.ChoiceField(
+        choices=(
+            ("ru", "Русский"),
+            ("en", "English"),
+            ("ar", "العربية"),
+            ("tr", "Türkçe"),
+        ),
+        label="Язык",
+        help_text="Для запуска заполните минимум русский и английский варианты.",
+    )
+
+    class Meta:
+        model = ShareCampaignCopy
+        fields = ("locale", "title", "message", "cta_label")
+        labels: ClassVar[dict[str, str]] = {
+            "title": "Заголовок блока",
+            "message": "Текст приглашения",
+            "cta_label": "Текст кнопки",
+        }
+        help_texts: ClassVar[dict[str, str]] = {
+            "title": "Например «Пригласить друзей в IQRO».",
+            "message": "Этот текст попадёт в системное меню «Поделиться».",
+            "cta_label": "Например «Поделиться». Можно оставить пустым.",
+        }
+
+
 class ShareCampaignCopyInline(admin.StackedInline):  # type: ignore[type-arg]
     model = ShareCampaignCopy
+    form = ShareCampaignCopyAdminForm
     extra = 1
     fields = ("locale", "title", "message", "cta_label")
-    verbose_name = "Перевод текста"
-    verbose_name_plural = "Тексты для языков RU / EN / AR / TR"
+    verbose_name = "Текст для одного языка"
+    verbose_name_plural = "Что увидят пользователи на разных языках"
 
 
 @admin.register(ShareCampaign)
 class ShareCampaignAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    form = ShareCampaignAdminForm
     list_display = (
         "internal_name",
         "key",
@@ -62,38 +166,55 @@ class ShareCampaignAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     readonly_fields = ("id", "config_version", "created_at", "updated_at", "download_link")
     fieldsets = (
         (
-            "Основное",
+            "1. Что это за кампания",
             {
+                "description": (
+                    "Создайте одну основную кампанию. Сначала заполните все поля и тексты ниже, "
+                    "затем включите показ пользователям."
+                ),
                 "fields": (
-                    "id",
                     "internal_name",
                     "key",
                     "is_active",
                     "starts_at",
                     "ends_at",
                     "priority",
-                )
+                ),
             },
         ),
         (
-            "Ссылки",
+            "2. Куда попадёт пользователь",
             {
+                "description": (
+                    "Основная ссылка обязательна. App Store и Google Play можно добавить позже "
+                    "без выпуска новой версии приложения."
+                ),
                 "fields": (
                     "canonical_download_url",
                     "download_link",
                     "ios_url",
                     "android_url",
                     "short_link_base_url",
-                )
+                ),
             },
         ),
         (
-            "Реферальная программа",
-            {"fields": ("referral_enabled", "reward_points")},
+            "3. Персональные приглашения и бонусы",
+            {
+                "description": (
+                    "После включения пользователь получит персональную ссылку в личном кабинете. "
+                    "Само нажатие «Поделиться» бонус не начисляет: приглашение "
+                    "сначала подтверждается."
+                ),
+                "fields": ("referral_enabled", "reward_points"),
+            },
         ),
         (
-            "Версионирование",
-            {"fields": ("config_version", "created_at", "updated_at")},
+            "Служебная информация",
+            {
+                "classes": ("collapse",),
+                "fields": ("id", "config_version", "created_at", "updated_at"),
+            },
         ),
     )
     inlines = (ShareCampaignCopyInline,)
@@ -128,14 +249,14 @@ class ReferralLinkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "code",
         "campaign",
-        "owner_id_safe",
+        "owner_account",
         "available_now",
         "click_count",
         "short_link",
         "created_at",
     )
     list_filter = ("campaign", "is_enabled", "revoked_at")
-    search_fields = ("=code", "=owner__id")
+    search_fields = ("=code", "owner__email")
     ordering = ("-created_at",)
     readonly_fields = (
         "id",
@@ -153,7 +274,7 @@ class ReferralLinkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "short_link",
     )
     fieldsets = (
-        ("Ссылка", {"fields": ("id", "campaign", "owner", "code", "short_link")}),
+        ("Персональная ссылка", {"fields": ("campaign", "owner", "code", "short_link")}),
         (
             "Состояние — меняется только действиями ниже",
             {
@@ -167,7 +288,10 @@ class ReferralLinkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 )
             },
         ),
-        ("Аудит", {"fields": ("created_at", "updated_at")}),
+        (
+            "Служебная информация",
+            {"classes": ("collapse",), "fields": ("id", "created_at", "updated_at")},
+        ),
     )
     actions = ("enable_selected", "disable_selected", "revoke_selected")
     list_select_related = ("campaign", "owner")
@@ -181,9 +305,9 @@ class ReferralLinkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def has_delete_permission(self, _request: HttpRequest, _obj: object | None = None) -> bool:
         return False
 
-    @admin.display(description="ID владельца", ordering="owner__id")
-    def owner_id_safe(self, obj: ReferralLink) -> str:
-        return str(obj.owner_id)
+    @admin.display(description="Кто приглашает", ordering="owner__email")
+    def owner_account(self, obj: ReferralLink) -> str:
+        return obj.owner.email or "Подтверждённый пользователь"
 
     @admin.display(boolean=True, description="Работает сейчас")
     def available_now(self, obj: ReferralLink) -> bool:
@@ -269,15 +393,80 @@ class ReferralClickAdmin(ImmutableAdmin):
     list_select_related = ("campaign", "referral_link")
 
 
+class ReferralLinkChoiceField(forms.ModelChoiceField):  # type: ignore[type-arg]
+    def label_from_instance(self, obj: ReferralLink) -> str:
+        owner = obj.owner.email or "Подтверждённый пользователь"
+        return f"{owner} — {obj.campaign.internal_name} — промокод {obj.code}"
+
+
+class VerifiedUserChoiceField(forms.ModelChoiceField):  # type: ignore[type-arg]
+    def label_from_instance(self, obj: User) -> str:
+        return obj.email or "Подтверждённый пользователь"
+
+
 class ReferralAttributionAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    referral_link = ReferralLinkChoiceField(
+        queryset=ReferralLink.objects.none(),
+        empty_label="Выберите, кто пригласил пользователя",
+        label="Кто пригласил",
+        help_text=(
+            "Показываются только работающие персональные ссылки. Если список пуст, сначала "
+            "включите кампанию, затем пользователь должен получить ссылку в личном кабинете."
+        ),
+    )
+    invitee = VerifiedUserChoiceField(
+        queryset=User.objects.none(),
+        empty_label="Выберите приглашённого пользователя",
+        label="Кого пригласили",
+        help_text=(
+            "Показываются только подтверждённые аккаунты с email. "
+            "Гостевые профили здесь не используются."
+        ),
+    )
+    approve_now = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Условия приглашения уже выполнены",
+        help_text=(
+            "Оставьте включённым, если приглашение проверено. Будет создан ожидающий бонус, "
+            "который затем можно одобрить в разделе «Бонусы за приглашения»."
+        ),
+    )
+
     class Meta:
         model = ReferralAttribution
-        fields = ("referral_link", "invitee", "idempotency_key")
+        fields = ("referral_link", "invitee")
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        now = timezone.now()
+        referral_link_field = cast(ReferralLinkChoiceField, self.fields["referral_link"])
+        invitee_field = cast(VerifiedUserChoiceField, self.fields["invitee"])
+        referral_link_field.queryset = (
+            ReferralLink.objects.select_related("campaign", "owner")
+            .filter(
+                is_enabled=True,
+                revoked_at__isnull=True,
+                campaign__is_active=True,
+                campaign__referral_enabled=True,
+            )
+            .filter(Q(campaign__starts_at__isnull=True) | Q(campaign__starts_at__lte=now))
+            .filter(Q(campaign__ends_at__isnull=True) | Q(campaign__ends_at__gt=now))
+            .order_by("owner__email", "campaign__internal_name")
+        )
+        invitee_field.queryset = User.objects.filter(
+            status=UserStatus.ACTIVE,
+            is_active=True,
+            email__isnull=False,
+        ).order_by("email")
 
     def clean(self) -> dict[str, Any]:
         cleaned = super().clean() or {}
         link = cleaned.get("referral_link")
         invitee = cleaned.get("invitee")
+        if link is not None:
+            self.instance.campaign = link.campaign
+            self.instance.source = AttributionSource.MANUAL_ADMIN
         if invitee is not None and invitee.status != UserStatus.ACTIVE:
             self.add_error("invitee", "Нужен подтверждённый активный аккаунт.")
         if link is not None and invitee is not None and link.owner_id == invitee.id:
@@ -289,21 +478,19 @@ class ReferralAttributionAdminForm(forms.ModelForm):  # type: ignore[type-arg]
 class ReferralAttributionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     form = ReferralAttributionAdminForm
     list_display = (
-        "id",
-        "campaign",
-        "referral_link",
-        "invitee_id_safe",
-        "source",
+        "campaign_name",
+        "inviter_account",
+        "invitee_account",
         "qualification_status",
         "attributed_at",
     )
-    list_filter = ("campaign", "source", "qualification__status")
-    search_fields = ("=id", "=referral_link__code", "=invitee__id", "=idempotency_key")
+    list_filter = ("campaign", "qualification__status")
+    search_fields = ("=referral_link__code", "referral_link__owner__email", "invitee__email")
     ordering = ("-attributed_at",)
     date_hierarchy = "attributed_at"
     list_select_related = (
         "campaign",
-        "referral_link",
+        "referral_link__owner",
         "invitee",
         "created_by",
         "qualification",
@@ -315,8 +502,60 @@ class ReferralAttributionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         obj: ReferralAttribution | None = None,
     ) -> tuple[str, ...]:
         if obj is None:
-            return ("id", "campaign", "source", "created_by", "created_at", "updated_at")
-        return tuple(field.name for field in ReferralAttribution._meta.fields)
+            return ()
+        return (
+            *tuple(field.name for field in ReferralAttribution._meta.fields),
+            "qualification_status",
+        )
+
+    def get_fieldsets(
+        self,
+        _request: HttpRequest,
+        obj: ReferralAttribution | None = None,
+    ) -> tuple[Any, ...]:
+        if obj is None:
+            return (
+                (
+                    "Подтвердить приглашение вручную",
+                    {
+                        "description": (
+                            "Используйте эту форму только после проверки регистрации. "
+                            "Выберите пригласившего по его ссылке и подтверждённый "
+                            "аккаунт нового пользователя. "
+                            "Служебный ключ операции создастся автоматически."
+                        ),
+                        "fields": ("referral_link", "invitee", "approve_now"),
+                    },
+                ),
+            )
+        return (
+            (
+                "Приглашение",
+                {
+                    "fields": (
+                        "campaign",
+                        "referral_link",
+                        "invitee",
+                        "qualification_status",
+                        "source",
+                        "attributed_at",
+                    )
+                },
+            ),
+            (
+                "Служебная информация",
+                {
+                    "classes": ("collapse",),
+                    "fields": (
+                        "id",
+                        "idempotency_key",
+                        "created_by",
+                        "created_at",
+                        "updated_at",
+                    ),
+                },
+            ),
+        )
 
     def has_delete_permission(self, _request: HttpRequest, _obj: object | None = None) -> bool:
         return False
@@ -325,7 +564,7 @@ class ReferralAttributionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         self,
         request: HttpRequest,
         obj: ReferralAttribution,
-        _form: ReferralAttributionAdminForm,
+        form: ReferralAttributionAdminForm,
         change: bool,
     ) -> None:
         if change:
@@ -344,31 +583,79 @@ class ReferralAttributionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         obj.created_at = attribution.created_at
         obj.updated_at = attribution.updated_at
         obj._state.adding = False
+        if form.cleaned_data.get("approve_now"):
+            qualify_referral(
+                attribution.qualification.id,
+                actor=request.user,  # type: ignore[arg-type]
+                reason="Приглашение проверено при ручном добавлении через Django Admin.",
+            )
+            self.message_user(
+                request,
+                "Приглашение подтверждено. Если для кампании задан бонус, "
+                "он создан со статусом «Ожидает одобрения».",
+                level=messages.SUCCESS,
+            )
 
-    @admin.display(description="ID приглашённого", ordering="invitee__id")
-    def invitee_id_safe(self, obj: ReferralAttribution) -> str:
-        return str(obj.invitee_id)
+    @admin.display(description="Кампания", ordering="campaign__internal_name")
+    def campaign_name(self, obj: ReferralAttribution) -> str:
+        return obj.campaign.internal_name
 
-    @admin.display(description="Квалификация", ordering="qualification__status")
+    @admin.display(description="Кто пригласил", ordering="referral_link__owner__email")
+    def inviter_account(self, obj: ReferralAttribution) -> str:
+        return obj.referral_link.owner.email or "Подтверждённый пользователь"
+
+    @admin.display(description="Кого пригласили", ordering="invitee__email")
+    def invitee_account(self, obj: ReferralAttribution) -> str:
+        return obj.invitee.email or "Подтверждённый пользователь"
+
+    @admin.display(description="Статус проверки", ordering="qualification__status")
     def qualification_status(self, obj: ReferralAttribution) -> str:
         return str(obj.qualification.get_status_display())
 
 
 @admin.register(ReferralQualification)
 class ReferralQualificationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("id", "referral_code", "status", "decided_at", "decided_by", "created_at")
+    list_display = (
+        "campaign_name",
+        "inviter_account",
+        "invitee_account",
+        "status",
+        "decided_at",
+        "created_at",
+    )
     list_filter = ("status", "attribution__campaign")
-    search_fields = ("=id", "=attribution__referral_link__code", "=attribution__invitee__id")
+    search_fields = (
+        "=attribution__referral_link__code",
+        "attribution__referral_link__owner__email",
+        "attribution__invitee__email",
+    )
     ordering = ("-created_at",)
     readonly_fields = tuple(field.name for field in ReferralQualification._meta.fields)
     actions = ("qualify_selected", "reject_selected", "reverse_selected")
-    list_select_related = ("attribution__referral_link", "decided_by")
+    list_select_related = (
+        "attribution__campaign",
+        "attribution__referral_link__owner",
+        "attribution__invitee",
+        "decided_by",
+    )
 
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
 
     def has_delete_permission(self, _request: HttpRequest, _obj: object | None = None) -> bool:
         return False
+
+    @admin.display(description="Кампания", ordering="attribution__campaign__internal_name")
+    def campaign_name(self, obj: ReferralQualification) -> str:
+        return obj.attribution.campaign.internal_name
+
+    @admin.display(description="Кто пригласил", ordering="attribution__referral_link__owner__email")
+    def inviter_account(self, obj: ReferralQualification) -> str:
+        return obj.attribution.referral_link.owner.email or "Подтверждённый пользователь"
+
+    @admin.display(description="Кого пригласили", ordering="attribution__invitee__email")
+    def invitee_account(self, obj: ReferralQualification) -> str:
+        return obj.attribution.invitee.email or "Подтверждённый пользователь"
 
     @admin.display(description="Промокод", ordering="attribution__referral_link__code")
     def referral_code(self, obj: ReferralQualification) -> str:
@@ -414,9 +701,9 @@ class ReferralQualificationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(ReferralReward)
 class ReferralRewardAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
-        "id",
-        "campaign",
-        "beneficiary_id_safe",
+        "campaign_name",
+        "beneficiary_account",
+        "invitee_account",
         "points",
         "status",
         "approved_at",
@@ -424,11 +711,19 @@ class ReferralRewardAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "created_at",
     )
     list_filter = ("campaign", "status")
-    search_fields = ("=id", "=beneficiary__id", "=qualification__attribution__referral_link__code")
+    search_fields = (
+        "beneficiary__email",
+        "qualification__attribution__invitee__email",
+        "=qualification__attribution__referral_link__code",
+    )
     ordering = ("-created_at",)
     readonly_fields = tuple(field.name for field in ReferralReward._meta.fields)
     actions = ("approve_selected", "reverse_selected")
-    list_select_related = ("campaign", "beneficiary", "qualification")
+    list_select_related = (
+        "campaign",
+        "beneficiary",
+        "qualification__attribution__invitee",
+    )
 
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
@@ -436,9 +731,20 @@ class ReferralRewardAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def has_delete_permission(self, _request: HttpRequest, _obj: object | None = None) -> bool:
         return False
 
-    @admin.display(description="ID получателя", ordering="beneficiary__id")
-    def beneficiary_id_safe(self, obj: ReferralReward) -> str:
-        return str(obj.beneficiary_id)
+    @admin.display(description="Кому начислить", ordering="beneficiary__email")
+    def beneficiary_account(self, obj: ReferralReward) -> str:
+        return obj.beneficiary.email or "Подтверждённый пользователь"
+
+    @admin.display(
+        description="За приглашение",
+        ordering="qualification__attribution__invitee__email",
+    )
+    def invitee_account(self, obj: ReferralReward) -> str:
+        return obj.qualification.attribution.invitee.email or "Подтверждённый пользователь"
+
+    @admin.display(description="Кампания", ordering="campaign__internal_name")
+    def campaign_name(self, obj: ReferralReward) -> str:
+        return obj.campaign.internal_name
 
     @admin.action(description="Одобрить выбранные ожидающие начисления")
     def approve_selected(self, request: HttpRequest, queryset: Any) -> None:

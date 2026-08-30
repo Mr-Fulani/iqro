@@ -16,6 +16,8 @@ from rest_framework.test import APIClient
 
 from quran_backend.modules.accounts.models import User, UserStatus
 from quran_backend.modules.share_referrals.admin import (
+    ReferralAttributionAdmin,
+    ReferralAttributionAdminForm,
     ReferralClickAdmin,
     ReferralQualificationAdmin,
     ReferralRewardAdmin,
@@ -25,6 +27,7 @@ from quran_backend.modules.share_referrals.admin import (
 from quran_backend.modules.share_referrals.exceptions import ReferralConflict
 from quran_backend.modules.share_referrals.models import (
     AttributionSource,
+    ReferralAttribution,
     ReferralClick,
     ReferralLink,
     ReferralQualification,
@@ -418,6 +421,51 @@ def test_admin_registers_operational_models_and_keeps_history_read_only() -> Non
     assert "reverse_selected" in qualification_admin.actions
     assert "approve_selected" in reward_admin.actions
     assert "reverse_selected" in reward_admin.actions
+
+
+@pytest.mark.django_db
+def test_admin_manual_invitation_form_uses_human_choices_and_generates_service_fields() -> None:
+    campaign = ShareCampaign.objects.create(
+        key="admin-invite",
+        internal_name="Основная кампания",
+        is_active=True,
+        canonical_download_url="https://iqro.example/download",
+        referral_enabled=True,
+    )
+    owner = _verified("owner@example.com")
+    invitee = _verified("invitee@example.com")
+    guest = User.objects.create_user()
+    operator = User.objects.create_superuser("operator@example.com")
+    link = ReferralLink.objects.create(campaign=campaign, owner=owner)
+
+    form = ReferralAttributionAdminForm(
+        data={
+            "referral_link": str(link.id),
+            "invitee": str(invitee.id),
+        }
+    )
+
+    assert set(form.fields) == {"referral_link", "invitee", "approve_now"}
+    assert guest not in form.fields["invitee"].queryset
+    assert owner in form.fields["invitee"].queryset
+    assert "owner@example.com" in form.fields["referral_link"].label_from_instance(link)
+    assert "Основная кампания" in form.fields["referral_link"].label_from_instance(link)
+    assert form.is_valid(), form.errors
+
+    request = RequestFactory().post("/admin/share_referrals/referralattribution/add/")
+    request.user = operator
+    model_admin = admin.site._registry[ReferralAttribution]
+    assert isinstance(model_admin, ReferralAttributionAdmin)
+    add_fields = model_admin.get_fieldsets(request, None)[0][1]["fields"]
+    assert add_fields == ("referral_link", "invitee", "approve_now")
+
+    obj = form.save(commit=False)
+    model_admin.save_model(request, obj, form, change=False)
+    saved = ReferralAttribution.objects.get(pk=obj.pk)
+    assert saved.idempotency_key is not None
+    assert saved.campaign == campaign
+    assert saved.created_by == operator
+    assert saved.qualification.status == "pending"
 
 
 def test_openapi_includes_share_referral_contracts() -> None:

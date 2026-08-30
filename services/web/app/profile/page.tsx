@@ -10,6 +10,9 @@ import {
   FeedbackTicket,
   FeedbackTicketDetail,
   ReadingPosition,
+  ReferralLink,
+  ReferralSummary,
+  ShareConfigResponse,
 } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
@@ -57,6 +60,7 @@ export default function ProfilePage() {
     isLoading: authLoading,
   } = useAuth();
   const { formatNumber, locale, t } = useI18n();
+  const userStatus = session?.user.status;
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -70,6 +74,12 @@ export default function ProfilePage() {
   const [confirmLogoutAll, setConfirmLogoutAll] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [shareConfig, setShareConfig] = useState<ShareConfigResponse | null>(null);
+  const [referralLink, setReferralLink] = useState<ReferralLink | null>(null);
+  const [referralSummary, setReferralSummary] = useState<ReferralSummary | null>(null);
+  const [loadingShare, setLoadingShare] = useState<boolean>(false);
+  const [creatingReferralLink, setCreatingReferralLink] = useState<boolean>(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const [bookmarkDraft, setBookmarkDraft] = useState<{
     id: string;
@@ -103,15 +113,42 @@ export default function ProfilePage() {
     }
   }, [locale]);
 
+  const loadShareData = useCallback(async () => {
+    setLoadingShare(true);
+    setShareNotice(null);
+    setReferralLink(null);
+    setReferralSummary(null);
+    try {
+      const config = await api.getShareConfig(locale);
+      setShareConfig(config);
+      if (
+        userStatus === "active" &&
+        config.available &&
+        config.campaign?.referral_enabled
+      ) {
+        try {
+          setReferralSummary(await api.getReferralSummary(config.campaign.key));
+        } catch {
+          // General sharing remains available when referral statistics cannot be loaded.
+        }
+      }
+    } catch {
+      setShareConfig(null);
+    } finally {
+      setLoadingShare(false);
+    }
+  }, [locale, userStatus]);
+
   // Load user data on mount / login
   useEffect(() => {
-    if (isLoggedIn && session?.user.status !== "pending_deletion") {
+    if (isLoggedIn && userStatus !== "pending_deletion") {
       void loadReadingData();
       void loadBookmarksData();
       void loadDuaFavoritesData();
       void loadTicketsData();
+      void loadShareData();
     }
-  }, [isLoggedIn, loadDuaFavoritesData, session?.user.status]);
+  }, [isLoggedIn, loadDuaFavoritesData, loadShareData, userStatus]);
 
   useEffect(() => {
     if (!session?.user.id) {
@@ -318,6 +355,79 @@ export default function ProfilePage() {
     }
   };
 
+  const trackShare = (
+    action: "open-system-share" | "copy-link" | "copy-code",
+    result: "shared" | "copied" | "dismissed" | "unavailable",
+  ) => {
+    const campaign = shareConfig?.campaign;
+    if (!campaign) return;
+    void api.trackShareEvent({
+      campaignKey: campaign.key,
+      referralCode: referralLink?.code,
+      action,
+      result,
+    }).catch(() => undefined);
+  };
+
+  const shareDestination = (): string =>
+    referralLink?.short_url ||
+    shareConfig?.campaign?.canonical_download_url ||
+    window.location.origin;
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareDestination());
+      setShareNotice(t("profile.shareCopied"));
+      trackShare("copy-link", "copied");
+    } catch {
+      setShareNotice(t("profile.shareCopyError"));
+      trackShare("copy-link", "unavailable");
+    }
+  };
+
+  const openShareMenu = async () => {
+    const campaign = shareConfig?.campaign;
+    if (!navigator.share) {
+      trackShare("open-system-share", "unavailable");
+      await copyShareLink();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: campaign?.title || t("profile.shareFallbackTitle"),
+        text: campaign?.message || t("profile.shareFallbackMessage"),
+        url: shareDestination(),
+      });
+      setShareNotice(t("profile.shareSent"));
+      trackShare("open-system-share", "shared");
+    } catch (shareError) {
+      const dismissed = shareError instanceof DOMException && shareError.name === "AbortError";
+      trackShare("open-system-share", dismissed ? "dismissed" : "unavailable");
+      if (!dismissed) setShareNotice(t("profile.shareCopyError"));
+    }
+  };
+
+  const createReferralLink = async () => {
+    const campaign = shareConfig?.campaign;
+    if (!campaign) return;
+    setCreatingReferralLink(true);
+    setShareNotice(null);
+    try {
+      const link = await api.getOrCreateReferralLink(campaign.key);
+      setReferralLink(link);
+      setShareNotice(t("profile.shareLinkReady"));
+      try {
+        setReferralSummary(await api.getReferralSummary(campaign.key));
+      } catch {
+        // The link is ready even if statistics are temporarily unavailable.
+      }
+    } catch {
+      setShareNotice(t("profile.shareLinkError"));
+    } finally {
+      setCreatingReferralLink(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="surface" style={{ maxWidth: 640, margin: "24px auto", textAlign: "center" }}>
@@ -345,6 +455,8 @@ export default function ProfilePage() {
   }
 
   const isGuest = session?.user.status === "guest";
+  const shareCampaign = shareConfig?.available ? shareConfig.campaign : null;
+  const canUseReferrals = !isGuest && Boolean(shareCampaign?.referral_enabled);
   const duaFavoriteEntries = duaFavorites.flatMap((favorite) =>
     favorite.entry ? [favorite.entry] : [],
   );
@@ -376,22 +488,33 @@ export default function ProfilePage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Account Info Header */}
-      <section className="surface">
-        <div className="surface-head">
+      <section className="surface profile-account-overview">
+        <div className="profile-account-heading">
+          <span className="profile-account-avatar" aria-hidden="true">👤</span>
           <div>
             <p className="eyebrow">{t("profile.eyebrow")}</p>
             <h1 className="surface-title">{t("profile.title")}</h1>
             <p className="surface-subtitle">
-              {session?.user.email ? `${session.user.email} · ` : ""}
-              {t("profile.identity", {
-                userId: session?.user.id || "—",
-                deviceId: session?.device.id || "—",
-              })}
+              {session?.user.email || t("profile.guestAccountSummary")}
             </p>
           </div>
+        </div>
 
-          <div className="responsive-actions">
-            <div className="profile-sync-action">
+        {error && <div className="alert alert-error" style={{ marginBottom: 14 }}>{error}</div>}
+        {successMsg && <div className="alert alert-success" style={{ marginBottom: 14 }}>{successMsg}</div>}
+        {isGuest && (
+          <div className="alert alert-info" style={{ marginBottom: 14 }}>
+            {t("profile.guestNotice")}
+          </div>
+        )}
+
+        <div className="profile-account-action-grid">
+          <article className="profile-account-action-card">
+            <div className="profile-account-action-copy">
+              <h2>{t("profile.syncTitle")}</h2>
+              <p id="profile-sync-description">{t("profile.syncDescription")}</p>
+            </div>
+            <div>
               <button
                 className="btn btn-outline-primary btn-sm"
                 onClick={() => void handleSyncPull()}
@@ -401,10 +524,19 @@ export default function ProfilePage() {
                 {loadingSync ? t("profile.syncing") : t("profile.syncData")}
                 {!loadingSync && pendingSync > 0 ? ` (${pendingSync})` : ""}
               </button>
-              <span id="profile-sync-description" className="profile-sync-help">
-                {t("profile.syncDescription")}
-              </span>
             </div>
+          </article>
+
+          <article className="profile-account-action-card">
+            <div className="profile-account-action-copy">
+              <h2>{isGuest ? t("profile.secureAccountTitle") : t("profile.sessionTitle")}</h2>
+              <p>
+                {isGuest
+                  ? t("profile.secureAccountDescription")
+                  : t("profile.sessionDescription")}
+              </p>
+            </div>
+            <div className="responsive-actions">
             {isGuest ? (
               <Link href={localizedPath(locale, "/login")} className="btn btn-primary btn-sm">
                 {t("auth.emailLogin")}
@@ -425,11 +557,10 @@ export default function ProfilePage() {
                 </button>
               </>
             )}
-          </div>
+            </div>
+          </article>
         </div>
 
-        {error && <div className="alert alert-error" style={{ marginBottom: 14 }}>{error}</div>}
-        {successMsg && <div className="alert alert-success" style={{ marginBottom: 14 }}>{successMsg}</div>}
         {confirmLogoutAll && (
           <div className="alert alert-error" style={{ marginBottom: 14 }}>
             <strong>{t("profile.logoutAllTitle")}</strong>
@@ -452,11 +583,6 @@ export default function ProfilePage() {
                 {t("common.cancel")}
               </button>
             </div>
-          </div>
-        )}
-        {isGuest && (
-          <div className="alert alert-info" style={{ marginBottom: 14 }}>
-            {t("profile.guestNotice")}
           </div>
         )}
 
@@ -509,6 +635,108 @@ export default function ProfilePage() {
       </section>
 
       <AccountSecurityPanel />
+
+      <section className="surface profile-share-section" id="share-app">
+        <div className="profile-share-heading">
+          <div className="profile-share-icon" aria-hidden="true">↗</div>
+          <div>
+            <p className="eyebrow">{t("profile.shareEyebrow")}</p>
+            <h2 className="surface-title">
+              {shareCampaign?.title || t("profile.shareTitle")}
+            </h2>
+            <p className="surface-subtitle">
+              {shareCampaign?.message || t("profile.shareDescription")}
+            </p>
+          </div>
+        </div>
+
+        {shareNotice && <div className="alert alert-info">{shareNotice}</div>}
+
+        {!loadingShare && !shareCampaign && (
+          <p className="profile-share-note">{t("profile.shareProgramUnavailable")}</p>
+        )}
+
+        {isGuest && (
+          <div className="profile-share-guest">
+            <p>{t("profile.shareGuestHint")}</p>
+            <Link href={localizedPath(locale, "/login")} className="btn btn-secondary btn-sm">
+              {t("profile.shareLogin")}
+            </Link>
+          </div>
+        )}
+
+        {canUseReferrals && !referralLink && (
+          <div className="profile-share-referral-callout">
+            <div>
+              <strong>{t("profile.sharePersonalTitle")}</strong>
+              <p>{t("profile.sharePersonalDescription")}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={creatingReferralLink || loadingShare}
+              onClick={() => void createReferralLink()}
+            >
+              {creatingReferralLink
+                ? t("profile.shareCreating")
+                : t("profile.shareCreateLink")}
+            </button>
+          </div>
+        )}
+
+        {referralLink && (
+          <div className="profile-share-link-card">
+            <div className="profile-share-link-copy">
+              <label htmlFor="profile-referral-link">{t("profile.sharePersonalLink")}</label>
+              <div className="profile-share-link-row">
+                <input
+                  id="profile-referral-link"
+                  value={referralLink.short_url}
+                  readOnly
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+                <button type="button" className="btn btn-secondary" onClick={() => void copyShareLink()}>
+                  {t("profile.shareCopy")}
+                </button>
+              </div>
+            </div>
+            <div className="profile-share-code">
+              <span>{t("profile.sharePromoCode")}</span>
+              <strong>{referralLink.code}</strong>
+            </div>
+          </div>
+        )}
+
+        {canUseReferrals && referralSummary && (
+          <div className="profile-share-stats" aria-label={t("profile.shareStatsTitle")}>
+            <div>
+              <span>{t("profile.shareInvited")}</span>
+              <strong>{formatNumber(referralSummary.invited)}</strong>
+            </div>
+            <div>
+              <span>{t("profile.shareQualified")}</span>
+              <strong>{formatNumber(referralSummary.qualified)}</strong>
+            </div>
+            <div>
+              <span>{t("profile.shareBalance")}</span>
+              <strong>{formatNumber(referralSummary.reward_balance)}</strong>
+            </div>
+            <div>
+              <span>{t("profile.sharePending")}</span>
+              <strong>{formatNumber(referralSummary.pending_reward)}</strong>
+            </div>
+          </div>
+        )}
+
+        <div className="profile-share-actions">
+          <button type="button" className="btn btn-primary" onClick={() => void openShareMenu()}>
+            {shareCampaign?.cta_label || t("profile.shareAction")}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => void copyShareLink()}>
+            {t("profile.shareCopyLink")}
+          </button>
+        </div>
+      </section>
 
       {/* Saved content */}
       <section className="surface profile-favorites" id="favorites">

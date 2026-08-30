@@ -240,7 +240,7 @@ export default function HomePage() {
             {isActiveAccount
               ? session.user.email
               : isLoggedIn && session
-                ? t("home.deviceOnly", { id: session.user.id.slice(0, 8) })
+                ? t("home.deviceOnly")
                 : t("home.readWithoutRegistration")}
           </div>
         </article>
