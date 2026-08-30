@@ -149,6 +149,118 @@ class MushafPageData {
   }
 }
 
+class MushafVariant {
+  const MushafVariant({
+    required this.sourceId,
+    required this.name,
+    required this.description,
+    required this.qiratName,
+    required this.pagesCount,
+    required this.renderingAvailable,
+    required this.renderingMode,
+  });
+
+  factory MushafVariant.fromJson(Map<String, Object?> json) {
+    final rendering = jsonMap(json['rendering']);
+    return MushafVariant(
+      sourceId: (json['source_id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      qiratName: json['qirat_name']?.toString() ?? '',
+      pagesCount: (json['pages_count'] as num?)?.toInt() ?? 604,
+      renderingAvailable: rendering['available'] == true,
+      renderingMode: rendering['mode']?.toString() ?? 'unknown',
+    );
+  }
+
+  final int sourceId;
+  final String name;
+  final String description;
+  final String qiratName;
+  final int pagesCount;
+  final bool renderingAvailable;
+  final String renderingMode;
+
+  String get preferenceValue => '$sourceId';
+
+  bool get supportedOnMobile =>
+      renderingAvailable && renderingMode == 'unicode-font';
+}
+
+class FoundationMushafWord {
+  const FoundationMushafWord({
+    required this.text,
+    required this.lineNumber,
+    required this.positionInLine,
+  });
+
+  factory FoundationMushafWord.fromJson(Map<String, Object?> json) {
+    return FoundationMushafWord(
+      text: json['text']?.toString() ?? '',
+      lineNumber: (json['line_number'] as num?)?.toInt() ?? 0,
+      positionInLine: (json['position_in_line'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String text;
+  final int lineNumber;
+  final int positionInLine;
+}
+
+class FoundationMushafPageData {
+  const FoundationMushafPageData({
+    required this.mushafId,
+    required this.pageNumber,
+    required this.qiratName,
+    required this.words,
+  });
+
+  factory FoundationMushafPageData.fromJson(Map<String, Object?> json) {
+    final words =
+        (json['words'] as List?)
+            ?.whereType<Map>()
+            .map(
+              (item) => FoundationMushafWord.fromJson(
+                Map<String, Object?>.from(item),
+              ),
+            )
+            .where((item) => item.text.isNotEmpty && item.lineNumber > 0)
+            .toList(growable: false) ??
+        const <FoundationMushafWord>[];
+    return FoundationMushafPageData(
+      mushafId: (json['mushaf_id'] as num?)?.toInt() ?? 0,
+      pageNumber: (json['page_number'] as num?)?.toInt() ?? 1,
+      qiratName: json['qirat_name']?.toString() ?? '',
+      words: words,
+    );
+  }
+
+  final int mushafId;
+  final int pageNumber;
+  final String qiratName;
+  final List<FoundationMushafWord> words;
+
+  List<List<FoundationMushafWord>> get lines {
+    final grouped = <int, List<FoundationMushafWord>>{};
+    for (final word in words) {
+      grouped
+          .putIfAbsent(word.lineNumber, () => <FoundationMushafWord>[])
+          .add(word);
+    }
+    final lineNumbers = grouped.keys.toList()..sort();
+    return lineNumbers
+        .map((lineNumber) {
+          final line = grouped[lineNumber]!
+            ..sort(
+              (left, right) =>
+                  left.positionInLine.compareTo(right.positionInLine),
+            );
+          return List<FoundationMushafWord>.unmodifiable(line);
+        })
+        .toList(growable: false);
+  }
+}
+
 class ReadingPosition {
   const ReadingPosition({
     required this.edition,

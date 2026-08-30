@@ -408,6 +408,42 @@ abstract class AppLocalizations {
   /// **'Selected Mushaf'**
   String get selectedMushaf;
 
+  /// No description provided for @chooseMushaf.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Mushaf'**
+  String get chooseMushaf;
+
+  /// No description provided for @mushafScanName.
+  ///
+  /// In en, this message translates to:
+  /// **'Madani Mushaf'**
+  String get mushafScanName;
+
+  /// No description provided for @mushafScanDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Original pages · Hafs'**
+  String get mushafScanDescription;
+
+  /// No description provided for @mushafTextDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Crisp text adapted to your screen'**
+  String get mushafTextDescription;
+
+  /// No description provided for @mushafWebOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This font is currently available in the web version only'**
+  String get mushafWebOnly;
+
+  /// No description provided for @mushafUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporarily unavailable from the source'**
+  String get mushafUnavailable;
+
   /// No description provided for @continueSaved.
   ///
   /// In en, this message translates to:

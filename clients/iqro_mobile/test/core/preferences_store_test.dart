@@ -14,6 +14,7 @@ void main() {
       locale: 'ar',
       themeMode: ThemeMode.dark,
       readerMode: ReaderMode.mushaf,
+      mushafVariant: '5',
       goal: 'reading',
       dailyUnit: DailyUnit.ayahs,
       dailyTarget: 12,
@@ -25,6 +26,7 @@ void main() {
     expect(restored.locale, 'ar');
     expect(restored.themeMode, ThemeMode.dark);
     expect(restored.readerMode, ReaderMode.mushaf);
+    expect(restored.mushafVariant, '5');
     expect(restored.dailyTarget, 12);
   });
 }

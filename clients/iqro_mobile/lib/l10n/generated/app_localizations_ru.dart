@@ -164,6 +164,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get selectedMushaf => 'Выбранный Мусхаф';
 
   @override
+  String get chooseMushaf => 'Выберите Мусхаф';
+
+  @override
+  String get mushafScanName => 'Мадинский Мусхаф';
+
+  @override
+  String get mushafScanDescription => 'Оригинальные страницы · Хафс';
+
+  @override
+  String get mushafTextDescription => 'Чёткий текст, адаптированный для экрана';
+
+  @override
+  String get mushafWebOnly => 'Этот шрифт пока доступен только в веб-версии';
+
+  @override
+  String get mushafUnavailable => 'Вариант временно недоступен у источника';
+
+  @override
   String get continueSaved => 'Продолжить с сохранённого места';
 
   @override

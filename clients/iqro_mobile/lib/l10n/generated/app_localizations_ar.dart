@@ -164,6 +164,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectedMushaf => 'المصحف المختار';
 
   @override
+  String get chooseMushaf => 'اختر المصحف';
+
+  @override
+  String get mushafScanName => 'مصحف المدينة';
+
+  @override
+  String get mushafScanDescription => 'صفحات أصلية · حفص';
+
+  @override
+  String get mushafTextDescription => 'نص واضح متكيف مع الشاشة';
+
+  @override
+  String get mushafWebOnly => 'هذا الخط متاح حاليًا في نسخة الويب فقط';
+
+  @override
+  String get mushafUnavailable => 'هذا الخيار غير متاح مؤقتًا من المصدر';
+
+  @override
   String get continueSaved => 'متابعة من الموضع المحفوظ';
 
   @override

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import 'quran_models.dart';
@@ -82,7 +83,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 icon: Icons.sync,
                 title: context.l10n.savedAutomatically,
                 actionLabel: context.l10n.mushafMode,
-                onAction: () {
+                onAction: () async {
                   final page =
                       items
                           .where((item) => item.number == _selectedAyah)
@@ -91,6 +92,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                           .firstOrNull ??
                       surah?.firstPage ??
                       1;
+                  await ref
+                      .read(appPreferencesProvider.notifier)
+                      .setReaderMode(ReaderMode.mushaf);
+                  if (!context.mounted) return;
                   context.push(
                     '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah',
                   );

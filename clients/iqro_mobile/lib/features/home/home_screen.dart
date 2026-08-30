@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../prayer/prayer_repository.dart';
 
@@ -15,6 +16,9 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final position = ref.watch(readingPositionProvider).valueOrNull;
+    final readerMode = ref.watch(
+      appPreferencesProvider.select((value) => value.readerMode),
+    );
     final plan = ref.watch(planProvider).valueOrNull;
     final reciter = ref.watch(recitersProvider).valueOrNull?.firstOrNull;
     final prayer = ref.watch(prayerScheduleProvider).valueOrNull;
@@ -46,7 +50,17 @@ class HomeScreen extends ConsumerWidget {
             _ContinueCard(
               ayah: position?.ayah ?? 1,
               page: position?.page ?? 1,
-              onTap: () => context.push('/reader/${position?.surah ?? 1}'),
+              onTap: () {
+                if (readerMode == ReaderMode.mushaf) {
+                  context.push(
+                    '/mushaf?page=${position?.page ?? 1}&surah=${position?.surah ?? 1}&ayah=${position?.ayah ?? 1}',
+                  );
+                } else {
+                  context.push(
+                    '/reader/${position?.surah ?? 1}?ayah=${position?.ayah ?? 1}',
+                  );
+                }
+              },
             ),
             const SizedBox(height: 12),
             _PrayerStrip(

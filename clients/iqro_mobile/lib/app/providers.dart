@@ -92,6 +92,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
       _set(state.copyWith(themeMode: mode));
   Future<void> setReaderMode(ReaderMode mode) =>
       _set(state.copyWith(readerMode: mode));
+
+  Future<void> setMushafVariant(String variant) =>
+      _set(state.copyWith(mushafVariant: variant));
 }
 
 final appPreferencesProvider =
@@ -165,6 +168,17 @@ final mushafPageProvider = FutureProvider.family<MushafPageData, int>((
 ) {
   return ref.watch(quranRepositoryProvider).mushafPage(page);
 });
+final mushafVariantsProvider = FutureProvider<List<MushafVariant>>((ref) {
+  return ref.watch(quranRepositoryProvider).mushafVariants();
+});
+final foundationMushafPageProvider =
+    FutureProvider.family<FoundationMushafPageData, ({int sourceId, int page})>(
+      (ref, request) {
+        return ref
+            .watch(quranRepositoryProvider)
+            .foundationMushafPage(request.sourceId, request.page);
+      },
+    );
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });

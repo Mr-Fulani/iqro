@@ -9,6 +9,8 @@ import 'package:photo_view/photo_view.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/preferences_store.dart';
+import 'quran_models.dart';
 
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({
@@ -62,6 +64,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mushafVariant = ref.watch(
+      appPreferencesProvider.select((value) => value.mushafVariant),
+    );
     final foreground = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFF3EEDC)
         : const Color(0xFF26261F);
@@ -95,13 +100,25 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 );
                 unawaited(_savePagePosition(page));
                 if (page < 604) {
-                  ref.read(mushafPageProvider(page + 1).future).ignore();
+                  if (mushafVariant == '5') {
+                    ref
+                        .read(
+                          foundationMushafPageProvider((
+                            sourceId: 5,
+                            page: page + 1,
+                          )).future,
+                        )
+                        .ignore();
+                  } else {
+                    ref.read(mushafPageProvider(page + 1).future).ignore();
+                  }
                 }
               },
               itemBuilder: (context, index) {
                 final page = index + 1;
                 return _MushafPage(
                   page: page,
+                  variant: mushafVariant,
                   controller: _zoomControllers.putIfAbsent(
                     page,
                     PhotoViewController.new,
@@ -167,9 +184,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                             ),
                             IconButton(
                               tooltip: context.l10n.textMode,
-                              onPressed: () => context.pushReplacement(
-                                '/reader/${widget.surah}?ayah=${widget.ayah}',
-                              ),
+                              onPressed: () async {
+                                await ref
+                                    .read(appPreferencesProvider.notifier)
+                                    .setReaderMode(ReaderMode.text);
+                                if (!context.mounted) return;
+                                context.pushReplacement(
+                                  '/reader/${widget.surah}?ayah=${widget.ayah}',
+                                );
+                              },
                               color: Colors.white,
                               icon: const Icon(Icons.format_list_bulleted),
                             ),
@@ -297,7 +320,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               PositionedDirectional(
                 start: 0,
                 end: 0,
-                bottom: 26 + MediaQuery.paddingOf(context).bottom,
+                bottom: 58 + MediaQuery.paddingOf(context).bottom,
                 child: IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: .65,
@@ -347,18 +370,30 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 class _MushafPage extends ConsumerWidget {
   const _MushafPage({
     required this.page,
+    required this.variant,
     required this.controller,
     required this.onTap,
     required this.onScale,
   });
 
   final int page;
+  final String variant;
   final PhotoViewController controller;
   final VoidCallback onTap;
   final ValueChanged<double> onScale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final sourceId = int.tryParse(variant);
+    if (sourceId == 5) {
+      return _FoundationMushafPage(
+        page: page,
+        sourceId: 5,
+        controller: controller,
+        onTap: onTap,
+        onScale: onScale,
+      );
+    }
     final data = ref.watch(mushafPageProvider(page));
     return data.when(
       loading: () =>
@@ -412,6 +447,134 @@ class _MushafPage extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _FoundationMushafPage extends ConsumerWidget {
+  const _FoundationMushafPage({
+    required this.page,
+    required this.sourceId,
+    required this.controller,
+    required this.onTap,
+    required this.onScale,
+  });
+
+  final int page;
+  final int sourceId;
+  final PhotoViewController controller;
+  final VoidCallback onTap;
+  final ValueChanged<double> onScale;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(
+      foundationMushafPageProvider((sourceId: sourceId, page: page)),
+    );
+    return data.when(
+      loading: () =>
+          const ColoredBox(color: Color(0xFFEDE6D3), child: IqroLoading()),
+      error: (error, stack) => ColoredBox(
+        color: const Color(0xFFEDE6D3),
+        child: IqroAsyncError(
+          title: context.l10n.noQuranData,
+          message: context.l10n.networkError,
+          onRetry: () => ref.invalidate(
+            foundationMushafPageProvider((sourceId: sourceId, page: page)),
+          ),
+        ),
+      ),
+      data: (pageData) {
+        if (pageData.lines.isEmpty) {
+          return ColoredBox(
+            color: const Color(0xFFEDE6D3),
+            child: Center(child: Text(context.l10n.noQuranData)),
+          );
+        }
+        return PhotoView.customChild(
+          controller: controller,
+          backgroundDecoration: const BoxDecoration(color: Color(0xFFEDE6D3)),
+          minScale: PhotoViewComputedScale.contained,
+          initialScale: PhotoViewComputedScale.contained,
+          maxScale: PhotoViewComputedScale.contained * 3,
+          basePosition: Alignment.center,
+          onTapUp: (context, details, controllerValue) => onTap(),
+          onScaleEnd: (context, details, controllerValue) =>
+              onScale(controllerValue.scale ?? 1),
+          child: _MushafTextSheet(data: pageData),
+        );
+      },
+    );
+  }
+}
+
+class _MushafTextSheet extends StatelessWidget {
+  const _MushafTextSheet({required this.data});
+
+  final FoundationMushafPageData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFEDE6D3),
+      child: SafeArea(
+        minimum: const EdgeInsets.all(12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFCF2),
+            border: Border.all(color: const Color(0xFFC8B88D)),
+            borderRadius: BorderRadius.circular(3),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x22000000),
+                blurRadius: 14,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 22, 12, 16),
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: data.lines
+                        .map((words) {
+                          final line = words.map((word) => word.text).join(' ');
+                          return SizedBox(
+                            width: double.infinity,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                line,
+                                textAlign: TextAlign.center,
+                                textDirection: TextDirection.rtl,
+                                style: const TextStyle(
+                                  color: Color(0xFF17140D),
+                                  fontFamily: 'serif',
+                                  fontSize: 30,
+                                  height: 1.65,
+                                ),
+                              ),
+                            ),
+                          );
+                        })
+                        .toList(growable: false),
+                  ),
+                ),
+                Text(
+                  '${data.pageNumber}',
+                  style: const TextStyle(
+                    color: Color(0xFF766942),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

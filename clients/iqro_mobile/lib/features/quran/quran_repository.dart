@@ -88,6 +88,53 @@ class QuranRepository {
     }
   }
 
+  Future<List<MushafVariant>> mushafVariants({
+    bool forceRefresh = false,
+  }) async {
+    const key = 'quran:foundation:mushafs';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _parseMushafVariants(cached!.value);
+    }
+    try {
+      final payload = await _api.get('/quran/foundation/mushafs', public: true);
+      await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
+      return _parseMushafVariants(payload);
+    } on Object {
+      if (cached != null) return _parseMushafVariants(cached.value);
+      rethrow;
+    }
+  }
+
+  Future<FoundationMushafPageData> foundationMushafPage(
+    int sourceId,
+    int page, {
+    bool forceRefresh = false,
+  }) async {
+    final key = 'quran:foundation:mushaf:$sourceId:page:$page';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return FoundationMushafPageData.fromJson(jsonMap(cached!.value));
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/foundation/mushafs/$sourceId/pages/$page',
+        public: true,
+      );
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(days: 30),
+      );
+      return FoundationMushafPageData.fromJson(jsonMap(payload));
+    } on Object {
+      if (cached != null) {
+        return FoundationMushafPageData.fromJson(jsonMap(cached.value));
+      }
+      rethrow;
+    }
+  }
+
   Future<ReadingPosition> position() async {
     final rows = await _database.database.query(
       'reading_positions',
@@ -303,4 +350,12 @@ class QuranRepository {
         .where((ayah) => ayah.number > 0 && ayah.textUthmani.isNotEmpty)
         .toList(growable: false);
   }
+}
+
+List<MushafVariant> _parseMushafVariants(Object? payload) {
+  return jsonResults(payload)
+      .whereType<Map>()
+      .map((item) => MushafVariant.fromJson(Map<String, Object?>.from(item)))
+      .where((item) => item.sourceId > 0 && item.name.isNotEmpty)
+      .toList(growable: false);
 }

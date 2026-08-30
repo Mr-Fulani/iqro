@@ -29,7 +29,18 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   Widget build(BuildContext context) {
     final preferences = ref.watch(appPreferencesProvider);
     final catalog = ref.watch(quranCatalogProvider);
+    final mushafVariants = ref.watch(mushafVariantsProvider).valueOrNull;
     final position = ref.watch(readingPositionProvider).valueOrNull;
+    final selectedVariant = mushafVariants
+        ?.where(
+          (variant) => variant.preferenceValue == preferences.mushafVariant,
+        )
+        .firstOrNull;
+    final selectedMushafName = preferences.mushafVariant == defaultMushafVariant
+        ? context.l10n.mushafScanName
+        : selectedVariant == null
+        ? 'KFGQPC HAFS · Hafs'
+        : '${selectedVariant.name} · ${selectedVariant.qiratName}';
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navQuran,
@@ -77,26 +88,43 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => _showMushafPicker(
+                        context,
+                        selected: preferences.mushafVariant,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
                           children: <Widget>[
-                            Text(
-                              context.l10n.selectedMushaf,
-                              style: Theme.of(context).textTheme.bodySmall,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    context.l10n.selectedMushaf,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    selectedMushafName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'KFGQPC Hafs',
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
+                            const Icon(Icons.chevron_right),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -252,7 +280,22 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => _QuickJumpSheet(surahs: catalog.surahs),
+      builder: (context) => _QuickJumpSheet(
+        surahs: catalog.surahs,
+        readerMode: ref.read(appPreferencesProvider).readerMode,
+      ),
+    );
+  }
+
+  Future<void> _showMushafPicker(
+    BuildContext context, {
+    required String selected,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _MushafPickerSheet(selected: selected),
     );
   }
 }
@@ -306,8 +349,9 @@ class _SurahRow extends StatelessWidget {
 }
 
 class _QuickJumpSheet extends StatefulWidget {
-  const _QuickJumpSheet({required this.surahs});
+  const _QuickJumpSheet({required this.surahs, required this.readerMode});
   final List<Surah> surahs;
+  final ReaderMode readerMode;
 
   @override
   State<_QuickJumpSheet> createState() => _QuickJumpSheetState();
@@ -414,6 +458,13 @@ class _QuickJumpSheetState extends State<_QuickJumpSheet> {
                 } else if (_mode == 1) {
                   final page = ((_number.clamp(1, 30) - 1) * 20) + 1;
                   context.push('/mushaf?page=$page&surah=1&ayah=1');
+                } else if (widget.readerMode == ReaderMode.mushaf) {
+                  final surah = widget.surahs
+                      .where((item) => item.number == _surah)
+                      .firstOrNull;
+                  context.push(
+                    '/mushaf?page=${surah?.firstPage ?? 1}&surah=$_surah&ayah=$_ayah',
+                  );
                 } else {
                   context.push('/reader/$_surah?ayah=$_ayah');
                 }
@@ -424,6 +475,128 @@ class _QuickJumpSheetState extends State<_QuickJumpSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MushafPickerSheet extends ConsumerWidget {
+  const _MushafPickerSheet({required this.selected});
+
+  final String selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final variants = ref.watch(mushafVariantsProvider);
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            context.l10n.chooseMushaf,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          _MushafChoice(
+            value: defaultMushafVariant,
+            selected: selected,
+            title: context.l10n.mushafScanName,
+            subtitle: context.l10n.mushafScanDescription,
+            enabled: true,
+            onSelected: (value) => _select(context, ref, value),
+          ),
+          variants.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, stack) => IqroAsyncError(
+              title: context.l10n.noQuranData,
+              message: context.l10n.networkError,
+              onRetry: () => ref.invalidate(mushafVariantsProvider),
+            ),
+            data: (items) => Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: items
+                    .map((variant) {
+                      final available = variant.supportedOnMobile;
+                      final subtitle = available
+                          ? context.l10n.mushafTextDescription
+                          : variant.renderingAvailable
+                          ? context.l10n.mushafWebOnly
+                          : context.l10n.mushafUnavailable;
+                      return _MushafChoice(
+                        value: variant.preferenceValue,
+                        selected: selected,
+                        title: '${variant.name} · ${variant.qiratName}',
+                        subtitle: subtitle,
+                        enabled: available,
+                        onSelected: (value) => _select(context, ref, value),
+                      );
+                    })
+                    .toList(growable: false),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _select(
+    BuildContext context,
+    WidgetRef ref,
+    String value,
+  ) async {
+    await ref.read(appPreferencesProvider.notifier).setMushafVariant(value);
+    if (context.mounted) Navigator.pop(context);
+  }
+}
+
+class _MushafChoice extends StatelessWidget {
+  const _MushafChoice({
+    required this.value,
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  final String value;
+  final String selected;
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = value == selected;
+    return ListTile(
+      enabled: enabled,
+      minTileHeight: 72,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        isSelected ? Icons.check_circle : Icons.circle_outlined,
+        color: isSelected ? Theme.of(context).colorScheme.primary : null,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: enabled ? () => onSelected(value) : null,
     );
   }
 }

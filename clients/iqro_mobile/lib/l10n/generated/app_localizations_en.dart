@@ -164,6 +164,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectedMushaf => 'Selected Mushaf';
 
   @override
+  String get chooseMushaf => 'Choose Mushaf';
+
+  @override
+  String get mushafScanName => 'Madani Mushaf';
+
+  @override
+  String get mushafScanDescription => 'Original pages · Hafs';
+
+  @override
+  String get mushafTextDescription => 'Crisp text adapted to your screen';
+
+  @override
+  String get mushafWebOnly =>
+      'This font is currently available in the web version only';
+
+  @override
+  String get mushafUnavailable => 'Temporarily unavailable from the source';
+
+  @override
   String get continueSaved => 'Continue from saved position';
 
   @override

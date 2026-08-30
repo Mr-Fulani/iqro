@@ -164,6 +164,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get selectedMushaf => 'Seçili Mushaf';
 
   @override
+  String get chooseMushaf => 'Mushaf seçin';
+
+  @override
+  String get mushafScanName => 'Medine Mushafı';
+
+  @override
+  String get mushafScanDescription => 'Orijinal sayfalar · Hafs';
+
+  @override
+  String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
+
+  @override
+  String get mushafWebOnly =>
+      'Bu yazı tipi şimdilik yalnızca web sürümünde kullanılabilir';
+
+  @override
+  String get mushafUnavailable => 'Kaynakta geçici olarak kullanılamıyor';
+
+  @override
   String get continueSaved => 'Kayıtlı yerden devam et';
 
   @override
