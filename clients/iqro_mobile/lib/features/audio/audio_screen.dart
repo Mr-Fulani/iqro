@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'audio_models.dart';
+import 'reciter_portraits.dart';
 
 class AudioScreen extends ConsumerStatefulWidget {
   const AudioScreen({super.key});
@@ -24,6 +25,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final reciters = ref.watch(recitersProvider);
     final player = ref.watch(audioControllerProvider);
     final locale = Localizations.localeOf(context).languageCode;
+    final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navAudio,
@@ -106,36 +108,34 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   );
                 }
                 _selected ??= player.reciter?.id ?? items.first.id;
-                return IqroCard(
-                  padding: EdgeInsets.zero,
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: items.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final reciter = items[index];
-                      final active = reciter.id == _selected;
-                      return Semantics(
-                        selected: active,
-                        child: ListTile(
-                          minTileHeight: 72,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 4,
-                          ),
-                          leading: _ReciterPortrait(reciter: reciter),
-                          title: Text(
-                            reciter.nameFor(locale),
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          subtitle: Text(reciter.countryCode ?? 'Murattal'),
-                          trailing: Icon(
-                            active ? Icons.check_circle : Icons.circle_outlined,
-                            color: active
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = switch (constraints.maxWidth) {
+                      < 340 => 2,
+                      < 620 => 3,
+                      < 900 => 4,
+                      _ => 6,
+                    };
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: items.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        mainAxisExtent: 180,
+                      ),
+                      itemBuilder: (context, index) {
+                        final reciter = items[index];
+                        final active = reciter.id == _selected;
+                        return _ReciterCard(
+                          reciter: reciter,
+                          locale: locale,
+                          active: active,
+                          portraitUrl: resolveReciterPortraitUrl(
+                            reciter,
+                            apiBaseUrl: apiBaseUrl,
                           ),
                           onTap: () async {
                             if (player.reciter?.id != null &&
@@ -146,10 +146,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                             }
                             setState(() => _selected = reciter.id);
                           },
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -209,19 +209,144 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   }
 }
 
-class _ReciterPortrait extends StatelessWidget {
-  const _ReciterPortrait({required this.reciter});
+class _ReciterCard extends StatelessWidget {
+  const _ReciterCard({
+    required this.reciter,
+    required this.locale,
+    required this.active,
+    required this.portraitUrl,
+    required this.onTap,
+  });
+
   final Reciter reciter;
+  final String locale;
+  final bool active;
+  final String? portraitUrl;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 25,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      backgroundImage: reciter.portraitUrl == null
-          ? null
-          : CachedNetworkImageProvider(reciter.portraitUrl!),
-      child: reciter.portraitUrl == null ? Text(reciter.initials) : null,
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: active,
+      label: reciter.nameFor(locale),
+      child: IqroCard(
+        onTap: onTap,
+        color: active ? colorScheme.primaryContainer : null,
+        borderColor: active ? colorScheme.primary : context.iqroColors.line,
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+        child: Column(
+          children: <Widget>[
+            _ReciterPortrait(
+              initials: reciter.initials,
+              portraitUrl: portraitUrl,
+              active: active,
+            ),
+            const SizedBox(height: 9),
+            Text(
+              reciter.nameFor(locale),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(height: 1.15),
+            ),
+            if (locale != 'ar' && reciter.nameAr.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 4),
+              Text(
+                reciter.nameAr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReciterPortrait extends StatelessWidget {
+  const _ReciterPortrait({
+    required this.initials,
+    required this.portraitUrl,
+    required this.active,
+  });
+
+  final String initials;
+  final String? portraitUrl;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final fallback = ColoredBox(
+      color: colorScheme.primaryContainer,
+      child: Center(
+        child: Text(
+          initials,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colorScheme.onPrimaryContainer,
+          ),
+        ),
+      ),
+    );
+    return SizedBox(
+      width: 88,
+      height: 88,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned.fill(
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).colorScheme.surface,
+                border: Border.all(
+                  color: active ? colorScheme.primary : context.iqroColors.line,
+                  width: active ? 3 : 1,
+                ),
+              ),
+              child: ClipOval(
+                child: portraitUrl == null
+                    ? fallback
+                    : CachedNetworkImage(
+                        imageUrl: portraitUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => fallback,
+                        errorWidget: (context, url, error) => fallback,
+                      ),
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            end: -1,
+            bottom: -1,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colorScheme.primary,
+                border: Border.all(color: colorScheme.surface, width: 2),
+              ),
+              child: Icon(
+                active ? Icons.check : Icons.play_arrow,
+                size: 17,
+                color: colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
