@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,6 +25,8 @@ class QuranRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final Uuid _uuid;
+  final Map<String, Future<Uint8List>> _fontDownloads =
+      <String, Future<Uint8List>>{};
 
   Future<QuranCatalog> surahs({bool forceRefresh = false}) async {
     const key = 'quran:$edition:surahs';
@@ -104,6 +110,148 @@ class QuranRepository {
       if (cached != null) return _parseMushafVariants(cached.value);
       rethrow;
     }
+  }
+
+  Future<FoundationMushafPage> foundationMushafPage(
+    int sourceId,
+    int page, {
+    bool forceRefresh = false,
+  }) async {
+    final safePage = page.clamp(1, 604);
+    final key = 'quran:foundation:mushaf:$sourceId:page:$safePage';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return FoundationMushafPage.fromJson(
+        jsonMap(cached!.value),
+        fromCache: true,
+      );
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/foundation/mushafs/$sourceId/pages/$safePage',
+        public: true,
+      );
+      await _database.writeCache(key, payload, maxAge: const Duration(days: 7));
+      return FoundationMushafPage.fromJson(jsonMap(payload), fromCache: false);
+    } on Object {
+      if (cached != null) {
+        return FoundationMushafPage.fromJson(
+          jsonMap(cached.value),
+          fromCache: true,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> mushafFontDataUri(MushafVariant variant, int page) async {
+    final uri = variant.fontUriForPage(page);
+    if (uri == null) {
+      throw const FormatException('Mushaf font URL is unavailable');
+    }
+    final supportDirectory = await getApplicationSupportDirectory();
+    final directory = Directory(
+      p.join(
+        supportDirectory.path,
+        'mushaf_fonts',
+        'source-${variant.sourceId}',
+      ),
+    );
+    await directory.create(recursive: true);
+    final basename = variant.renderingMode == 'page-font'
+        ? 'page-${page.toString().padLeft(3, '0')}.woff2'
+        : 'global.woff2';
+    final file = File(p.join(directory.path, basename));
+    final sourceFile = File('${file.path}.source');
+    final bytes = await _fontBytes(file, sourceFile, uri);
+    return 'data:font/woff2;base64,${base64Encode(bytes)}';
+  }
+
+  Future<void> prefetchFoundationMushaf(
+    MushafVariant variant,
+    int currentPage,
+  ) async {
+    final pages = <int>{
+      currentPage,
+      if (currentPage > 1) currentPage - 1,
+      if (currentPage < variant.pagesCount) currentPage + 1,
+    };
+    await Future.wait(
+      pages.map((page) async {
+        try {
+          await Future.wait(<Future<Object?>>[
+            foundationMushafPage(variant.sourceId, page),
+            mushafFontDataUri(variant, page),
+          ]);
+        } on Object {
+          // Prefetch is best-effort; the visible page owns user-facing errors.
+        }
+      }),
+    );
+  }
+
+  Future<Uint8List> _fontBytes(File file, File sourceFile, Uri uri) async {
+    final cached = await _readCachedFont(file, sourceFile, uri);
+    if (cached != null) return cached;
+    final key = file.path;
+    final inFlight = _fontDownloads.putIfAbsent(
+      key,
+      () => _downloadFont(file, sourceFile, uri),
+    );
+    try {
+      return await inFlight;
+    } finally {
+      if (identical(_fontDownloads[key], inFlight)) {
+        _fontDownloads.remove(key);
+      }
+    }
+  }
+
+  Future<Uint8List?> _readCachedFont(
+    File file,
+    File sourceFile,
+    Uri uri,
+  ) async {
+    if (!await file.exists() || !await sourceFile.exists()) return null;
+    if ((await sourceFile.readAsString()).trim() != uri.toString()) return null;
+    final bytes = await file.readAsBytes();
+    return _validWoff2(bytes) ? bytes : null;
+  }
+
+  Future<Uint8List> _downloadFont(File file, File sourceFile, Uri uri) async {
+    try {
+      final bytes = await _api.getPublicBytes(
+        uri,
+        allowedHosts: const <String>{'verses.quran.foundation'},
+      );
+      if (!_validWoff2(bytes)) {
+        throw const FormatException('Mushaf font is not a valid WOFF2 file');
+      }
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      final temporaryFile = File('${file.path}.$suffix.part');
+      final temporarySource = File('${sourceFile.path}.$suffix.part');
+      await temporaryFile.writeAsBytes(bytes, flush: true);
+      await temporarySource.writeAsString(uri.toString(), flush: true);
+      if (await file.exists()) await file.delete();
+      if (await sourceFile.exists()) await sourceFile.delete();
+      await temporaryFile.rename(file.path);
+      await temporarySource.rename(sourceFile.path);
+      return bytes;
+    } on Object {
+      if (await file.exists()) {
+        final stale = await file.readAsBytes();
+        if (_validWoff2(stale)) return stale;
+      }
+      rethrow;
+    }
+  }
+
+  bool _validWoff2(List<int> bytes) {
+    return bytes.length >= 48 &&
+        bytes[0] == 0x77 &&
+        bytes[1] == 0x4f &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x32;
   }
 
   Future<ReadingPosition> position() async {

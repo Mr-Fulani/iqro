@@ -29,6 +29,18 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   Widget build(BuildContext context) {
     final preferences = ref.watch(appPreferencesProvider);
     final catalog = ref.watch(quranCatalogProvider);
+    final mushafVariants = ref.watch(mushafVariantsProvider).valueOrNull;
+    final matchingMushafs = mushafVariants
+        ?.where(
+          (variant) => variant.preferenceValue == preferences.mushafVariant,
+        )
+        .toList(growable: false);
+    final selectedMushaf =
+        preferences.mushafVariant == defaultMushafVariant ||
+            matchingMushafs == null ||
+            matchingMushafs.isEmpty
+        ? null
+        : matchingMushafs.first;
     final position = ref.watch(readingPositionProvider).valueOrNull;
     return Scaffold(
       appBar: IqroTopBar(
@@ -49,6 +61,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         child: Column(
           children: <Widget>[
             IqroCard(
+              onTap: () => _showMushafPicker(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -89,18 +102,27 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              context.l10n.mushafScanName,
+                              selectedMushaf?.name ??
+                                  context.l10n.mushafScanName,
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              context.l10n.mushafScanDescription,
+                              selectedMushaf == null
+                                  ? context.l10n.mushafScanDescription
+                                  : context.l10n.mushafCachedDescription,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.verified_outlined),
+                      Icon(
+                        selectedMushaf == null
+                            ? Icons.verified_outlined
+                            : Icons.offline_pin_outlined,
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right),
                     ],
                   ),
                 ],
@@ -248,6 +270,71 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     } else {
       context.push('/reader/$surah');
     }
+  }
+
+  Future<void> _showMushafPicker(BuildContext context) async {
+    List<MushafVariant> variants;
+    try {
+      variants = await ref.read(mushafVariantsProvider.future);
+    } on Object {
+      variants = const <MushafVariant>[];
+    }
+    if (!context.mounted) return;
+    final current = ref.read(appPreferencesProvider).mushafVariant;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => RadioGroup<String>(
+        groupValue: current,
+        onChanged: (value) => _selectMushaf(context, value),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 20),
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 12),
+              child: Text(
+                context.l10n.chooseMushaf,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            RadioListTile<String>(
+              value: defaultMushafVariant,
+              title: Text(context.l10n.mushafScanName),
+              subtitle: Text(context.l10n.mushafScanDescription),
+              secondary: const Icon(Icons.image_outlined),
+            ),
+            for (final variant in variants.where(
+              (variant) => variant.supportedOnMobile,
+            ))
+              RadioListTile<String>(
+                value: variant.preferenceValue,
+                title: Text(variant.name),
+                subtitle: Text(
+                  '${variant.qiratName} · ${context.l10n.mushafCachedDescription}',
+                ),
+                secondary: Icon(
+                  variant.sourceId == 19
+                      ? Icons.palette_outlined
+                      : Icons.font_download_outlined,
+                ),
+              ),
+            if (!variants.any((variant) => variant.supportedOnMobile))
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(context.l10n.mushafUnavailable),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectMushaf(BuildContext context, String? value) async {
+    if (value == null) return;
+    await ref.read(appPreferencesProvider.notifier).setMushafVariant(value);
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   Future<void> _showQuickJump(BuildContext context) async {

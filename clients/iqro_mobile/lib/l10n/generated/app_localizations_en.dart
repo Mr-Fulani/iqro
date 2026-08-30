@@ -183,6 +183,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafUnavailable => 'Temporarily unavailable from the source';
 
   @override
+  String get mushafCachedDescription =>
+      'Downloaded on first open · then available offline';
+
+  @override
+  String get mushafLoading => 'Loading the page and official font…';
+
+  @override
+  String get mushafFontError =>
+      'The official font could not be opened. Try again while online.';
+
+  @override
+  String get mushafOfflineMissing =>
+      'This page has not been saved on this device yet. Connect to the internet and try again.';
+
+  @override
   String get continueSaved => 'Continue from saved position';
 
   @override

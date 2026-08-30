@@ -54,6 +54,8 @@ dependencies:
   flutter_timezone: ^5.1.0
   intl: ^0.20.2
   audio_service: ^0.18.19
+  path_provider: ^2.1.5
+  webview_flutter: ^4.9.0
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +80,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/mushaf_reader.html
 
   # To add assets to your application, add an assets section, like this:
   # assets:

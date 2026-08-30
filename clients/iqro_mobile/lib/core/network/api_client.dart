@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../auth/auth_repository.dart';
@@ -77,6 +79,33 @@ class ApiClient {
         ),
       );
       return response.data;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<Uint8List> getPublicBytes(
+    Uri uri, {
+    required Set<String> allowedHosts,
+    int maxBytes = 8 * 1024 * 1024,
+  }) async {
+    if (uri.scheme != 'https' || !allowedHosts.contains(uri.host)) {
+      throw ArgumentError.value(uri, 'uri', 'Unapproved public asset origin');
+    }
+    try {
+      final response = await dio.getUri<List<int>>(
+        uri,
+        options: Options(
+          responseType: ResponseType.bytes,
+          extra: <String, Object?>{'public': true},
+          followRedirects: false,
+        ),
+      );
+      final bytes = response.data;
+      if (bytes == null || bytes.isEmpty || bytes.length > maxBytes) {
+        throw const FormatException('Public asset size is invalid');
+      }
+      return Uint8List.fromList(bytes);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }

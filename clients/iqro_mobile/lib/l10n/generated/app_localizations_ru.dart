@@ -182,6 +182,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafUnavailable => 'Вариант временно недоступен у источника';
 
   @override
+  String get mushafCachedDescription =>
+      'Загружается при первом открытии · далее доступен без сети';
+
+  @override
+  String get mushafLoading => 'Загружаем страницу и официальный шрифт…';
+
+  @override
+  String get mushafFontError =>
+      'Официальный шрифт не удалось открыть. Повторите при подключении к интернету.';
+
+  @override
+  String get mushafOfflineMissing =>
+      'Эта страница ещё не сохранена на устройстве. Подключитесь к интернету и повторите.';
+
+  @override
   String get continueSaved => 'Продолжить с сохранённого места';
 
   @override

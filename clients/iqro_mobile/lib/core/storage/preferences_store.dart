@@ -63,6 +63,7 @@ class PreferencesStore {
   PreferencesStore(this._preferences);
 
   static const supportedLocales = <String>{'ru', 'en', 'ar', 'tr'};
+  static const supportedMushafVariants = <String>{'scan', '1', '5', '19'};
   final SharedPreferences _preferences;
 
   AppPreferences read() {
@@ -76,10 +77,7 @@ class PreferencesStore {
       readerMode: _preferences.getString('reader_mode') == 'mushaf'
           ? ReaderMode.mushaf
           : ReaderMode.text,
-      // Native clients expose only the verified page scan until a variant has
-      // fully published native page assets. This also migrates the temporary
-      // KFGQPC text fallback back to the safe scan.
-      mushafVariant: defaultMushafVariant,
+      mushafVariant: _mushafVariant(_preferences.getString('mushaf_variant')),
       goal: _preferences.getString('primary_goal') ?? 'reading',
       dailyUnit: _unitFromName(_preferences.getString('daily_unit') ?? 'pages'),
       dailyTarget: _preferences.getInt('daily_target') ?? 6,
@@ -111,6 +109,12 @@ class PreferencesStore {
       (unit) => unit.name == value,
       orElse: () => DailyUnit.pages,
     );
+  }
+
+  static String _mushafVariant(String? value) {
+    return supportedMushafVariants.contains(value)
+        ? value!
+        : defaultMushafVariant;
   }
 }
 

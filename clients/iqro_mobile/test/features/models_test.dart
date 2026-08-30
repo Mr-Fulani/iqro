@@ -50,25 +50,62 @@ void main() {
     expect(page.firstAyahReference, (surah: 2, ayah: 1));
   });
 
-  test('font-only Mushaf variants are not exposed as mobile-ready', () {
+  test('approved font Mushafs expose only allowlisted mobile font URLs', () {
     final unicode = MushafVariant.fromJson(<String, Object?>{
       'source_id': 5,
       'name': 'KFGQPC HAFS',
       'qirat_name': 'Hafs',
       'pages_count': 604,
-      'rendering': <String, Object?>{'available': true, 'mode': 'unicode-font'},
+      'rendering': <String, Object?>{
+        'available': true,
+        'mode': 'unicode-font',
+        'font_url':
+            'https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/font.woff2',
+      },
     });
     final pageFont = MushafVariant.fromJson(<String, Object?>{
       'source_id': 19,
       'name': 'QCF V4 Tajweed',
       'qirat_name': 'Hafs',
       'pages_count': 604,
-      'rendering': <String, Object?>{'available': true, 'mode': 'page-font'},
+      'rendering': <String, Object?>{
+        'available': true,
+        'mode': 'page-font',
+        'font_url_template':
+            'https://verses.quran.foundation/fonts/quran/hafs/v4/p{page}.woff2',
+      },
     });
 
     expect(unicode.preferenceValue, '5');
-    expect(unicode.supportedOnMobile, isFalse);
-    expect(pageFont.supportedOnMobile, isFalse);
+    expect(unicode.supportedOnMobile, isTrue);
+    expect(unicode.fontUriForPage(4)?.host, 'verses.quran.foundation');
+    expect(pageFont.supportedOnMobile, isTrue);
+    expect(pageFont.fontUriForPage(4)?.path, endsWith('/p4.woff2'));
+
+    final unsafe = MushafVariant.fromJson(<String, Object?>{
+      'source_id': 5,
+      'name': 'Unsafe',
+      'qirat_name': 'Hafs',
+      'pages_count': 604,
+      'rendering': <String, Object?>{
+        'available': true,
+        'mode': 'unicode-font',
+        'font_url': 'https://example.com/font.woff2',
+      },
+    });
+    expect(unsafe.fontUriForPage(1), isNull);
+    expect(unsafe.supportedOnMobile, isFalse);
+  });
+
+  test('foundation Mushaf page derives first ayah from verse mapping', () {
+    final page = FoundationMushafPage.fromJson(<String, Object?>{
+      'page_number': 42,
+      'verse_mapping': <String, Object?>{'5': '3-11', '4': '176'},
+    }, fromCache: true);
+
+    expect(page.pageNumber, 42);
+    expect(page.firstAyahReference, (surah: 4, ayah: 176));
+    expect(page.fromCache, isTrue);
   });
 
   test('Reciter uses Turkish content with an English fallback', () {

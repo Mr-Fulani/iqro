@@ -10,6 +10,8 @@ import 'package:photo_view/photo_view.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
+import 'foundation_mushaf_reader.dart';
+import 'quran_models.dart';
 
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({
@@ -29,6 +31,7 @@ class MushafScreen extends ConsumerStatefulWidget {
 
 class _MushafScreenState extends ConsumerState<MushafScreen> {
   late final PageController _pageController;
+  final _foundationController = FoundationMushafReaderController();
   final _zoomControllers = <int, PhotoViewController>{};
   var _currentPage = 1;
   var _controlsVisible = false;
@@ -63,6 +66,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final preference = ref.watch(
+      appPreferencesProvider.select((value) => value.mushafVariant),
+    );
+    final variants = ref.watch(mushafVariantsProvider);
+    final matchingVariants = variants.valueOrNull
+        ?.where((variant) => variant.preferenceValue == preference)
+        .toList(growable: false);
+    final MushafVariant? foundationVariant =
+        preference == defaultMushafVariant ||
+            matchingVariants == null ||
+            matchingVariants.isEmpty
+        ? null
+        : matchingVariants.first;
     final foreground = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFF3EEDC)
         : const Color(0xFF26261F);
@@ -78,44 +94,53 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         backgroundColor: const Color(0xFFEDE6D3),
         body: Stack(
           children: <Widget>[
-            PageView.builder(
-              controller: _pageController,
-              reverse: true,
-              itemCount: 604,
-              onPageChanged: (index) {
-                final page = index + 1;
-                setState(() {
-                  _currentPage = page;
-                  _controlsVisible = false;
-                  _zoom = 1;
-                });
-                unawaited(
-                  SystemChrome.setEnabledSystemUIMode(
-                    SystemUiMode.immersiveSticky,
-                  ),
-                );
-                unawaited(_savePagePosition(page));
-                if (page < 604) {
-                  ref.read(mushafPageProvider(page + 1).future).ignore();
-                }
-              },
-              itemBuilder: (context, index) {
-                final page = index + 1;
-                return _MushafPage(
-                  page: page,
-                  controller: _zoomControllers.putIfAbsent(
-                    page,
-                    PhotoViewController.new,
-                  ),
-                  onTap: () => _setControls(!_controlsVisible),
-                  onScale: (value) {
-                    if (page == _currentPage && mounted) {
-                      setState(() => _zoom = value);
-                    }
-                  },
-                );
-              },
-            ),
+            if (preference != defaultMushafVariant && variants.isLoading)
+              const ColoredBox(color: Color(0xFFEDE6D3), child: IqroLoading())
+            else if (foundationVariant != null &&
+                foundationVariant.supportedOnMobile)
+              FoundationMushafReader(
+                variant: foundationVariant,
+                page: _currentPage,
+                // Official glyph palettes require a light paper surface.
+                dark: false,
+                controller: _foundationController,
+                onToggleControls: () => _setControls(!_controlsVisible),
+                onNextPage: () => _turnPage(1, foundation: true),
+                onPreviousPage: () => _turnPage(-1, foundation: true),
+                onPageLoaded: _saveFoundationPagePosition,
+              )
+            else if (preference != defaultMushafVariant)
+              ColoredBox(
+                color: const Color(0xFFEDE6D3),
+                child: IqroAsyncError(
+                  title: context.l10n.noQuranData,
+                  message: context.l10n.mushafOfflineMissing,
+                  onRetry: () => ref.invalidate(mushafVariantsProvider),
+                ),
+              )
+            else
+              PageView.builder(
+                controller: _pageController,
+                reverse: true,
+                itemCount: 604,
+                onPageChanged: _onScanPageChanged,
+                itemBuilder: (context, index) {
+                  final page = index + 1;
+                  return _MushafPage(
+                    page: page,
+                    controller: _zoomControllers.putIfAbsent(
+                      page,
+                      PhotoViewController.new,
+                    ),
+                    onTap: () => _setControls(!_controlsVisible),
+                    onScale: (value) {
+                      if (page == _currentPage && mounted) {
+                        setState(() => _zoom = value);
+                      }
+                    },
+                  );
+                },
+              ),
             IgnorePointer(
               ignoring: !_controlsVisible,
               child: AnimatedSlide(
@@ -223,8 +248,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                   min: 1,
                                   max: 3,
                                   onChanged: (value) {
-                                    _zoomControllers[_currentPage]?.scale =
-                                        value;
+                                    if (foundationVariant != null) {
+                                      unawaited(
+                                        _foundationController.setZoom(value),
+                                      );
+                                    } else {
+                                      _zoomControllers[_currentPage]?.scale =
+                                          value;
+                                    }
                                     setState(() => _zoom = value);
                                   },
                                 ),
@@ -250,11 +281,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                     '${context.l10n.page} ${_currentPage - 1}',
                                 onPressed: _currentPage <= 1
                                     ? null
-                                    : () => _pageController.previousPage(
-                                        duration: const Duration(
-                                          milliseconds: 420,
-                                        ),
-                                        curve: Curves.easeInOutCubic,
+                                    : () => _turnPage(
+                                        -1,
+                                        foundation: foundationVariant != null,
                                       ),
                                 icon: const Icon(Icons.chevron_left),
                               ),
@@ -283,11 +312,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                     '${context.l10n.page} ${_currentPage + 1}',
                                 onPressed: _currentPage >= 604
                                     ? null
-                                    : () => _pageController.nextPage(
-                                        duration: const Duration(
-                                          milliseconds: 420,
-                                        ),
-                                        curve: Curves.easeInOutCubic,
+                                    : () => _turnPage(
+                                        1,
+                                        foundation: foundationVariant != null,
                                       ),
                                 icon: const Icon(Icons.chevron_right),
                               ),
@@ -327,6 +354,59 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         ),
       ),
     );
+  }
+
+  void _onScanPageChanged(int index) {
+    final page = index + 1;
+    setState(() {
+      _currentPage = page;
+      _controlsVisible = false;
+      _zoom = 1;
+    });
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+    unawaited(_savePagePosition(page));
+    if (page < 604) {
+      ref.read(mushafPageProvider(page + 1).future).ignore();
+    }
+  }
+
+  void _turnPage(int delta, {required bool foundation}) {
+    final target = (_currentPage + delta).clamp(1, 604).toInt();
+    if (target == _currentPage) return;
+    if (!foundation) {
+      unawaited(
+        _pageController.animateToPage(
+          target - 1,
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeInOutCubic,
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _currentPage = target;
+      _controlsVisible = false;
+      _zoom = 1;
+    });
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+  }
+
+  void _saveFoundationPagePosition(FoundationMushafPage pageData) {
+    unawaited(() async {
+      final repository = ref.read(quranRepositoryProvider);
+      final current = await repository.position();
+      final reference = pageData.firstAyahReference;
+      await repository.savePosition(
+        surah: reference?.surah ?? current.surah,
+        ayah: reference?.ayah ?? current.ayah,
+        page: pageData.pageNumber,
+      );
+      if (mounted) ref.invalidate(readingPositionProvider);
+    }());
   }
 
   Future<void> _savePagePosition(int page) async {

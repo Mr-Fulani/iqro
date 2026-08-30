@@ -7,7 +7,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'unsupported Mushaf choices migrate back to the verified scan',
+    'supported Mushaf choices persist and unknown choices migrate',
     () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final store = PreferencesStore(await SharedPreferences.getInstance());
@@ -28,8 +28,11 @@ void main() {
       expect(restored.locale, 'ar');
       expect(restored.themeMode, ThemeMode.dark);
       expect(restored.readerMode, ReaderMode.mushaf);
-      expect(restored.mushafVariant, defaultMushafVariant);
+      expect(restored.mushafVariant, '5');
       expect(restored.dailyTarget, 12);
+
+      await store.write(value.copyWith(mushafVariant: '11'));
+      expect(store.read().mushafVariant, defaultMushafVariant);
     },
   );
 }

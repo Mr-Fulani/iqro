@@ -183,6 +183,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mushafUnavailable => 'Kaynakta geçici olarak kullanılamıyor';
 
   @override
+  String get mushafCachedDescription =>
+      'İlk açılışta indirilir · ardından çevrimdışı kullanılabilir';
+
+  @override
+  String get mushafLoading => 'Sayfa ve resmî yazı tipi yükleniyor…';
+
+  @override
+  String get mushafFontError =>
+      'Resmî yazı tipi açılamadı. İnternete bağlıyken yeniden deneyin.';
+
+  @override
+  String get mushafOfflineMissing =>
+      'Bu sayfa henüz cihaza kaydedilmedi. İnternete bağlanıp yeniden deneyin.';
+
+  @override
   String get continueSaved => 'Kayıtlı yerden devam et';
 
   @override

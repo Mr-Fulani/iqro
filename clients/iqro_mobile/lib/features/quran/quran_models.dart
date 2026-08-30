@@ -158,6 +158,10 @@ class MushafVariant {
     required this.pagesCount,
     required this.renderingAvailable,
     required this.renderingMode,
+    required this.linesPerPage,
+    required this.sourceChecksum,
+    this.fontUrl,
+    this.fontUrlTemplate,
   });
 
   factory MushafVariant.fromJson(Map<String, Object?> json) {
@@ -170,6 +174,10 @@ class MushafVariant {
       pagesCount: (json['pages_count'] as num?)?.toInt() ?? 604,
       renderingAvailable: rendering['available'] == true,
       renderingMode: rendering['mode']?.toString() ?? 'unknown',
+      linesPerPage: (json['lines_per_page'] as num?)?.toInt() ?? 15,
+      sourceChecksum: json['source_checksum_sha256']?.toString() ?? '',
+      fontUrl: rendering['font_url']?.toString(),
+      fontUrlTemplate: rendering['font_url_template']?.toString(),
     );
   }
 
@@ -180,12 +188,81 @@ class MushafVariant {
   final int pagesCount;
   final bool renderingAvailable;
   final String renderingMode;
+  final int linesPerPage;
+  final String sourceChecksum;
+  final String? fontUrl;
+  final String? fontUrlTemplate;
 
   String get preferenceValue => '$sourceId';
 
-  // Browser font contracts are insufficient for a faithful native page.
-  // Mobile readiness will be driven by verified backend page assets.
-  bool get supportedOnMobile => false;
+  bool get supportedOnMobile {
+    if (!renderingAvailable || !const <int>{1, 5, 19}.contains(sourceId)) {
+      return false;
+    }
+    return const <String>{
+          'unicode-font',
+          'page-font',
+        }.contains(renderingMode) &&
+        fontUriForPage(1) != null;
+  }
+
+  Uri? fontUriForPage(int page) {
+    final raw = switch (renderingMode) {
+      'unicode-font' => fontUrl,
+      'page-font' => fontUrlTemplate?.replaceAll('{page}', '$page'),
+      _ => null,
+    };
+    if (raw == null) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host != 'verses.quran.foundation' ||
+        !uri.path.startsWith('/fonts/quran/') ||
+        !uri.path.endsWith('.woff2')) {
+      return null;
+    }
+    return uri;
+  }
+}
+
+class FoundationMushafPage {
+  const FoundationMushafPage({required this.value, required this.fromCache});
+
+  factory FoundationMushafPage.fromJson(
+    Map<String, Object?> json, {
+    required bool fromCache,
+  }) {
+    return FoundationMushafPage(value: json, fromCache: fromCache);
+  }
+
+  final Map<String, Object?> value;
+  final bool fromCache;
+
+  int get pageNumber => (value['page_number'] as num?)?.toInt() ?? 1;
+
+  ({int surah, int ayah})? get firstAyahReference {
+    final mapping = value['verse_mapping'];
+    if (mapping is! Map || mapping.isEmpty) return null;
+    final entries =
+        mapping.entries
+            .map(
+              (entry) => (
+                surah: int.tryParse(entry.key.toString()),
+                ranges: entry.value?.toString() ?? '',
+              ),
+            )
+            .where((entry) => entry.surah != null)
+            .toList(growable: false)
+          ..sort((left, right) => left.surah!.compareTo(right.surah!));
+    for (final entry in entries) {
+      final firstRange = entry.ranges.split(',').first.trim();
+      final match = RegExp(r'^(\d+)(?:-\d+)?$').firstMatch(firstRange);
+      if (match == null) continue;
+      final ayah = int.tryParse(match.group(1)!);
+      if (ayah != null) return (surah: entry.surah!, ayah: ayah);
+    }
+    return null;
+  }
 }
 
 class ReadingPosition {

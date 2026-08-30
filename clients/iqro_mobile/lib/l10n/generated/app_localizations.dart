@@ -444,6 +444,30 @@ abstract class AppLocalizations {
   /// **'Temporarily unavailable from the source'**
   String get mushafUnavailable;
 
+  /// No description provided for @mushafCachedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded on first open · then available offline'**
+  String get mushafCachedDescription;
+
+  /// No description provided for @mushafLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the page and official font…'**
+  String get mushafLoading;
+
+  /// No description provided for @mushafFontError.
+  ///
+  /// In en, this message translates to:
+  /// **'The official font could not be opened. Try again while online.'**
+  String get mushafFontError;
+
+  /// No description provided for @mushafOfflineMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This page has not been saved on this device yet. Connect to the internet and try again.'**
+  String get mushafOfflineMissing;
+
   /// No description provided for @continueSaved.
   ///
   /// In en, this message translates to:

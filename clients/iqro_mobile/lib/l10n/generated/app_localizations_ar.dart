@@ -182,6 +182,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafUnavailable => 'هذا الخيار غير متاح مؤقتًا من المصدر';
 
   @override
+  String get mushafCachedDescription =>
+      'يُحمّل عند الفتح أول مرة · ثم يتاح دون اتصال';
+
+  @override
+  String get mushafLoading => 'جارٍ تحميل الصفحة والخط الرسمي…';
+
+  @override
+  String get mushafFontError =>
+      'تعذر فتح الخط الرسمي. حاول مرة أخرى عند الاتصال بالإنترنت.';
+
+  @override
+  String get mushafOfflineMissing =>
+      'لم تُحفظ هذه الصفحة على الجهاز بعد. اتصل بالإنترنت وحاول مرة أخرى.';
+
+  @override
   String get continueSaved => 'متابعة من الموضع المحفوظ';
 
   @override

@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=3, user-scalable=yes, viewport-fit=cover"
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --paper: #ede6d3;
+        --ink: #24231d;
+        --muted: rgba(36, 35, 29, 0.58);
+        --accent: #0b6b57;
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      button,
+      input,
+      textarea,
+      select { font: inherit; }
+
+      #viewport {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        touch-action: pan-x pan-y pinch-zoom;
+        scrollbar-width: none;
+      }
+
+      #viewport::-webkit-scrollbar { display: none; }
+
+      #page {
+        width: 100%;
+        min-height: 100%;
+        padding: max(12px, env(safe-area-inset-top)) 10px
+          max(16px, env(safe-area-inset-bottom));
+        transform-origin: center center;
+        transition: transform 180ms ease-out;
+      }
+
+      #page.enter-next { animation: enter-next 360ms cubic-bezier(.22, .78, .26, 1); }
+      #page.enter-previous { animation: enter-previous 360ms cubic-bezier(.22, .78, .26, 1); }
+
+      @keyframes enter-next {
+        from { opacity: .2; transform: perspective(900px) rotateY(-8deg) translateX(-7%); }
+        to { opacity: 1; transform: perspective(900px) rotateY(0) translateX(0); }
+      }
+
+      @keyframes enter-previous {
+        from { opacity: .2; transform: perspective(900px) rotateY(8deg) translateX(7%); }
+        to { opacity: 1; transform: perspective(900px) rotateY(0) translateX(0); }
+      }
+
+      .sheet {
+        position: relative;
+        display: grid;
+        width: min(100%, calc((100vh - 60px) * .98), 720px);
+        height: calc(100vh - max(28px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
+        min-height: 0;
+        margin: 0 auto;
+        padding: 3.4vh 2.3vw 4.2vh;
+        border: 1px solid rgba(74, 64, 42, .2);
+        border-radius: 10px;
+        background:
+          linear-gradient(90deg, rgba(108, 84, 40, .035), transparent 12%, transparent 88%, rgba(108, 84, 40, .035)),
+          #f8f3e7;
+        box-shadow: 0 8px 30px rgba(43, 35, 20, .12);
+        overflow: hidden;
+      }
+
+      .line {
+        grid-column: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        direction: rtl;
+        white-space: nowrap;
+        font-size: clamp(13px, min(5.25vw, 4.25vh), 34px);
+        line-height: 1;
+        text-rendering: optimizeLegibility;
+        font-synthesis: none;
+      }
+
+      .fragment { display: inline-flex; align-items: baseline; }
+      .word { display: inline-block; }
+
+      .intro {
+        grid-column: 1;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 0;
+        overflow: hidden;
+        text-align: center;
+        font-family: var(--mushaf-font), serif;
+        font-size: clamp(12px, min(4vw, 3.8vh), 25px);
+        line-height: 1.15;
+      }
+
+      .intro.compact { font-size: clamp(12px, 3.3vw, 20px); }
+
+      .surah-title {
+        width: min(86%, 460px);
+        padding: 3px 16px;
+        border-block: 1px solid rgba(84, 66, 31, .3);
+        color: #4f3e1f;
+      }
+
+      .bismillah { color: #2e2a20; }
+
+      .page-number {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 8px;
+        text-align: center;
+        color: var(--muted);
+        font: 600 12px/1 system-ui, sans-serif;
+      }
+
+      .attribution {
+        position: absolute;
+        inset-inline-end: 14px;
+        bottom: 8px;
+        color: var(--muted);
+        font: 500 9px/1 system-ui, sans-serif;
+      }
+
+      .state {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        background: var(--paper);
+        text-align: center;
+        color: var(--ink);
+        font: 500 15px/1.45 system-ui, sans-serif;
+      }
+
+      .state[hidden] { display: none; }
+
+      .spinner {
+        width: 32px;
+        height: 32px;
+        margin: 0 auto 12px;
+        border: 3px solid rgba(11, 107, 87, .18);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 800ms linear infinite;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      body.dark {
+        --paper: #101713;
+        --ink: #f1ead7;
+        --muted: rgba(241, 234, 215, .58);
+      }
+
+      body.dark .sheet {
+        border-color: rgba(235, 219, 181, .14);
+        background: #17201b;
+        box-shadow: none;
+      }
+
+      body.dark .surah-title,
+      body.dark .bismillah { color: #eadfbf; }
+
+      @media (max-height: 650px) {
+        .sheet {
+          padding-top: 10px;
+          padding-bottom: 22px;
+        }
+        .line { font-size: clamp(12px, min(4.8vw, 4vh), 27px); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #page.enter-next,
+        #page.enter-previous { animation: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="viewport" aria-live="polite">
+      <section id="page"></section>
+      <section id="state" class="state">
+        <div><div class="spinner"></div><span>Loading…</span></div>
+      </section>
+    </main>
+    <script>
+      (() => {
+        "use strict";
+
+        const pageElement = document.getElementById("page");
+        const stateElement = document.getElementById("state");
+        const viewport = document.getElementById("viewport");
+        let activeFont = null;
+        let zoom = 1;
+        let pointerStart = null;
+
+        function send(type, extra = {}) {
+          if (!window.IqroReader || !window.IqroReader.postMessage) return;
+          window.IqroReader.postMessage(JSON.stringify({ type, ...extra }));
+        }
+
+        function showState(text, loading) {
+          stateElement.hidden = false;
+          stateElement.replaceChildren();
+          const content = document.createElement("div");
+          if (loading) {
+            const spinner = document.createElement("div");
+            spinner.className = "spinner";
+            content.appendChild(spinner);
+          }
+          const label = document.createElement("span");
+          label.textContent = text;
+          content.appendChild(label);
+          stateElement.appendChild(content);
+        }
+
+        function hideState() { stateElement.hidden = true; }
+
+        function verseKeysFromMapping(mapping) {
+          const keys = [];
+          for (const [surahValue, rangesValue] of Object.entries(mapping || {}).sort(
+            ([left], [right]) => Number(left) - Number(right),
+          )) {
+            const surah = Number(surahValue);
+            for (const rangeValue of String(rangesValue).split(",")) {
+              const match = /^(\d+)(?:-(\d+))?$/.exec(rangeValue.trim());
+              if (!Number.isInteger(surah) || !match) continue;
+              const start = Number(match[1]);
+              const end = Number(match[2] || match[1]);
+              for (let ayah = start; ayah <= end; ayah += 1) {
+                keys.push(`${surah}:${ayah}`);
+              }
+            }
+          }
+          return keys;
+        }
+
+        function verseKeyById(page) {
+          const ids = [];
+          const seen = new Set();
+          for (const word of [...page.words].sort((a, b) => a.position_in_page - b.position_in_page)) {
+            if (word.verse_id == null || seen.has(word.verse_id)) continue;
+            seen.add(word.verse_id);
+            ids.push(word.verse_id);
+          }
+          const keys = verseKeysFromMapping(page.verse_mapping);
+          return new Map(ids.slice(0, keys.length).map((id, index) => [id, keys[index]]));
+        }
+
+        function displayLine(pageNumber, lineNumber) {
+          return pageNumber === 1 || pageNumber === 2 ? lineNumber - 4 : lineNumber;
+        }
+
+        function chapterIntros(page, lines, verseKeys, surahs) {
+          const surahByNumber = new Map(surahs.map((surah) => [surah.number, surah]));
+          const occupied = new Set(lines.flatMap((line, index) => line.length ? [index + 1] : []));
+          const intros = [];
+          for (const [surahValue, rangeValue] of Object.entries(page.verse_mapping || {}).sort(
+            ([left], [right]) => Number(left) - Number(right),
+          )) {
+            const match = /^(\d+)(?:-(\d+))?$/.exec(String(rangeValue).trim());
+            const surahNumber = Number(surahValue);
+            if (!match || Number(match[1]) !== 1) continue;
+            const surah = surahByNumber.get(surahNumber);
+            if (!surah) continue;
+            const firstVerseId = [...verseKeys.entries()].find(([, key]) => key === `${surahNumber}:1`)?.[0];
+            if (firstVerseId == null) continue;
+            const wordLines = page.words
+              .filter((word) => word.verse_id === firstVerseId)
+              .map((word) => word.line_number);
+            const firstVerseLine = Math.min(...wordLines);
+            if (!Number.isFinite(firstVerseLine) || firstVerseLine <= 1) continue;
+            let previousOccupied = firstVerseLine - 1;
+            while (previousOccupied > 0 && !occupied.has(previousOccupied)) previousOccupied -= 1;
+            const availableRows = firstVerseLine - previousOccupied - 1;
+            if (availableRows < 1) continue;
+            const showTitle = surahNumber > 2;
+            const showBismillah = surahNumber !== 1 && surahNumber !== 9;
+            const requiredRows = Number(showTitle) + Number(showBismillah);
+            if (!requiredRows) continue;
+            const usedRows = Math.min(requiredRows, availableRows);
+            intros.push({
+              surah,
+              firstLine: firstVerseLine - usedRows,
+              endLine: firstVerseLine,
+              compact: requiredRows > usedRows,
+              showTitle,
+              showBismillah,
+            });
+          }
+          return intros;
+        }
+
+        async function loadFont(payload) {
+          if (activeFont) {
+            document.fonts.delete(activeFont);
+            activeFont = null;
+          }
+          const family = `iqro-${payload.variant.source_id}-${
+            payload.variant.rendering_mode === "page-font" ? payload.page.page_number : "global"
+          }`;
+          const font = new FontFace(family, `url("${payload.font_data_uri}") format("woff2")`);
+          font.display = "block";
+          activeFont = await font.load();
+          document.fonts.add(activeFont);
+          await document.fonts.ready;
+          if (!document.fonts.check(`24px "${family}"`)) throw new Error("font-not-ready");
+          document.documentElement.style.setProperty("--mushaf-font", `"${family}"`);
+          return family;
+        }
+
+        function fragmentElements(words, verseKeys, family) {
+          const fragments = [];
+          for (const word of words) {
+            const ayahKey = word.verse_id == null ? null : verseKeys.get(word.verse_id);
+            let fragment = fragments.at(-1);
+            if (!fragment || fragment.dataset.ayahKey !== (ayahKey || "")) {
+              fragment = document.createElement("span");
+              fragment.className = "fragment";
+              fragment.dataset.ayahKey = ayahKey || "";
+              fragment.style.fontFamily = `"${family}", serif`;
+              fragments.push(fragment);
+            }
+            const wordElement = document.createElement("span");
+            wordElement.className = "word";
+            wordElement.textContent = word.text;
+            wordElement.dataset.positionInPage = String(word.position_in_page);
+            fragment.appendChild(wordElement);
+          }
+          return fragments;
+        }
+
+        function buildPage(payload, family, direction) {
+          const page = payload.page;
+          const lineCount = Math.min(30, Math.max(1, Number(payload.variant.lines_per_page) || 15));
+          const lines = Array.from({ length: lineCount }, () => []);
+          for (const word of [...page.words].sort(
+            (a, b) => a.position_in_page - b.position_in_page || a.id - b.id,
+          )) {
+            if (word.line_number >= 1 && word.line_number <= lineCount) {
+              lines[word.line_number - 1].push(word);
+            }
+          }
+          const verseKeys = verseKeyById(page);
+          const sheet = document.createElement("article");
+          sheet.className = "sheet";
+          sheet.style.gridTemplateRows = `repeat(${lineCount}, minmax(0, 1fr))`;
+          sheet.setAttribute("aria-label", `${payload.variant.name}, ${payload.labels.page} ${page.page_number}`);
+
+          for (const intro of chapterIntros(page, lines, verseKeys, payload.surahs)) {
+            const element = document.createElement("div");
+            element.className = `intro${intro.compact ? " compact" : ""}`;
+            element.style.gridRow = `${displayLine(page.page_number, intro.firstLine)} / ${displayLine(page.page_number, intro.endLine)}`;
+            if (intro.showTitle) {
+              const title = document.createElement("div");
+              title.className = "surah-title";
+              title.textContent = `سُورَةُ ${intro.surah.name_ar}`;
+              element.appendChild(title);
+            }
+            if (intro.showBismillah) {
+              const bismillah = document.createElement("div");
+              bismillah.className = "bismillah";
+              bismillah.textContent = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+              element.appendChild(bismillah);
+            }
+            sheet.appendChild(element);
+          }
+
+          lines.forEach((words, index) => {
+            if (!words.length) return;
+            const sourceLine = index + 1;
+            const line = document.createElement("div");
+            line.className = "line";
+            line.style.gridRow = String(displayLine(page.page_number, sourceLine));
+            line.dataset.lineNumber = String(sourceLine);
+            line.append(...fragmentElements(words, verseKeys, family));
+            sheet.appendChild(line);
+          });
+
+          const number = document.createElement("span");
+          number.className = "page-number";
+          number.textContent = String(page.page_number);
+          sheet.appendChild(number);
+
+          const attribution = document.createElement("span");
+          attribution.className = "attribution";
+          attribution.textContent = "Quran.Foundation";
+          sheet.appendChild(attribution);
+
+          pageElement.className = direction === "previous" ? "enter-previous" : "enter-next";
+          pageElement.style.transform = `scale(${zoom})`;
+          pageElement.replaceChildren(sheet);
+          viewport.scrollTo({ top: 0, left: 0 });
+        }
+
+        async function renderPage(payloadJson, direction = "next") {
+          const payload = JSON.parse(payloadJson);
+          document.body.classList.toggle("dark", Boolean(payload.dark));
+          showState(payload.labels.loading, true);
+          try {
+            const family = await loadFont(payload);
+            buildPage(payload, family, direction);
+            hideState();
+            send("ready", { page: payload.page.page_number });
+          } catch (error) {
+            showState(payload.labels.fontError, false);
+            send("error", { code: "font", message: String(error) });
+          }
+        }
+
+        function setZoom(value) {
+          zoom = Math.min(3, Math.max(1, Number(value) || 1));
+          pageElement.style.transform = `scale(${zoom})`;
+        }
+
+        viewport.addEventListener("pointerdown", (event) => {
+          pointerStart = { x: event.clientX, y: event.clientY, at: Date.now() };
+        });
+        viewport.addEventListener("pointerup", (event) => {
+          if (!pointerStart) return;
+          const dx = event.clientX - pointerStart.x;
+          const dy = event.clientY - pointerStart.y;
+          const elapsed = Date.now() - pointerStart.at;
+          pointerStart = null;
+          if (Math.abs(dx) >= 54 && Math.abs(dx) > Math.abs(dy) * 1.35) {
+            send(dx > 0 ? "next" : "previous");
+          } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && elapsed < 450) {
+            send("toggleControls");
+          }
+        });
+        viewport.addEventListener("pointercancel", () => { pointerStart = null; });
+
+        window.iqroReader = { renderPage, setZoom };
+        send("shellReady");
+      })();
+    </script>
+  </body>
+</html>
