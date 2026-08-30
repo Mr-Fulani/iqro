@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "release_id": "replace-with-approved-release",
+  "license_evidence": {
+    "decision": "pending",
+    "provider": "King Fahd Glorious Quran Printing Complex",
+    "approval_reference": "replace-with-provider-reference",
+    "approved_at": "replace-with-ISO-8601-timestamp",
+    "path": "evidence/provider-approval.pdf",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "rights": [
+      "cache_provider_fonts_for_server_rendering",
+      "create_lossless_webp_derivatives",
+      "host_derivatives_in_first_party_object_storage",
+      "deliver_derivatives_to_first_party_native_clients"
+    ]
+  },
+  "runtime": {
+    "playwright_core_version": "1.62.1",
+    "platform": "linux-x64",
+    "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "node": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "version": "replace-with-full-Node.js-version"
+    },
+    "chromium": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "version": "replace-with-full-Chromium-version"
+    },
+    "cwebp": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "version": "replace-with-pinned-libwebp-version"
+    }
+  },
+  "resources": {
+    "5": {
+      "mode": "unicode-font",
+      "allowed_source_checksums": [
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "font": {
+        "path": "resources/5/fonts/UthmanicHafs-authorized.woff2",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "geometry": {
+        "path": "resources/5/geometry.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    "1": {
+      "mode": "page-font",
+      "allowed_source_checksums": [
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "fonts_manifest": {
+        "path": "resources/1/fonts.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "geometry": {
+        "path": "resources/1/geometry.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    "19": {
+      "mode": "page-font",
+      "allowed_source_checksums": [
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "fonts_manifest": {
+        "path": "resources/19/fonts.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "geometry": {
+        "path": "resources/19/geometry.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  }
+}

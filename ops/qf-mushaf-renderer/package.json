@@ -1,0 +1,18 @@
+{
+  "name": "@iqro/qf-mushaf-renderer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0 <25"
+  },
+  "bin": {
+    "qf-mushaf-renderer": "bin/qf-mushaf-renderer.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.62.1"
+  }
+}

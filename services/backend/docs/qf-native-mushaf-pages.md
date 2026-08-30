@@ -25,9 +25,10 @@ admin только для чтения. В списке видны статус,
 
 ## Контракт renderer
 
-Backend содержит строгий adapter `ExternalCommandQuranFoundationRenderer`, но не включает
-Chromium/Playwright и браузерные бинарники. Это сознательный operational boundary: pixel renderer
-должен быть отдельно собран, закреплён по версии и проверен редакционно на контрольных страницах.
+Backend содержит строгий adapter `ExternalCommandQuranFoundationRenderer`. Реализация executable
+находится в `ops/qf-mushaf-renderer`; Chromium и `cwebp` поставляются отдельно из закреплённого
+internal artifact/container image. Renderer проверяет SHA-256 asset lock, runtime, provider
+evidence, fonts, exact geometry, backgrounds и QF glyph text перед созданием страницы.
 
 Executable обязан поддерживать:
 
@@ -61,9 +62,12 @@ Renderer должен вернуть lossless WebP и записать `OUTPUT_D
 page/source identity, набор ширин, WebP signature, размеры файла и SHA-256 перед create-only
 upload. Stderr renderer не сохраняется в БД и не попадает в публичный API.
 
-Единственный незавершённый runtime-компонент — сам закреплённый pixel renderer с Chromium,
-поддержкой QCF V2 page WOFF2, KFGQPC Unicode WOFF2 и QCF V4 COLRv1 page WOFF2. До его установки
-API корректно отвечает `not_ready`; наличие pipeline не означает готовность пиксельного рендера.
+Executable и install contract готовы, но production pixel release остаётся fail-closed до
+получения письменно разрешённого provider package: fonts, exact word geometry, официальные
+decoration/background layers и разрешение на WebP derivatives/CDN/native delivery. Точный blocker
+зафиксирован в `docs/sign-offs/qf-native-mushaf-renderer-blocker-2026-08-30.md`. Example asset lock
+имеет `decision=pending` и не может пройти проверку. До авторизованного release bundle API
+корректно отвечает `not_ready`; наличие pipeline не означает готовность пиксельного рендера.
 
 ## Prepare и resume
 

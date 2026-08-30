@@ -1,0 +1,31 @@
+{
+  "_note": "Schema fragment only. Production geometry must contain pages 1 through 604 exactly.",
+  "schema_version": 1,
+  "resource_id": 5,
+  "source_checksum_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "page_count": 604,
+  "canonical_width": 1440,
+  "canonical_height": 2208,
+  "pages": {
+    "1": {
+      "background": {
+        "path": "backgrounds/page-001.png",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "words": [
+        {
+          "position_in_page": 1,
+          "source_id": 1,
+          "line_number": 9,
+          "x": 1100,
+          "y": 900,
+          "width": 180,
+          "height": 100,
+          "font_size": 72,
+          "text_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "anchor": "center"
+        }
+      ]
+    }
+  }
+}
