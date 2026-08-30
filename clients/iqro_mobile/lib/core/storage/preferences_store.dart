@@ -76,8 +76,10 @@ class PreferencesStore {
       readerMode: _preferences.getString('reader_mode') == 'mushaf'
           ? ReaderMode.mushaf
           : ReaderMode.text,
-      mushafVariant:
-          _preferences.getString('mushaf_variant') ?? defaultMushafVariant,
+      // Native clients expose only the verified page scan until a variant has
+      // fully published native page assets. This also migrates the temporary
+      // KFGQPC text fallback back to the safe scan.
+      mushafVariant: defaultMushafVariant,
       goal: _preferences.getString('primary_goal') ?? 'reading',
       dailyUnit: _unitFromName(_preferences.getString('daily_unit') ?? 'pages'),
       dailyTarget: _preferences.getInt('daily_target') ?? 6,

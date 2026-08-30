@@ -171,14 +171,6 @@ final mushafPageProvider = FutureProvider.family<MushafPageData, int>((
 final mushafVariantsProvider = FutureProvider<List<MushafVariant>>((ref) {
   return ref.watch(quranRepositoryProvider).mushafVariants();
 });
-final foundationMushafPageProvider =
-    FutureProvider.family<FoundationMushafPageData, ({int sourceId, int page})>(
-      (ref, request) {
-        return ref
-            .watch(quranRepositoryProvider)
-            .foundationMushafPage(request.sourceId, request.page);
-      },
-    );
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });

@@ -106,35 +106,6 @@ class QuranRepository {
     }
   }
 
-  Future<FoundationMushafPageData> foundationMushafPage(
-    int sourceId,
-    int page, {
-    bool forceRefresh = false,
-  }) async {
-    final key = 'quran:foundation:mushaf:$sourceId:page:$page';
-    final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return FoundationMushafPageData.fromJson(jsonMap(cached!.value));
-    }
-    try {
-      final payload = await _api.get(
-        '/quran/foundation/mushafs/$sourceId/pages/$page',
-        public: true,
-      );
-      await _database.writeCache(
-        key,
-        payload,
-        maxAge: const Duration(days: 30),
-      );
-      return FoundationMushafPageData.fromJson(jsonMap(payload));
-    } on Object {
-      if (cached != null) {
-        return FoundationMushafPageData.fromJson(jsonMap(cached.value));
-      }
-      rethrow;
-    }
-  }
-
   Future<ReadingPosition> position() async {
     final rows = await _database.database.query(
       'reading_positions',

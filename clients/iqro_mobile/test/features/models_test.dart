@@ -50,7 +50,7 @@ void main() {
     expect(page.firstAyahReference, (surah: 2, ayah: 1));
   });
 
-  test('Mushaf variants expose only the mobile-safe Unicode renderer', () {
+  test('font-only Mushaf variants are not exposed as mobile-ready', () {
     final unicode = MushafVariant.fromJson(<String, Object?>{
       'source_id': 5,
       'name': 'KFGQPC HAFS',
@@ -67,39 +67,8 @@ void main() {
     });
 
     expect(unicode.preferenceValue, '5');
-    expect(unicode.supportedOnMobile, isTrue);
+    expect(unicode.supportedOnMobile, isFalse);
     expect(pageFont.supportedOnMobile, isFalse);
-  });
-
-  test('Foundation Mushaf words are grouped into ordered page lines', () {
-    final page = FoundationMushafPageData.fromJson(<String, Object?>{
-      'mushaf_id': 5,
-      'page_number': 1,
-      'qirat_name': 'Hafs',
-      'words': <Map<String, Object?>>[
-        <String, Object?>{
-          'text': 'ٱللَّهِ',
-          'line_number': 9,
-          'position_in_line': 2,
-        },
-        <String, Object?>{
-          'text': 'بِسۡمِ',
-          'line_number': 9,
-          'position_in_line': 1,
-        },
-        <String, Object?>{
-          'text': 'ٱلۡحَمۡدُ',
-          'line_number': 10,
-          'position_in_line': 1,
-        },
-      ],
-    });
-
-    expect(page.lines, hasLength(2));
-    expect(page.lines.first.map((word) => word.text), <String>[
-      'بِسۡمِ',
-      'ٱللَّهِ',
-    ]);
   });
 
   test('Reciter uses Turkish content with an English fallback', () {

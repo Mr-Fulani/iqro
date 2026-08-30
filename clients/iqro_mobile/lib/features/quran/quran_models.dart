@@ -183,82 +183,9 @@ class MushafVariant {
 
   String get preferenceValue => '$sourceId';
 
-  bool get supportedOnMobile =>
-      renderingAvailable && renderingMode == 'unicode-font';
-}
-
-class FoundationMushafWord {
-  const FoundationMushafWord({
-    required this.text,
-    required this.lineNumber,
-    required this.positionInLine,
-  });
-
-  factory FoundationMushafWord.fromJson(Map<String, Object?> json) {
-    return FoundationMushafWord(
-      text: json['text']?.toString() ?? '',
-      lineNumber: (json['line_number'] as num?)?.toInt() ?? 0,
-      positionInLine: (json['position_in_line'] as num?)?.toInt() ?? 0,
-    );
-  }
-
-  final String text;
-  final int lineNumber;
-  final int positionInLine;
-}
-
-class FoundationMushafPageData {
-  const FoundationMushafPageData({
-    required this.mushafId,
-    required this.pageNumber,
-    required this.qiratName,
-    required this.words,
-  });
-
-  factory FoundationMushafPageData.fromJson(Map<String, Object?> json) {
-    final words =
-        (json['words'] as List?)
-            ?.whereType<Map>()
-            .map(
-              (item) => FoundationMushafWord.fromJson(
-                Map<String, Object?>.from(item),
-              ),
-            )
-            .where((item) => item.text.isNotEmpty && item.lineNumber > 0)
-            .toList(growable: false) ??
-        const <FoundationMushafWord>[];
-    return FoundationMushafPageData(
-      mushafId: (json['mushaf_id'] as num?)?.toInt() ?? 0,
-      pageNumber: (json['page_number'] as num?)?.toInt() ?? 1,
-      qiratName: json['qirat_name']?.toString() ?? '',
-      words: words,
-    );
-  }
-
-  final int mushafId;
-  final int pageNumber;
-  final String qiratName;
-  final List<FoundationMushafWord> words;
-
-  List<List<FoundationMushafWord>> get lines {
-    final grouped = <int, List<FoundationMushafWord>>{};
-    for (final word in words) {
-      grouped
-          .putIfAbsent(word.lineNumber, () => <FoundationMushafWord>[])
-          .add(word);
-    }
-    final lineNumbers = grouped.keys.toList()..sort();
-    return lineNumbers
-        .map((lineNumber) {
-          final line = grouped[lineNumber]!
-            ..sort(
-              (left, right) =>
-                  left.positionInLine.compareTo(right.positionInLine),
-            );
-          return List<FoundationMushafWord>.unmodifiable(line);
-        })
-        .toList(growable: false);
-  }
+  // Browser font contracts are insufficient for a faithful native page.
+  // Mobile readiness will be driven by verified backend page assets.
+  bool get supportedOnMobile => false;
 }
 
 class ReadingPosition {
