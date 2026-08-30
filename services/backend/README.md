@@ -49,6 +49,9 @@ MVP обратной связи с пользовательскими тикет
 Production Content Sync всех доступных Quran.Foundation Mushaf layout, локальный page cache,
 checkpoint refresh и полный возобновляемый chapter-reciter import описаны в
 [docs/quran-foundation-content.md](docs/quran-foundation-content.md).
+Backend pipeline для заранее отрендеренных нативных страниц QCF V2, KFGQPC и QCF V4 Tajweed,
+immutable CDN keys, fail-closed API и rollback описан в
+[docs/qf-native-mushaf-pages.md](docs/qf-native-mushaf-pages.md).
 
 Смысловые переводы хранятся в отдельном версионированном домене. Allowlist Content Sync
 содержит все 15 проверенных English/Russian/Turkish translation-ресурсов активных языков сайта,

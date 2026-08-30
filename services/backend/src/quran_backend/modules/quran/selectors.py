@@ -81,10 +81,14 @@ def published_pages(edition_code: str) -> QuerySet[MushafPage]:
 
 
 def public_quran_foundation_mushafs(environment: str) -> QuerySet[QuranFoundationMushaf]:
-    return QuranFoundationMushaf.objects.filter(
-        environment=environment,
-        is_available=True,
-    ).order_by("source_id")
+    return (
+        QuranFoundationMushaf.objects.filter(
+            environment=environment,
+            is_available=True,
+        )
+        .prefetch_related("native_publications")
+        .order_by("source_id")
+    )
 
 
 def public_quran_foundation_mushaf_pages(
@@ -98,6 +102,7 @@ def public_quran_foundation_mushaf_pages(
             mushaf__is_available=True,
         )
         .select_related("mushaf")
+        .prefetch_related("mushaf__native_publications")
         .order_by("page_number")
     )
 

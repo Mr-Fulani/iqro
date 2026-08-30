@@ -13,6 +13,8 @@ from quran_backend.modules.quran.models import (
     QuranFoundationMushaf,
     QuranFoundationMushafPage,
     QuranFoundationMushafSyncState,
+    QuranFoundationNativePageAsset,
+    QuranFoundationNativePublication,
     RubElHizb,
     SourceManifest,
     Surah,
@@ -127,3 +129,50 @@ class QuranFoundationMushafAdmin(CanonicalReadOnlyAdmin):
 class QuranFoundationMushafPageAdmin(CanonicalReadOnlyAdmin):
     list_display = ("mushaf", "page_number", "verses_count")
     list_filter = ("mushaf",)
+
+
+@admin.register(QuranFoundationNativePublication)
+class QuranFoundationNativePublicationAdmin(CanonicalReadOnlyAdmin):
+    list_display = (
+        "mushaf",
+        "render_version",
+        "status",
+        "is_active",
+        "coverage",
+        "assets_count",
+        "renderer_name",
+        "renderer_version",
+        "source_checksum",
+        "manifest_checksum",
+        "published_at",
+        "last_error_code",
+        "last_error_message",
+    )
+    list_filter = ("status", "is_active", "mushaf__environment", "mushaf__source_id")
+    search_fields = ("render_version", "source_checksum_sha256", "manifest_checksum_sha256")
+
+    @admin.display(description="Подготовлено страниц")
+    def coverage(self, obj: QuranFoundationNativePublication) -> str:
+        return f"{obj.prepared_pages} / {obj.expected_pages}"
+
+    @admin.display(description="SHA источника")
+    def source_checksum(self, obj: QuranFoundationNativePublication) -> str:
+        return obj.source_checksum_sha256[:12]
+
+    @admin.display(description="SHA манифеста")
+    def manifest_checksum(self, obj: QuranFoundationNativePublication) -> str:
+        return obj.manifest_checksum_sha256[:12] or "—"
+
+
+@admin.register(QuranFoundationNativePageAsset)
+class QuranFoundationNativePageAssetAdmin(CanonicalReadOnlyAdmin):
+    list_display = (
+        "publication",
+        "page_number",
+        "width",
+        "height",
+        "content_type",
+        "size_bytes",
+    )
+    list_filter = ("publication__mushaf", "publication__render_version", "width")
+    search_fields = ("storage_key", "checksum_sha256")

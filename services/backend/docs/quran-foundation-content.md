@@ -33,6 +33,12 @@ Bootstrap `mushafs:*` сохраняет:
 не должен собирать URL самостоятельно. Это снимается после появления подтверждённого origin от
 Quran.Foundation. Для ID 1, 5 и 19 API возвращает только проверенные официальные font URL.
 
+Нативные iOS/Android клиенты не должны самостоятельно собирать страницы из WOFF2/COLRv1.
+Отдельный versioned pipeline заранее создаёт lossless WebP в managed object storage и включает
+`native_rendering` только после полной атомарной публикации. Операторский контракт, prepare,
+resume, publish и rollback описаны в
+[`docs/qf-native-mushaf-pages.md`](qf-native-mushaf-pages.md).
+
 ## Команды
 
 ```bash
@@ -64,6 +70,9 @@ Celery Beat выполняет incremental sync ежедневно. Это ук�
 использует URL только из `rendering`, а слова группирует по `line_number`. В Quran DOM обязательно
 устанавливаются `lang="ar"`, `dir="rtl"` и `translate="no"`. Шрифты не зеркалируются на нашем
 сервере: они загружаются с официального CDN Quran.Foundation с CORS и долгим browser/CDN cache.
+Дополнительные поля `native_rendering` и `native_assets` обратносуместимы. Пока полный набор
+страниц не опубликован или source checksum изменился, status равен `not_ready`, а список assets
+пуст. HTTP request никогда не запускает renderer.
 
 Web reader показывает отдельный переключатель визуального варианта Мусхафа: локальный page scan,
 QCF V2 (`1`), KFGQPC Hafs (`5`) и цветной QCF V4 Tajweed (`19`). Это не четыре разных риваята:

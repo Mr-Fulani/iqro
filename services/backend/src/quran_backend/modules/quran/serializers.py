@@ -18,6 +18,10 @@ from quran_backend.modules.quran.models import (
     RubElHizb,
     Surah,
 )
+from quran_backend.modules.quran.quran_foundation_native import (
+    native_page_assets,
+    native_rendering_catalog,
+)
 from quran_backend.modules.quran.quran_foundation_rendering import (
     quran_foundation_rendering,
 )
@@ -158,6 +162,7 @@ class MushafPageSerializer(serializers.ModelSerializer[MushafPage]):
 class QuranFoundationMushafSerializer(serializers.ModelSerializer[QuranFoundationMushaf]):
     source = serializers.SerializerMethodField()  # type: ignore[assignment]
     rendering = serializers.SerializerMethodField()
+    native_rendering = serializers.SerializerMethodField()
 
     class Meta:
         model = QuranFoundationMushaf
@@ -175,11 +180,15 @@ class QuranFoundationMushafSerializer(serializers.ModelSerializer[QuranFoundatio
             "source_checksum_sha256",
             "last_synced_at",
             "rendering",
+            "native_rendering",
             "source",
         )
 
     def get_rendering(self, obj: QuranFoundationMushaf) -> dict[str, Any]:
         return quran_foundation_rendering(obj.source_id)
+
+    def get_native_rendering(self, obj: QuranFoundationMushaf) -> dict[str, Any]:
+        return native_rendering_catalog(obj)
 
     def get_source(self, obj: QuranFoundationMushaf) -> dict[str, str]:  # noqa: ARG002
         return {
@@ -194,6 +203,8 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
     qirat_name = serializers.CharField(source="mushaf.qirat_name", read_only=True)
     font_name = serializers.CharField(source="mushaf.default_font_name", read_only=True)
     rendering = serializers.SerializerMethodField()
+    native_rendering = serializers.SerializerMethodField()
+    native_assets = serializers.SerializerMethodField()
 
     class Meta:
         model = QuranFoundationMushafPage
@@ -202,6 +213,8 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "qirat_name",
             "font_name",
             "rendering",
+            "native_rendering",
+            "native_assets",
             "page_number",
             "verse_mapping",
             "first_verse_id",
@@ -216,6 +229,15 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
         return quran_foundation_rendering(
             obj.mushaf.source_id,
             page_number=obj.page_number,
+        )
+
+    def get_native_rendering(self, obj: QuranFoundationMushafPage) -> dict[str, Any]:
+        return native_rendering_catalog(obj.mushaf)
+
+    def get_native_assets(self, obj: QuranFoundationMushafPage) -> list[dict[str, Any]]:
+        return native_page_assets(
+            obj,
+            public_media_base_url=settings.PUBLIC_MEDIA_BASE_URL,
         )
 
 

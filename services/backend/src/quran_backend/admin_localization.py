@@ -39,6 +39,14 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
         "страница мусхафа Quran.Foundation",
         "страницы мусхафов Quran.Foundation",
     ),
+    "quran.QuranFoundationNativePublication": (
+        "нативная публикация мусхафа",
+        "нативные публикации мусхафов Quran.Foundation",
+    ),
+    "quran.QuranFoundationNativePageAsset": (
+        "нативное изображение страницы",
+        "нативные изображения страниц мусхафа",
+    ),
     "translations.TranslationEdition": (
         "смысловой перевод Корана",
         "смысловые переводы Корана",

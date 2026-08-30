@@ -559,3 +559,179 @@ class QuranFoundationMushafPage(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.mushaf}: page {self.page_number}"
+
+
+class QuranFoundationNativePublicationStatus(models.TextChoices):
+    PREPARING = "preparing", "Preparing"
+    PUBLISHED = "published", "Published"
+    WITHDRAWN = "withdrawn", "Withdrawn"
+    FAILED = "failed", "Failed"
+
+
+class QuranFoundationNativePublication(BaseModel):
+    """Immutable native page rendition bound to one exact QF source snapshot."""
+
+    mushaf = models.ForeignKey(
+        QuranFoundationMushaf,
+        on_delete=models.CASCADE,
+        related_name="native_publications",
+    )
+    render_version = models.CharField(max_length=96)
+    renderer_name = models.CharField(max_length=128)
+    renderer_version = models.CharField(max_length=96)
+    source_checksum_sha256 = models.CharField(max_length=64)
+    manifest_checksum_sha256 = models.CharField(max_length=64, blank=True)
+    expected_pages = models.PositiveSmallIntegerField()
+    required_widths = models.JSONField(default=list)
+    prepared_pages = models.PositiveSmallIntegerField(default=0)
+    assets_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(
+        max_length=16,
+        choices=QuranFoundationNativePublicationStatus,
+        default=QuranFoundationNativePublicationStatus.PREPARING,
+    )
+    is_active = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=64, blank=True)
+    last_error_message = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "quran_qf_native_publication"
+        ordering = ["mushaf", "-published_at", "render_version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mushaf", "render_version"],
+                name="quran_qf_native_pub_version_uq",
+            ),
+            models.UniqueConstraint(
+                fields=["mushaf"],
+                condition=models.Q(is_active=True),
+                name="quran_qf_native_one_active_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expected_pages__gt=0),
+                name="quran_qf_native_expected_pages_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(prepared_pages__lte=models.F("expected_pages")),
+                name="quran_qf_native_prepared_pages_lte_expected",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status=QuranFoundationNativePublicationStatus.PUBLISHED,
+                        published_at__isnull=False,
+                    )
+                    | ~models.Q(status=QuranFoundationNativePublicationStatus.PUBLISHED)
+                ),
+                name="quran_qf_native_published_at_required",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        is_active=False,
+                    )
+                    | models.Q(status=QuranFoundationNativePublicationStatus.PUBLISHED)
+                ),
+                name="quran_qf_native_active_is_published",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["mushaf", "status", "is_active"],
+                name="quran_qf_native_public_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.mushaf} native {self.render_version}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.mushaf.source_id not in {1, 5, 19}:
+            raise ValidationError("Only Quran.Foundation resources 1, 5 and 19 are renderable.")
+        if not isinstance(self.required_widths, list) or not self.required_widths:
+            raise ValidationError({"required_widths": "At least one output width is required."})
+        widths = self.required_widths
+        if any(
+            isinstance(width, bool) or not isinstance(width, int) or width <= 0 for width in widths
+        ) or widths != sorted(set(widths)):
+            raise ValidationError(
+                {"required_widths": "Widths must be sorted unique positive integers."}
+            )
+        if not _is_sha256(self.source_checksum_sha256):
+            raise ValidationError({"source_checksum_sha256": "A lowercase SHA-256 is required."})
+        if self.manifest_checksum_sha256 and not _is_sha256(self.manifest_checksum_sha256):
+            raise ValidationError({"manifest_checksum_sha256": "A lowercase SHA-256 is required."})
+        if self.status == QuranFoundationNativePublicationStatus.PUBLISHED and (
+            not self.manifest_checksum_sha256
+            or self.prepared_pages != self.expected_pages
+            or self.assets_count != self.expected_pages * len(widths)
+        ):
+            raise ValidationError("Published native renditions require complete verified coverage.")
+
+
+class QuranFoundationNativePageAsset(BaseModel):
+    """One create-only page rendition stored under a checksum-versioned object key."""
+
+    publication = models.ForeignKey(
+        QuranFoundationNativePublication,
+        on_delete=models.CASCADE,
+        related_name="page_assets",
+    )
+    page_number = models.PositiveSmallIntegerField()
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=64, default="image/webp")
+    storage_key = models.CharField(max_length=500, unique=True)
+    checksum_sha256 = models.CharField(max_length=64)
+    size_bytes = models.PositiveBigIntegerField()
+
+    class Meta:
+        db_table = "quran_qf_native_page_asset"
+        ordering = ["publication", "page_number", "width"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["publication", "page_number", "width"],
+                name="quran_qf_native_asset_page_width_uq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(page_number__gt=0),
+                name="quran_qf_native_asset_page_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(width__gt=0, height__gt=0, size_bytes__gt=0),
+                name="quran_qf_native_asset_dimensions_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["publication", "page_number"],
+                name="quran_qf_native_asset_page_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.publication}: page {self.page_number} @ {self.width}px"
+
+    def clean(self) -> None:
+        super().clean()
+        path = self.storage_key.split("/")
+        if (
+            self.storage_key.startswith("/")
+            or "\\" in self.storage_key
+            or "" in path
+            or ".." in path
+            or self.content_type != "image/webp"
+        ):
+            raise ValidationError("Native assets require a safe relative WebP storage key.")
+        if self.page_number > self.publication.expected_pages:
+            raise ValidationError("Native asset page exceeds the publication page count.")
+        if self.width not in self.publication.required_widths:
+            raise ValidationError("Native asset width is not declared by the publication.")
+        if not _is_sha256(self.checksum_sha256):
+            raise ValidationError({"checksum_sha256": "A lowercase SHA-256 is required."})
+
+
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and set(value) <= set("0123456789abcdef")
