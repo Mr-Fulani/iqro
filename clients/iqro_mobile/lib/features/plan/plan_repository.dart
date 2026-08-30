@@ -8,17 +8,16 @@ class DailyPlan {
     required this.streak,
   });
 
-  const DailyPlan.initial()
-    : target = 6,
-      achieved = 2,
+  const DailyPlan.initial({this.target = 6})
+    : achieved = 0,
       prayerPages = const <String, int>{
-        'fajr': 2,
+        'fajr': 0,
         'dhuhr': 0,
         'asr': 0,
         'maghrib': 0,
         'isha': 0,
       },
-      streak = 4;
+      streak = 0;
 
   factory DailyPlan.fromJson(Map<String, Object?> json) {
     final prayer = json['prayer_pages'] is Map
@@ -71,9 +70,22 @@ class PlanRepository {
 
   final LocalDatabase _database;
 
-  Future<DailyPlan> load() async {
+  Future<DailyPlan> initialize({required int target}) async {
+    final plan = DailyPlan.initial(target: target);
+    await _database.writeState('daily_plan', plan.toJson());
+    return plan;
+  }
+
+  Future<DailyPlan> load({int? preferredTarget}) async {
     final data = await _database.readState('daily_plan');
-    return data == null ? const DailyPlan.initial() : DailyPlan.fromJson(data);
+    var plan = data == null
+        ? DailyPlan.initial(target: preferredTarget ?? 6)
+        : DailyPlan.fromJson(data);
+    if (preferredTarget != null && plan.target != preferredTarget) {
+      plan = plan.copyWith(target: preferredTarget);
+      await _database.writeState('daily_plan', plan.toJson());
+    }
+    return plan;
   }
 
   Future<DailyPlan> addPages(int pages) async {

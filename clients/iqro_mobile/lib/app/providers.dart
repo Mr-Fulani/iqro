@@ -60,8 +60,9 @@ final syncServiceProvider = Provider<SyncService>(
 );
 
 class AppPreferencesController extends StateNotifier<AppPreferences> {
-  AppPreferencesController(this._store) : super(_store.read());
+  AppPreferencesController(this._store, this._plan) : super(_store.read());
   final PreferencesStore _store;
+  final PlanRepository _plan;
 
   Future<void> _set(AppPreferences value) async {
     state = value;
@@ -73,15 +74,18 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
     required String goal,
     required DailyUnit unit,
     required int target,
-  }) => _set(
-    state.copyWith(
-      onboardingComplete: true,
-      locale: locale,
-      goal: goal,
-      dailyUnit: unit,
-      dailyTarget: target,
-    ),
-  );
+  }) async {
+    await _set(
+      state.copyWith(
+        onboardingComplete: true,
+        locale: locale,
+        goal: goal,
+        dailyUnit: unit,
+        dailyTarget: target,
+      ),
+    );
+    await _plan.initialize(target: unit == DailyUnit.pages ? target : 6);
+  }
 
   Future<void> setLocale(String locale) => _set(state.copyWith(locale: locale));
   Future<void> setTheme(ThemeMode mode) =>
@@ -92,7 +96,10 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
 
 final appPreferencesProvider =
     StateNotifierProvider<AppPreferencesController, AppPreferences>((ref) {
-      return AppPreferencesController(ref.watch(preferencesStoreProvider));
+      return AppPreferencesController(
+        ref.watch(preferencesStoreProvider),
+        ref.watch(planRepositoryProvider),
+      );
     });
 
 class SessionController extends StateNotifier<AsyncValue<AuthSession?>> {
@@ -190,12 +197,16 @@ final prayerMethodsProvider = FutureProvider<List<PrayerMethod>>((ref) {
 });
 
 class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
-  PlanController(this._repository) : super(const AsyncValue.loading()) {
+  PlanController(this._repository, {required int? preferredTarget})
+    : _preferredTarget = preferredTarget,
+      super(const AsyncValue.loading()) {
     unawaited(reload());
   }
   final PlanRepository _repository;
-  Future<void> reload() async =>
-      state = await AsyncValue.guard(_repository.load);
+  final int? _preferredTarget;
+  Future<void> reload() async => state = await AsyncValue.guard(
+    () => _repository.load(preferredTarget: _preferredTarget),
+  );
   Future<void> addPages(int pages) async =>
       state = await AsyncValue.guard(() => _repository.addPages(pages));
   Future<void> setPrayerPages(String prayer, int pages) async => state =
@@ -204,7 +215,14 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
 
 final planProvider =
     StateNotifierProvider<PlanController, AsyncValue<DailyPlan>>((ref) {
-      return PlanController(ref.watch(planRepositoryProvider));
+      final preferences = ref.watch(appPreferencesProvider);
+      final preferredTarget = preferences.dailyUnit == DailyUnit.pages
+          ? preferences.dailyTarget
+          : null;
+      return PlanController(
+        ref.watch(planRepositoryProvider),
+        preferredTarget: preferredTarget,
+      );
     });
 
 class MemorizationController

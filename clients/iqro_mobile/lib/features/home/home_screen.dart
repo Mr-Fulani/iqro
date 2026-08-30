@@ -72,7 +72,9 @@ class HomeScreen extends ConsumerWidget {
                     alignment: Alignment.center,
                     children: <Widget>[
                       CircularProgressIndicator(
-                        value: target == 0 ? 0 : achieved / target,
+                        value: target == 0
+                            ? 0
+                            : (achieved / target).clamp(0.0, 1.0),
                         strokeWidth: 7,
                         backgroundColor: context.iqroColors.line,
                         strokeCap: StrokeCap.round,
@@ -109,7 +111,9 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 10),
                       LinearProgressIndicator(
-                        value: target == 0 ? 0 : achieved / target,
+                        value: target == 0
+                            ? 0
+                            : (achieved / target).clamp(0.0, 1.0),
                       ),
                     ],
                   ),

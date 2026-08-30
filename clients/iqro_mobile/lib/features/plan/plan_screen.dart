@@ -63,7 +63,7 @@ class PlanScreen extends ConsumerWidget {
                       LinearProgressIndicator(
                         value: value.target == 0
                             ? 0
-                            : value.achieved / value.target,
+                            : (value.achieved / value.target).clamp(0.0, 1.0),
                         minHeight: 8,
                         borderRadius: BorderRadius.circular(8),
                       ),

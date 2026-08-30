@@ -33,7 +33,8 @@ class LocalDatabase {
       version: schemaVersion,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
-        await db.execute('PRAGMA journal_mode = WAL');
+        // journal_mode returns a result row, so Android requires the query API.
+        await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
         await db.execute('''
