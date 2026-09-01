@@ -95,4 +95,9 @@ void main() {
     expect(reminderNotificationId('rule', 'weekday:2'), isNot(first));
     expect(first, inInclusiveRange(0, 0x7fffffff));
   });
+
+  test('prayer horizon respects Android continuity and iOS pending cap', () {
+    expect(prayerSchedulingHorizonDays(isIOS: false), 32);
+    expect(prayerSchedulingHorizonDays(isIOS: true), 8);
+  });
 }

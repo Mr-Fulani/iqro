@@ -380,4 +380,50 @@ void main() {
     expect(method.nameFor('tr'), 'Muslim World League');
     expect(method.highLatitudeRule, 'middle_of_night');
   });
+
+  test('Prayer method enables local calculation only for pinned engine', () {
+    final method = PrayerMethod.fromJson(
+      <String, Object?>{
+        'id': 'method-id',
+        'code': 'muslim-world-league',
+        'available': true,
+        'checksum_sha256': 'checksum',
+        'parameters': <String, Object?>{
+          'fajr_angle': '18.00',
+          'isha': <String, Object?>{
+            'type': 'angle',
+            'angle': '17.00',
+            'interval_minutes': null,
+          },
+          'method_adjustments': <String, Object?>{'dhuhr': 1},
+        },
+      },
+      algorithmId: 'adhan-js-python-adapter',
+      algorithmVersion: '4.4.4-quran.1-adhanpy.1.0.5',
+      timezoneDatabaseVersion: '2026.3',
+    );
+
+    expect(method.supportsLocalCalculation, isTrue);
+    expect(method.fajrAngle, 18);
+    expect(method.ishaAngle, 17);
+    expect(method.adjustments['dhuhr'], 1);
+  });
+
+  test('Prayer schedule preserves server local wall time and UTC instant', () {
+    final schedule = PrayerSchedule.fromJson(<String, Object?>{
+      'date': '2026-09-01',
+      'timezone': 'Europe/Istanbul',
+      'method': <String, Object?>{'code': 'muslim-world-league'},
+      'times': <String, Object?>{
+        'fajr': <String, Object?>{
+          'local': '2026-09-01T04:51:00+03:00',
+          'utc': '2026-09-01T01:51:00Z',
+        },
+      },
+      'warnings': const <Object?>[],
+    });
+
+    expect(schedule.times['fajr']?.hour, 4);
+    expect(schedule.timesUtc['fajr'], DateTime.utc(2026, 9, 1, 1, 51));
+  });
 }

@@ -190,7 +190,9 @@ class NotificationGateway {
         )
         .toList(growable: false);
     if (prayerRules.isNotEmpty) {
-      final schedules = await prayerRepository.calculateHorizon();
+      final schedules = await prayerRepository.calculateHorizon(
+        days: prayerSchedulingHorizonDays(isIOS: Platform.isIOS),
+      );
       for (final rule in prayerRules) {
         for (final schedule in schedules) {
           if (!reminderRunsOnWeekday(
@@ -203,14 +205,19 @@ class NotificationGateway {
           final prayerTime = schedule.times[prayerEvent];
           if (prayerTime == null) continue;
           final location = _safeLocation(schedule.timezone);
-          final scheduledDate = tz.TZDateTime(
-            location,
-            prayerTime.year,
-            prayerTime.month,
-            prayerTime.day,
-            prayerTime.hour,
-            prayerTime.minute,
-          ).add(Duration(minutes: rule.schedule.prayerOffsetMinutes));
+          final utcInstant = schedule.timesUtc[prayerEvent];
+          final scheduledDate =
+              (utcInstant == null
+                      ? tz.TZDateTime(
+                          location,
+                          prayerTime.year,
+                          prayerTime.month,
+                          prayerTime.day,
+                          prayerTime.hour,
+                          prayerTime.minute,
+                        )
+                      : tz.TZDateTime.from(utcInstant, location))
+                  .add(Duration(minutes: rule.schedule.prayerOffsetMinutes));
           if (!scheduledDate.isAfter(tz.TZDateTime.now(location))) continue;
           final occurrence =
               '${schedule.date.year}-${schedule.date.month}-${schedule.date.day}:$prayerEvent';
@@ -236,6 +243,10 @@ class NotificationGateway {
     await _database.writeState('reminder_notification_plan', <String, Object?>{
       'ids': plannedIds.toList(growable: false),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'prayer_horizon_days': prayerRules.isEmpty
+          ? 0
+          : prayerSchedulingHorizonDays(isIOS: Platform.isIOS),
+      'timezone': tz.local.name,
     });
     return ReminderSchedulingResult(
       permission: permission,
@@ -311,6 +322,8 @@ class NotificationGateway {
       '/reader/${rule.reviewTarget?.start.surah ?? 1}?ayah=${rule.reviewTarget?.start.ayah ?? 1}',
   };
 }
+
+int prayerSchedulingHorizonDays({required bool isIOS}) => isIOS ? 8 : 32;
 
 int reminderNotificationId(String ruleId, String occurrence) {
   final bytes = sha256.convert(utf8.encode('$ruleId|$occurrence')).bytes;
