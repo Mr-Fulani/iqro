@@ -14,6 +14,14 @@ if (hasReleaseSigning) {
     releaseSigningFile.inputStream().use { stream ->
         releaseSigningProperties.load(stream)
     }
+    val missingKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+        .filter { releaseSigningProperties.getProperty(it).isNullOrBlank() }
+    require(missingKeys.isEmpty()) {
+        "android/key.properties is missing required release signing fields: ${missingKeys.joinToString()}"
+    }
+    require(rootProject.file(releaseSigningProperties.getProperty("storeFile")).isFile) {
+        "The release keystore configured by android/key.properties does not exist"
+    }
 }
 
 android {
@@ -29,6 +37,11 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
     }
 
     defaultConfig {
@@ -47,7 +60,7 @@ android {
             create("release") {
                 keyAlias = releaseSigningProperties.getProperty("keyAlias")
                 keyPassword = releaseSigningProperties.getProperty("keyPassword")
-                storeFile = file(releaseSigningProperties.getProperty("storeFile"))
+                storeFile = rootProject.file(releaseSigningProperties.getProperty("storeFile"))
                 storePassword = releaseSigningProperties.getProperty("storePassword")
             }
         }
@@ -58,6 +71,8 @@ android {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

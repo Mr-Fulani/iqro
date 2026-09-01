@@ -12,7 +12,7 @@ STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.
 STAGING_RUNTIME_POSTGRES_IMAGE ?= $(shell container_id="$$( $(STAGING_COMPOSE) ps -q postgres 2>/dev/null )"; if [ -n "$$container_id" ]; then docker inspect --format '{{.Config.Image}}' "$$container_id" 2>/dev/null; fi)
 STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING_COMPOSE)
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run mobile-check mobile-android-staging mobile-android-production production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
 
 # Запуск с сохранением данных базы данных
 up:
@@ -64,6 +64,20 @@ web-build:
 
 web-run:
 	cd $(WEB_DIR) && npm start
+
+mobile-check:
+	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
+	cd clients/iqro_mobile && dart format --output=none --set-exit-if-changed lib test
+	cd clients/iqro_mobile && flutter gen-l10n
+	git diff --exit-code -- clients/iqro_mobile/lib/l10n/generated
+	cd clients/iqro_mobile && flutter analyze
+	cd clients/iqro_mobile && flutter test
+
+mobile-android-staging:
+	cd clients/iqro_mobile && flutter build apk --debug --target-platform android-arm64 --dart-define=API_BASE_URL=https://staging.iqro.forum --dart-define=APP_ENV=staging --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+
+mobile-android-production:
+	cd clients/iqro_mobile && flutter build appbundle --release --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
 production-config:
 	$(PRODUCTION_COMPOSE) config --quiet

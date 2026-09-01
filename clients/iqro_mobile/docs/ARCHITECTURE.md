@@ -38,6 +38,12 @@ Screen → Riverpod controller/provider → Feature repository
 - `LocalDatabase` владеет версией SQLite schema, кэшем, позициями чтения и outbox.
 - `SyncService` отправляет идемпотентные операции, затем применяет server cursor pull;
   конфликт не показывается пользователю техническим кодом.
+- `BackgroundMaintenanceService` одним системным заданием отправляет outbox, сверяет
+  позицию аудио и автономно продлевает локальные напоминания; сеть для запуска задания
+  не обязательна.
+- `AudioPlaybackSyncService` использует server revision и timestamp клиента, поэтому
+  изменения на двух устройствах разрешаются детерминированно, а снятый с публикации
+  трек никогда не восстанавливается в плеер.
 - `AudioController` владеет единственным player instance. Смена чтеца останавливает
   старый источник; MediaSession продолжает работать в фоне и на lock screen.
 
@@ -53,7 +59,7 @@ Screen → Riverpod controller/provider → Feature repository
 |---|---|---|---|
 | Каталог сур и аяты | cache-first/fallback | — | ETag/обновление из API |
 | Полный Мусхаф | активный проверенный package | resumable download | versioned manifest + SHA-256 |
-| Чтецы и аудиометаданные | cache fallback | выбранный чтец локально | API при доступной сети |
+| Чтецы и аудиометаданные | cache fallback + проверенный audio package | позиция и настройки плеера | versioned account position API |
 | Позиция чтения и закладки | SQLite | SQLite + outbox | push/pull с revision |
 | Ду’а | локализованный cache fallback | избранное + outbox | идемпотентный PUT/retry |
 | План и заучивание | SQLite | SQLite | готовая граница repository для API-sync |
@@ -64,6 +70,11 @@ Screen → Riverpod controller/provider → Feature repository
 страниц и переключение `is_active` применяются одной SQLite-транзакцией только после
 полной проверки 604 страниц; до этого читалка продолжает использовать прежний пакет.
 Обычный on-demand cache остаётся fallback для пользователей без полного download.
+
+`AudioOfflineRepository` применяет тот же принцип к 114 аудиодорожкам: Range-resume,
+проверка формата, размера и SHA-256, затем атомарная активация. `NotificationGateway`
+строит горизонт намазов локальным портом закреплённого движка Adhan, поэтому WorkManager
+может продлевать расписание без сети.
 
 ## Локализация и RTL
 
@@ -82,14 +93,16 @@ APP_DOWNLOAD_URL  fallback URL для системного share sheet
 ```
 
 В коде и Git нет API-ключей или серверных секретов. Production build должен получать
-release keystore через секреты CI и собираться из конкретного commit SHA.
+release keystore через секреты CI и собираться из конкретного commit SHA. В
+release-режиме пустая конфигурация запрещена, а окружение жёстко связано с первым
+доменом IQRO.
 
 ## Следующие безопасные расширения
 
 1. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages, когда
    появится второй Flutter target или независимые команды.
-2. Добавить WorkManager для фонового outbox retry с экспоненциальной задержкой.
-3. Подключить серверные reminder profiles и локальный Android scheduler за отдельным
-   `NotificationGateway`.
-4. Добавить управляемые offline-download packages для аудио на существующем manifest API.
-5. Добавить integration tests на Android emulator и release pipeline с SBOM/signing.
+2. Добавить подписанный Play Console delivery pipeline после создания upload key и
+   защищённого CI secret environment.
+3. Добавить Android emulator smoke-test после появления отдельного CI-бюджета на
+   виртуальные устройства.
+4. Вынести обезличенную crash/QoE telemetry за отдельный consent и privacy review.

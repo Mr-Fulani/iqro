@@ -20,6 +20,8 @@ class ApiClient {
            connectTimeout: const Duration(seconds: 12),
            receiveTimeout: const Duration(seconds: 25),
            sendTimeout: const Duration(seconds: 12),
+           followRedirects: false,
+           maxRedirects: 0,
            headers: const <String, Object>{'Accept': 'application/json'},
          ),
        ) {
