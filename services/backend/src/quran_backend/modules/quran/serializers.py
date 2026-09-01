@@ -259,6 +259,7 @@ class OfflineMushafPageSerializer(serializers.Serializer[Any]):
     number = serializers.IntegerField(min_value=1)
     metadata_url = serializers.URLField()
     asset = OfflineMushafAssetSerializer()
+    metadata = serializers.DictField(required=False)
 
 
 class OfflineMushafIdentitySerializer(serializers.Serializer[Any]):

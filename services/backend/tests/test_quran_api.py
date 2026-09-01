@@ -162,6 +162,9 @@ def test_canonical_mushaf_offline_manifest_is_complete_and_integrity_bound(
         "bytes": 100_000,
         "sha256": "b" * 64,
     }
+    assert manifest["pages"][0]["metadata"]["number"] == 1
+    assert manifest["pages"][0]["metadata"]["assets"] == [manifest["pages"][0]["asset"]]
+    assert len(manifest["pages"][0]["metadata"]["regions"]) == 2
     assert "path" not in str(manifest)
 
     unavailable = api_client.get(url, {"width": 640})

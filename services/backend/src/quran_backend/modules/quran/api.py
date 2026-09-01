@@ -244,47 +244,50 @@ class QuranEditionMushafOfflineManifestView(PublicQuranViewMixin, APIView):
             raise NotFound("The offline Mushaf package failed its integrity check.")
         verified_assets = [asset for asset in selected_assets if asset is not None]
         package_id = f"quran-edition-{source.code}-{version.version}-w{width}"
-        page_payloads = [
-            {
-                "number": page.number,
-                "metadata_url": request.build_absolute_uri(
-                    reverse(
-                        "quran:page-detail",
-                        kwargs={"edition": source.code, "page": page.number},
-                    )
-                ),
-                "asset": {
-                    "url": (
-                        f"{settings.PUBLIC_MEDIA_BASE_URL.rstrip('/')}/{asset['relative_path']}"
-                    ),
-                    "file_name": f"page-{page.number:03d}-{width}.webp",
-                    "content_type": "image/webp",
-                    "width": width,
-                    "height": asset["height"],
-                    "bytes": asset["bytes"],
-                    "sha256": asset["sha256"],
-                },
+        page_payloads: list[dict[str, Any]] = []
+        checksum_pages: list[dict[str, Any]] = []
+        for page, asset in zip(pages, verified_assets, strict=True):
+            public_asset = {
+                "url": f"{settings.PUBLIC_MEDIA_BASE_URL.rstrip('/')}/{asset['relative_path']}",
+                "file_name": f"page-{page.number:03d}-{width}.webp",
+                "content_type": "image/webp",
+                "width": width,
+                "height": asset["height"],
+                "bytes": asset["bytes"],
+                "sha256": asset["sha256"],
             }
-            for page, asset in zip(pages, verified_assets, strict=True)
-        ]
+            metadata = dict(MushafPageSerializer(page).data)
+            metadata["assets"] = [public_asset]
+            page_payloads.append(
+                {
+                    "number": page.number,
+                    "metadata_url": request.build_absolute_uri(
+                        reverse(
+                            "quran:page-detail",
+                            kwargs={"edition": source.code, "page": page.number},
+                        )
+                    ),
+                    "asset": public_asset,
+                    "metadata": metadata,
+                }
+            )
+            checksum_metadata = dict(metadata)
+            checksum_metadata["assets"] = [
+                {key: value for key, value in public_asset.items() if key != "url"}
+            ]
+            checksum_pages.append(
+                {
+                    "number": page.number,
+                    "metadata": checksum_metadata,
+                }
+            )
         checksum_payload = {
             "schema_version": OFFLINE_PACKAGE_SCHEMA_VERSION,
             "package_type": "mushaf_pages",
             "package_id": package_id,
             "version": version.version,
             "source_checksum_sha256": version.checksum_sha256,
-            "pages": [
-                {
-                    "number": page.number,
-                    "file_name": f"page-{page.number:03d}-{width}.webp",
-                    "content_type": "image/webp",
-                    "width": width,
-                    "height": asset["height"],
-                    "bytes": asset["bytes"],
-                    "sha256": asset["sha256"],
-                }
-                for page, asset in zip(pages, verified_assets, strict=True)
-            ],
+            "pages": checksum_pages,
         }
         payload = {
             "schema_version": OFFLINE_PACKAGE_SCHEMA_VERSION,
