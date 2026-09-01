@@ -12,6 +12,7 @@ from django.http import HttpRequest
 from django.utils.html import format_html
 
 from quran_backend.modules.audio.models import (
+    AudioPlaybackPosition,
     AudioRendition,
     AudioTimingVersion,
     AudioTrack,
@@ -156,6 +157,26 @@ class QuranFoundationReadOnlyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
         return False
+
+
+@admin.register(AudioPlaybackPosition)
+class AudioPlaybackPositionAdmin(QuranFoundationReadOnlyAdmin):
+    list_display = (
+        "user",
+        "track",
+        "position_ms",
+        "revision",
+        "client_updated_at",
+        "updated_at",
+    )
+    list_filter = (
+        "repeat_enabled",
+        "track__recitation_edition__status",
+        "client_updated_at",
+    )
+    search_fields = ("=user__id", "user__email", "=track__id")
+    list_select_related = ("user", "device", "track__recitation_edition")
+    readonly_fields = tuple(field.name for field in AudioPlaybackPosition._meta.fields)
 
 
 @admin.register(QuranFoundationAyahRecitation)

@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/audio/audio_playback_store.dart';
+import '../core/audio/audio_playback_sync_service.dart';
 import '../core/auth/auth_repository.dart';
+import '../core/background/background_maintenance_service.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/notifications/notification_gateway.dart';
@@ -31,6 +34,7 @@ class AppDependencies {
     required this.offlineMushaf,
     required this.audio,
     required this.offlineAudio,
+    required this.playbackSync,
     required this.plan,
     required this.prayer,
     required this.reminders,
@@ -39,6 +43,7 @@ class AppDependencies {
     required this.dua,
     required this.share,
     required this.sync,
+    required this.maintenance,
   });
 
   final AppConfig config;
@@ -50,6 +55,7 @@ class AppDependencies {
   final MushafOfflineRepository offlineMushaf;
   final AudioRepository audio;
   final AudioOfflineRepository offlineAudio;
+  final AudioPlaybackSyncService playbackSync;
   final PlanRepository plan;
   final PrayerRepository prayer;
   final ReminderRepository reminders;
@@ -58,6 +64,7 @@ class AppDependencies {
   final DuaRepository dua;
   final ShareRepository share;
   final SyncService sync;
+  final BackgroundMaintenanceService maintenance;
 
   static Future<AppDependencies> initialize() async {
     final config = AppConfig.fromEnvironment();
@@ -76,6 +83,28 @@ class AppDependencies {
     await notifications.initialize();
     final offlineMushaf = MushafOfflineRepository(api: api, database: database);
     final offlineAudio = AudioOfflineRepository(api: api, database: database);
+    final audio = AudioRepository(
+      api: api,
+      database: database,
+      offline: offlineAudio,
+    );
+    final playbackSync = AudioPlaybackSyncService(
+      api: api,
+      database: database,
+      audio: audio,
+      store: AudioPlaybackStore(database),
+      locale: () => preferences.read().locale,
+    );
+    final sync = SyncService(api: api, database: database);
+    final maintenance = BackgroundMaintenanceService(
+      sync: sync,
+      audio: playbackSync,
+      reminders: reminders,
+      prayer: prayer,
+      notifications: notifications,
+      database: database,
+      locale: () => preferences.read().locale,
+    );
     return AppDependencies._(
       config: config,
       preferences: preferences,
@@ -84,12 +113,9 @@ class AppDependencies {
       api: api,
       quran: QuranRepository(api: api, database: database),
       offlineMushaf: offlineMushaf,
-      audio: AudioRepository(
-        api: api,
-        database: database,
-        offline: offlineAudio,
-      ),
+      audio: audio,
       offlineAudio: offlineAudio,
+      playbackSync: playbackSync,
       plan: PlanRepository(database),
       prayer: prayer,
       reminders: reminders,
@@ -102,7 +128,8 @@ class AppDependencies {
         database: database,
         auth: auth,
       ),
-      sync: SyncService(api: api, database: database),
+      sync: sync,
+      maintenance: maintenance,
     );
   }
 
@@ -116,6 +143,7 @@ class AppDependencies {
     mushafOfflineRepositoryProvider.overrideWithValue(offlineMushaf),
     audioRepositoryProvider.overrideWithValue(audio),
     audioOfflineRepositoryProvider.overrideWithValue(offlineAudio),
+    audioPlaybackSyncProvider.overrideWithValue(playbackSync),
     planRepositoryProvider.overrideWithValue(plan),
     prayerRepositoryProvider.overrideWithValue(prayer),
     reminderRepositoryProvider.overrideWithValue(reminders),
@@ -124,5 +152,6 @@ class AppDependencies {
     duaRepositoryProvider.overrideWithValue(dua),
     shareRepositoryProvider.overrideWithValue(share),
     syncServiceProvider.overrideWithValue(sync),
+    backgroundMaintenanceProvider.overrideWithValue(maintenance),
   ];
 }

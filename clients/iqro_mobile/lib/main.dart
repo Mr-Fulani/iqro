@@ -5,6 +5,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
+import 'core/background/background_work.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,7 @@ void main() {
 }
 
 Future<AppDependencies> _initialize() async {
+  await initializeBackgroundWork();
   await JustAudioBackground.init(
     androidNotificationChannelId: 'forum.iqro.app.audio',
     androidNotificationChannelName: 'IQRO Quran audio',

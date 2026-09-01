@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/audio/audio_controller.dart';
 import '../core/audio/audio_playback_store.dart';
+import '../core/audio/audio_playback_sync_service.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/auth/auth_session.dart';
+import '../core/background/background_maintenance_service.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/notifications/notification_gateway.dart';
@@ -54,6 +56,9 @@ final audioRepositoryProvider = Provider<AudioRepository>(
 final audioOfflineRepositoryProvider = Provider<AudioOfflineRepository>(
   (ref) => _missing('AudioOfflineRepository'),
 );
+final audioPlaybackSyncProvider = Provider<AudioPlaybackSyncService>(
+  (ref) => _missing('AudioPlaybackSyncService'),
+);
 final planRepositoryProvider = Provider<PlanRepository>(
   (ref) => _missing('PlanRepository'),
 );
@@ -77,6 +82,9 @@ final shareRepositoryProvider = Provider<ShareRepository>(
 );
 final syncServiceProvider = Provider<SyncService>(
   (ref) => _missing('SyncService'),
+);
+final backgroundMaintenanceProvider = Provider<BackgroundMaintenanceService>(
+  (ref) => _missing('BackgroundMaintenanceService'),
 );
 
 class AppPreferencesController extends StateNotifier<AppPreferences> {

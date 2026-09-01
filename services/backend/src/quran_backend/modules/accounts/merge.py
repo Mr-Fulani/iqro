@@ -18,6 +18,7 @@ from quran_backend.modules.accounts.models import (
     User,
     UserStatus,
 )
+from quran_backend.modules.audio.models import AudioPlaybackPosition
 from quran_backend.modules.dua.models import DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
 from quran_backend.modules.memorization.models import MemorizationPlan, MemorizationSession
@@ -113,6 +114,7 @@ def merge_guest_into_account(
     _merge_dua_favorites(source=source, target=target, counts=counts)
     _merge_reminders(source=source, target=target, counts=counts)
     _merge_prayer_profile(source=source, target=target, counts=counts)
+    _merge_audio_playback(source=source, target=target, counts=counts)
     _merge_feedback(source=source, target=target, counts=counts)
     _move_identities(source=source, target=target, counts=counts)
     _rebuild_target_sync_feed(source=source, target=target)
@@ -477,6 +479,51 @@ def _copy_prayer_profile(*, source: PrayerProfile, target: PrayerProfile) -> Non
     for field in copied_fields:
         setattr(target, field, getattr(source, field))
     target.revision = max(target.revision, source.revision) + 1
+    target.save()
+
+
+def _merge_audio_playback(*, source: User, target: User, counts: dict[str, int]) -> None:
+    source_position = AudioPlaybackPosition.objects.select_for_update().filter(user=source).first()
+    if source_position is None:
+        counts["audio_playback_positions"] = 0
+        return
+    target_position = AudioPlaybackPosition.objects.select_for_update().filter(user=target).first()
+    if target_position is None:
+        source_position.user = target
+        source_position.save(update_fields=["user", "updated_at"])
+    else:
+        if (
+            source_position.client_updated_at,
+            source_position.updated_at,
+            source_position.id,
+        ) > (
+            target_position.client_updated_at,
+            target_position.updated_at,
+            target_position.id,
+        ):
+            _copy_audio_playback(source=source_position, target=target_position)
+        source_position.delete()
+    counts["audio_playback_positions"] = 1
+
+
+def _copy_audio_playback(
+    *,
+    source: AudioPlaybackPosition,
+    target: AudioPlaybackPosition,
+) -> None:
+    for field in (
+        "device",
+        "track",
+        "position_ms",
+        "speed",
+        "repeat_enabled",
+        "range_start_ayah",
+        "range_end_ayah",
+        "client_updated_at",
+    ):
+        setattr(target, field, getattr(source, field))
+    target.revision = max(target.revision, source.revision) + 1
+    target.full_clean()
     target.save()
 
 

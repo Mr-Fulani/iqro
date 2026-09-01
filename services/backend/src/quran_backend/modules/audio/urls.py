@@ -14,10 +14,16 @@ from quran_backend.modules.audio.api import (
     ReciterListView,
     SurahPlaybackView,
 )
+from quran_backend.modules.audio.playback_position_api import AudioPlaybackPositionView
 
 app_name = "audio"
 
 urlpatterns = [
+    path(
+        "me/audio-playback-position",
+        AudioPlaybackPositionView.as_view(),
+        name="playback-position",
+    ),
     path("reciters", ReciterListView.as_view(), name="reciter-list"),
     path("reciters/<uuid:reciter_id>", ReciterDetailView.as_view(), name="reciter-detail"),
     path("recitations", RecitationListView.as_view(), name="recitation-list"),

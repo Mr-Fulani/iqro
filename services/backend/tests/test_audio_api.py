@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import uuid
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
@@ -12,9 +14,17 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from quran_backend.modules.accounts.merge import merge_guest_into_account
+from quran_backend.modules.accounts.models import (
+    AuthIdentity,
+    IdentityProvider,
+    User,
+    UserStatus,
+)
 from quran_backend.modules.audio.models import (
     AudioCodec,
     AudioContentType,
+    AudioPlaybackPosition,
     AudioRendition,
     AudioRenditionQuality,
     AudioTimingVersion,
@@ -270,6 +280,174 @@ def _create_second_public_recitation(
     _complete_surah_catalog(recitation)
     _publish(recitation)
     return recitation
+
+
+def _playback_position_payload(
+    track: AudioTrack,
+    *,
+    base_revision: int = 0,
+    position_ms: int = 4_000,
+    client_updated_at: datetime | None = None,
+) -> dict[str, object]:
+    return {
+        "base_revision": base_revision,
+        "track_id": str(track.id),
+        "position_ms": position_ms,
+        "speed": "1.25",
+        "repeat_enabled": True,
+        "range_start_ayah": 1,
+        "range_end_ayah": 2,
+        "client_updated_at": (client_updated_at or timezone.now()).isoformat(),
+    }
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_audio_playback_position_is_private_versioned_and_idempotent(
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    url = reverse("audio:playback-position")
+    unauthenticated = APIClient().get(url)
+    user = User.objects.create_user()
+    client = APIClient()
+    client.force_authenticate(user=user)
+    initial = client.get(url)
+    payload = _playback_position_payload(published_audio_dataset["track"])
+    created = client.put(url, payload, format="json")
+    replayed = client.put(url, payload, format="json")
+    changed = client.put(
+        url,
+        {
+            **_playback_position_payload(
+                published_audio_dataset["track"],
+                base_revision=1,
+                position_ms=7_000,
+            ),
+            "range_start_ayah": None,
+            "range_end_ayah": None,
+        },
+        format="json",
+    )
+    stale = client.put(
+        url,
+        _playback_position_payload(
+            published_audio_dataset["track"],
+            base_revision=1,
+            position_ms=8_000,
+        ),
+        format="json",
+    )
+
+    assert unauthenticated.status_code == 401
+    assert initial.status_code == 200
+    assert initial.json() == {"position": None}
+    assert initial["Cache-Control"] == "private, no-store, max-age=0"
+    assert created.status_code == 200
+    assert created.json()["position"]["revision"] == 1
+    assert created.json()["position"]["position_ms"] == 4_000
+    assert created.json()["position"]["speed"] == 1.25
+    assert created.json()["position"]["reciter"]["name_en"] == "Test Reciter"
+    assert created.json()["position"]["surah_names"] == {
+        "ar": "الفاتحة",
+        "en": "Al-Fatihah",
+        "ru": "Аль-Фатиха",
+        "tr": "Al-Fatihah",
+    }
+    assert replayed.status_code == 200
+    assert replayed.json()["position"]["revision"] == 1
+    assert changed.status_code == 200
+    assert changed.json()["position"]["revision"] == 2
+    assert changed.json()["position"]["position_ms"] == 7_000
+    assert stale.status_code == 409
+    assert stale.json()["code"] == "audio_playback_position_revision_conflict"
+
+
+@pytest.mark.django_db
+def test_audio_playback_position_validates_track_duration_and_timed_range(
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    user = User.objects.create_user()
+    client = APIClient()
+    client.force_authenticate(user=user)
+    url = reverse("audio:playback-position")
+
+    too_far = client.put(
+        url,
+        _playback_position_payload(
+            published_audio_dataset["track"],
+            position_ms=12_001,
+        ),
+        format="json",
+    )
+    missing_boundary = client.put(
+        url,
+        {
+            **_playback_position_payload(published_audio_dataset["track"]),
+            "range_end_ayah": None,
+        },
+        format="json",
+    )
+    unknown_boundary = client.put(
+        url,
+        {
+            **_playback_position_payload(published_audio_dataset["track"]),
+            "range_end_ayah": 3,
+        },
+        format="json",
+    )
+
+    assert too_far.status_code == 400
+    assert "position_ms" in too_far.json()["field_errors"]
+    assert missing_boundary.status_code == 400
+    assert "range_end_ayah" in missing_boundary.json()["field_errors"]
+    assert unknown_boundary.status_code == 400
+    assert "range_start_ayah" in unknown_boundary.json()["field_errors"]
+
+
+@pytest.mark.django_db
+def test_guest_merge_keeps_newest_audio_playback_position(
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    now = timezone.now()
+    guest = User.objects.create_user(status=UserStatus.GUEST)
+    target = User.objects.create_user(email="audio@example.com", status=UserStatus.ACTIVE)
+    identity = AuthIdentity.objects.create(
+        user=target,
+        provider=IdentityProvider.EMAIL,
+        provider_subject="audio@example.com",
+        email_at_provider="audio@example.com",
+        email_verified=True,
+    )
+    track = published_audio_dataset["track"]
+    AudioPlaybackPosition.objects.create(
+        user=target,
+        track=track,
+        position_ms=1_000,
+        client_updated_at=now - timedelta(hours=1),
+        revision=4,
+    )
+    AudioPlaybackPosition.objects.create(
+        user=guest,
+        track=track,
+        position_ms=9_000,
+        speed="1.50",
+        client_updated_at=now,
+        revision=2,
+    )
+
+    result = merge_guest_into_account(
+        source_user=guest,
+        target_user=target,
+        trigger_identity=identity,
+        idempotency_key=uuid.uuid4(),
+    )
+
+    position = AudioPlaybackPosition.objects.get(user=target)
+    assert result.moved_counts["audio_playback_positions"] == 1
+    assert position.position_ms == 9_000
+    assert float(position.speed) == 1.5
+    assert position.revision == 5
+    assert not AudioPlaybackPosition.objects.filter(user=guest).exists()
 
 
 @pytest.mark.django_db

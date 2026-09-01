@@ -16,25 +16,50 @@ class IqroApp extends ConsumerStatefulWidget {
   ConsumerState<IqroApp> createState() => _IqroAppState();
 }
 
-class _IqroAppState extends ConsumerState<IqroApp> {
+class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   late final _router = createRouter(
     onboardingComplete: ref.read(appPreferencesProvider).onboardingComplete,
   );
   StreamSubscription<String>? _notificationRoutes;
+  DateTime? _lastMaintenanceStartedAt;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final notifications = ref.read(notificationGatewayProvider);
     _notificationRoutes = notifications.routeRequests.listen(_router.go);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final route = notifications.takeInitialRoute();
       if (mounted && route != null) _router.go(route);
+      unawaited(_runMaintenance());
     });
+  }
+
+  Future<void> _runMaintenance() async {
+    final now = DateTime.now();
+    if (_lastMaintenanceStartedAt != null &&
+        now.difference(_lastMaintenanceStartedAt!) <
+            const Duration(minutes: 5)) {
+      return;
+    }
+    _lastMaintenanceStartedAt = now;
+    final report = await ref
+        .read(backgroundMaintenanceProvider)
+        .run(renewReminders: false);
+    if (mounted && report.audioDownloaded) {
+      await ref.read(audioControllerProvider.notifier).restoreLatestIfIdle();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_runMaintenance());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notificationRoutes?.cancel();
     _router.dispose();
     super.dispose();

@@ -226,14 +226,35 @@ class AudioController extends StateNotifier<IqroAudioState> {
   var _disposed = false;
   var _restoreStarted = false;
   var _restoring = false;
+  DateTime? _restoredSavedAt;
 
   Future<void> restore() async {
-    if (_restoreStarted || _playbackStore == null) return;
+    await _restoreFromStore(force: false);
+  }
+
+  Future<void> restoreLatestIfIdle() async {
+    await _restoreFromStore(force: true);
+  }
+
+  Future<void> _restoreFromStore({required bool force}) async {
+    if ((!force && _restoreStarted) ||
+        _restoring ||
+        _playbackStore == null ||
+        (force && (state.playing || state.buffering))) {
+      return;
+    }
     _restoreStarted = true;
     _restoring = true;
     try {
       final snapshot = await _playbackStore.read();
-      if (snapshot == null || _disposed || state.active) return;
+      if (snapshot == null ||
+          _disposed ||
+          (!force && state.active) ||
+          (force &&
+              _restoredSavedAt != null &&
+              !snapshot.savedAt.isAfter(_restoredSavedAt!))) {
+        return;
+      }
       state = state.copyWith(
         speed: snapshot.speed,
         repeatEnabled: snapshot.repeatEnabled,
@@ -259,6 +280,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         clearActiveAyah: _segmentAt(state.segments, logicalPosition) == null,
         clearError: true,
       );
+      _restoredSavedAt = snapshot.savedAt;
     } on Object {
       try {
         await _playbackStore.clear();

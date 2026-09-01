@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any, ClassVar
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -1107,6 +1110,78 @@ class AyahAudioSegment(BaseModel):
             )
         )
         return track_ids, recitation_ids
+
+
+class AudioPlaybackPosition(BaseModel):
+    """The latest resumable audio position for one IQRO account."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="audio_playback_position",
+    )
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="audio_playback_positions",
+        null=True,
+        blank=True,
+    )
+    track = models.ForeignKey(
+        AudioTrack,
+        on_delete=models.PROTECT,
+        related_name="playback_positions",
+    )
+    position_ms = models.PositiveBigIntegerField()
+    speed = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        validators=[MinValueValidator(Decimal("0.50")), MaxValueValidator(Decimal("2.00"))],
+    )
+    repeat_enabled = models.BooleanField(default=False)
+    range_start_ayah = models.PositiveSmallIntegerField(null=True, blank=True)
+    range_end_ayah = models.PositiveSmallIntegerField(null=True, blank=True)
+    client_updated_at = models.DateTimeField(db_index=True)
+    revision = models.PositiveBigIntegerField(default=1)
+
+    class Meta:
+        db_table = "audio_playback_position"
+        ordering = ["user_id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(revision__gt=0),
+                name="audio_playback_revision_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    speed__gte=Decimal("0.50"),
+                    speed__lte=Decimal("2.00"),
+                ),
+                name="audio_playback_speed_range",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(range_start_ayah__isnull=True, range_end_ayah__isnull=True)
+                    | models.Q(
+                        range_start_ayah__gte=1,
+                        range_start_ayah__lte=286,
+                        range_end_ayah__gte=models.F("range_start_ayah"),
+                        range_end_ayah__lte=286,
+                    )
+                ),
+                name="audio_playback_ayah_range_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "client_updated_at"],
+                name="audio_playback_user_time_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}: {self.track} @ {self.position_ms}ms"
 
 
 class QuranFoundationAyahRecitation(BaseModel):
