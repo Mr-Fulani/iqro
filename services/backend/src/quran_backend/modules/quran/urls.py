@@ -10,6 +10,7 @@ from quran_backend.modules.quran.api import (
     MushafPageDetailView,
     QuranEditionDetailView,
     QuranEditionListView,
+    QuranEditionMushafOfflineManifestView,
     QuranFoundationMushafListView,
     QuranFoundationMushafOfflineManifestView,
     QuranFoundationMushafPageDetailView,
@@ -43,6 +44,11 @@ urlpatterns = [
         "editions/<slug:edition>/pages/<int:page>",
         MushafPageDetailView.as_view(),
         name="page-detail",
+    ),
+    path(
+        "editions/<slug:edition>/offline-manifest",
+        QuranEditionMushafOfflineManifestView.as_view(),
+        name="edition-offline-manifest",
     ),
     path(
         "foundation/mushafs",

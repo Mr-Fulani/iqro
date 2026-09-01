@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -126,6 +127,45 @@ def test_page_returns_public_assets_and_regions(
         "surah": 1,
         "number": 1,
     }
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_MEDIA_BASE_URL="https://media.example.test")
+def test_canonical_mushaf_offline_manifest_is_complete_and_integrity_bound(
+    api_client: APIClient,
+    quran_dataset: dict[str, Any],
+) -> None:
+    version = quran_dataset["version"]
+    version.page_count = 1
+    version.save(update_fields=["page_count", "updated_at"])
+    url = reverse(
+        "quran:edition-offline-manifest",
+        kwargs={"edition": quran_dataset["edition"].code},
+    )
+
+    response = api_client.get(url, {"width": 1024})
+
+    assert response.status_code == 200
+    manifest = response.json()
+    assert manifest["package_id"] == "quran-edition-madani-hafs-1.0.0-w1024"
+    assert manifest["publication_checksum_sha256"] == "a" * 64
+    assert manifest["mushaf"]["edition_code"] == "madani-hafs"
+    assert manifest["mushaf"]["source_id"] is None
+    assert manifest["page_count"] == 1
+    assert manifest["total_bytes"] == 100_000
+    assert manifest["pages"][0]["asset"] == {
+        "url": "https://media.example.test/quran/madani-hafs/1.0.0/pages/001.webp",
+        "file_name": "page-001-1024.webp",
+        "content_type": "image/webp",
+        "width": 1024,
+        "height": 1536,
+        "bytes": 100_000,
+        "sha256": "b" * 64,
+    }
+    assert "path" not in str(manifest)
+
+    unavailable = api_client.get(url, {"width": 640})
+    assert unavailable.status_code == 404
 
 
 @pytest.mark.django_db

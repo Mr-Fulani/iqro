@@ -262,15 +262,16 @@ class OfflineMushafPageSerializer(serializers.Serializer[Any]):
 
 
 class OfflineMushafIdentitySerializer(serializers.Serializer[Any]):
-    source_id = serializers.IntegerField(min_value=1)
+    source_id = serializers.IntegerField(min_value=1, allow_null=True)
+    edition_code = serializers.CharField(allow_null=True)
     name = serializers.CharField()
     qirat_name = serializers.CharField()
-    lines_per_page = serializers.IntegerField(min_value=1)
+    lines_per_page = serializers.IntegerField(min_value=1, allow_null=True)
 
 
 class OfflineMushafSourceSerializer(serializers.Serializer[Any]):
     name = serializers.CharField()
-    url = serializers.URLField()
+    url = serializers.URLField(allow_blank=True)
     checksum_sha256 = serializers.CharField()
 
 
@@ -278,6 +279,8 @@ class OfflineMushafRightsSerializer(serializers.Serializer[Any]):
     offline_download = serializers.BooleanField()
     attribution_required = serializers.BooleanField()
     attribution = serializers.CharField()
+    license_name = serializers.CharField(allow_blank=True)
+    license_url = serializers.URLField(allow_blank=True)
 
 
 class OfflineMushafManifestSerializer(serializers.Serializer[Any]):
