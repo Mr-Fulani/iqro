@@ -8,7 +8,12 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/reciter_portraits.dart';
+import '../dua/dua_repository.dart';
+import '../memorization/memorization_repository.dart';
 import '../prayer/prayer_repository.dart';
+import '../quran/quran_models.dart';
+import 'home_view_data.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,19 +21,47 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final position = ref.watch(readingPositionProvider).valueOrNull;
+    final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final readerMode = ref.watch(
       appPreferencesProvider.select((value) => value.readerMode),
     );
-    final plan = ref.watch(planProvider).valueOrNull;
-    final reciter = ref.watch(recitersProvider).valueOrNull?.firstOrNull;
-    final prayer = ref.watch(prayerScheduleProvider).valueOrNull;
-    final playerActive = ref.watch(
-      audioControllerProvider.select((value) => value.active),
-    );
+    final preferences = ref.watch(appPreferencesProvider);
+    final planState = ref.watch(planProvider);
+    final plan = planState.valueOrNull;
+    final prayerState = ref.watch(prayerScheduleProvider);
+    final memorizationState = ref.watch(memorizationProvider);
+    final duaState = ref.watch(duaEntriesProvider);
+    final session = ref.watch(sessionProvider).valueOrNull;
+    final player = ref.watch(audioControllerProvider);
     final locale = Localizations.localeOf(context).languageCode;
+    final currentSurahNumber = position?.surah ?? 1;
+    final currentSurah = findSurah(catalog, currentSurahNumber);
+    final currentSurahName =
+        currentSurah?.nameFor(locale) ??
+        '${context.l10n.surah} $currentSurahNumber';
+    final memorization = memorizationState.valueOrNull;
+    final memorizationSurah = memorization == null
+        ? null
+        : findSurah(catalog, memorization.surah);
+    final dailyDua = duaForDate(duaState.valueOrNull, DateTime.now());
     final achieved = plan?.achieved ?? 0;
-    final target = plan?.target ?? 6;
+    final target =
+        plan?.target ??
+        (preferences.dailyUnit == DailyUnit.pages
+            ? preferences.dailyTarget
+            : 6);
     final remaining = (target - achieved).clamp(0, target);
+    final goalAchieved = achieved.clamp(0, target);
+    final planLoading = planState.isLoading && plan == null;
+    final prayerPages =
+        plan?.prayerPages.values.fold<int>(0, (sum, item) => sum + item) ?? 0;
+    final reciter = player.reciter;
+    final reciterPortrait = reciter == null
+        ? null
+        : resolveReciterPortraitUrl(
+            reciter,
+            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+          );
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.greeting,
@@ -47,11 +80,12 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: playerActive),
+        padding: iqroRootTabPadding(playerActive: player.active),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _ContinueCard(
+              surahName: currentSurahName,
               ayah: position?.ayah ?? 1,
               page: position?.page ?? 1,
               onTap: () {
@@ -68,7 +102,8 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _PrayerStrip(
-              schedule: prayer,
+              schedule: prayerState.valueOrNull,
+              loading: prayerState.isLoading,
               onTap: () => context.push('/prayer'),
             ),
             const SizedBox(height: 28),
@@ -90,9 +125,11 @@ class HomeScreen extends ConsumerWidget {
                     alignment: Alignment.center,
                     children: <Widget>[
                       CircularProgressIndicator(
-                        value: target == 0
+                        value: planLoading
+                            ? null
+                            : target == 0
                             ? 0
-                            : (achieved / target).clamp(0.0, 1.0),
+                            : goalAchieved / target,
                         strokeWidth: 7,
                         backgroundColor: context.iqroColors.line,
                         strokeCap: StrokeCap.round,
@@ -101,7 +138,7 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Text(
-                            '$achieved',
+                            planLoading ? '—' : '$goalAchieved',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           Text(
@@ -119,19 +156,27 @@ class HomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        context.l10n.calmPace,
+                        !planLoading && target > 0 && achieved >= target
+                            ? context.l10n.completed
+                            : context.l10n.calmPace,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$remaining ${context.l10n.pages}',
+                        planLoading
+                            ? context.l10n.loading
+                            : target > 0 && achieved >= target
+                            ? '$achieved ${context.l10n.pages}'
+                            : '$remaining ${context.l10n.pages}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 10),
                       LinearProgressIndicator(
-                        value: target == 0
+                        value: planLoading
+                            ? null
+                            : target == 0
                             ? 0
-                            : (achieved / target).clamp(0.0, 1.0),
+                            : goalAchieved / target,
                       ),
                     ],
                   ),
@@ -146,8 +191,9 @@ class HomeScreen extends ConsumerWidget {
                     color: context.iqroColors.sand,
                     icon: Icons.schedule_outlined,
                     eyebrow: context.l10n.afterPrayer,
-                    title:
-                        '${plan?.prayerPages.values.fold<int>(0, (sum, item) => sum + item) ?? 0} / 10',
+                    title: planLoading
+                        ? context.l10n.loading
+                        : '$prayerPages ${context.l10n.pages}',
                     onTap: () => context.push('/after-prayer'),
                   ),
                 ),
@@ -158,7 +204,13 @@ class HomeScreen extends ConsumerWidget {
                     foreground: Colors.white,
                     icon: Icons.repeat,
                     eyebrow: context.l10n.memorization,
-                    title: '${context.l10n.alFatiha} 1–3',
+                    title: _memorizationTitle(
+                      context,
+                      memorizationState,
+                      memorization,
+                      memorizationSurah,
+                      locale,
+                    ),
                     onTap: () => context.push('/memorization'),
                   ),
                 ),
@@ -173,15 +225,44 @@ class HomeScreen extends ConsumerWidget {
                     minTileHeight: 64,
                     contentPadding: EdgeInsets.zero,
                     leading: _ReciterAvatar(
-                      url: reciter?.portraitUrl,
+                      url: reciterPortrait,
                       initials: reciter?.initials ?? 'IQ',
                     ),
-                    title: Text(context.l10n.recentReciter),
-                    subtitle: Text(
-                      reciter?.nameFor(locale) ?? context.l10n.allReciters,
+                    title: Text(
+                      reciter == null
+                          ? context.l10n.allReciters
+                          : context.l10n.recentReciter,
                     ),
-                    trailing: const Icon(Icons.play_circle_fill),
-                    onTap: () => context.push('/app?tab=3'),
+                    subtitle: Text(
+                      reciter?.nameFor(locale) ?? context.l10n.audioTitle,
+                    ),
+                    trailing: player.active
+                        ? IconButton(
+                            tooltip: player.playing
+                                ? context.l10n.pause
+                                : context.l10n.play,
+                            onPressed: player.buffering
+                                ? null
+                                : ref
+                                      .read(audioControllerProvider.notifier)
+                                      .toggle,
+                            icon: player.buffering
+                                ? const SizedBox.square(
+                                    dimension: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(
+                                    player.playing
+                                        ? Icons.pause_circle_filled
+                                        : Icons.play_circle_fill,
+                                  ),
+                          )
+                        : const Icon(Icons.chevron_right),
+                    onTap: () => player.active
+                        ? context.push('/player')
+                        : context.push('/app?tab=3'),
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -196,29 +277,64 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     title: Text(context.l10n.duaOfDay),
                     subtitle: Text(
-                      context.l10n.duaSubtitle,
+                      _duaSubtitle(context, duaState, dailyDua),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/dua'),
+                    onTap: () => dailyDua == null
+                        ? context.push('/dua')
+                        : context.push('/dua/${dailyDua.id}', extra: dailyDua),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            IqroStatusBanner(
-              icon: Icons.shield_outlined,
-              title: context.l10n.readingAsGuest,
-              message: context.l10n.guestSyncHint,
-              actionLabel: context.l10n.signIn,
-              onAction: () => context.push('/account'),
-              color: context.iqroColors.lavender,
-            ),
+            if (session?.isGuest == true) ...<Widget>[
+              const SizedBox(height: 14),
+              IqroStatusBanner(
+                icon: Icons.shield_outlined,
+                title: context.l10n.readingAsGuest,
+                message: context.l10n.guestSyncHint,
+                actionLabel: context.l10n.signIn,
+                onAction: () => context.push('/account'),
+                color: context.iqroColors.lavender,
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  String _memorizationTitle(
+    BuildContext context,
+    AsyncValue<MemorizationState> state,
+    MemorizationState? value,
+    Surah? surah,
+    String locale,
+  ) {
+    if (state.isLoading && value == null) return context.l10n.loading;
+    if (value == null) return context.l10n.memorizationTitle;
+    final name =
+        surah?.nameFor(locale) ?? '${context.l10n.surah} ${value.surah}';
+    return '$name ${value.startAyah}–${value.endAyah} · '
+        '${value.completed}/${value.target}';
+  }
+
+  String _duaSubtitle(
+    BuildContext context,
+    AsyncValue<List<DuaEntry>> state,
+    DuaEntry? entry,
+  ) {
+    if (state.isLoading && entry == null) return context.l10n.loading;
+    if (entry == null) return context.l10n.duaSubtitle;
+    if (entry.meaning.trim().isNotEmpty) return entry.meaning.trim();
+    if (entry.categoryTitle.trim().isNotEmpty) {
+      return entry.categoryTitle.trim();
+    }
+    return entry.sourceLabel.trim().isEmpty
+        ? context.l10n.duaSubtitle
+        : entry.sourceLabel.trim();
   }
 }
 
@@ -244,10 +360,12 @@ class _HomeLogo extends StatelessWidget {
 
 class _ContinueCard extends StatelessWidget {
   const _ContinueCard({
+    required this.surahName,
     required this.ayah,
     required this.page,
     required this.onTap,
   });
+  final String surahName;
   final int ayah;
   final int page;
   final VoidCallback onTap;
@@ -279,7 +397,7 @@ class _ContinueCard extends StatelessWidget {
               IqroEyebrow(context.l10n.continueReading, light: true),
               const SizedBox(height: 10),
               Text(
-                context.l10n.alFatiha,
+                surahName,
                 style: Theme.of(
                   context,
                 ).textTheme.displaySmall?.copyWith(color: Colors.white),
@@ -328,13 +446,18 @@ class _ContinueCard extends StatelessWidget {
 }
 
 class _PrayerStrip extends StatelessWidget {
-  const _PrayerStrip({required this.schedule, required this.onTap});
+  const _PrayerStrip({
+    required this.schedule,
+    required this.loading,
+    required this.onTap,
+  });
   final PrayerSchedule? schedule;
+  final bool loading;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final next = _nextPrayer(context, schedule);
+    final next = nextPrayerOccurrence(schedule, DateTime.now());
     return IqroCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -355,16 +478,27 @@ class _PrayerStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  context.l10n.nextPrayer,
+                  next == null && !loading
+                      ? context.l10n.prayer
+                      : context.l10n.nextPrayer,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                Text(next.$1, style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  loading
+                      ? context.l10n.loading
+                      : next == null
+                      ? context.l10n.prayerUnavailable
+                      : _prayerName(context, next.code),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ],
             ),
           ),
-          if (next.$2 != null)
+          if (!loading && next != null)
             Text(
-              DateFormat.Hm().format(next.$2!),
+              DateFormat.Hm().format(next.time),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -374,17 +508,6 @@ class _PrayerStrip extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  (String, DateTime?) _nextPrayer(BuildContext context, PrayerSchedule? value) {
-    if (value == null) return (context.l10n.maghrib, null);
-    final now = DateTime.now();
-    for (final entry in value.times.entries) {
-      if (entry.value.isAfter(now) && entry.key != 'sunrise') {
-        return (_prayerName(context, entry.key), entry.value);
-      }
-    }
-    return (context.l10n.fajr, null);
   }
 
   String _prayerName(BuildContext context, String code) => switch (code) {
