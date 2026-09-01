@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/network/api_client.dart';
@@ -169,26 +170,34 @@ class DuaRepository {
       'source_number': entry.sourceNumber,
       'is_favorite': !active,
     };
-    if (active) {
-      await _database.database.delete(
-        'favorites',
-        where: 'item_key = ?',
-        whereArgs: <Object?>[entry.favoriteKey],
+    await _database.database.transaction((transaction) async {
+      if (active) {
+        await transaction.delete(
+          'favorites',
+          where: 'item_key = ?',
+          whereArgs: <Object?>[entry.favoriteKey],
+        );
+      } else {
+        await transaction.insert('favorites', <String, Object?>{
+          'item_key': entry.favoriteKey,
+          'kind': 'dua',
+          'payload': jsonEncode(entry.toJson()),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await transaction.delete(
+        'outbox',
+        where: 'entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>['dua_favorite', entry.favoriteKey],
       );
-    } else {
-      await _database.database.insert('favorites', <String, Object?>{
-        'item_key': entry.favoriteKey,
-        'kind': 'dua',
-        'payload': jsonEncode(entry.toJson()),
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      await transaction.insert('outbox', <String, Object?>{
+        'operation_id': operationId,
+        'entity_type': 'dua_favorite',
+        'entity_id': entry.favoriteKey,
+        'payload': jsonEncode(payload),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
       });
-    }
-    await _database.enqueue(
-      operationId: operationId,
-      entityType: 'dua_favorite',
-      entityId: entry.favoriteKey,
-      payload: payload,
-    );
+    });
     try {
       await _api.put(
         '/me/dua-favorites/${entry.collection}/${entry.sourceNumber}',

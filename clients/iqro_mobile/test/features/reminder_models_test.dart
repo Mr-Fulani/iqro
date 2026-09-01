@@ -1,11 +1,44 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/notifications/notification_gateway.dart';
 import 'package:iqro_mobile/features/reminders/reminder_models.dart';
+import 'package:iqro_mobile/features/reminders/reminder_repository.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   setUpAll(tz_data.initializeTimeZones);
+
+  test('only retryable reminder failures are persisted to outbox', () {
+    expect(
+      shouldPersistReminderMutation(const ApiException(message: 'offline')),
+      isTrue,
+    );
+    expect(
+      shouldPersistReminderMutation(
+        const ApiException(message: 'busy', statusCode: 503),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldPersistReminderMutation(
+        const ApiException(message: 'rate limited', statusCode: 429),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldPersistReminderMutation(
+        const ApiException(message: 'invalid', statusCode: 400),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldPersistReminderMutation(
+        const ApiException(message: 'unauthorized', statusCode: 401),
+      ),
+      isFalse,
+    );
+  });
 
   test('parses the authoritative backend reminder shape', () {
     final rule = ReminderRule.fromJson(<String, Object?>{

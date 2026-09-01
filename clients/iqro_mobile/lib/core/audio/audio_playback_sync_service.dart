@@ -24,7 +24,9 @@ class AudioPlaybackSyncReport {
   final AudioPlaybackSyncStatus status;
   final String? message;
 
-  bool get shouldRetry => status == AudioPlaybackSyncStatus.failed;
+  bool get shouldRetry =>
+      status == AudioPlaybackSyncStatus.offline ||
+      status == AudioPlaybackSyncStatus.failed;
 }
 
 class RemoteAudioPlaybackPosition {
@@ -218,9 +220,12 @@ class AudioPlaybackSyncService {
   Future<AudioPlaybackSyncReport> synchronize() {
     final current = _flight;
     if (current != null) return current;
-    final next = _synchronize(allowConflictRetry: true);
-    _flight = next;
-    return next.whenComplete(() => _flight = null);
+    late final Future<AudioPlaybackSyncReport> flight;
+    flight = _synchronize(allowConflictRetry: true).whenComplete(() {
+      if (identical(_flight, flight)) _flight = null;
+    });
+    _flight = flight;
+    return flight;
   }
 
   Future<AudioPlaybackSyncReport> _synchronize({

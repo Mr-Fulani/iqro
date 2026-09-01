@@ -6,6 +6,25 @@ import 'package:iqro_mobile/features/audio/audio_models.dart';
 void main() {
   final syncedAt = DateTime.utc(2026, 9, 1, 8);
 
+  test('offline and failed playback sync request a background retry', () {
+    expect(
+      const AudioPlaybackSyncReport(
+        AudioPlaybackSyncStatus.offline,
+      ).shouldRetry,
+      isTrue,
+    );
+    expect(
+      const AudioPlaybackSyncReport(AudioPlaybackSyncStatus.failed).shouldRetry,
+      isTrue,
+    );
+    expect(
+      const AudioPlaybackSyncReport(
+        AudioPlaybackSyncStatus.conflict,
+      ).shouldRetry,
+      isFalse,
+    );
+  });
+
   test(
     'uploads a local-only position and downloads a remote-only position',
     () {

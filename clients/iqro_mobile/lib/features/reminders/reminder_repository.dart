@@ -3,16 +3,19 @@ import 'package:uuid/uuid.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/sync/sync_store.dart';
 import '../../core/utils/json_helpers.dart';
 import 'reminder_models.dart';
 
 class ReminderRepository {
   ReminderRepository({required ApiClient api, required LocalDatabase database})
     : _api = api,
-      _database = database;
+      _database = database,
+      _syncStore = SqliteSyncStore(database.database);
 
   final ApiClient _api;
   final LocalDatabase _database;
+  final SqliteSyncStore _syncStore;
   final Uuid _uuid = const Uuid();
 
   Future<List<ReminderRule>> localRules() async =>
@@ -30,14 +33,8 @@ class ReminderRepository {
               .map((item) => Map<String, Object?>.from(item))
               .toList(growable: false) ??
           const <Map<String, Object?>>[];
-      await _database.replaceReminderSnapshot(rawRules);
-      return (
-        rules: rawRules
-            .map(ReminderRule.fromJson)
-            .where((rule) => rule.active)
-            .toList(growable: false),
-        offline: false,
-      );
+      await _syncStore.replaceAuthoritativeReminderSnapshot(rawRules);
+      return (rules: await localRules(), offline: false);
     } on ApiException catch (error) {
       if (!error.isOffline) rethrow;
       return (rules: await localRules(), offline: true);
@@ -85,7 +82,7 @@ class ReminderRepository {
       await _database.upsertReminder(result.toLocalJson());
       return result;
     } on ApiException catch (error) {
-      if (!error.isOffline) rethrow;
+      if (!shouldPersistReminderMutation(error)) rethrow;
       await _storeOffline(local, action: 'upsert');
       return local;
     }
@@ -110,7 +107,7 @@ class ReminderRepository {
       await _database.upsertReminder(result.toLocalJson());
       return result;
     } on ApiException catch (error) {
-      if (!error.isOffline) rethrow;
+      if (!shouldPersistReminderMutation(error)) rethrow;
       await _storeOffline(local, action: 'upsert');
       return local;
     }
@@ -134,7 +131,7 @@ class ReminderRepository {
       );
       await _database.upsertReminder(result);
     } on ApiException catch (error) {
-      if (!error.isOffline) rethrow;
+      if (!shouldPersistReminderMutation(error)) rethrow;
       final tombstone = rule.copyWith(
         isEnabled: false,
         clientUpdatedAt: now,
@@ -148,13 +145,11 @@ class ReminderRepository {
     ReminderRule rule, {
     required String action,
   }) async {
-    await _database.upsertReminder(rule.toLocalJson());
     final operationId = _uuid.v4();
-    await _database.replaceOutboxOperation(
+    await _database.upsertReminderWithOutbox(
+      reminder: rule.toLocalJson(),
       operationId: operationId,
-      entityType: 'reminder',
-      entityId: rule.id,
-      payload: <String, Object?>{
+      operation: <String, Object?>{
         'operation_id': operationId,
         'entity_type': 'reminder',
         'entity_id': rule.id,
@@ -167,4 +162,13 @@ class ReminderRepository {
       },
     );
   }
+}
+
+bool shouldPersistReminderMutation(ApiException error) {
+  final status = error.statusCode;
+  return error.isOffline ||
+      status == 408 ||
+      status == 425 ||
+      status == 429 ||
+      (status != null && status >= 500 && status <= 599);
 }

@@ -451,6 +451,11 @@ class QuranRepository {
         'dirty': 1,
         'updated_at': now.toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await transaction.delete(
+        'outbox',
+        where: 'entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>['reading_position', current.entityId],
+      );
       await transaction.insert('outbox', <String, Object?>{
         'operation_id': operationId,
         'entity_type': 'reading_position',
@@ -524,6 +529,11 @@ class QuranRepository {
             whereArgs: <Object?>[id],
           );
           final operationId = _uuid.v4();
+          await transaction.delete(
+            'outbox',
+            where: 'entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>['bookmark', id],
+          );
           await transaction.insert(
             'outbox',
             _outboxRow(

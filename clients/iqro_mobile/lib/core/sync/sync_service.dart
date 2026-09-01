@@ -1,11 +1,9 @@
-import 'dart:convert';
-
-import 'package:sqflite/sqflite.dart';
-
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
 import '../storage/local_database.dart';
 import '../utils/json_helpers.dart';
+import 'sync_remote.dart';
+import 'sync_store.dart';
 
 enum SyncStatus { idle, syncing, offline, conflict, sessionExpired, failed }
 
@@ -14,260 +12,413 @@ class SyncReport {
     required this.status,
     this.pushed = 0,
     this.pulled = 0,
+    this.pending = 0,
+    this.retryRecommended = false,
     this.message,
   });
 
   final SyncStatus status;
   final int pushed;
   final int pulled;
+  final int pending;
+  final bool retryRecommended;
   final String? message;
+
+  bool get shouldRetry =>
+      retryRecommended ||
+      status == SyncStatus.offline ||
+      status == SyncStatus.failed;
 }
 
 class SyncService {
-  SyncService({required ApiClient api, required LocalDatabase database})
-    : _api = api,
-      _database = database;
+  factory SyncService({
+    required ApiClient api,
+    required LocalDatabase database,
+  }) => SyncService.withDependencies(
+    remote: _ApiSyncRemote(api),
+    store: SqliteSyncStore(database.database),
+  );
 
-  final ApiClient _api;
-  final LocalDatabase _database;
+  SyncService.withDependencies({
+    required SyncRemote remote,
+    required SyncStore store,
+  }) : _remote = remote,
+       _store = store;
+
+  static const _maxPushBatches = 10;
+  static const _maxFullResyncPages = 1000;
+  static const _maxFullResyncEntities = 20000;
+
+  final SyncRemote _remote;
+  final SyncStore _store;
   Future<SyncReport>? _flight;
 
   Future<SyncReport> synchronize() {
     final current = _flight;
     if (current != null) return current;
-    final next = _run();
-    _flight = next;
-    return next.whenComplete(() => _flight = null);
+    late final Future<SyncReport> flight;
+    flight = _run().whenComplete(() {
+      if (identical(_flight, flight)) _flight = null;
+    });
+    _flight = flight;
+    return flight;
   }
 
   Future<SyncReport> _run() async {
-    var pushed = 0;
-    var pulled = 0;
+    final progress = _SyncProgress();
+    _SyncIssue? auxiliaryIssue;
     try {
-      final rows = await _database.pendingOutbox();
-      final shareRows = rows.where(
-        (row) => row['entity_type'] == 'share_event',
-      );
-      for (final row in shareRows) {
-        final id = row['operation_id']! as String;
-        try {
-          await _api.post(
-            '/share/events',
-            data: jsonDecode(row['payload']! as String),
-          );
-          await _database.acknowledgeOutbox(id);
-          pushed++;
-        } on ApiException catch (error) {
-          if (error.statusCode == 409 || error.statusCode == 400) {
-            await _database.acknowledgeOutbox(id);
-          } else {
-            await _database.markOutboxFailure(id, error.toString());
-          }
-        }
-      }
-
-      final duaFavoriteRows = rows.where(
-        (row) => row['entity_type'] == 'dua_favorite',
-      );
-      for (final row in duaFavoriteRows) {
-        final id = row['operation_id']! as String;
-        try {
-          final payload = Map<String, Object?>.from(
-            jsonDecode(row['payload']! as String) as Map,
-          );
-          await _api.put(
-            '/me/dua-favorites/${payload['collection']}/${payload['source_number']}',
-            data: <String, Object?>{
-              'is_favorite': payload['is_favorite'] == true,
-            },
-          );
-          await _database.acknowledgeOutbox(id);
-          pushed++;
-        } on ApiException catch (error) {
-          await _database.markOutboxFailure(id, error.toString());
-        }
-      }
-
-      final entityRows = rows
-          .where(
-            (row) =>
-                row['entity_type'] != 'share_event' &&
-                row['entity_type'] != 'dua_favorite',
-          )
-          .take(100)
-          .toList(growable: false);
-      if (entityRows.isNotEmpty) {
-        final operations = entityRows
-            .map((row) => jsonDecode(row['payload']! as String))
-            .toList(growable: false);
-        final response = jsonMap(
-          await _api.post(
-            '/sync/push',
-            data: <String, Object?>{'operations': operations},
-          ),
+      auxiliaryIssue = await _pushAuxiliary(progress);
+      var push = await _pushEntities(progress);
+      if (push.conflict != null) {
+        return _report(
+          progress,
+          status: SyncStatus.conflict,
+          message: push.conflict,
         );
-        final results =
-            (response['results'] as List?)?.whereType<Map>() ??
-            const Iterable<Map>.empty();
-        for (final raw in results) {
-          final result = Map<String, Object?>.from(raw);
-          final operationId = result['operation_id']?.toString();
-          if (operationId == null) continue;
-          if (result['outcome'] == 'accepted') {
-            await _applyAcceptedEntity(result['entity']);
-            await _database.acknowledgeOutbox(operationId);
-            pushed++;
-          } else {
-            await _database.markOutboxFailure(
-              operationId,
-              result['conflict_reason']?.toString() ?? 'sync_conflict',
-            );
-            return SyncReport(
-              status: SyncStatus.conflict,
-              pushed: pushed,
-              message: result['conflict_reason']?.toString(),
-            );
-          }
+      }
+      try {
+        progress.pulled += await _pullIncremental();
+      } on ApiException catch (error) {
+        if (error.code != 'sync_cursor_expired') rethrow;
+        progress.pulled += await _fullResync();
+        progress.pulled += await _pullIncremental();
+
+        // Full resync rebases pending local intent. Submit it immediately and
+        // pull once more so this run ends on a server-confirmed state.
+        push = await _pushEntities(progress);
+        if (push.conflict != null) {
+          return _report(
+            progress,
+            status: SyncStatus.conflict,
+            message: push.conflict,
+          );
         }
+        progress.pulled += await _pullIncremental();
       }
 
-      final cursorState = await _database.readState('sync_cursor');
-      var cursor = (cursorState?['value'] as num?)?.toInt() ?? 0;
-      var hasMore = true;
-      while (hasMore) {
-        final response = jsonMap(
-          await _api.get(
-            '/sync/pull',
-            query: <String, Object?>{'cursor': cursor, 'limit': 100},
-          ),
-        );
-        final changes =
-            (response['changes'] as List?)?.whereType<Map>() ??
-            const Iterable<Map>.empty();
-        for (final change in changes) {
-          await _applyAcceptedEntity(change['entity']);
-          pulled++;
-        }
-        cursor = (response['next_cursor'] as num?)?.toInt() ?? cursor;
-        hasMore = response['has_more'] == true;
-        await _database.writeState('sync_cursor', <String, Object?>{
-          'value': cursor,
-        });
-      }
+      final pending = await _store.pendingCount();
+      final issue = auxiliaryIssue;
       return SyncReport(
-        status: SyncStatus.idle,
-        pushed: pushed,
-        pulled: pulled,
+        status: issue?.status ?? SyncStatus.idle,
+        pushed: progress.pushed,
+        pulled: progress.pulled,
+        pending: pending,
+        retryRecommended:
+            issue?.status == SyncStatus.offline ||
+            issue?.status == SyncStatus.failed ||
+            (pending > 0 && issue == null),
+        message: issue?.message,
       );
     } on ApiException catch (error) {
-      if (error.code == 'sync_cursor_expired') {
-        return _fullResync(pushed: pushed);
-      }
-      if (error.statusCode == 401) {
-        return SyncReport(
-          status: SyncStatus.sessionExpired,
-          message: error.message,
-        );
-      }
-      return SyncReport(
-        status: error.isOffline ? SyncStatus.offline : SyncStatus.failed,
-        pushed: pushed,
-        pulled: pulled,
+      return _report(
+        progress,
+        status: error.statusCode == 401
+            ? SyncStatus.sessionExpired
+            : error.isOffline
+            ? SyncStatus.offline
+            : SyncStatus.failed,
         message: error.message,
       );
     } on Object catch (error) {
-      return SyncReport(status: SyncStatus.failed, message: error.toString());
+      return _report(
+        progress,
+        status: SyncStatus.failed,
+        message: error.toString(),
+      );
     }
   }
 
-  Future<SyncReport> _fullResync({required int pushed}) async {
-    var token = '';
+  Future<_SyncIssue?> _pushAuxiliary(_SyncProgress progress) async {
+    _SyncIssue? issue;
+    final rows = await _store.pendingAuxiliary();
+    for (final row in rows) {
+      try {
+        if (row.entityType == 'share_event') {
+          await _remote.post('/share/events', data: row.body);
+        } else if (row.entityType == 'dua_favorite') {
+          await _remote.put(
+            '/me/dua-favorites/'
+            '${row.body['collection']}/${row.body['source_number']}',
+            data: <String, Object?>{
+              'is_favorite': row.body['is_favorite'] == true,
+            },
+          );
+        } else {
+          await _store.markFailure(row.operationId, 'unsupported_outbox_type');
+          issue ??= const _SyncIssue(
+            SyncStatus.failed,
+            'unsupported_outbox_type',
+          );
+          continue;
+        }
+        await _store.acknowledge(row.operationId);
+        progress.pushed++;
+      } on ApiException catch (error) {
+        if ((row.entityType == 'share_event' &&
+                (error.statusCode == 400 || error.statusCode == 409)) ||
+            (row.entityType == 'dua_favorite' && error.statusCode == 400)) {
+          // The server made a terminal decision; retrying an invalid analytics
+          // or favorite payload forever would permanently block the queue.
+          await _store.acknowledge(row.operationId);
+          continue;
+        }
+        await _store.markFailure(row.operationId, error.toString());
+        if (error.statusCode == 401) rethrow;
+        issue ??= _SyncIssue(
+          error.isOffline ? SyncStatus.offline : SyncStatus.failed,
+          error.message,
+        );
+      } on Object catch (error) {
+        await _store.markFailure(row.operationId, error.toString());
+        issue ??= _SyncIssue(SyncStatus.failed, error.toString());
+      }
+    }
+    return issue;
+  }
+
+  Future<_PushResult> _pushEntities(_SyncProgress progress) async {
+    for (var batchNumber = 0; batchNumber < _maxPushBatches; batchNumber++) {
+      final rows = await _store.pendingEntities();
+      if (rows.isEmpty) return const _PushResult();
+      Object? rawResponse;
+      try {
+        rawResponse = await _remote.post(
+          '/sync/push',
+          data: <String, Object?>{
+            'operations': rows.map((row) => row.body).toList(growable: false),
+          },
+        );
+      } on Object catch (error) {
+        for (final row in rows) {
+          await _store.markFailure(row.operationId, error.toString());
+        }
+        rethrow;
+      }
+      final response = jsonMap(rawResponse);
+      final rawResults = response['results'];
+      if (rawResults is! List) {
+        for (final row in rows) {
+          await _store.markFailure(row.operationId, 'missing_sync_results');
+        }
+        throw const FormatException('Sync response has no results array');
+      }
+      final resultsById = <String, Map<String, Object?>>{};
+      for (final raw in rawResults.whereType<Map>()) {
+        final result = Map<String, Object?>.from(raw);
+        final operationId = result['operation_id']?.toString();
+        if (operationId == null || operationId.isEmpty) continue;
+        resultsById[operationId] = result;
+      }
+      final expectedIds = rows.map((row) => row.operationId).toSet();
+      if (resultsById.length != rawResults.length ||
+          resultsById.keys.toSet().difference(expectedIds).isNotEmpty ||
+          expectedIds.difference(resultsById.keys.toSet()).isNotEmpty) {
+        for (final row in rows) {
+          await _store.markFailure(row.operationId, 'invalid_sync_results');
+        }
+        throw const FormatException(
+          'Sync results do not match the input operations',
+        );
+      }
+
+      var rebased = false;
+      for (final row in rows) {
+        final result = resultsById[row.operationId];
+        if (result == null) {
+          await _store.markFailure(row.operationId, 'missing_sync_result');
+          throw const FormatException(
+            'Sync response omitted an input operation',
+          );
+        }
+        if (result['outcome'] == 'accepted') {
+          if (result['entity'] is! Map) {
+            await _store.markFailure(row.operationId, 'missing_sync_entity');
+            throw const FormatException(
+              'Accepted sync result has no entity snapshot',
+            );
+          }
+          await _store.acceptOperation(row.operationId, result['entity']);
+          progress.pushed++;
+          continue;
+        }
+        if (result['outcome'] != 'conflict') {
+          await _store.markFailure(row.operationId, 'unknown_sync_outcome');
+          throw const FormatException('Sync outcome is invalid');
+        }
+        final resolution = await _store.resolveConflict(row, result);
+        if (resolution == SyncConflictResolution.unresolved) {
+          return _PushResult(
+            conflict: result['conflict_reason']?.toString() ?? 'sync_conflict',
+          );
+        }
+        rebased = rebased || resolution == SyncConflictResolution.rebased;
+      }
+      if (!rebased && rows.length < 100) {
+        final remaining = await _store.pendingEntities(limit: 1);
+        if (remaining.isEmpty) return const _PushResult();
+      }
+    }
+    return const _PushResult();
+  }
+
+  Future<int> _pullIncremental() async {
+    var cursor = await _store.readCursor();
     var pulled = 0;
     var hasMore = true;
-    var snapshotCursor = 0;
-    final entities = <Object?>[];
     while (hasMore) {
       final response = jsonMap(
-        await _api.get(
+        await _remote.get(
+          '/sync/pull',
+          query: <String, Object?>{'cursor': cursor, 'limit': 100},
+        ),
+      );
+      if (response['mode'] != 'incremental') {
+        throw const FormatException('Expected an incremental sync response');
+      }
+      final rawChanges = response['changes'];
+      if (rawChanges is! List) {
+        throw const FormatException('Sync response has no changes array');
+      }
+      var lastChangeCursor = cursor;
+      for (final raw in rawChanges) {
+        if (raw is! Map) {
+          throw const FormatException('Sync change must be an object');
+        }
+        final change = Map<String, Object?>.from(raw);
+        final changeCursor = (change['cursor'] as num?)?.toInt();
+        if (changeCursor == null || changeCursor <= lastChangeCursor) {
+          throw const FormatException('Sync changes are not cursor ordered');
+        }
+        await _store.applyRemoteEntity(change['entity']);
+        lastChangeCursor = changeCursor;
+        pulled++;
+      }
+      final nextCursor = (response['next_cursor'] as num?)?.toInt();
+      if (nextCursor == null ||
+          nextCursor < lastChangeCursor ||
+          nextCursor < cursor) {
+        throw const FormatException('Sync next cursor is invalid');
+      }
+      hasMore = response['has_more'] == true;
+      if (hasMore && nextCursor == cursor) {
+        throw const FormatException('Sync pagination made no progress');
+      }
+      cursor = nextCursor;
+      await _store.writeCursor(cursor);
+    }
+    return pulled;
+  }
+
+  Future<int> _fullResync() async {
+    var token = '';
+    var hasMore = true;
+    int? snapshotCursor;
+    final entities = <Object?>[];
+    final seenTokens = <String>{};
+    var pages = 0;
+    while (hasMore) {
+      if (++pages > _maxFullResyncPages) {
+        throw const FormatException('Full resync exceeded the page limit');
+      }
+      final response = jsonMap(
+        await _remote.get(
           '/sync/pull',
           query: <String, Object?>{
             'full_resync': true,
-            'limit': 100,
+            'limit': 200,
             if (token.isNotEmpty) 'page_token': token,
           },
         ),
       );
-      entities.addAll((response['entities'] as List?) ?? const <Object?>[]);
-      snapshotCursor =
-          (response['snapshot_cursor'] as num?)?.toInt() ?? snapshotCursor;
-      token = response['next_page_token']?.toString() ?? '';
-      hasMore = response['has_more'] == true;
-    }
-    await _database.database.transaction((transaction) async {
-      for (final entity in entities) {
-        await _applyAcceptedEntity(entity, database: transaction);
-        pulled++;
+      if (response['mode'] != 'full_resync') {
+        throw const FormatException('Expected a full resync response');
       }
-      await transaction.insert('app_state', <String, Object?>{
-        'state_key': 'sync_cursor',
-        'payload': jsonEncode(<String, Object?>{'value': snapshotCursor}),
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    });
-    return SyncReport(status: SyncStatus.idle, pushed: pushed, pulled: pulled);
+      final pageCursor = (response['snapshot_cursor'] as num?)?.toInt();
+      if (pageCursor == null || pageCursor < 0) {
+        throw const FormatException('Full resync cursor is invalid');
+      }
+      snapshotCursor ??= pageCursor;
+      if (snapshotCursor != pageCursor) {
+        throw const FormatException('Full resync snapshot changed mid-stream');
+      }
+      final pageEntities = response['entities'];
+      if (pageEntities is! List) {
+        throw const FormatException('Full resync has no entities array');
+      }
+      entities.addAll(pageEntities);
+      if (entities.length > _maxFullResyncEntities) {
+        throw const FormatException('Full resync exceeded the entity limit');
+      }
+      hasMore = response['has_more'] == true;
+      final nextToken = response['next_page_token']?.toString() ?? '';
+      if (hasMore &&
+          (nextToken.isEmpty ||
+              nextToken == token ||
+              !seenTokens.add(nextToken))) {
+        throw const FormatException('Full resync page token is invalid');
+      }
+      token = nextToken;
+    }
+    await _store.replaceAuthoritativeSnapshot(entities, snapshotCursor ?? 0);
+    return entities.length;
   }
 
-  Future<void> _applyAcceptedEntity(
-    Object? raw, {
-    DatabaseExecutor? database,
+  Future<SyncReport> _report(
+    _SyncProgress progress, {
+    required SyncStatus status,
+    String? message,
   }) async {
-    if (raw is! Map) return;
-    final entity = Map<String, Object?>.from(raw);
-    final executor = database ?? _database.database;
-    final type = entity['entity_type']?.toString();
-    if (type == 'reading_position') {
-      final ayah = entity['ayah'] is Map
-          ? Map<String, Object?>.from(entity['ayah']! as Map)
-          : const <String, Object?>{};
-      await executor.insert('reading_positions', <String, Object?>{
-        'edition': entity['edition_code']?.toString() ?? 'madani-hafs',
-        'entity_id': entity['id']?.toString() ?? '',
-        'surah': (ayah['surah_number'] as num?)?.toInt() ?? 1,
-        'ayah': (ayah['ayah_number'] as num?)?.toInt() ?? 1,
-        'page': (entity['page_number'] as num?)?.toInt() ?? 1,
-        'server_revision': (entity['revision'] as num?)?.toInt() ?? 0,
-        'dirty': 0,
-        'updated_at':
-            entity['updated_at']?.toString() ??
-            DateTime.now().toUtc().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } else if (type == 'bookmark') {
-      final ayah = entity['ayah'] is Map
-          ? Map<String, Object?>.from(entity['ayah']! as Map)
-          : const <String, Object?>{};
-      await executor.insert('bookmarks', <String, Object?>{
-        'id': entity['id']?.toString() ?? '',
-        'edition': entity['edition_code']?.toString() ?? 'madani-hafs',
-        'surah': (ayah['surah_number'] as num?)?.toInt() ?? 1,
-        'ayah': (ayah['ayah_number'] as num?)?.toInt() ?? 1,
-        'server_revision': (entity['revision'] as num?)?.toInt() ?? 0,
-        'is_deleted': entity['deleted_at'] == null ? 0 : 1,
-        'updated_at':
-            entity['updated_at']?.toString() ??
-            DateTime.now().toUtc().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } else if (type == 'reminder') {
-      final id = entity['id']?.toString() ?? '';
-      if (id.isEmpty) return;
-      await executor.insert('reminders', <String, Object?>{
-        'id': id,
-        'payload': jsonEncode(entity),
-        'revision': (entity['revision'] as num?)?.toInt() ?? 0,
-        'is_deleted': entity['deleted_at'] == null ? 0 : 1,
-        'updated_at':
-            entity['updated_at']?.toString() ??
-            DateTime.now().toUtc().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    var pending = 0;
+    try {
+      pending = await _store.pendingCount();
+    } on Object {
+      // Preserve the original failure; inability to count cannot make it safe.
     }
+    return SyncReport(
+      status: status,
+      pushed: progress.pushed,
+      pulled: progress.pulled,
+      pending: pending,
+      retryRecommended:
+          status == SyncStatus.offline || status == SyncStatus.failed,
+      message: message,
+    );
   }
+}
+
+class _ApiSyncRemote implements SyncRemote {
+  const _ApiSyncRemote(this._api);
+
+  final ApiClient _api;
+
+  @override
+  Future<Object?> get(String path, {Map<String, Object?>? query}) =>
+      _api.get(path, query: query);
+
+  @override
+  Future<Object?> post(String path, {Object? data}) =>
+      _api.post(path, data: data);
+
+  @override
+  Future<Object?> put(String path, {Object? data}) =>
+      _api.put(path, data: data);
+}
+
+class _SyncProgress {
+  int pushed = 0;
+  int pulled = 0;
+}
+
+class _SyncIssue {
+  const _SyncIssue(this.status, this.message);
+
+  final SyncStatus status;
+  final String message;
+}
+
+class _PushResult {
+  const _PushResult({this.conflict});
+
+  final String? conflict;
 }

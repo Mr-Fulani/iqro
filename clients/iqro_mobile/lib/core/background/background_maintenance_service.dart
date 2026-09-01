@@ -22,9 +22,7 @@ class BackgroundMaintenanceReport {
       audio.status == AudioPlaybackSyncStatus.downloaded;
 
   bool get shouldRetry =>
-      sync.status == SyncStatus.failed ||
-      audio.shouldRetry ||
-      reminderError != null;
+      sync.shouldRetry || audio.shouldRetry || reminderError != null;
 }
 
 class BackgroundMaintenanceService {
@@ -58,9 +56,12 @@ class BackgroundMaintenanceService {
   Future<BackgroundMaintenanceReport> run({bool renewReminders = true}) {
     final current = _flight;
     if (current != null) return current;
-    final next = _run(renewReminders: renewReminders);
-    _flight = next;
-    return next.whenComplete(() => _flight = null);
+    late final Future<BackgroundMaintenanceReport> flight;
+    flight = _run(renewReminders: renewReminders).whenComplete(() {
+      if (identical(_flight, flight)) _flight = null;
+    });
+    _flight = flight;
+    return flight;
   }
 
   Future<BackgroundMaintenanceReport> _run({
@@ -94,6 +95,7 @@ class BackgroundMaintenanceService {
       'sync_status': syncReport.status.name,
       'pushed': syncReport.pushed,
       'pulled': syncReport.pulled,
+      'pending': syncReport.pending,
       'audio_status': audioReport.status.name,
       'reminders_scheduled': remindersScheduled,
       'reminders_renewed': renewReminders,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -22,6 +23,9 @@ class CachedValue {
 
 class LocalDatabase {
   LocalDatabase._(this.database);
+
+  @visibleForTesting
+  LocalDatabase.forTesting(this.database);
 
   static const schemaVersion = 3;
   final Database database;
@@ -222,16 +226,41 @@ class LocalDatabase {
   Future<void> upsertReminder(Map<String, Object?> reminder) async {
     final id = reminder['id']?.toString();
     if (id == null || id.isEmpty) return;
-    await database.insert('reminders', <String, Object?>{
-      'id': id,
-      'payload': jsonEncode(reminder),
-      'revision': (reminder['revision'] as num?)?.toInt() ?? 0,
-      'is_deleted': reminder['deleted_at'] == null ? 0 : 1,
-      'updated_at':
-          reminder['updated_at']?.toString() ??
-          reminder['client_updated_at']?.toString() ??
-          DateTime.now().toUtc().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await database.insert(
+      'reminders',
+      _reminderRow(reminder, id),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> upsertReminderWithOutbox({
+    required Map<String, Object?> reminder,
+    required String operationId,
+    required Map<String, Object?> operation,
+  }) async {
+    final id = reminder['id']?.toString();
+    if (id == null || id.isEmpty) {
+      throw const FormatException('Reminder identity is required');
+    }
+    await database.transaction((transaction) async {
+      await transaction.insert(
+        'reminders',
+        _reminderRow(reminder, id),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await transaction.delete(
+        'outbox',
+        where: 'entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>['reminder', id],
+      );
+      await transaction.insert('outbox', <String, Object?>{
+        'operation_id': operationId,
+        'entity_type': 'reminder',
+        'entity_id': id,
+        'payload': jsonEncode(operation),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    });
   }
 
   Future<void> discardLocalReminder(String id) async {
@@ -246,27 +275,6 @@ class LocalDatabase {
         where: 'entity_type = ? AND entity_id = ?',
         whereArgs: <Object?>['reminder', id],
       );
-    });
-  }
-
-  Future<void> replaceReminderSnapshot(
-    List<Map<String, Object?>> reminders,
-  ) async {
-    await database.transaction((transaction) async {
-      await transaction.delete('reminders');
-      for (final reminder in reminders) {
-        final id = reminder['id']?.toString();
-        if (id == null || id.isEmpty) continue;
-        await transaction.insert('reminders', <String, Object?>{
-          'id': id,
-          'payload': jsonEncode(reminder),
-          'revision': (reminder['revision'] as num?)?.toInt() ?? 0,
-          'is_deleted': reminder['deleted_at'] == null ? 0 : 1,
-          'updated_at':
-              reminder['updated_at']?.toString() ??
-              DateTime.now().toUtc().toIso8601String(),
-        });
-      }
     });
   }
 
@@ -290,6 +298,20 @@ class LocalDatabase {
   }
 
   Future<void> close() => database.close();
+
+  static Map<String, Object?> _reminderRow(
+    Map<String, Object?> reminder,
+    String id,
+  ) => <String, Object?>{
+    'id': id,
+    'payload': jsonEncode(reminder),
+    'revision': (reminder['revision'] as num?)?.toInt() ?? 0,
+    'is_deleted': reminder['deleted_at'] == null ? 0 : 1,
+    'updated_at':
+        reminder['updated_at']?.toString() ??
+        reminder['client_updated_at']?.toString() ??
+        DateTime.now().toUtc().toIso8601String(),
+  };
 
   static Future<void> _createReminderTable(DatabaseExecutor db) async {
     await db.execute('''
