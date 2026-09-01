@@ -295,7 +295,7 @@ services:
       - static-data:/srv/static:ro
     tmpfs:
       - /var/cache/nginx:size=32m
-      - /var/lib/nginx/tmp:size=24m
+      - /var/lib/nginx/tmp:size=64m,mode=0750,uid=100,gid=101
       - /var/log/nginx:size=8m
       - /run/nginx:size=4m
       - /tmp:size=16m

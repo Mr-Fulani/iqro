@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +8,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
-import '../audio/audio_models.dart';
+import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
@@ -20,15 +22,32 @@ class ReaderScreen extends ConsumerStatefulWidget {
 
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _bookmarks = <int>{};
-  var _showTranslation = false;
+  var _showTranslation = true;
   var _showTafsir = false;
   var _selectedAyah = 1;
+  var _contentInitialized = false;
+  var _contentLoading = false;
+  int? _audioLoadingAyah;
+  List<QuranTranslationEdition> _translationEditions = const [];
+  List<QuranTafsirEdition> _tafsirEditions = const [];
+  int? _translationSourceId;
+  int? _tafsirSourceId;
+  Map<int, QuranAyahTranslation> _translations = const {};
+  Map<int, QuranAyahTafsir> _tafsirs = const {};
 
   @override
   void initState() {
     super.initState();
     _selectedAyah = widget.initialAyah;
     _loadBookmarks();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_contentInitialized) return;
+    _contentInitialized = true;
+    unawaited(_loadReaderContent());
   }
 
   Future<void> _loadBookmarks() async {
@@ -49,6 +68,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Widget build(BuildContext context) {
     final ayahs = ref.watch(ayahsProvider(widget.surah));
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
+    final audio = ref.watch(
+      audioControllerProvider.select(
+        (value) => (
+          surah: value.track?.surah,
+          ayah: value.activeAyah,
+          playing: value.playing,
+        ),
+      ),
+    );
     final locale = Localizations.localeOf(context).languageCode;
     final surah = catalog?.surahs
         .where((item) => item.number == widget.surah)
@@ -111,17 +139,28 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     return _ReaderIntro(surah: surah, title: title);
                   }
                   final ayah = items[index - 1];
+                  final audioActive =
+                      audio.surah == ayah.surahNumber &&
+                      audio.ayah == ayah.number;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _AyahCard(
                       ayah: ayah,
                       selected: ayah.number == _selectedAyah,
+                      audioActive: audioActive,
+                      audioPlaying: audioActive && audio.playing,
+                      audioLoading: _audioLoadingAyah == ayah.number,
                       bookmarked: _bookmarks.contains(ayah.number),
                       showTranslation: _showTranslation,
                       showTafsir: _showTafsir,
+                      translation: _translations[ayah.number],
+                      tafsir: _tafsirs[ayah.number],
+                      contentLoading: _contentLoading,
                       onSelected: () => _select(ayah),
                       onBookmark: () => _toggleBookmark(ayah),
-                      onPlay: () => _play(ayah, title),
+                      onPlay: () => audioActive
+                          ? ref.read(audioControllerProvider.notifier).toggle()
+                          : _play(ayah, title),
                     ),
                   );
                 },
@@ -143,48 +182,201 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           page: ayah.pages.firstOrNull ?? 1,
         );
     ref.invalidate(readingPositionProvider);
-  }
-
-  Future<void> _toggleBookmark(QuranAyah ayah) async {
-    final active = await ref
-        .read(quranRepositoryProvider)
-        .toggleBookmark(
-          ayah.surahNumber,
-          ayah.number,
-          page: ayah.pages.firstOrNull,
-        );
     if (!mounted) return;
-    setState(
-      () =>
-          active ? _bookmarks.add(ayah.number) : _bookmarks.remove(ayah.number),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          active ? context.l10n.bookmarkAdded : context.l10n.bookmarkRemoved,
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AyahActionSheet(
+        reference: QuranAyahReference(
+          id: ayah.id,
+          surah: ayah.surahNumber,
+          ayah: ayah.number,
         ),
+        page: ayah.pages.firstOrNull ?? 1,
       ),
     );
   }
 
+  Future<void> _toggleBookmark(QuranAyah ayah) async {
+    try {
+      final active = await ref
+          .read(quranRepositoryProvider)
+          .toggleBookmark(
+            ayah.surahNumber,
+            ayah.number,
+            page: ayah.pages.firstOrNull,
+          );
+      if (!mounted) return;
+      setState(
+        () => active
+            ? _bookmarks.add(ayah.number)
+            : _bookmarks.remove(ayah.number),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            active ? context.l10n.bookmarkAdded : context.l10n.bookmarkRemoved,
+          ),
+        ),
+      );
+    } on Object {
+      if (mounted) _showOptionalContentError();
+    }
+  }
+
   Future<void> _play(QuranAyah ayah, String surahName) async {
-    final reciters = await ref.read(audioRepositoryProvider).reciters();
-    final Reciter? reciter = reciters.firstOrNull;
-    if (reciter == null) return;
-    final track = await ref
-        .read(audioRepositoryProvider)
-        .track(reciterId: reciter.id, surah: ayah.surahNumber);
-    if (track == null) {
+    if (_audioLoadingAyah != null) return;
+    setState(() => _audioLoadingAyah = ayah.number);
+    try {
+      final repository = ref.read(audioRepositoryProvider);
+      final recitations = (await repository.recitations())
+          .where((item) => item.timingsAvailable)
+          .toList(growable: false);
+      final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
+      final preferredRecitationId = ref
+          .read(appPreferencesProvider)
+          .preferredRecitationId;
+      final recitation =
+          recitations
+              .where((item) => item.id == preferredRecitationId)
+              .firstOrNull ??
+          recitations
+              .where((item) => item.reciter.id == activeReciterId)
+              .firstOrNull ??
+          recitations
+              .where((item) => item.code.startsWith('qf-7-'))
+              .firstOrNull ??
+          recitations.firstOrNull;
+      if (recitation == null) throw const FormatException('no recitation');
+      final playback = await repository.playback(
+        recitationId: recitation.id,
+        surah: ayah.surahNumber,
+      );
+      await ref
+          .read(audioControllerProvider.notifier)
+          .loadPlayback(
+            playback: playback,
+            reciter: recitation.reciter,
+            surahName: surahName,
+            startAyah: ayah.number,
+            endAyah: ayah.number,
+          );
+    } on Object {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
       }
-      return;
+    } finally {
+      if (mounted) setState(() => _audioLoadingAyah = null);
     }
-    await ref
-        .read(audioControllerProvider.notifier)
-        .load(track: track, reciter: reciter, surahName: surahName);
+  }
+
+  Future<void> _loadReaderContent() async {
+    setState(() => _contentLoading = true);
+    try {
+      final locale = Localizations.localeOf(context).languageCode;
+      final repository = ref.read(quranRepositoryProvider);
+      final catalogs = await Future.wait<Object>(<Future<Object>>[
+        repository.translationEditions(locale),
+        repository.tafsirEditions(locale),
+      ]);
+      final translations = catalogs[0] as List<QuranTranslationEdition>;
+      final tafsirs = catalogs[1] as List<QuranTafsirEdition>;
+      final preferences = ref.read(appPreferencesProvider);
+      _translationSourceId ??=
+          translations
+              .where(
+                (item) =>
+                    item.sourceId == preferences.preferredTranslationSourceId,
+              )
+              .firstOrNull
+              ?.sourceId ??
+          translations.firstOrNull?.sourceId;
+      _tafsirSourceId ??=
+          tafsirs
+              .where(
+                (item) => item.sourceId == preferences.preferredTafsirSourceId,
+              )
+              .firstOrNull
+              ?.sourceId ??
+          tafsirs.firstOrNull?.sourceId;
+      if (!mounted) return;
+      setState(() {
+        _translationEditions = translations;
+        _tafsirEditions = tafsirs;
+      });
+      await Future.wait<void>(<Future<void>>[
+        if (_translationSourceId != null)
+          _loadTranslation(_translationSourceId!),
+        if (_tafsirSourceId != null) _loadTafsir(_tafsirSourceId!),
+      ]);
+    } on Object {
+      // The reader remains usable with Arabic text when optional localized
+      // content has not yet been cached and the network is unavailable.
+    } finally {
+      if (mounted) setState(() => _contentLoading = false);
+    }
+  }
+
+  Future<void> _loadTranslation(int sourceId) async {
+    _translationSourceId = sourceId;
+    try {
+      final items = await ref
+          .read(quranRepositoryProvider)
+          .translations(sourceId: sourceId, surah: widget.surah);
+      if (!mounted || _translationSourceId != sourceId) return;
+      setState(() {
+        _translations = <int, QuranAyahTranslation>{
+          for (final item in items) item.ayah: item,
+        };
+      });
+      unawaited(
+        ref
+            .read(appPreferencesProvider.notifier)
+            .setPreferredTranslationSource(sourceId),
+      );
+    } on Object {
+      if (mounted) _showOptionalContentError();
+    }
+  }
+
+  Future<void> _loadTafsir(int sourceId) async {
+    _tafsirSourceId = sourceId;
+    try {
+      final items = await ref
+          .read(quranRepositoryProvider)
+          .tafsirs(sourceId: sourceId, surah: widget.surah);
+      if (!mounted || _tafsirSourceId != sourceId) return;
+      setState(() {
+        _tafsirs = _indexTafsirs(items);
+      });
+      unawaited(
+        ref
+            .read(appPreferencesProvider.notifier)
+            .setPreferredTafsirSource(sourceId),
+      );
+    } on Object {
+      if (mounted) _showOptionalContentError();
+    }
+  }
+
+  Map<int, QuranAyahTafsir> _indexTafsirs(List<QuranAyahTafsir> items) {
+    final indexed = <int, QuranAyahTafsir>{};
+    for (final item in items) {
+      for (var ayah = 1; ayah <= 286; ayah++) {
+        if (item.covers(widget.surah, ayah)) indexed[ayah] = item;
+      }
+    }
+    return indexed;
+  }
+
+  void _showOptionalContentError() {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
   }
 
   Future<void> _showSettings() async {
@@ -193,7 +385,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) {
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -224,23 +416,87 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(context.l10n.translation),
-                  subtitle: Text(context.l10n.translationUnavailable),
+                  subtitle: Text(
+                    _translationEditions
+                            .where(
+                              (item) => item.sourceId == _translationSourceId,
+                            )
+                            .firstOrNull
+                            ?.name ??
+                        context.l10n.translationUnavailable,
+                  ),
                   value: _showTranslation,
-                  onChanged: (value) {
-                    setState(() => _showTranslation = value);
-                    setSheetState(() {});
-                  },
+                  onChanged: _translationEditions.isEmpty
+                      ? null
+                      : (value) {
+                          setState(() => _showTranslation = value);
+                          setSheetState(() {});
+                        },
                 ),
+                if (_translationEditions.length > 1 && _showTranslation)
+                  DropdownButtonFormField<int>(
+                    initialValue: _translationSourceId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.translation,
+                    ),
+                    items: _translationEditions
+                        .map(
+                          (item) => DropdownMenuItem<int>(
+                            value: item.sourceId,
+                            child: Text(
+                              item.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      unawaited(_loadTranslation(value));
+                      setSheetState(() {});
+                    },
+                  ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(context.l10n.tafsir),
-                  subtitle: Text(context.l10n.loadOnDemand),
+                  subtitle: Text(
+                    _tafsirEditions
+                            .where((item) => item.sourceId == _tafsirSourceId)
+                            .firstOrNull
+                            ?.name ??
+                        context.l10n.tafsirUnavailable,
+                  ),
                   value: _showTafsir,
-                  onChanged: (value) {
-                    setState(() => _showTafsir = value);
-                    setSheetState(() {});
-                  },
+                  onChanged: _tafsirEditions.isEmpty
+                      ? null
+                      : (value) {
+                          setState(() => _showTafsir = value);
+                          setSheetState(() {});
+                        },
                 ),
+                if (_tafsirEditions.length > 1 && _showTafsir)
+                  DropdownButtonFormField<int>(
+                    initialValue: _tafsirSourceId,
+                    isExpanded: true,
+                    decoration: InputDecoration(labelText: context.l10n.tafsir),
+                    items: _tafsirEditions
+                        .map(
+                          (item) => DropdownMenuItem<int>(
+                            value: item.sourceId,
+                            child: Text(
+                              item.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      unawaited(_loadTafsir(value));
+                      setSheetState(() {});
+                    },
+                  ),
               ],
             ),
           );
@@ -291,18 +547,30 @@ class _AyahCard extends StatelessWidget {
   const _AyahCard({
     required this.ayah,
     required this.selected,
+    required this.audioActive,
+    required this.audioPlaying,
+    required this.audioLoading,
     required this.bookmarked,
     required this.showTranslation,
     required this.showTafsir,
+    required this.translation,
+    required this.tafsir,
+    required this.contentLoading,
     required this.onSelected,
     required this.onBookmark,
     required this.onPlay,
   });
   final QuranAyah ayah;
   final bool selected;
+  final bool audioActive;
+  final bool audioPlaying;
+  final bool audioLoading;
   final bool bookmarked;
   final bool showTranslation;
   final bool showTafsir;
+  final QuranAyahTranslation? translation;
+  final QuranAyahTafsir? tafsir;
+  final bool contentLoading;
   final VoidCallback onSelected;
   final VoidCallback onBookmark;
   final VoidCallback onPlay;
@@ -310,10 +578,14 @@ class _AyahCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      selected: selected,
+      selected: selected || audioActive,
       child: IqroCard(
         onTap: onSelected,
-        borderColor: selected ? Theme.of(context).colorScheme.primary : null,
+        borderColor: audioActive
+            ? Theme.of(context).colorScheme.tertiary
+            : selected
+            ? Theme.of(context).colorScheme.primary
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -336,8 +608,13 @@ class _AyahCard extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   tooltip: context.l10n.listen,
-                  onPressed: onPlay,
-                  icon: const Icon(Icons.play_arrow),
+                  onPressed: audioLoading ? null : onPlay,
+                  icon: audioLoading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(audioPlaying ? Icons.pause : Icons.play_arrow),
                 ),
                 IconButton(
                   tooltip: context.l10n.favorites,
@@ -361,22 +638,79 @@ class _AyahCard extends StatelessWidget {
             ),
             if (showTranslation) ...<Widget>[
               const Divider(height: 28),
-              IqroStatusBanner(
+              _ReaderContentBlock(
                 icon: Icons.translate,
                 title: context.l10n.translation,
-                message: context.l10n.translationUnavailable,
+                text: translation?.text,
+                loading: contentLoading,
+                unavailable: context.l10n.translationUnavailable,
               ),
             ],
             if (showTafsir) ...<Widget>[
               const SizedBox(height: 8),
-              IqroStatusBanner(
+              _ReaderContentBlock(
                 icon: Icons.auto_stories_outlined,
                 title: context.l10n.tafsir,
-                message: context.l10n.tafsirUnavailable,
+                text: tafsir?.text,
+                loading: contentLoading,
+                unavailable: context.l10n.tafsirUnavailable,
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ReaderContentBlock extends StatelessWidget {
+  const _ReaderContentBlock({
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.loading,
+    required this.unavailable,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? text;
+  final bool loading;
+  final String unavailable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(icon, size: 18),
+              const SizedBox(width: 8),
+              Text(title, style: Theme.of(context).textTheme.titleSmall),
+              if (loading) ...<Widget>[
+                const Spacer(),
+                const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            text?.isNotEmpty == true ? text! : unavailable,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.5),
+          ),
+        ],
       ),
     );
   }

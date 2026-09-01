@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
@@ -214,6 +215,32 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                 label: Text(context.l10n.retry),
               ),
             ],
+            const SizedBox(height: 18),
+            IqroCard(
+              onTap: () => context.push('/reminders'),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.notifications_active_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          context.l10n.prayerReminders,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          context.l10n.remindersSubtitle,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -236,6 +263,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
           .calculateForCurrentLocation(method: method);
       if (mounted) setState(() => _schedule = value);
       ref.invalidate(prayerScheduleProvider);
+      await ref.read(reminderProvider.notifier).replan();
     } on Object catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {

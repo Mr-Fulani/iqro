@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -25,14 +25,16 @@ class QuranRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final Uuid _uuid;
-  final Map<String, Future<Uint8List>> _fontDownloads =
-      <String, Future<Uint8List>>{};
+  final Map<String, Future<File>> _pageAssetDownloads =
+      <String, Future<File>>{};
+  final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
+  final Map<String, List<QuranAyahTafsir>> _tafsirMemory = {};
 
   Future<QuranCatalog> surahs({bool forceRefresh = false}) async {
     const key = 'quran:$edition:surahs';
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
-      return QuranCatalog(surahs: parseSurahs(cached!.value), fromCache: true);
+      return QuranCatalog(surahs: parseSurahs(cached!.value), fromCache: false);
     }
     try {
       final payload = await _api.get(
@@ -68,6 +70,147 @@ class QuranRepository {
     }
   }
 
+  Future<List<QuranDivision>> juz({bool forceRefresh = false}) async {
+    const key = 'quran:$edition:juz';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _parseDivisions(cached!.value);
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/editions/$edition/juz',
+        public: true,
+      );
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(days: 30),
+      );
+      return _parseDivisions(payload);
+    } on Object {
+      if (cached != null) return _parseDivisions(cached.value);
+      rethrow;
+    }
+  }
+
+  Future<List<QuranTranslationEdition>> translationEditions(
+    String locale, {
+    bool forceRefresh = false,
+  }) async {
+    final key = 'quran:translations:catalog:$locale';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _parseTranslationEditions(cached!.value);
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/translations',
+        query: <String, Object?>{'language': locale},
+        public: true,
+      );
+      await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
+      return _parseTranslationEditions(payload);
+    } on Object {
+      if (cached != null) return _parseTranslationEditions(cached.value);
+      rethrow;
+    }
+  }
+
+  Future<List<QuranAyahTranslation>> translations({
+    required int sourceId,
+    required int surah,
+    bool forceRefresh = false,
+  }) async {
+    final key = 'quran:translations:$sourceId:surah:$surah';
+    if (!forceRefresh) {
+      final memory = _translationMemory.remove(key);
+      if (memory != null) {
+        _translationMemory[key] = memory;
+        return memory;
+      }
+    }
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _rememberTranslations(key, _parseTranslations(cached!.value));
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/translations/$sourceId/surahs/$surah',
+        public: true,
+      );
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(days: 30),
+      );
+      return _rememberTranslations(key, _parseTranslations(payload));
+    } on Object {
+      if (cached != null) {
+        return _rememberTranslations(key, _parseTranslations(cached.value));
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<QuranTafsirEdition>> tafsirEditions(
+    String locale, {
+    bool forceRefresh = false,
+  }) async {
+    final key = 'quran:tafsirs:catalog:$locale';
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _parseTafsirEditions(cached!.value);
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/tafsirs',
+        query: <String, Object?>{'language': locale},
+        public: true,
+      );
+      await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
+      return _parseTafsirEditions(payload);
+    } on Object {
+      if (cached != null) return _parseTafsirEditions(cached.value);
+      rethrow;
+    }
+  }
+
+  Future<List<QuranAyahTafsir>> tafsirs({
+    required int sourceId,
+    required int surah,
+    bool forceRefresh = false,
+  }) async {
+    final key = 'quran:tafsirs:$sourceId:surah:$surah';
+    if (!forceRefresh) {
+      final memory = _tafsirMemory.remove(key);
+      if (memory != null) {
+        _tafsirMemory[key] = memory;
+        return memory;
+      }
+    }
+    final cached = await _database.readCache(key);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _rememberTafsirs(key, _parseTafsirs(cached!.value));
+    }
+    try {
+      final payload = await _api.get(
+        '/quran/tafsirs/$sourceId/surahs/$surah',
+        public: true,
+      );
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(days: 30),
+      );
+      return _rememberTafsirs(key, _parseTafsirs(payload));
+    } on Object {
+      if (cached != null) {
+        return _rememberTafsirs(key, _parseTafsirs(cached.value));
+      }
+      rethrow;
+    }
+  }
+
   Future<MushafPageData> mushafPage(
     int page, {
     bool forceRefresh = false,
@@ -94,164 +237,130 @@ class QuranRepository {
     }
   }
 
-  Future<List<MushafVariant>> mushafVariants({
-    bool forceRefresh = false,
-  }) async {
-    const key = 'quran:foundation:mushafs';
-    final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return _parseMushafVariants(cached!.value);
-    }
-    try {
-      final payload = await _api.get('/quran/foundation/mushafs', public: true);
-      await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
-      return _parseMushafVariants(payload);
-    } on Object {
-      if (cached != null) return _parseMushafVariants(cached.value);
-      rethrow;
-    }
-  }
-
-  Future<FoundationMushafPage> foundationMushafPage(
-    int sourceId,
-    int page, {
-    bool forceRefresh = false,
-  }) async {
-    final safePage = page.clamp(1, 604);
-    final key = 'quran:foundation:mushaf:$sourceId:page:$safePage';
-    final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return FoundationMushafPage.fromJson(
-        jsonMap(cached!.value),
-        fromCache: true,
-      );
-    }
-    try {
-      final payload = await _api.get(
-        '/quran/foundation/mushafs/$sourceId/pages/$safePage',
-        public: true,
-      );
-      await _database.writeCache(key, payload, maxAge: const Duration(days: 7));
-      return FoundationMushafPage.fromJson(jsonMap(payload), fromCache: false);
-    } on Object {
-      if (cached != null) {
-        return FoundationMushafPage.fromJson(
-          jsonMap(cached.value),
-          fromCache: true,
-        );
-      }
-      rethrow;
-    }
-  }
-
-  Future<String> mushafFontDataUri(MushafVariant variant, int page) async {
-    final uri = variant.fontUriForPage(page);
-    if (uri == null) {
-      throw const FormatException('Mushaf font URL is unavailable');
-    }
+  Future<File> cachedMushafPageAsset(
+    MushafPageData page,
+    MushafAsset asset,
+  ) async {
     final supportDirectory = await getApplicationSupportDirectory();
+    final safeVersion = page.contentVersion.replaceAll(
+      RegExp('[^a-zA-Z0-9._-]'),
+      '_',
+    );
+    final checksum = asset.sha256.isNotEmpty
+        ? asset.sha256
+        : page.checksumSha256;
+    final checksumPrefix = checksum.length >= 16
+        ? checksum.substring(0, 16)
+        : 'unversioned';
     final directory = Directory(
-      p.join(
-        supportDirectory.path,
-        'mushaf_fonts',
-        'source-${variant.sourceId}',
-      ),
+      p.join(supportDirectory.path, 'mushaf_pages', edition, safeVersion),
     );
     await directory.create(recursive: true);
-    final basename = variant.renderingMode == 'page-font'
-        ? 'page-${page.toString().padLeft(3, '0')}.woff2'
-        : 'global.woff2';
-    final file = File(p.join(directory.path, basename));
-    final sourceFile = File('${file.path}.source');
-    final bytes = await _fontBytes(file, sourceFile, uri);
-    return 'data:font/woff2;base64,${base64Encode(bytes)}';
-  }
-
-  Future<void> prefetchFoundationMushaf(
-    MushafVariant variant,
-    int currentPage,
-  ) async {
-    final pages = <int>{
-      currentPage,
-      if (currentPage > 1) currentPage - 1,
-      if (currentPage < variant.pagesCount) currentPage + 1,
-    };
-    await Future.wait(
-      pages.map((page) async {
-        try {
-          await Future.wait(<Future<Object?>>[
-            foundationMushafPage(variant.sourceId, page),
-            mushafFontDataUri(variant, page),
-          ]);
-        } on Object {
-          // Prefetch is best-effort; the visible page owns user-facing errors.
-        }
-      }),
+    final file = File(
+      p.join(
+        directory.path,
+        'page-${page.number.toString().padLeft(3, '0')}'
+        '-w${asset.width}-$checksumPrefix.webp',
+      ),
     );
-  }
-
-  Future<Uint8List> _fontBytes(File file, File sourceFile, Uri uri) async {
-    final cached = await _readCachedFont(file, sourceFile, uri);
-    if (cached != null) return cached;
-    final key = file.path;
-    final inFlight = _fontDownloads.putIfAbsent(
-      key,
-      () => _downloadFont(file, sourceFile, uri),
+    if (await _validCachedPage(file, checksum, expectedBytes: asset.bytes)) {
+      return file;
+    }
+    final inFlight = _pageAssetDownloads.putIfAbsent(
+      file.path,
+      () => _downloadMushafPageAsset(file, asset, expectedChecksum: checksum),
     );
     try {
       return await inFlight;
     } finally {
-      if (identical(_fontDownloads[key], inFlight)) {
-        _fontDownloads.remove(key);
+      if (identical(_pageAssetDownloads[file.path], inFlight)) {
+        _pageAssetDownloads.remove(file.path);
       }
     }
   }
 
-  Future<Uint8List?> _readCachedFont(
+  Future<File> _downloadMushafPageAsset(
     File file,
-    File sourceFile,
-    Uri uri,
-  ) async {
-    if (!await file.exists() || !await sourceFile.exists()) return null;
-    if ((await sourceFile.readAsString()).trim() != uri.toString()) return null;
-    final bytes = await file.readAsBytes();
-    return _validWoff2(bytes) ? bytes : null;
-  }
-
-  Future<Uint8List> _downloadFont(File file, File sourceFile, Uri uri) async {
-    try {
-      final bytes = await _api.getPublicBytes(
-        uri,
-        allowedHosts: const <String>{'verses.quran.foundation'},
-      );
-      if (!_validWoff2(bytes)) {
-        throw const FormatException('Mushaf font is not a valid WOFF2 file');
-      }
-      final suffix = DateTime.now().microsecondsSinceEpoch;
-      final temporaryFile = File('${file.path}.$suffix.part');
-      final temporarySource = File('${sourceFile.path}.$suffix.part');
-      await temporaryFile.writeAsBytes(bytes, flush: true);
-      await temporarySource.writeAsString(uri.toString(), flush: true);
-      if (await file.exists()) await file.delete();
-      if (await sourceFile.exists()) await sourceFile.delete();
-      await temporaryFile.rename(file.path);
-      await temporarySource.rename(sourceFile.path);
-      return bytes;
-    } on Object {
-      if (await file.exists()) {
-        final stale = await file.readAsBytes();
-        if (_validWoff2(stale)) return stale;
-      }
-      rethrow;
+    MushafAsset asset, {
+    required String expectedChecksum,
+  }) async {
+    final uri = Uri.tryParse(asset.url);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        !uri.path.toLowerCase().endsWith('.webp')) {
+      throw const FormatException('Mushaf page URL is invalid');
     }
+    final bytes = await _api.getPublicBytes(
+      uri,
+      allowedHosts: const <String>{
+        'media.staging.iqro.forum',
+        'media.iqro.forum',
+      },
+      maxBytes: 4 * 1024 * 1024,
+    );
+    if (!_validWebp(bytes) ||
+        (asset.bytes != null && bytes.length != asset.bytes) ||
+        (expectedChecksum.isNotEmpty &&
+            sha256.convert(bytes).toString() != expectedChecksum)) {
+      throw const FormatException('Mushaf page integrity check failed');
+    }
+    final temporary = File(
+      '${file.path}.${DateTime.now().microsecondsSinceEpoch}.part',
+    );
+    await temporary.writeAsBytes(bytes, flush: true);
+    if (await file.exists()) await file.delete();
+    return temporary.rename(file.path);
   }
 
-  bool _validWoff2(List<int> bytes) {
-    return bytes.length >= 48 &&
-        bytes[0] == 0x77 &&
-        bytes[1] == 0x4f &&
+  Future<bool> _validCachedPage(
+    File file,
+    String expectedChecksum, {
+    required int? expectedBytes,
+  }) async {
+    if (!await file.exists()) return false;
+    final bytes = await file.readAsBytes();
+    if (!_validWebp(bytes) ||
+        (expectedBytes != null && bytes.length != expectedBytes)) {
+      return false;
+    }
+    return expectedChecksum.isEmpty ||
+        sha256.convert(bytes).toString() == expectedChecksum;
+  }
+
+  bool _validWebp(List<int> bytes) {
+    return bytes.length >= 16 &&
+        bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
         bytes[2] == 0x46 &&
-        bytes[3] == 0x32;
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x45 &&
+        bytes[10] == 0x42 &&
+        bytes[11] == 0x50;
+  }
+
+  List<QuranAyahTranslation> _rememberTranslations(
+    String key,
+    List<QuranAyahTranslation> value,
+  ) {
+    _translationMemory.remove(key);
+    _translationMemory[key] = value;
+    while (_translationMemory.length > 4) {
+      _translationMemory.remove(_translationMemory.keys.first);
+    }
+    return value;
+  }
+
+  List<QuranAyahTafsir> _rememberTafsirs(
+    String key,
+    List<QuranAyahTafsir> value,
+  ) {
+    _tafsirMemory.remove(key);
+    _tafsirMemory[key] = value;
+    while (_tafsirMemory.length > 2) {
+      _tafsirMemory.remove(_tafsirMemory.keys.first);
+    }
+    return value;
   }
 
   Future<ReadingPosition> position() async {
@@ -471,10 +580,55 @@ class QuranRepository {
   }
 }
 
-List<MushafVariant> _parseMushafVariants(Object? payload) {
+List<QuranTranslationEdition> _parseTranslationEditions(Object? payload) {
   return jsonResults(payload)
       .whereType<Map>()
-      .map((item) => MushafVariant.fromJson(Map<String, Object?>.from(item)))
+      .map(
+        (item) =>
+            QuranTranslationEdition.fromJson(Map<String, Object?>.from(item)),
+      )
       .where((item) => item.sourceId > 0 && item.name.isNotEmpty)
+      .toList(growable: false);
+}
+
+List<QuranAyahTranslation> _parseTranslations(Object? payload) {
+  return jsonResults(payload)
+      .whereType<Map>()
+      .map(
+        (item) =>
+            QuranAyahTranslation.fromJson(Map<String, Object?>.from(item)),
+      )
+      .where((item) => item.verseKey.isNotEmpty && item.text.isNotEmpty)
+      .toList(growable: false);
+}
+
+List<QuranTafsirEdition> _parseTafsirEditions(Object? payload) {
+  return jsonResults(payload)
+      .whereType<Map>()
+      .map(
+        (item) => QuranTafsirEdition.fromJson(Map<String, Object?>.from(item)),
+      )
+      .where((item) => item.sourceId > 0 && item.name.isNotEmpty)
+      .toList(growable: false);
+}
+
+List<QuranAyahTafsir> _parseTafsirs(Object? payload) {
+  return jsonResults(payload)
+      .whereType<Map>()
+      .map((item) => QuranAyahTafsir.fromJson(Map<String, Object?>.from(item)))
+      .where((item) => item.verseKey.isNotEmpty && item.text.isNotEmpty)
+      .toList(growable: false);
+}
+
+List<QuranDivision> _parseDivisions(Object? payload) {
+  return jsonResults(payload)
+      .whereType<Map>()
+      .map((item) => QuranDivision.fromJson(Map<String, Object?>.from(item)))
+      .where(
+        (item) =>
+            item.number > 0 &&
+            item.startAyah.surah > 0 &&
+            item.startAyah.ayah > 0,
+      )
       .toList(growable: false);
 }

@@ -72,10 +72,158 @@ class QuranAyah {
   final List<int> pages;
 }
 
+class QuranAyahReference {
+  const QuranAyahReference({
+    required this.id,
+    required this.surah,
+    required this.ayah,
+  });
+
+  factory QuranAyahReference.fromJson(Map<String, Object?> json) {
+    return QuranAyahReference(
+      id: json['id']?.toString() ?? '',
+      surah: (json['surah'] as num?)?.toInt() ?? 0,
+      ayah: (json['number'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String id;
+  final int surah;
+  final int ayah;
+
+  String get key => '$surah:$ayah';
+
+  @override
+  bool operator ==(Object other) {
+    return other is QuranAyahReference &&
+        other.surah == surah &&
+        other.ayah == ayah;
+  }
+
+  @override
+  int get hashCode => Object.hash(surah, ayah);
+}
+
+class MushafPoint {
+  const MushafPoint(this.x, this.y);
+
+  final double x;
+  final double y;
+}
+
+class MushafAyahRegion {
+  const MushafAyahRegion({
+    required this.id,
+    required this.ayah,
+    required this.readingOrder,
+    required this.polygon,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory MushafAyahRegion.fromJson(Map<String, Object?> json) {
+    final ayah = json['ayah'] is Map
+        ? Map<String, Object?>.from(json['ayah']! as Map)
+        : const <String, Object?>{};
+    final polygon =
+        (json['polygon'] as List?)
+            ?.whereType<List>()
+            .where((point) => point.length >= 2)
+            .map(
+              (point) => MushafPoint(_asDouble(point[0]), _asDouble(point[1])),
+            )
+            .toList(growable: false) ??
+        const <MushafPoint>[];
+    return MushafAyahRegion(
+      id: json['id']?.toString() ?? '',
+      ayah: QuranAyahReference.fromJson(ayah),
+      readingOrder: (json['reading_order'] as num?)?.toInt() ?? 0,
+      polygon: polygon,
+      x: _asDouble(json['x']),
+      y: _asDouble(json['y']),
+      width: _asDouble(json['width']),
+      height: _asDouble(json['height']),
+    );
+  }
+
+  final String id;
+  final QuranAyahReference ayah;
+  final int readingOrder;
+  final List<MushafPoint> polygon;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  bool contains(double normalizedX, double normalizedY) {
+    if (!normalizedX.isFinite ||
+        !normalizedY.isFinite ||
+        normalizedX < 0 ||
+        normalizedX > 1 ||
+        normalizedY < 0 ||
+        normalizedY > 1 ||
+        !_hasValidBounds) {
+      return false;
+    }
+    if (normalizedX < x ||
+        normalizedX > x + width ||
+        normalizedY < y ||
+        normalizedY > y + height) {
+      return false;
+    }
+    if (polygon.length < 3) return true;
+    var inside = false;
+    for (
+      var index = 0, previous = polygon.length - 1;
+      index < polygon.length;
+      previous = index++
+    ) {
+      final currentPoint = polygon[index];
+      final previousPoint = polygon[previous];
+      final crosses =
+          (currentPoint.y > normalizedY) != (previousPoint.y > normalizedY) &&
+          normalizedX <
+              (previousPoint.x - currentPoint.x) *
+                      (normalizedY - currentPoint.y) /
+                      (previousPoint.y - currentPoint.y) +
+                  currentPoint.x;
+      if (crosses) inside = !inside;
+    }
+    return inside;
+  }
+
+  bool get _hasValidBounds {
+    if (!x.isFinite ||
+        !y.isFinite ||
+        !width.isFinite ||
+        !height.isFinite ||
+        x < 0 ||
+        y < 0 ||
+        width <= 0 ||
+        height <= 0 ||
+        x + width > 1 ||
+        y + height > 1) {
+      return false;
+    }
+    return polygon.every(
+      (point) =>
+          point.x.isFinite &&
+          point.y.isFinite &&
+          point.x >= 0 &&
+          point.x <= 1 &&
+          point.y >= 0 &&
+          point.y <= 1,
+    );
+  }
+}
+
 class MushafAsset {
   const MushafAsset({
     required this.url,
     required this.width,
+    required this.sha256,
     this.height,
     this.bytes,
   });
@@ -84,6 +232,7 @@ class MushafAsset {
     return MushafAsset(
       url: json['url']?.toString() ?? '',
       width: (json['width'] as num?)?.toInt() ?? 0,
+      sha256: json['sha256']?.toString() ?? '',
       height: (json['height'] as num?)?.toInt(),
       bytes: (json['bytes'] as num?)?.toInt(),
     );
@@ -91,13 +240,32 @@ class MushafAsset {
 
   final String url;
   final int width;
+  final String sha256;
   final int? height;
   final int? bytes;
+
+  bool get isUsable {
+    final uri = Uri.tryParse(url);
+    return uri != null &&
+        uri.scheme == 'https' &&
+        uri.host.isNotEmpty &&
+        uri.path.toLowerCase().endsWith('.webp') &&
+        width > 0 &&
+        height != null &&
+        height! > 0 &&
+        bytes != null &&
+        bytes! > 0 &&
+        RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(sha256);
+  }
 }
 
 class MushafPageData {
   const MushafPageData({
     required this.number,
+    required this.contentVersion,
+    required this.checksumSha256,
+    required this.imageWidth,
+    required this.imageHeight,
     required this.assets,
     required this.regions,
   });
@@ -105,36 +273,61 @@ class MushafPageData {
   factory MushafPageData.fromJson(Map<String, Object?> json) {
     return MushafPageData(
       number: (json['number'] as num?)?.toInt() ?? 1,
+      contentVersion: json['content_version']?.toString() ?? 'unknown',
+      checksumSha256: json['checksum_sha256']?.toString() ?? '',
+      imageWidth: (json['image_width'] as num?)?.toInt() ?? 900,
+      imageHeight: (json['image_height'] as num?)?.toInt() ?? 1380,
       assets:
           (json['assets'] as List?)
               ?.whereType<Map>()
               .map(
                 (item) => MushafAsset.fromJson(Map<String, Object?>.from(item)),
               )
-              .where((item) => item.url.isNotEmpty)
+              .where((item) => item.isUsable)
               .toList(growable: false) ??
           const <MushafAsset>[],
       regions:
           (json['regions'] as List?)
               ?.whereType<Map>()
-              .map((item) => Map<String, Object?>.from(item))
+              .map(
+                (item) =>
+                    MushafAyahRegion.fromJson(Map<String, Object?>.from(item)),
+              )
+              .where((item) => item.ayah.surah > 0 && item.ayah.ayah > 0)
               .toList(growable: false) ??
-          const <Map<String, Object?>>[],
+          const <MushafAyahRegion>[],
     );
   }
 
   final int number;
+  final String contentVersion;
+  final String checksumSha256;
+  final int imageWidth;
+  final int imageHeight;
   final List<MushafAsset> assets;
-  final List<Map<String, Object?>> regions;
+  final List<MushafAyahRegion> regions;
 
   ({int surah, int ayah})? get firstAyahReference {
     if (regions.isEmpty) return null;
-    final ayah = regions.first['ayah'];
-    if (ayah is! Map) return null;
-    final surahNumber = (ayah['surah'] as num?)?.toInt();
-    final ayahNumber = (ayah['number'] as num?)?.toInt();
-    if (surahNumber == null || ayahNumber == null) return null;
-    return (surah: surahNumber, ayah: ayahNumber);
+    final ordered = List<MushafAyahRegion>.of(regions)
+      ..sort((a, b) => a.readingOrder.compareTo(b.readingOrder));
+    final reference = ordered.first.ayah;
+    return (surah: reference.surah, ayah: reference.ayah);
+  }
+
+  QuranAyahReference? ayahAt(double normalizedX, double normalizedY) {
+    if (!normalizedX.isFinite ||
+        !normalizedY.isFinite ||
+        normalizedX < 0 ||
+        normalizedX > 1 ||
+        normalizedY < 0 ||
+        normalizedY > 1) {
+      return null;
+    }
+    for (final region in regions.reversed) {
+      if (region.contains(normalizedX, normalizedY)) return region.ayah;
+    }
+    return null;
   }
 
   MushafAsset? bestAssetFor(double logicalWidth, double devicePixelRatio) {
@@ -147,6 +340,147 @@ class MushafPageData {
       orElse: () => sorted.last,
     );
   }
+}
+
+class QuranTranslationEdition {
+  const QuranTranslationEdition({
+    required this.sourceId,
+    required this.languageCode,
+    required this.name,
+    required this.authorName,
+  });
+
+  factory QuranTranslationEdition.fromJson(Map<String, Object?> json) {
+    return QuranTranslationEdition(
+      sourceId: (json['source_id'] as num?)?.toInt() ?? 0,
+      languageCode: json['language_code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      authorName: json['author_name']?.toString() ?? '',
+    );
+  }
+
+  final int sourceId;
+  final String languageCode;
+  final String name;
+  final String authorName;
+}
+
+class QuranAyahTranslation {
+  const QuranAyahTranslation({
+    required this.verseKey,
+    required this.surah,
+    required this.ayah,
+    required this.text,
+    required this.footnotes,
+  });
+
+  factory QuranAyahTranslation.fromJson(Map<String, Object?> json) {
+    return QuranAyahTranslation(
+      verseKey: json['verse_key']?.toString() ?? '',
+      surah: (json['surah_number'] as num?)?.toInt() ?? 0,
+      ayah: (json['ayah_number'] as num?)?.toInt() ?? 0,
+      text: json['text']?.toString() ?? '',
+      footnotes: _footnotes(json['foot_notes']),
+    );
+  }
+
+  final String verseKey;
+  final int surah;
+  final int ayah;
+  final String text;
+  final List<String> footnotes;
+}
+
+class QuranTafsirEdition {
+  const QuranTafsirEdition({
+    required this.sourceId,
+    required this.languageCode,
+    required this.name,
+    required this.authorName,
+  });
+
+  factory QuranTafsirEdition.fromJson(Map<String, Object?> json) {
+    return QuranTafsirEdition(
+      sourceId: (json['source_id'] as num?)?.toInt() ?? 0,
+      languageCode: json['language_code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      authorName: json['author_name']?.toString() ?? '',
+    );
+  }
+
+  final int sourceId;
+  final String languageCode;
+  final String name;
+  final String authorName;
+}
+
+class QuranAyahTafsir {
+  const QuranAyahTafsir({
+    required this.verseKey,
+    required this.startVerseKey,
+    required this.endVerseKey,
+    required this.text,
+  });
+
+  factory QuranAyahTafsir.fromJson(Map<String, Object?> json) {
+    return QuranAyahTafsir(
+      verseKey: json['verse_key']?.toString() ?? '',
+      startVerseKey: json['start_verse_key']?.toString() ?? '',
+      endVerseKey: json['end_verse_key']?.toString() ?? '',
+      text: json['text']?.toString() ?? '',
+    );
+  }
+
+  final String verseKey;
+  final String startVerseKey;
+  final String endVerseKey;
+  final String text;
+
+  int get surah => int.tryParse(verseKey.split(':').first) ?? 0;
+  int get ayah => int.tryParse(verseKey.split(':').last) ?? 0;
+
+  bool covers(int surah, int ayah) {
+    final start = _verseParts(startVerseKey.isEmpty ? verseKey : startVerseKey);
+    final end = _verseParts(endVerseKey.isEmpty ? verseKey : endVerseKey);
+    final currentOrder = surah * 1000 + ayah;
+    return currentOrder >= start.$1 * 1000 + start.$2 &&
+        currentOrder <= end.$1 * 1000 + end.$2;
+  }
+}
+
+(int, int) _verseParts(String key) {
+  final parts = key.split(':');
+  return (
+    int.tryParse(parts.firstOrNull ?? '') ?? 0,
+    int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0,
+  );
+}
+
+double _asDouble(Object? value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+List<String> _footnotes(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) {
+          if (item is Map) return item['text']?.toString() ?? '';
+          return item?.toString() ?? '';
+        })
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  if (value is Map) {
+    return value.values
+        .map((item) {
+          if (item is Map) return item['text']?.toString() ?? '';
+          return item?.toString() ?? '';
+        })
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  return const <String>[];
 }
 
 class MushafVariant {
@@ -195,16 +529,9 @@ class MushafVariant {
 
   String get preferenceValue => '$sourceId';
 
-  bool get supportedOnMobile {
-    if (!renderingAvailable || !const <int>{1, 5, 19}.contains(sourceId)) {
-      return false;
-    }
-    return const <String>{
-          'unicode-font',
-          'page-font',
-        }.contains(renderingMode) &&
-        fontUriForPage(1) != null;
-  }
+  // Browser font contracts cannot guarantee a pixel-stable native page or an
+  // accurate ayah hit map. Readiness is unlocked by native backend assets.
+  bool get supportedOnMobile => false;
 
   Uri? fontUriForPage(int page) {
     final raw = switch (renderingMode) {
@@ -281,6 +608,38 @@ class ReadingPosition {
   final int ayah;
   final int page;
   final int revision;
+}
+
+class QuranDivision {
+  const QuranDivision({
+    required this.number,
+    required this.startAyah,
+    required this.endAyah,
+    required this.startPage,
+    required this.endPage,
+  });
+
+  factory QuranDivision.fromJson(Map<String, Object?> json) {
+    final start = json['start_ayah'] is Map
+        ? Map<String, Object?>.from(json['start_ayah']! as Map)
+        : const <String, Object?>{};
+    final end = json['end_ayah'] is Map
+        ? Map<String, Object?>.from(json['end_ayah']! as Map)
+        : const <String, Object?>{};
+    return QuranDivision(
+      number: (json['number'] as num?)?.toInt() ?? 0,
+      startAyah: QuranAyahReference.fromJson(start),
+      endAyah: QuranAyahReference.fromJson(end),
+      startPage: (json['start_page'] as num?)?.toInt() ?? 1,
+      endPage: (json['end_page'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  final int number;
+  final QuranAyahReference startAyah;
+  final QuranAyahReference endAyah;
+  final int startPage;
+  final int endPage;
 }
 
 class QuranCatalog {

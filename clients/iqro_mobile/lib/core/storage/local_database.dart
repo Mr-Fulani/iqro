@@ -23,7 +23,7 @@ class CachedValue {
 class LocalDatabase {
   LocalDatabase._(this.database);
 
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
   final Database database;
 
   static Future<LocalDatabase> open() async {
@@ -95,6 +95,10 @@ class LocalDatabase {
             updated_at TEXT NOT NULL
           )
         ''');
+        await _createReminderTable(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) await _createReminderTable(db);
       },
     );
     return LocalDatabase._(database);
@@ -155,6 +159,14 @@ class LocalDatabase {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  Future<void> deleteState(String key) async {
+    await database.delete(
+      'app_state',
+      where: 'state_key = ?',
+      whereArgs: <Object?>[key],
+    );
+  }
+
   Future<void> enqueue({
     required String operationId,
     required String entityType,
@@ -168,6 +180,92 @@ class LocalDatabase {
       'payload': jsonEncode(payload),
       'created_at': DateTime.now().toUtc().toIso8601String(),
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<void> replaceOutboxOperation({
+    required String operationId,
+    required String entityType,
+    required String entityId,
+    required Map<String, Object?> payload,
+  }) async {
+    await database.transaction((transaction) async {
+      await transaction.delete(
+        'outbox',
+        where: 'entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>[entityType, entityId],
+      );
+      await transaction.insert('outbox', <String, Object?>{
+        'operation_id': operationId,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'payload': jsonEncode(payload),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    });
+  }
+
+  Future<List<Map<String, Object?>>> readReminders() async {
+    final rows = await database.query('reminders', orderBy: 'updated_at DESC');
+    return rows
+        .map((row) {
+          final decoded = jsonDecode(row['payload']! as String);
+          return decoded is Map
+              ? Map<String, Object?>.from(decoded)
+              : <String, Object?>{};
+        })
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  Future<void> upsertReminder(Map<String, Object?> reminder) async {
+    final id = reminder['id']?.toString();
+    if (id == null || id.isEmpty) return;
+    await database.insert('reminders', <String, Object?>{
+      'id': id,
+      'payload': jsonEncode(reminder),
+      'revision': (reminder['revision'] as num?)?.toInt() ?? 0,
+      'is_deleted': reminder['deleted_at'] == null ? 0 : 1,
+      'updated_at':
+          reminder['updated_at']?.toString() ??
+          reminder['client_updated_at']?.toString() ??
+          DateTime.now().toUtc().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> discardLocalReminder(String id) async {
+    await database.transaction((transaction) async {
+      await transaction.delete(
+        'reminders',
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+      );
+      await transaction.delete(
+        'outbox',
+        where: 'entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>['reminder', id],
+      );
+    });
+  }
+
+  Future<void> replaceReminderSnapshot(
+    List<Map<String, Object?>> reminders,
+  ) async {
+    await database.transaction((transaction) async {
+      await transaction.delete('reminders');
+      for (final reminder in reminders) {
+        final id = reminder['id']?.toString();
+        if (id == null || id.isEmpty) continue;
+        await transaction.insert('reminders', <String, Object?>{
+          'id': id,
+          'payload': jsonEncode(reminder),
+          'revision': (reminder['revision'] as num?)?.toInt() ?? 0,
+          'is_deleted': reminder['deleted_at'] == null ? 0 : 1,
+          'updated_at':
+              reminder['updated_at']?.toString() ??
+              DateTime.now().toUtc().toIso8601String(),
+        });
+      }
+    });
   }
 
   Future<List<Map<String, Object?>>> pendingOutbox({int limit = 100}) async {
@@ -190,4 +288,16 @@ class LocalDatabase {
   }
 
   Future<void> close() => database.close();
+
+  static Future<void> _createReminderTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS reminders (
+        id TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        revision INTEGER NOT NULL DEFAULT 0,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
 }

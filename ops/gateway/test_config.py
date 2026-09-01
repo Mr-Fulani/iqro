@@ -54,6 +54,14 @@ class GatewayConfigTests(unittest.TestCase):
         )[0]
         self.assertNotIn("proxy_cache ", generic_api)
 
+    def test_large_uploads_have_writable_bounded_temp_storage(self) -> None:
+        production_compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")
+        self.assertIn("client_max_body_size 55m;", self.config)
+        self.assertIn(
+            "/var/lib/nginx/tmp:size=64m,mode=0750,uid=100,gid=101",
+            production_compose,
+        )
+
     def test_web_auth_namespace_is_routed_to_next_bff(self) -> None:
         web_auth_location = "location /api/web-auth/ {"
         generic_api_location = "location /api/ {"

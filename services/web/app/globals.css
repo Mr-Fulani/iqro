@@ -2059,6 +2059,42 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+@media (min-width: 1000px) {
+  .reciter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .reciter-showcase .reciter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .reciter-showcase .reciter-card {
+    gap: 14px;
+    padding: 22px 16px 18px;
+  }
+
+  .reciter-showcase .reciter-avatar {
+    width: 112px;
+    height: 112px;
+    flex-basis: 112px;
+  }
+
+  .reciter-showcase .reciter-avatar-play {
+    width: 34px;
+    height: 34px;
+  }
+
+  .reciter-showcase .reciter-card-copy strong {
+    font-size: 15px;
+  }
+
+  .reciter-showcase .reciter-card-copy span {
+    font-size: 17px;
+  }
+}
+
 .reciter-card {
   min-width: 0;
   padding: 22px 16px 18px;

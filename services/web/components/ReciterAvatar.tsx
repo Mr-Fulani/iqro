@@ -35,7 +35,9 @@ export function ReciterAvatar({
       aria-hidden="true"
       data-testid="reciter-avatar"
     >
-      <span className="reciter-avatar-initials">{initials(name)}</span>
+      {(!portraitUrl || imageFailed) && (
+        <span className="reciter-avatar-initials">{initials(name)}</span>
+      )}
       {portraitUrl && !imageFailed && (
         <Image
           loader={passthroughLoader}

@@ -1,16 +1,19 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:photo_view/photo_view.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
-import 'foundation_mushaf_reader.dart';
+import '../audio/reciter_portraits.dart';
+import 'ayah_action_sheet.dart';
+import 'native_mushaf_page.dart';
+import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 
 class MushafScreen extends ConsumerStatefulWidget {
@@ -31,17 +34,29 @@ class MushafScreen extends ConsumerStatefulWidget {
 
 class _MushafScreenState extends ConsumerState<MushafScreen> {
   late final PageController _pageController;
-  final _foundationController = FoundationMushafReaderController();
-  final _zoomControllers = <int, PhotoViewController>{};
+  final _zoomControllers = <int, NativeMushafPageController>{};
   var _currentPage = 1;
   var _controlsVisible = false;
   var _zoom = 1.0;
+  QuranAyahReference? _selectedAyah;
+  QuranAyahReference? _pageReference;
 
   @override
   void initState() {
     super.initState();
     _currentPage = widget.initialPage.clamp(1, 604);
+    _selectedAyah = QuranAyahReference(
+      id: '',
+      surah: widget.surah,
+      ayah: widget.ayah,
+    );
+    _pageReference = _selectedAyah;
     _pageController = PageController(initialPage: _currentPage - 1);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_savePagePosition(_currentPage));
+      _prefetchAdjacentPages(_currentPage);
+    });
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
@@ -50,9 +65,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    for (final controller in _zoomControllers.values) {
-      controller.dispose();
-    }
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
   }
@@ -66,19 +78,37 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final preference = ref.watch(
-      appPreferencesProvider.select((value) => value.mushafVariant),
+    final divisions = ref.watch(quranJuzProvider).valueOrNull;
+    final currentJuz = divisions
+        ?.where(
+          (division) =>
+              _currentPage >= division.startPage &&
+              _currentPage <= division.endPage,
+        )
+        .firstOrNull
+        ?.number;
+    final player = ref.watch(
+      audioControllerProvider.select(
+        (value) => (
+          surah: value.track?.surah,
+          ayah: value.activeAyah,
+          active: value.active,
+          playing: value.playing,
+          buffering: value.buffering,
+          reciter: value.reciter,
+        ),
+      ),
     );
-    final variants = ref.watch(mushafVariantsProvider);
-    final matchingVariants = variants.valueOrNull
-        ?.where((variant) => variant.preferenceValue == preference)
-        .toList(growable: false);
-    final MushafVariant? foundationVariant =
-        preference == defaultMushafVariant ||
-            matchingVariants == null ||
-            matchingVariants.isEmpty
+    final playingAyah =
+        player.active && player.surah != null && player.ayah != null
+        ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
+        : null;
+    final reciterPortraitUrl = player.reciter == null
         ? null
-        : matchingVariants.first;
+        : resolveReciterPortraitUrl(
+            player.reciter!,
+            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+          );
     final foreground = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFF3EEDC)
         : const Color(0xFF26261F);
@@ -94,53 +124,34 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         backgroundColor: const Color(0xFFEDE6D3),
         body: Stack(
           children: <Widget>[
-            if (preference != defaultMushafVariant && variants.isLoading)
-              const ColoredBox(color: Color(0xFFEDE6D3), child: IqroLoading())
-            else if (foundationVariant != null &&
-                foundationVariant.supportedOnMobile)
-              FoundationMushafReader(
-                variant: foundationVariant,
-                page: _currentPage,
-                // Official glyph palettes require a light paper surface.
-                dark: false,
-                controller: _foundationController,
-                onToggleControls: () => _setControls(!_controlsVisible),
-                onNextPage: () => _turnPage(1, foundation: true),
-                onPreviousPage: () => _turnPage(-1, foundation: true),
-                onPageLoaded: _saveFoundationPagePosition,
-              )
-            else if (preference != defaultMushafVariant)
-              ColoredBox(
-                color: const Color(0xFFEDE6D3),
-                child: IqroAsyncError(
-                  title: context.l10n.noQuranData,
-                  message: context.l10n.mushafOfflineMissing,
-                  onRetry: () => ref.invalidate(mushafVariantsProvider),
-                ),
-              )
-            else
-              PageView.builder(
-                controller: _pageController,
-                reverse: true,
-                itemCount: 604,
-                onPageChanged: _onScanPageChanged,
-                itemBuilder: (context, index) {
-                  final page = index + 1;
-                  return _MushafPage(
-                    page: page,
-                    controller: _zoomControllers.putIfAbsent(
-                      page,
-                      PhotoViewController.new,
-                    ),
-                    onTap: () => _setControls(!_controlsVisible),
-                    onScale: (value) {
-                      if (page == _currentPage && mounted) {
-                        setState(() => _zoom = value);
-                      }
-                    },
-                  );
-                },
-              ),
+            PageView.builder(
+              controller: _pageController,
+              reverse: true,
+              physics: _zoom > 1.01
+                  ? const NeverScrollableScrollPhysics()
+                  : const PageScrollPhysics(parent: ClampingScrollPhysics()),
+              itemCount: 604,
+              onPageChanged: _onScanPageChanged,
+              itemBuilder: (context, index) {
+                final page = index + 1;
+                return NativeMushafPage(
+                  page: page,
+                  controller: _zoomControllers.putIfAbsent(
+                    page,
+                    NativeMushafPageController.new,
+                  ),
+                  selectedAyah: _selectedAyah,
+                  playingAyah: playingAyah,
+                  onSelectAyah: _selectAyah,
+                  onBackgroundTap: () => _setControls(!_controlsVisible),
+                  onScale: (value) {
+                    if (page == _currentPage && mounted) {
+                      setState(() => _zoom = value);
+                    }
+                  },
+                );
+              },
+            ),
             IgnorePointer(
               ignoring: !_controlsVisible,
               child: AnimatedSlide(
@@ -183,7 +194,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                         ?.copyWith(color: Colors.white),
                                   ),
                                   Text(
-                                    '${context.l10n.juz} ${((_currentPage - 1) ~/ 20) + 1}',
+                                    '${context.l10n.juz} ${currentJuz ?? '—'}',
                                     style: TextStyle(
                                       color: Colors.white.withValues(alpha: .7),
                                     ),
@@ -192,14 +203,29 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                               ),
                             ),
                             IconButton(
+                              tooltip: context.l10n.quickJump,
+                              onPressed: _showQuickJump,
+                              color: Colors.white,
+                              icon: const Icon(Icons.layers_outlined),
+                            ),
+                            IconButton(
                               tooltip: context.l10n.textMode,
                               onPressed: () async {
+                                final reference =
+                                    _selectedAyah ??
+                                    _pageReference ??
+                                    QuranAyahReference(
+                                      id: '',
+                                      surah: widget.surah,
+                                      ayah: widget.ayah,
+                                    );
                                 await ref
                                     .read(appPreferencesProvider.notifier)
                                     .setReaderMode(ReaderMode.text);
                                 if (!context.mounted) return;
                                 context.pushReplacement(
-                                  '/reader/${widget.surah}?ayah=${widget.ayah}',
+                                  '/reader/${reference.surah}'
+                                  '?ayah=${reference.ayah}',
                                 );
                               },
                               color: Colors.white,
@@ -248,14 +274,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                   min: 1,
                                   max: 3,
                                   onChanged: (value) {
-                                    if (foundationVariant != null) {
-                                      unawaited(
-                                        _foundationController.setZoom(value),
-                                      );
-                                    } else {
-                                      _zoomControllers[_currentPage]?.scale =
-                                          value;
-                                    }
+                                    _zoomControllers[_currentPage]?.setZoom(
+                                      value,
+                                    );
                                     setState(() => _zoom = value);
                                   },
                                 ),
@@ -281,41 +302,40 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                                     '${context.l10n.page} ${_currentPage - 1}',
                                 onPressed: _currentPage <= 1
                                     ? null
-                                    : () => _turnPage(
-                                        -1,
-                                        foundation: foundationVariant != null,
-                                      ),
+                                    : () => _turnPage(-1),
                                 icon: const Icon(Icons.chevron_left),
                               ),
-                              Column(
-                                children: <Widget>[
-                                  Text(
-                                    '$_currentPage / 604',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(color: Colors.white),
-                                  ),
-                                  Text(
-                                    context.l10n.listenPage,
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: .65,
-                                      ),
-                                      fontSize: 12,
+                              Expanded(
+                                child: Column(
+                                  children: <Widget>[
+                                    Text(
+                                      '$_currentPage / 604',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(color: Colors.white),
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      context.l10n.tapAyahForDetails,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: .65,
+                                        ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               IconButton.filledTonal(
                                 tooltip:
                                     '${context.l10n.page} ${_currentPage + 1}',
                                 onPressed: _currentPage >= 604
                                     ? null
-                                    : () => _turnPage(
-                                        1,
-                                        foundation: foundationVariant != null,
-                                      ),
+                                    : () => _turnPage(1),
                                 icon: const Icon(Icons.chevron_right),
                               ),
                             ],
@@ -327,11 +347,35 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 ),
               ),
             ),
+            if (player.active && !_controlsVisible)
+              PositionedDirectional(
+                start: 14,
+                end: 14,
+                bottom: 18 + MediaQuery.paddingOf(context).bottom,
+                child: _ReaderAudioPill(
+                  title: player.ayah == null
+                      ? '${context.l10n.surah} ${player.surah ?? ''}'
+                      : '${context.l10n.ayah} ${player.surah}:${player.ayah}',
+                  subtitle: player.reciter?.nameFor(
+                    Localizations.localeOf(context).languageCode,
+                  ),
+                  portraitUrl: reciterPortraitUrl,
+                  initials: player.reciter?.initials ?? 'IQ',
+                  playing: player.playing,
+                  buffering: player.buffering,
+                  onToggle: () =>
+                      ref.read(audioControllerProvider.notifier).toggle(),
+                  onStop: () =>
+                      ref.read(audioControllerProvider.notifier).stop(),
+                ),
+              ),
             if (!_controlsVisible)
               PositionedDirectional(
                 start: 0,
                 end: 0,
-                bottom: 58 + MediaQuery.paddingOf(context).bottom,
+                bottom:
+                    (player.active ? 98 : 58) +
+                    MediaQuery.paddingOf(context).bottom,
                 child: IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: .65,
@@ -358,55 +402,133 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   void _onScanPageChanged(int index) {
     final page = index + 1;
+    _zoomControllers[_currentPage]?.setZoom(1);
     setState(() {
       _currentPage = page;
       _controlsVisible = false;
       _zoom = 1;
+      _selectedAyah = null;
+      _pageReference = null;
     });
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
     unawaited(_savePagePosition(page));
-    if (page < 604) {
-      ref.read(mushafPageProvider(page + 1).future).ignore();
+    _zoomControllers.removeWhere((key, value) => (key - page).abs() > 2);
+    _prefetchAdjacentPages(page);
+  }
+
+  void _prefetchAdjacentPages(int page) {
+    final logicalWidth = MediaQuery.sizeOf(context).width;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final repository = ref.read(quranRepositoryProvider);
+    for (final candidate in <int>[page - 1, page + 1]) {
+      if (candidate < 1 || candidate > 604) continue;
+      final pageFuture = ref.read(mushafPageProvider(candidate).future);
+      unawaited(() async {
+        try {
+          final pageData = await pageFuture;
+          final asset = pageData.bestAssetFor(logicalWidth, pixelRatio);
+          if (asset != null) {
+            await repository.cachedMushafPageAsset(pageData, asset);
+          }
+        } on Object {
+          // Prefetch is opportunistic; the visible page owns retry feedback.
+        }
+      }());
     }
   }
 
-  void _turnPage(int delta, {required bool foundation}) {
+  void _turnPage(int delta) {
     final target = (_currentPage + delta).clamp(1, 604).toInt();
     if (target == _currentPage) return;
-    if (!foundation) {
-      unawaited(
-        _pageController.animateToPage(
-          target - 1,
-          duration: const Duration(milliseconds: 420),
-          curve: Curves.easeInOutCubic,
-        ),
-      );
-      return;
-    }
-    setState(() {
-      _currentPage = target;
-      _controlsVisible = false;
-      _zoom = 1;
-    });
     unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      _pageController.animateToPage(
+        target - 1,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeInOutCubic,
+      ),
     );
   }
 
-  void _saveFoundationPagePosition(FoundationMushafPage pageData) {
-    unawaited(() async {
+  Future<void> _showQuickJump() async {
+    try {
       final repository = ref.read(quranRepositoryProvider);
-      final current = await repository.position();
-      final reference = pageData.firstAyahReference;
-      await repository.savePosition(
-        surah: reference?.surah ?? current.surah,
-        ayah: reference?.ayah ?? current.ayah,
-        page: pageData.pageNumber,
+      final results = await Future.wait<Object>(<Future<Object>>[
+        repository.surahs(),
+        repository.juz(),
+      ]);
+      if (!mounted) return;
+      final catalog = results[0] as QuranCatalog;
+      final juz = results[1] as List<QuranDivision>;
+      final reference = _selectedAyah ?? _pageReference;
+      final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => QuranQuickJumpSheet(
+          surahs: catalog.surahs,
+          juz: juz,
+          initialMode: QuranQuickJumpMode.page,
+          initialSurah: reference?.surah ?? widget.surah,
+          initialAyah: reference?.ayah ?? widget.ayah,
+          initialPage: _currentPage,
+        ),
       );
-      if (mounted) ref.invalidate(readingPositionProvider);
-    }());
+      if (selection == null || !mounted) return;
+      var page = selection.page;
+      QuranAyahReference? targetReference;
+      if (selection.mode == QuranQuickJumpMode.ayah) {
+        final ayahs = await repository.ayahs(selection.surah);
+        final target = ayahs
+            .where((item) => item.number == selection.ayah)
+            .firstOrNull;
+        page = target?.pages.firstOrNull ?? page;
+        targetReference = QuranAyahReference(
+          id: target?.id ?? '',
+          surah: selection.surah,
+          ayah: selection.ayah,
+        );
+      } else if (selection.mode == QuranQuickJumpMode.juz) {
+        targetReference = QuranAyahReference(
+          id: '',
+          surah: selection.surah,
+          ayah: selection.ayah,
+        );
+      }
+      if (!mounted) return;
+      await _jumpToPage(page, targetReference);
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    }
+  }
+
+  Future<void> _jumpToPage(
+    int requestedPage,
+    QuranAyahReference? reference,
+  ) async {
+    final page = requestedPage.clamp(1, 604);
+    _zoomControllers[_currentPage]?.setZoom(1);
+    if ((page - _currentPage).abs() <= 3) {
+      await _pageController.animateToPage(
+        page - 1,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      _pageController.jumpToPage(page - 1);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selectedAyah = reference;
+      _pageReference = reference;
+      _controlsVisible = false;
+      _zoom = 1;
+    });
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   Future<void> _savePagePosition(int page) async {
@@ -415,6 +537,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     try {
       final pageData = await ref.read(mushafPageProvider(page).future);
       final reference = pageData.firstAyahReference;
+      if (mounted && reference != null && page == _currentPage) {
+        setState(() {
+          _pageReference = QuranAyahReference(
+            id: '',
+            surah: reference.surah,
+            ayah: reference.ayah,
+          );
+          if (_selectedAyah != null &&
+              !pageData.regions.any((region) => region.ayah == _selectedAyah)) {
+            _selectedAyah = null;
+          }
+        });
+      }
       await repository.savePosition(
         surah: reference?.surah ?? current.surah,
         ayah: reference?.ayah ?? current.ayah,
@@ -429,76 +564,164 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     }
     ref.invalidate(readingPositionProvider);
   }
+
+  Future<void> _selectAyah(QuranAyahReference reference) async {
+    setState(() {
+      _selectedAyah = reference;
+      _pageReference = reference;
+      _controlsVisible = false;
+    });
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await ref
+        .read(quranRepositoryProvider)
+        .savePosition(
+          surah: reference.surah,
+          ayah: reference.ayah,
+          page: _currentPage,
+        );
+    ref.invalidate(readingPositionProvider);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          AyahActionSheet(reference: reference, page: _currentPage),
+    );
+    if (mounted) {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+  }
 }
 
-class _MushafPage extends ConsumerWidget {
-  const _MushafPage({
-    required this.page,
-    required this.controller,
-    required this.onTap,
-    required this.onScale,
+class _ReaderAudioPill extends StatelessWidget {
+  const _ReaderAudioPill({
+    required this.title,
+    required this.subtitle,
+    required this.portraitUrl,
+    required this.initials,
+    required this.playing,
+    required this.buffering,
+    required this.onToggle,
+    required this.onStop,
   });
 
-  final int page;
-  final PhotoViewController controller;
-  final VoidCallback onTap;
-  final ValueChanged<double> onScale;
+  final String title;
+  final String? subtitle;
+  final String? portraitUrl;
+  final String initials;
+  final bool playing;
+  final bool buffering;
+  final VoidCallback onToggle;
+  final VoidCallback onStop;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(mushafPageProvider(page));
-    return data.when(
-      loading: () =>
-          const ColoredBox(color: Color(0xFFEDE6D3), child: IqroLoading()),
-      error: (error, stack) => ColoredBox(
-        color: const Color(0xFFEDE6D3),
-        child: IqroAsyncError(
-          title: context.l10n.noQuranData,
-          message: context.l10n.networkError,
-          onRetry: () => ref.invalidate(mushafPageProvider(page)),
-        ),
+  Widget build(BuildContext context) {
+    final portraitFallback = ColoredBox(
+      color: const Color(0xFF163C33),
+      child: Center(
+        child: Text(initials, style: const TextStyle(color: Color(0xFF9BDECB))),
       ),
-      data: (pageData) {
-        final width = MediaQuery.sizeOf(context).width;
-        final asset = pageData.bestAssetFor(
-          width,
-          MediaQuery.devicePixelRatioOf(context),
-        );
-        if (asset == null) {
-          return ColoredBox(
-            color: const Color(0xFFEDE6D3),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Text(
-                  context.l10n.noQuranData,
-                  textAlign: TextAlign.center,
-                ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0x52030F0C),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: .16)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              height: 66,
+              child: Row(
+                children: <Widget>[
+                  const SizedBox(width: 10),
+                  Semantics(
+                    image: true,
+                    label: subtitle ?? title,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF9BDECB),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: portraitUrl == null
+                            ? portraitFallback
+                            : CachedNetworkImage(
+                                imageUrl: portraitUrl!,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => portraitFallback,
+                                errorWidget: (context, url, error) =>
+                                    portraitFallback,
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(color: Colors.white),
+                        ),
+                        if (subtitle?.isNotEmpty == true)
+                          Text(
+                            subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .68),
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: playing ? context.l10n.pause : context.l10n.play,
+                    onPressed: buffering ? null : onToggle,
+                    color: Colors.white,
+                    icon: buffering
+                        ? const SizedBox.square(
+                            dimension: 19,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(playing ? Icons.pause : Icons.play_arrow),
+                  ),
+                  IconButton(
+                    tooltip: context.l10n.close,
+                    onPressed: onStop,
+                    color: Colors.white70,
+                    icon: const Icon(Icons.close),
+                  ),
+                  const SizedBox(width: 4),
+                ],
               ),
             ),
-          );
-        }
-        return PhotoView(
-          imageProvider: CachedNetworkImageProvider(asset.url),
-          controller: controller,
-          backgroundDecoration: const BoxDecoration(color: Color(0xFFEDE6D3)),
-          minScale: PhotoViewComputedScale.contained,
-          initialScale: PhotoViewComputedScale.contained,
-          maxScale: PhotoViewComputedScale.contained * 3,
-          basePosition: Alignment.center,
-          filterQuality: FilterQuality.high,
-          semanticLabel:
-              '${context.l10n.mushafMode}, ${context.l10n.page} $page',
-          onTapUp: (context, details, controllerValue) => onTap(),
-          onScaleEnd: (context, details, controllerValue) =>
-              onScale(controllerValue.scale ?? 1),
-          loadingBuilder: (context, event) => const IqroLoading(),
-          errorBuilder: (context, error, stackTrace) => IqroAsyncError(
-            title: context.l10n.noQuranData,
-            onRetry: () => ref.invalidate(mushafPageProvider(page)),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

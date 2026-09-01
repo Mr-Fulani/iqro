@@ -13,6 +13,7 @@ import '../features/plan/plan_screen.dart';
 import '../features/prayer/prayer_screen.dart';
 import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
+import '../features/reminders/reminders_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/share/share_screen.dart';
 import 'app_shell.dart';
@@ -60,6 +61,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/prayer',
         builder: (context, state) => const PrayerScreen(),
+      ),
+      GoRoute(
+        path: '/reminders',
+        builder: (context, state) => const RemindersScreen(),
       ),
       GoRoute(
         path: '/memorization',

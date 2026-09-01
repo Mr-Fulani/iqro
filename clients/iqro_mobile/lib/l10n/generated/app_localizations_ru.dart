@@ -271,6 +271,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listenPage => 'Прослушать текущую страницу';
 
   @override
+  String get tapAyahForDetails => 'Коснитесь аята: аудио, перевод и тафсир';
+
+  @override
   String get audioTitle => 'Слушайте Коран';
 
   @override
@@ -278,6 +281,31 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get allReciters => 'Все чтецы';
+
+  @override
+  String get recitationStyle => 'Стиль чтения';
+
+  @override
+  String get chooseRecitationStyle => 'Выберите стиль чтения';
+
+  @override
+  String get styleMurattal => 'Мурратталь';
+
+  @override
+  String get styleMujawwad => 'Муджаввад';
+
+  @override
+  String get styleMuallim => 'Муаллим';
+
+  @override
+  String get refreshReciters => 'Обновить каталог чтецов';
+
+  @override
+  String get recitersUpdated => 'Каталог чтецов обновлён';
+
+  @override
+  String get recitersRefreshFailed =>
+      'Не удалось обновить каталог. Показаны сохранённые данные.';
 
   @override
   String get noAudio => 'Нет доступной аудиозаписи';
@@ -290,6 +318,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pause => 'Пауза';
+
+  @override
+  String get previousSurah => 'Предыдущая сура';
+
+  @override
+  String get nextSurah => 'Следующая сура';
+
+  @override
+  String get chooseSurah => 'Выбрать суру';
 
   @override
   String get speed => 'Скорость';
@@ -529,4 +566,116 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get privacy => 'Конфиденциальность';
+
+  @override
+  String get reminders => 'Напоминания';
+
+  @override
+  String get remindersSubtitle => 'Намаз и повторение Корана';
+
+  @override
+  String get notificationAccess => 'Разрешите уведомления';
+
+  @override
+  String get notificationAccessBody =>
+      'IQRO напомнит в выбранное время, даже когда приложение закрыто.';
+
+  @override
+  String get allowNotifications => 'Разрешить уведомления';
+
+  @override
+  String get notificationDenied =>
+      'Уведомления выключены в настройках устройства.';
+
+  @override
+  String get approximateDelivery =>
+      'Система может доставлять уведомления с небольшой задержкой для экономии батареи.';
+
+  @override
+  String get prayerReminders => 'Напоминания о намазе';
+
+  @override
+  String get prayerReminderSetup =>
+      'Сначала выберите метод расчёта и определите местоположение в разделе «Время намаза».';
+
+  @override
+  String get quranReviewReminders => 'Повторение Корана';
+
+  @override
+  String get addReminder => 'Добавить напоминание';
+
+  @override
+  String get noReminders => 'Напоминаний о повторении пока нет.';
+
+  @override
+  String get reviewReminder => 'Повторение аятов';
+
+  @override
+  String get reminderTime => 'Время';
+
+  @override
+  String get reminderDays => 'Дни недели';
+
+  @override
+  String get everyDay => 'Каждый день';
+
+  @override
+  String get signal => 'Сигнал';
+
+  @override
+  String get sound => 'Звук';
+
+  @override
+  String get vibration => 'Вибрация';
+
+  @override
+  String get silent => 'Без звука';
+
+  @override
+  String get timezone => 'Часовой пояс';
+
+  @override
+  String get deviceTimezone => 'Как на устройстве';
+
+  @override
+  String get fixedTimezone => 'Фиксированный';
+
+  @override
+  String get timezoneName => 'Часовой пояс IANA';
+
+  @override
+  String get startAyah => 'Первый аят';
+
+  @override
+  String get endAyah => 'Последний аят';
+
+  @override
+  String get delete => 'Удалить';
+
+  @override
+  String get deleteReminderConfirm => 'Удалить это напоминание?';
+
+  @override
+  String get reminderSaved => 'Напоминание сохранено';
+
+  @override
+  String get mondayShort => 'Пн';
+
+  @override
+  String get tuesdayShort => 'Вт';
+
+  @override
+  String get wednesdayShort => 'Ср';
+
+  @override
+  String get thursdayShort => 'Чт';
+
+  @override
+  String get fridayShort => 'Пт';
+
+  @override
+  String get saturdayShort => 'Сб';
+
+  @override
+  String get sundayShort => 'Вс';
 }

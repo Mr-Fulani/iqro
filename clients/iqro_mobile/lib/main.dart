@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app/app.dart';
@@ -16,7 +17,10 @@ Future<AppDependencies> _initialize() async {
     androidNotificationChannelName: 'IQRO Quran audio',
     androidNotificationOngoing: true,
   );
-  return AppDependencies.initialize();
+  final dependencies = await AppDependencies.initialize();
+  final audioSession = await AudioSession.instance;
+  await audioSession.configure(const AudioSessionConfiguration.speech());
+  return dependencies;
 }
 
 class _IqroBootstrap extends StatefulWidget {

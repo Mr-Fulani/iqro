@@ -3,21 +3,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../quran/quran_models.dart';
+import 'reciter_portraits.dart';
 
-class PlayerScreen extends ConsumerWidget {
+class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends ConsumerState<PlayerScreen> {
+  var _changingSurah = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(audioControllerProvider);
     final controller = ref.read(audioControllerProvider.notifier);
     final locale = Localizations.localeOf(context).languageCode;
-    final durationMs = state.duration.inMilliseconds;
-    final positionMs = state.position.inMilliseconds.clamp(
+    final currentSurah = state.track?.surah;
+    final surahs =
+        ref.watch(quranCatalogProvider).valueOrNull?.surahs ?? const <Surah>[];
+    final controlsEnabled = state.active && !state.buffering && !_changingSurah;
+    final durationMs = state.effectiveDuration.inMilliseconds;
+    final positionMs = state.relativePosition.inMilliseconds.clamp(
       0,
       durationMs == 0 ? 1 : durationMs,
     );
+    final currentAyah = state.displayedAyah;
+    final reciter = state.reciter;
+    final portraitUrl = reciter == null
+        ? null
+        : resolveReciterPortraitUrl(
+            reciter,
+            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+          );
     return Scaffold(
       backgroundColor: const Color(0xFF061D18),
       appBar: AppBar(
@@ -51,22 +73,18 @@ class PlayerScreen extends ConsumerWidget {
           padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 20, 28),
           child: Column(
             children: <Widget>[
-              _Artwork(
-                url: state.reciter?.portraitUrl,
-                initials: state.reciter?.initials ?? 'IQ',
-              ),
+              _Artwork(url: portraitUrl),
               const SizedBox(height: 28),
               IqroEyebrow(
-                '${context.l10n.surah} 1 · ${context.l10n.ayah} 1',
+                '${context.l10n.surah} ${state.track?.surah ?? '—'} · '
+                '${context.l10n.ayah} ${currentAyah ?? '—'}',
                 light: true,
               ),
               const SizedBox(height: 8),
-              Text(
-                state.active ? state.surahName : context.l10n.noAudio,
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.displaySmall?.copyWith(color: Colors.white),
+              _SurahTitleButton(
+                title: state.active ? state.surahName : context.l10n.noAudio,
+                enabled: state.active && surahs.isNotEmpty && !_changingSurah,
+                onTap: () => _chooseSurah(surahs, currentSurah),
               ),
               const SizedBox(height: 8),
               Text(
@@ -79,8 +97,9 @@ class PlayerScreen extends ConsumerWidget {
                 min: 0,
                 max: durationMs <= 0 ? 1 : durationMs.toDouble(),
                 onChanged: state.active
-                    ? (value) =>
-                          controller.seek(Duration(milliseconds: value.round()))
+                    ? (value) => controller.seekInActiveRange(
+                        Duration(milliseconds: value.round()),
+                      )
                     : null,
               ),
               Padding(
@@ -88,8 +107,8 @@ class PlayerScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text(_duration(state.position), style: _metaStyle),
-                    Text(_duration(state.duration), style: _metaStyle),
+                    Text(_duration(state.relativePosition), style: _metaStyle),
+                    Text(_duration(state.effectiveDuration), style: _metaStyle),
                   ],
                 ),
               ),
@@ -98,8 +117,8 @@ class PlayerScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
                   IconButton(
-                    onPressed: state.active
-                        ? () => controller.seek(
+                    onPressed: controlsEnabled
+                        ? () => controller.seekInActiveRange(
                             Duration(
                               milliseconds: (positionMs - 10000).clamp(
                                 0,
@@ -113,15 +132,12 @@ class PlayerScreen extends ConsumerWidget {
                     icon: const Icon(Icons.replay_10),
                   ),
                   IconButton(
-                    onPressed: state.active
-                        ? () => controller.seek(
-                            Duration(
-                              milliseconds: (positionMs - 30000).clamp(
-                                0,
-                                durationMs,
-                              ),
-                            ),
-                          )
+                    tooltip: context.l10n.previousSurah,
+                    onPressed:
+                        controlsEnabled &&
+                            currentSurah != null &&
+                            currentSurah > 1
+                        ? () => _changeSurah(-1)
                         : null,
                     color: Colors.white,
                     icon: const Icon(Icons.skip_previous),
@@ -133,9 +149,9 @@ class PlayerScreen extends ConsumerWidget {
                       tooltip: state.playing
                           ? context.l10n.pause
                           : context.l10n.play,
-                      onPressed: state.active ? controller.toggle : null,
+                      onPressed: controlsEnabled ? controller.toggle : null,
                       iconSize: 38,
-                      icon: state.buffering
+                      icon: state.buffering || _changingSurah
                           ? const CircularProgressIndicator(strokeWidth: 2)
                           : Icon(
                               state.playing ? Icons.pause : Icons.play_arrow,
@@ -143,22 +159,19 @@ class PlayerScreen extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: state.active
-                        ? () => controller.seek(
-                            Duration(
-                              milliseconds: (positionMs + 30000).clamp(
-                                0,
-                                durationMs,
-                              ),
-                            ),
-                          )
+                    tooltip: context.l10n.nextSurah,
+                    onPressed:
+                        controlsEnabled &&
+                            currentSurah != null &&
+                            currentSurah < 114
+                        ? () => _changeSurah(1)
                         : null,
                     color: Colors.white,
                     icon: const Icon(Icons.skip_next),
                   ),
                   IconButton(
-                    onPressed: state.active
-                        ? () => controller.seek(
+                    onPressed: controlsEnabled
+                        ? () => controller.seekInActiveRange(
                             Duration(
                               milliseconds: (positionMs + 10000).clamp(
                                 0,
@@ -199,8 +212,10 @@ class PlayerScreen extends ConsumerWidget {
                   _PlayerOption(
                     icon: Icons.layers_outlined,
                     title: context.l10n.range,
-                    value: context.l10n.soon,
-                    onTap: null,
+                    value: _rangeValue(context, state),
+                    onTap: state.segments.isEmpty
+                        ? null
+                        : () => _chooseRange(context, controller, state),
                   ),
                   _PlayerOption(
                     icon: Icons.repeat,
@@ -211,27 +226,6 @@ class PlayerScreen extends ConsumerWidget {
                     onTap: controller.toggleRepeat,
                   ),
                 ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF103E34),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    const Icon(Icons.phone_android, color: Color(0xFF98DBC7)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        context.l10n.backgroundPlayback,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    const Icon(Icons.check, color: Color(0xFF98DBC7)),
-                  ],
-                ),
               ),
             ],
           ),
@@ -248,9 +242,74 @@ class PlayerScreen extends ConsumerWidget {
     return '$minutes:$seconds';
   }
 
+  Future<void> _changeSurah(int direction) async {
+    final player = ref.read(audioControllerProvider);
+    final currentSurah = player.track?.surah;
+    if (currentSurah == null) return;
+
+    final targetSurah = currentSurah + direction;
+    await _loadSurah(targetSurah);
+  }
+
+  Future<void> _chooseSurah(List<Surah> surahs, int? currentSurah) async {
+    if (_changingSurah || surahs.isEmpty) return;
+    final targetSurah = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .88,
+        child: _SurahPickerSheet(surahs: surahs, currentSurah: currentSurah),
+      ),
+    );
+    if (!mounted || targetSurah == null || targetSurah == currentSurah) return;
+    await _loadSurah(targetSurah);
+  }
+
+  Future<void> _loadSurah(int targetSurah) async {
+    if (_changingSurah || targetSurah < 1 || targetSurah > 114) return;
+    final player = ref.read(audioControllerProvider);
+    final reciter = player.reciter;
+    final recitationId = player.track?.recitationId;
+    if (reciter == null || recitationId == null) return;
+
+    final locale = Localizations.localeOf(context).languageCode;
+    var surahName = '${context.l10n.surah} $targetSurah';
+    final catalog = ref.read(quranCatalogProvider).valueOrNull;
+    if (catalog != null) {
+      for (final surah in catalog.surahs) {
+        if (surah.number == targetSurah) {
+          surahName = surah.nameFor(locale);
+          break;
+        }
+      }
+    }
+
+    setState(() => _changingSurah = true);
+    try {
+      final playback = await ref
+          .read(audioRepositoryProvider)
+          .playback(recitationId: recitationId, surah: targetSurah);
+      await ref
+          .read(audioControllerProvider.notifier)
+          .loadPlayback(
+            playback: playback,
+            reciter: reciter,
+            surahName: surahName,
+          );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+    } finally {
+      if (mounted) setState(() => _changingSurah = false);
+    }
+  }
+
   Future<void> _chooseSpeed(
     BuildContext context,
-    dynamic controller,
+    AudioController controller,
     double current,
   ) async {
     final speed = await showModalBottomSheet<double>(
@@ -279,7 +338,10 @@ class PlayerScreen extends ConsumerWidget {
     if (speed != null) await controller.setSpeed(speed);
   }
 
-  Future<void> _chooseTimer(BuildContext context, dynamic controller) async {
+  Future<void> _chooseTimer(
+    BuildContext context,
+    AudioController controller,
+  ) async {
     final minutes = await showModalBottomSheet<int>(
       context: context,
       builder: (context) => SafeArea(
@@ -303,15 +365,295 @@ class PlayerScreen extends ConsumerWidget {
       minutes == null || minutes == 0 ? null : Duration(minutes: minutes),
     );
   }
+
+  String _rangeValue(BuildContext context, IqroAudioState state) {
+    if (state.segments.isEmpty) return context.l10n.noAudio;
+    final start = state.rangeStartAyah ?? state.segments.first.ayah;
+    final end = state.rangeEndAyah ?? state.segments.last.ayah;
+    return start == end
+        ? '${context.l10n.ayah} $start'
+        : '${context.l10n.ayah} $start–$end';
+  }
+
+  Future<void> _chooseRange(
+    BuildContext context,
+    AudioController controller,
+    IqroAudioState state,
+  ) async {
+    final ayahs = state.segments.map((item) => item.ayah).toSet().toList()
+      ..sort();
+    if (ayahs.isEmpty) return;
+    final minimum = ayahs.first;
+    final maximum = ayahs.last;
+    var values = RangeValues(
+      (state.rangeStartAyah ?? minimum).clamp(minimum, maximum).toDouble(),
+      (state.rangeEndAyah ?? maximum).clamp(minimum, maximum).toDouble(),
+    );
+    final selected = await showModalBottomSheet<List<int>>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                context.l10n.range,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${context.l10n.ayah} ${values.start.round()}–${values.end.round()}',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              RangeSlider(
+                values: values,
+                min: minimum.toDouble(),
+                max: maximum.toDouble(),
+                divisions: maximum - minimum,
+                labels: RangeLabels(
+                  '${values.start.round()}',
+                  '${values.end.round()}',
+                ),
+                onChanged: (next) => setSheetState(() => values = next),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, <int>[
+                    values.start.round(),
+                    values.end.round(),
+                  ]),
+                  child: Text(context.l10n.done),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !context.mounted) return;
+    try {
+      await controller.setAyahRange(selected[0], selected[1]);
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+    }
+  }
 }
 
-class _Artwork extends StatelessWidget {
-  const _Artwork({required this.url, required this.initials});
-  final String? url;
-  final String initials;
+class _SurahTitleButton extends StatelessWidget {
+  const _SurahTitleButton({
+    required this.title,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String title;
+  final bool enabled;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = enabled
+        ? Colors.white
+        : Colors.white.withValues(alpha: .62);
+    return Semantics(
+      button: enabled,
+      label: context.l10n.chooseSurah,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 5, 8, 5),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 5,
+              children: <Widget>[
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.displaySmall?.copyWith(color: foreground),
+                ),
+                Icon(Icons.expand_more_rounded, color: foreground, size: 30),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurahPickerSheet extends StatefulWidget {
+  const _SurahPickerSheet({required this.surahs, required this.currentSurah});
+
+  final List<Surah> surahs;
+  final int? currentSurah;
+
+  @override
+  State<_SurahPickerSheet> createState() => _SurahPickerSheetState();
+}
+
+class _SurahPickerSheetState extends State<_SurahPickerSheet> {
+  late final TextEditingController _searchController;
+  late final ScrollController _scrollController;
+  var _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _scrollController = ScrollController(
+      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * 68.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final normalizedQuery = _query.trim().toLowerCase();
+    final filtered = normalizedQuery.isEmpty
+        ? widget.surahs
+        : widget.surahs
+              .where(
+                (surah) =>
+                    surah.number.toString().contains(normalizedQuery) ||
+                    surah.nameAr.toLowerCase().contains(normalizedQuery) ||
+                    surah.nameEn.toLowerCase().contains(normalizedQuery) ||
+                    surah.nameRu.toLowerCase().contains(normalizedQuery),
+              )
+              .toList(growable: false);
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 10),
+        Container(
+          width: 42,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(context).dividerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 8),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  context.l10n.chooseSurah,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: context.l10n.search,
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _query = '');
+                      },
+                      icon: const Icon(Icons.clear_rounded),
+                    ),
+            ),
+            onChanged: (value) => setState(() => _query = value),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.builder(
+            controller: normalizedQuery.isEmpty ? _scrollController : null,
+            itemExtent: 68,
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final surah = filtered[index];
+              final selected = surah.number == widget.currentSurah;
+              final primaryName = surah.nameFor(locale);
+              final secondaryName = locale == 'ar'
+                  ? surah.nameEn
+                  : surah.nameAr;
+              return ListTile(
+                selected: selected,
+                leading: CircleAvatar(child: Text('${surah.number}')),
+                title: Text(
+                  primaryName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  secondaryName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: locale == 'ar'
+                      ? TextDirection.ltr
+                      : TextDirection.rtl,
+                ),
+                trailing: selected ? const Icon(Icons.check_rounded) : null,
+                onTap: () => Navigator.pop(context, surah.number),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Artwork extends StatelessWidget {
+  const _Artwork({required this.url});
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = const ColoredBox(
+      color: Color(0xFF255E51),
+      child: Center(
+        child: Icon(Icons.person_rounded, size: 72, color: Color(0xFFB6E8D9)),
+      ),
+    );
     return Container(
       width: 210,
       height: 210,
@@ -327,17 +669,15 @@ class _Artwork extends StatelessWidget {
         ),
         border: Border.all(color: Colors.white.withValues(alpha: .12)),
       ),
-      child: CircleAvatar(
-        backgroundColor: const Color(0xFF255E51),
-        backgroundImage: url == null ? null : CachedNetworkImageProvider(url!),
+      child: ClipOval(
         child: url == null
-            ? Text(
-                initials,
-                style: Theme.of(
-                  context,
-                ).textTheme.displaySmall?.copyWith(color: Colors.white),
-              )
-            : null,
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: url!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => fallback,
+                errorWidget: (context, url, error) => fallback,
+              ),
       ),
     );
   }

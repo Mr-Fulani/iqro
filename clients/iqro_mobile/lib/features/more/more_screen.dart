@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 
-class MoreScreen extends StatelessWidget {
+class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playerActive = ref.watch(
+      audioControllerProvider.select((value) => value.active),
+    );
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navMore,
         subtitle: context.l10n.moreTools,
       ),
       body: IqroPage(
+        padding: iqroRootTabPadding(playerActive: playerActive),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             GridView.count(
+              padding: EdgeInsets.zero,
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
@@ -64,6 +71,13 @@ class MoreScreen extends StatelessWidget {
                     title: context.l10n.personalProfile,
                     subtitle: context.l10n.guestSyncHint,
                     onTap: () => context.push('/account'),
+                  ),
+                  const Divider(height: 1),
+                  IqroListTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: context.l10n.reminders,
+                    subtitle: context.l10n.remindersSubtitle,
+                    onTap: () => context.push('/reminders'),
                   ),
                   const Divider(height: 1),
                   IqroListTile(

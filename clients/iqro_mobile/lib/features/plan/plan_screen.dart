@@ -12,6 +12,9 @@ class PlanScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planProvider);
+    final playerActive = ref.watch(
+      audioControllerProvider.select((value) => value.active),
+    );
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.dailyPlan,
@@ -29,6 +32,7 @@ class PlanScreen extends ConsumerWidget {
             value.target,
           );
           return IqroPage(
+            padding: iqroRootTabPadding(playerActive: playerActive),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

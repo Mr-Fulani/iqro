@@ -1,7 +1,10 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/prayer/prayer_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
+import 'package:just_audio/just_audio.dart';
 
 void main() {
   test('Quran and audio contracts parse current backend envelopes', () {
@@ -50,7 +53,235 @@ void main() {
     expect(page.firstAyahReference, (surah: 2, ayah: 1));
   });
 
-  test('approved font Mushafs expose only allowlisted mobile font URLs', () {
+  test('Mushaf page hit map resolves a tap to the correct ayah', () {
+    final page = MushafPageData.fromJson(<String, Object?>{
+      'number': 50,
+      'image_width': 900,
+      'image_height': 1380,
+      'assets': const <Object?>[],
+      'regions': <Object?>[
+        <String, Object?>{
+          'id': 'region-1',
+          'ayah': <String, Object?>{'id': 'ayah-1', 'surah': 3, 'number': 7},
+          'reading_order': 1,
+          'polygon': <Object?>[
+            <Object?>[.1, .2],
+            <Object?>[.9, .2],
+            <Object?>[.9, .3],
+            <Object?>[.1, .3],
+          ],
+          'x': '0.1',
+          'y': '0.2',
+          'width': '0.8',
+          'height': '0.1',
+        },
+      ],
+    });
+
+    expect(page.ayahAt(.5, .25)?.key, '3:7');
+    expect(page.ayahAt(.5, .5), isNull);
+    expect(page.ayahAt(double.nan, .25), isNull);
+    expect(page.ayahAt(1.1, .25), isNull);
+    expect(page.imageWidth, 900);
+    expect(page.imageHeight, 1380);
+  });
+
+  test('Mushaf page only selects integrity-bound WebP renditions', () {
+    final page = MushafPageData.fromJson(<String, Object?>{
+      'number': 1,
+      'assets': <Object?>[
+        <String, Object?>{
+          'url': 'http://media.iqro.forum/page-001.webp',
+          'width': 720,
+          'height': 1104,
+          'bytes': 1000,
+          'sha256': 'a' * 64,
+        },
+        <String, Object?>{
+          'url': 'https://media.iqro.forum/page-001-w720.webp',
+          'width': 720,
+          'height': 1104,
+          'bytes': 1000,
+          'sha256': 'b' * 64,
+        },
+        <String, Object?>{
+          'url': 'https://media.iqro.forum/page-001-w1080.webp',
+          'width': 1080,
+          'height': 1656,
+          'bytes': 2000,
+          'sha256': 'c' * 64,
+        },
+      ],
+      'regions': const <Object?>[],
+    });
+
+    expect(page.assets, hasLength(2));
+    expect(page.bestAssetFor(360, 2)?.width, 720);
+    expect(page.bestAssetFor(400, 3)?.width, 1080);
+  });
+
+  test('Mushaf reading progress follows canonical region order', () {
+    final page = MushafPageData.fromJson(<String, Object?>{
+      'number': 2,
+      'assets': const <Object?>[],
+      'regions': <Object?>[
+        <String, Object?>{
+          'ayah': <String, Object?>{'surah': 2, 'number': 2},
+          'reading_order': 2,
+        },
+        <String, Object?>{
+          'ayah': <String, Object?>{'surah': 2, 'number': 1},
+          'reading_order': 1,
+        },
+      ],
+    });
+
+    expect(page.firstAyahReference, (surah: 2, ayah: 1));
+  });
+
+  test('Surah playback parses timing segments for ayah highlighting', () {
+    final playback = SurahPlayback.fromJson(<String, Object?>{
+      'track': <String, Object?>{
+        'id': 'track',
+        'recitation_id': 'recitation',
+        'surah_number': 3,
+        'duration_ms': 12000,
+        'offline_download_allowed': false,
+        'asset': <String, Object?>{'url': 'https://cdn.example/3.mp3'},
+      },
+      'segments': <Object?>[
+        <String, Object?>{
+          'ayah_id': 'ayah-1',
+          'surah_number': 3,
+          'ayah_number': 1,
+          'start_ms': 0,
+          'end_ms': 5761,
+        },
+        <String, Object?>{
+          'ayah_id': 'ayah-2',
+          'surah_number': 3,
+          'ayah_number': 2,
+          'start_ms': 5761,
+          'end_ms': 10092,
+        },
+      ],
+    });
+
+    expect(playback.track.surah, 3);
+    expect(playback.segmentFor(2)?.start, const Duration(milliseconds: 5761));
+    expect(
+      playback.segmentFor(2)?.contains(const Duration(milliseconds: 6000)),
+      isTrue,
+    );
+  });
+
+  test('player exposes position relative to the selected ayah range', () {
+    const track = AudioTrack(
+      id: 'track',
+      recitationId: 'recitation',
+      surah: 1,
+      url: 'https://cdn.example/1.mp3',
+      duration: Duration(milliseconds: 34615),
+      offlineDownloadAllowed: false,
+    );
+    const segments = <AudioSegment>[
+      AudioSegment(
+        ayahId: 'ayah-1',
+        surah: 1,
+        ayah: 1,
+        start: Duration.zero,
+        end: Duration(milliseconds: 2751),
+      ),
+      AudioSegment(
+        ayahId: 'ayah-7',
+        surah: 1,
+        ayah: 7,
+        start: Duration(milliseconds: 20605),
+        end: Duration(milliseconds: 34615),
+      ),
+    ];
+    const state = IqroAudioState(
+      track: track,
+      duration: Duration(milliseconds: 34615),
+      position: Duration(milliseconds: 23605),
+      segments: segments,
+      activeAyah: 7,
+      rangeStartAyah: 7,
+      rangeEndAyah: 7,
+    );
+
+    expect(state.displayedAyah, 7);
+    expect(state.relativePosition, const Duration(seconds: 3));
+    expect(state.effectiveDuration, const Duration(milliseconds: 14010));
+    expect(
+      state.logicalPositionForPlayer(const Duration(seconds: 3)),
+      const Duration(milliseconds: 23605),
+    );
+    expect(
+      state.playerPositionForLogical(const Duration(milliseconds: 23605)),
+      const Duration(seconds: 3),
+    );
+  });
+
+  test('ayah playback is loaded as one clipped audio source', () {
+    const track = AudioTrack(
+      id: 'track',
+      recitationId: 'recitation',
+      surah: 2,
+      url: 'https://cdn.example/2.mp3',
+      duration: Duration(minutes: 10),
+      offlineDownloadAllowed: false,
+    );
+    const mediaItem = MediaItem(id: 'track', title: 'Al-Baqarah');
+    const start = Duration(seconds: 212);
+    const end = Duration(seconds: 234);
+
+    final source = buildIqroAudioSource(
+      track: track,
+      mediaItem: mediaItem,
+      start: start,
+      end: end,
+    );
+
+    expect(source, isA<ClippingAudioSource>());
+    final clipped = source as ClippingAudioSource;
+    expect(clipped.child.uri, Uri.parse(track.url));
+    expect(clipped.start, start);
+    expect(clipped.end, end);
+    expect(clipped.duration, end - start);
+  });
+
+  test('Juz navigation parses exact page and ayah boundaries', () {
+    final division = QuranDivision.fromJson(<String, Object?>{
+      'number': 2,
+      'start_page': 22,
+      'end_page': 41,
+      'start_ayah': <String, Object?>{'id': 'start', 'surah': 2, 'number': 142},
+      'end_ayah': <String, Object?>{'id': 'end', 'surah': 2, 'number': 252},
+    });
+
+    expect(division.number, 2);
+    expect(division.startPage, 22);
+    expect(division.startAyah.key, '2:142');
+    expect(division.endPage, 41);
+    expect(division.endAyah.key, '2:252');
+  });
+
+  test('grouped tafsir covers every ayah in its declared range', () {
+    final tafsir = QuranAyahTafsir.fromJson(<String, Object?>{
+      'verse_key': '2:1',
+      'start_verse_key': '2:1',
+      'end_verse_key': '2:5',
+      'text': 'Grouped explanation',
+    });
+
+    expect(tafsir.covers(2, 1), isTrue);
+    expect(tafsir.covers(2, 3), isTrue);
+    expect(tafsir.covers(2, 5), isTrue);
+    expect(tafsir.covers(2, 6), isFalse);
+  });
+
+  test('browser font Mushafs remain hidden until native assets exist', () {
     final unicode = MushafVariant.fromJson(<String, Object?>{
       'source_id': 5,
       'name': 'KFGQPC HAFS',
@@ -77,9 +308,9 @@ void main() {
     });
 
     expect(unicode.preferenceValue, '5');
-    expect(unicode.supportedOnMobile, isTrue);
+    expect(unicode.supportedOnMobile, isFalse);
     expect(unicode.fontUriForPage(4)?.host, 'verses.quran.foundation');
-    expect(pageFont.supportedOnMobile, isTrue);
+    expect(pageFont.supportedOnMobile, isFalse);
     expect(pageFont.fontUriForPage(4)?.path, endsWith('/p4.woff2'));
 
     final unsafe = MushafVariant.fromJson(<String, Object?>{

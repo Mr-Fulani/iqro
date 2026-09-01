@@ -270,6 +270,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listenPage => 'استمع إلى الصفحة الحالية';
 
   @override
+  String get tapAyahForDetails => 'اضغط على آية للصوت والترجمة والتفسير';
+
+  @override
   String get audioTitle => 'استمع إلى القرآن';
 
   @override
@@ -277,6 +280,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get allReciters => 'جميع القراء';
+
+  @override
+  String get recitationStyle => 'نمط التلاوة';
+
+  @override
+  String get chooseRecitationStyle => 'اختر نمط التلاوة';
+
+  @override
+  String get styleMurattal => 'مرتل';
+
+  @override
+  String get styleMujawwad => 'مجود';
+
+  @override
+  String get styleMuallim => 'معلّم';
+
+  @override
+  String get refreshReciters => 'تحديث قائمة القراء';
+
+  @override
+  String get recitersUpdated => 'تم تحديث قائمة القراء';
+
+  @override
+  String get recitersRefreshFailed =>
+      'تعذر تحديث القائمة. يتم عرض البيانات المحفوظة.';
 
   @override
   String get noAudio => 'لا يوجد تسجيل صوتي متاح';
@@ -289,6 +317,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pause => 'إيقاف مؤقت';
+
+  @override
+  String get previousSurah => 'السورة السابقة';
+
+  @override
+  String get nextSurah => 'السورة التالية';
+
+  @override
+  String get chooseSurah => 'اختر السورة';
 
   @override
   String get speed => 'السرعة';
@@ -527,4 +564,115 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacy => 'الخصوصية';
+
+  @override
+  String get reminders => 'التذكيرات';
+
+  @override
+  String get remindersSubtitle => 'الصلاة ومراجعة القرآن';
+
+  @override
+  String get notificationAccess => 'السماح بالإشعارات';
+
+  @override
+  String get notificationAccessBody =>
+      'سيذكّرك IQRO في الوقت المحدد حتى عند إغلاق التطبيق.';
+
+  @override
+  String get allowNotifications => 'السماح بالإشعارات';
+
+  @override
+  String get notificationDenied => 'الإشعارات متوقفة في إعدادات الجهاز.';
+
+  @override
+  String get approximateDelivery =>
+      'قد يرسل النظام التذكير بتأخير بسيط لتوفير البطارية.';
+
+  @override
+  String get prayerReminders => 'تذكيرات الصلاة';
+
+  @override
+  String get prayerReminderSetup =>
+      'اختر أولاً طريقة الحساب وحدد الموقع في قسم مواقيت الصلاة.';
+
+  @override
+  String get quranReviewReminders => 'مراجعة القرآن';
+
+  @override
+  String get addReminder => 'إضافة تذكير';
+
+  @override
+  String get noReminders => 'لا توجد تذكيرات للمراجعة بعد.';
+
+  @override
+  String get reviewReminder => 'مراجعة الآيات';
+
+  @override
+  String get reminderTime => 'الوقت';
+
+  @override
+  String get reminderDays => 'الأيام';
+
+  @override
+  String get everyDay => 'كل يوم';
+
+  @override
+  String get signal => 'التنبيه';
+
+  @override
+  String get sound => 'بصوت';
+
+  @override
+  String get vibration => 'اهتزاز';
+
+  @override
+  String get silent => 'صامت';
+
+  @override
+  String get timezone => 'المنطقة الزمنية';
+
+  @override
+  String get deviceTimezone => 'منطقة الجهاز';
+
+  @override
+  String get fixedTimezone => 'ثابتة';
+
+  @override
+  String get timezoneName => 'منطقة IANA الزمنية';
+
+  @override
+  String get startAyah => 'الآية الأولى';
+
+  @override
+  String get endAyah => 'الآية الأخيرة';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String get deleteReminderConfirm => 'هل تريد حذف هذا التذكير؟';
+
+  @override
+  String get reminderSaved => 'تم حفظ التذكير';
+
+  @override
+  String get mondayShort => 'ن';
+
+  @override
+  String get tuesdayShort => 'ث';
+
+  @override
+  String get wednesdayShort => 'ر';
+
+  @override
+  String get thursdayShort => 'خ';
+
+  @override
+  String get fridayShort => 'ج';
+
+  @override
+  String get saturdayShort => 'س';
+
+  @override
+  String get sundayShort => 'ح';
 }

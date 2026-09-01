@@ -256,6 +256,18 @@ class SyncService {
             entity['updated_at']?.toString() ??
             DateTime.now().toUtc().toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (type == 'reminder') {
+      final id = entity['id']?.toString() ?? '';
+      if (id.isEmpty) return;
+      await executor.insert('reminders', <String, Object?>{
+        'id': id,
+        'payload': jsonEncode(entity),
+        'revision': (entity['revision'] as num?)?.toInt() ?? 0,
+        'is_deleted': entity['deleted_at'] == null ? 0 : 1,
+        'updated_at':
+            entity['updated_at']?.toString() ??
+            DateTime.now().toUtc().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 }

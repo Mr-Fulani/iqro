@@ -272,6 +272,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listenPage => 'Bu sayfayı dinle';
 
   @override
+  String get tapAyahForDetails => 'Ses, meal ve tefsir için bir ayete dokunun';
+
+  @override
   String get audioTitle => 'Kur\'an\'ı dinleyin';
 
   @override
@@ -279,6 +282,31 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get allReciters => 'Tüm kâriler';
+
+  @override
+  String get recitationStyle => 'Okuyuş stili';
+
+  @override
+  String get chooseRecitationStyle => 'Okuyuş stilini seçin';
+
+  @override
+  String get styleMurattal => 'Mürattel';
+
+  @override
+  String get styleMujawwad => 'Mücevved';
+
+  @override
+  String get styleMuallim => 'Muallim';
+
+  @override
+  String get refreshReciters => 'Kâri kataloğunu yenile';
+
+  @override
+  String get recitersUpdated => 'Kâri kataloğu güncellendi';
+
+  @override
+  String get recitersRefreshFailed =>
+      'Katalog yenilenemedi. Kayıtlı veriler gösteriliyor.';
 
   @override
   String get noAudio => 'Oynatılabilir ses yok';
@@ -291,6 +319,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get pause => 'Duraklat';
+
+  @override
+  String get previousSurah => 'Önceki sure';
+
+  @override
+  String get nextSurah => 'Sonraki sure';
+
+  @override
+  String get chooseSurah => 'Sure seç';
 
   @override
   String get speed => 'Hız';
@@ -531,4 +568,115 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get privacy => 'Gizlilik';
+
+  @override
+  String get reminders => 'Hatırlatıcılar';
+
+  @override
+  String get remindersSubtitle => 'Namaz ve Kur’an tekrarı';
+
+  @override
+  String get notificationAccess => 'Bildirimlere izin verin';
+
+  @override
+  String get notificationAccessBody =>
+      'IQRO, uygulama kapalıyken bile seçtiğiniz saatte hatırlatır.';
+
+  @override
+  String get allowNotifications => 'Bildirimlere izin ver';
+
+  @override
+  String get notificationDenied => 'Bildirimler cihaz ayarlarında kapalı.';
+
+  @override
+  String get approximateDelivery =>
+      'Pil tasarrufu için sistem bildirimleri kısa bir gecikmeyle iletebilir.';
+
+  @override
+  String get prayerReminders => 'Namaz hatırlatıcıları';
+
+  @override
+  String get prayerReminderSetup =>
+      'Önce Namaz vakitleri bölümünde hesaplama yöntemini ve konumu ayarlayın.';
+
+  @override
+  String get quranReviewReminders => 'Kur’an tekrarı';
+
+  @override
+  String get addReminder => 'Hatırlatıcı ekle';
+
+  @override
+  String get noReminders => 'Henüz tekrar hatırlatıcısı yok.';
+
+  @override
+  String get reviewReminder => 'Ayet tekrarı';
+
+  @override
+  String get reminderTime => 'Saat';
+
+  @override
+  String get reminderDays => 'Günler';
+
+  @override
+  String get everyDay => 'Her gün';
+
+  @override
+  String get signal => 'Uyarı';
+
+  @override
+  String get sound => 'Sesli';
+
+  @override
+  String get vibration => 'Titreşim';
+
+  @override
+  String get silent => 'Sessiz';
+
+  @override
+  String get timezone => 'Saat dilimi';
+
+  @override
+  String get deviceTimezone => 'Cihaz saat dilimi';
+
+  @override
+  String get fixedTimezone => 'Sabit';
+
+  @override
+  String get timezoneName => 'IANA saat dilimi';
+
+  @override
+  String get startAyah => 'İlk ayet';
+
+  @override
+  String get endAyah => 'Son ayet';
+
+  @override
+  String get delete => 'Sil';
+
+  @override
+  String get deleteReminderConfirm => 'Bu hatırlatıcı silinsin mi?';
+
+  @override
+  String get reminderSaved => 'Hatırlatıcı kaydedildi';
+
+  @override
+  String get mondayShort => 'Pzt';
+
+  @override
+  String get tuesdayShort => 'Sal';
+
+  @override
+  String get wednesdayShort => 'Çar';
+
+  @override
+  String get thursdayShort => 'Per';
+
+  @override
+  String get fridayShort => 'Cum';
+
+  @override
+  String get saturdayShort => 'Cmt';
+
+  @override
+  String get sundayShort => 'Paz';
 }

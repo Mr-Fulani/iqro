@@ -20,6 +20,9 @@ void main() {
         goal: 'reading',
         dailyUnit: DailyUnit.ayahs,
         dailyTarget: 12,
+        preferredTranslationSourceId: 45,
+        preferredTafsirSourceId: 170,
+        preferredRecitationId: 'recitation-id',
       );
 
       await store.write(value);
@@ -28,8 +31,11 @@ void main() {
       expect(restored.locale, 'ar');
       expect(restored.themeMode, ThemeMode.dark);
       expect(restored.readerMode, ReaderMode.mushaf);
-      expect(restored.mushafVariant, '5');
+      expect(restored.mushafVariant, defaultMushafVariant);
       expect(restored.dailyTarget, 12);
+      expect(restored.preferredTranslationSourceId, 45);
+      expect(restored.preferredTafsirSourceId, 170);
+      expect(restored.preferredRecitationId, 'recitation-id');
 
       await store.write(value.copyWith(mushafVariant: '11'));
       expect(store.read().mushafVariant, defaultMushafVariant);

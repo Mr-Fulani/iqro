@@ -164,6 +164,19 @@ test("portrait manifest covers the full production reciter catalog", async () =>
   expect(people).toHaveLength(10);
   expect(people.filter((reciter) => reciter.slug.includes("abdul-baset"))).toHaveLength(1);
   expect(people[0].slug).toBe("qf-2-abdul-baset-abdul-samad");
+
+  const uploadedPortrait = "https://media.example.test/abdul-baset.png";
+  const peopleWithVariantPortrait = groupRecitersByPerson(
+    reciters.map((reciter) =>
+      reciter.slug === "qf-1-abdulbaset-abdulsamad-mujawwad"
+        ? { ...reciter, portrait_url: uploadedPortrait }
+        : reciter,
+    ),
+  );
+  expect(peopleWithVariantPortrait[0]).toMatchObject({
+    slug: "qf-2-abdul-baset-abdul-samad",
+    portrait_url: uploadedPortrait,
+  });
 });
 
 test("home hero links Quran, audio, Dua and prayer with optimized landmark slides", async ({ page }) => {
@@ -356,6 +369,8 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
   await expect(section.getByTestId("featured-reciter")).toHaveCount(10);
   await expect(section.getByTestId("reciter-avatar")).toHaveCount(10);
   await expect(section.locator("img")).toHaveCount(10);
+  await expect(section.getByTestId("reciter-avatar").first().locator(".reciter-avatar-initials"))
+    .toHaveCount(0);
   await expect(section.locator("img").nth(0)).toHaveAttribute(
     "src",
     /\/reciters\/abdul-baset-abdul-samad\.webp$/,
@@ -368,7 +383,9 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
     await section.locator(".reciter-grid").evaluate((grid) =>
       getComputedStyle(grid).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(5);
+  ).toBe(4);
+  await expect(section.getByTestId("reciter-avatar").first()).toHaveCSS("width", "112px");
+  await expect(section.getByTestId("reciter-avatar").first()).toHaveCSS("height", "112px");
 
   await page.setViewportSize({ width: 320, height: 760 });
   expect(

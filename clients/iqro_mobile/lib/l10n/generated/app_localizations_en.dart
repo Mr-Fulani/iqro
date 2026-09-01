@@ -272,6 +272,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listenPage => 'Listen to this page';
 
   @override
+  String get tapAyahForDetails =>
+      'Tap an ayah for audio, translation and tafsir';
+
+  @override
   String get audioTitle => 'Listen to the Quran';
 
   @override
@@ -279,6 +283,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allReciters => 'All reciters';
+
+  @override
+  String get recitationStyle => 'Recitation style';
+
+  @override
+  String get chooseRecitationStyle => 'Choose recitation style';
+
+  @override
+  String get styleMurattal => 'Murattal';
+
+  @override
+  String get styleMujawwad => 'Mujawwad';
+
+  @override
+  String get styleMuallim => 'Muallim';
+
+  @override
+  String get refreshReciters => 'Refresh reciter catalog';
+
+  @override
+  String get recitersUpdated => 'Reciter catalog updated';
+
+  @override
+  String get recitersRefreshFailed =>
+      'Could not refresh the catalog. Saved data is shown.';
 
   @override
   String get noAudio => 'No playable audio is available';
@@ -291,6 +320,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pause => 'Pause';
+
+  @override
+  String get previousSurah => 'Previous surah';
+
+  @override
+  String get nextSurah => 'Next surah';
+
+  @override
+  String get chooseSurah => 'Choose surah';
 
   @override
   String get speed => 'Speed';
@@ -529,4 +567,116 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacy => 'Privacy';
+
+  @override
+  String get reminders => 'Reminders';
+
+  @override
+  String get remindersSubtitle => 'Prayer and Quran review';
+
+  @override
+  String get notificationAccess => 'Allow notifications';
+
+  @override
+  String get notificationAccessBody =>
+      'IQRO will remind you at the selected time, even when the app is closed.';
+
+  @override
+  String get allowNotifications => 'Allow notifications';
+
+  @override
+  String get notificationDenied =>
+      'Notifications are disabled in device settings.';
+
+  @override
+  String get approximateDelivery =>
+      'The system may deliver reminders with a small delay to save battery.';
+
+  @override
+  String get prayerReminders => 'Prayer reminders';
+
+  @override
+  String get prayerReminderSetup =>
+      'First choose a calculation method and set your location in Prayer times.';
+
+  @override
+  String get quranReviewReminders => 'Quran review';
+
+  @override
+  String get addReminder => 'Add reminder';
+
+  @override
+  String get noReminders => 'No review reminders yet.';
+
+  @override
+  String get reviewReminder => 'Verse review';
+
+  @override
+  String get reminderTime => 'Time';
+
+  @override
+  String get reminderDays => 'Days';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get signal => 'Alert';
+
+  @override
+  String get sound => 'Sound';
+
+  @override
+  String get vibration => 'Vibration';
+
+  @override
+  String get silent => 'Silent';
+
+  @override
+  String get timezone => 'Time zone';
+
+  @override
+  String get deviceTimezone => 'Use device time zone';
+
+  @override
+  String get fixedTimezone => 'Fixed';
+
+  @override
+  String get timezoneName => 'IANA time zone';
+
+  @override
+  String get startAyah => 'First verse';
+
+  @override
+  String get endAyah => 'Last verse';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteReminderConfirm => 'Delete this reminder?';
+
+  @override
+  String get reminderSaved => 'Reminder saved';
+
+  @override
+  String get mondayShort => 'Mon';
+
+  @override
+  String get tuesdayShort => 'Tue';
+
+  @override
+  String get wednesdayShort => 'Wed';
+
+  @override
+  String get thursdayShort => 'Thu';
+
+  @override
+  String get fridayShort => 'Fri';
+
+  @override
+  String get saturdayShort => 'Sat';
+
+  @override
+  String get sundayShort => 'Sun';
 }

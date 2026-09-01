@@ -22,6 +22,9 @@ class HomeScreen extends ConsumerWidget {
     final plan = ref.watch(planProvider).valueOrNull;
     final reciter = ref.watch(recitersProvider).valueOrNull?.firstOrNull;
     final prayer = ref.watch(prayerScheduleProvider).valueOrNull;
+    final playerActive = ref.watch(
+      audioControllerProvider.select((value) => value.active),
+    );
     final locale = Localizations.localeOf(context).languageCode;
     final achieved = plan?.achieved ?? 0;
     final target = plan?.target ?? 6;
@@ -44,6 +47,7 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: IqroPage(
+        padding: iqroRootTabPadding(playerActive: playerActive),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

@@ -24,6 +24,7 @@ from quran_backend.modules.audio.models import (
     Reciter,
 )
 from quran_backend.modules.audio.portrait_upload import (
+    MAX_RECITER_PORTRAIT_MIB,
     ReciterPortraitUploadError,
     upload_reciter_portrait,
 )
@@ -42,7 +43,7 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         required=False,
         label="Загрузить новый портрет",
         help_text=(
-            "Выберите WebP, JPEG или PNG размером до 2 МБ. "
+            f"Выберите WebP, JPEG или PNG размером до {MAX_RECITER_PORTRAIT_MIB} МБ. "
             "Файл будет загружен в media-хранилище автоматически."
         ),
         widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg,image/png"}),

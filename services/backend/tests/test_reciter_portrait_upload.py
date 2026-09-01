@@ -58,7 +58,7 @@ def test_reciter_portrait_upload_rejects_unsupported_content(payload: bytes) -> 
 
 def test_reciter_portrait_upload_enforces_size_limit() -> None:
     payload = b"\x89PNG\r\n\x1a\n" + b"0" * MAX_RECITER_PORTRAIT_BYTES
-    with pytest.raises(ReciterPortraitUploadError, match="не больше 2 МБ"):
+    with pytest.raises(ReciterPortraitUploadError, match="не больше 50 МБ"):
         upload_reciter_portrait(
             SimpleUploadedFile("portrait.png", payload),
             reciter_code="saad-al-ghamdi",

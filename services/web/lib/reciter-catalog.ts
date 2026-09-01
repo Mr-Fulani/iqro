@@ -15,7 +15,20 @@ export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
   for (const reciter of reciters) {
     const personKey = reciterPersonKey(reciter);
     const current = people.get(personKey);
-    if (!current || reciter.slug === personKey) people.set(personKey, reciter);
+    if (!current) {
+      people.set(personKey, reciter);
+      continue;
+    }
+
+    const representative = reciter.slug === personKey ? reciter : current;
+    const portraitUrl =
+      representative.portrait_url || current.portrait_url || reciter.portrait_url || null;
+    people.set(
+      personKey,
+      portraitUrl === representative.portrait_url
+        ? representative
+        : { ...representative, portrait_url: portraitUrl },
+    );
   }
   return [...people.values()];
 }

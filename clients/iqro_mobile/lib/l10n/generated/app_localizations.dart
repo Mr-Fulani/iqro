@@ -612,6 +612,12 @@ abstract class AppLocalizations {
   /// **'Listen to this page'**
   String get listenPage;
 
+  /// No description provided for @tapAyahForDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an ayah for audio, translation and tafsir'**
+  String get tapAyahForDetails;
+
   /// No description provided for @audioTitle.
   ///
   /// In en, this message translates to:
@@ -629,6 +635,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All reciters'**
   String get allReciters;
+
+  /// No description provided for @recitationStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recitation style'**
+  String get recitationStyle;
+
+  /// No description provided for @chooseRecitationStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose recitation style'**
+  String get chooseRecitationStyle;
+
+  /// No description provided for @styleMurattal.
+  ///
+  /// In en, this message translates to:
+  /// **'Murattal'**
+  String get styleMurattal;
+
+  /// No description provided for @styleMujawwad.
+  ///
+  /// In en, this message translates to:
+  /// **'Mujawwad'**
+  String get styleMujawwad;
+
+  /// No description provided for @styleMuallim.
+  ///
+  /// In en, this message translates to:
+  /// **'Muallim'**
+  String get styleMuallim;
+
+  /// No description provided for @refreshReciters.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh reciter catalog'**
+  String get refreshReciters;
+
+  /// No description provided for @recitersUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Reciter catalog updated'**
+  String get recitersUpdated;
+
+  /// No description provided for @recitersRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not refresh the catalog. Saved data is shown.'**
+  String get recitersRefreshFailed;
 
   /// No description provided for @noAudio.
   ///
@@ -653,6 +707,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pause'**
   String get pause;
+
+  /// No description provided for @previousSurah.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous surah'**
+  String get previousSurah;
+
+  /// No description provided for @nextSurah.
+  ///
+  /// In en, this message translates to:
+  /// **'Next surah'**
+  String get nextSurah;
+
+  /// No description provided for @chooseSurah.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose surah'**
+  String get chooseSurah;
 
   /// No description provided for @speed.
   ///
@@ -1121,6 +1193,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy'**
   String get privacy;
+
+  /// No description provided for @reminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders'**
+  String get reminders;
+
+  /// No description provided for @remindersSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer and Quran review'**
+  String get remindersSubtitle;
+
+  /// No description provided for @notificationAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications'**
+  String get notificationAccess;
+
+  /// No description provided for @notificationAccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'IQRO will remind you at the selected time, even when the app is closed.'**
+  String get notificationAccessBody;
+
+  /// No description provided for @allowNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications'**
+  String get allowNotifications;
+
+  /// No description provided for @notificationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are disabled in device settings.'**
+  String get notificationDenied;
+
+  /// No description provided for @approximateDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'The system may deliver reminders with a small delay to save battery.'**
+  String get approximateDelivery;
+
+  /// No description provided for @prayerReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer reminders'**
+  String get prayerReminders;
+
+  /// No description provided for @prayerReminderSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'First choose a calculation method and set your location in Prayer times.'**
+  String get prayerReminderSetup;
+
+  /// No description provided for @quranReviewReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Quran review'**
+  String get quranReviewReminders;
+
+  /// No description provided for @addReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reminder'**
+  String get addReminder;
+
+  /// No description provided for @noReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'No review reminders yet.'**
+  String get noReminders;
+
+  /// No description provided for @reviewReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Verse review'**
+  String get reviewReminder;
+
+  /// No description provided for @reminderTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get reminderTime;
+
+  /// No description provided for @reminderDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get reminderDays;
+
+  /// No description provided for @everyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get everyDay;
+
+  /// No description provided for @signal.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert'**
+  String get signal;
+
+  /// No description provided for @sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get sound;
+
+  /// No description provided for @vibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibration'**
+  String get vibration;
+
+  /// No description provided for @silent.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent'**
+  String get silent;
+
+  /// No description provided for @timezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Time zone'**
+  String get timezone;
+
+  /// No description provided for @deviceTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Use device time zone'**
+  String get deviceTimezone;
+
+  /// No description provided for @fixedTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed'**
+  String get fixedTimezone;
+
+  /// No description provided for @timezoneName.
+  ///
+  /// In en, this message translates to:
+  /// **'IANA time zone'**
+  String get timezoneName;
+
+  /// No description provided for @startAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'First verse'**
+  String get startAyah;
+
+  /// No description provided for @endAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Last verse'**
+  String get endAyah;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @deleteReminderConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this reminder?'**
+  String get deleteReminderConfirm;
+
+  /// No description provided for @reminderSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder saved'**
+  String get reminderSaved;
+
+  /// No description provided for @mondayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get mondayShort;
+
+  /// No description provided for @tuesdayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get tuesdayShort;
+
+  /// No description provided for @wednesdayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get wednesdayShort;
+
+  /// No description provided for @thursdayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get thursdayShort;
+
+  /// No description provided for @fridayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get fridayShort;
+
+  /// No description provided for @saturdayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get saturdayShort;
+
+  /// No description provided for @sundayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get sundayShort;
 }
 
 class _AppLocalizationsDelegate

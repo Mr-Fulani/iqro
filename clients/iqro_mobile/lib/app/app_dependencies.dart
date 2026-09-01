@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
+import '../core/notifications/notification_gateway.dart';
 import '../core/storage/local_database.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
@@ -13,6 +14,7 @@ import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/quran/quran_repository.dart';
+import '../features/reminders/reminder_repository.dart';
 import '../features/share/share_repository.dart';
 import 'providers.dart';
 
@@ -27,6 +29,8 @@ class AppDependencies {
     required this.audio,
     required this.plan,
     required this.prayer,
+    required this.reminders,
+    required this.notifications,
     required this.memorization,
     required this.dua,
     required this.share,
@@ -42,6 +46,8 @@ class AppDependencies {
   final AudioRepository audio;
   final PlanRepository plan;
   final PrayerRepository prayer;
+  final ReminderRepository reminders;
+  final NotificationGateway notifications;
   final MemorizationRepository memorization;
   final DuaRepository dua;
   final ShareRepository share;
@@ -58,6 +64,10 @@ class AppDependencies {
       authRepository: auth,
       locale: () => preferences.read().locale,
     );
+    final prayer = PrayerRepository(api: api, database: database);
+    final reminders = ReminderRepository(api: api, database: database);
+    final notifications = NotificationGateway(database: database);
+    await notifications.initialize();
     return AppDependencies._(
       config: config,
       preferences: preferences,
@@ -67,7 +77,9 @@ class AppDependencies {
       quran: QuranRepository(api: api, database: database),
       audio: AudioRepository(api: api, database: database),
       plan: PlanRepository(database),
-      prayer: PrayerRepository(api: api, database: database),
+      prayer: prayer,
+      reminders: reminders,
+      notifications: notifications,
       memorization: MemorizationRepository(database),
       dua: DuaRepository(api: api, database: database),
       share: ShareRepository(
@@ -90,6 +102,8 @@ class AppDependencies {
     audioRepositoryProvider.overrideWithValue(audio),
     planRepositoryProvider.overrideWithValue(plan),
     prayerRepositoryProvider.overrideWithValue(prayer),
+    reminderRepositoryProvider.overrideWithValue(reminders),
+    notificationGatewayProvider.overrideWithValue(notifications),
     memorizationRepositoryProvider.overrideWithValue(memorization),
     duaRepositoryProvider.overrideWithValue(dua),
     shareRepositoryProvider.overrideWithValue(share),

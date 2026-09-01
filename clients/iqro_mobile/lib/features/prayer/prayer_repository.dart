@@ -98,6 +98,30 @@ class PrayerMethod {
   String nameFor(String locale) => names[locale] ?? names['en'] ?? code;
 }
 
+class PrayerLocation {
+  const PrayerLocation({
+    required this.latitude,
+    required this.longitude,
+    required this.timezone,
+  });
+
+  final double latitude;
+  final double longitude;
+  final String timezone;
+
+  factory PrayerLocation.fromJson(Map<String, Object?> json) => PrayerLocation(
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+    longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+    timezone: json['timezone']?.toString() ?? 'UTC',
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'latitude': latitude,
+    'longitude': longitude,
+    'timezone': timezone,
+  };
+}
+
 class PrayerRepository {
   PrayerRepository({required ApiClient api, required LocalDatabase database})
     : _api = api,
@@ -155,6 +179,17 @@ class PrayerRepository {
   Future<void> selectMethod(String code) =>
       _database.writeState('prayer_method', <String, Object?>{'code': code});
 
+  Future<PrayerMethod?> selectedMethod() async {
+    final available = await methods();
+    final code = await selectedMethodCode();
+    return available.where((item) => item.code == code).firstOrNull;
+  }
+
+  Future<PrayerLocation?> storedLocation() async {
+    final value = await _database.readState('prayer_location');
+    return value == null ? null : PrayerLocation.fromJson(value);
+  }
+
   Future<PrayerSchedule?> cachedToday() async {
     final data = await _database.readState('prayer_schedule_today');
     if (data == null) return null;
@@ -193,36 +228,126 @@ class PrayerRepository {
       ),
     );
     final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final result = jsonMap(
-      await _api.post(
-        '/prayer/calculate',
-        public: true,
-        data: <String, Object?>{
-          'date': today,
-          'timezone': timezone,
-          'location': <String, Object?>{
-            'latitude': position.latitude.toStringAsFixed(6),
-            'longitude': position.longitude.toStringAsFixed(6),
-          },
-          'method_config_id': method.id,
-          'method_checksum_sha256': method.checksum,
-          'asr_method': 'standard',
-          'high_latitude_rule': method.highLatitudeRule,
-          'polar_resolution': method.polarResolution,
-          'adjustments': const <String, int>{
-            'fajr': 0,
-            'sunrise': 0,
-            'dhuhr': 0,
-            'asr': 0,
-            'maghrib': 0,
-            'isha': 0,
-          },
-        },
-      ),
+    final location = PrayerLocation(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      timezone: timezone,
     );
-    final schedule = PrayerSchedule.fromJson(result);
-    await _database.writeState('prayer_schedule_today', result);
+    await _database.writeState('prayer_location', location.toJson());
+    final schedule = await calculateForDate(
+      method: method,
+      location: location,
+      date: DateTime.now(),
+    );
+    await _saveProfile(method);
     return schedule;
+  }
+
+  Future<PrayerSchedule> calculateForDate({
+    required PrayerMethod method,
+    required PrayerLocation location,
+    required DateTime date,
+  }) async {
+    final dateValue = DateFormat('yyyy-MM-dd').format(date);
+    final cacheKey =
+        'prayer:schedule:$dateValue:${method.checksum}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
+    final cached = await _database.readCache(cacheKey);
+    Map<String, Object?> result;
+    if (cached?.isFresh == true) {
+      result = jsonMap(cached!.value);
+    } else {
+      try {
+        result = jsonMap(
+          await _api.post(
+            '/prayer/calculate',
+            public: true,
+            data: <String, Object?>{
+              'date': dateValue,
+              'timezone': location.timezone,
+              'location': <String, Object?>{
+                'latitude': location.latitude.toStringAsFixed(6),
+                'longitude': location.longitude.toStringAsFixed(6),
+              },
+              'method_config_id': method.id,
+              'method_checksum_sha256': method.checksum,
+              'asr_method': 'standard',
+              'high_latitude_rule': method.highLatitudeRule,
+              'polar_resolution': method.polarResolution,
+              'adjustments': const <String, int>{
+                'fajr': 0,
+                'sunrise': 0,
+                'dhuhr': 0,
+                'asr': 0,
+                'maghrib': 0,
+                'isha': 0,
+              },
+            },
+          ),
+        );
+        await _database.writeCache(
+          cacheKey,
+          result,
+          maxAge: const Duration(hours: 18),
+        );
+      } on Object {
+        if (cached == null) rethrow;
+        result = jsonMap(cached.value);
+      }
+    }
+    final schedule = PrayerSchedule.fromJson(result);
+    if (DateFormat('yyyy-MM-dd').format(DateTime.now()) == dateValue) {
+      await _database.writeState('prayer_schedule_today', result);
+    }
+    return schedule;
+  }
+
+  Future<List<PrayerSchedule>> calculateHorizon({int days = 8}) async {
+    final location = await storedLocation();
+    final method = await selectedMethod();
+    if (location == null || method == null) return const <PrayerSchedule>[];
+    final today = DateTime.now();
+    final schedules = <PrayerSchedule>[];
+    for (var offset = 0; offset < days; offset++) {
+      schedules.add(
+        await calculateForDate(
+          method: method,
+          location: location,
+          date: DateTime(today.year, today.month, today.day + offset),
+        ),
+      );
+    }
+    return schedules;
+  }
+
+  Future<void> _saveProfile(PrayerMethod method) async {
+    var revision = 0;
+    try {
+      final current = jsonMap(await _api.get('/me/prayer-profile'));
+      revision = (current['revision'] as num?)?.toInt() ?? 0;
+    } on ApiException catch (error) {
+      if (error.statusCode != 404 && !error.isOffline) rethrow;
+      if (error.isOffline) return;
+    }
+    await _api.put(
+      '/me/prayer-profile',
+      data: <String, Object?>{
+        'base_revision': revision,
+        'method_config_id': method.id,
+        'method_checksum_sha256': method.checksum,
+        'asr_method': 'standard',
+        'high_latitude_rule': method.highLatitudeRule,
+        'polar_resolution': method.polarResolution,
+        'adjustments': const <String, int>{
+          'fajr': 0,
+          'sunrise': 0,
+          'dhuhr': 0,
+          'asr': 0,
+          'maghrib': 0,
+          'isha': 0,
+        },
+        'timezone_mode': 'device_local',
+        'client_updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
   }
 }

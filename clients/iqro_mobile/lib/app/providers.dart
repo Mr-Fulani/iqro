@@ -4,21 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/audio/audio_controller.dart';
+import '../core/audio/audio_playback_store.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/auth/auth_session.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
+import '../core/notifications/notification_gateway.dart';
 import '../core/storage/local_database.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
 import '../features/audio/audio_repository.dart';
+import '../features/audio/reciter_catalog.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/quran/quran_models.dart';
 import '../features/quran/quran_repository.dart';
+import '../features/reminders/reminder_controller.dart';
+import '../features/reminders/reminder_models.dart';
+import '../features/reminders/reminder_repository.dart';
 import '../features/share/share_repository.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
@@ -45,6 +51,12 @@ final planRepositoryProvider = Provider<PlanRepository>(
 );
 final prayerRepositoryProvider = Provider<PrayerRepository>(
   (ref) => _missing('PrayerRepository'),
+);
+final reminderRepositoryProvider = Provider<ReminderRepository>(
+  (ref) => _missing('ReminderRepository'),
+);
+final notificationGatewayProvider = Provider<NotificationGateway>(
+  (ref) => _missing('NotificationGateway'),
 );
 final memorizationRepositoryProvider = Provider<MemorizationRepository>(
   (ref) => _missing('MemorizationRepository'),
@@ -95,6 +107,15 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
 
   Future<void> setMushafVariant(String variant) =>
       _set(state.copyWith(mushafVariant: variant));
+
+  Future<void> setPreferredTranslationSource(int sourceId) =>
+      _set(state.copyWith(preferredTranslationSourceId: sourceId));
+
+  Future<void> setPreferredTafsirSource(int sourceId) =>
+      _set(state.copyWith(preferredTafsirSourceId: sourceId));
+
+  Future<void> setPreferredRecitation(String recitationId) =>
+      _set(state.copyWith(preferredRecitationId: recitationId));
 }
 
 final appPreferencesProvider =
@@ -162,18 +183,26 @@ final readingPositionProvider = FutureProvider<ReadingPosition>((ref) {
 final ayahsProvider = FutureProvider.family<List<QuranAyah>, int>((ref, surah) {
   return ref.watch(quranRepositoryProvider).ayahs(surah);
 });
-final mushafPageProvider = FutureProvider.family<MushafPageData, int>((
-  ref,
-  page,
-) {
-  return ref.watch(quranRepositoryProvider).mushafPage(page);
+final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
+  return ref.watch(quranRepositoryProvider).juz();
 });
-final mushafVariantsProvider = FutureProvider<List<MushafVariant>>((ref) {
-  return ref.watch(quranRepositoryProvider).mushafVariants();
-});
+final mushafPageProvider = FutureProvider.autoDispose
+    .family<MushafPageData, int>((ref, page) {
+      return ref.watch(quranRepositoryProvider).mushafPage(page);
+    });
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });
+final recitationVariantsProvider =
+    FutureProvider.family<List<Recitation>, String>((ref, personKey) async {
+      final reciters = await ref.watch(recitersProvider.future);
+      final people = groupRecitersByPerson(reciters);
+      final person = people.where((item) => item.key == personKey).firstOrNull;
+      if (person == null) return const <Recitation>[];
+      return ref
+          .watch(audioRepositoryProvider)
+          .recitationsForReciters(person.sources.map((item) => item.id));
+    });
 final duaCategoriesProvider = FutureProvider<List<DuaCategory>>((ref) {
   final locale = ref.watch(
     appPreferencesProvider.select((value) => value.locale),
@@ -201,6 +230,16 @@ final prayerScheduleProvider = FutureProvider<PrayerSchedule?>((ref) {
 final prayerMethodsProvider = FutureProvider<List<PrayerMethod>>((ref) {
   return ref.watch(prayerRepositoryProvider).methods();
 });
+
+final reminderProvider =
+    StateNotifierProvider<ReminderController, ReminderState>((ref) {
+      return ReminderController(
+        repository: ref.watch(reminderRepositoryProvider),
+        notifications: ref.watch(notificationGatewayProvider),
+        prayerRepository: ref.watch(prayerRepositoryProvider),
+        locale: () => ref.read(appPreferencesProvider).locale,
+      );
+    });
 
 class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
   PlanController(this._repository, {required int? preferredTarget})
@@ -255,7 +294,10 @@ final memorizationProvider =
 
 final audioControllerProvider =
     StateNotifierProvider<AudioController, IqroAudioState>((ref) {
-      final controller = AudioController();
+      final controller = AudioController(
+        playbackStore: AudioPlaybackStore(ref.watch(localDatabaseProvider)),
+      );
+      unawaited(controller.restore());
       ref.onDispose(controller.dispose);
       return controller;
     });

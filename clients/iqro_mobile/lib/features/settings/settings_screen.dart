@@ -79,6 +79,13 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: <Widget>[
                   IqroListTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: context.l10n.reminders,
+                    subtitle: context.l10n.remindersSubtitle,
+                    onTap: () => context.push('/reminders'),
+                  ),
+                  const Divider(height: 1),
+                  IqroListTile(
                     icon: Icons.ios_share_outlined,
                     title: context.l10n.shareApp,
                     subtitle: context.l10n.shareBody,

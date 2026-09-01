@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 
 class QuranScreen extends ConsumerStatefulWidget {
@@ -29,19 +30,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   Widget build(BuildContext context) {
     final preferences = ref.watch(appPreferencesProvider);
     final catalog = ref.watch(quranCatalogProvider);
-    final mushafVariants = ref.watch(mushafVariantsProvider).valueOrNull;
-    final matchingMushafs = mushafVariants
-        ?.where(
-          (variant) => variant.preferenceValue == preferences.mushafVariant,
-        )
-        .toList(growable: false);
-    final selectedMushaf =
-        preferences.mushafVariant == defaultMushafVariant ||
-            matchingMushafs == null ||
-            matchingMushafs.isEmpty
-        ? null
-        : matchingMushafs.first;
     final position = ref.watch(readingPositionProvider).valueOrNull;
+    final playerActive = ref.watch(
+      audioControllerProvider.select((value) => value.active),
+    );
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navQuran,
@@ -57,7 +49,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       ),
       body: IqroPage(
         scrollable: false,
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 0),
+        padding: iqroRootTabPadding(playerActive: playerActive),
         child: Column(
           children: <Widget>[
             IqroCard(
@@ -102,25 +94,18 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              selectedMushaf?.name ??
-                                  context.l10n.mushafScanName,
+                              context.l10n.mushafScanName,
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              selectedMushaf == null
-                                  ? context.l10n.mushafScanDescription
-                                  : context.l10n.mushafCachedDescription,
+                              context.l10n.mushafScanDescription,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ),
                       ),
-                      Icon(
-                        selectedMushaf == null
-                            ? Icons.verified_outlined
-                            : Icons.offline_pin_outlined,
-                      ),
+                      Icon(Icons.verified_outlined),
                       const SizedBox(width: 4),
                       const Icon(Icons.chevron_right),
                     ],
@@ -235,6 +220,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                         child: IqroCard(
                           padding: EdgeInsets.zero,
                           child: ListView.separated(
+                            padding: EdgeInsets.zero,
                             itemCount: filtered.length,
                             separatorBuilder: (context, index) =>
                                 const Divider(height: 1),
@@ -273,13 +259,6 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   }
 
   Future<void> _showMushafPicker(BuildContext context) async {
-    List<MushafVariant> variants;
-    try {
-      variants = await ref.read(mushafVariantsProvider.future);
-    } on Object {
-      variants = const <MushafVariant>[];
-    }
-    if (!context.mounted) return;
     final current = ref.read(appPreferencesProvider).mushafVariant;
     await showModalBottomSheet<void>(
       context: context,
@@ -305,26 +284,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
               subtitle: Text(context.l10n.mushafScanDescription),
               secondary: const Icon(Icons.image_outlined),
             ),
-            for (final variant in variants.where(
-              (variant) => variant.supportedOnMobile,
-            ))
-              RadioListTile<String>(
-                value: variant.preferenceValue,
-                title: Text(variant.name),
-                subtitle: Text(
-                  '${variant.qiratName} · ${context.l10n.mushafCachedDescription}',
-                ),
-                secondary: Icon(
-                  variant.sourceId == 19
-                      ? Icons.palette_outlined
-                      : Icons.font_download_outlined,
-                ),
-              ),
-            if (!variants.any((variant) => variant.supportedOnMobile))
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(context.l10n.mushafUnavailable),
-              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(context.l10n.mushafUnavailable),
+            ),
           ],
         ),
       ),
@@ -338,17 +301,47 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   }
 
   Future<void> _showQuickJump(BuildContext context) async {
-    final catalog = await ref.read(quranRepositoryProvider).surahs();
-    if (!context.mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => _QuickJumpSheet(
-        surahs: catalog.surahs,
-        readerMode: ref.read(appPreferencesProvider).readerMode,
-      ),
-    );
+    try {
+      final repository = ref.read(quranRepositoryProvider);
+      final results = await Future.wait<Object>(<Future<Object>>[
+        repository.surahs(),
+        repository.juz(),
+      ]);
+      final catalog = results[0] as QuranCatalog;
+      final juz = results[1] as List<QuranDivision>;
+      if (!context.mounted) return;
+      final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) =>
+            QuranQuickJumpSheet(surahs: catalog.surahs, juz: juz),
+      );
+      if (selection == null || !context.mounted) return;
+      final readerMode = ref.read(appPreferencesProvider).readerMode;
+      if (selection.mode == QuranQuickJumpMode.ayah &&
+          readerMode == ReaderMode.text) {
+        context.push('/reader/${selection.surah}?ayah=${selection.ayah}');
+        return;
+      }
+      var page = selection.page;
+      if (selection.mode == QuranQuickJumpMode.ayah) {
+        final ayahs = await repository.ayahs(selection.surah);
+        final target = ayahs
+            .where((item) => item.number == selection.ayah)
+            .firstOrNull;
+        page = target?.pages.firstOrNull ?? page;
+      }
+      if (!context.mounted) return;
+      context.push(
+        '/mushaf?page=$page&surah=${selection.surah}&ayah=${selection.ayah}',
+      );
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    }
   }
 }
 
@@ -396,137 +389,6 @@ class _SurahRow extends StatelessWidget {
         ),
       ),
       onTap: onTap,
-    );
-  }
-}
-
-class _QuickJumpSheet extends StatefulWidget {
-  const _QuickJumpSheet({required this.surahs, required this.readerMode});
-  final List<Surah> surahs;
-  final ReaderMode readerMode;
-
-  @override
-  State<_QuickJumpSheet> createState() => _QuickJumpSheetState();
-}
-
-class _QuickJumpSheetState extends State<_QuickJumpSheet> {
-  var _mode = 0;
-  var _surah = 1;
-  var _ayah = 1;
-  var _number = 1;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        20,
-        12,
-        20,
-        20 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Center(
-            child: Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).dividerColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          IqroEyebrow(context.l10n.navigation),
-          Text(
-            context.l10n.quickJump,
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 18),
-          SegmentedButton<int>(
-            segments: <ButtonSegment<int>>[
-              ButtonSegment(value: 0, label: Text(context.l10n.ayah)),
-              ButtonSegment(value: 1, label: Text(context.l10n.juz)),
-              ButtonSegment(value: 2, label: Text(context.l10n.page)),
-            ],
-            selected: <int>{_mode},
-            onSelectionChanged: (value) => setState(() => _mode = value.first),
-            showSelectedIcon: false,
-          ),
-          const SizedBox(height: 18),
-          if (_mode == 0)
-            Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _surah,
-                    decoration: InputDecoration(labelText: context.l10n.surah),
-                    items: widget.surahs
-                        .map(
-                          (surah) => DropdownMenuItem(
-                            value: surah.number,
-                            child: Text(
-                              '${surah.number}. ${surah.nameFor(Localizations.localeOf(context).languageCode)}',
-                            ),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) => setState(() => _surah = value ?? 1),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: '1',
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: context.l10n.ayah),
-                    onChanged: (value) => _ayah = int.tryParse(value) ?? 1,
-                  ),
-                ),
-              ],
-            )
-          else
-            TextFormField(
-              initialValue: '1',
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: _mode == 1 ? context.l10n.juz : context.l10n.page,
-              ),
-              onChanged: (value) => _number = int.tryParse(value) ?? 1,
-            ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                if (_mode == 2) {
-                  context.push(
-                    '/mushaf?page=${_number.clamp(1, 604)}&surah=1&ayah=1',
-                  );
-                } else if (_mode == 1) {
-                  final page = ((_number.clamp(1, 30) - 1) * 20) + 1;
-                  context.push('/mushaf?page=$page&surah=1&ayah=1');
-                } else if (widget.readerMode == ReaderMode.mushaf) {
-                  final surah = widget.surahs
-                      .where((item) => item.number == _surah)
-                      .firstOrNull;
-                  context.push(
-                    '/mushaf?page=${surah?.firstPage ?? 1}&surah=$_surah&ayah=$_ayah',
-                  );
-                } else {
-                  context.push('/reader/$_surah?ayah=$_ayah');
-                }
-              },
-              icon: const Icon(Icons.arrow_forward),
-              label: Text(context.l10n.open),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

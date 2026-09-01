@@ -15,7 +15,8 @@ from quran_backend.modules.core.object_storage import (
     configured_object_uploader,
 )
 
-MAX_RECITER_PORTRAIT_BYTES = 2 * 1024 * 1024
+MAX_RECITER_PORTRAIT_MIB = 50
+MAX_RECITER_PORTRAIT_BYTES = MAX_RECITER_PORTRAIT_MIB * 1024 * 1024
 
 
 class ReciterPortraitUploadError(ValueError):
@@ -47,7 +48,9 @@ def upload_reciter_portrait(
         for chunk in uploaded.chunks():
             size_bytes += len(chunk)
             if size_bytes > MAX_RECITER_PORTRAIT_BYTES:
-                raise ReciterPortraitUploadError("Портрет должен быть не больше 2 МБ.")
+                raise ReciterPortraitUploadError(
+                    f"Портрет должен быть не больше {MAX_RECITER_PORTRAIT_MIB} МБ."
+                )
             if len(header) < 16:
                 header.extend(chunk[: 16 - len(header)])
             digest.update(chunk)
