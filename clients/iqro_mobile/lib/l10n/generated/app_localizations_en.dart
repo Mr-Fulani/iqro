@@ -577,6 +577,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resumeDownload => 'Resume';
 
   @override
+  String get offlineAudio => 'Offline audio';
+
+  @override
+  String get offlineAudioDescription =>
+      'Download all 114 surahs for this recitation. Every file is verified before activation.';
+
+  @override
+  String get audioDownloading => 'Downloading audio';
+
+  @override
+  String get audioAvailableOffline => 'Audio available offline';
+
+  @override
+  String get audioDownloadFailed =>
+      'The audio download stopped. You can resume from the saved point.';
+
+  @override
+  String get audioOfflineUnavailable =>
+      'This recording is not licensed for offline download.';
+
+  @override
   String get moreTools => 'Practice and tools';
 
   @override

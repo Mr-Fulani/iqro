@@ -576,6 +576,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get resumeDownload => 'Продолжить';
 
   @override
+  String get offlineAudio => 'Аудио без интернета';
+
+  @override
+  String get offlineAudioDescription =>
+      'Скачайте все 114 сур выбранного чтения. Каждый файл проверяется перед включением.';
+
+  @override
+  String get audioDownloading => 'Скачиваем аудио';
+
+  @override
+  String get audioAvailableOffline => 'Аудио доступно без интернета';
+
+  @override
+  String get audioDownloadFailed =>
+      'Загрузка аудио прервана. Можно продолжить с сохранённого места.';
+
+  @override
+  String get audioOfflineUnavailable =>
+      'Для этой записи право на офлайн-загрузку не предоставлено.';
+
+  @override
   String get moreTools => 'Практика и инструменты';
 
   @override

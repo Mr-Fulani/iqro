@@ -1206,6 +1206,42 @@ abstract class AppLocalizations {
   /// **'Resume'**
   String get resumeDownload;
 
+  /// No description provided for @offlineAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline audio'**
+  String get offlineAudio;
+
+  /// No description provided for @offlineAudioDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all 114 surahs for this recitation. Every file is verified before activation.'**
+  String get offlineAudioDescription;
+
+  /// No description provided for @audioDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading audio'**
+  String get audioDownloading;
+
+  /// No description provided for @audioAvailableOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio available offline'**
+  String get audioAvailableOffline;
+
+  /// No description provided for @audioDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The audio download stopped. You can resume from the saved point.'**
+  String get audioDownloadFailed;
+
+  /// No description provided for @audioOfflineUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This recording is not licensed for offline download.'**
+  String get audioOfflineUnavailable;
+
   /// No description provided for @moreTools.
   ///
   /// In en, this message translates to:

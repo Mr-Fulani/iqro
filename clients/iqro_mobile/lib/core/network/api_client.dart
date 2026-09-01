@@ -117,6 +117,7 @@ class ApiClient {
     File destination, {
     required Set<String> allowedHosts,
     required int expectedBytes,
+    String? expectedEtag,
     int maxBytes = 8 * 1024 * 1024,
     void Function(int received, int total)? onProgress,
   }) async {
@@ -149,7 +150,10 @@ class ApiClient {
           extra: const <String, Object?>{'public': true},
           headers: offset == 0
               ? null
-              : <String, Object?>{'Range': 'bytes=$offset-'},
+              : <String, Object?>{
+                  'Range': 'bytes=$offset-',
+                  'If-Range': ?expectedEtag,
+                },
           followRedirects: false,
           validateStatus: (status) => status == 200 || status == 206,
         ),

@@ -2,14 +2,20 @@ import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'audio_models.dart';
+import 'audio_offline_repository.dart';
 
 class AudioRepository {
-  AudioRepository({required ApiClient api, required LocalDatabase database})
-    : _api = api,
-      _database = database;
+  AudioRepository({
+    required ApiClient api,
+    required LocalDatabase database,
+    required AudioOfflineRepository offline,
+  }) : _api = api,
+       _database = database,
+       _offline = offline;
 
   final ApiClient _api;
   final LocalDatabase _database;
+  final AudioOfflineRepository _offline;
   final Map<String, List<Recitation>> _recitationMemory = {};
   final Map<String, SurahPlayback> _playbackMemory = {};
 
@@ -121,6 +127,11 @@ class AudioRepository {
     required int surah,
     bool forceRefresh = false,
   }) async {
+    final offline = await _offline.activePlayback(
+      recitationId: recitationId,
+      surah: surah,
+    );
+    if (offline != null) return offline;
     final key = 'audio:playback:$recitationId:surah:$surah';
     if (!forceRefresh) {
       final memory = _playbackMemory.remove(key);

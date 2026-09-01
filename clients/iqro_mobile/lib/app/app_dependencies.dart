@@ -9,6 +9,7 @@ import '../core/storage/local_database.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_repository.dart';
+import '../features/audio/audio_offline_repository.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
@@ -29,6 +30,7 @@ class AppDependencies {
     required this.quran,
     required this.offlineMushaf,
     required this.audio,
+    required this.offlineAudio,
     required this.plan,
     required this.prayer,
     required this.reminders,
@@ -47,6 +49,7 @@ class AppDependencies {
   final QuranRepository quran;
   final MushafOfflineRepository offlineMushaf;
   final AudioRepository audio;
+  final AudioOfflineRepository offlineAudio;
   final PlanRepository plan;
   final PrayerRepository prayer;
   final ReminderRepository reminders;
@@ -72,6 +75,7 @@ class AppDependencies {
     final notifications = NotificationGateway(database: database);
     await notifications.initialize();
     final offlineMushaf = MushafOfflineRepository(api: api, database: database);
+    final offlineAudio = AudioOfflineRepository(api: api, database: database);
     return AppDependencies._(
       config: config,
       preferences: preferences,
@@ -80,7 +84,12 @@ class AppDependencies {
       api: api,
       quran: QuranRepository(api: api, database: database),
       offlineMushaf: offlineMushaf,
-      audio: AudioRepository(api: api, database: database),
+      audio: AudioRepository(
+        api: api,
+        database: database,
+        offline: offlineAudio,
+      ),
+      offlineAudio: offlineAudio,
       plan: PlanRepository(database),
       prayer: prayer,
       reminders: reminders,
@@ -106,6 +115,7 @@ class AppDependencies {
     quranRepositoryProvider.overrideWithValue(quran),
     mushafOfflineRepositoryProvider.overrideWithValue(offlineMushaf),
     audioRepositoryProvider.overrideWithValue(audio),
+    audioOfflineRepositoryProvider.overrideWithValue(offlineAudio),
     planRepositoryProvider.overrideWithValue(plan),
     prayerRepositoryProvider.overrideWithValue(prayer),
     reminderRepositoryProvider.overrideWithValue(reminders),

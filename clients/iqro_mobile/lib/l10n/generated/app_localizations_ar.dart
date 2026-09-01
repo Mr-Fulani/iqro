@@ -574,6 +574,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get resumeDownload => 'متابعة';
 
   @override
+  String get offlineAudio => 'الصوت دون إنترنت';
+
+  @override
+  String get offlineAudioDescription =>
+      'نزّل السور الـ114 لهذه التلاوة. يُفحص كل ملف قبل تفعيله.';
+
+  @override
+  String get audioDownloading => 'جارٍ تنزيل الصوت';
+
+  @override
+  String get audioAvailableOffline => 'الصوت متاح دون إنترنت';
+
+  @override
+  String get audioDownloadFailed =>
+      'توقف تنزيل الصوت. يمكنك المتابعة من الموضع المحفوظ.';
+
+  @override
+  String get audioOfflineUnavailable =>
+      'هذه التلاوة غير مرخّصة للتنزيل دون إنترنت.';
+
+  @override
   String get moreTools => 'التدريب والأدوات';
 
   @override

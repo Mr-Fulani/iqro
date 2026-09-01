@@ -14,6 +14,7 @@ import '../core/storage/local_database.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
+import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/reciter_catalog.dart';
 import '../features/dua/dua_repository.dart';
@@ -49,6 +50,9 @@ final mushafOfflineRepositoryProvider = Provider<MushafOfflineRepository>(
 );
 final audioRepositoryProvider = Provider<AudioRepository>(
   (ref) => _missing('AudioRepository'),
+);
+final audioOfflineRepositoryProvider = Provider<AudioOfflineRepository>(
+  (ref) => _missing('AudioOfflineRepository'),
 );
 final planRepositoryProvider = Provider<PlanRepository>(
   (ref) => _missing('PlanRepository'),
@@ -265,6 +269,67 @@ final recitationVariantsProvider =
       return ref
           .watch(audioRepositoryProvider)
           .recitationsForReciters(person.sources.map((item) => item.id));
+    });
+
+class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
+  AudioDownloadController(this._repository, this._recitationId)
+    : super(AudioDownloadSnapshot.empty(_recitationId)) {
+    unawaited(initialize());
+  }
+
+  final AudioOfflineRepository _repository;
+  final String _recitationId;
+
+  Future<void> initialize() async {
+    state = await _repository.snapshot(_recitationId);
+  }
+
+  Future<void> download({String? quality}) async {
+    if (state.status == AudioDownloadStatus.downloading) return;
+    final requestedQuality =
+        quality ?? (state.quality == 'default' ? null : state.quality);
+    state = AudioDownloadSnapshot(
+      status: AudioDownloadStatus.downloading,
+      recitationId: _recitationId,
+      packageId: state.packageId,
+      quality: requestedQuality ?? state.quality,
+      completedTracks: state.completedTracks,
+      totalTracks: state.totalTracks,
+      downloadedBytes: state.downloadedBytes,
+      totalBytes: state.totalBytes,
+    );
+    try {
+      state = await _repository.install(
+        recitationId: _recitationId,
+        quality: requestedQuality,
+        onProgress: (progress) => state = progress,
+      );
+    } on Object catch (error) {
+      final persisted = await _repository.snapshot(_recitationId);
+      state = AudioDownloadSnapshot(
+        status: AudioDownloadStatus.failed,
+        recitationId: _recitationId,
+        packageId: persisted.packageId,
+        quality: persisted.quality,
+        completedTracks: persisted.completedTracks,
+        totalTracks: persisted.totalTracks,
+        downloadedBytes: persisted.downloadedBytes,
+        totalBytes: persisted.totalBytes,
+        error: error.toString(),
+      );
+    }
+  }
+}
+
+final audioDownloadProvider = StateNotifierProvider.autoDispose
+    .family<AudioDownloadController, AudioDownloadSnapshot, String>((
+      ref,
+      recitationId,
+    ) {
+      return AudioDownloadController(
+        ref.watch(audioOfflineRepositoryProvider),
+        recitationId,
+      );
     });
 final duaCategoriesProvider = FutureProvider<List<DuaCategory>>((ref) {
   final locale = ref.watch(

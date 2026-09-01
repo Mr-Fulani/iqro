@@ -578,6 +578,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get resumeDownload => 'Devam et';
 
   @override
+  String get offlineAudio => 'Çevrimdışı ses';
+
+  @override
+  String get offlineAudioDescription =>
+      'Bu kıraatin 114 sûresinin tamamını indirin. Her dosya etkinleştirilmeden önce doğrulanır.';
+
+  @override
+  String get audioDownloading => 'Ses indiriliyor';
+
+  @override
+  String get audioAvailableOffline => 'Ses çevrimdışı kullanılabilir';
+
+  @override
+  String get audioDownloadFailed =>
+      'Ses indirme durdu. Kaydedilen yerden devam edebilirsiniz.';
+
+  @override
+  String get audioOfflineUnavailable =>
+      'Bu kayıt çevrimdışı indirme için lisanslı değil.';
+
+  @override
   String get moreTools => 'Pratik ve araçlar';
 
   @override

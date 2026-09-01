@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'audio_models.dart';
+import 'audio_offline_repository.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 
@@ -135,19 +136,35 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   (item) => item.key == _selected,
                   orElse: () => people.first,
                 );
-                final variants = selectedPerson.sources.length > 1
-                    ? ref.watch(recitationVariantsProvider(selectedPerson.key))
-                    : null;
+                final variants = ref.watch(
+                  recitationVariantsProvider(selectedPerson.key),
+                );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     if (selectedPerson.sources.length > 1) ...<Widget>[
                       _buildStyleSelector(
-                        variants!,
+                        variants,
                         preferredRecitationId: preferredRecitationId,
                       ),
                       const SizedBox(height: 12),
                     ],
+                    variants.when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (error, stack) => const SizedBox.shrink(),
+                      data: (items) {
+                        final selected = preferredRecitation(
+                          items,
+                          preferredId:
+                              _selectedRecitationId ?? preferredRecitationId,
+                        );
+                        if (selected == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _OfflineAudioCard(recitation: selected),
+                        );
+                      },
+                    ),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final preferredColumns = switch (constraints.maxWidth) {
@@ -396,6 +413,105 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       if (mounted) setState(() => _loadingTrack = false);
     }
   }
+}
+
+class _OfflineAudioCard extends ConsumerWidget {
+  const _OfflineAudioCard({required this.recitation});
+
+  final Recitation recitation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!recitation.offlineDownloadAllowed) {
+      return IqroCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            const Icon(Icons.cloud_off_outlined),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                context.l10n.audioOfflineUnavailable,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final state = ref.watch(audioDownloadProvider(recitation.id));
+    final downloading = state.status == AudioDownloadStatus.downloading;
+    final ready = state.status == AudioDownloadStatus.ready;
+    final failed = state.status == AudioDownloadStatus.failed;
+    final progressLabel = state.totalTracks <= 0
+        ? null
+        : '${state.completedTracks} / ${state.totalTracks} · '
+              '${_formatAudioMegabytes(state.downloadedBytes)} / '
+              '${_formatAudioMegabytes(state.totalBytes)}';
+    return IqroCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                ready ? Icons.offline_pin_outlined : Icons.download_outlined,
+                color: ready ? Theme.of(context).colorScheme.primary : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  ready
+                      ? context.l10n.audioAvailableOffline
+                      : downloading
+                      ? context.l10n.audioDownloading
+                      : context.l10n.offlineAudio,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              if (!ready)
+                IconButton.filledTonal(
+                  tooltip: failed
+                      ? context.l10n.resumeDownload
+                      : context.l10n.downloadForOffline,
+                  onPressed: downloading
+                      ? null
+                      : () => ref
+                            .read(audioDownloadProvider(recitation.id).notifier)
+                            .download(),
+                  icon: Icon(
+                    failed ? Icons.refresh_rounded : Icons.download_rounded,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            failed
+                ? context.l10n.audioDownloadFailed
+                : context.l10n.offlineAudioDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (downloading) ...<Widget>[
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: state.totalBytes > 0 ? state.progress : null,
+            ),
+          ],
+          if (progressLabel != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _formatAudioMegabytes(int bytes) {
+  final value = bytes / (1024 * 1024);
+  return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
 }
 
 String _styleLabel(BuildContext context, String style) => switch (style) {
