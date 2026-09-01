@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
+import 'mushaf_offline_repository.dart';
 import 'quran_models.dart';
 
 class QuranRepository {
@@ -241,6 +242,8 @@ class QuranRepository {
     MushafPageData page,
     MushafAsset asset,
   ) async {
+    final offline = await _activeOfflineMushafPage(page, asset);
+    if (offline != null) return offline;
     final supportDirectory = await getApplicationSupportDirectory();
     final safeVersion = page.contentVersion.replaceAll(
       RegExp('[^a-zA-Z0-9._-]'),
@@ -277,6 +280,43 @@ class QuranRepository {
         _pageAssetDownloads.remove(file.path);
       }
     }
+  }
+
+  Future<File?> _activeOfflineMushafPage(
+    MushafPageData page,
+    MushafAsset asset,
+  ) async {
+    final rows = await _database.database.rawQuery(
+      '''
+      SELECT item.local_path, item.file_name, item.size_bytes,
+             item.checksum_sha256
+      FROM offline_package_items AS item
+      INNER JOIN offline_packages AS package
+        ON package.package_id = item.package_id
+      WHERE package.content_key = ?
+        AND package.is_active = 1
+        AND package.status = 'ready'
+        AND item.item_number = ?
+        AND item.status = 'ready'
+        AND item.checksum_sha256 = ?
+      LIMIT 1
+      ''',
+      <Object?>['quran-edition:$edition', page.number, asset.sha256],
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.single;
+    final file = File(row['local_path']! as String);
+    final offlinePage = OfflineMushafPage(
+      number: page.number,
+      url: Uri.parse(asset.url),
+      fileName: row['file_name']! as String,
+      width: asset.width,
+      height: asset.height ?? page.imageHeight,
+      bytes: row['size_bytes']! as int,
+      sha256: row['checksum_sha256']! as String,
+      metadata: const <String, Object?>{},
+    );
+    return await verifyMushafAssetFile(file, offlinePage) ? file : null;
   }
 
   Future<File> _downloadMushafPageAsset(

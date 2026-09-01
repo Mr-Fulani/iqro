@@ -21,6 +21,7 @@ import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/quran/quran_models.dart';
+import '../features/quran/mushaf_offline_repository.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
@@ -42,6 +43,9 @@ final authRepositoryProvider = Provider<AuthRepository>(
 final apiClientProvider = Provider<ApiClient>((ref) => _missing('ApiClient'));
 final quranRepositoryProvider = Provider<QuranRepository>(
   (ref) => _missing('QuranRepository'),
+);
+final mushafOfflineRepositoryProvider = Provider<MushafOfflineRepository>(
+  (ref) => _missing('MushafOfflineRepository'),
 );
 final audioRepositoryProvider = Provider<AudioRepository>(
   (ref) => _missing('AudioRepository'),
@@ -189,6 +193,65 @@ final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
 final mushafPageProvider = FutureProvider.autoDispose
     .family<MushafPageData, int>((ref, page) {
       return ref.watch(quranRepositoryProvider).mushafPage(page);
+    });
+
+class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
+  MushafDownloadController(this._repository)
+    : super(const MushafDownloadSnapshot.empty()) {
+    unawaited(initialize());
+  }
+
+  final MushafOfflineRepository _repository;
+
+  Future<void> initialize() async {
+    state = await _repository.snapshot();
+  }
+
+  Future<void> download({int? width}) async {
+    if (state.status == MushafDownloadStatus.downloading) return;
+    state = MushafDownloadSnapshot(
+      status: MushafDownloadStatus.downloading,
+      packageId: state.packageId,
+      completedPages: state.completedPages,
+      totalPages: state.totalPages,
+      downloadedBytes: state.downloadedBytes,
+      totalBytes: state.totalBytes,
+    );
+    try {
+      state = await _repository.install(
+        width: width,
+        onProgress: (progress) => state = progress,
+      );
+      for (var page = 1; page <= state.totalPages; page += 1) {
+        refInvalidateMushafPage?.call(page);
+      }
+    } on Object catch (error) {
+      final persisted = await _repository.snapshot();
+      state = MushafDownloadSnapshot(
+        status: MushafDownloadStatus.failed,
+        packageId: persisted.packageId,
+        completedPages: persisted.completedPages,
+        totalPages: persisted.totalPages,
+        downloadedBytes: persisted.downloadedBytes,
+        totalBytes: persisted.totalBytes,
+        error: error.toString(),
+      );
+    }
+  }
+
+  void Function(int page)? refInvalidateMushafPage;
+}
+
+final mushafDownloadProvider =
+    StateNotifierProvider<MushafDownloadController, MushafDownloadSnapshot>((
+      ref,
+    ) {
+      final controller = MushafDownloadController(
+        ref.watch(mushafOfflineRepositoryProvider),
+      );
+      controller.refInvalidateMushafPage = (page) =>
+          ref.invalidate(mushafPageProvider(page));
+      return controller;
     });
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();

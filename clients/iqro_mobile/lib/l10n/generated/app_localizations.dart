@@ -1164,6 +1164,48 @@ abstract class AppLocalizations {
   /// **'Offline'**
   String get offline;
 
+  /// No description provided for @offlineMushaf.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Mushaf'**
+  String get offlineMushaf;
+
+  /// No description provided for @offlineMushafDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Download every page and ayah map. Files are verified before activation.'**
+  String get offlineMushafDescription;
+
+  /// No description provided for @downloadForOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get downloadForOffline;
+
+  /// No description provided for @mushafDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading Mushaf'**
+  String get mushafDownloading;
+
+  /// No description provided for @mushafAvailableOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Available offline'**
+  String get mushafAvailableOffline;
+
+  /// No description provided for @mushafDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The download stopped. You can resume from the saved point.'**
+  String get mushafDownloadFailed;
+
+  /// No description provided for @resumeDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resumeDownload;
+
   /// No description provided for @moreTools.
   ///
   /// In en, this message translates to:

@@ -554,6 +554,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offline => 'Offline';
 
   @override
+  String get offlineMushaf => 'Offline Mushaf';
+
+  @override
+  String get offlineMushafDescription =>
+      'Download every page and ayah map. Files are verified before activation.';
+
+  @override
+  String get downloadForOffline => 'Download';
+
+  @override
+  String get mushafDownloading => 'Downloading Mushaf';
+
+  @override
+  String get mushafAvailableOffline => 'Available offline';
+
+  @override
+  String get mushafDownloadFailed =>
+      'The download stopped. You can resume from the saved point.';
+
+  @override
+  String get resumeDownload => 'Resume';
+
+  @override
   String get moreTools => 'Practice and tools';
 
   @override

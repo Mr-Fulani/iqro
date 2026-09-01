@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -106,6 +107,82 @@ class ApiClient {
         throw const FormatException('Public asset size is invalid');
       }
       return Uint8List.fromList(bytes);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<int> downloadPublicFile(
+    Uri uri,
+    File destination, {
+    required Set<String> allowedHosts,
+    required int expectedBytes,
+    int maxBytes = 8 * 1024 * 1024,
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (uri.scheme != 'https' || !allowedHosts.contains(uri.host)) {
+      throw ArgumentError.value(uri, 'uri', 'Unapproved public asset origin');
+    }
+    if (expectedBytes <= 0 || expectedBytes > maxBytes) {
+      throw ArgumentError.value(
+        expectedBytes,
+        'expectedBytes',
+        'Public asset size is invalid',
+      );
+    }
+    await destination.parent.create(recursive: true);
+    var offset = await destination.exists() ? await destination.length() : 0;
+    if (offset > expectedBytes) {
+      await destination.writeAsBytes(const <int>[], flush: true);
+      offset = 0;
+    }
+    if (offset == expectedBytes) {
+      onProgress?.call(offset, expectedBytes);
+      return offset;
+    }
+
+    try {
+      final response = await dio.getUri<ResponseBody>(
+        uri,
+        options: Options(
+          responseType: ResponseType.stream,
+          extra: const <String, Object?>{'public': true},
+          headers: offset == 0
+              ? null
+              : <String, Object?>{'Range': 'bytes=$offset-'},
+          followRedirects: false,
+          validateStatus: (status) => status == 200 || status == 206,
+        ),
+      );
+      final body = response.data;
+      if (body == null) throw const FormatException('Empty public asset');
+      final resumed = offset > 0 && response.statusCode == 206;
+      if (offset > 0 && !resumed) {
+        offset = 0;
+      }
+      final sink = destination.openWrite(
+        mode: resumed ? FileMode.append : FileMode.write,
+      );
+      var received = offset;
+      try {
+        await for (final chunk in body.stream) {
+          received += chunk.length;
+          if (received > expectedBytes || received > maxBytes) {
+            throw const FormatException('Public asset exceeds declared size');
+          }
+          sink.add(chunk);
+          onProgress?.call(received, expectedBytes);
+        }
+      } finally {
+        await sink.flush();
+        await sink.close();
+      }
+      if (received != expectedBytes) {
+        throw const FormatException(
+          'Public asset size does not match manifest',
+        );
+      }
+      return received;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }

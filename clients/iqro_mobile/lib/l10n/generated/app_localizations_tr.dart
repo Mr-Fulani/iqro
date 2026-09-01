@@ -555,6 +555,29 @@ class AppLocalizationsTr extends AppLocalizations {
   String get offline => 'Çevrimdışı';
 
   @override
+  String get offlineMushaf => 'Çevrimdışı Mushaf';
+
+  @override
+  String get offlineMushafDescription =>
+      'Tüm sayfaları ve ayet haritasını indirin. Dosyalar etkinleştirilmeden önce doğrulanır.';
+
+  @override
+  String get downloadForOffline => 'İndir';
+
+  @override
+  String get mushafDownloading => 'Mushaf indiriliyor';
+
+  @override
+  String get mushafAvailableOffline => 'Çevrimdışı kullanılabilir';
+
+  @override
+  String get mushafDownloadFailed =>
+      'İndirme durdu. Kaydedilen yerden devam edebilirsiniz.';
+
+  @override
+  String get resumeDownload => 'Devam et';
+
+  @override
   String get moreTools => 'Pratik ve araçlar';
 
   @override

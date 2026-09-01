@@ -551,6 +551,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get offline => 'غير متصل';
 
   @override
+  String get offlineMushaf => 'المصحف دون إنترنت';
+
+  @override
+  String get offlineMushafDescription =>
+      'نزّل جميع الصفحات وخريطة الآيات. تُفحص الملفات قبل تفعيلها.';
+
+  @override
+  String get downloadForOffline => 'تنزيل';
+
+  @override
+  String get mushafDownloading => 'جارٍ تنزيل المصحف';
+
+  @override
+  String get mushafAvailableOffline => 'متاح دون إنترنت';
+
+  @override
+  String get mushafDownloadFailed =>
+      'توقف التنزيل. يمكنك المتابعة من الموضع المحفوظ.';
+
+  @override
+  String get resumeDownload => 'متابعة';
+
+  @override
   String get moreTools => 'التدريب والأدوات';
 
   @override

@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'mushaf_offline_repository.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 
@@ -105,7 +106,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                           ],
                         ),
                       ),
-                      Icon(Icons.verified_outlined),
+                      const _MushafOfflineIndicator(),
                       const SizedBox(width: 4),
                       const Icon(Icons.chevron_right),
                     ],
@@ -284,8 +285,11 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
               subtitle: Text(context.l10n.mushafScanDescription),
               secondary: const Icon(Icons.image_outlined),
             ),
+            const Divider(height: 28),
+            const _OfflineMushafCard(),
+            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(context.l10n.mushafUnavailable),
             ),
           ],
@@ -343,6 +347,111 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
     }
   }
+}
+
+class _MushafOfflineIndicator extends ConsumerWidget {
+  const _MushafOfflineIndicator();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(
+      mushafDownloadProvider.select((value) => value.status),
+    );
+    return Icon(
+      switch (status) {
+        MushafDownloadStatus.ready => Icons.offline_pin_outlined,
+        MushafDownloadStatus.downloading => Icons.downloading_outlined,
+        MushafDownloadStatus.failed => Icons.cloud_off_outlined,
+        MushafDownloadStatus.notDownloaded => Icons.cloud_download_outlined,
+      },
+      color: status == MushafDownloadStatus.ready
+          ? Theme.of(context).colorScheme.primary
+          : null,
+    );
+  }
+}
+
+class _OfflineMushafCard extends ConsumerWidget {
+  const _OfflineMushafCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(mushafDownloadProvider);
+    final downloading = state.status == MushafDownloadStatus.downloading;
+    final ready = state.status == MushafDownloadStatus.ready;
+    final failed = state.status == MushafDownloadStatus.failed;
+    final progressLabel = state.totalPages <= 0
+        ? null
+        : '${state.completedPages} / ${state.totalPages} · '
+              '${_formatMegabytes(state.downloadedBytes)} / '
+              '${_formatMegabytes(state.totalBytes)}';
+    return IqroCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                ready ? Icons.offline_pin_outlined : Icons.download_outlined,
+                color: ready ? Theme.of(context).colorScheme.primary : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  ready
+                      ? context.l10n.mushafAvailableOffline
+                      : downloading
+                      ? context.l10n.mushafDownloading
+                      : context.l10n.offlineMushaf,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            failed
+                ? context.l10n.mushafDownloadFailed
+                : context.l10n.offlineMushafDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (downloading) ...<Widget>[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: state.totalBytes > 0 ? state.progress : null,
+            ),
+          ],
+          if (progressLabel != null) ...<Widget>[
+            const SizedBox(height: 7),
+            Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+          ],
+          if (!ready) ...<Widget>[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: downloading
+                    ? null
+                    : () =>
+                          ref.read(mushafDownloadProvider.notifier).download(),
+                icon: Icon(failed ? Icons.refresh : Icons.download_outlined),
+                label: Text(
+                  failed
+                      ? context.l10n.resumeDownload
+                      : context.l10n.downloadForOffline,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _formatMegabytes(int bytes) {
+  final value = bytes / (1024 * 1024);
+  return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
 }
 
 class _SurahRow extends StatelessWidget {

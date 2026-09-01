@@ -553,6 +553,29 @@ class AppLocalizationsRu extends AppLocalizations {
   String get offline => 'Нет сети';
 
   @override
+  String get offlineMushaf => 'Мусхаф без интернета';
+
+  @override
+  String get offlineMushafDescription =>
+      'Скачайте все страницы и карту аятов. Файлы проверяются перед включением.';
+
+  @override
+  String get downloadForOffline => 'Скачать';
+
+  @override
+  String get mushafDownloading => 'Скачиваем Мусхаф';
+
+  @override
+  String get mushafAvailableOffline => 'Доступен без интернета';
+
+  @override
+  String get mushafDownloadFailed =>
+      'Загрузка прервана. Можно продолжить с сохранённого места.';
+
+  @override
+  String get resumeDownload => 'Продолжить';
+
+  @override
   String get moreTools => 'Практика и инструменты';
 
   @override

@@ -23,7 +23,7 @@ class CachedValue {
 class LocalDatabase {
   LocalDatabase._(this.database);
 
-  static const schemaVersion = 2;
+  static const schemaVersion = 3;
   final Database database;
 
   static Future<LocalDatabase> open() async {
@@ -96,9 +96,11 @@ class LocalDatabase {
           )
         ''');
         await _createReminderTable(db);
+        await _createOfflinePackageTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) await _createReminderTable(db);
+        if (oldVersion < 3) await _createOfflinePackageTables(db);
       },
     );
     return LocalDatabase._(database);
@@ -298,6 +300,55 @@ class LocalDatabase {
         is_deleted INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL
       )
+    ''');
+  }
+
+  static Future<void> _createOfflinePackageTables(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS offline_packages (
+        package_id TEXT PRIMARY KEY,
+        package_type TEXT NOT NULL,
+        content_key TEXT NOT NULL,
+        version TEXT NOT NULL,
+        width INTEGER,
+        checksum_sha256 TEXT NOT NULL,
+        manifest TEXT NOT NULL,
+        status TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        total_items INTEGER NOT NULL,
+        completed_items INTEGER NOT NULL DEFAULT 0,
+        total_bytes INTEGER NOT NULL,
+        downloaded_bytes INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS offline_packages_content_idx
+      ON offline_packages(content_key, is_active, updated_at)
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS offline_package_items (
+        package_id TEXT NOT NULL,
+        item_key TEXT NOT NULL,
+        item_number INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        local_path TEXT NOT NULL,
+        url TEXT NOT NULL,
+        checksum_sha256 TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        metadata TEXT NOT NULL,
+        status TEXT NOT NULL,
+        downloaded_bytes INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (package_id, item_key),
+        FOREIGN KEY (package_id) REFERENCES offline_packages(package_id)
+          ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS offline_package_items_page_idx
+      ON offline_package_items(package_id, item_number)
     ''');
   }
 }

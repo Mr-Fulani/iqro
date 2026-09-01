@@ -14,6 +14,7 @@ import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/quran/quran_repository.dart';
+import '../features/quran/mushaf_offline_repository.dart';
 import '../features/reminders/reminder_repository.dart';
 import '../features/share/share_repository.dart';
 import 'providers.dart';
@@ -26,6 +27,7 @@ class AppDependencies {
     required this.auth,
     required this.api,
     required this.quran,
+    required this.offlineMushaf,
     required this.audio,
     required this.plan,
     required this.prayer,
@@ -43,6 +45,7 @@ class AppDependencies {
   final AuthRepository auth;
   final ApiClient api;
   final QuranRepository quran;
+  final MushafOfflineRepository offlineMushaf;
   final AudioRepository audio;
   final PlanRepository plan;
   final PrayerRepository prayer;
@@ -68,6 +71,7 @@ class AppDependencies {
     final reminders = ReminderRepository(api: api, database: database);
     final notifications = NotificationGateway(database: database);
     await notifications.initialize();
+    final offlineMushaf = MushafOfflineRepository(api: api, database: database);
     return AppDependencies._(
       config: config,
       preferences: preferences,
@@ -75,6 +79,7 @@ class AppDependencies {
       auth: auth,
       api: api,
       quran: QuranRepository(api: api, database: database),
+      offlineMushaf: offlineMushaf,
       audio: AudioRepository(api: api, database: database),
       plan: PlanRepository(database),
       prayer: prayer,
@@ -99,6 +104,7 @@ class AppDependencies {
     authRepositoryProvider.overrideWithValue(auth),
     apiClientProvider.overrideWithValue(api),
     quranRepositoryProvider.overrideWithValue(quran),
+    mushafOfflineRepositoryProvider.overrideWithValue(offlineMushaf),
     audioRepositoryProvider.overrideWithValue(audio),
     planRepositoryProvider.overrideWithValue(plan),
     prayerRepositoryProvider.overrideWithValue(prayer),

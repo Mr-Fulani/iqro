@@ -51,15 +51,19 @@ Screen → Riverpod controller/provider → Feature repository
 
 | Данные | Чтение offline | Запись offline | Синхронизация |
 |---|---|---|---|
-| Каталог сур, аяты, страницы Мусхафа | cache-first/fallback | — | ETag/обновление из API |
+| Каталог сур и аяты | cache-first/fallback | — | ETag/обновление из API |
+| Полный Мусхаф | активный проверенный package | resumable download | versioned manifest + SHA-256 |
 | Чтецы и аудиометаданные | cache fallback | выбранный чтец локально | API при доступной сети |
 | Позиция чтения и закладки | SQLite | SQLite + outbox | push/pull с revision |
 | Ду’а | локализованный cache fallback | избранное + outbox | идемпотентный PUT/retry |
 | План и заучивание | SQLite | SQLite | готовая граница repository для API-sync |
 | Share/referral events | встроенный fallback | outbox | идемпотентный event API |
 
-Файлы аудио и страницы Мусхафа пока кэширует HTTP image/audio stack. Управляемый download
-manager с лимитами диска должен быть отдельным core-сервисом, не логикой экрана.
+`MushafOfflineRepository` устанавливает новую версию в отдельный каталог, возобновляет
+`.part`-файлы через HTTP Range и проверяет размер, WebP signature и SHA-256. Метаданные
+страниц и переключение `is_active` применяются одной SQLite-транзакцией только после
+полной проверки 604 страниц; до этого читалка продолжает использовать прежний пакет.
+Обычный on-demand cache остаётся fallback для пользователей без полного download.
 
 ## Локализация и RTL
 
@@ -87,5 +91,5 @@ release keystore через секреты CI и собираться из ко�
 2. Добавить WorkManager для фонового outbox retry с экспоненциальной задержкой.
 3. Подключить серверные reminder profiles и локальный Android scheduler за отдельным
    `NotificationGateway`.
-4. Добавить управляемые offline-download manifests для Мусхафа и аудио.
+4. Добавить управляемые offline-download packages для аудио на существующем manifest API.
 5. Добавить integration tests на Android emulator и release pipeline с SBOM/signing.
