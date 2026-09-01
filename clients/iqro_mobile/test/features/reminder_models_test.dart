@@ -99,5 +99,15 @@ void main() {
   test('prayer horizon respects Android continuity and iOS pending cap', () {
     expect(prayerSchedulingHorizonDays(isIOS: false), 32);
     expect(prayerSchedulingHorizonDays(isIOS: true), 8);
+
+    final candidates = List<int>.generate(80, (index) => index);
+    expect(
+      limitPendingNotificationPlan(candidates, isIOS: true),
+      orderedEquals(List<int>.generate(64, (index) => index)),
+    );
+    expect(
+      limitPendingNotificationPlan(candidates, isIOS: false),
+      orderedEquals(candidates),
+    );
   });
 }

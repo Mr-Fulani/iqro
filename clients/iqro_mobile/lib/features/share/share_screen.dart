@@ -93,19 +93,28 @@ class _ShareScreenState extends ConsumerState<ShareScreen> {
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
-                          child: FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: context.iqroColors.ink,
+                          child: Builder(
+                            builder: (buttonContext) => FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: context.iqroColors.ink,
+                              ),
+                              onPressed: () async {
+                                final box = buttonContext.findRenderObject();
+                                final origin = box is RenderBox
+                                    ? box.localToGlobal(Offset.zero) & box.size
+                                    : null;
+                                await ref
+                                    .read(shareRepositoryProvider)
+                                    .openShareSheet(
+                                      experience,
+                                      sourceScreen: 'settings',
+                                      sharePositionOrigin: origin,
+                                    );
+                              },
+                              icon: const Icon(Icons.ios_share),
+                              label: Text(experience.ctaLabel),
                             ),
-                            onPressed: () => ref
-                                .read(shareRepositoryProvider)
-                                .openShareSheet(
-                                  experience,
-                                  sourceScreen: 'settings',
-                                ),
-                            icon: const Icon(Icons.ios_share),
-                            label: Text(experience.ctaLabel),
                           ),
                         ),
                       ],

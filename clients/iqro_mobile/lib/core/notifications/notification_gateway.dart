@@ -24,6 +24,20 @@ class ReminderSchedulingResult {
   final int scheduled;
 }
 
+class _PlannedReminderNotification {
+  const _PlannedReminderNotification({
+    required this.id,
+    required this.rule,
+    required this.scheduledDate,
+    this.matchDateTimeComponents,
+  });
+
+  final int id;
+  final ReminderRule rule;
+  final tz.TZDateTime scheduledDate;
+  final DateTimeComponents? matchDateTimeComponents;
+}
+
 class NotificationGateway {
   NotificationGateway({
     required LocalDatabase database,
@@ -153,7 +167,7 @@ class NotificationGateway {
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
     final copy = ReminderNotificationCopy.forLocale(locale);
-    final plannedIds = <int>{};
+    final candidates = <_PlannedReminderNotification>[];
 
     for (final rule in rules.where(
       (item) =>
@@ -163,22 +177,19 @@ class NotificationGateway {
       for (var weekday = 1; weekday <= 7; weekday++) {
         if (!reminderRunsOnWeekday(rule.weekdaysMask, weekday)) continue;
         final id = reminderNotificationId(rule.id, 'weekday:$weekday');
-        plannedIds.add(id);
         final time = rule.schedule.timeParts;
-        await _plugin.zonedSchedule(
-          id: id,
-          title: copy.titleFor(rule),
-          body: copy.bodyFor(rule),
-          scheduledDate: nextWeeklyOccurrence(
-            location: location,
-            weekday: weekday,
-            hour: time.hour,
-            minute: time.minute,
+        candidates.add(
+          _PlannedReminderNotification(
+            id: id,
+            rule: rule,
+            scheduledDate: nextWeeklyOccurrence(
+              location: location,
+              weekday: weekday,
+              hour: time.hour,
+              minute: time.minute,
+            ),
+            matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
           ),
-          notificationDetails: _details(rule.signal),
-          androidScheduleMode: mode,
-          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-          payload: _payloadFor(rule),
         );
       }
     }
@@ -222,23 +233,41 @@ class NotificationGateway {
           final occurrence =
               '${schedule.date.year}-${schedule.date.month}-${schedule.date.day}:$prayerEvent';
           final id = reminderNotificationId(rule.id, occurrence);
-          plannedIds.add(id);
-          await _plugin.zonedSchedule(
-            id: id,
-            title: copy.titleFor(rule),
-            body: copy.bodyFor(rule),
-            scheduledDate: scheduledDate,
-            notificationDetails: _details(rule.signal),
-            androidScheduleMode: mode,
-            payload: _payloadFor(rule),
+          candidates.add(
+            _PlannedReminderNotification(
+              id: id,
+              rule: rule,
+              scheduledDate: scheduledDate,
+            ),
           );
         }
       }
     }
 
+    candidates.sort(
+      (left, right) =>
+          left.scheduledDate.toUtc().compareTo(right.scheduledDate.toUtc()),
+    );
+    final selected = limitPendingNotificationPlan(
+      candidates,
+      isIOS: Platform.isIOS,
+    );
+    final plannedIds = selected.map((item) => item.id).toSet();
     final previous = await _plannedIds();
     for (final staleId in previous.difference(plannedIds)) {
       await _plugin.cancel(id: staleId);
+    }
+    for (final item in selected) {
+      await _plugin.zonedSchedule(
+        id: item.id,
+        title: copy.titleFor(item.rule),
+        body: copy.bodyFor(item.rule),
+        scheduledDate: item.scheduledDate,
+        notificationDetails: _details(item.rule.signal),
+        androidScheduleMode: mode,
+        matchDateTimeComponents: item.matchDateTimeComponents,
+        payload: _payloadFor(item.rule),
+      );
     }
     await _database.writeState('reminder_notification_plan', <String, Object?>{
       'ids': plannedIds.toList(growable: false),
@@ -246,6 +275,8 @@ class NotificationGateway {
       'prayer_horizon_days': prayerRules.isEmpty
           ? 0
           : prayerSchedulingHorizonDays(isIOS: Platform.isIOS),
+      'candidate_count': candidates.length,
+      'capacity_limit': Platform.isIOS ? iosPendingNotificationLimit : null,
       'timezone': tz.local.name,
     });
     return ReminderSchedulingResult(
@@ -321,6 +352,20 @@ class NotificationGateway {
     ReminderType.quranReview =>
       '/reader/${rule.reviewTarget?.start.surah ?? 1}?ayah=${rule.reviewTarget?.start.ayah ?? 1}',
   };
+}
+
+const iosPendingNotificationLimit = 64;
+
+List<T> limitPendingNotificationPlan<T>(
+  List<T> chronologicallyOrdered, {
+  required bool isIOS,
+}) {
+  if (!isIOS || chronologicallyOrdered.length <= iosPendingNotificationLimit) {
+    return List<T>.unmodifiable(chronologicallyOrdered);
+  }
+  return List<T>.unmodifiable(
+    chronologicallyOrdered.take(iosPendingNotificationLimit),
+  );
 }
 
 int prayerSchedulingHorizonDays({required bool isIOS}) => isIOS ? 8 : 32;

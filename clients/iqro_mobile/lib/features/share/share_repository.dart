@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -73,6 +76,18 @@ class ReferralSummary {
   final int qualified;
   final int rewardBalance;
   final int pendingReward;
+}
+
+class ShareClientMetadata {
+  const ShareClientMetadata({required this.platform, required this.osMajor});
+
+  final String platform;
+  final String osMajor;
+}
+
+String shareOsMajor(String version) {
+  final match = RegExp(r'\d+').firstMatch(version);
+  return match?.group(0) ?? 'unknown';
 }
 
 class ShareRepository {
@@ -177,12 +192,14 @@ class ShareRepository {
   Future<ShareResult> openShareSheet(
     ShareExperience experience, {
     required String sourceScreen,
+    Rect? sharePositionOrigin,
   }) async {
     final result = await SharePlus.instance.share(
       ShareParams(
         subject: experience.title,
         text: '${experience.message}\n\n${experience.url}',
         title: experience.ctaLabel,
+        sharePositionOrigin: sharePositionOrigin,
       ),
     );
     if (experience.campaignKey != null) {
@@ -219,36 +236,83 @@ class ShareRepository {
     required String result,
     required String sourceScreen,
   }) async {
-    final package = await PackageInfo.fromPlatform();
-    final android = await DeviceInfoPlugin().androidInfo;
-    final id = _uuid.v7();
-    final payload = <String, Object?>{
-      'client_event_id': id,
-      'campaign_key': experience.campaignKey,
-      if (experience.referralCode != null)
-        'referral_code': experience.referralCode,
-      'action': action,
-      'result': result,
-      'channel': action == 'copy-link' ? 'copy' : 'system',
-      'occurred_at': DateTime.now().toUtc().toIso8601String(),
-      'metadata': <String, Object?>{
-        'app_version': package.version,
-        'app_build': package.buildNumber,
-        'platform': 'android',
-        'os_major': android.version.release.split('.').first,
-        'source_screen': sourceScreen,
-      },
-    };
-    await _database.enqueue(
-      operationId: id,
-      entityType: 'share_event',
-      payload: payload,
+    try {
+      final package = await _packageMetadata();
+      final client = await _clientMetadata();
+      final id = _uuid.v7();
+      final payload = <String, Object?>{
+        'client_event_id': id,
+        'campaign_key': experience.campaignKey,
+        if (experience.referralCode != null)
+          'referral_code': experience.referralCode,
+        'action': action,
+        'result': result,
+        'channel': action == 'copy-link' ? 'copy' : 'system',
+        'occurred_at': DateTime.now().toUtc().toIso8601String(),
+        'metadata': <String, Object?>{
+          'app_version': package.version,
+          'app_build': package.buildNumber,
+          'platform': client.platform,
+          'os_major': client.osMajor,
+          'source_screen': sourceScreen,
+        },
+      };
+      await _database.enqueue(
+        operationId: id,
+        entityType: 'share_event',
+        payload: payload,
+      );
+      unawaited(_deliverEvent(id, payload));
+    } on Object {
+      // Analytics must never make sharing or copying appear to fail.
+    }
+  }
+
+  Future<({String version, String buildNumber})> _packageMetadata() async {
+    try {
+      final package = await PackageInfo.fromPlatform();
+      return (version: package.version, buildNumber: package.buildNumber);
+    } on Object {
+      return (version: 'unknown', buildNumber: 'unknown');
+    }
+  }
+
+  Future<ShareClientMetadata> _clientMetadata() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isIOS) {
+        final ios = await deviceInfo.iosInfo;
+        return ShareClientMetadata(
+          platform: 'ios',
+          osMajor: shareOsMajor(ios.systemVersion),
+        );
+      }
+      if (Platform.isAndroid) {
+        final android = await deviceInfo.androidInfo;
+        return ShareClientMetadata(
+          platform: 'android',
+          osMajor: shareOsMajor(android.version.release),
+        );
+      }
+    } on Object {
+      // Keep privacy-safe coarse metadata even when the plugin is unavailable.
+    }
+    return ShareClientMetadata(
+      platform: Platform.operatingSystem,
+      osMajor: 'unknown',
     );
+  }
+
+  Future<void> _deliverEvent(String id, Map<String, Object?> payload) async {
     try {
       await _api.post('/share/events', data: payload);
       await _database.acknowledgeOutbox(id);
     } on Object catch (error) {
-      await _database.markOutboxFailure(id, error.toString());
+      try {
+        await _database.markOutboxFailure(id, error.toString());
+      } on Object {
+        // The durable outbox will be retried by the background sync worker.
+      }
     }
   }
 

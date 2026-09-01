@@ -76,6 +76,20 @@ Screen → Riverpod controller/provider → Feature repository
 строит горизонт намазов локальным портом закреплённого движка Adhan, поэтому WorkManager
 может продлевать расписание без сети.
 
+## Apple platform
+
+Один iOS target обслуживает iPhone и iPad (`TARGETED_DEVICE_FAMILY = 1,2`) с minimum
+iOS/iPadOS 14. UIScene является единственным lifecycle. `AppDelegate` до завершения
+launch регистрирует BGTaskScheduler handlers и plugin registrant для отдельного
+background Flutter engine. Идентификатор `forum.iqro.app.periodic-maintenance-v1`
+одинаков в Dart, `Info.plist` и native registration, поэтому outbox, playback sync и
+горизонт напоминаний могут обслуживаться системным BGAppRefreshTask.
+
+`UIBackgroundModes` ограничены `audio` и `fetch`. Location background mode и Always
+permission отсутствуют: координаты запрашиваются только при открытом приложении для
+локального расчёта времени намаза. Нативные dependency-версии фиксирует `Podfile.lock`,
+а CocoaPods-конфигурации разделены для Debug/Profile/Release.
+
 ## Локализация и RTL
 
 ARB-файлы являются единственным источником интерфейсных строк. Layout использует
@@ -100,7 +114,7 @@ release-режиме пустая конфигурация запрещена, �
 ## Следующие безопасные расширения
 
 1. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages, когда
-   появится второй Flutter target или независимые команды.
+   появятся независимые команды или отдельное Flutter-приложение.
 2. Добавить подписанный Play Console delivery pipeline после создания upload key и
    защищённого CI secret environment.
 3. Добавить Android emulator smoke-test после появления отдельного CI-бюджета на

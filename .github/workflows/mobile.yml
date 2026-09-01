@@ -72,3 +72,69 @@ jobs:
           --dart-define=API_BASE_URL=https://iqro.forum
           --dart-define=APP_ENV=production
           --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+
+  ios:
+    needs: checks
+    runs-on: macos-15
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: clients/iqro_mobile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select App Store-compatible Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Show Apple toolchain
+        run: |
+          xcodebuild -version
+          pod --version
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.41.4
+          cache: true
+      - name: Disable CLI analytics
+        run: flutter config --no-analytics
+      - name: Resolve locked Dart dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Validate Apple configuration
+        run: |
+          ruby -c ios/Podfile
+          plutil -lint ios/Runner/Info.plist ios/Flutter/AppFrameworkInfo.plist
+          for file in ios/Runner/*.lproj/InfoPlist.strings; do
+            plutil -lint "$file"
+          done
+      - name: Verify locked CocoaPods dependencies
+        working-directory: clients/iqro_mobile/ios
+        run: pod install --deployment
+      - name: iPhone and iPad production release compile
+        run: >-
+          flutter build ios
+          --release
+          --no-codesign
+          --dart-define=API_BASE_URL=https://iqro.forum
+          --dart-define=APP_ENV=production
+          --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          device_id="$(
+            xcrun simctl list devices available -j |
+              ruby -rjson -e '
+                devices = JSON.parse(STDIN.read).fetch("devices").values.flatten
+                device = devices.find { |item| item["isAvailable"] && item["name"].start_with?("iPhone") }
+                abort "No available iPhone simulator" unless device
+                print device.fetch("udid")
+              '
+          )"
+          echo "device_id=$device_id" >> "$GITHUB_OUTPUT"
+      - name: Run native iOS configuration tests
+        run: >-
+          xcodebuild test
+          -workspace ios/Runner.xcworkspace
+          -scheme Runner
+          -configuration Debug
+          -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}"
+          -only-testing:RunnerTests
+          CODE_SIGNING_ALLOWED=NO

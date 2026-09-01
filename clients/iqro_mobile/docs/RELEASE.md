@@ -7,7 +7,10 @@
   compile-time значения.
 - Keystore, пароли и `android/key.properties` не хранятся в Git и не копируются на
   backend-сервер.
-- Перед публикацией обязательны `make mobile-check` и production release compile.
+- Apple certificates, provisioning profiles и App Store Connect credentials также не
+  хранятся в Git.
+- Перед публикацией обязательны `make mobile-check` и production release compile
+  соответствующей платформы.
 
 ## Staging APK
 
@@ -71,3 +74,34 @@ make mobile-android-production
 - production release AAB compile без доступа к release secrets.
 
 Подписанная публикация должна быть отдельным protected workflow с ручным approval.
+
+## iPhone и iPad compile-check
+
+```bash
+make mobile-ios-config-check
+make mobile-ios-production
+```
+
+Target поддерживает iOS/iPadOS 14+ и bundle ID `forum.iqro.app`. Команда собирает
+неподписанное приложение для проверки кода, CocoaPods, background modes и production
+API. Для установки на устройство потребуется полный Xcode, Apple Developer Team и
+development provisioning profile.
+
+CI использует Xcode 26.3 и iOS 26 SDK: с 28 апреля 2026 года Apple принимает новые
+iOS/iPadOS-сборки только из Xcode 26+ с iOS/iPadOS 26 SDK. Локальный compile на более
+старом Xcode не доказывает готовность к App Store.
+
+## Подписанный Apple-релиз
+
+В защищённом release-контуре:
+
+1. зарегистрировать bundle ID `forum.iqro.app` в Apple Developer;
+2. создать App Store Connect app record и distribution signing assets;
+3. открыть `ios/Runner.xcworkspace`, назначить Apple Team и проверить capabilities;
+4. выполнить все staging-сценарии на реальных iPhone и iPad;
+5. собрать `flutter build ipa` с production defines из чистого commit;
+6. сохранить `.xcarchive`, dSYM и export log рядом с release SHA;
+7. сначала выпустить TestFlight internal testing, затем staged production rollout.
+
+Signing assets передаются только через protected CI secrets/keychain. Обычный Mobile CI
+никогда не подписывает и не загружает приложение.

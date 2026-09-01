@@ -30,9 +30,20 @@ void iqroBackgroundDispatcher() {
 }
 
 Future<void> initializeBackgroundWork() async {
-  if (!Platform.isAndroid) return;
+  final isAndroid = Platform.isAndroid;
+  final isIOS = Platform.isIOS;
+  if (!supportsIqroBackgroundWork(isAndroid: isAndroid, isIOS: isIOS)) return;
   final workmanager = Workmanager();
   await workmanager.initialize(iqroBackgroundDispatcher);
+  if (isIOS) {
+    await workmanager.registerPeriodicTask(
+      iqroMaintenanceUniqueName,
+      iqroMaintenanceTaskName,
+      frequency: iqroMaintenanceFrequency,
+      initialDelay: iqroMaintenanceFrequency,
+    );
+    return;
+  }
   await workmanager.registerPeriodicTask(
     iqroMaintenanceUniqueName,
     iqroMaintenanceTaskName,
@@ -50,3 +61,8 @@ Future<void> initializeBackgroundWork() async {
     tag: 'iqro-maintenance',
   );
 }
+
+bool supportsIqroBackgroundWork({
+  required bool isAndroid,
+  required bool isIOS,
+}) => isAndroid || isIOS;
