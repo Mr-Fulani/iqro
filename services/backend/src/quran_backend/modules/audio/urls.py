@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.urls import path
 
 from quran_backend.modules.audio.api import (
+    AudioOfflineManifestView,
     AudioTrackListView,
     AyahPlaybackView,
     QuranFoundationAyahRecitationChapterView,
@@ -39,6 +40,11 @@ urlpatterns = [
         "recitations/<uuid:recitation_id>/tracks",
         AudioTrackListView.as_view(),
         name="track-list",
+    ),
+    path(
+        "recitations/<uuid:recitation_id>/offline-manifest",
+        AudioOfflineManifestView.as_view(),
+        name="offline-manifest",
     ),
     path(
         "recitations/<uuid:recitation_id>/surahs/<int:surah>",

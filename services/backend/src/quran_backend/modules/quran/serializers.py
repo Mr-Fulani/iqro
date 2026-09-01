@@ -241,6 +241,62 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
         )
 
 
+class OfflineMushafManifestQuerySerializer(serializers.Serializer[Any]):
+    width = serializers.IntegerField(min_value=1, required=False)
+
+
+class OfflineMushafAssetSerializer(serializers.Serializer[Any]):
+    url = serializers.URLField()
+    file_name = serializers.CharField()
+    content_type = serializers.CharField()
+    width = serializers.IntegerField(min_value=1)
+    height = serializers.IntegerField(min_value=1)
+    bytes = serializers.IntegerField(min_value=1)
+    sha256 = serializers.CharField()
+
+
+class OfflineMushafPageSerializer(serializers.Serializer[Any]):
+    number = serializers.IntegerField(min_value=1)
+    metadata_url = serializers.URLField()
+    asset = OfflineMushafAssetSerializer()
+
+
+class OfflineMushafIdentitySerializer(serializers.Serializer[Any]):
+    source_id = serializers.IntegerField(min_value=1)
+    name = serializers.CharField()
+    qirat_name = serializers.CharField()
+    lines_per_page = serializers.IntegerField(min_value=1)
+
+
+class OfflineMushafSourceSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField()
+    url = serializers.URLField()
+    checksum_sha256 = serializers.CharField()
+
+
+class OfflineMushafRightsSerializer(serializers.Serializer[Any]):
+    offline_download = serializers.BooleanField()
+    attribution_required = serializers.BooleanField()
+    attribution = serializers.CharField()
+
+
+class OfflineMushafManifestSerializer(serializers.Serializer[Any]):
+    schema_version = serializers.IntegerField(min_value=1)
+    package_type = serializers.CharField()
+    package_id = serializers.CharField()
+    version = serializers.CharField()
+    package_checksum_sha256 = serializers.CharField()
+    publication_checksum_sha256 = serializers.CharField()
+    published_at = serializers.DateTimeField()
+    source: Any = OfflineMushafSourceSerializer()
+    rights = OfflineMushafRightsSerializer()
+    mushaf = OfflineMushafIdentitySerializer()
+    width = serializers.IntegerField(min_value=1)
+    page_count = serializers.IntegerField(min_value=1)
+    total_bytes = serializers.IntegerField(min_value=1)
+    pages = OfflineMushafPageSerializer(many=True)
+
+
 class JuzSerializer(serializers.ModelSerializer[Juz]):
     start_ayah = AyahReferenceSerializer(read_only=True)
     end_ayah = AyahReferenceSerializer(read_only=True)

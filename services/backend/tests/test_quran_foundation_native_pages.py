@@ -200,6 +200,38 @@ def test_complete_publication_enables_catalog_and_page_assets(
     )
     assert renderer.rendered_pages == [1, 2]
 
+    offline = api_client.get(
+        "/api/v1/quran/foundation/mushafs/1/offline-manifest",
+        {"width": 320},
+    )
+    assert offline.status_code == 200
+    manifest = offline.json()
+    assert manifest["schema_version"] == 1
+    assert manifest["package_type"] == "mushaf_pages"
+    assert manifest["package_id"] == "qf-mushaf-1-native-test-1.0.0-w320"
+    assert manifest["publication_checksum_sha256"] == (result.publication.manifest_checksum_sha256)
+    assert len(manifest["package_checksum_sha256"]) == 64
+    assert manifest["width"] == 320
+    assert manifest["page_count"] == 2
+    assert manifest["total_bytes"] > 0
+    assert [item["number"] for item in manifest["pages"]] == [1, 2]
+    assert manifest["pages"][0]["asset"]["file_name"] == "page-001-320.webp"
+    assert manifest["pages"][0]["asset"]["url"].startswith("https://media.example.test/quran/")
+    assert "storage_key" not in str(manifest)
+
+    cached = api_client.get(
+        "/api/v1/quran/foundation/mushafs/1/offline-manifest",
+        {"width": 320},
+        HTTP_IF_NONE_MATCH=offline["ETag"],
+    )
+    assert cached.status_code == 304
+
+    missing_width = api_client.get(
+        "/api/v1/quran/foundation/mushafs/1/offline-manifest",
+        {"width": 999},
+    )
+    assert missing_width.status_code == 404
+
 
 @pytest.mark.django_db
 @override_settings(QURAN_QF_ENV="production")
@@ -229,6 +261,7 @@ def test_incomplete_publication_is_fail_closed(
     assert (
         api_client.get("/api/v1/quran/foundation/mushafs/1/pages/1").json()["native_assets"] == []
     )
+    assert api_client.get("/api/v1/quran/foundation/mushafs/1/offline-manifest").status_code == 404
 
 
 @pytest.mark.django_db

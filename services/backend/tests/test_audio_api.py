@@ -453,6 +453,60 @@ def test_track_response_exposes_cdn_asset_contract_without_storage_fields(
 
 
 @pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_offline_audio_manifest_is_complete_verified_and_cacheable(
+    api_client: APIClient,
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation = published_audio_dataset["recitation"]
+    url = reverse("audio:offline-manifest", kwargs={"recitation_id": recitation.id})
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    manifest = response.json()
+    assert manifest["schema_version"] == 1
+    assert manifest["package_type"] == "surah_audio"
+    assert manifest["quality"] == "default"
+    assert manifest["available_qualities"] == ["standard"]
+    assert manifest["track_count"] == 114
+    assert len(manifest["tracks"]) == 114
+    assert manifest["total_bytes"] == 114 * 192_000
+    assert len(manifest["package_checksum_sha256"]) == 64
+    first = manifest["tracks"][0]
+    assert first["surah_number"] == 1
+    assert first["asset"]["file_name"] == "surah-001.mp3"
+    assert first["asset"]["sha256"] == "d" * 64
+    assert first["timing"]["source_checksum_sha256"] == "e" * 64
+    assert [segment["ayah_number"] for segment in first["segments"]] == [1, 2]
+    assert "object_key" not in json.dumps(manifest)
+
+    cached = api_client.get(url, HTTP_IF_NONE_MATCH=response["ETag"])
+    assert cached.status_code == 304
+
+    unavailable_quality = api_client.get(url, {"quality": "high"})
+    assert unavailable_quality.status_code == 404
+
+
+@pytest.mark.django_db
+def test_offline_audio_manifest_enforces_licensing_and_integrity(
+    api_client: APIClient,
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation = published_audio_dataset["recitation"]
+    url = reverse("audio:offline-manifest", kwargs={"recitation_id": recitation.id})
+
+    RecitationEdition.objects.filter(pk=recitation.pk).update(offline_download_allowed=False)
+    assert api_client.get(url).status_code == 403
+
+    RecitationEdition.objects.filter(pk=recitation.pk).update(offline_download_allowed=True)
+    AudioRendition.objects.filter(pk=published_audio_dataset["rendition"].pk).update(
+        checksum_sha256=""
+    )
+    assert api_client.get(url).status_code == 404
+
+
+@pytest.mark.django_db
 def test_track_contains_verified_timing_version(
     api_client: APIClient,
     published_audio_dataset: dict[str, Any],

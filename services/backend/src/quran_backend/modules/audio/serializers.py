@@ -9,6 +9,7 @@ from rest_framework import serializers
 from quran_backend.modules.audio.models import (
     AudioCodec,
     AudioRendition,
+    AudioRenditionQuality,
     AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
@@ -374,6 +375,73 @@ class AudioTrackSerializer(serializers.ModelSerializer[AudioTrack]):
     @extend_schema_field(AudioRenditionSerializer(many=True))
     def get_renditions(self, obj: AudioTrack) -> Any:
         return AudioRenditionSerializer(self._renditions(obj), many=True).data
+
+
+class OfflineAudioManifestQuerySerializer(serializers.Serializer[Any]):
+    quality = serializers.ChoiceField(
+        choices=list(AudioRenditionQuality.choices),
+        required=False,
+    )
+
+
+class OfflineAudioAssetSerializer(serializers.Serializer[Any]):
+    url = serializers.URLField()
+    file_name = serializers.CharField()
+    content_type = serializers.CharField()
+    codec = serializers.ChoiceField(choices=list(AudioCodec.choices))
+    bitrate_kbps = serializers.IntegerField(min_value=1)
+    bytes = serializers.IntegerField(min_value=1)
+    sha256 = serializers.CharField()
+    etag = serializers.CharField()
+    range_supported = serializers.BooleanField()
+    immutable = serializers.BooleanField()
+
+
+class OfflineAudioTimingSerializer(serializers.Serializer[Any]):
+    version = serializers.CharField()
+    source_checksum_sha256 = serializers.CharField()
+
+
+class OfflineAudioSegmentSerializer(serializers.Serializer[Any]):
+    ayah_id = serializers.UUIDField()
+    ayah_number = serializers.IntegerField(min_value=1)
+    start_ms = serializers.IntegerField(min_value=0)
+    end_ms = serializers.IntegerField(min_value=1)
+
+
+class OfflineAudioTrackSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    surah_number = serializers.IntegerField(min_value=1, max_value=114)
+    duration_ms = serializers.IntegerField(min_value=1)
+    rendition_quality = serializers.ChoiceField(choices=list(AudioRenditionQuality.choices))
+    timing = OfflineAudioTimingSerializer(allow_null=True)
+    segments = OfflineAudioSegmentSerializer(many=True)
+    asset = OfflineAudioAssetSerializer()
+
+
+class OfflineAudioQuranEditionSerializer(serializers.Serializer[Any]):
+    code = serializers.CharField()
+    version = serializers.CharField()
+    checksum_sha256 = serializers.CharField()
+
+
+class OfflineAudioManifestSerializer(serializers.Serializer[Any]):
+    schema_version = serializers.IntegerField(min_value=1)
+    package_type = serializers.CharField()
+    package_id = serializers.CharField()
+    version = serializers.CharField()
+    quality = serializers.CharField()
+    available_qualities = serializers.ListField(child=serializers.CharField())
+    package_checksum_sha256 = serializers.CharField()
+    published_at = serializers.DateTimeField()
+    source: Any = RecitationSourceSerializer()
+    license = RecitationLicenseSerializer()
+    rights = RecitationRightsSerializer()
+    reciter = ReciterSummarySerializer()
+    quran_edition = OfflineAudioQuranEditionSerializer()
+    track_count = serializers.IntegerField(min_value=1)
+    total_bytes = serializers.IntegerField(min_value=1)
+    tracks = OfflineAudioTrackSerializer(many=True)
 
 
 class AyahAudioSegmentSerializer(serializers.ModelSerializer[AyahAudioSegment]):
