@@ -849,8 +849,44 @@ abstract class AppLocalizations {
   /// No description provided for @locationDenied.
   ///
   /// In en, this message translates to:
-  /// **'Location access is off. You can enable it in Android settings.'**
+  /// **'Location access is off. You can enable it in the device settings.'**
   String get locationDenied;
+
+  /// No description provided for @locationServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is turned off'**
+  String get locationServicesDisabled;
+
+  /// No description provided for @locationServicesDisabledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services, then return to IQRO to calculate prayer times automatically.'**
+  String get locationServicesDisabledBody;
+
+  /// No description provided for @locationPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is required'**
+  String get locationPermissionRequired;
+
+  /// No description provided for @locationPermissionRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access once to calculate prayer times. Coordinates stay on this device.'**
+  String get locationPermissionRequiredBody;
+
+  /// No description provided for @locationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Location could not be determined'**
+  String get locationUnavailable;
+
+  /// No description provided for @prayerCalculationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer times could not be calculated. Check the calculation method and try again.'**
+  String get prayerCalculationFailed;
 
   /// No description provided for @prayerUnavailable.
   ///

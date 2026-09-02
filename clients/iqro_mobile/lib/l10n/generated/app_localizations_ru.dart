@@ -391,7 +391,28 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get locationDenied =>
-      'Доступ к геолокации выключен. Его можно включить в настройках Android.';
+      'Доступ к геолокации выключен. Его можно включить в настройках устройства.';
+
+  @override
+  String get locationServicesDisabled => 'Геолокация на телефоне выключена';
+
+  @override
+  String get locationServicesDisabledBody =>
+      'Включите геолокацию и вернитесь в IQRO — расчёт продолжится автоматически.';
+
+  @override
+  String get locationPermissionRequired => 'Нужен доступ к местоположению';
+
+  @override
+  String get locationPermissionRequiredBody =>
+      'Разрешите доступ для расчёта времени намаза. Координаты останутся на этом устройстве.';
+
+  @override
+  String get locationUnavailable => 'Не удалось определить местоположение';
+
+  @override
+  String get prayerCalculationFailed =>
+      'Не удалось рассчитать время намаза. Проверьте метод расчёта и повторите.';
 
   @override
   String get prayerUnavailable => 'Время намаза ещё не рассчитано';

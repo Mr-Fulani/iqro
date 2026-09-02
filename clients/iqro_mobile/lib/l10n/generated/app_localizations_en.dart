@@ -393,7 +393,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get locationDenied =>
-      'Location access is off. You can enable it in Android settings.';
+      'Location access is off. You can enable it in the device settings.';
+
+  @override
+  String get locationServicesDisabled => 'Location is turned off';
+
+  @override
+  String get locationServicesDisabledBody =>
+      'Turn on location services, then return to IQRO to calculate prayer times automatically.';
+
+  @override
+  String get locationPermissionRequired => 'Location access is required';
+
+  @override
+  String get locationPermissionRequiredBody =>
+      'Allow access once to calculate prayer times. Coordinates stay on this device.';
+
+  @override
+  String get locationUnavailable => 'Location could not be determined';
+
+  @override
+  String get prayerCalculationFailed =>
+      'Prayer times could not be calculated. Check the calculation method and try again.';
 
   @override
   String get prayerUnavailable => 'Prayer times are not calculated yet';

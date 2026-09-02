@@ -17,21 +17,39 @@ class PrayerScreen extends ConsumerStatefulWidget {
   ConsumerState<PrayerScreen> createState() => _PrayerScreenState();
 }
 
-class _PrayerScreenState extends ConsumerState<PrayerScreen> {
+class _PrayerScreenState extends ConsumerState<PrayerScreen>
+    with WidgetsBindingObserver {
   PrayerSchedule? _schedule;
   Object? _error;
   String? _selectedMethodCode;
   var _loading = false;
+  var _retryLocationOnResume = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _schedule = ref.read(prayerScheduleProvider).valueOrNull;
     ref.read(prayerRepositoryProvider).cachedToday().then((value) {
       if (mounted) setState(() => _schedule = value);
     });
     ref.read(prayerRepositoryProvider).selectedMethodCode().then((value) {
       if (mounted) setState(() => _selectedMethodCode = value);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_retryLocationOnResume) return;
+    _retryLocationOnResume = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_loading) _calculate();
     });
   }
 
@@ -85,15 +103,23 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
               message: context.l10n.prayerLocationPrivacy,
               color: context.iqroColors.lavender,
             ),
-            if (_error is ApiException &&
-                (_error! as ApiException).code ==
-                    'location_denied') ...<Widget>[
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 10),
+              _PrayerErrorBanner(
+                error: _error!,
+                onRetry: _calculate,
+                onOpenLocationSettings: () =>
+                    _openSettings(locationServices: true),
+                onOpenAppSettings: () => _openSettings(locationServices: false),
+              ),
+            ],
+            if (methods.hasError) ...<Widget>[
               const SizedBox(height: 10),
               IqroStatusBanner(
-                icon: Icons.location_off_outlined,
-                title: context.l10n.locationDenied,
-                actionLabel: context.l10n.settings,
-                onAction: Geolocator.openAppSettings,
+                icon: Icons.cloud_off_outlined,
+                title: context.l10n.networkError,
+                actionLabel: context.l10n.retry,
+                onAction: () => ref.invalidate(prayerMethodsProvider),
               ),
             ],
             const SizedBox(height: 22),
@@ -271,6 +297,14 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
     }
   }
 
+  Future<void> _openSettings({required bool locationServices}) async {
+    _retryLocationOnResume = true;
+    final opened = locationServices
+        ? await Geolocator.openLocationSettings()
+        : await Geolocator.openAppSettings();
+    if (!opened) _retryLocationOnResume = false;
+  }
+
   String _nextPrayerName(BuildContext context) {
     if (_schedule == null) return context.l10n.prayerUnavailable;
     final now = DateTime.now();
@@ -311,4 +345,61 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
     'maghrib' => context.l10n.maghrib,
     _ => context.l10n.isha,
   };
+}
+
+class _PrayerErrorBanner extends StatelessWidget {
+  const _PrayerErrorBanner({
+    required this.error,
+    required this.onRetry,
+    required this.onOpenLocationSettings,
+    required this.onOpenAppSettings,
+  });
+
+  final Object error;
+  final VoidCallback onRetry;
+  final VoidCallback onOpenLocationSettings;
+  final VoidCallback onOpenAppSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final apiError = error is ApiException ? error as ApiException : null;
+    return switch (apiError?.code) {
+      'location_disabled' => IqroStatusBanner(
+        icon: Icons.location_off_outlined,
+        title: context.l10n.locationServicesDisabled,
+        message: context.l10n.locationServicesDisabledBody,
+        actionLabel: context.l10n.settings,
+        onAction: onOpenLocationSettings,
+      ),
+      'location_denied' => IqroStatusBanner(
+        icon: Icons.location_disabled_outlined,
+        title: context.l10n.locationPermissionRequired,
+        message: context.l10n.locationPermissionRequiredBody,
+        actionLabel: context.l10n.retry,
+        onAction: onRetry,
+      ),
+      'location_denied_forever' => IqroStatusBanner(
+        icon: Icons.location_disabled_outlined,
+        title: context.l10n.locationPermissionRequired,
+        message: context.l10n.locationDenied,
+        actionLabel: context.l10n.settings,
+        onAction: onOpenAppSettings,
+      ),
+      'location_timeout' || 'location_unavailable' => IqroStatusBanner(
+        icon: Icons.location_searching_outlined,
+        title: context.l10n.locationUnavailable,
+        message: context.l10n.prayerCalculationFailed,
+        actionLabel: context.l10n.retry,
+        onAction: onRetry,
+      ),
+      _ => IqroStatusBanner(
+        icon: Icons.error_outline,
+        title: apiError?.isOffline == true
+            ? context.l10n.networkError
+            : context.l10n.prayerCalculationFailed,
+        actionLabel: context.l10n.retry,
+        onAction: onRetry,
+      ),
+    };
+  }
 }

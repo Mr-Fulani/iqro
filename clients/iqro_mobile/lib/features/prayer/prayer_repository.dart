@@ -1,5 +1,3 @@
-import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -8,6 +6,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'prayer_local_engine.dart';
+import 'prayer_location_gateway.dart';
 
 class PrayerSchedule {
   const PrayerSchedule({
@@ -202,12 +201,17 @@ class PrayerLocation {
 }
 
 class PrayerRepository {
-  PrayerRepository({required ApiClient api, required LocalDatabase database})
-    : _api = api,
-      _database = database;
+  PrayerRepository({
+    required ApiClient api,
+    required LocalDatabase database,
+    PrayerLocationGateway locationGateway = const DevicePrayerLocationGateway(),
+  }) : _api = api,
+       _database = database,
+       _locationGateway = locationGateway;
 
   final ApiClient _api;
   final LocalDatabase _database;
+  final PrayerLocationGateway _locationGateway;
   final LocalPrayerEngine _localEngine = const LocalPrayerEngine();
 
   Future<List<PrayerMethod>> methods() async {
@@ -261,38 +265,14 @@ class PrayerRepository {
   Future<PrayerSchedule> calculateForCurrentLocation({
     required PrayerMethod method,
   }) async {
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) {
-      throw const ApiException(
-        message: 'Location services are disabled',
-        code: 'location_disabled',
-      );
-    }
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      throw const ApiException(
-        message: 'Location permission was denied',
-        code: 'location_denied',
-      );
-    }
-
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
-      ),
-    );
-    final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
+    final deviceLocation = await acquirePrayerDeviceLocation(_locationGateway);
     final location = PrayerLocation(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      timezone: timezone,
+      latitude: deviceLocation.latitude,
+      longitude: deviceLocation.longitude,
+      timezone: deviceLocation.timezone,
     );
     await _database.writeState('prayer_location', location.toJson());
-    final schedule = await calculateForDate(
+    final schedule = await calculateLocallyForDate(
       method: method,
       location: location,
       date: DateTime.now(),
@@ -370,23 +350,21 @@ class PrayerRepository {
   Future<List<PrayerSchedule>> calculateHorizon({int days = 8}) async {
     final location = await storedLocation();
     final method = await selectedMethod();
-    if (location == null || method == null) return const <PrayerSchedule>[];
+    if (location == null ||
+        method == null ||
+        !method.supportsLocalCalculation) {
+      return const <PrayerSchedule>[];
+    }
     final today = DateTime.now();
     final schedules = <PrayerSchedule>[];
     for (var offset = 0; offset < days; offset++) {
       final date = DateTime(today.year, today.month, today.day + offset);
       schedules.add(
-        method.supportsLocalCalculation
-            ? await calculateLocallyForDate(
-                method: method,
-                location: location,
-                date: date,
-              )
-            : await calculateForDate(
-                method: method,
-                location: location,
-                date: date,
-              ),
+        await calculateLocallyForDate(
+          method: method,
+          location: location,
+          date: date,
+        ),
       );
     }
     return schedules;

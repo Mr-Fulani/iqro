@@ -390,7 +390,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get locationDenied =>
-      'الوصول إلى الموقع متوقف. يمكنك تفعيله من إعدادات أندرويد.';
+      'الوصول إلى الموقع متوقف. يمكنك تفعيله من إعدادات الجهاز.';
+
+  @override
+  String get locationServicesDisabled => 'خدمة الموقع متوقفة';
+
+  @override
+  String get locationServicesDisabledBody =>
+      'فعّل خدمات الموقع ثم ارجع إلى IQRO ليُستأنف حساب أوقات الصلاة تلقائيًا.';
+
+  @override
+  String get locationPermissionRequired => 'يلزم السماح بالوصول إلى الموقع';
+
+  @override
+  String get locationPermissionRequiredBody =>
+      'اسمح بالوصول مرة واحدة لحساب أوقات الصلاة. تبقى الإحداثيات على هذا الجهاز.';
+
+  @override
+  String get locationUnavailable => 'تعذر تحديد الموقع';
+
+  @override
+  String get prayerCalculationFailed =>
+      'تعذر حساب أوقات الصلاة. تحقق من طريقة الحساب وحاول مرة أخرى.';
 
   @override
   String get prayerUnavailable => 'لم تُحسب مواقيت الصلاة بعد';

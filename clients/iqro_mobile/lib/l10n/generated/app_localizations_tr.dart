@@ -392,7 +392,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get locationDenied =>
-      'Konum erişimi kapalı. Android ayarlarından açabilirsiniz.';
+      'Konum erişimi kapalı. Cihaz ayarlarından açabilirsiniz.';
+
+  @override
+  String get locationServicesDisabled => 'Telefonda konum kapalı';
+
+  @override
+  String get locationServicesDisabledBody =>
+      'Konum hizmetlerini açıp IQRO\'ya dönün; namaz vakitleri otomatik olarak hesaplanacaktır.';
+
+  @override
+  String get locationPermissionRequired => 'Konum erişimi gerekli';
+
+  @override
+  String get locationPermissionRequiredBody =>
+      'Namaz vakitlerini hesaplamak için bir kez izin verin. Koordinatlar bu cihazda kalır.';
+
+  @override
+  String get locationUnavailable => 'Konum belirlenemedi';
+
+  @override
+  String get prayerCalculationFailed =>
+      'Namaz vakitleri hesaplanamadı. Hesaplama yöntemini kontrol edip tekrar deneyin.';
 
   @override
   String get prayerUnavailable => 'Namaz vakitleri henüz hesaplanmadı';
