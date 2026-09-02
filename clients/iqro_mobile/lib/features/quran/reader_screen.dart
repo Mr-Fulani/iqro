@@ -22,6 +22,9 @@ class ReaderScreen extends ConsumerStatefulWidget {
 
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _bookmarks = <int>{};
+  final _scrollController = ScrollController();
+  final _viewportKey = GlobalKey();
+  final _ayahKeys = <int, GlobalKey>{};
   var _showTranslation = true;
   var _showTafsir = false;
   var _selectedAyah = 1;
@@ -34,12 +37,23 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   int? _tafsirSourceId;
   Map<int, QuranAyahTranslation> _translations = const {};
   Map<int, QuranAyahTafsir> _tafsirs = const {};
+  var _restoreScheduled = false;
+  var _contentRestoreScheduled = false;
+  var _restoringPosition = false;
+  var _readerWasDragged = false;
+  int? _lastPersistedAyah;
 
   @override
   void initState() {
     super.initState();
     _selectedAyah = widget.initialAyah;
     _loadBookmarks();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -130,50 +144,165 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 },
               ),
             ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 14, 100),
-                itemCount: items.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _ReaderIntro(surah: surah, title: title);
-                  }
-                  final ayah = items[index - 1];
-                  final audioActive =
-                      audio.surah == ayah.surahNumber &&
-                      audio.ayah == ayah.number;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _AyahCard(
-                      ayah: ayah,
-                      selected: ayah.number == _selectedAyah,
-                      audioActive: audioActive,
-                      audioPlaying: audioActive && audio.playing,
-                      audioLoading: _audioLoadingAyah == ayah.number,
-                      bookmarked: _bookmarks.contains(ayah.number),
-                      showTranslation: _showTranslation,
-                      showTafsir: _showTafsir,
-                      translation: _translations[ayah.number],
-                      tafsir: _tafsirs[ayah.number],
-                      contentLoading: _contentLoading,
-                      onSelected: () => _select(ayah),
-                      onBookmark: () => _toggleBookmark(ayah),
-                      onPlay: () => audioActive
-                          ? ref.read(audioControllerProvider.notifier).toggle()
-                          : _play(ayah, title),
-                    ),
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _readerList(items, surah, title, audio)),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _select(QuranAyah ayah) async {
-    setState(() => _selectedAyah = ayah.number);
+  Widget _readerList(
+    List<QuranAyah> items,
+    Surah? surah,
+    String title,
+    ({int? surah, int? ayah, bool playing}) audio,
+  ) {
+    _schedulePositionRestore(items);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.depth != 0) return false;
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
+          _readerWasDragged = true;
+        }
+        if (notification is ScrollEndNotification && !_restoringPosition) {
+          unawaited(_persistTopVisibleAyah(items));
+        }
+        return false;
+      },
+      child: ListView.builder(
+        key: _viewportKey,
+        controller: _scrollController,
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 14, 100),
+        itemCount: items.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _ReaderIntro(surah: surah, title: title);
+          }
+          final ayah = items[index - 1];
+          final audioActive =
+              audio.surah == ayah.surahNumber && audio.ayah == ayah.number;
+          return Padding(
+            key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _AyahCard(
+              ayah: ayah,
+              selected: ayah.number == _selectedAyah,
+              audioActive: audioActive,
+              audioPlaying: audioActive && audio.playing,
+              audioLoading: _audioLoadingAyah == ayah.number,
+              bookmarked: _bookmarks.contains(ayah.number),
+              showTranslation: _showTranslation,
+              showTafsir: _showTafsir,
+              translation: _translations[ayah.number],
+              tafsir: _tafsirs[ayah.number],
+              contentLoading: _contentLoading,
+              onSelected: () => _select(ayah),
+              onBookmark: () => _toggleBookmark(ayah),
+              onPlay: () => audioActive
+                  ? ref.read(audioControllerProvider.notifier).toggle()
+                  : _play(ayah, title),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _schedulePositionRestore(List<QuranAyah> items) {
+    if (items.isEmpty) return;
+    if (!_restoreScheduled) {
+      _restoreScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_restorePosition(items));
+      });
+      return;
+    }
+    if (!_contentLoading && !_contentRestoreScheduled && !_readerWasDragged) {
+      _contentRestoreScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_readerWasDragged) {
+          unawaited(_restorePosition(items));
+        }
+      });
+    }
+  }
+
+  Future<void> _restorePosition(List<QuranAyah> items) async {
+    final target = items
+        .where((item) => item.number == widget.initialAyah)
+        .firstOrNull;
+    if (target == null || !_scrollController.hasClients) {
+      return;
+    }
+    if (target.number <= 1) {
+      await _persistPosition(target);
+      return;
+    }
+    _restoringPosition = true;
+    try {
+      for (var attempt = 0; attempt < 4 && mounted; attempt++) {
+        final targetContext = _ayahKeys[target.number]?.currentContext;
+        if (targetContext != null && targetContext.mounted) {
+          await Scrollable.ensureVisible(
+            targetContext,
+            alignment: .03,
+            duration: attempt == 0
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+          );
+          await _persistPosition(target);
+          return;
+        }
+        final ratio = (target.number - 1) / items.length;
+        final offset = _scrollController.position.maxScrollExtent * ratio;
+        _scrollController.jumpTo(
+          offset.clamp(0, _scrollController.position.maxScrollExtent),
+        );
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      await _persistPosition(target);
+    } finally {
+      _restoringPosition = false;
+    }
+  }
+
+  Future<void> _persistTopVisibleAyah(List<QuranAyah> items) async {
+    final viewportContext = _viewportKey.currentContext;
+    if (viewportContext == null) return;
+    final viewportBox = viewportContext.findRenderObject();
+    if (viewportBox is! RenderBox || !viewportBox.hasSize) return;
+    final viewportTop = viewportBox.localToGlobal(Offset.zero).dy;
+    final viewportBottom = viewportTop + viewportBox.size.height;
+    QuranAyah? candidate;
+    QuranAyah? fallback;
+    var fallbackVisible = 0.0;
+    for (final ayah in items) {
+      final itemContext = _ayahKeys[ayah.number]?.currentContext;
+      final itemBox = itemContext?.findRenderObject();
+      if (itemBox is! RenderBox || !itemBox.hasSize) continue;
+      final itemTop = itemBox.localToGlobal(Offset.zero).dy;
+      final itemBottom = itemTop + itemBox.size.height;
+      final visible =
+          (itemBottom.clamp(viewportTop, viewportBottom) -
+                  itemTop.clamp(viewportTop, viewportBottom))
+              .clamp(0, itemBox.size.height)
+              .toDouble();
+      if (visible > fallbackVisible) {
+        fallback = ayah;
+        fallbackVisible = visible;
+      }
+      if (visible >= (itemBox.size.height * .2).clamp(36, 96)) {
+        candidate = ayah;
+        break;
+      }
+    }
+    await _persistPosition(candidate ?? fallback);
+  }
+
+  Future<void> _persistPosition(QuranAyah? ayah) async {
+    if (ayah == null || ayah.number == _lastPersistedAyah) return;
+    _lastPersistedAyah = ayah.number;
     await ref
         .read(quranRepositoryProvider)
         .savePosition(
@@ -182,6 +311,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           page: ayah.pages.firstOrNull ?? 1,
         );
     ref.invalidate(readingPositionProvider);
+  }
+
+  Future<void> _select(QuranAyah ayah) async {
+    setState(() => _selectedAyah = ayah.number);
+    _lastPersistedAyah = null;
+    await _persistPosition(ayah);
     if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,

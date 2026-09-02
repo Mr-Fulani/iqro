@@ -32,6 +32,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     final preferences = ref.watch(appPreferencesProvider);
     final catalog = ref.watch(quranCatalogProvider);
     final position = ref.watch(readingPositionProvider).valueOrNull;
+    final locale = Localizations.localeOf(context).languageCode;
+    final positionSurah = catalog.valueOrNull?.surahs
+        .where((surah) => surah.number == (position?.surah ?? 1))
+        .firstOrNull;
     final playerActive = ref.watch(
       audioControllerProvider.select((value) => value.active),
     );
@@ -121,6 +125,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
               onTap: () => _openPosition(
                 preferences.readerMode,
                 position?.surah ?? 1,
+                position?.ayah ?? 1,
                 position?.page ?? 1,
               ),
               child: Row(
@@ -155,7 +160,8 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${context.l10n.alFatiha} · ${position?.ayah ?? 1}',
+                          '${positionSurah?.nameFor(locale) ?? '${context.l10n.surah} ${position?.surah ?? 1}'}'
+                          ' · ${context.l10n.ayah} ${position?.ayah ?? 1}',
                           style: Theme.of(
                             context,
                           ).textTheme.titleSmall?.copyWith(color: Colors.white),
@@ -198,7 +204,6 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                   onRetry: () => ref.invalidate(quranCatalogProvider),
                 ),
                 data: (data) {
-                  final locale = Localizations.localeOf(context).languageCode;
                   final filtered = data.surahs
                       .where((surah) {
                         if (_query.isEmpty) return true;
@@ -233,6 +238,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                                 onTap: () => _openPosition(
                                   preferences.readerMode,
                                   surah.number,
+                                  1,
                                   surah.firstPage ?? 1,
                                 ),
                               );
@@ -251,11 +257,11 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     );
   }
 
-  void _openPosition(ReaderMode mode, int surah, int page) {
+  void _openPosition(ReaderMode mode, int surah, int ayah, int page) {
     if (mode == ReaderMode.mushaf) {
-      context.push('/mushaf?page=$page&surah=$surah&ayah=1');
+      context.push('/mushaf?page=$page&surah=$surah&ayah=$ayah');
     } else {
-      context.push('/reader/$surah');
+      context.push('/reader/$surah?ayah=$ayah');
     }
   }
 

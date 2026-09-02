@@ -435,6 +435,43 @@ class AppLocalizationsAr extends AppLocalizations {
   String get memorizationTitle => 'تدريب الحفظ';
 
   @override
+  String get memorizationCreatePlan => 'إنشاء خطة للحفظ';
+
+  @override
+  String get memorizationEditPlan => 'تعديل الخطة';
+
+  @override
+  String get memorizationPlanDescription =>
+      'اختر السورة ونطاق الآيات والهدف اليومي ومدة التوقف والتلاوة. تتم مزامنة الخطة مع حسابك.';
+
+  @override
+  String get memorizationDailyRepetitions => 'التكرارات اليومية';
+
+  @override
+  String get memorizationPauseSeconds => 'التوقف بين التكرارات بالثواني';
+
+  @override
+  String get memorizationReciter => 'القارئ للتدريب';
+
+  @override
+  String get memorizationWithoutAudio => 'بدون صوت';
+
+  @override
+  String get memorizationSavePlan => 'حفظ الخطة';
+
+  @override
+  String get memorizationPlanSaved => 'تم حفظ خطة الحفظ';
+
+  @override
+  String get memorizationRangeInvalid => 'تحقق من بداية نطاق الآيات ونهايته';
+
+  @override
+  String get memorizationTodayCompleted => 'اكتمل هدف اليوم';
+
+  @override
+  String get memorizationRemaining => 'التكرارات المتبقية';
+
+  @override
   String get repetitionTarget => 'التكرارات';
 
   @override

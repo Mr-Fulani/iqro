@@ -40,6 +40,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   var _zoom = 1.0;
   QuranAyahReference? _selectedAyah;
   QuranAyahReference? _pageReference;
+  var _initialPageHandled = false;
+  var _positionRequest = 0;
 
   @override
   void initState() {
@@ -54,7 +56,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     _pageController = PageController(initialPage: _currentPage - 1);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(_savePagePosition(_currentPage));
+      if (!_initialPageHandled) {
+        _initialPageHandled = true;
+        unawaited(
+          _savePagePosition(_currentPage, preferredReference: _selectedAyah),
+        );
+      }
       _prefetchAdjacentPages(_currentPage);
     });
     unawaited(
@@ -402,6 +409,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   void _onScanPageChanged(int index) {
     final page = index + 1;
+    if (!_initialPageHandled && page == _currentPage) {
+      _initialPageHandled = true;
+      unawaited(_savePagePosition(page, preferredReference: _selectedAyah));
+      _prefetchAdjacentPages(page);
+      return;
+    }
+    if (page == _currentPage) return;
+    _initialPageHandled = true;
     _zoomControllers[_currentPage]?.setZoom(1);
     setState(() {
       _currentPage = page;
@@ -523,20 +538,39 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     }
     if (!mounted) return;
     setState(() {
+      _currentPage = page;
       _selectedAyah = reference;
       _pageReference = reference;
       _controlsVisible = false;
       _zoom = 1;
     });
+    if (reference != null) {
+      await _savePagePosition(page, preferredReference: reference);
+    }
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
-  Future<void> _savePagePosition(int page) async {
+  Future<void> _savePagePosition(
+    int page, {
+    QuranAyahReference? preferredReference,
+  }) async {
+    final request = ++_positionRequest;
     final repository = ref.read(quranRepositoryProvider);
     final current = await repository.position();
     try {
       final pageData = await ref.read(mushafPageProvider(page).future);
-      final reference = pageData.firstAyahReference;
+      if (!mounted || request != _positionRequest || page != _currentPage) {
+        return;
+      }
+      final preferredIsOnPage =
+          preferredReference != null &&
+          (pageData.regions.isEmpty ||
+              pageData.regions.any(
+                (region) => region.ayah == preferredReference,
+              ));
+      final reference = preferredIsOnPage
+          ? (surah: preferredReference.surah, ayah: preferredReference.ayah)
+          : pageData.firstAyahReference;
       if (mounted && reference != null && page == _currentPage) {
         setState(() {
           _pageReference = QuranAyahReference(
@@ -545,6 +579,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             ayah: reference.ayah,
           );
           if (_selectedAyah != null &&
+              pageData.regions.isNotEmpty &&
               !pageData.regions.any((region) => region.ayah == _selectedAyah)) {
             _selectedAyah = null;
           }
@@ -556,9 +591,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         page: page,
       );
     } on Object {
+      if (!mounted || request != _positionRequest || page != _currentPage) {
+        return;
+      }
       await repository.savePosition(
-        surah: current.surah,
-        ayah: current.ayah,
+        surah: preferredReference?.surah ?? current.surah,
+        ayah: preferredReference?.ayah ?? current.ayah,
         page: page,
       );
     }
@@ -566,6 +604,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   }
 
   Future<void> _selectAyah(QuranAyahReference reference) async {
+    _positionRequest++;
     setState(() {
       _selectedAyah = reference;
       _pageReference = reference;

@@ -436,6 +436,44 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memorizationTitle => 'Практика заучивания';
 
   @override
+  String get memorizationCreatePlan => 'Создать план заучивания';
+
+  @override
+  String get memorizationEditPlan => 'Изменить план';
+
+  @override
+  String get memorizationPlanDescription =>
+      'Выберите суру, диапазон аятов, дневную цель, паузу и чтение. План синхронизируется с вашим аккаунтом.';
+
+  @override
+  String get memorizationDailyRepetitions => 'Повторений в день';
+
+  @override
+  String get memorizationPauseSeconds => 'Пауза между повторами, сек.';
+
+  @override
+  String get memorizationReciter => 'Чтец для повторения';
+
+  @override
+  String get memorizationWithoutAudio => 'Без аудио';
+
+  @override
+  String get memorizationSavePlan => 'Сохранить план';
+
+  @override
+  String get memorizationPlanSaved => 'План заучивания сохранён';
+
+  @override
+  String get memorizationRangeInvalid =>
+      'Проверьте начало и конец диапазона аятов';
+
+  @override
+  String get memorizationTodayCompleted => 'Цель на сегодня выполнена';
+
+  @override
+  String get memorizationRemaining => 'Осталось повторений';
+
+  @override
   String get repetitionTarget => 'Повторений';
 
   @override

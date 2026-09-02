@@ -438,6 +438,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memorizationTitle => 'Memorization practice';
 
   @override
+  String get memorizationCreatePlan => 'Create a memorization plan';
+
+  @override
+  String get memorizationEditPlan => 'Edit plan';
+
+  @override
+  String get memorizationPlanDescription =>
+      'Choose a surah, ayah range, daily target, pause, and recitation. The plan syncs with your account.';
+
+  @override
+  String get memorizationDailyRepetitions => 'Repetitions per day';
+
+  @override
+  String get memorizationPauseSeconds => 'Pause between repetitions, sec.';
+
+  @override
+  String get memorizationReciter => 'Reciter for practice';
+
+  @override
+  String get memorizationWithoutAudio => 'Without audio';
+
+  @override
+  String get memorizationSavePlan => 'Save plan';
+
+  @override
+  String get memorizationPlanSaved => 'Memorization plan saved';
+
+  @override
+  String get memorizationRangeInvalid =>
+      'Check the start and end of the ayah range';
+
+  @override
+  String get memorizationTodayCompleted => 'Today\'s target is complete';
+
+  @override
+  String get memorizationRemaining => 'Repetitions remaining';
+
+  @override
   String get repetitionTarget => 'Repetitions';
 
   @override

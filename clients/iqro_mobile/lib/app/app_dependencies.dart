@@ -120,7 +120,7 @@ class AppDependencies {
       prayer: prayer,
       reminders: reminders,
       notifications: notifications,
-      memorization: MemorizationRepository(database),
+      memorization: MemorizationRepository(api: api, database: database),
       dua: DuaRepository(api: api, database: database),
       share: ShareRepository(
         api: api,

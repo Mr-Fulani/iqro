@@ -40,9 +40,10 @@ class HomeScreen extends ConsumerWidget {
         currentSurah?.nameFor(locale) ??
         '${context.l10n.surah} $currentSurahNumber';
     final memorization = memorizationState.valueOrNull;
-    final memorizationSurah = memorization == null
+    final memorizationPlan = memorization?.plan;
+    final memorizationSurah = memorizationPlan == null
         ? null
-        : findSurah(catalog, memorization.surah);
+        : findSurah(catalog, memorizationPlan.startAyah.surah);
     final dailyDua = duaForDate(duaState.valueOrNull, DateTime.now());
     final achieved = plan?.achieved ?? 0;
     final target =
@@ -308,17 +309,19 @@ class HomeScreen extends ConsumerWidget {
 
   String _memorizationTitle(
     BuildContext context,
-    AsyncValue<MemorizationState> state,
-    MemorizationState? value,
+    AsyncValue<MemorizationDashboard> state,
+    MemorizationDashboard? value,
     Surah? surah,
     String locale,
   ) {
     if (state.isLoading && value == null) return context.l10n.loading;
-    if (value == null) return context.l10n.memorizationTitle;
+    final plan = value?.plan;
+    if (plan == null) return context.l10n.memorizationCreatePlan;
     final name =
-        surah?.nameFor(locale) ?? '${context.l10n.surah} ${value.surah}';
-    return '$name ${value.startAyah}–${value.endAyah} · '
-        '${value.completed}/${value.target}';
+        surah?.nameFor(locale) ??
+        '${context.l10n.surah} ${plan.startAyah.surah}';
+    return '$name ${plan.startAyah.ayah}–${plan.endAyah.ayah} · '
+        '${value!.today.completedRepetitions}/${plan.dailyRepetitions}';
   }
 
   String _duaSubtitle(

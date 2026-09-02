@@ -268,6 +268,14 @@ final mushafDownloadProvider =
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });
+final memorizationRecitationsProvider = FutureProvider<List<Recitation>>((
+  ref,
+) async {
+  final recitations = await ref.watch(audioRepositoryProvider).recitations();
+  return recitations
+      .where((item) => item.streamAllowed && item.timingsAvailable)
+      .toList(growable: false);
+});
 final recitationVariantsProvider =
     FutureProvider.family<List<Recitation>, String>((ref, personKey) async {
       final reciters = await ref.watch(recitersProvider.future);
@@ -407,23 +415,35 @@ final planProvider =
     });
 
 class MemorizationController
-    extends StateNotifier<AsyncValue<MemorizationState>> {
+    extends StateNotifier<AsyncValue<MemorizationDashboard>> {
   MemorizationController(this._repository) : super(const AsyncValue.loading()) {
     unawaited(reload());
   }
   final MemorizationRepository _repository;
   Future<void> reload() async =>
       state = await AsyncValue.guard(_repository.load);
-  Future<void> assess(String value) async =>
-      state = await AsyncValue.guard(() => _repository.assess(value));
-  Future<void> reset() async =>
-      state = await AsyncValue.guard(_repository.reset);
+  Future<void> savePlan(
+    MemorizationPlanDraft draft, {
+    required int baseRevision,
+  }) async {
+    state = AsyncValue.data(
+      await _repository.savePlan(draft, baseRevision: baseRevision),
+    );
+  }
+
+  Future<void> assess(MemorizationAssessment value) async {
+    state = AsyncValue.data(await _repository.assess(value));
+  }
+
+  Future<void> reset() async {
+    state = AsyncValue.data(await _repository.reset());
+  }
 }
 
 final memorizationProvider =
     StateNotifierProvider<
       MemorizationController,
-      AsyncValue<MemorizationState>
+      AsyncValue<MemorizationDashboard>
     >((ref) {
       return MemorizationController(ref.watch(memorizationRepositoryProvider));
     });

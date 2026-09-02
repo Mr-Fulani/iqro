@@ -930,6 +930,78 @@ abstract class AppLocalizations {
   /// **'Memorization practice'**
   String get memorizationTitle;
 
+  /// No description provided for @memorizationCreatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a memorization plan'**
+  String get memorizationCreatePlan;
+
+  /// No description provided for @memorizationEditPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit plan'**
+  String get memorizationEditPlan;
+
+  /// No description provided for @memorizationPlanDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a surah, ayah range, daily target, pause, and recitation. The plan syncs with your account.'**
+  String get memorizationPlanDescription;
+
+  /// No description provided for @memorizationDailyRepetitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Repetitions per day'**
+  String get memorizationDailyRepetitions;
+
+  /// No description provided for @memorizationPauseSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause between repetitions, sec.'**
+  String get memorizationPauseSeconds;
+
+  /// No description provided for @memorizationReciter.
+  ///
+  /// In en, this message translates to:
+  /// **'Reciter for practice'**
+  String get memorizationReciter;
+
+  /// No description provided for @memorizationWithoutAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Without audio'**
+  String get memorizationWithoutAudio;
+
+  /// No description provided for @memorizationSavePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Save plan'**
+  String get memorizationSavePlan;
+
+  /// No description provided for @memorizationPlanSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Memorization plan saved'**
+  String get memorizationPlanSaved;
+
+  /// No description provided for @memorizationRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the start and end of the ayah range'**
+  String get memorizationRangeInvalid;
+
+  /// No description provided for @memorizationTodayCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s target is complete'**
+  String get memorizationTodayCompleted;
+
+  /// No description provided for @memorizationRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Repetitions remaining'**
+  String get memorizationRemaining;
+
   /// No description provided for @repetitionTarget.
   ///
   /// In en, this message translates to:

@@ -437,6 +437,44 @@ class AppLocalizationsTr extends AppLocalizations {
   String get memorizationTitle => 'Ezber çalışması';
 
   @override
+  String get memorizationCreatePlan => 'Ezber planı oluştur';
+
+  @override
+  String get memorizationEditPlan => 'Planı düzenle';
+
+  @override
+  String get memorizationPlanDescription =>
+      'Sureyi, ayet aralığını, günlük hedefi, bekleme süresini ve okuyuşu seçin. Plan hesabınızla eşitlenir.';
+
+  @override
+  String get memorizationDailyRepetitions => 'Günlük tekrar';
+
+  @override
+  String get memorizationPauseSeconds => 'Tekrarlar arası bekleme, sn.';
+
+  @override
+  String get memorizationReciter => 'Çalışma kârisi';
+
+  @override
+  String get memorizationWithoutAudio => 'Ses olmadan';
+
+  @override
+  String get memorizationSavePlan => 'Planı kaydet';
+
+  @override
+  String get memorizationPlanSaved => 'Ezber planı kaydedildi';
+
+  @override
+  String get memorizationRangeInvalid =>
+      'Ayet aralığının başlangıç ve bitişini kontrol edin';
+
+  @override
+  String get memorizationTodayCompleted => 'Bugünün hedefi tamamlandı';
+
+  @override
+  String get memorizationRemaining => 'Kalan tekrar';
+
+  @override
   String get repetitionTarget => 'Tekrar';
 
   @override
