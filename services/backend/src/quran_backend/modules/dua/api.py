@@ -24,6 +24,7 @@ from quran_backend.modules.dua.selectors import (
     published_dua_categories,
     published_dua_collections,
     published_dua_entries,
+    published_dua_entries_for_keys,
 )
 from quran_backend.modules.dua.serializers import (
     DuaCategoryListQuerySerializer,
@@ -215,10 +216,7 @@ class DuaFavoriteListView(PrivateNoStoreResponseMixin, APIView):
         favorite_keys = {
             (item["collection"], item["source_number"]) for item in snapshot["results"]
         }
-        entries = published_dua_entries(language).filter(
-            collection_version__collection__slug__in={key[0] for key in favorite_keys},
-            source_number__in={key[1] for key in favorite_keys},
-        )
+        entries = published_dua_entries_for_keys(language, favorite_keys)
         serialized_entries = DuaEntrySerializer(entries, many=True).data
         entries_by_key = {
             (entry["collection"], entry["source_number"]): entry

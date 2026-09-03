@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 
 from quran_backend.modules.dua.models import (
@@ -152,3 +154,24 @@ def published_dua_entries(
             | Q(matches_localized_category=True)
         )
     return queryset.distinct().order_by("sort_order", "id")
+
+
+def published_dua_entries_for_keys(
+    language: str,
+    keys: Iterable[tuple[str, int]],
+) -> QuerySet[DuaEntry]:
+    """Return published entries matching exact canonical collection/number pairs."""
+
+    numbers_by_collection: dict[str, set[int]] = {}
+    for collection_slug, source_number in keys:
+        numbers_by_collection.setdefault(collection_slug, set()).add(source_number)
+    if not numbers_by_collection:
+        return published_dua_entries(language).none()
+
+    pair_filter = Q(pk__isnull=True)
+    for collection_slug, source_numbers in numbers_by_collection.items():
+        pair_filter |= Q(
+            collection_version__collection__slug=collection_slug,
+            source_number__in=source_numbers,
+        )
+    return published_dua_entries(language).filter(pair_filter)

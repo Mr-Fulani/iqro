@@ -54,21 +54,8 @@ def set_dua_favorite(
     source_number: int,
     is_favorite: bool,
 ) -> dict[str, Any]:
-    collection = (
-        DuaCollection.objects.select_for_update()
-        .filter(
-            slug=collection_slug,
-            active_version__status=DuaPublicationStatus.PUBLISHED,
-        )
-        .first()
-    )
-    if (
-        collection is None
-        or not DuaEntry.objects.filter(
-            collection_version_id=collection.active_version_id,
-            source_number=source_number,
-        ).exists()
-    ):
+    collection = DuaCollection.objects.select_for_update().filter(slug=collection_slug).first()
+    if collection is None:
         raise DuaFavoriteTargetNotFoundError
 
     favorite = (
@@ -80,16 +67,34 @@ def set_dua_favorite(
         )
         .first()
     )
-    if is_favorite:
-        if favorite is None:
-            favorite = DuaFavorite.objects.create(
-                user=user,
-                collection=collection,
-                source_number=source_number,
-            )
-    elif favorite is not None:
-        favorite.delete()
-        favorite = None
+    if not is_favorite:
+        if favorite is not None:
+            favorite.delete()
+            favorite = None
+        elif not DuaEntry.objects.filter(
+            collection_version__collection=collection,
+            source_number=source_number,
+        ).exists():
+            raise DuaFavoriteTargetNotFoundError
+        return favorite_snapshot(
+            collection_slug=collection.slug,
+            source_number=source_number,
+            favorite=None,
+        )
+
+    target_is_published = DuaEntry.objects.filter(
+        collection_version_id=collection.active_version_id,
+        collection_version__status=DuaPublicationStatus.PUBLISHED,
+        source_number=source_number,
+    ).exists()
+    if not target_is_published:
+        raise DuaFavoriteTargetNotFoundError
+    if favorite is None:
+        favorite = DuaFavorite.objects.create(
+            user=user,
+            collection=collection,
+            source_number=source_number,
+        )
 
     return favorite_snapshot(
         collection_slug=collection.slug,

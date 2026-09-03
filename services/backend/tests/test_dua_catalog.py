@@ -5,8 +5,10 @@ from copy import deepcopy
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from django.contrib import admin
 from django.contrib.postgres.indexes import GinIndex
 from django.core.cache import caches
+from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.request import Request
@@ -30,10 +32,13 @@ from quran_backend.modules.dua.models import (
     DuaCollectionVersion,
     DuaEntry,
     DuaEntryTranslation,
+    DuaEvidence,
     DuaFavorite,
     DuaPublicationStatus,
+    DuaSourceEdition,
 )
 from quran_backend.modules.dua.pagination import DuaEntryCursorPagination
+from quran_backend.modules.dua.selectors import published_dua_entries_for_keys
 from quran_backend.modules.dua.throttling import DuaSearchRateThrottle
 
 
@@ -173,6 +178,82 @@ def test_dua_favorite_rejects_unknown_published_entry(api_client: APIClient) -> 
 
     assert response.status_code == 404
     assert response.content_type == "application/problem+json"
+
+
+@pytest.mark.django_db
+def test_withdrawn_dua_favorite_lists_without_entry_and_remains_removable(
+    api_client: APIClient,
+) -> None:
+    user = User.objects.create_user()
+    other_user = User.objects.create_user()
+    collection = DuaCollection.objects.get(slug="hisn-al-muslim")
+    assert collection.active_version is not None
+    detail_url = reverse(
+        "dua-personal:favorite-detail",
+        kwargs={"collection_slug": collection.slug, "source_number": 267},
+    )
+    list_url = reverse("dua-personal:favorite-list")
+
+    api_client.force_authenticate(user=user)
+    created = api_client.put(detail_url, {"is_favorite": True}, format="json")
+    DuaFavorite.objects.create(
+        user=other_user,
+        collection=collection,
+        source_number=267,
+    )
+    collection.active_version.status = DuaPublicationStatus.WITHDRAWN
+    collection.active_version.save(update_fields=("status", "updated_at"))
+    collection.active_version = None
+    collection.save(update_fields=("active_version", "updated_at"))
+
+    expanded = api_client.get(f"{list_url}?include=entry&language=en")
+    removed = api_client.put(detail_url, {"is_favorite": False}, format="json")
+    repeated = api_client.put(detail_url, {"is_favorite": False}, format="json")
+    unavailable_add = api_client.put(detail_url, {"is_favorite": True}, format="json")
+
+    assert created.status_code == 200
+    assert expanded.status_code == 200
+    assert expanded["Cache-Control"] == PRIVATE_NO_STORE_CACHE_CONTROL
+    assert expanded.json()["results"] == [{**created.json(), "entry": None}]
+    assert removed.status_code == 200
+    assert removed.json()["is_favorite"] is False
+    assert repeated.status_code == 200
+    assert repeated.json()["is_favorite"] is False
+    assert unavailable_add.status_code == 404
+    assert not DuaFavorite.objects.filter(user=user).exists()
+    assert DuaFavorite.objects.filter(user=other_user).exists()
+
+
+@pytest.mark.django_db
+def test_favorite_entry_expansion_uses_exact_collection_number_pairs(
+    api_client: APIClient,
+) -> None:
+    snapshot = deepcopy(load_dua_snapshot(bundled_starter_snapshot_path()))
+    snapshot["collection"]["slug"] = "second-dua-collection"
+    snapshot["version"] = "second-dua-v1"
+    import_dua_snapshot(snapshot, publish=True)
+
+    keys = {("hisn-al-muslim", 1), ("second-dua-collection", 9)}
+    selected = published_dua_entries_for_keys("en", keys)
+    assert {
+        (entry.collection_version.collection.slug, entry.source_number) for entry in selected
+    } == keys
+
+    user = User.objects.create_user()
+    for collection_slug, source_number in keys:
+        DuaFavorite.objects.create(
+            user=user,
+            collection=DuaCollection.objects.get(slug=collection_slug),
+            source_number=source_number,
+        )
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/api/v1/me/dua-favorites?include=entry&language=en")
+
+    assert response.status_code == 200
+    assert {
+        (item["entry"]["collection"], item["entry"]["source_number"])
+        for item in response.json()["results"]
+    } == keys
 
 
 @pytest.mark.django_db
@@ -498,6 +579,101 @@ def test_dua_api_rejects_unsupported_language_and_hides_drafts(api_client: APICl
     assert invalid.status_code == 400
     assert "language" in invalid.json()["field_errors"]
     assert [item["slug"] for item in catalog.json()] == ["hisn-al-muslim"]
+
+
+@pytest.mark.django_db
+def test_dua_admin_freezes_published_catalog_and_allows_new_draft_version() -> None:
+    operator = User.objects.create_superuser("dua-admin@example.test")
+    request = RequestFactory().get("/admin/dua/")
+    request.user = operator
+    collection = DuaCollection.objects.get(slug="hisn-al-muslim")
+    version = collection.active_version
+    assert version is not None
+    category = DuaCategory.objects.filter(collection_version=version).first()
+    entry = DuaEntry.objects.filter(collection_version=version).first()
+    source = DuaSourceEdition.objects.filter(collection_version=version).first()
+    audio = DuaAudioAsset.objects.filter(collection=collection, is_active=True).first()
+    assert category is not None
+    assert entry is not None
+    assert source is not None
+    assert audio is not None
+    category_translation = DuaCategoryTranslation.objects.filter(category=category).first()
+    entry_translation = DuaEntryTranslation.objects.filter(entry=entry).first()
+    evidence = DuaEvidence.objects.filter(entry=entry).first()
+    assert category_translation is not None
+    assert entry_translation is not None
+    assert evidence is not None
+
+    published_objects = (
+        collection,
+        version,
+        source,
+        category,
+        category_translation,
+        entry,
+        entry_translation,
+        evidence,
+    )
+    for obj in published_objects:
+        model_admin = admin.site._registry[type(obj)]
+        readonly = set(model_admin.get_readonly_fields(request, obj))
+        assert {field.name for field in obj._meta.fields} <= readonly
+        assert model_admin.has_delete_permission(request, obj) is False
+        assert "delete_selected" not in model_admin.get_actions(request)
+
+    audio_admin = admin.site._registry[DuaAudioAsset]
+    audio_readonly = set(audio_admin.get_readonly_fields(request, audio))
+    assert {field.name for field in audio._meta.fields} - {"is_active"} <= audio_readonly
+    assert "is_active" not in audio_readonly
+    assert audio_admin.has_delete_permission(request, audio) is False
+    assert "delete_selected" not in audio_admin.get_actions(request)
+
+    draft_version = DuaCollectionVersion.objects.create(
+        collection=collection,
+        version="next-admin-draft",
+        checksum_sha256="a" * 64,
+    )
+    draft_category = DuaCategory.objects.create(
+        collection_version=draft_version,
+        source_number=1,
+        slug="draft-category",
+        sort_order=1,
+    )
+    draft_entry = DuaEntry.objects.create(
+        collection_version=draft_version,
+        category=draft_category,
+        source_number=1,
+        slug="draft-entry",
+        arabic_text="دعاء",
+        sort_order=1,
+    )
+    version_admin = admin.site._registry[DuaCollectionVersion]
+    category_admin = admin.site._registry[DuaCategory]
+
+    assert "version" not in version_admin.get_readonly_fields(request, draft_version)
+    assert "status" in version_admin.get_readonly_fields(request, draft_version)
+    assert version_admin.has_delete_permission(request, draft_version) is True
+    assert "slug" not in category_admin.get_readonly_fields(request, draft_category)
+    assert category_admin.has_delete_permission(request, draft_category) is True
+    assert "active_version" in admin.site._registry[DuaCollection].get_readonly_fields(
+        request, collection
+    )
+
+    draft_parent_choices = (
+        (DuaSourceEdition, "collection_version", draft_version.id, version.id),
+        (DuaCategory, "collection_version", draft_version.id, version.id),
+        (DuaEntry, "collection_version", draft_version.id, version.id),
+        (DuaCategoryTranslation, "category", draft_category.id, category.id),
+        (DuaEntryTranslation, "entry", draft_entry.id, entry.id),
+        (DuaEvidence, "entry", draft_entry.id, entry.id),
+    )
+    for model, parent_field, draft_parent_id, published_parent_id in draft_parent_choices:
+        form = admin.site._registry[model].get_form(request)
+        allowed_parent_ids = set(
+            form.base_fields[parent_field].queryset.values_list("id", flat=True)
+        )
+        assert draft_parent_id in allowed_parent_ids
+        assert published_parent_id not in allowed_parent_ids
 
 
 @pytest.mark.django_db
