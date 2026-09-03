@@ -17,6 +17,23 @@ from quran_backend.modules.dua.models import (
 )
 
 
+def publishable_dua_audio_assets() -> QuerySet[DuaAudioAsset]:
+    """Return active external audio and managed audio with complete CDN evidence."""
+
+    return DuaAudioAsset.objects.filter(is_active=True).filter(
+        (Q(object_key__isnull=True) & ~Q(external_url=""))
+        | (
+            Q(object_key__isnull=False)
+            & Q(external_url="")
+            & ~Q(checksum_sha256="")
+            & Q(size_bytes__gt=0)
+            & ~Q(origin_etag="")
+            & ~Q(etag="")
+            & Q(cdn_contract_verified_at__isnull=False)
+        )
+    )
+
+
 def published_dua_collections(language: str) -> QuerySet[DuaCollection]:
     localized_sources = DuaSourceEdition.objects.filter(language_code=language)
     return (
@@ -127,8 +144,8 @@ def published_dua_entries(
                 to_attr="localized_source_editions",
             ),
             Prefetch(
-                "collection_version__collection__audio_assets",
-                queryset=DuaAudioAsset.objects.filter(is_active=True).order_by("sort_order"),
+                "collection_version__audio_assets",
+                queryset=publishable_dua_audio_assets().order_by("sort_order"),
                 to_attr="active_audio_assets",
             ),
             Prefetch("evidence", queryset=DuaEvidence.objects.order_by("sort_order")),

@@ -1,0 +1,3007 @@
+{
+  "schema_version": 1,
+  "version": "jmapps-bd4eef1",
+  "collection": {
+    "slug": "supplications-from-quran"
+  },
+  "sources": [
+    {
+      "language": "ar",
+      "provider": "JMApps",
+      "source_item_id": "main_supplications.db:ar",
+      "title": "أدعية من القرآن",
+      "author": "",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b"
+    },
+    {
+      "language": "en",
+      "provider": "JMApps",
+      "source_item_id": "main_supplications.db:en",
+      "title": "Supplications from the Quran",
+      "author": "",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b"
+    },
+    {
+      "language": "ru",
+      "provider": "JMApps",
+      "source_item_id": "main_supplications.db:ru",
+      "title": "Мольбы из Корана",
+      "author": "",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b"
+    },
+    {
+      "language": "tr",
+      "provider": "JMApps",
+      "source_item_id": "main_supplications.db:tr",
+      "title": "Kur'ân-ı Kerîm'den duâlar",
+      "author": "",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b"
+    }
+  ],
+  "categories": [
+    {
+      "source_number": 1,
+      "slug": "quranic-supplications",
+      "translations": [
+        {
+          "language": "ar",
+          "title": "أدعية من القرآن"
+        },
+        {
+          "language": "en",
+          "title": "Supplications from the Quran"
+        },
+        {
+          "language": "ru",
+          "title": "Мольбы из Корана"
+        },
+        {
+          "language": "tr",
+          "title": "Kur'ân-ı Kerîm'den duâlar"
+        }
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "source_number": 1,
+      "category_source_number": 1,
+      "slug": "quran-supplication-001",
+      "arabic_text": "رَبِّ اجْعَلْ هَذَا بَلَدًا آمِنًا وَارْزُقْ أَهْلَهُ مِنَ الثَّمَرَاتِ مَنْ آمَنَ مِنْهُم بِاللَّهِ وَالْيَوْمِ الْآخِرِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ اجْعَلْ هَذَا بَلَدًا آمِنًا وَارْزُقْ أَهْلَهُ مِنَ الثَّمَرَاتِ مَنْ آمَنَ مِنْهُم بِاللَّهِ وَالْيَوْمِ الْآخِرِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, make this a secure city and provide its people with fruits - whoever of them believes in Allāh and the Last Day»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Сделай этот город безопасным и надели плодами его жителей, которые уверовали в Аллаха и в Последний день»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bu şehri güvenli bir şehir kıl. Halkından Allah'a ve ahiret gününe iman edenleri her türlü ürünle rızıklandır»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "2:126",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "1",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 2,
+      "category_source_number": 1,
+      "slug": "quran-supplication-002",
+      "arabic_text": "رَبَّنَا تَقَبَّلْ مِنَّا إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِن ذُرِّيَّتِنَا أُمَّةً مُّسْلِمَةً لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا تَقَبَّلْ مِنَّا إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِن ذُرِّيَّتِنَا أُمَّةً مُّسْلِمَةً لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Lord, accept [this] from us. Indeed, You are the Hearing, Knowing. Our Lord, and make us Muslims [in submission] to You and from our descendants a Muslim nation [in submission] to You. And show us our rites [of worship] and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Прими от нас! Воистину, Ты – Слышащий, Знающий. Господь наш! Сделай нас покорившимися Тебе, а из нашего потомства – общину, покорившуюся Тебе. Покажи нам обряды поклонения и прими наше покаяние. Воистину, Ты – Принимающий покаяние, Милосердный»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizden kabul buyur! Şüphesiz sen hakkıyla işitensin, hakkıyla bilensin\" diyorlardı. Rabbimiz! Bizi sana teslim olmuş kimseler kıl. Soyumuzdan da sana teslim olmuş bir ümmet kıl. Bize ibadet yerlerini ve ilkelerini göster. Tövbemizi kabul et. Çünkü sen, tövbeleri çok kabul edensin, çok merhametli olansın»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "2:127-128",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "2",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 3,
+      "category_source_number": 1,
+      "slug": "quran-supplication-003",
+      "arabic_text": "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Одари нас добром в этом мире и добром в Последней жизни и защити нас от мучений Огня»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Bize dünyada da iyilik ver, ahirette de iyilik ver ve bizi ateş azabından koru\" diyenler de vardır»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "2:201",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "3",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 4,
+      "category_source_number": 1,
+      "slug": "quran-supplication-004",
+      "arabic_text": "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, pour upon us patience and plant firmly our feet and give us victory over the disbelieving people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Пролей на нас терпение, укрепи наши стопы и помоги нам одержать победу над неверующими людьми»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Üzerimize sabır yağdır, ayaklarımızı sağlam bastır ve şu kâfir kavme karşı bize yardım et»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "2:250",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "4",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 5,
+      "category_source_number": 1,
+      "slug": "quran-supplication-005",
+      "arabic_text": "آمَنَ الرَّسُولُ بِمَا أُنزِلَ إِلَيْهِ مِن رَّبِّهِ وَالْمُؤْمِنُونَ كُلٌّ آمَنَ بِاللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ لَا نُفَرِّقُ بَيْنَ أَحَدٍ مِّن رُّسُلِهِ وَقَالُوا سَمِعْنَا وَأَطَعْنَا غُفْرَانَكَ رَبَّنَا وَإِلَيْكَ الْمَصِيرُ لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "آمَنَ الرَّسُولُ بِمَا أُنزِلَ إِلَيْهِ مِن رَّبِّهِ وَالْمُؤْمِنُونَ كُلٌّ آمَنَ بِاللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ لَا نُفَرِّقُ بَيْنَ أَحَدٍ مِّن رُّسُلِهِ وَقَالُوا سَمِعْنَا وَأَطَعْنَا غُفْرَانَكَ رَبَّنَا وَإِلَيْكَ الْمَصِيرُ لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allāh and His angels and His books and His messengers, [saying], We make no distinction between any of His messengers. And they say, We hear and we obey. [We seek] Your forgiveness, our Lord, and to You is the [final] destination. Allāh does not charge a soul except [with that within] its capacity. It will have [the consequence of] what [good] it has gained, and it will bear [the consequence of] what [evil] it has earned. Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Посланник и верующие уверовали в то, что ниспослано ему от Господа. Все они уверовали в Аллаха, Его ангелов, Его Писания и Его посланников. Они говорят: «Мы не делаем различий между Его посланниками». Они говорят: «Слушаем и повинуемся! Твоего прощения мы просим, Господь наш, и к Тебе предстоит возвращение». Аллах не возлагает на человека сверх его возможностей. Ему достанется то, что он приобрел, и против него будет то, что он приобрел. Господь наш! Не наказывай нас, если мы позабыли или ошиблись. Господь наш! Не возлагай на нас бремя, которое Ты возложил на наших предшественников. Господь наш! Не обременяй нас тем, что нам не под силу. Будь снисходителен к нам! Прости нас и помилуй! Ты – наш Покровитель. Помоги же нам одержать верх над неверующими людьми»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Peygamber, Rabbinden kendisine indirilene iman etti, mü'minler de (iman ettiler). Her biri; Allah'a, meleklerine, kitaplarına ve peygamberlerine iman ettiler ve şöyle dediler: \"Onun peygamberlerinden hiçbirini (diğerinden) ayırt etmeyiz.\" Şöyle de dediler: \"İşittik ve itaat ettik. Ey Rabbimiz! Senden bağışlama dileriz. Sonunda dönüş yalnız sanadır. Allah bir kimseyi ancak gücünün yettiği şeyle yükümlü kılar. Onun kazandığı iyilik kendi yararına, kötülük de kendi zararınadır. (Şöyle diyerek dua ediniz): \"Ey Rabbimiz! Unutur, ya da yanılırsak bizi sorumlu tutma! Ey Rabbimiz! Bize, bizden öncekilere yüklediğin gibi ağır yük yükleme. Ey Rabbimiz! Bize gücümüzün yetmediği şeyleri yükleme! Bizi affet, bizi bağışla, bize acı! Sen bizim Mevlâmızsın. Kâfirler topluluğuna karşı bize yardım et»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "2:285-286",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "5",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 6,
+      "category_source_number": 1,
+      "slug": "quran-supplication-006",
+      "arabic_text": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً إِنَّكَ أَنتَ الْوَهَّابُ رَبَّنَا إِنَّكَ جَامِعُ النَّاسِ لِيَوْمٍ لَّا رَيْبَ فِيهِ إِنَّ اللَّهَ لَا يُخْلِفُ الْمِيعَادَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً إِنَّكَ أَنتَ الْوَهَّابُ رَبَّنَا إِنَّكَ جَامِعُ النَّاسِ لِيَوْمٍ لَّا رَيْبَ فِيهِ إِنَّ اللَّهَ لَا يُخْلِفُ الْمِيعَادَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower! Our Lord, surely You will gather the people for a Day about which there is no doubt. Indeed, Allāh does not fail in His promise»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Не уклоняй наши сердца в сторону после того, как Ты наставил нас на прямой путь, и даруй нам милость от Себя, ведь Ты – Дарующий! Господь наш! Ты соберешь людей в день, в котором нет сомнения. Воистину, Аллах не нарушает обещания»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Bizi hidayete erdirdikten sonra kalplerimizi eğriltme. Bize katından bir rahmet bahşet. Şüphesiz sen çok bahşedensin! Rabbimiz! Şüphesiz sen, hakkında şüphe olmayan bir günde insanları toplayacaksın. Şüphesiz Allah va'dinden dönmez»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:8-9",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "6",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 7,
+      "category_source_number": 1,
+      "slug": "quran-supplication-007",
+      "arabic_text": "رَبَّنَا إِنَّنَا آمَنَّا فَاغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ النَّارِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا إِنَّنَا آمَنَّا فَاغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ النَّارِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Воистину, мы уверовали. Прости же нам наши грехи и защити нас от мучений Огня»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz, biz iman ettik. Bizim günahlarımızı bağışla. Bizi ateş azabından koru»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:16",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "7",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 8,
+      "category_source_number": 1,
+      "slug": "quran-supplication-008",
+      "arabic_text": "إِنِّي أُعِيذُهَا بِكَ وَذُرِّيَّتَهَا مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "إِنِّي أُعِيذُهَا بِكَ وَذُرِّيَّتَهَا مِنَ الشَّيْطَانِ الرَّجِيمِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«I seek refuge for her (Mary) in You and [for] her descendants from Satan, the expelled [from the mercy of Allāh]»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Прошу Тебя защитить ее (Марьям) и ее потомство от сатаны изгнанного и побиваемого»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Onu (Meryem) ve soyunu kovulmuş şeytandan senin korumana bırakıyorum»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:36",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "8",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 9,
+      "category_source_number": 1,
+      "slug": "quran-supplication-009",
+      "arabic_text": "رَبِّ هَبْ لِي مِن لَّدُنكَ ذُرِّيَّةً طَيِّبَةً إِنَّكَ سَمِيعُ الدُّعَاءِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ هَبْ لِي مِن لَّدُنكَ ذُرِّيَّةً طَيِّبَةً إِنَّكَ سَمِيعُ الدُّعَاءِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, grant me from Yourself a good offspring. Indeed, You are the Hearer of supplication»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Одари меня прекрасным потомством от Себя, ведь Ты внимаешь мольбе»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bana katından temiz bir nesil bahşet. Şüphesiz sen duayı hakkıyla işitensin»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:38",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "9",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 10,
+      "category_source_number": 1,
+      "slug": "quran-supplication-010",
+      "arabic_text": "رَبَّنَا آمَنَّا بِمَا أَنزَلْتَ وَاتَّبَعْنَا الرَّسُولَ فَاكْتُبْنَا مَعَ الشَّاهِدِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا آمَنَّا بِمَا أَنزَلْتَ وَاتَّبَعْنَا الرَّسُولَ فَاكْتُبْنَا مَعَ الشَّاهِدِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, we have believed in what You revealed and have followed the messenger, so register us among the witnesses [to truth]»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Мы уверовали в то, что Ты ниспослал, и последовали за посланником. Запиши же нас в числе свидетельствующих»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Senin indirdiğine iman ettik ve Peygamber'e uyduk.Artık bizi (hakikate) şahitlik edenlerle beraber yaz»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:53",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "10",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 11,
+      "category_source_number": 1,
+      "slug": "quran-supplication-011",
+      "arabic_text": "رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, forgive us our sins and the excess [committed] in our affairs and plant firmly our feet and give us victory over the disbelieving people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Прости нам наши грехи и излишества, которые мы допустили в нашем деле, утверди наши стопы и даруй нам победу над людьми неверующими»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Bizim günahlarımızı ve işimizdeki taşkınlıklarımızı bağışla ve (yolunda) ayaklarımızı sağlam tut. Kâfir topluma karşı bize yardım et»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:147",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "11",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 12,
+      "category_source_number": 1,
+      "slug": "quran-supplication-012",
+      "arabic_text": "رَبَّنَا مَا خَلَقْتَ هَذَا بَاطِلًا سُبْحَانَكَ فَقِنَا عَذَابَ النَّارِ رَبَّنَا إِنَّكَ مَن تُدْخِلِ النَّارَ فَقَدْ أَخْزَيْتَهُ وَمَا لِلظَّالِمِينَ مِنْ أَنصَارٍ رَّبَّنَا إِنَّنَا سَمِعْنَا مُنَادِيًا يُنَادِي لِلْإِيمَانِ أَنْ آمِنُوا بِرَبِّكُمْ فَآمَنَّا رَبَّنَا فَاغْفِرْ لَنَا ذُنُوبَنَا وَكَفِّرْ عَنَّا سَيِّئَاتِنَا وَتَوَفَّنَا مَعَ الْأَبْرَارِ رَبَّنَا وَآتِنَا مَا وَعَدتَّنَا عَلَى رُسُلِكَ وَلَا تُخْزِنَا يَوْمَ الْقِيَامَةِ إِنَّكَ لَا تُخْلِفُ الْمِيعَادَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا مَا خَلَقْتَ هَذَا بَاطِلًا سُبْحَانَكَ فَقِنَا عَذَابَ النَّارِ رَبَّنَا إِنَّكَ مَن تُدْخِلِ النَّارَ فَقَدْ أَخْزَيْتَهُ وَمَا لِلظَّالِمِينَ مِنْ أَنصَارٍ رَّبَّنَا إِنَّنَا سَمِعْنَا مُنَادِيًا يُنَادِي لِلْإِيمَانِ أَنْ آمِنُوا بِرَبِّكُمْ فَآمَنَّا رَبَّنَا فَاغْفِرْ لَنَا ذُنُوبَنَا وَكَفِّرْ عَنَّا سَيِّئَاتِنَا وَتَوَفَّنَا مَعَ الْأَبْرَارِ رَبَّنَا وَآتِنَا مَا وَعَدتَّنَا عَلَى رُسُلِكَ وَلَا تُخْزِنَا يَوْمَ الْقِيَامَةِ إِنَّكَ لَا تُخْلِفُ الْمِيعَادَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, You did not create this aimlessly; exalted are You [above such a thing]; then protect us from the punishment of the Fire. Our Lord, indeed whoever You admit to the Fire - You have disgraced him, and for the wrongdoers there are no helpers. Our Lord, indeed we have heard a caller [i.e., Prophet Muḥammad (ﷺ)] calling to faith, [saying], 'Believe in your Lord,' and we have believed. Our Lord, so forgive us our sins and remove from us our misdeeds and cause us to die among the righteous. Our Lord, and grant us what You promised us through Your messengers and do not disgrace us on the Day of Resurrection. Indeed, You do not fail in [Your] promise»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Ты не сотворил это понапрасну. Пречист Ты! Защити же нас от мучений в Огне. Господь наш! Тот, кого Ты ввергнешь в Огонь, будет опозорен, и не будет у беззаконников помощников. Господь наш! Мы услышали глашатая Мухаммада, который призывал к вере: «Уверуйте в вашего Господа», – и мы уверовали. Господь наш! Прости нам наши грехи, отпусти нам наши прегрешения и упокой нас вместе с благочестивыми. Господь наш! Даруй нам то, что Ты обещал нам через Своих посланников, и не позорь нас в День воскресения, ведь Ты не нарушаешь обещаний»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Bunu boş yere yaratmadın, seni eksikliklerden uzak tutarız. Bizi ateş azabından koru\" derler. Rabbimiz! Sen kimi cehennem ateşine sokarsan onu rezil etmişsindir. Zalimlerin hiç yardımcıları yoktur. Rabbimiz! Biz, ‘Rabbinize iman edin' diye imana çağıran bir davetçi işittik, hemen iman ettik. Rabbimiz! Günahlarımızı bağışla. Kötülüklerimizi ört. Canımızı iyilerle beraber al. Rabbimiz! Peygamberlerin aracılığı ile bize vadettiklerini ver bize. Kıyamet günü bizi rezil etme. Şüphesiz sen, vadinden dönmezsin»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "3:191-194",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "12",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 13,
+      "category_source_number": 1,
+      "slug": "quran-supplication-013",
+      "arabic_text": "رَبَّنَا أَخْرِجْنَا مِنْ هَذِهِ الْقَرْيَةِ الظَّالِمِ أَهْلُهَا وَاجْعَل لَّنَا مِن لَّدُنكَ وَلِيًّا وَاجْعَل لَّنَا مِن لَّدُنكَ نَصِيرًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا أَخْرِجْنَا مِنْ هَذِهِ الْقَرْيَةِ الظَّالِمِ أَهْلُهَا وَاجْعَل لَّنَا مِن لَّدُنكَ وَلِيًّا وَاجْعَل لَّنَا مِن لَّدُنكَ نَصِيرًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, take us out of this city of oppressive people and appoint for us from Yourself a protector and appoint for us from Yourself a helper»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Выведи нас из этого города, жители которого являются беззаконниками. Назначь нам от Себя покровителя и назначь нам от Себя помощника»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizleri halkı zâlim olan şu memleketten çıkar, katından bize bir dost ver, bize katından bir yardımcı ver»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "4:75",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "13",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 14,
+      "category_source_number": 1,
+      "slug": "quran-supplication-014",
+      "arabic_text": "رَبَّنَا آمَنَّا فَاكْتُبْنَا مَعَ الشَّاهِدِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا آمَنَّا فَاكْتُبْنَا مَعَ الشَّاهِدِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, we have believed, so register us among the witnesses»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Мы уверовали. Запиши же нас в число свидетелей»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! İnandık. Artık bizi şahitlerle (Muhammed'in ümmeti) ile beraber yaz»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "5:83",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "14",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 15,
+      "category_source_number": 1,
+      "slug": "quran-supplication-015",
+      "arabic_text": "رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Мы поступили несправедливо по отношению к себе, и если Ты не простишь нас и не смилостивишься над нами, то мы непременно окажемся одними из потерпевших убыток»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbimiz! Biz kendimize zulüm ettik. Eğer bizi bağışlamaz ve bize acımazsan mutlaka ziyan edenlerden oluruz»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:23",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "15",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 16,
+      "category_source_number": 1,
+      "slug": "quran-supplication-016",
+      "arabic_text": "رَّبِّ لَا تَذَرْ عَلَى الْأَرْضِ مِنَ الْكَافِرِينَ دَيَّارًا إِنَّكَ إِن تَذَرْهُمْ يُضِلُّوا عِبَادَكَ وَلَا يَلِدُوا إِلَّا فَاجِرًا كَفَّارًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ لَا تَذَرْ عَلَى الْأَرْضِ مِنَ الْكَافِرِينَ دَيَّارًا إِنَّكَ إِن تَذَرْهُمْ يُضِلُّوا عِبَادَكَ وَلَا يَلِدُوا إِلَّا فَاجِرًا كَفَّارًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, do not leave upon the earth from among the disbelievers an inhabitant! Indeed, if You leave them, they will mislead Your servants and not beget except [every] wicked one and [confirmed] disbeliever»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Не оставь на земле ни одного неверующего жителя! Если ты оставишь их, они введут в заблуждение Твоих рабов и породят только грешных неверующих»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Nûh şöyle dedi: \"Ey Rabbim! Kâfirlerden hiç kimseyi yeryüzünde bırakma! Çünkü sen onları bırakırsan, kullarını saptırırlar; sadece ahlâksız ve kafir kimseler yetiştirirler»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "71:26-27",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "16",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 17,
+      "category_source_number": 1,
+      "slug": "quran-supplication-017",
+      "arabic_text": "رَّبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِمَن دَخَلَ بَيْتِيَ مُؤْمِنًا وَلِلْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ وَلَا تَزِدِ الظَّالِمِينَ إِلَّا تَبَارًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِمَن دَخَلَ بَيْتِيَ مُؤْمِنًا وَلِلْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ وَلَا تَزِدِ الظَّالِمِينَ إِلَّا تَبَارًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, forgive me and my parents and whoever enters my house a believer and the believing men and believing women. And do not increase the wrongdoers except in destruction!»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Прости меня и моих родителей и тех, кто вошел в мой дом верующим, а также верующих мужчин и женщин. А беззаконникам не приумножай ничего, кроме погибели!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Beni, ana babamı, iman etmiş olarak evime girenleri, iman eden erkekleri ve iman eden kadınları bağışla. Zalimlerin de ancak helâkini arttır!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "71:28",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "17",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 18,
+      "category_source_number": 1,
+      "slug": "quran-supplication-018",
+      "arabic_text": "رَبَّنَا لَا تَجْعَلْنَا مَعَ الْقَوْمِ الظَّالِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا لَا تَجْعَلْنَا مَعَ الْقَوْمِ الظَّالِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, do not place us with the wrongdoing people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Не помещай нас с людьми несправедливыми!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizi zalim toplumla beraber kılma»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:47",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "18",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 19,
+      "category_source_number": 1,
+      "slug": "quran-supplication-019",
+      "arabic_text": "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, decide between us and our people in truth, and You are the best of those who give decision»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Рассуди между нами и нашим народом по истине, ведь Ты – Наилучший из судий»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizimle kavmimiz arasında gerçekle hükmet. Çünkü sen hükmedenlerin en hayırlısısın»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:89",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "19",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 20,
+      "category_source_number": 1,
+      "slug": "quran-supplication-020",
+      "arabic_text": "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, pour upon us patience[[To endure the torture to which we will be subjected.]] and let us die as Muslims [in submission to You]»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Ниспошли нам терпение и упокой нас мусульманами»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Üzerimize sabır yağdır ve müslüman olarak bizim canımızı al»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:126",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "20",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 21,
+      "category_source_number": 1,
+      "slug": "quran-supplication-021",
+      "arabic_text": "لَئِن لَّمْ يَرْحَمْنَا رَبُّنَا وَيَغْفِرْ لَنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "لَئِن لَّمْ يَرْحَمْنَا رَبُّنَا وَيَغْفِرْ لَنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«If our Lord does not have mercy upon us and forgive us, we will surely be among the losers»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Если наш Господь не смилостивится над нами и не простит нас, то мы непременно окажемся в числе потерпевших убыток»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Eğer Rabbimiz bize acımaz ve bizi bağışlamazsa, mutlaka ziyana uğrayanlardan oluruz»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:149",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "21",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 22,
+      "category_source_number": 1,
+      "slug": "quran-supplication-022",
+      "arabic_text": "رَبِّ اغْفِرْ لِي وَلِأَخِي وَأَدْخِلْنَا فِي رَحْمَتِكَ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ اغْفِرْ لِي وَلِأَخِي وَأَدْخِلْنَا فِي رَحْمَتِكَ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, forgive me and my brother and admit us into Your mercy, for You are the most merciful of the merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Прости меня и моего брата и введи нас в Свою милость, ибо Ты – Милосерднейший из милосердных»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Beni ve kardeşimi bağışla. Bizi kendi rahmetine sok. Sen merhametlilerin en merhametlisisin»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "7:151",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "22",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 23,
+      "category_source_number": 1,
+      "slug": "quran-supplication-023",
+      "arabic_text": "رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلْقَوْمِ الظَّالِمِينَ وَنَجِّنَا بِرَحْمَتِكَ مِنَ الْقَوْمِ الْكَافِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلْقَوْمِ الظَّالِمِينَ وَنَجِّنَا بِرَحْمَتِكَ مِنَ الْقَوْمِ الْكَافِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, make us not [objects of] trial for the wrongdoing people! And save us by Your mercy from the disbelieving people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш, не делай нас искушением для людей несправедливых! По Своей милости спаси нас от людей неверующих»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz, bizi zalimler topluluğunun baskı ve şiddetine maruz bırakma! Bizi rahmetinle o kâfirler topluluğundan kurtar»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "10:85-86",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "23",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 24,
+      "category_source_number": 1,
+      "slug": "quran-supplication-024",
+      "arabic_text": "رَبِّ إِنِّي أَعُوذُ بِكَ أَنْ أَسْأَلَكَ مَا لَيْسَ لِي بِهِ عِلْمٌ وَإِلَّا تَغْفِرْ لِي وَتَرْحَمْنِي أَكُن مِّنَ الْخَاسِرِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ إِنِّي أَعُوذُ بِكَ أَنْ أَسْأَلَكَ مَا لَيْسَ لِي بِهِ عِلْمٌ وَإِلَّا تَغْفِرْ لِي وَتَرْحَمْنِي أَكُن مِّنَ الْخَاسِرِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, I seek refuge in You from asking that of which I have no knowledge. And unless You forgive me and have mercy upon me, I will be among the losers»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Я прибегаю к Тебе, дабы не просить о том, чего не ведаю. И если Ты не простишь меня и не помилуешь, то я окажусь среди потерпевших убыток»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Şüphesiz ben senden hakkında bilgim olmayan şeyi istemekten sana sığınırım. Eğer beni bağışlamaz ve bana acımazsan, şüphesiz ziyana uğrayanlardan olurum»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "11:47",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "24",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 25,
+      "category_source_number": 1,
+      "slug": "quran-supplication-025",
+      "arabic_text": "رَبِّ اجْعَلْ هَذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ اجْعَلْ هَذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, make this city [i.e., Makkah] secure and keep me and my sons away from worshipping idols»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Сделай этот город безопасным и убереги меня и моих сыновей от поклонения идолам»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bu şehri güvenli kıl, beni ve oğullarımı putlara tapmaktan uzak tut»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "14:35",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "25",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 26,
+      "category_source_number": 1,
+      "slug": "quran-supplication-026",
+      "arabic_text": "رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي رَبَّنَا وَتَقَبَّلْ دُعَاءِ رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي رَبَّنَا وَتَقَبَّلْ دُعَاءِ رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication. Our Lord, forgive me and my parents and the believers the Day the account is established»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Сделай меня выстаивающим молитву и из моего потомства. Господь наш! Прими мою мольбу. Господь наш! Прости меня, моих родителей и верующих в тот день, когда будет представлен счет»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Beni namaza devam eden bir kimse eyle. Soyumdan da böyle kimseler yarat. Rabbimiz! Duamı kabul eyle. Rabbimiz! Hesap görülecek günde, beni, ana-babamı ve inananları bağışla»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "14:40-41",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "26",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 27,
+      "category_source_number": 1,
+      "slug": "quran-supplication-027",
+      "arabic_text": "رَّبِّ أَدْخِلْنِي مُدْخَلَ صِدْقٍ وَأَخْرِجْنِي مُخْرَجَ صِدْقٍ وَاجْعَل لِّي مِن لَّدُنكَ سُلْطَانًا نَّصِيرًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ أَدْخِلْنِي مُدْخَلَ صِدْقٍ وَأَخْرِجْنِي مُخْرَجَ صِدْقٍ وَاجْعَل لِّي مِن لَّدُنكَ سُلْطَانًا نَّصِيرًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, cause me to enter a sound entrance[[Into Madīnah at the time of emigration, or into the grave.]] and to exit a sound exit[[From Makkah, or from the grave at the time of resurrection.]] and grant me from Yourself a supporting authority»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Пусть мое пришествие будет правдивым, и пусть мой уход будет правдивым! Даруй мне от Тебя знамение в помощь»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! (Gireceğim yere) doğruluk ve esenlik içinde girmemi sağla.  (Çıkacağım yerden de) beni doğruluk ve esenlik içinde çıkar. Katından bana yardımcı bir kuvvet ver»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "17:80",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "27",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 28,
+      "category_source_number": 1,
+      "slug": "quran-supplication-028",
+      "arabic_text": "رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Даруй нам от Себя милость и устрой наше дело наилучшим образом»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bize katından bir rahmet ver ve içinde bulunduğumuz şu durumda bize kurtuluş ve doğruluğa ulaşmayı kolaylaştır»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "18:10",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "28",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 29,
+      "category_source_number": 1,
+      "slug": "quran-supplication-029",
+      "arabic_text": "رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي يَفْقَهُوا قَوْلِي",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي يَفْقَهُوا قَوْلِي"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, expand [i.e., relax] for me my breast [with assurance]! And ease for me my task! And untie the knot from my tongue, that they may understand my speech»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Раскрой для меня мою грудь! Облегчи мою миссию! Развяжи узел на моем языке, чтобы они могли понять мою речь»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Gönlüme ferahlık ver! İşimi bana kolaylaştır! Dilimdeki tutukluğu çöz ki sözümü anlasınlar, dilimdeki tutukluğu çöz ki sözümü anlasınlar»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "20:25-28",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "29",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 30,
+      "category_source_number": 1,
+      "slug": "quran-supplication-030",
+      "arabic_text": "رَّبِّ زِدْنِي عِلْمًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ زِدْنِي عِلْمًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, increase me in knowledge»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Приумножь мои знания»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! İlmimi arttır»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "20:114",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "30",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 31,
+      "category_source_number": 1,
+      "slug": "quran-supplication-031",
+      "arabic_text": "لَّا إِلَهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "لَّا إِلَهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Нет божества, кроме Тебя! Пречист Ты! Воистину, я был одним из беззаконников!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Senden başka hiçbir ilah yoktur. Seni eksikliklerden uzak tutarım. Ben gerçekten (nefsine) zulmedenlerden oldum»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "21:87",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "31",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 32,
+      "category_source_number": 1,
+      "slug": "quran-supplication-032",
+      "arabic_text": "رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ الْوَارِثِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ الْوَارِثِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, do not leave me alone [with no heir], while You are the best of inheritors»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Не оставляй меня одиноким, и Ты – Наилучший из наследников»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Beni tek başıma bırakma. Sen varislerin en hayırlısısın»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "21:89",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "32",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 33,
+      "category_source_number": 1,
+      "slug": "quran-supplication-033",
+      "arabic_text": "رَبِّ انصُرْنِي بِمَا كَذَّبُونِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ انصُرْنِي بِمَا كَذَّبُونِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, support me because they have denied me»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Помоги мне, ведь они сочли меня лжецом»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Beni yalanlamalarına karşı bana yardım et!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:26",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "33",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 34,
+      "category_source_number": 1,
+      "slug": "quran-supplication-034",
+      "arabic_text": "رَّبِّ أَنزِلْنِي مُنزَلًا مُّبَارَكًا وَأَنتَ خَيْرُ الْمُنزِلِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ أَنزِلْنِي مُنزَلًا مُّبَارَكًا وَأَنتَ خَيْرُ الْمُنزِلِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, let me land at a blessed landing place, and You are the best to accommodate [us]»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Приведи меня к благословенному месту, ведь Ты – Наилучший из расселяющих»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Beni bereketli bir yere kondur. Sen konuk edenlerin en hayırlısısın»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:29",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "34",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 35,
+      "category_source_number": 1,
+      "slug": "quran-supplication-035",
+      "arabic_text": "رَبِّ فَلَا تَجْعَلْنِي فِي الْقَوْمِ الظَّالِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ فَلَا تَجْعَلْنِي فِي الْقَوْمِ الظَّالِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, then do not place me among the wrongdoing people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Не делай меня, Господи, в числе несправедливых людей!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Onlara yöneltilen tehditleri bana mutlaka göstereceksen, beni o zalim milletin içinde bulundurma»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:94",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "35",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 36,
+      "category_source_number": 1,
+      "slug": "quran-supplication-036",
+      "arabic_text": "رَّبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, I seek refuge in You from the incitements of the devils»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Я прибегаю к Тебе от наваждений дьяволов»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Şeytanların vesveselerinden sana sığınırım»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:97",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "36",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 37,
+      "category_source_number": 1,
+      "slug": "quran-supplication-037",
+      "arabic_text": "رَبَّنَا آمَنَّا فَاغْفِرْ لَنَا وَارْحَمْنَا وَأَنتَ خَيْرُ الرَّاحِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا آمَنَّا فَاغْفِرْ لَنَا وَارْحَمْنَا وَأَنتَ خَيْرُ الرَّاحِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Мы уверовали. Прости же нас и помилуй, ибо Ты – Наилучший из милосердных»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Biz inandık, bizi bağışla, bize merhamet et, sen merhamet edenlerin en hayırlısısın\" diyen bir grup var idi»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:109",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "37",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 38,
+      "category_source_number": 1,
+      "slug": "quran-supplication-038",
+      "arabic_text": "رَّبِّ اغْفِرْ وَارْحَمْ وَأَنتَ خَيْرُ الرَّاحِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبِّ اغْفِرْ وَارْحَمْ وَأَنتَ خَيْرُ الرَّاحِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, forgive and have mercy, and You are the best of the merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи, прости и помилуй, ведь Ты – Наилучший из милосердных!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bağışla, merhamet et. Çünkü sen merhamet edenlerin en hayırlısısın!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "23:118",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "38",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 39,
+      "category_source_number": 1,
+      "slug": "quran-supplication-039",
+      "arabic_text": "رَبَّنَا اصْرِفْ عَنَّا عَذَابَ جَهَنَّمَ إِنَّ عَذَابَهَا كَانَ غَرَامًا إِنَّهَا سَاءَتْ مُسْتَقَرًّا وَمُقَامًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا اصْرِفْ عَنَّا عَذَابَ جَهَنَّمَ إِنَّ عَذَابَهَا كَانَ غَرَامًا إِنَّهَا سَاءَتْ مُسْتَقَرًّا وَمُقَامًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, avert from us the punishment of Hell. Indeed, its punishment is ever adhering. Indeed, it is evil as a settlement and residence!»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Отврати от нас мучения в Геенне, поскольку мучения там не отступают. Как скверна эта обитель и местопребывание!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizden cehennem azabını uzaklaştır, gerçekten onun azabı sürekli bir helaktir! Şüphesiz, ne kötü bir durak ve ne kötü bir konaktır orası!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "25:65-66",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "39",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 40,
+      "category_source_number": 1,
+      "slug": "quran-supplication-040",
+      "arabic_text": "رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, grant us from among our wives and offspring comfort to our eyes[[i.e., a source of happiness due to their righteousness.]] and make us a leader [i.e., example] for the righteous»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Даруй нам отраду глаз в наших супругах и потомках и сделай нас образцом для богобоязненных»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Eşlerimizi ve çocuklarımızı bize göz aydınlığı kıl ve bizi Allah'a karşı gelmekten sakınanlara önder eyle»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "25:74",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "40",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 41,
+      "category_source_number": 1,
+      "slug": "quran-supplication-041",
+      "arabic_text": "رَبِّ هَبْ لِي حُكْمًا وَأَلْحِقْنِي بِالصَّالِحِينَ وَاجْعَل لِّي لِسَانَ صِدْقٍ فِي الْآخِرِينَ وَاجْعَلْنِي مِن وَرَثَةِ جَنَّةِ النَّعِيمِ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ هَبْ لِي حُكْمًا وَأَلْحِقْنِي بِالصَّالِحِينَ وَاجْعَل لِّي لِسَانَ صِدْقٍ فِي الْآخِرِينَ وَاجْعَلْنِي مِن وَرَثَةِ جَنَّةِ النَّعِيمِ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, grant me authority and join me with the righteous! And grant me a mention [i.e., reputation] of honor among later generations! And place me among the inheritors of the Garden of Pleasure!»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Даруй мне власть пророчество или знание и воссоедини меня с праведниками! Оставь обо мне правдивую молву в последующих поколениях! Сделай меня одним из наследников Сада блаженства!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Bana bir hikmet bahşet ve beni salih kimseler arasına kat! Sonra gelecekler arasında beni doğrulukla anılanlardan kıl! Beni Naîm cennetinin varislerinden eyle!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "26:83-85",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "41",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 42,
+      "category_source_number": 1,
+      "slug": "quran-supplication-042",
+      "arabic_text": "رَبِّ نَجِّنِي وَأَهْلِي مِمَّا يَعْمَلُونَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ نَجِّنِي وَأَهْلِي مِمَّا يَعْمَلُونَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, save me and my family from [the consequence of] what they do»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Спаси меня и мою семью от того, что они совершают»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Beni ve ailemi onların yaptıkları çirkin işten kurtar»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "26:169",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "42",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 43,
+      "category_source_number": 1,
+      "slug": "quran-supplication-043",
+      "arabic_text": "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, enable me[[More literally, gather within me the utmost strength and ability.]] to be grateful for Your favor which You have bestowed upon me and upon my parents and to do righteousness of which You approve. And admit me by Your mercy into [the ranks of] Your righteous servants.[[Or with Your righteous servants [into Paradise]]]»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Внуши мне быть благодарным за Твою милость, которую Ты оказал мне и моим родителям, и совершать праведные деяния, которыми Ты будешь доволен. Введи меня по Своей милости в число Своих праведных рабов»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Beni; bana ve ana-babama verdiğin nimetlere şükretmeye ve razı olacağın salih ameller işlemeye sevk et ve beni  rahmetinle salih kullarının arasına kat!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "27:19",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "43",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 44,
+      "category_source_number": 1,
+      "slug": "quran-supplication-044",
+      "arabic_text": "رَبِّ إِنِّي ظَلَمْتُ نَفْسِي فَاغْفِرْ لِي",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ إِنِّي ظَلَمْتُ نَفْسِي فَاغْفِرْ لِي"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, indeed I have wronged myself, so forgive me, and He forgave him. Indeed, He is the Forgiving, the Merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Я поступил несправедливо по отношению к себе. Прости же меня!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Şüphesiz ben nefsime zulmettim. Beni affet»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "28:16",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "44",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 45,
+      "category_source_number": 1,
+      "slug": "quran-supplication-045",
+      "arabic_text": "رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, save me from the wrongdoing people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Спаси меня от несправедливых людей!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Beni bu zalim kavimden kurtar»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "28:21",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "45",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 46,
+      "category_source_number": 1,
+      "slug": "quran-supplication-046",
+      "arabic_text": "رَبِّ إِنِّي لِمَا أَنزَلْتَ إِلَيَّ مِنْ خَيْرٍ فَقِيرٌ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ إِنِّي لِمَا أَنزَلْتَ إِلَيَّ مِنْ خَيْرٍ فَقِيرٌ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, indeed I am, for whatever good You would send down to me, in need»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Воистину, я нуждаюсь в любом благе, которое Ты ниспошлешь мне»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bana göndereceğin her hayra muhtacım»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "28:24",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "46",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 47,
+      "category_source_number": 1,
+      "slug": "quran-supplication-047",
+      "arabic_text": "رَبِّ انصُرْنِي عَلَى الْقَوْمِ الْمُفْسِدِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ انصُرْنِي عَلَى الْقَوْمِ الْمُفْسِدِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, support me against the corrupting people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Помоги мне одержать верх над нечестивыми людьми!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Şu bozguncu kavme karşı bana yardım et»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "29:30",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "47",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 48,
+      "category_source_number": 1,
+      "slug": "quran-supplication-048",
+      "arabic_text": "رَبِّ هَبْ لِي مِنَ الصَّالِحِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ هَبْ لِي مِنَ الصَّالِحِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, grant me [a child] from among the righteous»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи, одари меня потомством из числа праведников!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbim! Bana salihlerden olacak bir çocuk bağışla»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "37:100",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "48",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 49,
+      "category_source_number": 1,
+      "slug": "quran-supplication-049",
+      "arabic_text": "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, enable me[[Literally, gather within me the utmost strength and ability.]] to be grateful for Your favor which You have bestowed upon me and upon my parents and to work righteousness of which You will approve and make righteous for me my offspring. Indeed, I have repented to You, and indeed, I am of the Muslims»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Внуши мне благодарность за милость, которой Ты облагодетельствовал меня и моих родителей, и помоги мне совершать праведные деяния, которыми Ты доволен. Сделай для меня моих потомков праведниками. Я раскаиваюсь перед Тобой. Воистину, я – один из мусульман»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bana ve anne babama verdiğin nimetlere şükretmemi, senin razı olacağın salih amel işlememi bana ilham et. Neslimi de salih kimseler yap. Şüphesiz ben sana döndüm. Muhakkak ki ben sana teslim olanlardanım»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "46:15",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "49",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 50,
+      "category_source_number": 1,
+      "slug": "quran-supplication-050",
+      "arabic_text": "رَبَّنَا اغْفِرْ لَنَا وَلِإِخْوَانِنَا الَّذِينَ سَبَقُونَا بِالْإِيمَانِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِّلَّذِينَ آمَنُوا رَبَّنَا إِنَّكَ رَءُوفٌ رَّحِيمٌ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا اغْفِرْ لَنَا وَلِإِخْوَانِنَا الَّذِينَ سَبَقُونَا بِالْإِيمَانِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِّلَّذِينَ آمَنُوا رَبَّنَا إِنَّكَ رَءُوفٌ رَّحِيمٌ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Прости нас и наших братьев, которые уверовали раньше нас! Не насаждай в наших сердцах ненависти и зависти к тем, кто уверовал. Господь наш! Воистину, Ты – Сострадательный, Милосердный»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizi ve bizden önce iman etmiş olan kardeşlerimizi bağışla. Kalplerimizde, iman edenlere karşı hiçbir kin tutturma! Ey Rabbimiz! Şüphesiz sen çok esirgeyicisin, çok merhametlisin»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "59:10",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "50",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 51,
+      "category_source_number": 1,
+      "slug": "quran-supplication-051",
+      "arabic_text": "رَّبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَّبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, upon You we have relied, and to You we have returned, and to You is the destination»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! На Тебя одного мы уповаем, к Тебе одному мы обращаемся, и к Тебе предстоит возвращение»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Ancak sana dayandık, içtenlikle yalnız sana yöneldik. Dönüş de ancak sanadır»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "60:4",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "51",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 52,
+      "category_source_number": 1,
+      "slug": "quran-supplication-052",
+      "arabic_text": "رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلَّذِينَ كَفَرُوا وَاغْفِرْ لَنَا رَبَّنَا إِنَّكَ أَنتَ الْعَزِيزُ الْحَكِيمُ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلَّذِينَ كَفَرُوا وَاغْفِرْ لَنَا رَبَّنَا إِنَّكَ أَنتَ الْعَزِيزُ الْحَكِيمُ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, make us not [objects of] torment for the disbelievers and forgive us, our Lord. Indeed, it is You who is the Exalted in Might, the Wise»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Не делай нас искушением для тех, которые не веруют. Господь наш, прости нас, ведь Ты – Могущественный, Мудрый»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! Bizi, inkar edenlerin zulmüne uğratma. Bizi bağışla. Ey Rabbimiz! Şüphesiz sen mutlak güç sahibisin, hüküm ve hikmet sahibisin»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "60:5",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "52",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 53,
+      "category_source_number": 1,
+      "slug": "quran-supplication-053",
+      "arabic_text": "رَبَّنَا أَتْمِمْ لَنَا نُورَنَا وَاغْفِرْ لَنَا إِنَّكَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبَّنَا أَتْمِمْ لَنَا نُورَنَا وَاغْفِرْ لَنَا إِنَّكَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господь наш! Дай нам света сполна и прости нас. Воистину, Ты способен на всякую вещь»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Ey Rabbimiz! nûrumuzu bizim için tamamla, bizi bağışla; çünkü senin her şeye hakkıyla gücün yeter»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "66:8",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "53",
+          "verification_status": "source_only"
+        }
+      ]
+    },
+    {
+      "source_number": 54,
+      "category_source_number": 1,
+      "slug": "quran-supplication-054",
+      "arabic_text": "رَبِّ ابْنِ لِي عِندَكَ بَيْتًا فِي الْجَنَّةِ وَنَجِّنِي مِن فِرْعَوْنَ وَعَمَلِهِ وَنَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ",
+      "repetitions": 1,
+      "translations": [
+        {
+          "language": "ar",
+          "meaning_text": "رَبِّ ابْنِ لِي عِندَكَ بَيْتًا فِي الْجَنَّةِ وَنَجِّنِي مِن فِرْعَوْنَ وَعَمَلِهِ وَنَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ"
+        },
+        {
+          "language": "en",
+          "meaning_text": "«My Lord, build for me near You a house in Paradise and save me from Pharaoh and his deeds and save me from the wrongdoing people»"
+        },
+        {
+          "language": "ru",
+          "meaning_text": "«Господи! Спаси меня от Фараона и его деяний! Возведи для меня дом в Раю возле Тебя и спаси меня от несправедливых людей!»"
+        },
+        {
+          "language": "tr",
+          "meaning_text": "«Rabbim! Bana katında, cennette bir ev yap. Beni Firavun'dan ve onun yaptığı işlerden koru ve beni zalimler topluluğundan kurtar!»"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "quran",
+          "provider": "JMApps",
+          "source_name": "Supplications from the Quran",
+          "source_reference": "66:11",
+          "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/databases/main_supplications.db",
+          "external_id": "54",
+          "verification_status": "source_only"
+        }
+      ]
+    }
+  ],
+  "audio": [
+    {
+      "source_number": 1,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_1.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_1.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 132862,
+      "checksum_sha256": "980059cd0cf2ecfbe4ed2ee250d39383f0a9753ce4c8d7f94f5816c90eb0e1b0",
+      "source_git_blob_sha1": "2f3041a4775676e4e81e56621865337ac62be71c",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 2,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_2.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_2.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 301630,
+      "checksum_sha256": "6ca385d368ec00335853fcacd61a96c5f820cb172357c334f102cade1c3bf42b",
+      "source_git_blob_sha1": "8e889793357e0b6a1d9250285d7b50fe1e9c7e35",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 3,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_3.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_3.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 125086,
+      "checksum_sha256": "41d8386004d198fac9e6e7d2ded3c7743c90cb2f4c7aececa708019cc75c0664",
+      "source_git_blob_sha1": "fe418b8d173df5f17aa45b28e375683df2e74522",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 4,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_4.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_4.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 119038,
+      "checksum_sha256": "7819d6e5a434d6792b757b8ee1a9333f4a626ce60696682064a9a88f81bcf922",
+      "source_git_blob_sha1": "5900ace1fec9df698470da23585834cf5593a274",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 5,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_5.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_5.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 927742,
+      "checksum_sha256": "3155db047fc9f236dc9e142a66704d6beac86dae5c6cfd0b7b0e34a126e3fd15",
+      "source_git_blob_sha1": "e3126b60d8a1bd021f0e11e2190a7b08f361db62",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 6,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_6.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_6.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 275710,
+      "checksum_sha256": "b97685bb2f91023efa7b43c8a7b52ffdae0eefd300664e4a2d958352c42dbb7d",
+      "source_git_blob_sha1": "cdecba8f154135d3617c9d2cc67a63806ddd4c96",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 7,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_7.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_7.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 107230,
+      "checksum_sha256": "865b216184e6bc5f9661efcb5e9ec8e1cc9d23831cd2ebf17b3b082b0f14a331",
+      "source_git_blob_sha1": "f3f97ef7efbc727302c55d7dd3dcbd10aba94e04",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 8,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_8.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_8.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 85054,
+      "checksum_sha256": "2c25daf0c20164b63e11ccc7d26d6aec40b3103640675b11aaa38a18b88579e7",
+      "source_git_blob_sha1": "470a6faf144dcd9a9d93d5e4ae9061945c3e2b10",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 9,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_9.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_9.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 97150,
+      "checksum_sha256": "ebe9951a280c2dac0930f3cb12d1e22257acbb47cfbb49962e50182d239bb1b9",
+      "source_git_blob_sha1": "1a66222699b5560afd2782b38e7d76e8d4329710",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 10,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_10.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_10.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 115006,
+      "checksum_sha256": "0917bd288d40871644d2487d506528dfd5d45772cf77ad048ee9a1f7dd827c35",
+      "source_git_blob_sha1": "9befdd448001ce0b4d9eaffeb1aca1c9a4aace8e",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 11,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_11.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_11.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 159358,
+      "checksum_sha256": "b9b28bb89ad87204f6813b8db541693fa27406a871f03c06d69de3659c62ec54",
+      "source_git_blob_sha1": "25e077d0fe7edd75d2b26af0e2a828174bf42969",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 12,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_12.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_12.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 618718,
+      "checksum_sha256": "d607c7eb32e05da61c9c0cf6a746d231301a508a36e35662ed8e1f0e147ef07d",
+      "source_git_blob_sha1": "6476529e7149a401abc8f8e4f89af9675c34b002",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 13,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_13.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_13.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 170878,
+      "checksum_sha256": "455736dcf275cf408650a4711163b12a0400af9230b7ea3fad77327ab06c41f3",
+      "source_git_blob_sha1": "4ab9a4a17cac695c5987d1581a2856cb87ce6fa4",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 14,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_14.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_14.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 72670,
+      "checksum_sha256": "9fc0fdeb6c0f6fd331e4060636af4b3ecef6f46bdf9cc0db2c643c4d635e074b",
+      "source_git_blob_sha1": "86aaeabd089e206d52805360d18f82b86859a529",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 15,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_15.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_15.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 123646,
+      "checksum_sha256": "f774fee7a78a6bf706c2fcf6e803f6027e5e9b144c1e4a382b370ae95c708178",
+      "source_git_blob_sha1": "577a511b3f9bce5ea58f14ea504ff99d82f4556b",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 16,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_16.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_16.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 207166,
+      "checksum_sha256": "eeea17e045597954bfe8d992b2ad014e897f2d675f10cc01a0c59489dae38470",
+      "source_git_blob_sha1": "d625f4a960073be49d251d381df5de7dfce93569",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 17,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_17.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_17.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 172030,
+      "checksum_sha256": "f7ade2dedb11df994b1464907198451043ff5ea760618e5719d0eb9c2f608168",
+      "source_git_blob_sha1": "7c0aa60238deacef896525f95a617d3224c6057b",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 18,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_18.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_18.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 64318,
+      "checksum_sha256": "f98cfeea6c62a1698c994feba3a58ca6dcb365a2bef0a49711121d0551977169",
+      "source_git_blob_sha1": "2c0a1de596b4962b1adbd79bdeab06d9fe825185",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 19,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_19.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_19.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 101182,
+      "checksum_sha256": "f484370d8eef93f8090c711c0cdea06a107a67cd1d35ac1d1760060a60721498",
+      "source_git_blob_sha1": "93fdb19ca1657499ea6184b26964cf31a194aad4",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 20,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_20.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_20.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 80446,
+      "checksum_sha256": "89b035dc1c7e79caed12facbae53b424c10f64332d001b5035b7747c2eb515c6",
+      "source_git_blob_sha1": "38ede42fc11be28bc935fb96ae0aad2d5245afeb",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 21,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_21.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_21.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 95998,
+      "checksum_sha256": "49968a4f6f253137701e68080871f1341a9feef621253c86ab950308c6909018",
+      "source_git_blob_sha1": "ac16e1decd5a593beee93d56201826e4008db696",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 22,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_22.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_22.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 101182,
+      "checksum_sha256": "466ac6b679ee6e1ad9ebe041e266c2cf2e217b90421e69569cb13aad63a4338c",
+      "source_git_blob_sha1": "55eb28ef737c0f44d0a27fa03430d27dace89c5b",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 23,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_23.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_23.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 124222,
+      "checksum_sha256": "9518143484ae8ae84c103aecb9d9541dee7e9e63a14f1044681a664e8218a129",
+      "source_git_blob_sha1": "6b775216d35cdd36b59d79af04725e6643d772fb",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 24,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_24.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_24.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 139486,
+      "checksum_sha256": "309d3b4b4d21039fff9ebdcdcbc4e216a7d5bd8b3f97f4c1134d3d9dc24998fe",
+      "source_git_blob_sha1": "535e665a313d19465a8a461178f9d2548b80452b",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 25,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_25.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_25.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 103486,
+      "checksum_sha256": "9b11eac882bd972e694f68851a0abf223077b5fd22fb7e8f6c70010e1801c98c",
+      "source_git_blob_sha1": "f4f51bb923d406c5b8e6b1f45255d0422083c3ff",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 26,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_26.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_26.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 197950,
+      "checksum_sha256": "cf89223fc6cc18ea2d8aa46dc970d637d3cc95ad456239c77445caef54879c01",
+      "source_git_blob_sha1": "3e01f8e19fba7c86ed1cdb2ce3c66eda3b7b9b5a",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 27,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_27.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_27.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 125662,
+      "checksum_sha256": "42074cd8cc997de45635b5e702814d37eaa14807c079d9aa29f876214080775a",
+      "source_git_blob_sha1": "8b66aaed277f98869b1af1cec55d3efcfdf80935",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 28,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_28.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_28.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 99454,
+      "checksum_sha256": "aad850af91f71a22ced3a2961e099d0406443ad34a3781f2177fdb821b33e609",
+      "source_git_blob_sha1": "a18ce67aa6958b5cd6290d69b277246dff9f8cb0",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 29,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_29.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_29.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 131134,
+      "checksum_sha256": "ea06dc54e90f97f2370a1bcc0bf77dd4ec96bbf5d0e65734a7ac10dc2cadf731",
+      "source_git_blob_sha1": "1f84c609b433cc0a9173ea0772e6a59264d9209e",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 30,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_30.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_30.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 28318,
+      "checksum_sha256": "8eda699cf17bec2d46fc97f9782162bb7d25ae4f933caf6faf480943eb42ee33",
+      "source_git_blob_sha1": "85e56bb1cfe626587e69eb22c50889302e6b8d1c",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 31,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_31.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_31.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 89662,
+      "checksum_sha256": "74ad5a7d20546ef8badb34f0bd94669b79edf8978655f6cb0bf150e5ef2419a8",
+      "source_git_blob_sha1": "32cce68d659ff5a379e453d0e157dcfc31ae1436",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 32,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_32.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_32.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 74974,
+      "checksum_sha256": "7230fd6618a99129d77fe3b952f6950d775d7c8cbe672205aeb7610c507450fb",
+      "source_git_blob_sha1": "3f767e88a96669a4f0b8e4decdfdd44f2097a6ee",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 33,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_33.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_33.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 45886,
+      "checksum_sha256": "7a8377acba319cf81cc1fe815a9814df7131f28ba559eb92838d904a438b430a",
+      "source_git_blob_sha1": "372e191cb2c29e56ff281d0603dc3cfd736ce014",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 34,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_34.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_34.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 95710,
+      "checksum_sha256": "a33f9ac0fe6addb057cffcc0690e28425290c9feebc45603e5b0f44f5ad4cb70",
+      "source_git_blob_sha1": "cd212098ac24259dc6516284a24bae3c4979b440",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 35,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_35.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_35.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 68350,
+      "checksum_sha256": "85b0ce371ecd77b3655d4954f2d29c570f3f2c60aadd696838b8e477bd5b8a41",
+      "source_git_blob_sha1": "f4198ab514583968da523a23c7c828f4b799f8ec",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 36,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_36.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_36.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 57406,
+      "checksum_sha256": "13c93ee0028d40ed4b3d192b8da6ac991856ddbb669c4b8e0f4dc2b746fb7de0",
+      "source_git_blob_sha1": "847359d3162672a7961b27af8e9d15ec8fc95db2",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 37,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_37.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_37.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 107518,
+      "checksum_sha256": "4b9d4f7f7d44d16eb2fc2a790f9addf82cb3ef0ba8c4d44926767beef2fcd309",
+      "source_git_blob_sha1": "c731fa9971df54dcd97dbbfb206db8c4c68ee9a9",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 38,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_38.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_38.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 62014,
+      "checksum_sha256": "680cb676929055bc45ffb174fe8c0f16f06dc876f8c67f20ac324f91b2a4823f",
+      "source_git_blob_sha1": "78fdeaa483f6ae27aff5fbb24caf7422f0f2ead7",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 39,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_39.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_39.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 192766,
+      "checksum_sha256": "dd06de2d87684697eb24740695c5e5ddf79edaeb7aa0d04390435c374d0491f9",
+      "source_git_blob_sha1": "f39785e0c009cc3260ac0f7966c3d22bcfc81aa5",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 40,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_40.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_40.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 133438,
+      "checksum_sha256": "35ed8004209febe3fa263c2119ff9765d680669239a54c7e09904be5773ea433",
+      "source_git_blob_sha1": "328cf4180f1bdff64a934271c0c322eee912835d",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 41,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_41.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_41.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 175774,
+      "checksum_sha256": "3b17a75cb0594c36e3ceb5f0fd1b884872d32cc455e54816474406619bd42ea6",
+      "source_git_blob_sha1": "d064fa6d7826478a9ebb9b360b30a52d1d84aca5",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 42,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_42.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_42.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 67486,
+      "checksum_sha256": "a69237cb15792d0fa1ecc236bb8b6bd5f8b889cdebbc8d513f6fb4e572d7a9ca",
+      "source_git_blob_sha1": "24ff0a7bea5fe2c2fc8358b5ea983e9c1a1119ec",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 43,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_43.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_43.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 195646,
+      "checksum_sha256": "473be39723bff03912e81c4db5453aaa29426973a9e2a485fd1b7658dad2db01",
+      "source_git_blob_sha1": "bea5bfc399310dd31349e7ac71e6daf7686ca881",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 44,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_44.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_44.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 48766,
+      "checksum_sha256": "9cc3e10a057d144770ab9333e06b0da72b3e906aa5ba097227624b974374e07e",
+      "source_git_blob_sha1": "09d0472e60efd5695bc83de1a83ae9a673e6787e",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 45,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_45.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_45.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 53374,
+      "checksum_sha256": "e43553bb7338301fec30675da4b067fdc0cd1497ff1a13d3557e94ef29ff986a",
+      "source_git_blob_sha1": "fb1e21166a20346c7c424be203d06e3adcca2505",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 46,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_46.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_46.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 84478,
+      "checksum_sha256": "60073db8b51feea8ebafb7e8de409ea9880341f955601dc5a08a62f0bc950513",
+      "source_git_blob_sha1": "9553dfd982edf8743441d26e6a594ad1509185df",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 47,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_47.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_47.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 55678,
+      "checksum_sha256": "123f73369c322de972f82c6c01912f4d614971d878d77f518ff3e1aad39a282e",
+      "source_git_blob_sha1": "1ec6592e8883f512918cc4d8308528cb03a11311",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 48,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_48.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_48.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 41278,
+      "checksum_sha256": "2f1c1a6ac405eb185c66271f0e982f7bc1028c69e8407d04acd7cce57394c0fd",
+      "source_git_blob_sha1": "5b139ddd6ceea3b0aded4bc5105717f7f6788519",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 49,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_49.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_49.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 241726,
+      "checksum_sha256": "1b70c0f5421f4d2a423f8f94e556d36bfd2d25652a9b89936d388b3634cc217c",
+      "source_git_blob_sha1": "a0682143528a9799be8ae9668a34fddb7ceb960b",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 50,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_50.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_50.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 207166,
+      "checksum_sha256": "0178ec119373ad163e6f703083cc834ef5c61fb761ddaa2232f483d44a40d4ed",
+      "source_git_blob_sha1": "6c80ed7367949b06474d2702bc8df0bd9f134088",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 51,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_51.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_51.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 86494,
+      "checksum_sha256": "9f3a760b9aaa7d3c41abf8005e898e9392e34e06fe8ecc9b3a46edd5f4e7587f",
+      "source_git_blob_sha1": "c63c8daab1ef945f6c174a8c75de12988ca78e80",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 52,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_52.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_52.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 150430,
+      "checksum_sha256": "ceb38adb0d3a878e7c34199981c6c4c8c39a60c7e74248cb44caf11999f4bf40",
+      "source_git_blob_sha1": "ee0fb9db844bb330125876c87d273e8438af2711",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 53,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_53.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_53.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 104926,
+      "checksum_sha256": "9c774862d0ccdc571a75ca2d83acebc823895b79a9cd4f8fbbd6141c3419ae9e",
+      "source_git_blob_sha1": "b72520c1749f987f2868599593a30701a245f4f2",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "source_number": 54,
+      "language_code": "ar",
+      "provider": "JMApps",
+      "reader_name": "",
+      "reader_name_ar": "",
+      "external_url": "https://raw.githubusercontent.com/JMApps/supplications_from_quran/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_54.mp3",
+      "source_url": "https://github.com/JMApps/supplications_from_quran/blob/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_54.mp3",
+      "rights_url": "",
+      "rights_basis": "iqro_owner_attested",
+      "source_version": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+      "content_type": "audio/mpeg",
+      "size_bytes": 163390,
+      "checksum_sha256": "93072c9a08915561ed2fbf315157d54fdcbf9935e42308fb8af0c3f5e28b428c",
+      "source_git_blob_sha1": "d75e34cd8e877b3d5cc5c99bad1bc4fe224e58c3",
+      "sort_order": 1,
+      "is_active": true
+    }
+  ],
+  "provenance": {
+    "provider": "JMApps",
+    "repository_url": "https://github.com/JMApps/supplications_from_quran",
+    "source_commit": "bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+    "source_database_path": "assets/databases/main_supplications.db",
+    "source_database_sha256": "e8faad10345690ef6af1b16a493a601597f1245b1ea8812441f4efc667a14cce",
+    "audio_tree_sha1": "004bde230829beca4fe3f0b89b18fce48ccae9b9",
+    "rights_basis": "iqro_owner_attested",
+    "editorial_verification": "source_only"
+  }
+}

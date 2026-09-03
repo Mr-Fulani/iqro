@@ -1583,7 +1583,7 @@ class DuaRepository {
       final audio = Map<String, Object?>.from(rawAudio! as Map);
       if (audio['id']?.toString().trim().isEmpty != false ||
           audio['provider']?.toString().trim().isEmpty != false ||
-          audio['reader_name']?.toString().trim().isEmpty != false ||
+          audio['reader_name'] is! String ||
           !_isAbsoluteHttpsUrl(audio['url']) ||
           !_isAbsoluteHttpsUrl(audio['source_url']) ||
           audio['source_version']?.toString().trim().isEmpty != false) {

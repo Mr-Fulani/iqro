@@ -41,6 +41,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"{verb} {result.version}: {result.category_count} categories, "
-                f"{result.entry_count} entries, {publication}, sha256={result.checksum_sha256}."
+                f"{result.entry_count} entries, {result.audio_count} audio assets, "
+                f"{publication}, sha256={result.checksum_sha256}."
             )
         )

@@ -214,14 +214,20 @@ class DuaAudioAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     actions = None
     list_display = (
         "source_number",
-        "collection",
+        "collection_version",
+        "delivery_mode",
         "reader_name",
         "provider",
         "is_active",
     )
-    list_filter = ("collection", "provider", "language_code", "is_active")
-    search_fields = ("reader_name", "reader_name_ar", "url")
-    list_select_related = ("collection", "collection__active_version")
+    list_filter = (
+        "collection_version__collection",
+        "provider",
+        "language_code",
+        "is_active",
+    )
+    search_fields = ("reader_name", "reader_name_ar", "external_url", "object_key")
+    list_select_related = ("collection_version", "collection_version__collection")
     readonly_fields = BASE_READONLY_FIELDS
 
     def get_readonly_fields(
@@ -233,8 +239,7 @@ class DuaAudioAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if (
             obj is not None
             and obj.is_active
-            and obj.collection.active_version is not None
-            and obj.collection.active_version.status == DuaPublicationStatus.PUBLISHED
+            and obj.collection_version.status == DuaPublicationStatus.PUBLISHED
         ):
             immutable = _all_model_fields(obj, editable={"is_active"})
             return tuple(dict.fromkeys((*fields, *immutable)))

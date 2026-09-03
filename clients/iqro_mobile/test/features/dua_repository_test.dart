@@ -79,6 +79,21 @@ void main() {
     },
   );
 
+  test('accepts source audio when the reader is not identified', () async {
+    final payload = _entryPayload(8);
+    final audio = Map<String, Object?>.from(
+      (payload['audio']! as List).single! as Map,
+    );
+    audio['reader_name'] = '';
+    payload['audio'] = <Object?>[audio];
+    remote.onEntries = (_) => _page(<Object?>[payload]);
+
+    final entry = (await repository.entries('ru', category: 'sleep')).single;
+
+    expect(entry.audio.single.readerName, isEmpty);
+    expect(entry.audio.single.provider, 'hisnmuslim');
+  });
+
   test('preserves a withdrawn server favorite as removable identity', () async {
     AccountScopeSnapshot? requestScope;
     remote.onFavorites = (locale, accountScope) {

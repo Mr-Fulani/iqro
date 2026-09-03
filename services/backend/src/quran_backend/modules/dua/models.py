@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from quran_backend.modules.audio.validators import (
+    validate_relative_object_key,
+    validate_sha256,
+    validate_strong_etag,
+)
 from quran_backend.modules.core.models import BaseModel
 
 
@@ -24,6 +31,16 @@ class DuaEvidenceKind(models.TextChoices):
 class DuaEvidenceVerification(models.TextChoices):
     SOURCE_ONLY = "source_only", "Copied from source edition"
     EDITORIALLY_VERIFIED = "editorially_verified", "Editorially verified"
+
+
+class DuaRightsBasis(models.TextChoices):
+    SOURCE_DOCUMENTED = "source_documented", "Documented by the source"
+    IQRO_OWNER_ATTESTED = "iqro_owner_attested", "Attested by the IQRO owner"
+
+
+class DuaAudioDeliveryMode(models.TextChoices):
+    EXTERNAL = "external", "External immutable URL"
+    MANAGED = "managed", "IQRO-managed object"
 
 
 class DuaCollection(BaseModel):
@@ -115,11 +132,16 @@ class DuaSourceEdition(BaseModel):
     provider = models.CharField(max_length=64)
     source_item_id = models.CharField(max_length=64)
     title = models.CharField(max_length=255)
-    author = models.CharField(max_length=255)
+    author = models.CharField(max_length=255, blank=True)
     translator = models.CharField(max_length=255, blank=True)
     reviewer = models.CharField(max_length=255, blank=True)
     source_url = models.URLField(max_length=500)
-    rights_url = models.URLField(max_length=500)
+    rights_url = models.URLField(max_length=500, blank=True)
+    rights_basis = models.CharField(
+        max_length=32,
+        choices=DuaRightsBasis,
+        default=DuaRightsBasis.SOURCE_DOCUMENTED,
+    )
     source_version = models.CharField(max_length=64)
 
     class Meta:
@@ -325,21 +347,59 @@ class DuaEvidence(BaseModel):
 
 
 class DuaAudioAsset(BaseModel):
-    """A source-hosted recording mapped to a stable collection entry number."""
+    """One version-scoped external or verified managed Dua recording."""
 
+    # Kept as a denormalized, non-editable compatibility key so migration rollback
+    # never has to reconstruct a removed non-null foreign key on a populated table.
     collection = models.ForeignKey(
         DuaCollection,
+        on_delete=models.CASCADE,
+        related_name="audio_assets",
+        editable=False,
+    )
+    collection_version = models.ForeignKey(
+        DuaCollectionVersion,
         on_delete=models.CASCADE,
         related_name="audio_assets",
     )
     source_number = models.PositiveSmallIntegerField()
     language_code = models.CharField(max_length=8, default="ar")
     provider = models.CharField(max_length=64)
-    reader_name = models.CharField(max_length=255)
+    reader_name = models.CharField(max_length=255, blank=True)
     reader_name_ar = models.CharField(max_length=255, blank=True)
-    url = models.URLField(max_length=500)
+    external_url = models.URLField(max_length=1000, blank=True)
+    object_key = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        unique=True,
+        validators=[validate_relative_object_key],
+    )
+    content_type = models.CharField(max_length=64, default="audio/mpeg")
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        validators=[validate_sha256],
+    )
+    origin_etag = models.CharField(
+        max_length=255,
+        blank=True,
+        validators=[validate_strong_etag],
+    )
+    etag = models.CharField(
+        max_length=255,
+        blank=True,
+        validators=[validate_strong_etag],
+    )
+    cdn_contract_verified_at = models.DateTimeField(null=True, blank=True)
     source_url = models.URLField(max_length=500)
     rights_url = models.URLField(max_length=500, blank=True)
+    rights_basis = models.CharField(
+        max_length=32,
+        choices=DuaRightsBasis,
+        default=DuaRightsBasis.SOURCE_DOCUMENTED,
+    )
     source_version = models.CharField(max_length=64)
     sort_order = models.PositiveSmallIntegerField(default=1)
     is_active = models.BooleanField(default=True)
@@ -349,8 +409,8 @@ class DuaAudioAsset(BaseModel):
         ordering = ("source_number", "sort_order", "created_at")
         constraints = [
             models.UniqueConstraint(
-                fields=("collection", "source_number", "url"),
-                name="dua_audio_collection_entry_url_unique",
+                fields=("collection_version", "source_number", "sort_order"),
+                name="dua_audio_version_entry_order_unique",
             ),
             models.CheckConstraint(
                 condition=models.Q(source_number__gt=0),
@@ -360,16 +420,97 @@ class DuaAudioAsset(BaseModel):
                 condition=models.Q(sort_order__gt=0),
                 name="dua_audio_sort_order_positive",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(object_key__isnull=False, external_url="")
+                    | (models.Q(object_key__isnull=True) & ~models.Q(external_url=""))
+                ),
+                name="dua_audio_delivery_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(is_active=False)
+                    | models.Q(object_key__isnull=True)
+                    | (
+                        ~models.Q(checksum_sha256="")
+                        & ~models.Q(origin_etag="")
+                        & ~models.Q(etag="")
+                        & models.Q(cdn_contract_verified_at__isnull=False)
+                        & models.Q(size_bytes__gt=0)
+                    )
+                ),
+                name="dua_audio_active_managed_verified",
+            ),
         ]
         indexes = [
             models.Index(
-                fields=("collection", "source_number", "is_active"),
+                fields=("collection_version", "source_number", "is_active"),
                 name="dua_audio_catalog_idx",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.collection.slug}:{self.source_number}:{self.reader_name}"
+        return f"{self.collection_version}:{self.source_number}:{self.reader_name}"
+
+    @property
+    def delivery_mode(self) -> str:
+        if self.object_key:
+            return DuaAudioDeliveryMode.MANAGED
+        return DuaAudioDeliveryMode.EXTERNAL
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.collection_id
+            and self.collection_version_id
+            and self.collection_version.collection_id != self.collection_id
+        ):
+            raise ValidationError(
+                {"collection_version": "The audio version must belong to its collection."}
+            )
+        has_object_key = bool(self.object_key)
+        has_external_url = bool(self.external_url)
+        if has_object_key == has_external_url:
+            raise ValidationError(
+                "Exactly one managed object key or external provider URL is required."
+            )
+        managed_evidence = (
+            self.origin_etag,
+            self.etag,
+            self.cdn_contract_verified_at,
+        )
+        if not has_object_key and any(managed_evidence):
+            raise ValidationError(
+                "Managed origin/CDN evidence cannot be attached to an external URL."
+            )
+        if has_object_key and not self.checksum_sha256:
+            raise ValidationError(
+                {"checksum_sha256": "Managed Dua audio requires a SHA-256 checksum."}
+            )
+        if (
+            has_object_key
+            and self.is_active
+            and (
+                self.size_bytes == 0
+                or not self.origin_etag
+                or not self.etag
+                or self.cdn_contract_verified_at is None
+            )
+        ):
+            raise ValidationError(
+                {
+                    "is_active": (
+                        "Managed Dua audio stays private until its size, origin ETag, "
+                        "public ETag and CDN contract verification are recorded."
+                    )
+                }
+            )
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if self.collection_version_id:
+            self.collection_id = self.collection_version.collection_id
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class DuaFavorite(BaseModel):

@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from quran_backend.modules.core.content_revalidation import enqueue_dua_content_change
 from quran_backend.modules.dua.models import (
+    DuaAudioAsset,
     DuaCategory,
     DuaCategoryTranslation,
     DuaCollection,
@@ -19,10 +21,12 @@ from quran_backend.modules.dua.models import (
     DuaEntryTranslation,
     DuaEvidence,
     DuaPublicationStatus,
+    DuaRightsBasis,
     DuaSourceEdition,
 )
 
 SUPPORTED_DUA_LANGUAGES = frozenset({"ar", "en", "ru", "tr"})
+SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class DuaSnapshotError(ValueError):
@@ -36,6 +40,7 @@ class DuaImportResult:
     checksum_sha256: str
     category_count: int
     entry_count: int
+    audio_count: int
     created: bool
     published: bool
 
@@ -46,6 +51,10 @@ def bundled_starter_snapshot_path() -> Path:
 
 def bundled_full_snapshot_path() -> Path:
     return Path(__file__).with_name("data") / "hisn_al_muslim_full_v1.json"
+
+
+def bundled_quran_supplications_snapshot_path() -> Path:
+    return Path(__file__).with_name("data") / "supplications_from_quran_jmapps_v1.json"
 
 
 def load_dua_snapshot(path: str | Path) -> dict[str, Any]:
@@ -115,12 +124,23 @@ def _validate_sources(sources: Any) -> None:
             "provider",
             "source_item_id",
             "title",
-            "author",
             "source_url",
-            "rights_url",
             "source_version",
         ):
             _require_non_empty_string(source, key)
+        for optional_key in ("author", "translator", "reviewer", "rights_url"):
+            value = source.get(optional_key, "")
+            if not isinstance(value, str):
+                raise DuaSnapshotError(f"sources.{optional_key} must be a string.")
+        rights_basis = source.get("rights_basis", DuaRightsBasis.SOURCE_DOCUMENTED)
+        if rights_basis not in DuaRightsBasis.values:
+            raise DuaSnapshotError(f"Invalid source rights_basis: {rights_basis}.")
+        if not source.get("rights_url", "").strip() and rights_basis != (
+            DuaRightsBasis.IQRO_OWNER_ATTESTED
+        ):
+            raise DuaSnapshotError(
+                "A blank source rights_url requires rights_basis=iqro_owner_attested."
+            )
     if source_languages != SUPPORTED_DUA_LANGUAGES:
         raise DuaSnapshotError("A source edition is required for ar, en, ru and tr.")
 
@@ -149,7 +169,7 @@ def _validate_categories(categories: Any) -> set[int]:
     return category_numbers
 
 
-def _validate_entries(entries: Any, *, category_numbers: set[int]) -> None:
+def _validate_entries(entries: Any, *, category_numbers: set[int]) -> set[int]:
     if not isinstance(entries, list) or not entries:
         raise DuaSnapshotError("entries must be a non-empty list.")
     entry_numbers: set[int] = set()
@@ -187,6 +207,60 @@ def _validate_entries(entries: Any, *, category_numbers: set[int]) -> None:
                 raise DuaSnapshotError(f"Entry {source_number} evidence contains a non-object.")
             for key in ("kind", "provider", "source_name", "source_reference"):
                 _require_non_empty_string(evidence, key)
+    return entry_numbers
+
+
+def _validate_audio(audio_items: Any, *, entry_numbers: set[int]) -> None:
+    if audio_items is None:
+        return
+    if not isinstance(audio_items, list):
+        raise DuaSnapshotError("audio must be a list.")
+    identities: set[tuple[int, int]] = set()
+    for audio in audio_items:
+        if not isinstance(audio, dict):
+            raise DuaSnapshotError("audio contains a non-object value.")
+        source_number = audio.get("source_number")
+        sort_order = audio.get("sort_order", 1)
+        if source_number not in entry_numbers:
+            raise DuaSnapshotError("Dua audio references an unknown entry source number.")
+        if not isinstance(sort_order, int) or sort_order < 1:
+            raise DuaSnapshotError(f"Dua audio {source_number} has invalid sort_order.")
+        identity = (source_number, sort_order)
+        if identity in identities:
+            raise DuaSnapshotError(
+                f"Dua audio {source_number} contains duplicate sort_order {sort_order}."
+            )
+        identities.add(identity)
+        _validate_audio_source(audio, source_number=source_number)
+
+
+def _validate_audio_source(audio: dict[str, Any], *, source_number: int) -> None:
+    language = _require_non_empty_string(audio, "language_code")
+    if language not in SUPPORTED_DUA_LANGUAGES:
+        raise DuaSnapshotError(f"Unsupported Dua audio language: {language}.")
+    for key in ("provider", "external_url", "source_url", "source_version"):
+        _require_non_empty_string(audio, key)
+    for optional_key in ("reader_name", "reader_name_ar", "rights_url"):
+        value = audio.get(optional_key, "")
+        if not isinstance(value, str):
+            raise DuaSnapshotError(f"audio.{optional_key} must be a string.")
+    rights_basis = audio.get("rights_basis", DuaRightsBasis.SOURCE_DOCUMENTED)
+    if rights_basis not in DuaRightsBasis.values:
+        raise DuaSnapshotError(f"Invalid audio rights_basis: {rights_basis}.")
+    if not audio.get("rights_url", "").strip() and rights_basis != (
+        DuaRightsBasis.IQRO_OWNER_ATTESTED
+    ):
+        raise DuaSnapshotError(
+            "A blank audio rights_url requires rights_basis=iqro_owner_attested."
+        )
+    checksum = audio.get("checksum_sha256", "")
+    if not isinstance(checksum, str) or (checksum and SHA256_RE.fullmatch(checksum) is None):
+        raise DuaSnapshotError(f"Dua audio {source_number} has invalid checksum_sha256.")
+    size_bytes = audio.get("size_bytes", 0)
+    if not isinstance(size_bytes, int) or size_bytes < 0:
+        raise DuaSnapshotError(f"Dua audio {source_number} has invalid size_bytes.")
+    if not isinstance(audio.get("is_active", True), bool):
+        raise DuaSnapshotError(f"Dua audio {source_number} has invalid is_active.")
 
 
 def validate_dua_snapshot(snapshot: dict[str, Any]) -> None:
@@ -199,10 +273,25 @@ def validate_dua_snapshot(snapshot: dict[str, Any]) -> None:
     _require_non_empty_string(collection, "slug")
     _validate_sources(snapshot.get("sources"))
     category_numbers = _validate_categories(snapshot.get("categories"))
-    _validate_entries(snapshot.get("entries"), category_numbers=category_numbers)
+    entry_numbers = _validate_entries(snapshot.get("entries"), category_numbers=category_numbers)
+    _validate_audio(snapshot.get("audio"), entry_numbers=entry_numbers)
 
 
 def _publish_version(version: DuaCollectionVersion) -> None:
+    unverified_managed_audio = version.audio_assets.filter(
+        is_active=True,
+        object_key__isnull=False,
+    ).filter(
+        models.Q(checksum_sha256="")
+        | models.Q(size_bytes=0)
+        | models.Q(origin_etag="")
+        | models.Q(etag="")
+        | models.Q(cdn_contract_verified_at__isnull=True)
+    )
+    if unverified_managed_audio.exists():
+        raise DuaSnapshotError(
+            "Managed Dua audio must have verified origin and CDN evidence before publication."
+        )
     collection = version.collection
     previous = collection.active_version
     if previous and previous.pk != version.pk:
@@ -248,6 +337,7 @@ def import_dua_snapshot(snapshot: dict[str, Any], *, publish: bool = False) -> D
             checksum_sha256=checksum,
             category_count=existing.category_count,
             entry_count=existing.entry_count,
+            audio_count=existing.audio_assets.count(),
             created=False,
             published=existing.status == DuaPublicationStatus.PUBLISHED,
         )
@@ -270,11 +360,12 @@ def import_dua_snapshot(snapshot: dict[str, Any], *, publish: bool = False) -> D
             provider=source["provider"],
             source_item_id=source["source_item_id"],
             title=source["title"],
-            author=source["author"],
+            author=source.get("author", ""),
             translator=source.get("translator", ""),
             reviewer=source.get("reviewer", ""),
             source_url=source["source_url"],
-            rights_url=source["rights_url"],
+            rights_url=source.get("rights_url", ""),
+            rights_basis=source.get("rights_basis", DuaRightsBasis.SOURCE_DOCUMENTED),
             source_version=source["source_version"],
         )
 
@@ -293,6 +384,27 @@ def import_dua_snapshot(snapshot: dict[str, Any], *, publish: bool = False) -> D
                 language_code=translation["language"],
                 title=translation["title"],
             )
+
+    for audio in snapshot.get("audio", []):
+        DuaAudioAsset.objects.create(
+            collection_version=version,
+            source_number=audio["source_number"],
+            language_code=audio["language_code"],
+            provider=audio["provider"],
+            reader_name=audio.get("reader_name", ""),
+            reader_name_ar=audio.get("reader_name_ar", ""),
+            external_url=audio["external_url"],
+            object_key=None,
+            content_type=audio.get("content_type", "audio/mpeg"),
+            size_bytes=audio.get("size_bytes", 0),
+            checksum_sha256=audio.get("checksum_sha256", ""),
+            source_url=audio["source_url"],
+            rights_url=audio.get("rights_url", ""),
+            rights_basis=audio.get("rights_basis", DuaRightsBasis.SOURCE_DOCUMENTED),
+            source_version=audio["source_version"],
+            sort_order=audio.get("sort_order", 1),
+            is_active=audio.get("is_active", True),
+        )
 
     for sort_order, entry_payload in enumerate(entries_payload, start=1):
         entry = DuaEntry.objects.create(
@@ -334,6 +446,7 @@ def import_dua_snapshot(snapshot: dict[str, Any], *, publish: bool = False) -> D
         checksum_sha256=checksum,
         category_count=version.category_count,
         entry_count=version.entry_count,
+        audio_count=version.audio_assets.count(),
         created=True,
         published=version.status == DuaPublicationStatus.PUBLISHED,
     )

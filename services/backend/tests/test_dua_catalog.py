@@ -8,6 +8,7 @@ import pytest
 from django.contrib import admin
 from django.contrib.postgres.indexes import GinIndex
 from django.core.cache import caches
+from django.core.exceptions import ValidationError
 from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
@@ -19,6 +20,7 @@ from quran_backend.modules.core.privacy import PRIVATE_NO_STORE_CACHE_CONTROL
 from quran_backend.modules.dua.importer import (
     DuaSnapshotError,
     bundled_full_snapshot_path,
+    bundled_quran_supplications_snapshot_path,
     bundled_starter_snapshot_path,
     import_dua_snapshot,
     load_dua_snapshot,
@@ -72,14 +74,24 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
     assert first["evidence"][0]["verification_status"] == "source_only"
     assert first["audio"] == [
         {
-            "id": str(DuaAudioAsset.objects.get(source_number=1).id),
+            "id": str(
+                DuaAudioAsset.objects.get(
+                    collection_version__collection__slug="hisn-al-muslim",
+                    source_number=1,
+                ).id
+            ),
             "language_code": "ar",
             "provider": "hisnmuslim",
             "reader_name": "Hamad Al-Duraihem",
             "reader_name_ar": "حمد الدريهم",
             "url": "https://www.hisnmuslim.com/audio/ar/1.mp3",
+            "delivery_mode": "external",
+            "content_type": "audio/mpeg",
+            "size_bytes": 0,
+            "checksum_sha256": "",
             "source_url": "https://hisnmuslim.com/",
             "rights_url": "",
+            "rights_basis": "source_documented",
             "source_version": "hisnmuslim-audio-2026-08-29",
         }
     ]
@@ -110,7 +122,7 @@ def test_dua_audio_catalog_covers_every_published_entry() -> None:
 
     assert assets.count() == 267
     assert list(assets.values_list("source_number", flat=True)) == list(range(1, 268))
-    assert assets.get(source_number=153).url.endswith("/153.mp3")
+    assert assets.get(source_number=153).external_url.endswith("/153.mp3")
 
 
 @pytest.mark.django_db
@@ -578,7 +590,10 @@ def test_dua_api_rejects_unsupported_language_and_hides_drafts(api_client: APICl
 
     assert invalid.status_code == 400
     assert "language" in invalid.json()["field_errors"]
-    assert [item["slug"] for item in catalog.json()] == ["hisn-al-muslim"]
+    assert [item["slug"] for item in catalog.json()] == [
+        "hisn-al-muslim",
+        "supplications-from-quran",
+    ]
 
 
 @pytest.mark.django_db
@@ -686,6 +701,7 @@ def test_dua_snapshot_import_is_idempotent_and_checksum_protected() -> None:
     assert result.published is True
     assert result.category_count == 132
     assert result.entry_count == 267
+    assert result.audio_count == 267
 
     modified = deepcopy(snapshot)
     modified["sources"][0]["title"] = "Changed after publication"
@@ -727,6 +743,7 @@ def test_dua_snapshot_import_publishes_new_version_and_resolves_canonical_entry(
     assert resolved.json()["collection"] == "hisn-al-muslim"
     assert resolved.json()["collection_version"] == "hisn-starter-test-v2"
     assert resolved.json()["source_number"] == 1
+    assert resolved.json()["audio"] == []
 
 
 @pytest.mark.django_db
@@ -780,3 +797,132 @@ def test_full_dua_snapshot_has_complete_numbering_and_locales() -> None:
     )
     assert snapshot["entries"][105]["repetition_label"] == "33 · 33 · 34"
     validate_dua_snapshot(snapshot)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("language", ["ar", "en", "ru", "tr"])
+def test_seeded_quran_supplications_are_complete_localized_and_version_scoped(
+    api_client: APIClient,
+    language: str,
+) -> None:
+    catalog = api_client.get(f"/api/v1/dua/collections?language={language}")
+    categories = api_client.get(
+        f"/api/v1/dua/categories?language={language}&collection=supplications-from-quran"
+    )
+    entries = api_client.get(
+        f"/api/v1/dua/entries?language={language}&collection=supplications-from-quran&page_size=100"
+    )
+
+    assert catalog.status_code == 200
+    collection = next(item for item in catalog.json() if item["slug"] == "supplications-from-quran")
+    assert collection["version"] == "jmapps-bd4eef1"
+    assert collection["category_count"] == 1
+    assert collection["entry_count"] == 54
+    assert collection["source"]["author"] == ""
+    assert collection["source"]["rights_url"] == ""
+    assert collection["source"]["rights_basis"] == "iqro_owner_attested"
+    assert categories.status_code == 200
+    assert len(categories.json()) == 1
+    assert categories.json()[0]["entry_count"] == 54
+    assert entries.status_code == 200
+    assert len(entries.json()["results"]) == 54
+
+    first = entries.json()["results"][0]
+    assert first["source_number"] == 1
+    assert first["translation"]["language_code"] == language
+    assert first["evidence"] == [
+        {
+            "kind": "quran",
+            "provider": "JMApps",
+            "source_name": "Supplications from the Quran",
+            "source_reference": "2:126",
+            "source_url": (
+                "https://github.com/JMApps/supplications_from_quran/blob/"
+                "bd4eef191bed5ac8ee64bb65dfd51477acc8206b/"
+                "assets/databases/main_supplications.db"
+            ),
+            "grade": "",
+            "external_id": "1",
+            "verification_status": "source_only",
+        }
+    ]
+    assert len(first["audio"]) == 1
+    assert first["audio"][0]["delivery_mode"] == "external"
+    assert first["audio"][0]["reader_name"] == ""
+    assert first["audio"][0]["rights_basis"] == "iqro_owner_attested"
+    assert first["audio"][0]["source_version"] == ("bd4eef191bed5ac8ee64bb65dfd51477acc8206b")
+    assert first["audio"][0]["url"].endswith(
+        "/bd4eef191bed5ac8ee64bb65dfd51477acc8206b/assets/audios/a_1.mp3"
+    )
+
+
+@pytest.mark.django_db
+def test_quran_supplications_snapshot_import_is_idempotent() -> None:
+    snapshot = load_dua_snapshot(bundled_quran_supplications_snapshot_path())
+
+    first = import_dua_snapshot(snapshot, publish=True)
+    second = import_dua_snapshot(snapshot, publish=True)
+
+    assert first.created is False
+    assert second.created is False
+    assert second.published is True
+    assert second.category_count == 1
+    assert second.entry_count == 54
+    assert second.audio_count == 54
+    version = DuaCollectionVersion.objects.get(
+        collection__slug="supplications-from-quran",
+        version="jmapps-bd4eef1",
+    )
+    assert DuaAudioAsset.objects.filter(collection_version=version).count() == 54
+    assert not DuaAudioAsset.objects.filter(
+        collection_version__collection__slug="hisn-al-muslim",
+        source_version="bd4eef191bed5ac8ee64bb65dfd51477acc8206b",
+    ).exists()
+
+
+def test_dua_snapshot_requires_explicit_basis_for_blank_rights_url() -> None:
+    snapshot = deepcopy(load_dua_snapshot(bundled_quran_supplications_snapshot_path()))
+    snapshot["sources"][0]["rights_basis"] = "source_documented"
+
+    with pytest.raises(DuaSnapshotError, match="blank source rights_url"):
+        validate_dua_snapshot(snapshot)
+
+    snapshot = deepcopy(load_dua_snapshot(bundled_quran_supplications_snapshot_path()))
+    snapshot["audio"][0]["rights_basis"] = "source_documented"
+    with pytest.raises(DuaSnapshotError, match="blank audio rights_url"):
+        validate_dua_snapshot(snapshot)
+
+
+@pytest.mark.django_db
+def test_unverified_managed_dua_audio_cannot_be_activated_or_exposed(
+    api_client: APIClient,
+) -> None:
+    collection = DuaCollection.objects.get(slug="hisn-al-muslim")
+    version = collection.active_version
+    assert version is not None
+    asset = DuaAudioAsset(
+        collection_version=version,
+        source_number=1,
+        language_code="ar",
+        provider="iqro",
+        object_key="dua/test/unverified.mp3",
+        content_type="audio/mpeg",
+        checksum_sha256="a" * 64,
+        source_url="https://example.test/source",
+        rights_url="https://example.test/rights",
+        source_version="test-v1",
+        sort_order=2,
+        is_active=False,
+    )
+    asset.save()
+    asset.is_active = True
+
+    with pytest.raises(ValidationError, match="stays private"):
+        asset.save()
+
+    response = api_client.get(
+        "/api/v1/dua/entries/resolve",
+        {"language": "en", "collection": "hisn-al-muslim", "source_number": 1},
+    )
+    assert response.status_code == 200
+    assert all(item["delivery_mode"] == "external" for item in response.json()["audio"])

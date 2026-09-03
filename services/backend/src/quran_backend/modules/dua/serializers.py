@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from rest_framework import serializers
 
 from quran_backend.modules.dua.models import (
@@ -15,6 +16,9 @@ from quran_backend.modules.dua.models import (
 
 
 class DuaAudioAssetSerializer(serializers.ModelSerializer[DuaAudioAsset]):
+    url = serializers.SerializerMethodField()
+    delivery_mode = serializers.CharField(read_only=True)
+
     class Meta:
         model = DuaAudioAsset
         fields = (
@@ -24,10 +28,20 @@ class DuaAudioAssetSerializer(serializers.ModelSerializer[DuaAudioAsset]):
             "reader_name",
             "reader_name_ar",
             "url",
+            "delivery_mode",
+            "content_type",
+            "size_bytes",
+            "checksum_sha256",
             "source_url",
             "rights_url",
+            "rights_basis",
             "source_version",
         )
+
+    def get_url(self, obj: DuaAudioAsset) -> str:
+        if obj.object_key:
+            return f"{settings.PUBLIC_AUDIO_BASE_URL.rstrip('/')}/{obj.object_key.lstrip('/')}"
+        return obj.external_url
 
 
 class DuaSourceEditionSerializer(serializers.ModelSerializer[DuaSourceEdition]):
@@ -43,6 +57,7 @@ class DuaSourceEditionSerializer(serializers.ModelSerializer[DuaSourceEdition]):
             "reviewer",
             "source_url",
             "rights_url",
+            "rights_basis",
             "source_version",
         )
 
@@ -233,7 +248,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
         return DuaSourceEditionSerializer(source).data if source else None
 
     def get_audio(self, obj: DuaEntry) -> list[dict[str, Any]]:
-        assets = getattr(obj.collection_version.collection, "active_audio_assets", ())
+        assets = getattr(obj.collection_version, "active_audio_assets", ())
         matching_assets = [asset for asset in assets if asset.source_number == obj.source_number]
         return list(DuaAudioAssetSerializer(matching_assets, many=True).data)
 

@@ -456,6 +456,7 @@ FIELD_LABELS: dict[str, str] = {
     "reviewer": "Проверяющий редактор",
     "revoked_at": "Отозвано",
     "rights_holder": "Правообладатель",
+    "rights_basis": "Основание права использования",
     "rights_url": "Условия использования",
     "riwayah": "Риваят",
     "route": "Страница приложения",
