@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
@@ -231,7 +232,27 @@ class DuaEntry {
     this.evidence = const <DuaEvidence>[],
     this.audio = const <DuaAudioAsset>[],
     this.catalogVersionVerified = true,
+    this.available = true,
   });
+
+  const DuaEntry.unavailableFavorite({
+    required this.collection,
+    required this.sourceNumber,
+  }) : id = '',
+       collectionVersion = '',
+       categoryTitle = '',
+       categorySlug = '',
+       arabicText = '',
+       meaning = '',
+       transliteration = '',
+       repetitions = 1,
+       repetitionLabel = '',
+       sourceLabel = '',
+       source = null,
+       evidence = const <DuaEvidence>[],
+       audio = const <DuaAudioAsset>[],
+       catalogVersionVerified = false,
+       available = false;
 
   factory DuaEntry.fromJson(Map<String, Object?> json) {
     final category = json['category'] is Map
@@ -283,6 +304,7 @@ class DuaEntry {
       evidence: _modelList(json['evidence'], DuaEvidence.fromJson),
       audio: _modelList(json['audio'], DuaAudioAsset.fromJson),
       sourceLabel: sourceLabel,
+      available: json['_favorite_available'] != false,
     );
   }
 
@@ -302,6 +324,7 @@ class DuaEntry {
   final List<DuaEvidence> evidence;
   final List<DuaAudioAsset> audio;
   final bool catalogVersionVerified;
+  final bool available;
 
   String get favoriteKey => 'dua:$collection:$sourceNumber';
   bool get hasDeclaredSource =>
@@ -334,6 +357,7 @@ class DuaEntry {
     evidence: evidence,
     audio: audio,
     catalogVersionVerified: false,
+    available: available,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -357,6 +381,7 @@ class DuaEntry {
     'source': source?.toJson(),
     'evidence': evidence.map((item) => item.toJson()).toList(growable: false),
     'audio': audio.map((item) => item.toJson()).toList(growable: false),
+    '_favorite_available': available,
   };
 
   factory DuaEntry.fromFavorite(Map<String, Object?> json) =>
@@ -397,11 +422,17 @@ abstract interface class DuaRemoteGateway {
     required int sourceNumber,
   });
 
+  Future<Object?> favorites(
+    String locale, {
+    AccountScopeSnapshot? accountScope,
+  });
+
   Future<void> setFavorite(
     String collection,
     int sourceNumber,
-    bool isFavorite,
-  );
+    bool isFavorite, {
+    AccountScopeSnapshot? accountScope,
+  });
 }
 
 class ApiDuaRemoteGateway implements DuaRemoteGateway {
@@ -470,14 +501,26 @@ class ApiDuaRemoteGateway implements DuaRemoteGateway {
   );
 
   @override
+  Future<Object?> favorites(
+    String locale, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.get(
+    '/me/dua-favorites',
+    query: <String, Object?>{'include': 'entry', 'language': locale},
+    accountScope: accountScope,
+  );
+
+  @override
   Future<void> setFavorite(
     String collection,
     int sourceNumber,
-    bool isFavorite,
-  ) async {
+    bool isFavorite, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     await _api.put(
       '/me/dua-favorites/$collection/$sourceNumber',
       data: <String, Object?>{'is_favorite': isFavorite},
+      accountScope: accountScope,
     );
   }
 }
@@ -799,19 +842,38 @@ class DuaRepository {
     }
   }
 
-  Future<bool> isFavorite(DuaEntry entry) async {
+  Future<bool> isFavorite(
+    DuaEntry entry, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
     final rows = await _database.database.query(
       'favorites',
       columns: const <String>['item_key'],
-      where: 'item_key = ?',
-      whereArgs: <Object?>[entry.favoriteKey],
+      where: 'owner_id = ? AND item_key = ?',
+      whereArgs: <Object?>[scope.userId, entry.favoriteKey],
       limit: 1,
     );
+    _database.ensureCurrent(scope);
     return rows.isNotEmpty;
   }
 
-  Future<bool> toggleFavorite(DuaEntry entry) async {
-    final active = await isFavorite(entry);
+  Future<bool> toggleFavorite(
+    DuaEntry entry, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final existing = await _database.database.query(
+      'favorites',
+      columns: const <String>['item_key'],
+      where: 'owner_id = ? AND item_key = ?',
+      whereArgs: <Object?>[scope.userId, entry.favoriteKey],
+      limit: 1,
+    );
+    _database.ensureCurrent(scope);
+    final active = existing.isNotEmpty;
     final operationId = _uuid.v7();
     final payload = <String, Object?>{
       'collection': entry.collection,
@@ -819,14 +881,16 @@ class DuaRepository {
       'is_favorite': !active,
     };
     await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
       if (active) {
         await transaction.delete(
           'favorites',
-          where: 'item_key = ?',
-          whereArgs: <Object?>[entry.favoriteKey],
+          where: 'owner_id = ? AND item_key = ?',
+          whereArgs: <Object?>[scope.userId, entry.favoriteKey],
         );
       } else {
         await transaction.insert('favorites', <String, Object?>{
+          'owner_id': scope.userId,
           'item_key': entry.favoriteKey,
           'kind': 'dua',
           'payload': jsonEncode(entry.toJson()),
@@ -835,10 +899,11 @@ class DuaRepository {
       }
       await transaction.delete(
         'outbox',
-        where: 'entity_type = ? AND entity_id = ?',
-        whereArgs: <Object?>['dua_favorite', entry.favoriteKey],
+        where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>[scope.userId, 'dua_favorite', entry.favoriteKey],
       );
       await transaction.insert('outbox', <String, Object?>{
+        'owner_id': scope.userId,
         'operation_id': operationId,
         'entity_type': 'dua_favorite',
         'entity_id': entry.favoriteKey,
@@ -846,22 +911,57 @@ class DuaRepository {
         'created_at': DateTime.now().toUtc().toIso8601String(),
       });
     });
+    _database.ensureCurrent(scope);
     try {
-      await _remote.setFavorite(entry.collection, entry.sourceNumber, !active);
-      await _database.acknowledgeOutbox(operationId);
+      await _remote.setFavorite(
+        entry.collection,
+        entry.sourceNumber,
+        !active,
+        accountScope: scope,
+      );
+      _database.ensureCurrent(scope);
+      await _acknowledgeFavorite(scope, operationId);
+    } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') rethrow;
+      if (error.statusCode == 400 || error.statusCode == 404) {
+        await _reconcileRejectedFavorite(scope, entry.favoriteKey, operationId);
+        return false;
+      }
+      await _markFavoriteFailure(scope, operationId, error.toString());
+    } on AccountScopeChanged {
+      rethrow;
     } on Object catch (error) {
-      await _database.markOutboxFailure(operationId, error.toString());
+      await _markFavoriteFailure(scope, operationId, error.toString());
     }
     return !active;
   }
 
-  Future<List<DuaEntry>> favorites() async {
+  Future<List<DuaEntry>> favorites({
+    String? locale,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    if (locale != null) {
+      try {
+        await _pullFavorites(locale, scope);
+      } on ApiException catch (error) {
+        if (error.code == 'account_scope_changed') rethrow;
+        if (!error.isOffline) rethrow;
+      }
+    }
+    return _localFavorites(scope);
+  }
+
+  Future<List<DuaEntry>> _localFavorites(AccountScopeSnapshot scope) async {
+    _database.ensureCurrent(scope);
     final rows = await _database.database.query(
       'favorites',
-      where: 'kind = ?',
-      whereArgs: const <Object?>['dua'],
+      where: 'owner_id = ? AND kind = ?',
+      whereArgs: <Object?>[scope.userId, 'dua'],
       orderBy: 'updated_at DESC',
     );
+    _database.ensureCurrent(scope);
     return rows
         .map((row) {
           final payload = jsonDecode(row['payload']! as String);
@@ -870,6 +970,211 @@ class DuaRepository {
           );
         })
         .toList(growable: false);
+  }
+
+  Future<void> _pullFavorites(String locale, AccountScopeSnapshot scope) async {
+    _database.ensureCurrent(scope);
+    final raw = await _remote.favorites(locale, accountScope: scope);
+    _database.ensureCurrent(scope);
+    if (raw is! Map) {
+      throw const FormatException('Dua favorites snapshot is invalid');
+    }
+    final results = raw['results'];
+    if (results is! List || results.length > 5000) {
+      throw const FormatException('Dua favorites snapshot is invalid');
+    }
+    final serverEntries = <String, DuaEntry>{};
+    var snapshotBytes = 0;
+    for (final item in results) {
+      if (item is! Map) {
+        throw const FormatException('Dua favorite must be an object');
+      }
+      final favorite = Map<String, Object?>.from(item);
+      final encodedFavorite = jsonEncode(favorite);
+      snapshotBytes += encodedFavorite.length;
+      if (encodedFavorite.length > _maxFavoriteEntryBytes ||
+          snapshotBytes > _maxFavoriteSnapshotBytes) {
+        throw const FormatException('Dua favorites snapshot is too large');
+      }
+      final collection = _optionalCatalogSlug(
+        favorite['collection']?.toString(),
+        'collection',
+        maxLength: 100,
+      );
+      final sourceNumber = (favorite['source_number'] as num?)?.toInt();
+      if (collection == null ||
+          sourceNumber == null ||
+          sourceNumber < 1 ||
+          sourceNumber > 32767 ||
+          favorite['is_favorite'] != true) {
+        throw const FormatException('Dua favorite identity is invalid');
+      }
+      final entryRaw = favorite['entry'];
+      final entry = entryRaw == null
+          ? DuaEntry.unavailableFavorite(
+              collection: collection,
+              sourceNumber: sourceNumber,
+            )
+          : _validatedRemoteEntry(entryRaw);
+      if (entry.collection != collection ||
+          entry.sourceNumber != sourceNumber) {
+        throw const FormatException('Dua favorite entry identity mismatches');
+      }
+      if (serverEntries.containsKey(entry.favoriteKey)) {
+        throw const FormatException('Dua favorite identity is duplicated');
+      }
+      serverEntries[entry.favoriteKey] = entry;
+    }
+
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      final pendingRows = await transaction.query(
+        'outbox',
+        where: 'owner_id = ? AND entity_type = ?',
+        whereArgs: <Object?>[scope.userId, 'dua_favorite'],
+        orderBy: 'created_at ASC',
+      );
+      final existingRows = await transaction.query(
+        'favorites',
+        where: 'owner_id = ? AND kind = ?',
+        whereArgs: <Object?>[scope.userId, 'dua'],
+      );
+      final existingPayloads = <String, String>{
+        for (final row in existingRows)
+          row['item_key']! as String: row['payload']! as String,
+      };
+      final pendingIntent =
+          <String, ({bool isFavorite, String collection, int sourceNumber})>{};
+      for (final row in pendingRows) {
+        final decoded = jsonDecode(row['payload']! as String);
+        if (decoded is! Map) {
+          throw const FormatException('Dua favorite intent is invalid');
+        }
+        final body = Map<String, Object?>.from(decoded);
+        final key = row['entity_id']?.toString();
+        final collection = _optionalCatalogSlug(
+          body['collection']?.toString(),
+          'collection',
+          maxLength: 100,
+        );
+        final sourceNumber = (body['source_number'] as num?)?.toInt();
+        if (key == null ||
+            key.isEmpty ||
+            body['is_favorite'] is! bool ||
+            collection == null ||
+            sourceNumber == null ||
+            sourceNumber < 1 ||
+            sourceNumber > 32767 ||
+            key != 'dua:$collection:$sourceNumber') {
+          throw const FormatException('Dua favorite intent is invalid');
+        }
+        pendingIntent[key] = (
+          isFavorite: body['is_favorite']! as bool,
+          collection: collection,
+          sourceNumber: sourceNumber,
+        );
+      }
+      await transaction.delete(
+        'favorites',
+        where: 'owner_id = ? AND kind = ?',
+        whereArgs: <Object?>[scope.userId, 'dua'],
+      );
+      final now = DateTime.now().toUtc().toIso8601String();
+      for (final entry in serverEntries.values) {
+        await transaction.insert('favorites', <String, Object?>{
+          'owner_id': scope.userId,
+          'item_key': entry.favoriteKey,
+          'kind': 'dua',
+          'payload': jsonEncode(entry.toJson()),
+          'updated_at': now,
+        });
+      }
+      for (final intent in pendingIntent.entries) {
+        if (!intent.value.isFavorite) {
+          await transaction.delete(
+            'favorites',
+            where: 'owner_id = ? AND item_key = ?',
+            whereArgs: <Object?>[scope.userId, intent.key],
+          );
+          continue;
+        }
+        if (serverEntries.containsKey(intent.key)) continue;
+        final payload = existingPayloads[intent.key];
+        final desiredPayload =
+            payload ??
+            jsonEncode(
+              DuaEntry.unavailableFavorite(
+                collection: intent.value.collection,
+                sourceNumber: intent.value.sourceNumber,
+              ).toJson(),
+            );
+        await transaction.insert('favorites', <String, Object?>{
+          'owner_id': scope.userId,
+          'item_key': intent.key,
+          'kind': 'dua',
+          'payload': desiredPayload,
+          'updated_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    _database.ensureCurrent(scope);
+  }
+
+  Future<void> _acknowledgeFavorite(
+    AccountScopeSnapshot scope,
+    String operationId,
+  ) async {
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      await transaction.delete(
+        'outbox',
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[scope.userId, operationId],
+      );
+    });
+  }
+
+  Future<void> _markFavoriteFailure(
+    AccountScopeSnapshot scope,
+    String operationId,
+    String error,
+  ) async {
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      await transaction.rawUpdate(
+        'UPDATE outbox SET attempts = attempts + 1, last_error = ? '
+        'WHERE owner_id = ? AND operation_id = ?',
+        <Object?>[error, scope.userId, operationId],
+      );
+    });
+  }
+
+  Future<void> _reconcileRejectedFavorite(
+    AccountScopeSnapshot scope,
+    String favoriteKey,
+    String operationId,
+  ) async {
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      final current = await transaction.query(
+        'outbox',
+        columns: const <String>['operation_id'],
+        where: 'owner_id = ? AND operation_id = ? AND entity_id = ?',
+        whereArgs: <Object?>[scope.userId, operationId, favoriteKey],
+        limit: 1,
+      );
+      if (current.isEmpty) return;
+      await transaction.delete(
+        'favorites',
+        where: 'owner_id = ? AND item_key = ?',
+        whereArgs: <Object?>[scope.userId, favoriteKey],
+      );
+      await transaction.delete(
+        'outbox',
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[scope.userId, operationId],
+      );
+    });
   }
 
   List<DuaCategory> _parseCategories(Object? payload) {
@@ -1321,6 +1626,8 @@ bool _sameCollectionVersions(
     left.entries.every((entry) => right[entry.key] == entry.value);
 
 const int _maxPracticeRepetitions = 10000;
+const int _maxFavoriteEntryBytes = 128 * 1024;
+const int _maxFavoriteSnapshotBytes = 8 * 1024 * 1024;
 const Set<String> _supportedEvidenceKinds = <String>{
   'hadith',
   'quran',

@@ -2,28 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_session.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/storage/local_database.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/iqro_theme.dart';
 
-class AccountScreen extends ConsumerStatefulWidget {
+class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
   @override
-  ConsumerState<AccountScreen> createState() => _AccountScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionState = ref.watch(sessionProvider);
+    if (sessionState.isLoading) {
+      return Scaffold(
+        appBar: IqroTopBar(title: context.l10n.personalProfile),
+        body: const IqroLoading(),
+      );
+    }
+    final session = sessionState.valueOrNull;
+    final database = ref.watch(localDatabaseProvider);
+    final currentScope = database.accountScope.current;
+    final accountScope = currentScope?.userId == session?.userId
+        ? currentScope
+        : null;
+    final controller = ref.watch(sessionProvider.notifier);
+    return _AccountScreenBody(
+      key: ValueKey<String>(
+        '${accountScope?.userId ?? '<none>'}:'
+        '${accountScope?.epoch ?? -1}:${session?.isVerified == true}',
+      ),
+      database: database,
+      accountScope: accountScope,
+      controller: controller,
+    );
+  }
 }
 
-class _AccountScreenState extends ConsumerState<AccountScreen> {
+class _AccountScreenBody extends ConsumerStatefulWidget {
+  const _AccountScreenBody({
+    required this.database,
+    required this.accountScope,
+    required this.controller,
+    super.key,
+  });
+
+  final LocalDatabase database;
+  final AccountScopeSnapshot? accountScope;
+  final SessionController controller;
+
+  @override
+  ConsumerState<_AccountScreenBody> createState() => _AccountScreenBodyState();
+}
+
+class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
   EmailChallenge? _challenge;
   String? _message;
   var _working = false;
+  var _requestGeneration = 0;
 
   @override
   void dispose() {
+    _requestGeneration += 1;
+    _emailController.clear();
+    _codeController.clear();
+    _challenge = null;
+    _message = null;
     _emailController.dispose();
     _codeController.dispose();
     super.dispose();
@@ -186,7 +234,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 TextButton(
                   onPressed: _working
                       ? null
-                      : () => setState(() => _challenge = null),
+                      : () {
+                          if (_isCurrent()) {
+                            setState(() => _challenge = null);
+                          }
+                        },
                   child: Text(context.l10n.back),
                 ),
                 const SizedBox(width: 8),
@@ -218,7 +270,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           IqroListTile(
             icon: Icons.logout,
             title: context.l10n.signOut,
-            onTap: () => ref.read(sessionProvider.notifier).signOut(),
+            onTap: _signOut,
           ),
         ],
       ),
@@ -226,44 +278,87 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _sendCode() async {
-    if (!_emailController.text.contains('@')) return;
+    if (_working || !_isCurrent() || !_emailController.text.contains('@')) {
+      return;
+    }
+    final request = ++_requestGeneration;
+    final email = _emailController.text;
     setState(() {
       _working = true;
       _message = null;
     });
     try {
-      final challenge = await ref
-          .read(sessionProvider.notifier)
-          .startEmail(_emailController.text);
-      if (mounted) setState(() => _challenge = challenge);
+      final challenge = await widget.controller.startEmail(email);
+      if (mounted && _isCurrent(request)) {
+        setState(() => _challenge = challenge);
+      }
+    } on AccountScopeChanged {
+      // The account screen is replaced by its scope key on session changes.
     } on ApiException catch (error) {
-      if (mounted) setState(() => _message = error.message);
+      if (mounted && _isCurrent(request)) {
+        setState(() => _message = error.message);
+      }
     } finally {
-      if (mounted) setState(() => _working = false);
+      if (mounted && _isCurrent(request)) {
+        setState(() => _working = false);
+      }
     }
   }
 
   Future<void> _verify() async {
     final challenge = _challenge;
-    if (challenge == null || _codeController.text.length != 6) return;
+    if (_working ||
+        !_isCurrent() ||
+        challenge == null ||
+        _codeController.text.length != 6) {
+      return;
+    }
+    final request = ++_requestGeneration;
+    final code = _codeController.text;
     setState(() {
       _working = true;
       _message = null;
     });
     try {
-      await ref
-          .read(sessionProvider.notifier)
-          .verify(challenge, _codeController.text);
+      await widget.controller.verify(challenge, code);
+      if (!mounted || !_isCurrent(request)) return;
+      final error = ref.read(sessionProvider).error;
+      if (error is ApiException) throw error;
+    } on AccountScopeChanged {
+      // The account screen is replaced by its scope key on session changes.
     } on ApiException catch (error) {
-      if (mounted) setState(() => _message = error.message);
+      if (mounted && _isCurrent(request)) {
+        setState(() => _message = error.message);
+      }
     } finally {
-      if (mounted) setState(() => _working = false);
+      if (mounted && _isCurrent(request)) {
+        setState(() => _working = false);
+      }
     }
   }
 
   Future<void> _sync() async {
-    final report = await ref.read(syncProvider.notifier).run();
-    if (!mounted) return;
+    if (!_isCurrent()) return;
+    final request = ++_requestGeneration;
+    final controller = ref.read(syncProvider.notifier);
+    late final SyncReport report;
+    try {
+      report = await controller.run();
+    } on AccountScopeChanged {
+      return;
+    } on Object catch (error) {
+      if (mounted &&
+          _isCurrent(request) &&
+          identical(controller, ref.read(syncProvider.notifier))) {
+        setState(() => _message = error.toString());
+      }
+      return;
+    }
+    if (!mounted ||
+        !_isCurrent(request) ||
+        !identical(controller, ref.read(syncProvider.notifier))) {
+      return;
+    }
     if (report.status == SyncStatus.idle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -273,5 +368,30 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _signOut() async {
+    if (_working || !_isCurrent()) return;
+    ++_requestGeneration;
+    setState(() {
+      _working = true;
+      _message = null;
+    });
+    try {
+      await widget.controller.signOut();
+    } on Object {
+      // SessionController deactivates the old scope before surfacing a durable
+      // logout failure. The replacement screen owns any subsequent action.
+    }
+  }
+
+  bool _isCurrent([int? request]) {
+    if (!mounted) return false;
+    if (request != null && request != _requestGeneration) return false;
+    final scope = widget.accountScope;
+    if (scope == null || !widget.database.accountScope.isCurrent(scope)) {
+      return false;
+    }
+    return identical(widget.controller, ref.read(sessionProvider.notifier));
   }
 }

@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'dua_presentation.dart';
@@ -488,6 +489,15 @@ class DuaEntryRouteScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The audio controller is account-owned. Watching its identity makes this
+    // route rebuild at the same boundary as the rest of the private UI while
+    // keeping the public dua request independent from authentication.
+    ref.watch(audioControllerProvider.notifier);
+    final accountScope = ref.watch(localDatabaseProvider).accountScope;
+    final activeAccount = accountScope.current;
+    final accountKey = activeAccount == null
+        ? '__no_account__:${accountScope.epoch}'
+        : '${activeAccount.userId}:${activeAccount.epoch}';
     final identity = collection == null || sourceNumber == null
         ? null
         : (collection: collection!, sourceNumber: sourceNumber!);
@@ -513,7 +523,8 @@ class DuaEntryRouteScreen extends ConsumerWidget {
       final canRetry = !trusted && !result.isLoading;
       return DuaEntryScreen(
         key: ValueKey<String>(
-          '${fallback.id}:${fallback.collectionVersion}:$trusted',
+          '$accountKey:${fallback.id}:'
+          '${fallback.collectionVersion}:$trusted',
         ),
         entry: fallback,
         audioEnabled: trusted,
@@ -550,41 +561,64 @@ class DuaEntryScreen extends ConsumerStatefulWidget {
   ConsumerState<DuaEntryScreen> createState() => _DuaEntryScreenState();
 }
 
+bool _sameAccountScope(
+  AccountScopeSnapshot? left,
+  AccountScopeSnapshot? right,
+) => left?.userId == right?.userId && left?.epoch == right?.epoch;
+
 class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
   var _favorite = false;
   var _favoriteBusy = true;
   var _completedRepetitions = 0;
   var _selectedAudioIndex = 0;
   String? _ownedAudioId;
-  final Object _audioOwner = Object();
+  Object _audioOwner = Object();
   var _audioLoadFailed = false;
-  late final AudioController _audioController;
+  late AudioController _audioController;
+  AccountScopeSnapshot? _accountScope;
+  var _accountGeneration = 0;
+  var _favoriteRequest = 0;
+  var _audioRequest = 0;
 
   @override
   void initState() {
     super.initState();
+    _accountScope = ref.read(localDatabaseProvider).accountScope.current;
     _audioController = ref.read(audioControllerProvider.notifier);
-    unawaited(_loadFavorite());
+    final scope = _accountScope;
+    if (scope != null) {
+      unawaited(_loadFavorite(scope, _accountGeneration));
+    }
   }
 
-  Future<void> _loadFavorite() async {
+  Future<void> _loadFavorite(AccountScopeSnapshot scope, int generation) async {
+    final request = ++_favoriteRequest;
     try {
       final value = await ref
           .read(duaRepositoryProvider)
-          .isFavorite(widget.entry);
-      if (!mounted) return;
+          .isFavorite(widget.entry, accountScope: scope);
+      if (!_isCurrentAccount(scope, generation) ||
+          request != _favoriteRequest) {
+        return;
+      }
       setState(() {
         _favorite = value;
         _favoriteBusy = false;
       });
     } on Object {
-      if (mounted) setState(() => _favoriteBusy = false);
+      if (_isCurrentAccount(scope, generation) && request == _favoriteRequest) {
+        setState(() => _favoriteBusy = false);
+      }
     }
   }
 
   @override
   void dispose() {
+    _accountGeneration += 1;
+    _favoriteRequest += 1;
+    _audioRequest += 1;
     final audioId = _ownedAudioId;
+    _ownedAudioId = null;
     if (audioId != null) {
       unawaited(_audioController.stopStandalone(audioId, owner: _audioOwner));
     }
@@ -594,7 +628,9 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final entry = widget.entry;
+    final currentController = ref.watch(audioControllerProvider.notifier);
     final audioState = ref.watch(audioControllerProvider).standalone;
+    _synchronizeAccountBinding(currentController);
     final stages = duaRepetitionStages(
       entry.repetitionLabel,
       entry.repetitions,
@@ -692,12 +728,8 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
                 onSelected: _selectAudio,
                 onToggle: _toggleAudio,
                 onRetry: _retryAudio,
-                onSeek: (id, position) => ref
-                    .read(audioControllerProvider.notifier)
-                    .seekStandalone(id, position, owner: _audioOwner),
-                onRepeat: (id) => ref
-                    .read(audioControllerProvider.notifier)
-                    .toggleStandaloneRepeat(id, owner: _audioOwner),
+                onSeek: _seekAudio,
+                onRepeat: _toggleAudioRepeat,
               ),
             ],
             if (progress.total > 1 ||
@@ -743,35 +775,54 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
 
   Future<void> _toggle() async {
     if (_favoriteBusy) return;
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    if (scope == null || !_isCurrentAccount(scope, generation)) return;
+    final request = ++_favoriteRequest;
+    final addedMessage = context.l10n.bookmarkAdded;
+    final removedMessage = context.l10n.bookmarkRemoved;
     setState(() => _favoriteBusy = true);
     try {
       final active = await ref
           .read(duaRepositoryProvider)
-          .toggleFavorite(widget.entry);
+          .toggleFavorite(widget.entry, accountScope: scope);
+      if (!_isCurrentAccount(scope, generation) ||
+          request != _favoriteRequest) {
+        return;
+      }
       if (!mounted) return;
       setState(() => _favorite = active);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            active ? context.l10n.bookmarkAdded : context.l10n.bookmarkRemoved,
-          ),
-        ),
+        SnackBar(content: Text(active ? addedMessage : removedMessage)),
       );
+    } on AccountScopeChanged {
+      // Account handoff is an expected cancellation, not a user-facing error.
     } finally {
-      if (mounted) setState(() => _favoriteBusy = false);
+      if (_isCurrentAccount(scope, generation) && request == _favoriteRequest) {
+        setState(() => _favoriteBusy = false);
+      }
     }
   }
 
   void _selectAudio(int index) {
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    final controller = _audioController;
+    final owner = _audioOwner;
+    if (scope == null ||
+        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
+      return;
+    }
     if (index == _selectedAudioIndex) return;
     final audioId = _ownedAudioId;
     _ownedAudioId = null;
+    _audioRequest += 1;
     setState(() {
       _selectedAudioIndex = index;
       _audioLoadFailed = false;
     });
     if (audioId != null) {
-      unawaited(_audioController.stopStandalone(audioId, owner: _audioOwner));
+      unawaited(controller.stopStandalone(audioId, owner: owner));
     }
   }
 
@@ -781,42 +832,152 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
 
   Future<void> _playAudio({required bool forceReload}) async {
     if (!widget.audioEnabled) return;
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    final controller = _audioController;
+    final owner = _audioOwner;
+    if (scope == null ||
+        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
+      return;
+    }
     final entry = widget.entry;
     if (entry.audio.isEmpty || _selectedAudioIndex >= entry.audio.length) {
       return;
     }
     final asset = entry.audio[_selectedAudioIndex];
     final id = duaAudioPlaybackId(entry, asset, _selectedAudioIndex);
-    final controller = _audioController;
+    final request = ++_audioRequest;
     final current = ref.read(audioControllerProvider).standalone;
+    final locale = Localizations.localeOf(context).languageCode;
+    final album = 'IQRO · ${context.l10n.dua}';
     try {
       if (!forceReload && current?.mediaItem.id == id && _ownedAudioId == id) {
         _ownedAudioId = id;
-        await controller.toggleStandalone(id, owner: _audioOwner);
+        await controller.toggleStandalone(id, owner: owner);
       } else {
-        final locale = Localizations.localeOf(context).languageCode;
         _ownedAudioId = id;
-        if (mounted && _audioLoadFailed) {
+        if (_audioLoadFailed) {
           setState(() => _audioLoadFailed = false);
         }
         await controller.loadStandalone(
           id: id,
           url: asset.url,
           title: '${entry.categoryTitle} · #${entry.sourceNumber}',
-          album: 'IQRO · ${context.l10n.dua}',
+          album: album,
           contentType: 'dua',
           artist: _duaAudioReader(asset, locale),
           extras: <String, dynamic>{
             'collection': entry.collection,
             'source_number': entry.sourceNumber,
           },
-          owner: _audioOwner,
+          owner: owner,
         );
       }
     } on Object {
-      if (mounted) setState(() => _audioLoadFailed = true);
+      if (_isCurrentAudioRequest(
+        scope,
+        generation,
+        controller,
+        owner,
+        request,
+        id,
+      )) {
+        setState(() => _audioLoadFailed = true);
+      }
     }
   }
+
+  Future<void> _seekAudio(String id, Duration position) {
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    final controller = _audioController;
+    final owner = _audioOwner;
+    if (scope == null ||
+        _ownedAudioId != id ||
+        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
+      return Future<void>.value();
+    }
+    return controller.seekStandalone(id, position, owner: owner);
+  }
+
+  Future<void> _toggleAudioRepeat(String id) {
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    final controller = _audioController;
+    final owner = _audioOwner;
+    if (scope == null ||
+        _ownedAudioId != id ||
+        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
+      return Future<void>.value();
+    }
+    return controller.toggleStandaloneRepeat(id, owner: owner);
+  }
+
+  void _synchronizeAccountBinding(AudioController currentController) {
+    final accountScope = ref.read(localDatabaseProvider).accountScope;
+    final currentScope = accountScope.current;
+    if (_sameAccountScope(_accountScope, currentScope) &&
+        identical(_audioController, currentController)) {
+      return;
+    }
+
+    final oldController = _audioController;
+    final oldOwner = _audioOwner;
+    final oldAudioId = _ownedAudioId;
+    _accountScope = currentScope;
+    _audioController = currentController;
+    _audioOwner = Object();
+    _accountGeneration += 1;
+    _favoriteRequest += 1;
+    _audioRequest += 1;
+    _favorite = false;
+    _favoriteBusy = true;
+    _completedRepetitions = 0;
+    _selectedAudioIndex = 0;
+    _ownedAudioId = null;
+    _audioLoadFailed = false;
+
+    if (oldAudioId != null) {
+      unawaited(oldController.stopStandalone(oldAudioId, owner: oldOwner));
+    }
+    if (currentScope == null) return;
+    final generation = _accountGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isCurrentAccount(currentScope, generation)) {
+        unawaited(_loadFavorite(currentScope, generation));
+      }
+    });
+  }
+
+  bool _isCurrentAccount(AccountScopeSnapshot scope, int generation) {
+    if (!mounted || generation != _accountGeneration) return false;
+    final bound = _accountScope;
+    if (!_sameAccountScope(bound, scope)) return false;
+    return ref.read(localDatabaseProvider).accountScope.isCurrent(scope);
+  }
+
+  bool _isCurrentAudioBinding(
+    AccountScopeSnapshot scope,
+    int generation,
+    AudioController controller,
+    Object owner,
+  ) =>
+      _isCurrentAccount(scope, generation) &&
+      identical(_audioController, controller) &&
+      identical(_audioOwner, owner) &&
+      identical(ref.read(audioControllerProvider.notifier), controller);
+
+  bool _isCurrentAudioRequest(
+    AccountScopeSnapshot scope,
+    int generation,
+    AudioController controller,
+    Object owner,
+    int request,
+    String id,
+  ) =>
+      request == _audioRequest &&
+      _ownedAudioId == id &&
+      _isCurrentAudioBinding(scope, generation, controller, owner);
 
   void _incrementPractice() {
     final stages = duaRepetitionStages(

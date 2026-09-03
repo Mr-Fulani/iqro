@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/audio/audio_controller.dart';
+import '../core/auth/account_scope.dart';
 import '../core/design_system/iqro_widgets.dart';
+import '../core/storage/local_database.dart';
 import '../features/audio/audio_screen.dart';
 import '../features/audio/reciter_portraits.dart';
 import '../features/home/home_screen.dart';
@@ -104,10 +107,18 @@ class _MiniPlayer extends ConsumerStatefulWidget {
 
 class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
   var _changingSurah = false;
+  var _changeRequest = 0;
+  AudioController? _visibleController;
 
   @override
   Widget build(BuildContext context) {
     final player = ref.watch(audioControllerProvider);
+    final controller = ref.watch(audioControllerProvider.notifier);
+    if (!identical(_visibleController, controller)) {
+      _visibleController = controller;
+      _changeRequest += 1;
+      _changingSurah = false;
+    }
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurah = player.track?.surah;
     final reciter = player.reciter;
@@ -215,6 +226,11 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
 
   Future<void> _changeSurah(int direction) async {
     if (_changingSurah) return;
+    final database = ref.read(localDatabaseProvider);
+    final accountScope = database.accountScope.current;
+    if (accountScope == null) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final request = ++_changeRequest;
     final player = ref.read(audioControllerProvider);
     final reciter = player.reciter;
     final recitationId = player.track?.recitationId;
@@ -240,21 +256,54 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
       final playback = await ref
           .read(audioRepositoryProvider)
           .playback(recitationId: recitationId, surah: targetSurah);
-      await ref
-          .read(audioControllerProvider.notifier)
-          .loadPlayback(
-            playback: playback,
-            reciter: reciter,
-            surahName: surahName,
-          );
+      if (!_isCurrentRequest(
+        database: database,
+        accountScope: accountScope,
+        controller: controller,
+        request: request,
+      )) {
+        return;
+      }
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciter,
+        surahName: surahName,
+      );
     } on Object {
       if (!mounted) return;
+      if (!_isCurrentRequest(
+        database: database,
+        accountScope: accountScope,
+        controller: controller,
+        request: request,
+      )) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
     } finally {
-      if (mounted) setState(() => _changingSurah = false);
+      if (mounted && request == _changeRequest) {
+        setState(() => _changingSurah = false);
+      }
     }
+  }
+
+  bool _isCurrentRequest({
+    required LocalDatabase database,
+    required AccountScopeSnapshot accountScope,
+    required AudioController controller,
+    required int request,
+  }) {
+    if (!mounted || request != _changeRequest) return false;
+    if (!database.accountScope.isCurrent(accountScope)) return false;
+    return identical(controller, ref.read(audioControllerProvider.notifier));
+  }
+
+  @override
+  void dispose() {
+    _changeRequest += 1;
+    super.dispose();
   }
 }
 

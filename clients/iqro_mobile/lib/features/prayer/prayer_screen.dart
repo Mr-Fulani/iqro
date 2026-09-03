@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -22,6 +23,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
   PrayerSchedule? _schedule;
   Object? _error;
   String? _selectedMethodCode;
+  String? _ownerId;
   var _loading = false;
   var _retryLocationOnResume = false;
 
@@ -29,13 +31,8 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _schedule = ref.read(prayerScheduleProvider).valueOrNull;
-    ref.read(prayerRepositoryProvider).cachedToday().then((value) {
-      if (mounted) setState(() => _schedule = value);
-    });
-    ref.read(prayerRepositoryProvider).selectedMethodCode().then((value) {
-      if (mounted) setState(() => _selectedMethodCode = value);
-    });
+    _ownerId = ref.read(sessionProvider).valueOrNull?.userId;
+    if (_ownerId != null) _loadAccountState(_ownerId!);
   }
 
   @override
@@ -55,6 +52,18 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final ownerId = ref.watch(sessionProvider).valueOrNull?.userId;
+    if (ownerId != _ownerId) {
+      _ownerId = ownerId;
+      _schedule = null;
+      _selectedMethodCode = null;
+      _error = null;
+      if (ownerId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _ownerId == ownerId) _loadAccountState(ownerId);
+        });
+      }
+    }
     final methods = ref.watch(prayerMethodsProvider);
     final methodItems = methods.valueOrNull ?? const <PrayerMethod>[];
     final selectedMethod = methodItems
@@ -147,10 +156,19 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                     ? null
                     : (code) async {
                         if (code == null) return;
+                        final scope = ref
+                            .read(localDatabaseProvider)
+                            .accountScope
+                            .current;
+                        if (scope == null || scope.userId != _ownerId) return;
                         setState(() => _selectedMethodCode = code);
-                        await ref
-                            .read(prayerRepositoryProvider)
-                            .selectMethod(code);
+                        try {
+                          await ref
+                              .read(prayerRepositoryProvider)
+                              .selectMethod(code, accountScope: scope);
+                        } on AccountScopeChanged {
+                          // The newly mounted account owns its own selection.
+                        }
                       },
               ),
             ),
@@ -273,7 +291,46 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     );
   }
 
+  Future<void> _loadAccountState(String expectedOwnerId) async {
+    final repository = ref.read(prayerRepositoryProvider);
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || scope.userId != expectedOwnerId) return;
+    late final (PrayerSchedule?, String?) values;
+    try {
+      values = await (
+        repository.cachedToday(accountScope: scope),
+        repository.selectedMethodCode(accountScope: scope),
+      ).wait;
+      ref.read(localDatabaseProvider).ensureCurrent(scope);
+    } on AccountScopeChanged {
+      // Scoped reads are expected to abort during an account transition.
+      return;
+    } on Object catch (error) {
+      if (mounted &&
+          ref.read(sessionProvider).valueOrNull?.userId == expectedOwnerId) {
+        setState(() => _error = error);
+      }
+      return;
+    }
+    if (!mounted ||
+        ref.read(sessionProvider).valueOrNull?.userId != expectedOwnerId) {
+      return;
+    }
+    setState(() {
+      _schedule = values.$1;
+      _selectedMethodCode = values.$2;
+    });
+  }
+
   Future<void> _calculate() async {
+    final expectedOwnerId = _ownerId;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (expectedOwnerId == null ||
+        scope == null ||
+        scope.userId != expectedOwnerId) {
+      return;
+    }
     final methods = ref.read(prayerMethodsProvider).valueOrNull;
     final method = methods
         ?.where((item) => item.code == _selectedMethodCode)
@@ -286,14 +343,26 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     try {
       final value = await ref
           .read(prayerRepositoryProvider)
-          .calculateForCurrentLocation(method: method);
-      if (mounted) setState(() => _schedule = value);
-      ref.invalidate(prayerScheduleProvider);
+          .calculateForCurrentLocation(method: method, accountScope: scope);
+      database.ensureCurrent(scope);
+      if (!mounted || _ownerId != expectedOwnerId) return;
+      setState(() => _schedule = value);
+      ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
       await ref.read(reminderProvider.notifier).replan();
+    } on AccountScopeChanged {
+      // Ignore a completed location/calculation request from the old account.
     } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (mounted &&
+          _ownerId == expectedOwnerId &&
+          database.accountScope.isCurrent(scope)) {
+        setState(() => _error = error);
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted &&
+          _ownerId == expectedOwnerId &&
+          database.accountScope.isCurrent(scope)) {
+        setState(() => _loading = false);
+      }
     }
   }
 

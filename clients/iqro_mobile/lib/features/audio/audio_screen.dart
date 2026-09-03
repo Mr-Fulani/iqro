@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'audio_models.dart';
@@ -25,9 +27,22 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   String? _selectedRecitationId;
   var _loadingTrack = false;
   var _refreshingReciters = false;
+  String? _ownerId;
+  var _playRequest = 0;
+  var _refreshRequest = 0;
 
   @override
   Widget build(BuildContext context) {
+    final ownerId = ref.watch(sessionProvider).valueOrNull?.userId;
+    if (_ownerId != ownerId) {
+      _ownerId = ownerId;
+      _playRequest += 1;
+      _refreshRequest += 1;
+      _loadingTrack = false;
+      _refreshingReciters = false;
+      _selected = null;
+      _selectedRecitationId = null;
+    }
     final reciters = ref.watch(recitersProvider);
     final player = ref.watch(audioControllerProvider);
     final locale = Localizations.localeOf(context).languageCode;
@@ -201,18 +216,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                                 person.portraitSource,
                                 apiBaseUrl: apiBaseUrl,
                               ),
-                              onTap: () async {
-                                if (activePersonKey != null &&
-                                    activePersonKey != person.key) {
-                                  await ref
-                                      .read(audioControllerProvider.notifier)
-                                      .stop();
-                                }
-                                setState(() {
-                                  _selected = person.key;
-                                  _selectedRecitationId = null;
-                                });
-                              },
+                              onTap: () => _selectPerson(
+                                person,
+                                activePersonKey: activePersonKey,
+                              ),
                             );
                           },
                         );
@@ -312,23 +319,28 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
   Future<void> _refreshReciters() async {
     if (_refreshingReciters) return;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final activeId = ref.read(audioControllerProvider).reciter?.id;
+    final request = ++_refreshRequest;
     setState(() => _refreshingReciters = true);
     try {
       final items = await ref
           .read(audioRepositoryProvider)
           .reciters(forceRefresh: true);
-      if (!mounted) return;
+      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+        return;
+      }
 
-      final activeId = ref.read(audioControllerProvider).reciter?.id;
       if (activeId != null) {
         for (final person in groupRecitersByPerson(items)) {
           if (person.containsReciter(activeId)) {
-            ref
-                .read(audioControllerProvider.notifier)
-                .updateReciterMetadata(
-                  person.portraitSource,
-                  currentReciterId: activeId,
-                );
+            controller.updateReciterMetadata(
+              person.portraitSource,
+              currentReciterId: activeId,
+            );
             break;
           }
         }
@@ -341,11 +353,19 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
       ref.invalidate(recitersProvider);
       await ref.read(recitersProvider.future);
+      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(context.l10n.recitersUpdated)));
+    } on AccountScopeChanged {
+      return;
     } on Object {
+      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -353,65 +373,119 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           SnackBar(content: Text(context.l10n.recitersRefreshFailed)),
         );
     } finally {
-      if (mounted) setState(() => _refreshingReciters = false);
+      if (mounted && request == _refreshRequest) {
+        setState(() => _refreshingReciters = false);
+      }
     }
   }
 
   Future<void> _playSelected() async {
+    if (_loadingTrack) return;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final repository = ref.read(audioRepositoryProvider);
+    final selectedPersonKey = _selected;
+    final selectedRecitationId = _selectedRecitationId;
+    final preferredRecitationId = ref
+        .read(appPreferencesProvider)
+        .preferredRecitationId;
     final surahName = context.l10n.alFatiha;
-    final items = await ref.read(audioRepositoryProvider).reciters();
-    final people = groupRecitersByPerson(items);
-    final person =
-        people.where((item) => item.key == _selected).firstOrNull ??
-        people.firstOrNull;
-    if (person == null) return;
+    final request = ++_playRequest;
     setState(() => _loadingTrack = true);
     try {
-      final repository = ref.read(audioRepositoryProvider);
+      final items = await repository.reciters();
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      final people = groupRecitersByPerson(items);
+      final person =
+          people.where((item) => item.key == selectedPersonKey).firstOrNull ??
+          people.firstOrNull;
+      if (person == null) return;
       final variants = await repository.recitationsForReciters(
         person.sources.map((item) => item.id),
       );
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
       final recitation = preferredRecitation(
         variants,
-        preferredId:
-            _selectedRecitationId ??
-            ref.read(appPreferencesProvider).preferredRecitationId,
+        preferredId: selectedRecitationId ?? preferredRecitationId,
       );
       if (recitation == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
         return;
       }
       final playback = await repository.playback(
         recitationId: recitation.id,
         surah: 1,
       );
-      await ref
-          .read(audioControllerProvider.notifier)
-          .loadPlayback(
-            playback: playback,
-            reciter: person.portraitSource,
-            surahName: surahName,
-          );
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: person.portraitSource,
+        surahName: surahName,
+      );
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
       _selectedRecitationId = recitation.id;
       unawaited(
         ref
             .read(appPreferencesProvider.notifier)
             .setPreferredRecitation(recitation.id),
       );
-      if (mounted) context.push('/player');
+      if (!mounted) return;
+      context.push('/player');
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (mounted) {
+      if (_isCurrentAudioRequest(scope, controller, request)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
       }
     } finally {
-      if (mounted) setState(() => _loadingTrack = false);
+      if (mounted && request == _playRequest) {
+        setState(() => _loadingTrack = false);
+      }
     }
+  }
+
+  Future<void> _selectPerson(
+    ReciterPerson person, {
+    required String? activePersonKey,
+  }) async {
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final request = ++_playRequest;
+    if (activePersonKey != null && activePersonKey != person.key) {
+      await controller.stop();
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _selected = person.key;
+      _selectedRecitationId = null;
+    });
+  }
+
+  bool _sessionMatches(AccountScopeSnapshot scope) =>
+      ref.read(sessionProvider).valueOrNull?.userId == scope.userId;
+
+  bool _isCurrentAudioRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request, {
+    bool refresh = false,
+  }) {
+    return mounted &&
+        request == (refresh ? _refreshRequest : _playRequest) &&
+        _sessionMatches(scope) &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
+        identical(ref.read(audioControllerProvider.notifier), controller);
   }
 }
 

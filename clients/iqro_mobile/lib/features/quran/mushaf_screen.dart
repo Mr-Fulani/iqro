@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../audio/reciter_portraits.dart';
@@ -42,11 +43,18 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   QuranAyahReference? _pageReference;
   var _initialPageHandled = false;
   var _positionRequest = 0;
+  AccountScopeKey? _accountKey;
+  AccountScopeSnapshot? _pageTransitionScope;
+  AccountScopeSnapshot? _initialAccountScope;
 
   @override
   void initState() {
     super.initState();
     _currentPage = widget.initialPage.clamp(1, 604);
+    _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
+    _accountKey = _initialAccountScope == null
+        ? null
+        : accountScopeKey(_initialAccountScope!);
     _selectedAyah = QuranAyahReference(
       id: '',
       surah: widget.surah,
@@ -59,7 +67,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       if (!_initialPageHandled) {
         _initialPageHandled = true;
         unawaited(
-          _savePagePosition(_currentPage, preferredReference: _selectedAyah),
+          _savePagePosition(
+            _currentPage,
+            preferredReference: _selectedAyah,
+            accountScope: _initialAccountScope,
+          ),
         );
       }
       _prefetchAdjacentPages(_currentPage);
@@ -71,6 +83,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   @override
   void dispose() {
+    _positionRequest += 1;
     _pageController.dispose();
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
@@ -85,6 +98,22 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeAccount = ref.watch(activeAccountScopeKeyProvider);
+    if (_accountKey != activeAccount) {
+      _accountKey = activeAccount;
+      _positionRequest += 1;
+      _pageTransitionScope = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentAccountKey() == activeAccount) {
+          unawaited(
+            SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
+          );
+          context.go('/app?tab=1');
+        }
+      });
+      // Keep the previous owner's page and selection out of the next frame.
+      return const Scaffold(body: IqroLoading());
+    }
     final divisions = ref.watch(quranJuzProvider).valueOrNull;
     final currentJuz = divisions
         ?.where(
@@ -411,7 +440,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final page = index + 1;
     if (!_initialPageHandled && page == _currentPage) {
       _initialPageHandled = true;
-      unawaited(_savePagePosition(page, preferredReference: _selectedAyah));
+      unawaited(
+        _savePagePosition(
+          page,
+          preferredReference: _selectedAyah,
+          accountScope: _pageTransitionScope,
+        ),
+      );
       _prefetchAdjacentPages(page);
       return;
     }
@@ -428,7 +463,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
-    unawaited(_savePagePosition(page));
+    unawaited(_savePagePosition(page, accountScope: _pageTransitionScope));
     _zoomControllers.removeWhere((key, value) => (key - page).abs() > 2);
     _prefetchAdjacentPages(page);
   }
@@ -457,23 +492,34 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   void _turnPage(int delta) {
     final target = (_currentPage + delta).clamp(1, 604).toInt();
     if (target == _currentPage) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    _pageTransitionScope = scope;
+    final navigation = _pageController.animateToPage(
+      target - 1,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeInOutCubic,
+    );
     unawaited(
-      _pageController.animateToPage(
-        target - 1,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeInOutCubic,
-      ),
+      navigation.whenComplete(() {
+        if (identical(_pageTransitionScope, scope)) {
+          _pageTransitionScope = null;
+        }
+      }),
     );
   }
 
   Future<void> _showQuickJump() async {
+    final repository = ref.read(quranRepositoryProvider);
+    AccountScopeSnapshot? scope;
     try {
-      final repository = ref.read(quranRepositoryProvider);
+      scope = await repository.captureAccount();
+      if (!_isCurrentAccount(scope)) return;
       final results = await Future.wait<Object>(<Future<Object>>[
         repository.surahs(),
         repository.juz(),
       ]);
-      if (!mounted) return;
+      if (!_isCurrentAccount(scope) || !mounted) return;
       final catalog = results[0] as QuranCatalog;
       final juz = results[1] as List<QuranDivision>;
       final reference = _selectedAyah ?? _pageReference;
@@ -490,11 +536,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           initialPage: _currentPage,
         ),
       );
-      if (selection == null || !mounted) return;
+      if (selection == null || !_isCurrentAccount(scope)) return;
       var page = selection.page;
       QuranAyahReference? targetReference;
       if (selection.mode == QuranQuickJumpMode.ayah) {
         final ayahs = await repository.ayahs(selection.surah);
+        if (!_isCurrentAccount(scope)) return;
         final target = ayahs
             .where((item) => item.number == selection.ayah)
             .firstOrNull;
@@ -511,10 +558,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           ayah: selection.ayah,
         );
       }
-      if (!mounted) return;
-      await _jumpToPage(page, targetReference);
+      if (!_isCurrentAccount(scope)) return;
+      await _jumpToPage(page, targetReference, accountScope: scope);
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (!mounted) return;
+      if (scope == null || !_isCurrentAccount(scope) || !mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
@@ -523,10 +572,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   Future<void> _jumpToPage(
     int requestedPage,
-    QuranAyahReference? reference,
-  ) async {
+    QuranAyahReference? reference, {
+    required AccountScopeSnapshot accountScope,
+  }) async {
+    if (!_isCurrentAccount(accountScope)) return;
     final page = requestedPage.clamp(1, 604);
     _zoomControllers[_currentPage]?.setZoom(1);
+    _pageTransitionScope = accountScope;
     if ((page - _currentPage).abs() <= 3) {
       await _pageController.animateToPage(
         page - 1,
@@ -536,7 +588,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     } else {
       _pageController.jumpToPage(page - 1);
     }
-    if (!mounted) return;
+    if (identical(_pageTransitionScope, accountScope)) {
+      _pageTransitionScope = null;
+    }
+    if (!_isCurrentAccount(accountScope)) return;
     setState(() {
       _currentPage = page;
       _selectedAyah = reference;
@@ -545,21 +600,46 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       _zoom = 1;
     });
     if (reference != null) {
-      await _savePagePosition(page, preferredReference: reference);
+      await _savePagePosition(
+        page,
+        preferredReference: reference,
+        accountScope: accountScope,
+      );
     }
+    if (!_isCurrentAccount(accountScope)) return;
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   Future<void> _savePagePosition(
     int page, {
     QuranAyahReference? preferredReference,
+    AccountScopeSnapshot? accountScope,
   }) async {
     final request = ++_positionRequest;
     final repository = ref.read(quranRepositoryProvider);
-    final current = await repository.position();
+    final AccountScopeSnapshot scope;
+    try {
+      scope = accountScope ?? await repository.captureAccount();
+      if (!_isCurrentPositionRequest(scope, request, page)) return;
+    } on AccountScopeChanged {
+      return;
+    }
+
+    final ReadingPosition current;
+    try {
+      current = await repository.position(accountScope: scope);
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      // Without a stable account-owned starting position there is no safe
+      // fallback for a page metadata failure.
+      return;
+    }
+    if (!_isCurrentPositionRequest(scope, request, page)) return;
+
     try {
       final pageData = await ref.read(mushafPageProvider(page).future);
-      if (!mounted || request != _positionRequest || page != _currentPage) {
+      if (!_isCurrentPositionRequest(scope, request, page)) {
         return;
       }
       final preferredIsOnPage =
@@ -589,21 +669,39 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surah: reference?.surah ?? current.surah,
         ayah: reference?.ayah ?? current.ayah,
         page: page,
+        accountScope: scope,
       );
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (!mounted || request != _positionRequest || page != _currentPage) {
+      if (!_isCurrentPositionRequest(scope, request, page)) {
         return;
       }
-      await repository.savePosition(
-        surah: preferredReference?.surah ?? current.surah,
-        ayah: preferredReference?.ayah ?? current.ayah,
-        page: page,
-      );
+      try {
+        await repository.savePosition(
+          surah: preferredReference?.surah ?? current.surah,
+          ayah: preferredReference?.ayah ?? current.ayah,
+          page: page,
+          accountScope: scope,
+        );
+      } on AccountScopeChanged {
+        return;
+      }
     }
-    ref.invalidate(readingPositionProvider);
+    if (_isCurrentPositionRequest(scope, request, page)) {
+      ref.invalidate(readingPositionProvider(accountScopeKey(scope)));
+    }
   }
 
   Future<void> _selectAyah(QuranAyahReference reference) async {
+    final repository = ref.read(quranRepositoryProvider);
+    late final AccountScopeSnapshot scope;
+    try {
+      scope = await repository.captureAccount();
+    } on AccountScopeChanged {
+      return;
+    }
+    if (!_isCurrentAccount(scope)) return;
     _positionRequest++;
     setState(() {
       _selectedAyah = reference;
@@ -611,15 +709,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       _controlsVisible = false;
     });
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    await ref
-        .read(quranRepositoryProvider)
-        .savePosition(
-          surah: reference.surah,
-          ayah: reference.ayah,
-          page: _currentPage,
-        );
-    ref.invalidate(readingPositionProvider);
-    if (!mounted) return;
+    if (!_isCurrentAccount(scope)) return;
+    try {
+      await repository.savePosition(
+        surah: reference.surah,
+        ayah: reference.ayah,
+        page: _currentPage,
+        accountScope: scope,
+      );
+    } on AccountScopeChanged {
+      return;
+    }
+    if (!_isCurrentAccount(scope) || !mounted) return;
+    ref.invalidate(readingPositionProvider(accountScopeKey(scope)));
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -628,10 +730,30 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       builder: (context) =>
           AyahActionSheet(reference: reference, page: _currentPage),
     );
-    if (mounted) {
+    if (_isCurrentAccount(scope)) {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
   }
+
+  bool _isCurrentAccount(AccountScopeSnapshot scope) {
+    return mounted &&
+        _accountKey == accountScopeKey(scope) &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope);
+  }
+
+  AccountScopeKey? _currentAccountKey() {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    return scope == null ? null : accountScopeKey(scope);
+  }
+
+  bool _isCurrentPositionRequest(
+    AccountScopeSnapshot scope,
+    int request,
+    int page,
+  ) =>
+      request == _positionRequest &&
+      page == _currentPage &&
+      _isCurrentAccount(scope);
 }
 
 class _ReaderAudioPill extends StatelessWidget {

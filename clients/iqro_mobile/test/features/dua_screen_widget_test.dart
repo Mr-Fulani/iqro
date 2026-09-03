@@ -5,16 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
+import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/dua/dua_presentation.dart';
 import 'package:iqro_mobile/features/dua/dua_repository.dart';
 import 'package:iqro_mobile/features/dua/dua_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(sqfliteFfiInit);
 
   group('Dua catalog', () {
     testWidgets('shows the localized empty state at narrow large-text layout', (
@@ -293,9 +297,79 @@ void main() {
     });
   });
 
+  testWidgets(
+    'clears favorite state and ignores account A completion after handoff',
+    (tester) async {
+      final accountScope = AccountScope.forTesting('account-a');
+      final database = await _openTestDatabase(
+        tester,
+        accountScope: accountScope,
+      );
+      final repository = _DelayedFavoriteDuaRepository(database);
+      final controller = AudioController(engine: _SilentAudioEngine());
+      final rebuild = ValueNotifier<int>(0);
+      addTearDown(controller.dispose);
+      addTearDown(rebuild.dispose);
+      final entry = _entry(
+        categoryTitle: 'Morning',
+        arabicText: 'سبحان الله',
+        meaning: 'Glory be to Allah',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            localDatabaseProvider.overrideWithValue(database),
+            duaRepositoryProvider.overrideWithValue(repository),
+            audioControllerProvider.overrideWith((ref) => controller),
+          ],
+          child: _TestApp(
+            locale: const Locale('ru'),
+            home: ValueListenableBuilder<int>(
+              valueListenable: rebuild,
+              builder: (context, value, child) => DuaEntryScreen(entry: entry),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(repository.favoriteReads, hasLength(1));
+
+      repository.favoriteReads.single.complete(true);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.bookmark), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.bookmark));
+      await tester.pump();
+      expect(repository.favoriteToggles, hasLength(1));
+
+      accountScope.activate('account-b');
+      rebuild.value += 1;
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+      expect(repository.favoriteReads, hasLength(2));
+
+      repository.favoriteToggles.single.complete(true);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+
+      repository.favoriteReads.last.complete(false);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('same audio opened by another screen transfers ownership', (
     tester,
   ) async {
+    final database = await _openTestDatabase(tester);
     final engine = _SilentAudioEngine();
     final controller = AudioController(engine: engine);
     addTearDown(controller.dispose);
@@ -329,6 +403,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          localDatabaseProvider.overrideWithValue(database),
           audioControllerProvider.overrideWith((ref) => controller),
         ],
         child: _TestApp(
@@ -392,9 +467,11 @@ Future<void> _pumpDetail(
   required Future<DuaEntry> Function(String id) load,
   DuaEntry? initialEntry,
 }) async {
+  final database = await _openTestDatabase(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        localDatabaseProvider.overrideWithValue(database),
         duaEntryProvider.overrideWith((ref, id) => load(id)),
         audioControllerProvider.overrideWith(
           (ref) => AudioController(engine: _SilentAudioEngine()),
@@ -511,4 +588,90 @@ class _SilentAudioEngine implements IqroAudioEngine {
 
   @override
   Future<void> stop() async {}
+}
+
+Future<LocalDatabase> _openTestDatabase(
+  WidgetTester tester, {
+  AccountScope? accountScope,
+}) async {
+  final database = (await tester.runAsync(
+    () => databaseFactoryFfi.openDatabase(inMemoryDatabasePath),
+  ))!;
+  addTearDown(() => tester.runAsync(database.close));
+  return LocalDatabase.forTesting(database, accountScope: accountScope);
+}
+
+class _DelayedFavoriteDuaRepository extends DuaRepository {
+  _DelayedFavoriteDuaRepository(LocalDatabase database)
+    : super(database: database, remote: _UnusedDuaRemote());
+
+  final List<Completer<bool>> favoriteReads = <Completer<bool>>[];
+  final List<Completer<bool>> favoriteToggles = <Completer<bool>>[];
+
+  @override
+  Future<bool> isFavorite(
+    DuaEntry entry, {
+    AccountScopeSnapshot? accountScope,
+  }) {
+    final result = Completer<bool>();
+    favoriteReads.add(result);
+    return result.future;
+  }
+
+  @override
+  Future<bool> toggleFavorite(
+    DuaEntry entry, {
+    AccountScopeSnapshot? accountScope,
+  }) {
+    final result = Completer<bool>();
+    favoriteToggles.add(result);
+    return result.future;
+  }
+}
+
+class _UnusedDuaRemote implements DuaRemoteGateway {
+  @override
+  Uri get apiBaseUri => Uri.parse('https://staging.iqro.forum/api/v1');
+
+  Never _unused() => throw UnsupportedError('Not used by this widget test');
+
+  @override
+  Future<Object?> categories(String locale) => _unused();
+
+  @override
+  Future<Object?> collections(String locale) => _unused();
+
+  @override
+  Future<Object?> entries(
+    String locale, {
+    String? collection,
+    String? category,
+    String? query,
+    String? cursor,
+    required int pageSize,
+  }) => _unused();
+
+  @override
+  Future<Object?> entry(String locale, String id) => _unused();
+
+  @override
+  Future<Object?> favorites(
+    String locale, {
+    AccountScopeSnapshot? accountScope,
+  }) => _unused();
+
+  @override
+  Future<Object?> resolveEntry(
+    String locale, {
+    required String collection,
+    required int sourceNumber,
+  }) => _unused();
+
+  @override
+  Future<void> setFavorite(
+    String collection,
+    int sourceNumber,
+    bool isFavorite, {
+    AccountScopeSnapshot? accountScope,
+  }) => _unused();
 }

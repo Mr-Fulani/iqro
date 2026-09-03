@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../core/background/background_maintenance_service.dart';
 import '../core/theme/iqro_theme.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'account_scoped_maintenance.dart';
 import 'providers.dart';
 import 'router.dart';
 
@@ -21,7 +23,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     onboardingComplete: ref.read(appPreferencesProvider).onboardingComplete,
   );
   StreamSubscription<String>? _notificationRoutes;
-  DateTime? _lastMaintenanceStartedAt;
+  final _maintenance = AccountScopedMaintenanceCoordinator();
 
   @override
   void initState() {
@@ -30,31 +32,58 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     final notifications = ref.read(notificationGatewayProvider);
     _notificationRoutes = notifications.routeRequests.listen(_router.go);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final route = notifications.takeInitialRoute();
-      if (mounted && route != null) _router.go(route);
-      unawaited(_runMaintenance());
+      if (route != null) _router.go(route);
+      _requestMaintenance();
     });
   }
 
-  Future<void> _runMaintenance() async {
-    final now = DateTime.now();
-    if (_lastMaintenanceStartedAt != null &&
-        now.difference(_lastMaintenanceStartedAt!) <
-            const Duration(minutes: 5)) {
+  void _requestMaintenance() {
+    final key = ref.read(activeAccountScopeKeyProvider);
+    late final Future<BackgroundMaintenanceReport> Function() run;
+    late final Future<void> Function() restoreAudio;
+    try {
+      final service = ref.read(backgroundMaintenanceProvider);
+      final audio = ref.read(audioControllerProvider.notifier);
+      run = () => service.run(renewReminders: true);
+      restoreAudio = audio.restoreLatestIfIdle;
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'IQRO background maintenance',
+        ),
+      );
       return;
     }
-    _lastMaintenanceStartedAt = now;
-    final report = await ref
-        .read(backgroundMaintenanceProvider)
-        .run(renewReminders: false);
-    if (mounted && report.audioDownloaded) {
-      await ref.read(audioControllerProvider.notifier).restoreLatestIfIdle();
-    }
+    // iOS only keeps a bounded future notification plan. Renew it on launch
+    // and every foreground resume; headless account mutation is intentionally
+    // disabled until it can be fenced safely across isolates.
+    unawaited(
+      _maintenance.run(
+        key: key,
+        maintenance: run,
+        isCurrent: (expected) =>
+            mounted && ref.read(activeAccountScopeKeyProvider) == expected,
+        restoreAudio: restoreAudio,
+        reportUnexpected: (error, stackTrace) {
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stackTrace,
+              library: 'IQRO background maintenance',
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_runMaintenance());
+    if (state == AppLifecycleState.resumed) _requestMaintenance();
   }
 
   @override
@@ -70,6 +99,12 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     final preferences = ref.watch(appPreferencesProvider);
     ref.watch(sessionProvider);
     ref.watch(reminderProvider);
+    ref.listen<AccountScopeKey?>(activeAccountScopeKeyProvider, (
+      previous,
+      next,
+    ) {
+      if (next != null && next != previous) _requestMaintenance();
+    });
     ref.listen<String>(appPreferencesProvider.select((value) => value.locale), (
       previous,
       next,

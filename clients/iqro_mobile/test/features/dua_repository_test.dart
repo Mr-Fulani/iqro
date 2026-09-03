@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/dua/dua_repository.dart';
@@ -75,6 +76,137 @@ void main() {
       );
       expect(favorite.audio.single.url, entry.audio.single.url);
       expect(await sqlDatabase.query('outbox'), isEmpty);
+    },
+  );
+
+  test('preserves a withdrawn server favorite as removable identity', () async {
+    AccountScopeSnapshot? requestScope;
+    remote.onFavorites = (locale, accountScope) {
+      expect(locale, 'ru');
+      requestScope = accountScope;
+      return <String, Object?>{
+        'results': <Object?>[
+          <String, Object?>{
+            'collection': 'hisn-al-muslim',
+            'source_number': 7,
+            'is_favorite': true,
+            'entry': null,
+          },
+        ],
+      };
+    };
+
+    final favorite = (await repository.favorites(locale: 'ru')).single;
+
+    expect(requestScope?.userId, 'test-owner');
+    expect(favorite.favoriteKey, 'dua:hisn-al-muslim:7');
+    expect(favorite.available, isFalse);
+    expect(await repository.toggleFavorite(favorite), isFalse);
+    expect(remote.favoriteWrites, <_FavoriteWrite>[
+      const _FavoriteWrite('hisn-al-muslim', 7, false),
+    ]);
+    expect(await repository.favorites(), isEmpty);
+    expect(await sqlDatabase.query('outbox'), isEmpty);
+  });
+
+  test(
+    'favorite action captured by A cannot mutate B after an account switch',
+    () async {
+      final entry = DuaEntry.unavailableFavorite(
+        collection: 'hisn-al-muslim',
+        sourceNumber: 7,
+      );
+      final scopeA = await database.captureAccount();
+      database.accountScope.activate('owner-b');
+
+      await expectLater(
+        repository.toggleFavorite(entry, accountScope: scopeA),
+        throwsA(isA<AccountScopeChanged>()),
+      );
+      await expectLater(
+        repository.favorites(locale: 'ru', accountScope: scopeA),
+        throwsA(isA<AccountScopeChanged>()),
+      );
+
+      expect(await sqlDatabase.query('favorites'), isEmpty);
+      expect(await sqlDatabase.query('outbox'), isEmpty);
+      expect(remote.favoriteWrites, isEmpty);
+    },
+  );
+
+  test(
+    'authoritative favorite pull atomically overlays pending local intent',
+    () async {
+      final localAdd = DuaEntry.fromJson(_entryPayload(2));
+      await sqlDatabase.insert('favorites', <String, Object?>{
+        'owner_id': 'test-owner',
+        'item_key': localAdd.favoriteKey,
+        'kind': 'dua',
+        'payload': jsonEncode(localAdd.toJson()),
+        'updated_at': '2026-09-01T10:00:00Z',
+      });
+      await _insertFavoriteIntent(
+        sqlDatabase,
+        operationId: 'pending-add',
+        sourceNumber: 2,
+        isFavorite: true,
+      );
+      await _insertFavoriteIntent(
+        sqlDatabase,
+        operationId: 'pending-remove',
+        sourceNumber: 1,
+        isFavorite: false,
+      );
+      remote.onFavorites = (_, _) => <String, Object?>{
+        'results': <Object?>[
+          <String, Object?>{
+            'collection': 'hisn-al-muslim',
+            'source_number': 1,
+            'is_favorite': true,
+            'entry': _entryPayload(1),
+          },
+        ],
+      };
+
+      final favorites = await repository.favorites(locale: 'ru');
+
+      expect(favorites, hasLength(1));
+      expect(favorites.single.sourceNumber, 2);
+      expect(favorites.single.arabicText, localAdd.arabicText);
+      expect(await sqlDatabase.query('outbox'), hasLength(2));
+    },
+  );
+
+  test(
+    'invalid favorite pull leaves the previous snapshot untouched',
+    () async {
+      final existing = DuaEntry.fromJson(_entryPayload(4));
+      await sqlDatabase.insert('favorites', <String, Object?>{
+        'owner_id': 'test-owner',
+        'item_key': existing.favoriteKey,
+        'kind': 'dua',
+        'payload': jsonEncode(existing.toJson()),
+        'updated_at': '2026-09-01T10:00:00Z',
+      });
+      remote.onFavorites = (_, _) => <String, Object?>{
+        'results': <Object?>[
+          <String, Object?>{
+            'collection': 'hisn-al-muslim',
+            'source_number': 5,
+            'is_favorite': true,
+            'entry': <String, Object?>{..._entryPayload(6), 'source_number': 6},
+          },
+        ],
+      };
+
+      await expectLater(
+        repository.favorites(locale: 'ru'),
+        throwsFormatException,
+      );
+
+      final favorites = await repository.favorites();
+      expect(favorites, hasLength(1));
+      expect(favorites.single.sourceNumber, 4);
     },
   );
 
@@ -675,6 +807,8 @@ class _FakeDuaRemote implements DuaRemoteGateway {
   Object? Function(String locale, String collection, int sourceNumber)?
   onResolveEntry;
   Object? Function(int call)? onCollections;
+  Object? Function(String locale, AccountScopeSnapshot? accountScope)?
+  onFavorites;
 
   @override
   Future<Object?> collections(String locale) async {
@@ -742,10 +876,39 @@ class _FakeDuaRemote implements DuaRemoteGateway {
   Future<void> setFavorite(
     String collection,
     int sourceNumber,
-    bool isFavorite,
-  ) async {
+    bool isFavorite, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     favoriteWrites.add(_FavoriteWrite(collection, sourceNumber, isFavorite));
   }
+
+  @override
+  Future<Object?> favorites(
+    String locale, {
+    AccountScopeSnapshot? accountScope,
+  }) async =>
+      onFavorites?.call(locale, accountScope) ??
+      <String, Object?>{'results': const <Object?>[]};
+}
+
+Future<void> _insertFavoriteIntent(
+  Database database, {
+  required String operationId,
+  required int sourceNumber,
+  required bool isFavorite,
+}) async {
+  await database.insert('outbox', <String, Object?>{
+    'owner_id': 'test-owner',
+    'operation_id': operationId,
+    'entity_type': 'dua_favorite',
+    'entity_id': 'dua:hisn-al-muslim:$sourceNumber',
+    'payload': jsonEncode(<String, Object?>{
+      'collection': 'hisn-al-muslim',
+      'source_number': sourceNumber,
+      'is_favorite': isFavorite,
+    }),
+    'created_at': '2026-09-01T10:00:00Z',
+  });
 }
 
 Map<String, Object?> _page(List<Object?> results, {String? next}) =>
@@ -859,21 +1022,25 @@ Future<void> _createSchema(Database database) async {
   ''');
   await database.execute('''
     CREATE TABLE favorites (
-      item_key TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      item_key TEXT NOT NULL,
       kind TEXT NOT NULL,
       payload TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, item_key)
     )
   ''');
   await database.execute('''
     CREATE TABLE outbox (
-      operation_id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
       entity_type TEXT NOT NULL,
       entity_id TEXT,
       payload TEXT NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
-      last_error TEXT
+      last_error TEXT,
+      PRIMARY KEY (owner_id, operation_id)
     )
   ''');
 }

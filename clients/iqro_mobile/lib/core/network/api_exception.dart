@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../auth/account_scope.dart';
+
 class ApiException implements Exception {
   const ApiException({
     required this.message,
@@ -10,6 +12,12 @@ class ApiException implements Exception {
   });
 
   factory ApiException.fromDio(DioException error) {
+    if (error.error is AccountScopeChanged) {
+      return const ApiException(
+        message: 'The active account changed',
+        code: 'account_scope_changed',
+      );
+    }
     final data = error.response?.data;
     final problem = data is Map ? Map<String, Object?>.from(data) : null;
     final rawFields = problem?['field_errors'];

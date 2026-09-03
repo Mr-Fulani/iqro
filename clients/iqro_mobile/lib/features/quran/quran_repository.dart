@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
@@ -403,13 +404,25 @@ class QuranRepository {
     return value;
   }
 
-  Future<ReadingPosition> position() async {
+  Future<AccountScopeSnapshot> captureAccount() => _database.captureAccount();
+
+  void ensureAccountCurrent(AccountScopeSnapshot scope) =>
+      _database.ensureCurrent(scope);
+
+  Future<ReadingPosition> position({AccountScopeSnapshot? accountScope}) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    return _positionFor(scope);
+  }
+
+  Future<ReadingPosition> _positionFor(AccountScopeSnapshot scope) async {
     final rows = await _database.database.query(
       'reading_positions',
-      where: 'edition = ?',
-      whereArgs: const <Object?>[edition],
+      where: 'owner_id = ? AND edition = ?',
+      whereArgs: <Object?>[scope.userId, edition],
       limit: 1,
     );
+    _database.ensureCurrent(scope);
     if (rows.isEmpty) {
       return ReadingPosition(
         edition: edition,
@@ -435,13 +448,18 @@ class QuranRepository {
     required int surah,
     required int ayah,
     required int page,
+    AccountScopeSnapshot? accountScope,
   }) async {
-    final current = await position();
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final current = await _positionFor(scope);
     final now = DateTime.now().toUtc();
     final operationId = _uuid.v4();
     final progress = ((page / 604) * 100).clamp(0, 100).toStringAsFixed(2);
     await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
       await transaction.insert('reading_positions', <String, Object?>{
+        'owner_id': scope.userId,
         'edition': edition,
         'entity_id': current.entityId,
         'surah': surah,
@@ -453,10 +471,15 @@ class QuranRepository {
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       await transaction.delete(
         'outbox',
-        where: 'entity_type = ? AND entity_id = ?',
-        whereArgs: <Object?>['reading_position', current.entityId],
+        where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>[
+          scope.userId,
+          'reading_position',
+          current.entityId,
+        ],
       );
       await transaction.insert('outbox', <String, Object?>{
+        'owner_id': scope.userId,
         'operation_id': operationId,
         'entity_type': 'reading_position',
         'entity_id': current.entityId,
@@ -480,43 +503,64 @@ class QuranRepository {
         'created_at': now.toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
+    _database.ensureCurrent(scope);
   }
 
-  Future<bool> isBookmarked(int surah, int ayah) async {
+  Future<bool> isBookmarked(
+    int surah,
+    int ayah, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
     final rows = await _database.database.query(
       'bookmarks',
       columns: const <String>['id'],
-      where: 'edition = ? AND surah = ? AND ayah = ? AND is_deleted = 0',
-      whereArgs: <Object?>[edition, surah, ayah],
+      where:
+          'owner_id = ? AND edition = ? AND surah = ? AND ayah = ? '
+          'AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId, edition, surah, ayah],
       limit: 1,
     );
+    _database.ensureCurrent(scope);
     return rows.isNotEmpty;
   }
 
-  Future<bool> toggleBookmark(int surah, int ayah, {int? page}) async {
+  Future<bool> toggleBookmark(
+    int surah,
+    int ayah, {
+    int? page,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
     final rows = await _database.database.query(
       'bookmarks',
-      where: 'edition = ? AND surah = ? AND ayah = ? AND is_deleted = 0',
-      whereArgs: <Object?>[edition, surah, ayah],
+      where:
+          'owner_id = ? AND edition = ? AND surah = ? AND ayah = ? '
+          'AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId, edition, surah, ayah],
       orderBy: 'updated_at DESC',
       limit: 1,
     );
+    _database.ensureCurrent(scope);
     final now = DateTime.now().toUtc();
     if (rows.isNotEmpty) {
       final row = rows.single;
       final id = row['id']! as String;
       final revision = row['server_revision']! as int;
       await _database.database.transaction((transaction) async {
+        _database.ensureCurrent(scope);
         if (revision == 0) {
           await transaction.delete(
             'bookmarks',
-            where: 'id = ?',
-            whereArgs: <Object?>[id],
+            where: 'owner_id = ? AND id = ?',
+            whereArgs: <Object?>[scope.userId, id],
           );
           await transaction.delete(
             'outbox',
-            where: 'entity_id = ?',
-            whereArgs: <Object?>[id],
+            where: 'owner_id = ? AND entity_id = ?',
+            whereArgs: <Object?>[scope.userId, id],
           );
         } else {
           await transaction.update(
@@ -525,20 +569,21 @@ class QuranRepository {
               'is_deleted': 1,
               'updated_at': now.toIso8601String(),
             },
-            where: 'id = ?',
-            whereArgs: <Object?>[id],
+            where: 'owner_id = ? AND id = ?',
+            whereArgs: <Object?>[scope.userId, id],
           );
           final operationId = _uuid.v4();
           await transaction.delete(
             'outbox',
-            where: 'entity_type = ? AND entity_id = ?',
-            whereArgs: <Object?>['bookmark', id],
+            where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>[scope.userId, 'bookmark', id],
           );
           await transaction.insert(
             'outbox',
             _outboxRow(
               operationId: operationId,
               entityId: id,
+              ownerId: scope.userId,
               now: now,
               body: <String, Object?>{
                 'operation_id': operationId,
@@ -554,6 +599,7 @@ class QuranRepository {
           );
         }
       });
+      _database.ensureCurrent(scope);
       return false;
     }
 
@@ -567,7 +613,9 @@ class QuranRepository {
       'color_key': 'emerald',
     };
     await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
       await transaction.insert('bookmarks', <String, Object?>{
+        'owner_id': scope.userId,
         'id': id,
         'edition': edition,
         'surah': surah,
@@ -581,6 +629,7 @@ class QuranRepository {
         _outboxRow(
           operationId: operationId,
           entityId: id,
+          ownerId: scope.userId,
           now: now,
           body: <String, Object?>{
             'operation_id': operationId,
@@ -594,24 +643,34 @@ class QuranRepository {
         ),
       );
     });
+    _database.ensureCurrent(scope);
     return true;
   }
 
-  Future<List<Map<String, Object?>>> bookmarks() {
-    return _database.database.query(
+  Future<List<Map<String, Object?>>> bookmarks({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final rows = await _database.database.query(
       'bookmarks',
-      where: 'is_deleted = 0',
+      where: 'owner_id = ? AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId],
       orderBy: 'updated_at DESC',
     );
+    _database.ensureCurrent(scope);
+    return rows;
   }
 
   Map<String, Object?> _outboxRow({
     required String operationId,
     required String entityId,
+    required String ownerId,
     required DateTime now,
     required Map<String, Object?> body,
   }) {
     return <String, Object?>{
+      'owner_id': ownerId,
       'operation_id': operationId,
       'entity_type': 'bookmark',
       'entity_id': entityId,

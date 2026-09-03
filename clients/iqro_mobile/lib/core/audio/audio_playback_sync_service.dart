@@ -1,5 +1,6 @@
 import '../../features/audio/audio_models.dart';
 import '../../features/audio/audio_repository.dart';
+import '../auth/account_scope.dart';
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
 import '../storage/local_database.dart';
@@ -215,26 +216,30 @@ class AudioPlaybackSyncService {
   final AudioRepository _audio;
   final AudioPlaybackStore _store;
   final String Function() _locale;
-  Future<AudioPlaybackSyncReport>? _flight;
+  final Map<String, Future<AudioPlaybackSyncReport>> _flights =
+      <String, Future<AudioPlaybackSyncReport>>{};
 
-  Future<AudioPlaybackSyncReport> synchronize() {
-    final current = _flight;
+  Future<AudioPlaybackSyncReport> synchronize() async {
+    final scope = await _database.captureAccount();
+    final key = '${scope.userId}:${scope.epoch}';
+    final current = _flights[key];
     if (current != null) return current;
     late final Future<AudioPlaybackSyncReport> flight;
-    flight = _synchronize(allowConflictRetry: true).whenComplete(() {
-      if (identical(_flight, flight)) _flight = null;
+    flight = _synchronize(scope, allowConflictRetry: true).whenComplete(() {
+      if (identical(_flights[key], flight)) _flights.remove(key);
     });
-    _flight = flight;
+    _flights[key] = flight;
     return flight;
   }
 
-  Future<AudioPlaybackSyncReport> _synchronize({
+  Future<AudioPlaybackSyncReport> _synchronize(
+    AccountScopeSnapshot scope, {
     required bool allowConflictRetry,
   }) async {
     try {
-      final local = await _store.read();
-      final remote = await _readRemote();
-      final metadata = await _readMetadata();
+      final local = await _store.read(accountScope: scope);
+      final remote = await _readRemote(scope);
+      final metadata = await _readMetadata(scope);
       final action = decideAudioPlaybackSync(
         local: local,
         remote: remote,
@@ -250,8 +255,9 @@ class AudioPlaybackSyncService {
           final uploaded = await _upload(
             local,
             baseRevision: remote?.revision ?? 0,
+            scope: scope,
           );
-          await _writeMetadata(uploaded.revision, local.savedAt);
+          await _writeMetadata(uploaded.revision, local.savedAt, scope);
           return const AudioPlaybackSyncReport(
             AudioPlaybackSyncStatus.uploaded,
           );
@@ -260,13 +266,20 @@ class AudioPlaybackSyncService {
             return const AudioPlaybackSyncReport(AudioPlaybackSyncStatus.idle);
           }
           final downloaded = await _download(remote, local: local);
-          await _store.write(downloaded);
-          await _writeMetadata(remote.revision, downloaded.savedAt);
+          _database.ensureCurrent(scope);
+          await _store.write(downloaded, accountScope: scope);
+          await _writeMetadata(remote.revision, downloaded.savedAt, scope);
           return const AudioPlaybackSyncReport(
             AudioPlaybackSyncStatus.downloaded,
           );
       }
     } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') {
+        return AudioPlaybackSyncReport(
+          AudioPlaybackSyncStatus.failed,
+          message: error.message,
+        );
+      }
       if (error.isOffline) {
         return AudioPlaybackSyncReport(
           AudioPlaybackSyncStatus.offline,
@@ -279,7 +292,7 @@ class AudioPlaybackSyncService {
         );
       }
       if (error.statusCode == 409 && allowConflictRetry) {
-        return _synchronize(allowConflictRetry: false);
+        return _synchronize(scope, allowConflictRetry: false);
       }
       if (error.statusCode == 409) {
         return AudioPlaybackSyncReport(
@@ -291,6 +304,11 @@ class AudioPlaybackSyncService {
         AudioPlaybackSyncStatus.failed,
         message: error.message,
       );
+    } on AccountScopeChanged catch (error) {
+      return AudioPlaybackSyncReport(
+        AudioPlaybackSyncStatus.failed,
+        message: error.toString(),
+      );
     } on Object catch (error) {
       return AudioPlaybackSyncReport(
         AudioPlaybackSyncStatus.failed,
@@ -299,8 +317,13 @@ class AudioPlaybackSyncService {
     }
   }
 
-  Future<RemoteAudioPlaybackPosition?> _readRemote() async {
-    final envelope = jsonMap(await _api.get('/me/audio-playback-position'));
+  Future<RemoteAudioPlaybackPosition?> _readRemote(
+    AccountScopeSnapshot scope,
+  ) async {
+    final envelope = jsonMap(
+      await _api.get('/me/audio-playback-position', accountScope: scope),
+    );
+    _database.ensureCurrent(scope);
     final raw = envelope['position'];
     return raw is Map
         ? RemoteAudioPlaybackPosition.fromJson(Map<String, Object?>.from(raw))
@@ -310,6 +333,7 @@ class AudioPlaybackSyncService {
   Future<RemoteAudioPlaybackPosition> _upload(
     AudioPlaybackSnapshot local, {
     required int baseRevision,
+    required AccountScopeSnapshot scope,
   }) async {
     final envelope = jsonMap(
       await _api.put(
@@ -324,8 +348,10 @@ class AudioPlaybackSyncService {
           'range_end_ayah': local.rangeEndAyah,
           'client_updated_at': local.savedAt.toUtc().toIso8601String(),
         },
+        accountScope: scope,
       ),
     );
+    _database.ensureCurrent(scope);
     final raw = envelope['position'];
     if (raw is! Map) {
       throw const FormatException('Missing uploaded audio playback position');
@@ -369,8 +395,13 @@ class AudioPlaybackSyncService {
     );
   }
 
-  Future<AudioPlaybackSyncMetadata?> _readMetadata() async {
-    final value = await _database.readState(metadataStateKey);
+  Future<AudioPlaybackSyncMetadata?> _readMetadata(
+    AccountScopeSnapshot scope,
+  ) async {
+    final value = await _database.readState(
+      metadataStateKey,
+      accountScope: scope,
+    );
     if (value == null) return null;
     try {
       return AudioPlaybackSyncMetadata.fromJson(value);
@@ -379,12 +410,16 @@ class AudioPlaybackSyncService {
     }
   }
 
-  Future<void> _writeMetadata(int revision, DateTime savedAt) =>
-      _database.writeState(
-        metadataStateKey,
-        AudioPlaybackSyncMetadata(
-          serverRevision: revision,
-          localSavedAt: savedAt.toUtc(),
-        ).toJson(),
-      );
+  Future<void> _writeMetadata(
+    int revision,
+    DateTime savedAt,
+    AccountScopeSnapshot scope,
+  ) => _database.writeState(
+    metadataStateKey,
+    AudioPlaybackSyncMetadata(
+      serverRevision: revision,
+      localSavedAt: savedAt.toUtc(),
+    ).toJson(),
+    accountScope: scope,
+  );
 }

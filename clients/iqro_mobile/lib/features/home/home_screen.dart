@@ -20,7 +20,11 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final position = ref.watch(readingPositionProvider).valueOrNull;
+    final accountScopeKey = ref.watch(activeAccountScopeKeyProvider);
+    final positionState = accountScopeKey == null
+        ? const AsyncValue<ReadingPosition>.loading()
+        : ref.watch(readingPositionProvider(accountScopeKey));
+    final position = positionState.valueOrNull;
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final readerMode = ref.watch(
       appPreferencesProvider.select((value) => value.readerMode),
@@ -28,7 +32,9 @@ class HomeScreen extends ConsumerWidget {
     final preferences = ref.watch(appPreferencesProvider);
     final planState = ref.watch(planProvider);
     final plan = planState.valueOrNull;
-    final prayerState = ref.watch(prayerScheduleProvider);
+    final prayerState = accountScopeKey == null
+        ? const AsyncValue<PrayerSchedule?>.loading()
+        : ref.watch(prayerScheduleProvider(accountScopeKey));
     final memorizationState = ref.watch(memorizationProvider);
     final duaState = ref.watch(duaEntriesProvider);
     final session = ref.watch(sessionProvider).valueOrNull;
@@ -86,20 +92,25 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _ContinueCard(
-              surahName: currentSurahName,
-              ayah: position?.ayah ?? 1,
-              page: position?.page ?? 1,
-              onTap: () {
-                if (readerMode == ReaderMode.mushaf) {
-                  context.push(
-                    '/mushaf?page=${position?.page ?? 1}&surah=${position?.surah ?? 1}&ayah=${position?.ayah ?? 1}',
-                  );
-                } else {
-                  context.push(
-                    '/reader/${position?.surah ?? 1}?ayah=${position?.ayah ?? 1}',
-                  );
-                }
-              },
+              surahName: position == null
+                  ? context.l10n.loading
+                  : currentSurahName,
+              ayah: position?.ayah,
+              page: position?.page,
+              onTap: position == null
+                  ? null
+                  : () {
+                      if (readerMode == ReaderMode.mushaf) {
+                        context.push(
+                          '/mushaf?page=${position.page}'
+                          '&surah=${position.surah}&ayah=${position.ayah}',
+                        );
+                      } else {
+                        context.push(
+                          '/reader/${position.surah}?ayah=${position.ayah}',
+                        );
+                      }
+                    },
             ),
             const SizedBox(height: 12),
             _PrayerStrip(
@@ -372,9 +383,9 @@ class _ContinueCard extends StatelessWidget {
     required this.onTap,
   });
   final String surahName;
-  final int ayah;
-  final int page;
-  final VoidCallback onTap;
+  final int? ayah;
+  final int? page;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +421,9 @@ class _ContinueCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '${context.l10n.ayah} $ayah · ${context.l10n.page} $page',
+                ayah == null || page == null
+                    ? context.l10n.loading
+                    : '${context.l10n.ayah} $ayah · ${context.l10n.page} $page',
                 style: TextStyle(color: Colors.white.withValues(alpha: .76)),
               ),
               const SizedBox(height: 20),

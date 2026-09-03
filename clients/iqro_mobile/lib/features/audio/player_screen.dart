@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../quran/quran_models.dart';
 import 'reciter_portraits.dart';
@@ -22,9 +23,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   double? _seekPreviewMilliseconds;
   ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
   ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
+  String? _ownerId;
+  var _surahRequest = 0;
 
   @override
   Widget build(BuildContext context) {
+    final ownerId = ref.watch(sessionProvider).valueOrNull?.userId;
+    if (_ownerId != ownerId) {
+      _ownerId = ownerId;
+      _surahRequest += 1;
+      _changingSurah = false;
+      _seekPreviewMilliseconds = null;
+      _dragIdentity = null;
+    }
     final state = ref.watch(audioControllerProvider);
     final controller = ref.read(audioControllerProvider.notifier);
     final locale = Localizations.localeOf(context).languageCode;
@@ -304,6 +315,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   Future<void> _chooseSurah(List<Surah> surahs, int? currentSurah) async {
     if (_changingSurah || surahs.isEmpty) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
     final targetSurah = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
@@ -313,12 +327,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         child: _SurahPickerSheet(surahs: surahs, currentSurah: currentSurah),
       ),
     );
-    if (!mounted || targetSurah == null || targetSurah == currentSurah) return;
-    await _loadSurah(targetSurah);
+    if (!_isCurrentController(scope, controller) ||
+        targetSurah == null ||
+        targetSurah == currentSurah) {
+      return;
+    }
+    await _loadSurah(
+      targetSurah,
+      expectedScope: scope,
+      expectedController: controller,
+    );
   }
 
-  Future<void> _loadSurah(int targetSurah) async {
+  Future<void> _loadSurah(
+    int targetSurah, {
+    AccountScopeSnapshot? expectedScope,
+    AudioController? expectedController,
+  }) async {
     if (_changingSurah || targetSurah < 1 || targetSurah > 114) return;
+    final scope =
+        expectedScope ?? ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller =
+        expectedController ?? ref.read(audioControllerProvider.notifier);
+    if (controller == null) return;
+    if (!_isCurrentController(scope, controller)) return;
     final player = ref.read(audioControllerProvider);
     final reciter = player.reciter;
     final recitationId = player.track?.recitationId;
@@ -336,25 +369,30 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       }
     }
 
+    final request = ++_surahRequest;
     setState(() => _changingSurah = true);
     try {
       final playback = await ref
           .read(audioRepositoryProvider)
           .playback(recitationId: recitationId, surah: targetSurah);
-      await ref
-          .read(audioControllerProvider.notifier)
-          .loadPlayback(
-            playback: playback,
-            reciter: reciter,
-            surahName: surahName,
-          );
+      if (!_isCurrentSurahRequest(scope, controller, request)) return;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciter,
+        surahName: surahName,
+      );
+    } on AccountScopeChanged {
+      return;
     } on Object {
+      if (!_isCurrentSurahRequest(scope, controller, request)) return;
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
     } finally {
-      if (mounted) setState(() => _changingSurah = false);
+      if (mounted && request == _surahRequest) {
+        setState(() => _changingSurah = false);
+      }
     }
   }
 
@@ -363,6 +401,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AudioController controller,
     double current,
   ) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentController(scope, controller)) return;
     final speed = await showModalBottomSheet<double>(
       context: context,
       builder: (context) => SafeArea(
@@ -386,13 +426,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
-    if (speed != null) await controller.setSpeed(speed);
+    if (speed != null && _isCurrentController(scope, controller)) {
+      await controller.setSpeed(speed);
+    }
   }
 
   Future<void> _chooseTimer(
     BuildContext context,
     AudioController controller,
   ) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentController(scope, controller)) return;
     final minutes = await showModalBottomSheet<int>(
       context: context,
       builder: (context) => SafeArea(
@@ -412,6 +456,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
+    if (!_isCurrentController(scope, controller)) return;
     controller.setSleepTimer(
       minutes == null || minutes == 0 ? null : Duration(minutes: minutes),
     );
@@ -431,6 +476,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AudioController controller,
     IqroAudioState state,
   ) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentController(scope, controller)) return;
     final ayahs = state.segments.map((item) => item.ayah).toSet().toList()
       ..sort();
     if (ayahs.isEmpty) return;
@@ -497,16 +544,35 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
-    if (selected == null || !context.mounted) return;
+    if (selected == null || !_isCurrentController(scope, controller)) return;
     try {
       await controller.setAyahRange(selected[0], selected[1]);
     } on Object {
-      if (!context.mounted) return;
+      if (!_isCurrentController(scope, controller) || !context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
     }
   }
+
+  bool _sessionMatches(AccountScopeSnapshot scope) =>
+      ref.read(sessionProvider).valueOrNull?.userId == scope.userId;
+
+  bool _isCurrentController(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+  ) {
+    return mounted &&
+        _sessionMatches(scope) &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
+        identical(ref.read(audioControllerProvider.notifier), controller);
+  }
+
+  bool _isCurrentSurahRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request,
+  ) => request == _surahRequest && _isCurrentController(scope, controller);
 }
 
 class _SurahTitleButton extends StatelessWidget {

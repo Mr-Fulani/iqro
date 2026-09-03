@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
@@ -235,25 +236,64 @@ class PrayerRepository {
     }
   }
 
-  Future<String?> selectedMethodCode() async =>
-      (await _database.readState('prayer_method'))?['code']?.toString();
+  Future<String?> selectedMethodCode({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return (await _database.readState(
+      'prayer_method',
+      accountScope: scope,
+    ))?['code']?.toString();
+  }
 
-  Future<void> selectMethod(String code) =>
-      _database.writeState('prayer_method', <String, Object?>{'code': code});
+  Future<void> selectMethod(
+    String code, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    await _database.writeState('prayer_method', <String, Object?>{
+      'code': code,
+    }, accountScope: scope);
+  }
 
   Future<PrayerMethod?> selectedMethod() async {
+    final scope = await _database.captureAccount();
+    return _selectedMethodFor(scope);
+  }
+
+  Future<PrayerMethod?> _selectedMethodFor(AccountScopeSnapshot scope) async {
     final available = await methods();
-    final code = await selectedMethodCode();
+    _database.ensureCurrent(scope);
+    final code = (await _database.readState(
+      'prayer_method',
+      accountScope: scope,
+    ))?['code']?.toString();
     return available.where((item) => item.code == code).firstOrNull;
   }
 
-  Future<PrayerLocation?> storedLocation() async {
-    final value = await _database.readState('prayer_location');
+  Future<PrayerLocation?> storedLocation({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _storedLocationFor(scope);
+  }
+
+  Future<PrayerLocation?> _storedLocationFor(AccountScopeSnapshot scope) async {
+    final value = await _database.readState(
+      'prayer_location',
+      accountScope: scope,
+    );
     return value == null ? null : PrayerLocation.fromJson(value);
   }
 
-  Future<PrayerSchedule?> cachedToday() async {
-    final data = await _database.readState('prayer_schedule_today');
+  Future<PrayerSchedule?> cachedToday({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final data = await _database.readState(
+      'prayer_schedule_today',
+      accountScope: scope,
+    );
     if (data == null) return null;
     final schedule = PrayerSchedule.fromJson(data);
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -264,20 +304,28 @@ class PrayerRepository {
 
   Future<PrayerSchedule> calculateForCurrentLocation({
     required PrayerMethod method,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     final deviceLocation = await acquirePrayerDeviceLocation(_locationGateway);
+    _database.ensureCurrent(scope);
     final location = PrayerLocation(
       latitude: deviceLocation.latitude,
       longitude: deviceLocation.longitude,
       timezone: deviceLocation.timezone,
     );
-    await _database.writeState('prayer_location', location.toJson());
-    final schedule = await calculateLocallyForDate(
+    await _database.writeState(
+      'prayer_location',
+      location.toJson(),
+      accountScope: scope,
+    );
+    final schedule = await _calculateLocallyForDate(
       method: method,
       location: location,
       date: DateTime.now(),
+      scope: scope,
     );
-    await _saveProfile(method);
+    await _saveProfile(method, scope);
     return schedule;
   }
 
@@ -285,11 +333,30 @@ class PrayerRepository {
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _calculateForDate(
+      method: method,
+      location: location,
+      date: date,
+      scope: scope,
+    );
+  }
+
+  Future<PrayerSchedule> _calculateForDate({
+    required PrayerMethod method,
+    required PrayerLocation location,
+    required DateTime date,
+    required AccountScopeSnapshot scope,
   }) async {
     final dateValue = DateFormat('yyyy-MM-dd').format(date);
     final cacheKey =
         'prayer:schedule:$dateValue:${method.checksum}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
-    final cached = await _database.readCache(cacheKey);
+    final cached = await _database.readAccountCache(
+      cacheKey,
+      accountScope: scope,
+    );
     Map<String, Object?> result;
     if (cached?.isFresh == true) {
       result = jsonMap(cached!.value);
@@ -322,34 +389,44 @@ class PrayerRepository {
             },
           ),
         );
-        await _database.writeCache(
+        await _database.writeAccountCache(
           cacheKey,
           result,
           maxAge: const Duration(hours: 18),
+          accountScope: scope,
         );
       } on ApiException catch (error) {
         if (!error.isOffline) rethrow;
         if (cached != null) {
           result = jsonMap(cached.value);
         } else {
-          return calculateLocallyForDate(
+          return _calculateLocallyForDate(
             method: method,
             location: location,
             date: date,
+            scope: scope,
           );
         }
       }
     }
     final schedule = PrayerSchedule.fromJson(result);
     if (DateFormat('yyyy-MM-dd').format(DateTime.now()) == dateValue) {
-      await _database.writeState('prayer_schedule_today', result);
+      await _database.writeState(
+        'prayer_schedule_today',
+        result,
+        accountScope: scope,
+      );
     }
     return schedule;
   }
 
-  Future<List<PrayerSchedule>> calculateHorizon({int days = 8}) async {
-    final location = await storedLocation();
-    final method = await selectedMethod();
+  Future<List<PrayerSchedule>> calculateHorizon({
+    int days = 8,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final location = await _storedLocationFor(scope);
+    final method = await _selectedMethodFor(scope);
     if (location == null ||
         method == null ||
         !method.supportsLocalCalculation) {
@@ -360,10 +437,11 @@ class PrayerRepository {
     for (var offset = 0; offset < days; offset++) {
       final date = DateTime(today.year, today.month, today.day + offset);
       schedules.add(
-        await calculateLocallyForDate(
+        await _calculateLocallyForDate(
           method: method,
           location: location,
           date: date,
+          scope: scope,
         ),
       );
     }
@@ -374,7 +452,24 @@ class PrayerRepository {
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _calculateLocallyForDate(
+      method: method,
+      location: location,
+      date: date,
+      scope: scope,
+    );
+  }
+
+  Future<PrayerSchedule> _calculateLocallyForDate({
+    required PrayerMethod method,
+    required PrayerLocation location,
+    required DateTime date,
+    required AccountScopeSnapshot scope,
+  }) async {
+    _database.ensureCurrent(scope);
     if (!method.supportsLocalCalculation) {
       throw const LocalPrayerCalculationUnavailable(
         'backend_engine_version_unsupported',
@@ -424,23 +519,35 @@ class PrayerRepository {
     final dateValue = DateFormat('yyyy-MM-dd').format(date);
     final cacheKey =
         'prayer:schedule:$dateValue:${method.checksum}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
-    await _database.writeCache(
+    await _database.writeAccountCache(
       cacheKey,
       schedule.toJson(),
       maxAge: const Duration(days: 35),
+      accountScope: scope,
     );
     if (DateFormat('yyyy-MM-dd').format(DateTime.now()) == dateValue) {
-      await _database.writeState('prayer_schedule_today', schedule.toJson());
+      await _database.writeState(
+        'prayer_schedule_today',
+        schedule.toJson(),
+        accountScope: scope,
+      );
     }
     return schedule;
   }
 
-  Future<void> _saveProfile(PrayerMethod method) async {
+  Future<void> _saveProfile(
+    PrayerMethod method,
+    AccountScopeSnapshot scope,
+  ) async {
     var revision = 0;
     try {
-      final current = jsonMap(await _api.get('/me/prayer-profile'));
+      final current = jsonMap(
+        await _api.get('/me/prayer-profile', accountScope: scope),
+      );
+      _database.ensureCurrent(scope);
       revision = (current['revision'] as num?)?.toInt() ?? 0;
     } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') rethrow;
       if (error.statusCode != 404 && !error.isOffline) rethrow;
       if (error.isOffline) return;
     }
@@ -464,7 +571,9 @@ class PrayerRepository {
         'timezone_mode': 'device_local',
         'client_updated_at': DateTime.now().toUtc().toIso8601String(),
       },
+      accountScope: scope,
     );
+    _database.ensureCurrent(scope);
   }
 }
 

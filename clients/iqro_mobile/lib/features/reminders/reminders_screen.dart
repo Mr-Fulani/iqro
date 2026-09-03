@@ -4,9 +4,12 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../quran/quran_models.dart';
+import 'reminder_controller.dart';
 import 'reminder_models.dart';
 
 class RemindersScreen extends ConsumerWidget {
@@ -111,7 +114,9 @@ class RemindersScreen extends ConsumerWidget {
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton.icon(
-                  onPressed: state.saving ? null : () => _openEditor(context),
+                  onPressed: state.saving
+                      ? null
+                      : () => _openEditor(context, ref),
                   icon: const Icon(Icons.add),
                   label: Text(context.l10n.addReminder),
                 ),
@@ -164,13 +169,27 @@ class RemindersScreen extends ConsumerWidget {
       )
       .firstOrNull;
 
-  Future<void> _openEditor(BuildContext context, {ReminderRule? rule}) =>
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (_) => _ReminderEditor(rule: rule),
-      );
+  Future<void> _openEditor(
+    BuildContext context,
+    WidgetRef ref, {
+    ReminderRule? rule,
+  }) async {
+    final database = ref.read(localDatabaseProvider);
+    final accountScope = database.accountScope.current;
+    if (accountScope == null) return;
+    final controller = ref.read(reminderProvider.notifier);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _ReminderEditor(
+        rule: rule,
+        database: database,
+        accountScope: accountScope,
+        controller: controller,
+      ),
+    );
+  }
 }
 
 class _PrayerReminderTile extends ConsumerWidget {
@@ -187,6 +206,9 @@ class _PrayerReminderTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = _prayerName(context, event);
+    final database = ref.watch(localDatabaseProvider);
+    final accountScope = database.accountScope.current;
+    final controller = ref.watch(reminderProvider.notifier);
     return SwitchListTile.adaptive(
       secondary: Icon(Icons.mosque_outlined, color: context.iqroColors.gold),
       title: Text(title),
@@ -196,12 +218,16 @@ class _PrayerReminderTile extends ConsumerWidget {
       value: rule?.isEnabled == true,
       onChanged: enabled
           ? (value) async {
+              final scope = accountScope;
+              if (scope == null || !database.accountScope.isCurrent(scope)) {
+                return;
+              }
               try {
-                await ref
-                    .read(reminderProvider.notifier)
-                    .togglePrayer(event, value);
+                await controller.togglePrayer(event, value);
               } on Object {
-                if (context.mounted) _showError(context);
+                if (context.mounted && database.accountScope.isCurrent(scope)) {
+                  _showError(context);
+                }
               }
             }
           : null,
@@ -216,18 +242,28 @@ class _ReviewReminderCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final database = ref.watch(localDatabaseProvider);
+    final accountScope = database.accountScope.current;
+    final controller = ref.watch(reminderProvider.notifier);
     final time = rule.schedule.timeParts;
     final target = rule.reviewTarget;
     final range = target == null
         ? ''
         : '${target.start.surah}:${target.start.ayah}–${target.end.surah}:${target.end.ayah}';
     return IqroCard(
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (_) => _ReminderEditor(rule: rule),
-      ),
+      onTap: accountScope == null
+          ? null
+          : () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => _ReminderEditor(
+                rule: rule,
+                database: database,
+                accountScope: accountScope,
+                controller: controller,
+              ),
+            ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -262,12 +298,18 @@ class _ReviewReminderCard extends ConsumerWidget {
             onChanged: ref.watch(reminderProvider).saving
                 ? null
                 : (value) async {
+                    final scope = accountScope;
+                    if (scope == null ||
+                        !database.accountScope.isCurrent(scope)) {
+                      return;
+                    }
                     try {
-                      await ref
-                          .read(reminderProvider.notifier)
-                          .toggle(rule, value);
+                      await controller.toggle(rule, value);
                     } on Object {
-                      if (context.mounted) _showError(context);
+                      if (context.mounted &&
+                          database.accountScope.isCurrent(scope)) {
+                        _showError(context);
+                      }
                     }
                   },
           ),
@@ -278,9 +320,17 @@ class _ReviewReminderCard extends ConsumerWidget {
 }
 
 class _ReminderEditor extends ConsumerStatefulWidget {
-  const _ReminderEditor({this.rule});
+  const _ReminderEditor({
+    required this.database,
+    required this.accountScope,
+    required this.controller,
+    this.rule,
+  });
 
   final ReminderRule? rule;
+  final LocalDatabase database;
+  final AccountScopeSnapshot accountScope;
+  final ReminderController controller;
 
   @override
   ConsumerState<_ReminderEditor> createState() => _ReminderEditorState();
@@ -296,6 +346,7 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
   late int _endAyah;
   late final TextEditingController _timezone;
   var _saving = false;
+  var _requestGeneration = 0;
 
   @override
   void initState() {
@@ -314,22 +365,36 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
   }
 
   Future<void> _loadTimezone() async {
+    final request = ++_requestGeneration;
     try {
       final value = (await FlutterTimezone.getLocalTimezone()).identifier;
-      if (mounted && _timezone.text.isEmpty) _timezone.text = value;
+      if (_isCurrent(request) && _timezone.text.isEmpty) {
+        _timezone.text = value;
+      }
     } on Object {
-      if (mounted && _timezone.text.isEmpty) _timezone.text = 'UTC';
+      if (_isCurrent(request) && _timezone.text.isEmpty) {
+        _timezone.text = 'UTC';
+      }
     }
   }
 
   @override
   void dispose() {
+    _requestGeneration += 1;
+    _timezone.clear();
     _timezone.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(sessionProvider);
+    if (!_isCurrent()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+      return const SizedBox.shrink();
+    }
     final catalog = ref.watch(quranCatalogProvider);
     final ayahs = ref.watch(ayahsProvider(_surah));
     final surahs = catalog.valueOrNull?.surahs ?? const <Surah>[];
@@ -524,11 +589,19 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
   }
 
   Future<void> _pickTime() async {
+    if (!_isCurrent()) return;
+    final request = ++_requestGeneration;
     final value = await showTimePicker(context: context, initialTime: _time);
+    if (!_isCurrent(request)) {
+      if (mounted) Navigator.of(context).maybePop();
+      return;
+    }
     if (value != null) setState(() => _time = value);
   }
 
   Future<void> _save() async {
+    if (!_isCurrent()) return;
+    final request = ++_requestGeneration;
     final ayahs = ref.read(ayahsProvider(_surah)).valueOrNull;
     final start = ayahs?.where((item) => item.number == _startAyah).firstOrNull;
     final end = ayahs?.where((item) => item.number == _endAyah).firstOrNull;
@@ -542,10 +615,9 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
       end: ReminderAyah(id: end.id, surah: _surah, ayah: end.number),
     );
     try {
-      final controller = ref.read(reminderProvider.notifier);
       final existing = widget.rule;
       if (existing == null) {
-        await controller.create(
+        await widget.controller.create(
           type: ReminderType.quranReview,
           schedule: schedule,
           weekdaysMask: _weekdaysMask,
@@ -557,7 +629,7 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
           reviewTarget: target,
         );
       } else {
-        await controller.update(
+        await widget.controller.update(
           existing.copyWith(
             schedule: schedule,
             weekdaysMask: _weekdaysMask,
@@ -570,9 +642,10 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      if (_isCurrent(request)) Navigator.pop(context);
     } on Object {
-      if (mounted) {
+      if (mounted && _isCurrent(request)) {
         setState(() => _saving = false);
         _showError(context);
       }
@@ -580,6 +653,8 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
   }
 
   Future<void> _delete() async {
+    if (!_isCurrent()) return;
+    final request = ++_requestGeneration;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -597,17 +672,32 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
         ],
       ),
     );
+    if (!mounted) return;
+    if (!_isCurrent(request)) {
+      Navigator.of(context).maybePop();
+      return;
+    }
     if (confirmed != true || widget.rule == null) return;
     setState(() => _saving = true);
     try {
-      await ref.read(reminderProvider.notifier).delete(widget.rule!);
-      if (mounted) Navigator.pop(context);
+      await widget.controller.delete(widget.rule!);
+      if (!mounted) return;
+      if (_isCurrent(request)) Navigator.pop(context);
     } on Object {
-      if (mounted) {
+      if (mounted && _isCurrent(request)) {
         setState(() => _saving = false);
         _showError(context);
       }
     }
+  }
+
+  bool _isCurrent([int? request]) {
+    if (!mounted) return false;
+    if (request != null && request != _requestGeneration) return false;
+    if (!widget.database.accountScope.isCurrent(widget.accountScope)) {
+      return false;
+    }
+    return identical(widget.controller, ref.read(reminderProvider.notifier));
   }
 }
 

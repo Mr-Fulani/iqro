@@ -1,3 +1,4 @@
+import '../../core/auth/account_scope.dart';
 import '../../core/storage/local_database.dart';
 
 class DailyPlan {
@@ -70,37 +71,81 @@ class PlanRepository {
 
   final LocalDatabase _database;
 
-  Future<DailyPlan> initialize({required int target}) async {
+  Future<DailyPlan> initialize({
+    required int target,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     final plan = DailyPlan.initial(target: target);
-    await _database.writeState('daily_plan', plan.toJson());
+    await _database.writeState(
+      'daily_plan',
+      plan.toJson(),
+      accountScope: scope,
+    );
+    _database.ensureCurrent(scope);
     return plan;
   }
 
-  Future<DailyPlan> load({int? preferredTarget}) async {
-    final data = await _database.readState('daily_plan');
+  Future<DailyPlan> load({
+    int? preferredTarget,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _loadFor(scope, preferredTarget: preferredTarget);
+  }
+
+  Future<DailyPlan> _loadFor(
+    AccountScopeSnapshot scope, {
+    int? preferredTarget,
+  }) async {
+    final data = await _database.readState('daily_plan', accountScope: scope);
     var plan = data == null
         ? DailyPlan.initial(target: preferredTarget ?? 6)
         : DailyPlan.fromJson(data);
     if (preferredTarget != null && plan.target != preferredTarget) {
       plan = plan.copyWith(target: preferredTarget);
-      await _database.writeState('daily_plan', plan.toJson());
+      await _database.writeState(
+        'daily_plan',
+        plan.toJson(),
+        accountScope: scope,
+      );
     }
+    _database.ensureCurrent(scope);
     return plan;
   }
 
-  Future<DailyPlan> addPages(int pages) async {
-    final current = await load();
+  Future<DailyPlan> addPages(
+    int pages, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final current = await _loadFor(scope);
     final next = current.copyWith(achieved: current.achieved + pages);
-    await _database.writeState('daily_plan', next.toJson());
+    await _database.writeState(
+      'daily_plan',
+      next.toJson(),
+      accountScope: scope,
+    );
+    _database.ensureCurrent(scope);
     return next;
   }
 
-  Future<DailyPlan> setPrayerPages(String prayer, int pages) async {
-    final current = await load();
+  Future<DailyPlan> setPrayerPages(
+    String prayer,
+    int pages, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final current = await _loadFor(scope);
     final values = Map<String, int>.of(current.prayerPages)..[prayer] = pages;
     final total = values.values.fold<int>(0, (sum, value) => sum + value);
     final next = current.copyWith(prayerPages: values, achieved: total);
-    await _database.writeState('daily_plan', next.toJson());
+    await _database.writeState(
+      'daily_plan',
+      next.toJson(),
+      accountScope: scope,
+    );
+    _database.ensureCurrent(scope);
     return next;
   }
 }

@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/audio/audio_playback_store.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:just_audio/just_audio.dart';
@@ -923,9 +924,11 @@ Future<LocalDatabase> _audioStoreDatabase() async {
   final database = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
   await database.execute('''
     CREATE TABLE app_state (
-      state_key TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      state_key TEXT NOT NULL,
       payload TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, state_key)
     )
   ''');
   return LocalDatabase.forTesting(database);
@@ -938,17 +941,21 @@ class _ControlledPlaybackStore extends AudioPlaybackStore {
   final _clearGate = Completer<void>();
 
   @override
-  Future<AudioPlaybackSnapshot?> read() async =>
-      throw const FormatException('corrupt');
+  Future<AudioPlaybackSnapshot?> read({
+    AccountScopeSnapshot? accountScope,
+  }) async => throw const FormatException('corrupt');
 
   @override
-  Future<void> clear() async {
+  Future<void> clear({AccountScopeSnapshot? accountScope}) async {
     if (!clearStarted.isCompleted) clearStarted.complete();
     await _clearGate.future;
   }
 
   @override
-  Future<void> write(AudioPlaybackSnapshot snapshot) async {}
+  Future<void> write(
+    AudioPlaybackSnapshot snapshot, {
+    AccountScopeSnapshot? accountScope,
+  }) async {}
 
   void releaseClear() {
     if (!_clearGate.isCompleted) _clearGate.complete();

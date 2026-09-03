@@ -157,6 +157,43 @@ void main() {
   );
 
   test(
+    'withdrawn Dua favorite is reconciled after terminal background 404',
+    () async {
+      final favorite = _auxiliaryOperation(
+        'favorite-1',
+        'dua_favorite',
+        entityId: 'dua:hisn-al-muslim:7',
+        payload:
+            '{"collection":"hisn-al-muslim","source_number":7,'
+            '"is_favorite":true}',
+      );
+      final store = _FakeStore(auxiliary: <SyncOutboxEntry>[favorite]);
+      final remote = _FakeRemote(
+        onPut: (path, data) {
+          expect(path, '/me/dua-favorites/hisn-al-muslim/7');
+          expect(data, <String, Object?>{'is_favorite': true});
+          throw const ApiException(
+            message: 'Dua entry was withdrawn',
+            statusCode: 404,
+          );
+        },
+        onGet: (_, _) => _incremental(cursor: 0),
+      );
+
+      final report = await SyncService.withDependencies(
+        remote: remote,
+        store: store,
+      ).synchronize();
+
+      expect(report.status, SyncStatus.idle);
+      expect(report.pending, 0);
+      expect(report.shouldRetry, isFalse);
+      expect(store.rejectedFavorites, <String>['favorite-1']);
+      expect(store.failureCounts, isEmpty);
+    },
+  );
+
+  test(
     'omitted push result fails safely without acknowledging outbox',
     () async {
       final operation = _entityOperation(
@@ -180,6 +217,43 @@ void main() {
     },
   );
 
+  test(
+    'swapped result entity rejects the entire push before acknowledgement',
+    () async {
+      final operation = _entityOperation(
+        operationId: 'operation-1',
+        baseRevision: 0,
+      );
+      final store = _FakeStore(entities: <SyncOutboxEntry>[operation]);
+      final remote = _FakeRemote(
+        onPost: (_, _) => <String, Object?>{
+          'results': <Object?>[
+            <String, Object?>{
+              'operation_id': 'operation-1',
+              'outcome': 'accepted',
+              'entity': <String, Object?>{
+                'id': '01994f46-5fa6-7a20-b9ab-2a7bbcc70002',
+                'entity_type': 'bookmark',
+                'edition_code': 'madani-hafs',
+                'revision': 1,
+              },
+            },
+          ],
+        },
+      );
+
+      final report = await SyncService.withDependencies(
+        remote: remote,
+        store: store,
+      ).synchronize();
+
+      expect(report.status, SyncStatus.failed);
+      expect(report.pending, 1);
+      expect(store.failureCounts['operation-1'], 1);
+      expect(store.entities.single.operationId, 'operation-1');
+    },
+  );
+
   test('concurrent callers share one synchronization flight', () async {
     final gate = Completer<Object?>();
     final store = _FakeStore();
@@ -194,20 +268,24 @@ void main() {
 
     final first = service.synchronize();
     final second = service.synchronize();
-    expect(identical(first, second), isTrue);
     gate.complete(_incremental(cursor: 0));
-    await Future.wait(<Future<SyncReport>>[first, second]);
+    final reports = await Future.wait(<Future<SyncReport>>[first, second]);
 
     expect(gets, 1);
+    expect(
+      reports.map((report) => report.status),
+      everyElement(SyncStatus.idle),
+    );
   });
 }
 
 class _FakeRemote implements SyncRemote {
-  _FakeRemote({this.onGet, this.onPost});
+  _FakeRemote({this.onGet, this.onPost, this.onPut});
 
   final FutureOr<Object?> Function(String path, Map<String, Object?>? query)?
   onGet;
   final FutureOr<Object?> Function(String path, Object? data)? onPost;
+  final FutureOr<Object?> Function(String path, Object? data)? onPut;
 
   @override
   Future<Object?> get(String path, {Map<String, Object?>? query}) async =>
@@ -218,7 +296,8 @@ class _FakeRemote implements SyncRemote {
       onPost?.call(path, data);
 
   @override
-  Future<Object?> put(String path, {Object? data}) async => null;
+  Future<Object?> put(String path, {Object? data}) async =>
+      onPut?.call(path, data);
 }
 
 class _FakeStore implements SyncStore {
@@ -231,6 +310,7 @@ class _FakeStore implements SyncStore {
   final List<SyncOutboxEntry> auxiliary;
   final List<SyncOutboxEntry> entities;
   final Map<String, int> failureCounts = <String, int>{};
+  final List<String> rejectedFavorites = <String>[];
   int cursor = 0;
   int snapshotReplacements = 0;
   int conflictsResolved = 0;
@@ -242,8 +322,8 @@ class _FakeStore implements SyncStore {
   }
 
   @override
-  Future<void> acceptOperation(String operationId, Object? entity) =>
-      acknowledge(operationId);
+  Future<void> acceptOperation(SyncOutboxEntry operation, Object? entity) =>
+      acknowledge(operation.operationId);
 
   @override
   Future<void> applyRemoteEntity(Object? entity) async {}
@@ -251,6 +331,12 @@ class _FakeStore implements SyncStore {
   @override
   Future<void> markFailure(String operationId, String error) async {
     failureCounts.update(operationId, (value) => value + 1, ifAbsent: () => 1);
+  }
+
+  @override
+  Future<void> rejectDuaFavorite(SyncOutboxEntry operation) async {
+    rejectedFavorites.add(operation.operationId);
+    await acknowledge(operation.operationId);
   }
 
   @override
@@ -319,15 +405,19 @@ SyncOutboxEntry _entityOperation({
   'created_at': '2026-09-01T10:00:00Z',
 });
 
-SyncOutboxEntry _auxiliaryOperation(String id, String type) =>
-    SyncOutboxEntry.fromRow(<String, Object?>{
-      'operation_id': id,
-      'entity_type': type,
-      'entity_id': null,
-      'payload': '{"event":"share_sheet_opened"}',
-      'attempts': 0,
-      'created_at': '2026-09-01T10:00:00Z',
-    });
+SyncOutboxEntry _auxiliaryOperation(
+  String id,
+  String type, {
+  String? entityId,
+  String payload = '{"event":"share_sheet_opened"}',
+}) => SyncOutboxEntry.fromRow(<String, Object?>{
+  'operation_id': id,
+  'entity_type': type,
+  'entity_id': entityId,
+  'payload': payload,
+  'attempts': 0,
+  'created_at': '2026-09-01T10:00:00Z',
+});
 
 Map<String, Object?> _incremental({required int cursor}) => <String, Object?>{
   'mode': 'incremental',

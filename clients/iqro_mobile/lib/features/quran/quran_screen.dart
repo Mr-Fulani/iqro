@@ -31,7 +31,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   Widget build(BuildContext context) {
     final preferences = ref.watch(appPreferencesProvider);
     final catalog = ref.watch(quranCatalogProvider);
-    final position = ref.watch(readingPositionProvider).valueOrNull;
+    final accountScopeKey = ref.watch(activeAccountScopeKeyProvider);
+    final position = accountScopeKey == null
+        ? null
+        : ref.watch(readingPositionProvider(accountScopeKey)).valueOrNull;
     final locale = Localizations.localeOf(context).languageCode;
     final positionSurah = catalog.valueOrNull?.surahs
         .where((surah) => surah.number == (position?.surah ?? 1))
@@ -122,12 +125,14 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
             IqroCard(
               color: context.iqroColors.ink,
               borderColor: Colors.transparent,
-              onTap: () => _openPosition(
-                preferences.readerMode,
-                position?.surah ?? 1,
-                position?.ayah ?? 1,
-                position?.page ?? 1,
-              ),
+              onTap: position == null
+                  ? null
+                  : () => _openPosition(
+                      preferences.readerMode,
+                      position.surah,
+                      position.ayah,
+                      position.page,
+                    ),
               child: Row(
                 children: <Widget>[
                   Container(
@@ -160,8 +165,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${positionSurah?.nameFor(locale) ?? '${context.l10n.surah} ${position?.surah ?? 1}'}'
-                          ' · ${context.l10n.ayah} ${position?.ayah ?? 1}',
+                          position == null
+                              ? context.l10n.loading
+                              : '${positionSurah?.nameFor(locale) ?? '${context.l10n.surah} ${position.surah}'}'
+                                    ' · ${context.l10n.ayah} ${position.ayah}',
                           style: Theme.of(
                             context,
                           ).textTheme.titleSmall?.copyWith(color: Colors.white),

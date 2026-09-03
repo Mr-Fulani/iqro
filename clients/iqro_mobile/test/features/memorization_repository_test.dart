@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/memorization/memorization_repository.dart';
 
@@ -79,7 +80,42 @@ void main() {
 }
 
 class _MemoryDatabase implements LocalDatabase {
+  static const scope = AccountScopeSnapshot(userId: 'test-owner', epoch: 1);
   CachedValue? cached;
+
+  @override
+  Future<AccountScopeSnapshot> captureAccount() async => scope;
+
+  @override
+  void ensureCurrent(AccountScopeSnapshot accountScope) {
+    if (accountScope.userId != scope.userId ||
+        accountScope.epoch != scope.epoch) {
+      throw const AccountScopeChanged();
+    }
+  }
+
+  @override
+  Future<CachedValue?> readAccountCache(
+    String key, {
+    AccountScopeSnapshot? accountScope,
+  }) async => cached;
+
+  @override
+  Future<void> writeAccountCache(
+    String key,
+    Object? value, {
+    String? etag,
+    Duration maxAge = const Duration(minutes: 5),
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final now = DateTime.now().toUtc();
+    cached = CachedValue(
+      value: value,
+      updatedAt: now,
+      etag: etag,
+      expiresAt: now.add(maxAge),
+    );
+  }
 
   @override
   Future<CachedValue?> readCache(String key) async => cached;
@@ -112,14 +148,20 @@ class _MemoryRemote implements MemorizationRemoteGateway {
   Map<String, Object?>? savedSession;
 
   @override
-  Future<Object?> dashboard(String timezoneName) async {
+  Future<Object?> dashboard(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     this.timezoneName = timezoneName;
     if (failDashboard) throw StateError('offline');
     return dashboardPayload;
   }
 
   @override
-  Future<Object?> savePlan(Map<String, Object?> payload) async {
+  Future<Object?> savePlan(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     savedPlan = payload;
     final plan = Map<String, Object?>.from(dashboardPayload['plan']! as Map)
       ..['end_ayah'] = <String, Object?>{
@@ -137,7 +179,10 @@ class _MemoryRemote implements MemorizationRemoteGateway {
   }
 
   @override
-  Future<Object?> createSession(Map<String, Object?> payload) async {
+  Future<Object?> createSession(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     savedSession = payload;
     final session = <String, Object?>{
       ...payload,
@@ -154,7 +199,10 @@ class _MemoryRemote implements MemorizationRemoteGateway {
   }
 
   @override
-  Future<void> resetToday(String timezoneName) async {}
+  Future<void> resetToday(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  }) async {}
 }
 
 Map<String, Object?> _dashboard() => <String, Object?>{

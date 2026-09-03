@@ -2,8 +2,6 @@ import 'dart:io';
 
 import 'package:workmanager/workmanager.dart';
 
-import '../../app/app_dependencies.dart';
-
 const iqroMaintenanceUniqueName = 'forum.iqro.app.periodic-maintenance-v1';
 const iqroMaintenanceTaskName = 'iqro-periodic-maintenance';
 const iqroMaintenanceFrequency = Duration(hours: 6);
@@ -16,16 +14,14 @@ void iqroBackgroundDispatcher() {
         taskName != Workmanager.iOSBackgroundTask) {
       return true;
     }
-    AppDependencies? dependencies;
-    try {
-      dependencies = await AppDependencies.initialize();
-      final report = await dependencies.maintenance.run();
-      return !report.shouldRetry;
-    } on Object {
-      return false;
-    } finally {
-      if (dependencies != null) await dependencies.database.close();
-    }
+    // Workmanager runs this callback in a separate Dart isolate. Process-local
+    // account epochs cannot fence that isolate against a foreground logout or
+    // account handoff. Until a transactional cross-isolate generation fence is
+    // available, account-owned sync, auth refresh and notification scheduling
+    // are intentionally restricted to the foreground isolate. Existing OS
+    // reminders remain scheduled and foreground lifecycle maintenance still
+    // refreshes account data.
+    return true;
   });
 }
 

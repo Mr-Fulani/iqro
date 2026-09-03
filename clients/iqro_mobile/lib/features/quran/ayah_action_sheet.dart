@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
@@ -35,6 +37,18 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   int? _tafsirSourceId;
   String? _recitationId;
   var _dependenciesReady = false;
+  var _audioRequest = 0;
+  var _loadRequest = 0;
+  var _bookmarkRequest = 0;
+  var _translationRequest = 0;
+  var _tafsirRequest = 0;
+  String? _ownerId;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerId = ref.read(sessionProvider).valueOrNull?.userId;
+  }
 
   @override
   void didChangeDependencies() {
@@ -46,6 +60,26 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final ownerId = ref.watch(sessionProvider).valueOrNull?.userId;
+    if (_ownerId != ownerId) {
+      _ownerId = ownerId;
+      _audioRequest += 1;
+      _loadRequest += 1;
+      _bookmarkRequest += 1;
+      _translationRequest += 1;
+      _tafsirRequest += 1;
+      _details = null;
+      _error = null;
+      _loading = true;
+      _audioLoading = false;
+      _bookmarkLoading = false;
+      _bookmarked = false;
+      if (ownerId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _ownerId == ownerId) unawaited(_load());
+        });
+      }
+    }
     final audio = ref.watch(
       audioControllerProvider.select(
         (value) => (
@@ -289,6 +323,9 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   }
 
   Future<void> _load() async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final request = ++_loadRequest;
     setState(() {
       _loading = true;
       _error = null;
@@ -302,8 +339,9 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         _safeTranslationEditions(quran, locale),
         _safeTafsirEditions(quran, locale),
         _safeRecitations(audio),
-        _safeBookmark(quran),
+        _safeBookmark(quran, scope),
       ]);
+      if (!_isCurrentLoad(scope, request)) return;
       final ayahs = first[0] as List<QuranAyah>;
       final translationEditions = first[1] as List<QuranTranslationEdition>;
       final tafsirEditions = first[2] as List<QuranTafsirEdition>;
@@ -354,7 +392,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         else
           Future<List<QuranAyahTafsir>>.value(const <QuranAyahTafsir>[]),
       ]);
-      if (!mounted) return;
+      if (!_isCurrentLoad(scope, request)) return;
       final translations = second[0] as List<QuranAyahTranslation>;
       final tafsirs = second[1] as List<QuranAyahTafsir>;
       setState(() {
@@ -378,8 +416,10 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         );
         _loading = false;
       });
+    } on AccountScopeChanged {
+      return;
     } on Object catch (error) {
-      if (!mounted) return;
+      if (!_isCurrentLoad(scope, request)) return;
       setState(() {
         _loading = false;
         _error = error;
@@ -454,12 +494,18 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     }
   }
 
-  Future<bool> _safeBookmark(QuranRepository repository) async {
+  Future<bool> _safeBookmark(
+    QuranRepository repository,
+    AccountScopeSnapshot scope,
+  ) async {
     try {
       return await repository.isBookmarked(
         widget.reference.surah,
         widget.reference.ayah,
+        accountScope: scope,
       );
+    } on AccountScopeChanged {
+      rethrow;
     } on Object {
       return false;
     }
@@ -470,33 +516,59 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         .where((item) => item.id == _recitationId)
         .firstOrNull;
     if (recitation == null) return;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final repository = ref.read(audioRepositoryProvider);
+    final surahName = '${context.l10n.surah} ${widget.reference.surah}';
+    final request = ++_audioRequest;
     setState(() => _audioLoading = true);
     try {
-      final playback = await ref
-          .read(audioRepositoryProvider)
-          .playback(recitationId: recitation.id, surah: widget.reference.surah);
-      if (!mounted) return;
-      await ref
-          .read(audioControllerProvider.notifier)
-          .loadPlayback(
-            playback: playback,
-            reciter: recitation.reciter,
-            surahName: '${context.l10n.surah} ${widget.reference.surah}',
-            startAyah: widget.reference.ayah,
-            endAyah: widget.reference.ayah,
-          );
+      final playback = await repository.playback(
+        recitationId: recitation.id,
+        surah: widget.reference.surah,
+      );
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: recitation.reciter,
+        surahName: surahName,
+        startAyah: widget.reference.ayah,
+        endAyah: widget.reference.ayah,
+      );
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (mounted) {
+      if (_isCurrentAudioRequest(scope, controller, request)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
       }
     } finally {
-      if (mounted) setState(() => _audioLoading = false);
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoading = false);
+      }
     }
   }
 
+  bool _isCurrentAudioRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request,
+  ) {
+    return mounted &&
+        request == _audioRequest &&
+        ref.read(sessionProvider).valueOrNull?.userId == scope.userId &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
+        identical(ref.read(audioControllerProvider.notifier), controller);
+  }
+
   Future<void> _toggleBookmark() async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final request = ++_bookmarkRequest;
     setState(() => _bookmarkLoading = true);
     try {
       final active = await ref
@@ -505,8 +577,9 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             widget.reference.surah,
             widget.reference.ayah,
             page: widget.page,
+            accountScope: scope,
           );
-      if (!mounted) return;
+      if (!_isCurrentBookmark(scope, request) || !mounted) return;
       setState(() => _bookmarked = active);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -515,20 +588,43 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           ),
         ),
       );
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (mounted) _showContentError();
+      if (_isCurrentBookmark(scope, request) && mounted) _showContentError();
     } finally {
-      if (mounted) setState(() => _bookmarkLoading = false);
+      if (mounted && request == _bookmarkRequest) {
+        setState(() => _bookmarkLoading = false);
+      }
     }
   }
 
+  bool _isCurrentAccount(AccountScopeSnapshot scope) {
+    return mounted &&
+        _ownerId == scope.userId &&
+        ref.read(sessionProvider).valueOrNull?.userId == scope.userId &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope);
+  }
+
+  bool _isCurrentLoad(AccountScopeSnapshot scope, int request) =>
+      request == _loadRequest && _isCurrentAccount(scope);
+
+  bool _isCurrentBookmark(AccountScopeSnapshot scope, int request) =>
+      request == _bookmarkRequest && _isCurrentAccount(scope);
+
   Future<void> _changeTranslation(int sourceId) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final request = ++_translationRequest;
     setState(() => _translationSourceId = sourceId);
     try {
       final translations = await ref
           .read(quranRepositoryProvider)
           .translations(sourceId: sourceId, surah: widget.reference.surah);
-      if (!mounted || _details == null || _translationSourceId != sourceId) {
+      if (request != _translationRequest ||
+          !_isCurrentAccount(scope) ||
+          _details == null ||
+          _translationSourceId != sourceId) {
         return;
       }
       setState(() {
@@ -544,17 +640,27 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             .setPreferredTranslationSource(sourceId),
       );
     } on Object {
-      if (mounted) _showContentError();
+      if (request == _translationRequest && _isCurrentAccount(scope)) {
+        _showContentError();
+      }
     }
   }
 
   Future<void> _changeTafsir(int sourceId) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final request = ++_tafsirRequest;
     setState(() => _tafsirSourceId = sourceId);
     try {
       final tafsirs = await ref
           .read(quranRepositoryProvider)
           .tafsirs(sourceId: sourceId, surah: widget.reference.surah);
-      if (!mounted || _details == null || _tafsirSourceId != sourceId) return;
+      if (request != _tafsirRequest ||
+          !_isCurrentAccount(scope) ||
+          _details == null ||
+          _tafsirSourceId != sourceId) {
+        return;
+      }
       setState(() {
         _details = _details!.withTafsir(
           tafsirs
@@ -571,7 +677,9 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             .setPreferredTafsirSource(sourceId),
       );
     } on Object {
-      if (mounted) _showContentError();
+      if (request == _tafsirRequest && _isCurrentAccount(scope)) {
+        _showContentError();
+      }
     }
   }
 

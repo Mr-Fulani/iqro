@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
@@ -114,7 +115,17 @@ class ShareRepository {
     required String fallbackTitle,
     required String fallbackMessage,
     required String fallbackCta,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    // Capture the private-account boundary before the public config request.
+    // Otherwise a response started by A could resume after a handoff and
+    // create a personalized referral link for B.
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final initialSession = _auth.current;
+    final referralEligible =
+        initialSession?.userId == scope.userId &&
+        initialSession?.isVerified == true;
     final fallback = ShareExperience(
       title: fallbackTitle,
       message: fallbackMessage,
@@ -130,6 +141,7 @@ class ShareRepository {
           public: true,
         ),
       );
+      _database.ensureCurrent(scope);
       if (response['available'] != true || response['campaign'] is! Map) {
         return fallback;
       }
@@ -144,15 +156,21 @@ class ShareRepository {
         configVersion: campaign['config_version']?.toString(),
         referralEnabled: campaign['referral_enabled'] == true,
       );
-      final session = _auth.current;
-      if (experience.referralEnabled && session?.isVerified == true) {
+      if (experience.referralEnabled && referralEligible) {
         try {
+          _database.ensureCurrent(scope);
+          final session = _auth.current;
+          if (session?.userId != scope.userId || session?.isVerified != true) {
+            return experience;
+          }
           final referral = jsonMap(
             await _api.post(
               '/me/referrals/links',
               data: <String, Object?>{'campaign_key': experience.campaignKey},
+              accountScope: scope,
             ),
           );
+          _database.ensureCurrent(scope);
           final code = referral['code']?.toString();
           final shortUrl = referral['short_url']?.toString();
           if (code != null && shortUrl != null) {
@@ -161,29 +179,46 @@ class ShareRepository {
               shortUrl: shortUrl,
             );
           }
+        } on AccountScopeChanged {
+          rethrow;
         } on Object {
           // Personalization must never block the ordinary share flow.
         }
       }
       return experience;
+    } on AccountScopeChanged {
+      rethrow;
     } on Object {
       return fallback;
     }
   }
 
-  Future<ReferralSummary?> summary(String? campaignKey) async {
-    if (_auth.current?.isVerified != true) return null;
+  Future<ReferralSummary?> summary(
+    String? campaignKey, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     try {
-      return ReferralSummary.fromJson(
+      _database.ensureCurrent(scope);
+      final session = _auth.current;
+      if (session?.userId != scope.userId || session?.isVerified != true) {
+        return null;
+      }
+      final summary = ReferralSummary.fromJson(
         jsonMap(
           await _api.get(
             '/me/referrals/summary',
             query: campaignKey == null
                 ? null
                 : <String, Object?>{'campaign': campaignKey},
+            accountScope: scope,
           ),
         ),
       );
+      _database.ensureCurrent(scope);
+      return summary;
+    } on AccountScopeChanged {
+      rethrow;
     } on Object {
       return null;
     }
@@ -193,7 +228,12 @@ class ShareRepository {
     ShareExperience experience, {
     required String sourceScreen,
     Rect? sharePositionOrigin,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    final scope = experience.campaignKey == null
+        ? null
+        : accountScope ?? await _database.captureAccount();
+    if (scope != null) _database.ensureCurrent(scope);
     final result = await SharePlus.instance.share(
       ShareParams(
         subject: experience.title,
@@ -202,7 +242,7 @@ class ShareRepository {
         sharePositionOrigin: sharePositionOrigin,
       ),
     );
-    if (experience.campaignKey != null) {
+    if (scope != null) {
       await _enqueueEvent(
         experience: experience,
         action: 'open-system-share',
@@ -212,6 +252,7 @@ class ShareRepository {
           ShareResultStatus.unavailable => 'unavailable',
         },
         sourceScreen: sourceScreen,
+        accountScope: scope,
       );
     }
     return result;
@@ -220,13 +261,17 @@ class ShareRepository {
   Future<void> trackCopy(
     ShareExperience experience, {
     required String sourceScreen,
+    AccountScopeSnapshot? accountScope,
   }) async {
     if (experience.campaignKey == null) return;
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
     await _enqueueEvent(
       experience: experience,
       action: 'copy-link',
       result: 'copied',
       sourceScreen: sourceScreen,
+      accountScope: scope,
     );
   }
 
@@ -235,10 +280,12 @@ class ShareRepository {
     required String action,
     required String result,
     required String sourceScreen,
+    required AccountScopeSnapshot accountScope,
   }) async {
     try {
       final package = await _packageMetadata();
       final client = await _clientMetadata();
+      _database.ensureCurrent(accountScope);
       final id = _uuid.v7();
       final payload = <String, Object?>{
         'client_event_id': id,
@@ -261,8 +308,9 @@ class ShareRepository {
         operationId: id,
         entityType: 'share_event',
         payload: payload,
+        accountScope: accountScope,
       );
-      unawaited(_deliverEvent(id, payload));
+      unawaited(_deliverEvent(id, payload, accountScope));
     } on Object {
       // Analytics must never make sharing or copying appear to fail.
     }
@@ -303,13 +351,22 @@ class ShareRepository {
     );
   }
 
-  Future<void> _deliverEvent(String id, Map<String, Object?> payload) async {
+  Future<void> _deliverEvent(
+    String id,
+    Map<String, Object?> payload,
+    AccountScopeSnapshot scope,
+  ) async {
     try {
-      await _api.post('/share/events', data: payload);
-      await _database.acknowledgeOutbox(id);
+      await _api.post('/share/events', data: payload, accountScope: scope);
+      _database.ensureCurrent(scope);
+      await _database.acknowledgeOutbox(id, accountScope: scope);
     } on Object catch (error) {
       try {
-        await _database.markOutboxFailure(id, error.toString());
+        await _database.markOutboxFailure(
+          id,
+          error.toString(),
+          accountScope: scope,
+        );
       } on Object {
         // The durable outbox will be retried by the background sync worker.
       }

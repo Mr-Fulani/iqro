@@ -4,20 +4,57 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import '../quran/quran_models.dart';
 import 'memorization_repository.dart';
 
-class MemorizationScreen extends ConsumerStatefulWidget {
+class MemorizationScreen extends ConsumerWidget {
   const MemorizationScreen({super.key});
 
   @override
-  ConsumerState<MemorizationScreen> createState() => _MemorizationScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionState = ref.watch(sessionProvider);
+    final ownerId = sessionState.isLoading
+        ? null
+        : sessionState.valueOrNull?.userId;
+    final database = ref.watch(localDatabaseProvider);
+    final currentScope = database.accountScope.current;
+    final accountScope = currentScope?.userId == ownerId ? currentScope : null;
+    final controller = ref.watch(memorizationProvider.notifier);
+    return _MemorizationScreenBody(
+      key: ValueKey<String>(
+        '${accountScope?.userId ?? '<none>'}:${accountScope?.epoch ?? -1}',
+      ),
+      database: database,
+      accountScope: accountScope,
+      controller: controller,
+    );
+  }
 }
 
-class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
+class _MemorizationScreenBody extends ConsumerStatefulWidget {
+  const _MemorizationScreenBody({
+    required this.database,
+    required this.accountScope,
+    required this.controller,
+    super.key,
+  });
+
+  final LocalDatabase database;
+  final AccountScopeSnapshot? accountScope;
+  final MemorizationController controller;
+
+  @override
+  ConsumerState<_MemorizationScreenBody> createState() =>
+      _MemorizationScreenBodyState();
+}
+
+class _MemorizationScreenBodyState
+    extends ConsumerState<_MemorizationScreenBody> {
   var _editing = false;
   var _saving = false;
   var _selectedSurah = 1;
@@ -26,6 +63,7 @@ class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
   var _dailyRepetitions = 5;
   var _pauseSeconds = 2;
   String? _recitationId;
+  var _requestGeneration = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +72,8 @@ class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
       appBar: IqroTopBar(title: context.l10n.memorizationTitle),
       body: state.when(
         loading: () => const IqroLoading(),
-        error: (error, stack) => IqroAsyncError(
-          title: context.l10n.networkError,
-          onRetry: ref.read(memorizationProvider.notifier).reload,
-        ),
+        error: (error, stack) =>
+            IqroAsyncError(title: context.l10n.networkError, onRetry: _reload),
         data: _buildDashboard,
       ),
     );
@@ -111,6 +147,8 @@ class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
   }
 
   Future<void> _savePlan(MemorizationDashboard dashboard) async {
+    if (!_isCurrent() || _saving) return;
+    final request = ++_requestGeneration;
     final ayahs = ref.read(ayahsProvider(_selectedSurah)).valueOrNull;
     final start = ayahs?.where((item) => item.number == _startAyah).firstOrNull;
     final end = ayahs?.where((item) => item.number == _endAyah).firstOrNull;
@@ -120,43 +158,49 @@ class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
     }
     setState(() => _saving = true);
     try {
-      await ref
-          .read(memorizationProvider.notifier)
-          .savePlan(
-            MemorizationPlanDraft(
-              startAyahId: start.id,
-              endAyahId: end.id,
-              recitationId: _recitationId,
-              dailyRepetitions: _dailyRepetitions,
-              pauseSeconds: _pauseSeconds,
-            ),
-            baseRevision: dashboard.plan?.revision ?? 0,
-          );
+      await widget.controller.savePlan(
+        MemorizationPlanDraft(
+          startAyahId: start.id,
+          endAyahId: end.id,
+          recitationId: _recitationId,
+          dailyRepetitions: _dailyRepetitions,
+          pauseSeconds: _pauseSeconds,
+        ),
+        baseRevision: dashboard.plan?.revision ?? 0,
+      );
       if (!mounted) return;
+      if (!_isCurrent(request)) return;
       setState(() => _editing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.memorizationPlanSaved)),
       );
     } on Object {
-      if (mounted) _showError(context.l10n.networkError);
+      if (mounted && _isCurrent(request)) {
+        _showError(context.l10n.networkError);
+      }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (_isCurrent(request)) setState(() => _saving = false);
     }
   }
 
   Future<void> _assess(MemorizationAssessment assessment) async {
-    if (_saving) return;
+    if (_saving || !_isCurrent()) return;
+    final request = ++_requestGeneration;
     setState(() => _saving = true);
     try {
-      await ref.read(memorizationProvider.notifier).assess(assessment);
+      await widget.controller.assess(assessment);
     } on Object {
-      if (mounted) _showError(context.l10n.networkError);
+      if (mounted && _isCurrent(request)) {
+        _showError(context.l10n.networkError);
+      }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (_isCurrent(request)) setState(() => _saving = false);
     }
   }
 
   Future<void> _confirmReset() async {
+    if (_saving || !_isCurrent()) return;
+    final request = ++_requestGeneration;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -174,15 +218,41 @@ class _MemorizationScreenState extends ConsumerState<MemorizationScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (!mounted) return;
+    if (!_isCurrent(request) || confirmed != true) return;
     setState(() => _saving = true);
     try {
-      await ref.read(memorizationProvider.notifier).reset();
+      await widget.controller.reset();
     } on Object {
-      if (mounted) _showError(context.l10n.networkError);
+      if (mounted && _isCurrent(request)) {
+        _showError(context.l10n.networkError);
+      }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (_isCurrent(request)) setState(() => _saving = false);
     }
+  }
+
+  void _reload() {
+    if (_isCurrent()) unawaited(widget.controller.reload());
+  }
+
+  bool _isCurrent([int? request]) {
+    if (!mounted) return false;
+    if (request != null && request != _requestGeneration) return false;
+    final scope = widget.accountScope;
+    if (scope == null || !widget.database.accountScope.isCurrent(scope)) {
+      return false;
+    }
+    return identical(
+      widget.controller,
+      ref.read(memorizationProvider.notifier),
+    );
+  }
+
+  @override
+  void dispose() {
+    _requestGeneration += 1;
+    super.dispose();
   }
 
   void _showError(String message) {

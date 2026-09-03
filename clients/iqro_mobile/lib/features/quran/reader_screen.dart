@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -42,16 +44,24 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   var _restoringPosition = false;
   var _readerWasDragged = false;
   int? _lastPersistedAyah;
+  AccountScopeKey? _accountKey;
+  var _audioRequest = 0;
+  AccountScopeSnapshot? _initialAccountScope;
 
   @override
   void initState() {
     super.initState();
     _selectedAyah = widget.initialAyah;
-    _loadBookmarks();
+    _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
+    _accountKey = _initialAccountScope == null
+        ? null
+        : accountScopeKey(_initialAccountScope!);
+    if (_accountKey != null) _loadBookmarks(_accountKey!);
   }
 
   @override
   void dispose() {
+    _audioRequest += 1;
     _scrollController.dispose();
     super.dispose();
   }
@@ -64,9 +74,23 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     unawaited(_loadReaderContent());
   }
 
-  Future<void> _loadBookmarks() async {
-    final rows = await ref.read(quranRepositoryProvider).bookmarks();
-    if (!mounted) return;
+  Future<void> _loadBookmarks(AccountScopeKey expectedAccount) async {
+    late final List<Map<String, Object?>> rows;
+    try {
+      rows = await ref.read(quranRepositoryProvider).bookmarks();
+    } on AccountScopeChanged {
+      // A rapid account switch invalidates the scoped read. The next owner
+      // schedules its own reload from build().
+      return;
+    } on Object catch (error, stack) {
+      if (_isCurrentKey(expectedAccount)) {
+        FlutterError.reportError(
+          FlutterErrorDetails(exception: error, stack: stack),
+        );
+      }
+      return;
+    }
+    if (!_isCurrentKey(expectedAccount)) return;
     setState(() {
       _bookmarks
         ..clear()
@@ -80,6 +104,21 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeAccount = ref.watch(activeAccountScopeKeyProvider);
+    if (activeAccount != _accountKey) {
+      _accountKey = activeAccount;
+      _audioRequest += 1;
+      _audioLoadingAyah = null;
+      _bookmarks.clear();
+      _lastPersistedAyah = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentAccountKey() == activeAccount) {
+          context.go('/app?tab=1');
+        }
+      });
+      // Never paint or persist the previous account's route-derived location.
+      return const Scaffold(body: IqroLoading());
+    }
     final ayahs = ref.watch(ayahsProvider(widget.surah));
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final audio = ref.watch(
@@ -211,10 +250,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   void _schedulePositionRestore(List<QuranAyah> items) {
     if (items.isEmpty) return;
+    final scope = _initialAccountScope;
+    if (scope == null) return;
     if (!_restoreScheduled) {
       _restoreScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_restorePosition(items));
+        if (mounted) unawaited(_restorePosition(items, scope));
       });
       return;
     }
@@ -222,13 +263,17 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       _contentRestoreScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_readerWasDragged) {
-          unawaited(_restorePosition(items));
+          unawaited(_restorePosition(items, scope));
         }
       });
     }
   }
 
-  Future<void> _restorePosition(List<QuranAyah> items) async {
+  Future<void> _restorePosition(
+    List<QuranAyah> items,
+    AccountScopeSnapshot scope,
+  ) async {
+    if (!_isCurrentAccount(scope)) return;
     final target = items
         .where((item) => item.number == widget.initialAyah)
         .firstOrNull;
@@ -236,7 +281,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       return;
     }
     if (target.number <= 1) {
-      await _persistPosition(target);
+      await _persistPosition(target, accountScope: scope);
       return;
     }
     _restoringPosition = true;
@@ -251,7 +296,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 ? Duration.zero
                 : const Duration(milliseconds: 180),
           );
-          await _persistPosition(target);
+          if (!_isCurrentAccount(scope)) return;
+          await _persistPosition(target, accountScope: scope);
           return;
         }
         final ratio = (target.number - 1) / items.length;
@@ -260,14 +306,17 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           offset.clamp(0, _scrollController.position.maxScrollExtent),
         );
         await WidgetsBinding.instance.endOfFrame;
+        if (!_isCurrentAccount(scope)) return;
       }
-      await _persistPosition(target);
+      await _persistPosition(target, accountScope: scope);
     } finally {
       _restoringPosition = false;
     }
   }
 
   Future<void> _persistTopVisibleAyah(List<QuranAyah> items) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
     final viewportContext = _viewportKey.currentContext;
     if (viewportContext == null) return;
     final viewportBox = viewportContext.findRenderObject();
@@ -297,27 +346,45 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         break;
       }
     }
-    await _persistPosition(candidate ?? fallback);
+    await _persistPosition(candidate ?? fallback, accountScope: scope);
   }
 
-  Future<void> _persistPosition(QuranAyah? ayah) async {
+  Future<void> _persistPosition(
+    QuranAyah? ayah, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     if (ayah == null || ayah.number == _lastPersistedAyah) return;
+    final scope =
+        accountScope ?? ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final previousAyah = _lastPersistedAyah;
     _lastPersistedAyah = ayah.number;
-    await ref
-        .read(quranRepositoryProvider)
-        .savePosition(
-          surah: ayah.surahNumber,
-          ayah: ayah.number,
-          page: ayah.pages.firstOrNull ?? 1,
-        );
-    ref.invalidate(readingPositionProvider);
+    try {
+      await ref
+          .read(quranRepositoryProvider)
+          .savePosition(
+            surah: ayah.surahNumber,
+            ayah: ayah.number,
+            page: ayah.pages.firstOrNull ?? 1,
+            accountScope: scope,
+          );
+      if (_isCurrentAccount(scope)) {
+        ref.invalidate(readingPositionProvider(accountScopeKey(scope)));
+      }
+    } on AccountScopeChanged {
+      if (_lastPersistedAyah == ayah.number) {
+        _lastPersistedAyah = previousAyah;
+      }
+    }
   }
 
   Future<void> _select(QuranAyah ayah) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
     setState(() => _selectedAyah = ayah.number);
     _lastPersistedAyah = null;
-    await _persistPosition(ayah);
-    if (!mounted) return;
+    await _persistPosition(ayah, accountScope: scope);
+    if (!_isCurrentAccount(scope) || !mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -335,6 +402,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   }
 
   Future<void> _toggleBookmark(QuranAyah ayah) async {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
     try {
       final active = await ref
           .read(quranRepositoryProvider)
@@ -342,8 +411,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             ayah.surahNumber,
             ayah.number,
             page: ayah.pages.firstOrNull,
+            accountScope: scope,
           );
-      if (!mounted) return;
+      if (!_isCurrentAccount(scope) || !mounted) return;
       setState(
         () => active
             ? _bookmarks.add(ayah.number)
@@ -356,23 +426,45 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           ),
         ),
       );
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (mounted) _showOptionalContentError();
+      if (_isCurrentAccount(scope) && mounted) _showOptionalContentError();
     }
+  }
+
+  bool _isCurrentAccount(AccountScopeSnapshot scope) {
+    return mounted &&
+        _accountKey == accountScopeKey(scope) &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope);
+  }
+
+  bool _isCurrentKey(AccountScopeKey key) =>
+      mounted && _accountKey == key && _currentAccountKey() == key;
+
+  AccountScopeKey? _currentAccountKey() {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    return scope == null ? null : accountScopeKey(scope);
   }
 
   Future<void> _play(QuranAyah ayah, String surahName) async {
     if (_audioLoadingAyah != null) return;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final repository = ref.read(audioRepositoryProvider);
+    final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
+    final preferredRecitationId = ref
+        .read(appPreferencesProvider)
+        .preferredRecitationId;
+    final request = ++_audioRequest;
     setState(() => _audioLoadingAyah = ayah.number);
     try {
-      final repository = ref.read(audioRepositoryProvider);
       final recitations = (await repository.recitations())
           .where((item) => item.timingsAvailable)
           .toList(growable: false);
-      final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
-      final preferredRecitationId = ref
-          .read(appPreferencesProvider)
-          .preferredRecitationId;
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
       final recitation =
           recitations
               .where((item) => item.id == preferredRecitationId)
@@ -389,24 +481,39 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         recitationId: recitation.id,
         surah: ayah.surahNumber,
       );
-      await ref
-          .read(audioControllerProvider.notifier)
-          .loadPlayback(
-            playback: playback,
-            reciter: recitation.reciter,
-            surahName: surahName,
-            startAyah: ayah.number,
-            endAyah: ayah.number,
-          );
+      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: recitation.reciter,
+        surahName: surahName,
+        startAyah: ayah.number,
+        endAyah: ayah.number,
+      );
+    } on AccountScopeChanged {
+      return;
     } on Object {
-      if (mounted) {
+      if (_isCurrentAudioRequest(scope, controller, request)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
       }
     } finally {
-      if (mounted) setState(() => _audioLoadingAyah = null);
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoadingAyah = null);
+      }
     }
+  }
+
+  bool _isCurrentAudioRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request,
+  ) {
+    return mounted &&
+        request == _audioRequest &&
+        ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
+        identical(ref.read(audioControllerProvider.notifier), controller);
   }
 
   Future<void> _loadReaderContent() async {

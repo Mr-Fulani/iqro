@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 
@@ -44,6 +45,25 @@ void main() {
       expect(database.states['daily_plan']?['achieved'], 0);
     },
   );
+
+  test(
+    'an action captured by A cannot update the plan after switching to B',
+    () async {
+      final database = _FakeLocalDatabase(<String, Map<String, Object?>>{
+        'daily_plan': const DailyPlan.initial(target: 6).toJson(),
+      });
+      final repository = PlanRepository(database);
+      final scopeA = await database.captureAccount();
+      database.accountScope.activate('owner-b');
+
+      await expectLater(
+        repository.addPages(2, accountScope: scopeA),
+        throwsA(isA<AccountScopeChanged>()),
+      );
+
+      expect(database.states['daily_plan']?['achieved'], 0);
+    },
+  );
 }
 
 class _FakeLocalDatabase implements LocalDatabase {
@@ -53,10 +73,31 @@ class _FakeLocalDatabase implements LocalDatabase {
   final Map<String, Map<String, Object?>> states;
 
   @override
-  Future<Map<String, Object?>?> readState(String key) async => states[key];
+  final AccountScope accountScope = AccountScope.forTesting('test-owner');
 
   @override
-  Future<void> writeState(String key, Map<String, Object?> value) async {
+  Future<AccountScopeSnapshot> captureAccount() => accountScope.capture();
+
+  @override
+  void ensureCurrent(AccountScopeSnapshot scope) =>
+      accountScope.ensureCurrent(scope);
+
+  @override
+  Future<Map<String, Object?>?> readState(
+    String key, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (accountScope != null) ensureCurrent(accountScope);
+    return states[key];
+  }
+
+  @override
+  Future<void> writeState(
+    String key,
+    Map<String, Object?> value, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (accountScope != null) ensureCurrent(accountScope);
     states[key] = value;
   }
 

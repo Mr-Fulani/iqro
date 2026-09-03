@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
@@ -388,10 +389,22 @@ class MemorizationPlanDraft {
 }
 
 abstract interface class MemorizationRemoteGateway {
-  Future<Object?> dashboard(String timezoneName);
-  Future<Object?> savePlan(Map<String, Object?> payload);
-  Future<Object?> createSession(Map<String, Object?> payload);
-  Future<void> resetToday(String timezoneName);
+  Future<Object?> dashboard(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> savePlan(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> createSession(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<void> resetToday(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  });
 }
 
 class ApiMemorizationRemoteGateway implements MemorizationRemoteGateway {
@@ -399,24 +412,40 @@ class ApiMemorizationRemoteGateway implements MemorizationRemoteGateway {
   final ApiClient _api;
 
   @override
-  Future<Object?> dashboard(String timezoneName) => _api.get(
+  Future<Object?> dashboard(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.get(
     '/me/memorization',
     query: <String, Object?>{'timezone_name': timezoneName, 'recent_days': 14},
+    accountScope: accountScope,
   );
 
   @override
-  Future<Object?> savePlan(Map<String, Object?> payload) =>
-      _api.put('/me/memorization', data: payload);
+  Future<Object?> savePlan(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.put('/me/memorization', data: payload, accountScope: accountScope);
 
   @override
-  Future<Object?> createSession(Map<String, Object?> payload) =>
-      _api.post('/me/memorization-sessions', data: payload);
+  Future<Object?> createSession(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.post(
+    '/me/memorization-sessions',
+    data: payload,
+    accountScope: accountScope,
+  );
 
   @override
-  Future<void> resetToday(String timezoneName) async {
+  Future<void> resetToday(
+    String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
     await _api.delete(
       '/me/memorization-sessions?timezone_name='
       '${Uri.encodeQueryComponent(timezoneName)}',
+      accountScope: accountScope,
     );
   }
 }
@@ -440,15 +469,29 @@ class MemorizationRepository {
   final Future<String> Function() _timezoneLoader;
   final Uuid _uuid;
 
-  Future<MemorizationDashboard> load() async {
+  Future<MemorizationDashboard> load({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    return _loadFor(scope);
+  }
+
+  Future<MemorizationDashboard> _loadFor(AccountScopeSnapshot scope) async {
     final timezoneName = await _safeTimezone();
+    _database.ensureCurrent(scope);
     try {
-      final payload = await _remote.dashboard(timezoneName);
+      final payload = await _remote.dashboard(
+        timezoneName,
+        accountScope: scope,
+      );
+      _database.ensureCurrent(scope);
       final dashboard = MemorizationDashboard.fromJson(jsonMap(payload));
-      await _store(dashboard);
+      await _store(dashboard, scope);
       return dashboard;
     } on Object {
-      final cached = await _cached();
+      _database.ensureCurrent(scope);
+      final cached = await _cached(scope);
       if (cached != null) return cached;
       rethrow;
     }
@@ -457,7 +500,10 @@ class MemorizationRepository {
   Future<MemorizationDashboard> savePlan(
     MemorizationPlanDraft draft, {
     int baseRevision = 0,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
     if (draft.startAyahId.isEmpty || draft.endAyahId.isEmpty) {
       throw const FormatException('Memorization ayah range is incomplete');
     }
@@ -468,6 +514,7 @@ class MemorizationRepository {
       throw const FormatException('Pause is out of range');
     }
     final timezoneName = await _safeTimezone();
+    _database.ensureCurrent(scope);
     final payload = await _remote.savePlan(<String, Object?>{
       'start_ayah_id': draft.startAyahId,
       'end_ayah_id': draft.endAyahId,
@@ -477,21 +524,25 @@ class MemorizationRepository {
       'timezone_name': timezoneName,
       'base_revision': baseRevision,
       'client_updated_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    }, accountScope: scope);
+    _database.ensureCurrent(scope);
     final plan = MemorizationPlan.fromJson(jsonMap(payload));
     final current =
-        await _cached() ?? MemorizationDashboard.empty(timezoneName);
+        await _cached(scope) ?? MemorizationDashboard.empty(timezoneName);
     final optimistic = current.withPlan(plan);
-    await _store(optimistic);
-    return _refreshOr(optimistic);
+    await _store(optimistic, scope);
+    return _refreshOr(optimistic, scope);
   }
 
   Future<MemorizationDashboard> assess(
     MemorizationAssessment assessment, {
     int repetitions = 1,
     Duration duration = Duration.zero,
+    AccountScopeSnapshot? accountScope,
   }) async {
-    final current = await _cached() ?? await load();
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final current = await _cached(scope) ?? await _loadFor(scope);
     final plan = current.plan;
     if (plan == null) throw const FormatException('Memorization plan missing');
     final now = DateTime.now().toUtc();
@@ -504,33 +555,46 @@ class MemorizationRepository {
       'timezone_name': current.timezoneName,
       'local_date': current.today.localDate,
       'client_updated_at': now.toIso8601String(),
-    });
+    }, accountScope: scope);
+    _database.ensureCurrent(scope);
     final session = MemorizationSession.fromJson(jsonMap(payload));
     final optimistic = current.withToday(current.today.add(session));
-    await _store(optimistic);
-    return _refreshOr(optimistic);
+    await _store(optimistic, scope);
+    return _refreshOr(optimistic, scope);
   }
 
-  Future<MemorizationDashboard> reset() async {
-    final current = await _cached() ?? await load();
-    await _remote.resetToday(current.timezoneName);
+  Future<MemorizationDashboard> reset({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final current = await _cached(scope) ?? await _loadFor(scope);
+    await _remote.resetToday(current.timezoneName, accountScope: scope);
+    _database.ensureCurrent(scope);
     final optimistic = current.withToday(current.today.reset());
-    await _store(optimistic);
-    return _refreshOr(optimistic);
+    await _store(optimistic, scope);
+    return _refreshOr(optimistic, scope);
   }
 
   Future<MemorizationDashboard> _refreshOr(
     MemorizationDashboard fallback,
+    AccountScopeSnapshot scope,
   ) async {
     try {
-      return await load();
+      return await _loadFor(scope);
+    } on AccountScopeChanged {
+      rethrow;
     } on Object {
+      _database.ensureCurrent(scope);
       return fallback;
     }
   }
 
-  Future<MemorizationDashboard?> _cached() async {
-    final cached = await _database.readCache(_cacheKey);
+  Future<MemorizationDashboard?> _cached(AccountScopeSnapshot scope) async {
+    final cached = await _database.readAccountCache(
+      _cacheKey,
+      accountScope: scope,
+    );
     if (cached == null) return null;
     try {
       return MemorizationDashboard.fromJson(
@@ -542,10 +606,14 @@ class MemorizationRepository {
     }
   }
 
-  Future<void> _store(MemorizationDashboard dashboard) => _database.writeCache(
+  Future<void> _store(
+    MemorizationDashboard dashboard,
+    AccountScopeSnapshot scope,
+  ) => _database.writeAccountCache(
     _cacheKey,
     dashboard.toJson(),
     maxAge: const Duration(days: 30),
+    accountScope: scope,
   );
 
   Future<String> _safeTimezone() async {

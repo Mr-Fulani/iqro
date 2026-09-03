@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 
@@ -12,6 +13,14 @@ class PlanScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planProvider);
+    final database = ref.watch(localDatabaseProvider);
+    final accountKey = ref.watch(activeAccountScopeKeyProvider);
+    final scope = database.accountScope.current;
+    final controller = ref.read(planProvider.notifier);
+    final canMutate =
+        scope != null &&
+        accountKey == accountScopeKey(scope) &&
+        controller.isBoundTo(scope);
     final playerActive = ref.watch(
       audioControllerProvider.select((value) => value.active),
     );
@@ -24,7 +33,9 @@ class PlanScreen extends ConsumerWidget {
         loading: () => const IqroLoading(),
         error: (error, stack) => IqroAsyncError(
           title: context.l10n.networkError,
-          onRetry: ref.read(planProvider.notifier).reload,
+          onRetry: () {
+            if (canMutate) controller.reload();
+          },
         ),
         data: (value) {
           final remaining = (value.target - value.achieved).clamp(
@@ -86,7 +97,9 @@ class PlanScreen extends ConsumerWidget {
                   children: <Widget>[
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: () => _addPages(context, ref),
+                        onPressed: canMutate
+                            ? () => _addPages(context, ref, controller, scope)
+                            : null,
                         icon: const Icon(Icons.add),
                         label: Text(context.l10n.manualEntry),
                       ),
@@ -153,7 +166,12 @@ class PlanScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _addPages(BuildContext context, WidgetRef ref) async {
+  Future<void> _addPages(
+    BuildContext context,
+    WidgetRef ref,
+    PlanController controller,
+    AccountScopeSnapshot scope,
+  ) async {
     final value = await showModalBottomSheet<int>(
       context: context,
       builder: (context) => SafeArea(
@@ -184,7 +202,14 @@ class PlanScreen extends ConsumerWidget {
         ),
       ),
     );
-    if (value != null) await ref.read(planProvider.notifier).addPages(value);
+    if (value == null || !context.mounted) return;
+    final database = ref.read(localDatabaseProvider);
+    if (!database.accountScope.isCurrent(scope) ||
+        !controller.isBoundTo(scope) ||
+        !identical(ref.read(planProvider.notifier), controller)) {
+      return;
+    }
+    await controller.addPages(value);
   }
 }
 
@@ -202,13 +227,23 @@ class AfterPrayerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planProvider);
+    final database = ref.watch(localDatabaseProvider);
+    final accountKey = ref.watch(activeAccountScopeKeyProvider);
+    final scope = database.accountScope.current;
+    final controller = ref.read(planProvider.notifier);
+    final canMutate =
+        scope != null &&
+        accountKey == accountScopeKey(scope) &&
+        controller.isBoundTo(scope);
     return Scaffold(
       appBar: IqroTopBar(title: context.l10n.afterPrayerPlan),
       body: plan.when(
         loading: () => const IqroLoading(),
         error: (error, stack) => IqroAsyncError(
           title: context.l10n.networkError,
-          onRetry: ref.read(planProvider.notifier).reload,
+          onRetry: () {
+            if (canMutate) controller.reload();
+          },
         ),
         data: (value) => IqroPage(
           child: Column(
@@ -239,14 +274,12 @@ class AfterPrayerScreen extends ConsumerWidget {
                             ),
                           ),
                           IconButton(
-                            onPressed: entry.value <= 0
+                            onPressed: entry.value <= 0 || !canMutate
                                 ? null
-                                : () => ref
-                                      .read(planProvider.notifier)
-                                      .setPrayerPages(
-                                        entry.key,
-                                        entry.value - 1,
-                                      ),
+                                : () => controller.setPrayerPages(
+                                    entry.key,
+                                    entry.value - 1,
+                                  ),
                             icon: const Icon(Icons.remove_circle_outline),
                           ),
                           SizedBox(
@@ -258,9 +291,12 @@ class AfterPrayerScreen extends ConsumerWidget {
                             ),
                           ),
                           IconButton(
-                            onPressed: () => ref
-                                .read(planProvider.notifier)
-                                .setPrayerPages(entry.key, entry.value + 1),
+                            onPressed: !canMutate
+                                ? null
+                                : () => controller.setPrayerPages(
+                                    entry.key,
+                                    entry.value + 1,
+                                  ),
                             icon: const Icon(Icons.add_circle_outline),
                           ),
                         ],

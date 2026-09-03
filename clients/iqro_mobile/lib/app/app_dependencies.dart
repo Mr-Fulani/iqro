@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/audio/audio_playback_store.dart';
 import '../core/audio/audio_playback_sync_service.dart';
+import '../core/auth/account_scope.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/background/background_maintenance_service.dart';
 import '../core/config/app_config.dart';
@@ -70,8 +71,21 @@ class AppDependencies {
     final config = AppConfig.fromEnvironment();
     final sharedPreferences = await SharedPreferences.getInstance();
     final preferences = PreferencesStore(sharedPreferences);
-    final database = await LocalDatabase.open();
-    final auth = AuthRepository(config: config);
+    final accountScope = AccountScope();
+    final auth = AuthRepository(config: config, accountScope: accountScope);
+    final legacyOwnerId = await auth.legacyOwnerIdForMigration();
+    final database = await LocalDatabase.open(
+      accountScope: accountScope,
+      legacyOwnerId: legacyOwnerId,
+    );
+    accountScope.configure(
+      loader: () async {
+        await auth.ensureSession(locale: preferences.read().locale);
+      },
+      transfer: database.transferAccountData,
+      finalizeTransfer: database.finalizeAccountTransfer,
+    );
+    await auth.loadCachedSession();
     final api = ApiClient(
       config: config,
       authRepository: auth,

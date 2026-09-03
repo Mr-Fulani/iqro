@@ -44,6 +44,72 @@ class SyncOutboxEntry {
         ? Map<String, Object?>.from(raw)
         : const <String, Object?>{};
   }
+
+  String get logicalEntityKey {
+    if (!const <String>{
+      'reading_position',
+      'bookmark',
+      'reminder',
+    }.contains(entityType)) {
+      throw FormatException('Unsupported sync entity type: $entityType');
+    }
+    if (entityType == 'reading_position') {
+      final edition = intent['edition_code']?.toString();
+      if (edition == null || edition.isEmpty) {
+        throw const FormatException('Reading position edition is missing');
+      }
+      return '$entityType:$edition';
+    }
+    final id = entityId;
+    if (id == null || id.isEmpty) {
+      throw const FormatException('Outbox entity identity is missing');
+    }
+    return '$entityType:$id';
+  }
+
+  void ensureMatchesRemoteEntity(Object? raw) {
+    if (raw is! Map) {
+      throw const FormatException('Remote sync entity must be an object');
+    }
+    late final Map<String, Object?> entity;
+    try {
+      entity = Map<String, Object?>.from(raw);
+    } on Object {
+      throw const FormatException('Remote sync entity must be an object');
+    }
+    final type = entity['entity_type']?.toString();
+    if (!const <String>{
+      'reading_position',
+      'bookmark',
+      'reminder',
+    }.contains(type)) {
+      throw FormatException('Unsupported sync entity type: $type');
+    }
+    final revision = (entity['revision'] as num?)?.toInt();
+    if (revision == null || revision < 1) {
+      throw const FormatException('Remote entity revision is invalid');
+    }
+    late final String remoteKey;
+    if (type == 'reading_position') {
+      final edition = entity['edition_code']?.toString();
+      final id = entity['id']?.toString();
+      if (edition == null || edition.isEmpty || id == null || id.isEmpty) {
+        throw const FormatException('Reading position edition is missing');
+      }
+      remoteKey = '$type:$edition';
+    } else {
+      final id = entity['id']?.toString();
+      if (id == null || id.isEmpty) {
+        throw const FormatException('Remote entity identity is missing');
+      }
+      remoteKey = '$type:$id';
+    }
+    if (remoteKey != logicalEntityKey) {
+      throw const FormatException(
+        'Remote sync entity does not match its operation',
+      );
+    }
+  }
 }
 
 enum SyncConflictResolution { rebased, satisfied, unresolved }
@@ -59,11 +125,13 @@ abstract interface class SyncStore {
 
   Future<void> markFailure(String operationId, String error);
 
+  Future<void> rejectDuaFavorite(SyncOutboxEntry operation);
+
   Future<int> readCursor();
 
   Future<void> writeCursor(int cursor);
 
-  Future<void> acceptOperation(String operationId, Object? entity);
+  Future<void> acceptOperation(SyncOutboxEntry operation, Object? entity);
 
   Future<void> applyRemoteEntity(Object? entity);
 
@@ -81,10 +149,14 @@ abstract interface class SyncStore {
 class SqliteSyncStore implements SyncStore {
   SqliteSyncStore(
     this._database, {
+    required String ownerId,
     Uuid uuid = const Uuid(),
     DateTime Function()? now,
-  }) : _uuid = uuid,
-       _now = now ?? _utcNow;
+    void Function()? guard,
+  }) : _ownerId = ownerId,
+       _uuid = uuid,
+       _now = now ?? _utcNow,
+       _guard = guard;
 
   static const _entityTypes = <String>{
     'reading_position',
@@ -93,66 +165,121 @@ class SqliteSyncStore implements SyncStore {
   };
 
   final Database _database;
+  final String _ownerId;
   final Uuid _uuid;
   final DateTime Function() _now;
+  final void Function()? _guard;
 
   @override
   Future<List<SyncOutboxEntry>> pendingAuxiliary({int limit = 100}) async {
+    _guard?.call();
     final rows = await _database.query(
       'outbox',
-      where: "entity_type NOT IN ('reading_position', 'bookmark', 'reminder')",
+      where:
+          "owner_id = ? AND entity_type NOT IN "
+          "('reading_position', 'bookmark', 'reminder')",
+      whereArgs: <Object?>[_ownerId],
       orderBy: 'created_at ASC',
       limit: limit,
     );
+    _guard?.call();
     return rows.map(SyncOutboxEntry.fromRow).toList(growable: false);
   }
 
   @override
   Future<List<SyncOutboxEntry>> pendingEntities({int? limit = 100}) async {
+    _guard?.call();
     final rows = await _database.query(
       'outbox',
-      where: "entity_type IN ('reading_position', 'bookmark', 'reminder')",
+      where:
+          "owner_id = ? AND entity_type IN "
+          "('reading_position', 'bookmark', 'reminder')",
+      whereArgs: <Object?>[_ownerId],
       orderBy: 'created_at ASC',
       limit: limit,
     );
+    _guard?.call();
     return rows.map(SyncOutboxEntry.fromRow).toList(growable: false);
   }
 
   @override
   Future<int> pendingCount() async {
+    _guard?.call();
     final rows = await _database.rawQuery(
-      'SELECT COUNT(*) AS pending_count FROM outbox',
+      'SELECT COUNT(*) AS pending_count FROM outbox WHERE owner_id = ?',
+      <Object?>[_ownerId],
     );
+    _guard?.call();
     return (rows.single['pending_count'] as num?)?.toInt() ?? 0;
   }
 
   @override
   Future<void> acknowledge(String operationId) async {
-    await _database.delete(
-      'outbox',
-      where: 'operation_id = ?',
-      whereArgs: <Object?>[operationId],
-    );
+    await _database.transaction((transaction) async {
+      _guard?.call();
+      await transaction.delete(
+        'outbox',
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[_ownerId, operationId],
+      );
+    });
   }
 
   @override
   Future<void> markFailure(String operationId, String error) async {
-    await _database.rawUpdate(
-      'UPDATE outbox SET attempts = attempts + 1, last_error = ? '
-      'WHERE operation_id = ?',
-      <Object?>[error, operationId],
-    );
+    await _database.transaction((transaction) async {
+      _guard?.call();
+      await transaction.rawUpdate(
+        'UPDATE outbox SET attempts = attempts + 1, last_error = ? '
+        'WHERE owner_id = ? AND operation_id = ?',
+        <Object?>[error, _ownerId, operationId],
+      );
+    });
+  }
+
+  @override
+  Future<void> rejectDuaFavorite(SyncOutboxEntry operation) async {
+    if (operation.entityType != 'dua_favorite') {
+      throw const FormatException('Expected a Dua favorite operation');
+    }
+    final favoriteKey = operation.entityId;
+    if (favoriteKey == null || favoriteKey.isEmpty) {
+      throw const FormatException('Dua favorite identity is missing');
+    }
+    await _database.transaction((transaction) async {
+      _guard?.call();
+      final current = await transaction.query(
+        'outbox',
+        columns: const <String>['operation_id'],
+        where: 'owner_id = ? AND operation_id = ? AND entity_id = ?',
+        whereArgs: <Object?>[_ownerId, operation.operationId, favoriteKey],
+        limit: 1,
+      );
+      if (current.isEmpty) return;
+      await transaction.delete(
+        'favorites',
+        where: 'owner_id = ? AND item_key = ?',
+        whereArgs: <Object?>[_ownerId, favoriteKey],
+      );
+      await transaction.delete(
+        'outbox',
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[_ownerId, operation.operationId],
+      );
+    });
   }
 
   @override
   Future<int> readCursor() async {
+    _guard?.call();
     final rows = await _database.query(
       'app_state',
       columns: const <String>['payload'],
-      where: 'state_key = ?',
-      whereArgs: const <Object?>['sync_cursor'],
+      where: 'owner_id = ? AND state_key = ?',
+      whereArgs: <Object?>[_ownerId, 'sync_cursor'],
       limit: 1,
     );
+    _guard?.call();
     if (rows.isEmpty) return 0;
     final decoded = jsonDecode(rows.single['payload']! as String);
     return decoded is Map ? (decoded['value'] as num?)?.toInt() ?? 0 : 0;
@@ -160,28 +287,48 @@ class SqliteSyncStore implements SyncStore {
 
   @override
   Future<void> writeCursor(int cursor) async {
-    await _writeCursor(_database, cursor);
+    await _database.transaction((transaction) async {
+      _guard?.call();
+      await _writeCursor(transaction, cursor);
+    });
   }
 
   @override
-  Future<void> acceptOperation(String operationId, Object? entity) async {
+  Future<void> acceptOperation(
+    SyncOutboxEntry operation,
+    Object? entity,
+  ) async {
+    final normalized = _entityMap(entity);
+    final expectedKey = _operationKey(operation);
+    operation.ensureMatchesRemoteEntity(normalized);
     await _database.transaction((transaction) async {
+      _guard?.call();
+      final currentRows = await transaction.query(
+        'outbox',
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[_ownerId, operation.operationId],
+        limit: 1,
+      );
+      if (currentRows.isNotEmpty &&
+          _operationKey(SyncOutboxEntry.fromRow(currentRows.single)) !=
+              expectedKey) {
+        throw const FormatException('Accepted sync operation was replaced');
+      }
       await transaction.delete(
         'outbox',
-        where: 'operation_id = ?',
-        whereArgs: <Object?>[operationId],
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[_ownerId, operation.operationId],
       );
-      if (entity != null) {
-        await _applyRemoteWithPendingIntent(transaction, entity);
-      }
+      await _applyRemoteWithPendingIntent(transaction, normalized);
     });
   }
 
   @override
   Future<void> applyRemoteEntity(Object? entity) async {
-    await _database.transaction(
-      (transaction) => _applyRemoteWithPendingIntent(transaction, entity),
-    );
+    await _database.transaction((transaction) async {
+      _guard?.call();
+      await _applyRemoteWithPendingIntent(transaction, entity);
+    });
   }
 
   @override
@@ -193,14 +340,16 @@ class SqliteSyncStore implements SyncStore {
       throw const FormatException('Snapshot cursor must be non-negative');
     }
     final normalized = entities.map(_entityMap).toList(growable: false);
-    final snapshotByKey = <String, Map<String, Object?>>{
-      for (final entity in normalized) _entityKey(entity): entity,
-    };
+    final snapshotByKey = _uniqueSnapshotByKey(normalized);
 
     await _database.transaction((transaction) async {
+      _guard?.call();
       final rows = await transaction.query(
         'outbox',
-        where: "entity_type IN ('reading_position', 'bookmark', 'reminder')",
+        where:
+            "owner_id = ? AND entity_type IN "
+            "('reading_position', 'bookmark', 'reminder')",
+        whereArgs: <Object?>[_ownerId],
         orderBy: 'created_at ASC',
       );
       final latestOperations = <String, SyncOutboxEntry>{};
@@ -215,12 +364,27 @@ class SqliteSyncStore implements SyncStore {
           entry.value,
         );
       }
-      await transaction.delete('reading_positions');
-      await transaction.delete('bookmarks');
-      await transaction.delete('reminders');
+      await transaction.delete(
+        'reading_positions',
+        where: 'owner_id = ?',
+        whereArgs: <Object?>[_ownerId],
+      );
+      await transaction.delete(
+        'bookmarks',
+        where: 'owner_id = ?',
+        whereArgs: <Object?>[_ownerId],
+      );
+      await transaction.delete(
+        'reminders',
+        where: 'owner_id = ?',
+        whereArgs: <Object?>[_ownerId],
+      );
       await transaction.delete(
         'outbox',
-        where: "entity_type IN ('reading_position', 'bookmark', 'reminder')",
+        where:
+            "owner_id = ? AND entity_type IN "
+            "('reading_position', 'bookmark', 'reminder')",
+        whereArgs: <Object?>[_ownerId],
       );
       for (final entity in normalized) {
         await _applyRemoteRow(transaction, entity, authoritative: true);
@@ -250,14 +414,13 @@ class SqliteSyncStore implements SyncStore {
         _entityMap(<String, Object?>{...reminder, 'entity_type': 'reminder'}),
       );
     }
-    final snapshotByKey = <String, Map<String, Object?>>{
-      for (final reminder in normalized) _entityKey(reminder): reminder,
-    };
+    final snapshotByKey = _uniqueSnapshotByKey(normalized);
     await _database.transaction((transaction) async {
+      _guard?.call();
       final rows = await transaction.query(
         'outbox',
-        where: 'entity_type = ?',
-        whereArgs: const <Object?>['reminder'],
+        where: 'owner_id = ? AND entity_type = ?',
+        whereArgs: <Object?>[_ownerId, 'reminder'],
         orderBy: 'created_at ASC',
       );
       final latestOperations = <String, SyncOutboxEntry>{};
@@ -272,11 +435,15 @@ class SqliteSyncStore implements SyncStore {
           entry.value,
         );
       }
-      await transaction.delete('reminders');
+      await transaction.delete(
+        'reminders',
+        where: 'owner_id = ?',
+        whereArgs: <Object?>[_ownerId],
+      );
       await transaction.delete(
         'outbox',
-        where: 'entity_type = ?',
-        whereArgs: const <Object?>['reminder'],
+        where: 'owner_id = ? AND entity_type = ?',
+        whereArgs: <Object?>[_ownerId, 'reminder'],
       );
       for (final reminder in normalized) {
         await _applyRemoteRow(transaction, reminder, authoritative: true);
@@ -309,10 +476,10 @@ class SqliteSyncStore implements SyncStore {
       return SyncConflictResolution.unresolved;
     }
     final rawEntity = result['entity'];
-    final remote = rawEntity is Map
-        ? Map<String, Object?>.from(rawEntity)
-        : null;
+    final remote = rawEntity is Map ? _entityMap(rawEntity) : null;
+    if (remote != null) operation.ensureMatchesRemoteEntity(remote);
     return _database.transaction((transaction) async {
+      _guard?.call();
       final current = await _pendingOperationForOperation(
         transaction,
         operation,
@@ -336,7 +503,7 @@ class SqliteSyncStore implements SyncStore {
               'deleted_at': null,
             }
           : remote;
-      return _rebaseOperation(
+      final resolution = await _rebaseOperation(
         transaction,
         current,
         baseline,
@@ -347,6 +514,7 @@ class SqliteSyncStore implements SyncStore {
                 reason == 'entity_id_not_reusable'),
         localDesired: localDesired,
       );
+      return resolution;
     });
   }
 
@@ -381,8 +549,8 @@ class SqliteSyncStore implements SyncStore {
     final type = entity['entity_type']!.toString();
     final rows = await transaction.query(
       'outbox',
-      where: 'entity_type = ?',
-      whereArgs: <Object?>[type],
+      where: 'owner_id = ? AND entity_type = ?',
+      whereArgs: <Object?>[_ownerId, type],
       orderBy: 'created_at DESC',
     );
     final key = _entityKey(entity);
@@ -399,8 +567,8 @@ class SqliteSyncStore implements SyncStore {
   ) async {
     final rows = await transaction.query(
       'outbox',
-      where: 'entity_type = ?',
-      whereArgs: <Object?>[operation.entityType],
+      where: 'owner_id = ? AND entity_type = ?',
+      whereArgs: <Object?>[_ownerId, operation.entityType],
       orderBy: 'created_at DESC, rowid DESC',
     );
     final key = _operationKey(operation);
@@ -434,8 +602,8 @@ class SqliteSyncStore implements SyncStore {
     if (operation.action == 'delete' && (remote == null || remoteDeleted)) {
       await transaction.delete(
         'outbox',
-        where: 'operation_id = ?',
-        whereArgs: <Object?>[operation.operationId],
+        where: 'owner_id = ? AND operation_id = ?',
+        whereArgs: <Object?>[_ownerId, operation.operationId],
       );
       await _removeLocalEntity(transaction, operation.entityType, entityId);
       if (remote != null) {
@@ -485,8 +653,11 @@ class SqliteSyncStore implements SyncStore {
 
     await transaction.delete(
       'outbox',
-      where: 'entity_type = ? AND (entity_id = ? OR operation_id = ?)',
+      where:
+          'owner_id = ? AND entity_type = ? '
+          'AND (entity_id = ? OR operation_id = ?)',
       whereArgs: <Object?>[
+        _ownerId,
         operation.entityType,
         operation.entityId,
         operation.operationId,
@@ -500,6 +671,7 @@ class SqliteSyncStore implements SyncStore {
       );
     }
     await transaction.insert('outbox', <String, Object?>{
+      'owner_id': _ownerId,
       'operation_id': operationId,
       'entity_type': operation.entityType,
       'entity_id': entityId,
@@ -544,6 +716,7 @@ class SqliteSyncStore implements SyncStore {
           remote?['edition_code']?.toString() ??
           'madani-hafs';
       await transaction.insert('reading_positions', <String, Object?>{
+        'owner_id': _ownerId,
         'edition': edition,
         'entity_id': entityId,
         'surah':
@@ -570,6 +743,7 @@ class SqliteSyncStore implements SyncStore {
     if (type == 'bookmark') {
       final remoteAyah = _ayahMap(remote?['ayah']);
       await transaction.insert('bookmarks', <String, Object?>{
+        'owner_id': _ownerId,
         'id': entityId,
         'edition':
             intent['edition_code']?.toString() ??
@@ -587,7 +761,10 @@ class SqliteSyncStore implements SyncStore {
             (remoteAyah['ayah_number'] as num?)?.toInt() ??
             1,
         'server_revision': baseRevision,
-        'is_deleted': body['action'] == 'delete' ? 1 : 0,
+        'is_deleted':
+            body['action'] == 'delete' || localDesired?['deleted_at'] != null
+            ? 1
+            : 0,
         'updated_at': clientUpdatedAt,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
@@ -601,15 +778,16 @@ class SqliteSyncStore implements SyncStore {
         'entity_type': 'reminder',
         'revision': baseRevision,
         'client_updated_at': clientUpdatedAt,
-        'deleted_at': body['action'] == 'delete'
+        'deleted_at': desired['deleted_at'] != null
             ? clientUpdatedAt
             : desired['deleted_at'],
       };
       await transaction.insert('reminders', <String, Object?>{
+        'owner_id': _ownerId,
         'id': entityId,
         'payload': jsonEncode(merged),
         'revision': baseRevision,
-        'is_deleted': body['action'] == 'delete' ? 1 : 0,
+        'is_deleted': desired['deleted_at'] != null ? 1 : 0,
         'updated_at': clientUpdatedAt,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
@@ -624,8 +802,8 @@ class SqliteSyncStore implements SyncStore {
       if (edition == null || edition.isEmpty) return null;
       final rows = await executor.query(
         'reading_positions',
-        where: 'edition = ?',
-        whereArgs: <Object?>[edition],
+        where: 'owner_id = ? AND edition = ?',
+        whereArgs: <Object?>[_ownerId, edition],
         limit: 1,
       );
       if (rows.isEmpty) return null;
@@ -646,8 +824,8 @@ class SqliteSyncStore implements SyncStore {
     if (operation.entityType == 'bookmark') {
       final rows = await executor.query(
         'bookmarks',
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, id],
         limit: 1,
       );
       if (rows.isEmpty) return null;
@@ -669,8 +847,8 @@ class SqliteSyncStore implements SyncStore {
       final rows = await executor.query(
         'reminders',
         columns: const <String>['payload'],
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, id],
         limit: 1,
       );
       if (rows.isEmpty) return null;
@@ -714,6 +892,7 @@ class SqliteSyncStore implements SyncStore {
       }
       final ayah = _ayahMap(entity['ayah']);
       await executor.insert('reading_positions', <String, Object?>{
+        'owner_id': _ownerId,
         'edition': edition,
         'entity_id': id,
         'surah': (ayah['surah_number'] as num?)?.toInt() ?? 1,
@@ -745,6 +924,7 @@ class SqliteSyncStore implements SyncStore {
       }
       final ayah = _ayahMap(entity['ayah']);
       await executor.insert('bookmarks', <String, Object?>{
+        'owner_id': _ownerId,
         'id': id,
         'edition': entity['edition_code']?.toString() ?? 'madani-hafs',
         'surah': (ayah['surah_number'] as num?)?.toInt() ?? 1,
@@ -770,6 +950,7 @@ class SqliteSyncStore implements SyncStore {
         return false;
       }
       await executor.insert('reminders', <String, Object?>{
+        'owner_id': _ownerId,
         'id': id,
         'payload': jsonEncode(entity),
         'revision': revision,
@@ -794,8 +975,8 @@ class SqliteSyncStore implements SyncStore {
     final rows = await executor.query(
       table,
       columns: <String>[revisionColumn],
-      where: '$keyColumn = ?',
-      whereArgs: <Object?>[key],
+      where: 'owner_id = ? AND $keyColumn = ?',
+      whereArgs: <Object?>[_ownerId, key],
       limit: 1,
     );
     return rows.isEmpty ||
@@ -810,26 +991,27 @@ class SqliteSyncStore implements SyncStore {
     if (type == 'reading_position') {
       await executor.delete(
         'reading_positions',
-        where: 'entity_id = ?',
-        whereArgs: <Object?>[entityId],
+        where: 'owner_id = ? AND entity_id = ?',
+        whereArgs: <Object?>[_ownerId, entityId],
       );
     } else if (type == 'bookmark') {
       await executor.delete(
         'bookmarks',
-        where: 'id = ?',
-        whereArgs: <Object?>[entityId],
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, entityId],
       );
     } else if (type == 'reminder') {
       await executor.delete(
         'reminders',
-        where: 'id = ?',
-        whereArgs: <Object?>[entityId],
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, entityId],
       );
     }
   }
 
   Future<void> _writeCursor(DatabaseExecutor executor, int cursor) async {
     await executor.insert('app_state', <String, Object?>{
+      'owner_id': _ownerId,
       'state_key': 'sync_cursor',
       'payload': jsonEncode(<String, Object?>{'value': cursor}),
       'updated_at': _now().toUtc().toIso8601String(),
@@ -843,29 +1025,13 @@ class SqliteSyncStore implements SyncStore {
   ) async {
     await executor.rawUpdate(
       'UPDATE outbox SET attempts = attempts + 1, last_error = ? '
-      'WHERE operation_id = ?',
-      <Object?>[error, operationId],
+      'WHERE owner_id = ? AND operation_id = ?',
+      <Object?>[error, _ownerId, operationId],
     );
   }
 
   String _operationKey(SyncOutboxEntry operation) {
-    if (!_entityTypes.contains(operation.entityType)) {
-      throw FormatException(
-        'Unsupported sync entity type: ${operation.entityType}',
-      );
-    }
-    if (operation.entityType == 'reading_position') {
-      final edition = operation.intent['edition_code']?.toString();
-      if (edition == null || edition.isEmpty) {
-        throw const FormatException('Reading position edition is missing');
-      }
-      return '${operation.entityType}:$edition';
-    }
-    final id = operation.entityId;
-    if (id == null || id.isEmpty) {
-      throw const FormatException('Outbox entity identity is missing');
-    }
-    return '${operation.entityType}:$id';
+    return operation.logicalEntityKey;
   }
 
   String _entityKey(Map<String, Object?> entity) {
@@ -894,6 +1060,20 @@ class SqliteSyncStore implements SyncStore {
     final entity = Map<String, Object?>.from(raw);
     _entityKey(entity);
     return entity;
+  }
+
+  Map<String, Map<String, Object?>> _uniqueSnapshotByKey(
+    List<Map<String, Object?>> entities,
+  ) {
+    final result = <String, Map<String, Object?>>{};
+    for (final entity in entities) {
+      final key = _entityKey(entity);
+      if (result.containsKey(key)) {
+        throw FormatException('Sync snapshot contains duplicate entity: $key');
+      }
+      result[key] = entity;
+    }
+    return result;
   }
 
   Map<String, Object?> _ayahMap(Object? raw) =>

@@ -1,3 +1,4 @@
+import '../auth/account_scope.dart';
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
 import '../storage/local_database.dart';
@@ -34,40 +35,108 @@ class SyncService {
   factory SyncService({
     required ApiClient api,
     required LocalDatabase database,
-  }) => SyncService.withDependencies(
-    remote: _ApiSyncRemote(api),
-    store: SqliteSyncStore(database.database),
-  );
+  }) => SyncService._scoped(api, database);
+
+  SyncService._scoped(this._api, this._database)
+    : _providedRemote = null,
+      _providedStore = null;
 
   SyncService.withDependencies({
     required SyncRemote remote,
     required SyncStore store,
-  }) : _remote = remote,
-       _store = store;
+  }) : _providedRemote = remote,
+       _providedStore = store,
+       _api = null,
+       _database = null;
 
   static const _maxPushBatches = 10;
   static const _maxFullResyncPages = 1000;
   static const _maxFullResyncEntities = 20000;
 
-  final SyncRemote _remote;
-  final SyncStore _store;
+  final SyncRemote? _providedRemote;
+  final SyncStore? _providedStore;
+  final ApiClient? _api;
+  final LocalDatabase? _database;
+  SyncRemote? _activeRemote;
+  SyncStore? _activeStore;
+  AccountScopeSnapshot? _activeScope;
   Future<SyncReport>? _flight;
+  AccountScopeSnapshot? _flightScope;
 
-  Future<SyncReport> synchronize() {
-    final current = _flight;
-    if (current != null) return current;
+  SyncRemote get _remote => _activeRemote ?? _providedRemote!;
+  SyncStore get _store => _activeStore ?? _providedStore!;
+
+  Future<SyncReport> synchronize({AccountScopeSnapshot? accountScope}) async {
+    final database = _database;
+    final requestedScope = database == null
+        ? null
+        : accountScope ?? await database.captureAccount();
+    if (database != null) database.ensureCurrent(requestedScope!);
+    while (true) {
+      final current = _flight;
+      if (current != null) {
+        final activeScope = _flightScope;
+        if ((requestedScope == null && activeScope == null) ||
+            (requestedScope != null &&
+                activeScope != null &&
+                requestedScope.userId == activeScope.userId &&
+                requestedScope.epoch == activeScope.epoch)) {
+          return current;
+        }
+        try {
+          await current;
+        } on Object {
+          // A prior account's failure does not suppress this account's run.
+        }
+        database!.ensureCurrent(requestedScope!);
+        continue;
+      }
+      return _startFlight(requestedScope);
+    }
+  }
+
+  Future<SyncReport> _startFlight(AccountScopeSnapshot? scope) {
     late final Future<SyncReport> flight;
-    flight = _run().whenComplete(() {
-      if (identical(_flight, flight)) _flight = null;
+    flight = (scope == null ? _run() : _runScoped(scope)).whenComplete(() {
+      if (identical(_flight, flight)) {
+        _flight = null;
+        _flightScope = null;
+      }
     });
     _flight = flight;
+    _flightScope = scope;
     return flight;
+  }
+
+  Future<SyncReport> _runScoped(AccountScopeSnapshot scope) async {
+    final database = _database!;
+    _activeScope = scope;
+    _activeRemote = _ApiSyncRemote(_api!, scope);
+    _activeStore = SqliteSyncStore(
+      database.database,
+      ownerId: scope.userId,
+      guard: () => database.ensureCurrent(scope),
+    );
+    try {
+      return await _run();
+    } finally {
+      _activeRemote = null;
+      _activeStore = null;
+      _activeScope = null;
+    }
+  }
+
+  void _guardScope() {
+    final scope = _activeScope;
+    final database = _database;
+    if (scope != null && database != null) database.ensureCurrent(scope);
   }
 
   Future<SyncReport> _run() async {
     final progress = _SyncProgress();
     _SyncIssue? auxiliaryIssue;
     try {
+      _guardScope();
       auxiliaryIssue = await _pushAuxiliary(progress);
       var push = await _pushEntities(progress);
       if (push.conflict != null) {
@@ -98,6 +167,7 @@ class SyncService {
       }
 
       final pending = await _store.pendingCount();
+      _guardScope();
       final issue = auxiliaryIssue;
       return SyncReport(
         status: issue?.status ?? SyncStatus.idle,
@@ -110,10 +180,16 @@ class SyncService {
             (pending > 0 && issue == null),
         message: issue?.message,
       );
+    } on AccountScopeChanged {
+      return _report(
+        progress,
+        status: SyncStatus.sessionExpired,
+        message: 'account_scope_changed',
+      );
     } on ApiException catch (error) {
       return _report(
         progress,
-        status: error.statusCode == 401
+        status: error.statusCode == 401 || error.code == 'account_scope_changed'
             ? SyncStatus.sessionExpired
             : error.isOffline
             ? SyncStatus.offline
@@ -133,6 +209,7 @@ class SyncService {
     _SyncIssue? issue;
     final rows = await _store.pendingAuxiliary();
     for (final row in rows) {
+      _guardScope();
       try {
         if (row.entityType == 'share_event') {
           await _remote.post('/share/events', data: row.body);
@@ -152,12 +229,17 @@ class SyncService {
           );
           continue;
         }
+        _guardScope();
         await _store.acknowledge(row.operationId);
         progress.pushed++;
       } on ApiException catch (error) {
-        if ((row.entityType == 'share_event' &&
-                (error.statusCode == 400 || error.statusCode == 409)) ||
-            (row.entityType == 'dua_favorite' && error.statusCode == 400)) {
+        if (row.entityType == 'dua_favorite' &&
+            (error.statusCode == 400 || error.statusCode == 404)) {
+          await _store.rejectDuaFavorite(row);
+          continue;
+        }
+        if (row.entityType == 'share_event' &&
+            (error.statusCode == 400 || error.statusCode == 409)) {
           // The server made a terminal decision; retrying an invalid analytics
           // or favorite payload forever would permanently block the queue.
           await _store.acknowledge(row.operationId);
@@ -183,12 +265,14 @@ class SyncService {
       if (rows.isEmpty) return const _PushResult();
       Object? rawResponse;
       try {
+        _guardScope();
         rawResponse = await _remote.post(
           '/sync/push',
           data: <String, Object?>{
             'operations': rows.map((row) => row.body).toList(growable: false),
           },
         );
+        _guardScope();
       } on Object catch (error) {
         for (final row in rows) {
           await _store.markFailure(row.operationId, error.toString());
@@ -222,6 +306,34 @@ class SyncService {
         );
       }
 
+      var bindingsAreValid = true;
+      for (final row in rows) {
+        final result = resultsById[row.operationId]!;
+        final outcome = result['outcome'];
+        final entity = result['entity'];
+        try {
+          if (outcome == 'accepted') {
+            row.ensureMatchesRemoteEntity(entity);
+          } else if (outcome == 'conflict') {
+            if (entity != null) row.ensureMatchesRemoteEntity(entity);
+          } else {
+            bindingsAreValid = false;
+          }
+        } on Object {
+          bindingsAreValid = false;
+        }
+      }
+      if (!bindingsAreValid) {
+        // Validate the complete response before acknowledging any row. A
+        // swapped operation_id/entity pair must not partially commit a batch.
+        for (final row in rows) {
+          await _store.markFailure(row.operationId, 'invalid_sync_results');
+        }
+        throw const FormatException(
+          'Sync result entity does not match its operation',
+        );
+      }
+
       var rebased = false;
       for (final row in rows) {
         final result = resultsById[row.operationId];
@@ -238,7 +350,7 @@ class SyncService {
               'Accepted sync result has no entity snapshot',
             );
           }
-          await _store.acceptOperation(row.operationId, result['entity']);
+          await _store.acceptOperation(row, result['entity']);
           progress.pushed++;
           continue;
         }
@@ -273,6 +385,7 @@ class SyncService {
           query: <String, Object?>{'cursor': cursor, 'limit': 100},
         ),
       );
+      _guardScope();
       if (response['mode'] != 'incremental') {
         throw const FormatException('Expected an incremental sync response');
       }
@@ -291,6 +404,7 @@ class SyncService {
           throw const FormatException('Sync changes are not cursor ordered');
         }
         await _store.applyRemoteEntity(change['entity']);
+        _guardScope();
         lastChangeCursor = changeCursor;
         pulled++;
       }
@@ -331,6 +445,7 @@ class SyncService {
           },
         ),
       );
+      _guardScope();
       if (response['mode'] != 'full_resync') {
         throw const FormatException('Expected a full resync response');
       }
@@ -361,6 +476,7 @@ class SyncService {
       token = nextToken;
     }
     await _store.replaceAuthoritativeSnapshot(entities, snapshotCursor ?? 0);
+    _guardScope();
     return entities.length;
   }
 
@@ -388,21 +504,22 @@ class SyncService {
 }
 
 class _ApiSyncRemote implements SyncRemote {
-  const _ApiSyncRemote(this._api);
+  const _ApiSyncRemote(this._api, this._scope);
 
   final ApiClient _api;
+  final AccountScopeSnapshot _scope;
 
   @override
   Future<Object?> get(String path, {Map<String, Object?>? query}) =>
-      _api.get(path, query: query);
+      _api.get(path, query: query, accountScope: _scope);
 
   @override
   Future<Object?> post(String path, {Object? data}) =>
-      _api.post(path, data: data);
+      _api.post(path, data: data, accountScope: _scope);
 
   @override
   Future<Object?> put(String path, {Object? data}) =>
-      _api.put(path, data: data);
+      _api.put(path, data: data, accountScope: _scope);
 }
 
 class _SyncProgress {

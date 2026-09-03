@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
@@ -10,34 +11,50 @@ import 'reminder_models.dart';
 class ReminderRepository {
   ReminderRepository({required ApiClient api, required LocalDatabase database})
     : _api = api,
-      _database = database,
-      _syncStore = SqliteSyncStore(database.database);
+      _database = database;
 
   final ApiClient _api;
   final LocalDatabase _database;
-  final SqliteSyncStore _syncStore;
   final Uuid _uuid = const Uuid();
 
-  Future<List<ReminderRule>> localRules() async =>
-      (await _database.readReminders())
+  Future<List<ReminderRule>> localRules({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _localRulesFor(scope);
+  }
+
+  Future<List<ReminderRule>> _localRulesFor(AccountScopeSnapshot scope) async =>
+      (await _database.readReminders(accountScope: scope))
           .map(ReminderRule.fromJson)
           .where((rule) => rule.active)
           .toList(growable: false);
 
-  Future<({List<ReminderRule> rules, bool offline})> refresh() async {
+  Future<({List<ReminderRule> rules, bool offline})> refresh({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     try {
-      final snapshot = jsonMap(await _api.get('/me/reminders'));
+      final snapshot = jsonMap(
+        await _api.get('/me/reminders', accountScope: scope),
+      );
+      _database.ensureCurrent(scope);
       final rawRules =
           (snapshot['reminders'] as List?)
               ?.whereType<Map>()
               .map((item) => Map<String, Object?>.from(item))
               .toList(growable: false) ??
           const <Map<String, Object?>>[];
-      await _syncStore.replaceAuthoritativeReminderSnapshot(rawRules);
-      return (rules: await localRules(), offline: false);
+      await SqliteSyncStore(
+        _database.database,
+        ownerId: scope.userId,
+        guard: () => _database.ensureCurrent(scope),
+      ).replaceAuthoritativeReminderSnapshot(rawRules);
+      return (rules: await _localRulesFor(scope), offline: false);
     } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') rethrow;
       if (!error.isOffline) rethrow;
-      return (rules: await localRules(), offline: true);
+      return (rules: await _localRulesFor(scope), offline: true);
     }
   }
 
@@ -50,7 +67,9 @@ class ReminderRepository {
     String? timezoneName,
     ReminderReviewTarget? reviewTarget,
     bool isEnabled = true,
+    AccountScopeSnapshot? accountScope,
   }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     final now = DateTime.now().toUtc();
     final local = ReminderRule(
       id: _uuid.v7(),
@@ -76,19 +95,25 @@ class ReminderRepository {
               'client_updated_at': now.toIso8601String(),
               ...local.functionalJson,
             },
+            accountScope: scope,
           ),
         ),
       );
-      await _database.upsertReminder(result.toLocalJson());
+      _database.ensureCurrent(scope);
+      await _database.upsertReminder(result.toLocalJson(), accountScope: scope);
       return result;
     } on ApiException catch (error) {
       if (!shouldPersistReminderMutation(error)) rethrow;
-      await _storeOffline(local, action: 'upsert');
+      await _storeOffline(local, action: 'upsert', accountScope: scope);
       return local;
     }
   }
 
-  Future<ReminderRule> update(ReminderRule rule) async {
+  Future<ReminderRule> update(
+    ReminderRule rule, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     final now = DateTime.now().toUtc();
     final local = rule.copyWith(clientUpdatedAt: now);
     try {
@@ -101,21 +126,27 @@ class ReminderRepository {
               'client_updated_at': now.toIso8601String(),
               ...local.functionalJson,
             },
+            accountScope: scope,
           ),
         ),
       );
-      await _database.upsertReminder(result.toLocalJson());
+      _database.ensureCurrent(scope);
+      await _database.upsertReminder(result.toLocalJson(), accountScope: scope);
       return result;
     } on ApiException catch (error) {
       if (!shouldPersistReminderMutation(error)) rethrow;
-      await _storeOffline(local, action: 'upsert');
+      await _storeOffline(local, action: 'upsert', accountScope: scope);
       return local;
     }
   }
 
-  Future<void> deleteRule(ReminderRule rule) async {
+  Future<void> deleteRule(
+    ReminderRule rule, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     if (rule.revision == 0) {
-      await _database.discardLocalReminder(rule.id);
+      await _database.discardLocalReminder(rule.id, accountScope: scope);
       return;
     }
     final now = DateTime.now().toUtc();
@@ -127,9 +158,11 @@ class ReminderRepository {
             'base_revision': rule.revision,
             'client_updated_at': now.toIso8601String(),
           },
+          accountScope: scope,
         ),
       );
-      await _database.upsertReminder(result);
+      _database.ensureCurrent(scope);
+      await _database.upsertReminder(result, accountScope: scope);
     } on ApiException catch (error) {
       if (!shouldPersistReminderMutation(error)) rethrow;
       final tombstone = rule.copyWith(
@@ -137,13 +170,14 @@ class ReminderRepository {
         clientUpdatedAt: now,
         deletedAt: now,
       );
-      await _storeOffline(tombstone, action: 'delete');
+      await _storeOffline(tombstone, action: 'delete', accountScope: scope);
     }
   }
 
   Future<void> _storeOffline(
     ReminderRule rule, {
     required String action,
+    required AccountScopeSnapshot accountScope,
   }) async {
     final operationId = _uuid.v4();
     await _database.upsertReminderWithOutbox(
@@ -160,11 +194,13 @@ class ReminderRepository {
             ? const <String, Object?>{}
             : rule.functionalJson,
       },
+      accountScope: accountScope,
     );
   }
 }
 
 bool shouldPersistReminderMutation(ApiException error) {
+  if (error.code == 'account_scope_changed') return false;
   final status = error.statusCode;
   return error.isOffline ||
       status == 408 ||

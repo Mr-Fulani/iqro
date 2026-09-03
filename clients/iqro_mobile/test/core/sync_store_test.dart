@@ -6,6 +6,7 @@ import 'package:iqro_mobile/core/sync/sync_store.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  const ownerId = 'owner-a';
   late Database database;
   late SqliteSyncStore store;
 
@@ -14,13 +15,18 @@ void main() {
   setUp(() async {
     database = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
     await _createSchema(database);
-    store = SqliteSyncStore(database, now: () => DateTime.utc(2026, 9, 1, 12));
+    store = SqliteSyncStore(
+      database,
+      ownerId: ownerId,
+      now: () => DateTime.utc(2026, 9, 1, 12),
+    );
   });
 
   tearDown(() => database.close());
 
   test('full snapshot replaces stale rows and rebases local intent', () async {
     await database.insert('bookmarks', <String, Object?>{
+      'owner_id': ownerId,
       'id': '01994f46-5fa6-7a20-b9ab-2a7bbcc70001',
       'edition': 'madani-hafs',
       'surah': 1,
@@ -135,6 +141,85 @@ void main() {
   });
 
   test(
+    'accepted result cannot acknowledge a different logical entity',
+    () async {
+      await _insertBookmarkOperation(database, baseRevision: 0);
+      final operation = (await store.pendingEntities()).single;
+
+      await expectLater(
+        store.acceptOperation(
+          operation,
+          _readingPosition(revision: 1, page: 4),
+        ),
+        throwsFormatException,
+      );
+
+      expect(await store.pendingEntities(), hasLength(1));
+      expect(await database.query('reading_positions'), isEmpty);
+    },
+  );
+
+  test('conflict result cannot apply a different logical entity', () async {
+    await _insertBookmarkOperation(database, baseRevision: 1);
+    final operation = (await store.pendingEntities()).single;
+
+    await expectLater(
+      store.resolveConflict(operation, <String, Object?>{
+        'outcome': 'conflict',
+        'conflict_reason': 'revision_mismatch',
+        'entity': _readingPosition(revision: 2, page: 4),
+      }),
+      throwsFormatException,
+    );
+
+    expect(await store.pendingEntities(), hasLength(1));
+    expect(await database.query('reading_positions'), isEmpty);
+  });
+
+  test(
+    'duplicate full snapshot is rejected before replacing local data',
+    () async {
+      await database.insert('bookmarks', <String, Object?>{
+        'owner_id': ownerId,
+        'id': '01994f46-5fa6-7a20-b9ab-2a7bbcc70001',
+        'edition': 'madani-hafs',
+        'surah': 1,
+        'ayah': 1,
+        'server_revision': 2,
+        'is_deleted': 0,
+        'updated_at': '2026-08-31T10:00:00Z',
+      });
+
+      await expectLater(
+        store.replaceAuthoritativeSnapshot(<Object?>[
+          _readingPosition(revision: 3, page: 4),
+          _readingPosition(revision: 4, page: 5),
+        ], 8),
+        throwsFormatException,
+      );
+
+      expect(await database.query('bookmarks'), hasLength(1));
+      expect(await database.query('reading_positions'), isEmpty);
+      expect(await store.readCursor(), 0);
+    },
+  );
+
+  test('duplicate reminder snapshot is rejected before mutation', () async {
+    await _insertReminderOperation(database, baseRevision: 1);
+
+    await expectLater(
+      store.replaceAuthoritativeReminderSnapshot(<Map<String, Object?>>[
+        _reminder(revision: 2, weekdaysMask: 31),
+        _reminder(revision: 3, weekdaysMask: 127),
+      ]),
+      throwsFormatException,
+    );
+
+    expect(await database.query('reminders'), hasLength(1));
+    expect(await store.pendingEntities(), hasLength(1));
+  });
+
+  test(
     'reminder refresh rebases and preserves offline desired state',
     () async {
       await _insertReminderOperation(database, baseRevision: 1);
@@ -219,57 +304,129 @@ void main() {
     expect(rows, hasLength(1));
     expect(rows.single['operation_id'], 'reminder-operation-2');
   });
+
+  test('terminal Dua rejection reconciles only the bound owner', () async {
+    const favoriteKey = 'dua:hisn-al-muslim:7';
+    const operationId = 'dua-favorite-operation';
+    for (final owner in <String>['owner-a', 'owner-b']) {
+      await database.insert('favorites', <String, Object?>{
+        'owner_id': owner,
+        'item_key': favoriteKey,
+        'kind': 'dua',
+        'payload': '{"collection":"hisn-al-muslim","source_number":7}',
+        'updated_at': '2026-09-01T10:00:00Z',
+      });
+      await database.insert('outbox', <String, Object?>{
+        'owner_id': owner,
+        'operation_id': operationId,
+        'entity_type': 'dua_favorite',
+        'entity_id': favoriteKey,
+        'payload':
+            '{"collection":"hisn-al-muslim","source_number":7,'
+            '"is_favorite":true}',
+        'created_at': '2026-09-01T10:00:00Z',
+      });
+    }
+    final operation = SyncOutboxEntry.fromRow(
+      (await database.query(
+        'outbox',
+        where: 'owner_id = ?',
+        whereArgs: const <Object?>['owner-a'],
+      )).single,
+    );
+
+    await store.rejectDuaFavorite(operation);
+
+    for (final table in <String>['favorites', 'outbox']) {
+      expect(
+        await database.query(
+          table,
+          where: 'owner_id = ?',
+          whereArgs: const <Object?>['owner-a'],
+        ),
+        isEmpty,
+      );
+      expect(
+        await database.query(
+          table,
+          where: 'owner_id = ?',
+          whereArgs: const <Object?>['owner-b'],
+        ),
+        hasLength(1),
+      );
+    }
+  });
 }
 
 Future<void> _createSchema(Database database) async {
   await database.execute('''
     CREATE TABLE reading_positions (
-      edition TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      edition TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       surah INTEGER NOT NULL,
       ayah INTEGER NOT NULL,
       page INTEGER,
       server_revision INTEGER NOT NULL DEFAULT 0,
       dirty INTEGER NOT NULL DEFAULT 1,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, edition)
     )
   ''');
   await database.execute('''
     CREATE TABLE bookmarks (
-      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
       edition TEXT NOT NULL,
       surah INTEGER NOT NULL,
       ayah INTEGER NOT NULL,
       server_revision INTEGER NOT NULL DEFAULT 0,
       is_deleted INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, id)
     )
   ''');
   await database.execute('''
     CREATE TABLE reminders (
-      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
       payload TEXT NOT NULL,
       revision INTEGER NOT NULL DEFAULT 0,
       is_deleted INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, id)
     )
   ''');
   await database.execute('''
     CREATE TABLE outbox (
-      operation_id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
       entity_type TEXT NOT NULL,
       entity_id TEXT,
       payload TEXT NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
-      last_error TEXT
+      last_error TEXT,
+      PRIMARY KEY (owner_id, operation_id)
+    )
+  ''');
+  await database.execute('''
+    CREATE TABLE favorites (
+      owner_id TEXT NOT NULL,
+      item_key TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, item_key)
     )
   ''');
   await database.execute('''
     CREATE TABLE app_state (
-      state_key TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      state_key TEXT NOT NULL,
       payload TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, state_key)
     )
   ''');
 }
@@ -281,6 +438,7 @@ Future<void> _insertReadingOperation(
   const entityId = '01994f46-5fa6-7a20-b9ab-2a7bbcc79991';
   const operationId = 'operation-1';
   await database.insert('outbox', <String, Object?>{
+    'owner_id': 'owner-a',
     'operation_id': operationId,
     'entity_type': 'reading_position',
     'entity_id': entityId,
@@ -315,6 +473,7 @@ Future<void> _insertBookmarkOperation(
 }) async {
   const entityId = '01994f46-5fa6-7a20-b9ab-2a7bbcc70002';
   await database.insert('outbox', <String, Object?>{
+    'owner_id': 'owner-a',
     'operation_id': operationId,
     'entity_type': 'bookmark',
     'entity_id': entityId,
@@ -347,6 +506,7 @@ Future<void> _insertReminderOperation(
   const entityId = '01994f46-5fa6-7a20-b9ab-2a7bbcc70003';
   const operationId = 'reminder-operation-1';
   await database.insert('reminders', <String, Object?>{
+    'owner_id': 'owner-a',
     'id': entityId,
     'payload': jsonEncode(<String, Object?>{
       'id': entityId,
@@ -381,6 +541,7 @@ Future<void> _insertReminderOperation(
     'updated_at': '2026-09-01T10:00:00Z',
   });
   await database.insert('outbox', <String, Object?>{
+    'owner_id': 'owner-a',
     'operation_id': operationId,
     'entity_type': 'reminder',
     'entity_id': entityId,

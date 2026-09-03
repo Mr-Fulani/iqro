@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../auth/account_scope.dart';
 import '../auth/auth_repository.dart';
 import '../config/app_config.dart';
 import 'api_exception.dart';
@@ -29,9 +30,13 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           if (options.extra['public'] != true) {
-            final token = await _authRepository.validAccessToken(
-              locale: _locale(),
-            );
+            final expected = options.extra['accountScope'];
+            final token = expected is AccountScopeSnapshot
+                ? await _authRepository.validAccessTokenFor(
+                    expected,
+                    locale: _locale(),
+                  )
+                : await _authRepository.validAccessToken(locale: _locale());
             options.headers['Authorization'] = 'Bearer $token';
           }
           options.headers['Accept-Language'] = _locale();
@@ -44,11 +49,27 @@ class ApiClient {
               request.extra['refreshed'] != true) {
             try {
               final session = await _authRepository.refresh();
+              final expected = request.extra['accountScope'];
+              if (expected is AccountScopeSnapshot) {
+                _authRepository.accountScope.ensureCurrent(expected);
+                if (session.userId != expected.userId) {
+                  throw const AccountScopeChanged();
+                }
+              }
               request.extra['refreshed'] = true;
               request.headers['Authorization'] =
                   'Bearer ${session.accessToken}';
               final response = await dio.fetch<Object?>(request);
               handler.resolve(response);
+              return;
+            } on AccountScopeChanged catch (scopeError) {
+              handler.reject(
+                DioException(
+                  requestOptions: request,
+                  error: scopeError,
+                  type: DioExceptionType.unknown,
+                ),
+              );
               return;
             } on Object {
               // Preserve the original response for predictable error mapping.
@@ -69,13 +90,17 @@ class ApiClient {
     Map<String, Object?>? query,
     bool public = false,
     String? etag,
+    AccountScopeSnapshot? accountScope,
   }) async {
     try {
       final response = await dio.get<Object?>(
         path,
         queryParameters: query,
         options: Options(
-          extra: <String, Object?>{'public': public},
+          extra: <String, Object?>{
+            'public': public,
+            'accountScope': ?accountScope,
+          },
           headers: etag == null
               ? null
               : <String, Object?>{'If-None-Match': etag},
@@ -194,12 +219,22 @@ class ApiClient {
     }
   }
 
-  Future<Object?> post(String path, {Object? data, bool public = false}) async {
+  Future<Object?> post(
+    String path, {
+    Object? data,
+    bool public = false,
+    AccountScopeSnapshot? accountScope,
+  }) async {
     try {
       final response = await dio.post<Object?>(
         path,
         data: data,
-        options: Options(extra: <String, Object?>{'public': public}),
+        options: Options(
+          extra: <String, Object?>{
+            'public': public,
+            'accountScope': ?accountScope,
+          },
+        ),
       );
       return response.data;
     } on DioException catch (error) {
@@ -207,25 +242,55 @@ class ApiClient {
     }
   }
 
-  Future<Object?> put(String path, {Object? data}) async {
+  Future<Object?> put(
+    String path, {
+    Object? data,
+    AccountScopeSnapshot? accountScope,
+  }) async {
     try {
-      return (await dio.put<Object?>(path, data: data)).data;
+      return (await dio.put<Object?>(
+        path,
+        data: data,
+        options: Options(
+          extra: <String, Object?>{'accountScope': ?accountScope},
+        ),
+      )).data;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
   }
 
-  Future<Object?> patch(String path, {Object? data}) async {
+  Future<Object?> patch(
+    String path, {
+    Object? data,
+    AccountScopeSnapshot? accountScope,
+  }) async {
     try {
-      return (await dio.patch<Object?>(path, data: data)).data;
+      return (await dio.patch<Object?>(
+        path,
+        data: data,
+        options: Options(
+          extra: <String, Object?>{'accountScope': ?accountScope},
+        ),
+      )).data;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
   }
 
-  Future<Object?> delete(String path, {Object? data}) async {
+  Future<Object?> delete(
+    String path, {
+    Object? data,
+    AccountScopeSnapshot? accountScope,
+  }) async {
     try {
-      return (await dio.delete<Object?>(path, data: data)).data;
+      return (await dio.delete<Object?>(
+        path,
+        data: data,
+        options: Options(
+          extra: <String, Object?>{'accountScope': ?accountScope},
+        ),
+      )).data;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }

@@ -1,4 +1,5 @@
 import '../../features/audio/audio_models.dart';
+import '../auth/account_scope.dart';
 import '../storage/local_database.dart';
 
 class AudioPlaybackSnapshot {
@@ -73,19 +74,51 @@ class AudioPlaybackSnapshot {
 }
 
 class AudioPlaybackStore {
-  AudioPlaybackStore(this._database);
+  AudioPlaybackStore(this._database, {AccountScopeSnapshot? accountScope})
+    : _boundScope = accountScope == null
+          ? null
+          : Future<AccountScopeSnapshot>.value(accountScope);
 
   static const stateKey = 'audio_playback_v1';
   final LocalDatabase _database;
+  Future<AccountScopeSnapshot>? _boundScope;
 
-  Future<AudioPlaybackSnapshot?> read() async {
-    final json = await _database.readState(stateKey);
+  Future<AccountScopeSnapshot> _defaultScope() =>
+      _boundScope ??= _captureDefaultScope();
+
+  Future<AccountScopeSnapshot> _captureDefaultScope() async {
+    try {
+      return await _database.captureAccount();
+    } on Object {
+      // A first-launch network failure must not poison this store forever.
+      _boundScope = null;
+      rethrow;
+    }
+  }
+
+  Future<AudioPlaybackSnapshot?> read({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _defaultScope();
+    final json = await _database.readState(stateKey, accountScope: scope);
     if (json == null) return null;
     return AudioPlaybackSnapshot.fromJson(json);
   }
 
-  Future<void> write(AudioPlaybackSnapshot snapshot) =>
-      _database.writeState(stateKey, snapshot.toJson());
+  Future<void> write(
+    AudioPlaybackSnapshot snapshot, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _defaultScope();
+    await _database.writeState(
+      stateKey,
+      snapshot.toJson(),
+      accountScope: scope,
+    );
+  }
 
-  Future<void> clear() => _database.deleteState(stateKey);
+  Future<void> clear({AccountScopeSnapshot? accountScope}) async {
+    final scope = accountScope ?? await _defaultScope();
+    await _database.deleteState(stateKey, accountScope: scope);
+  }
 }
