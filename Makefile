@@ -341,6 +341,7 @@ release-web-check:
 	cd $(WEB_DIR) && npm run lint
 	cd $(WEB_DIR) && npm run typecheck
 	cd $(WEB_DIR) && npm run test:cache
+	cd $(WEB_DIR) && npm run test:public-contracts
 	cd $(WEB_DIR) && npm run build
 	cd $(WEB_DIR) && npm run test:e2e
 	cd $(WEB_DIR) && npm run test:e2e:production

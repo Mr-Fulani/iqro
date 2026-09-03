@@ -493,7 +493,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dua => 'الدعاء';
 
   @override
-  String get duaSubtitle => 'مجموعة حصن المسلم';
+  String get duaSubtitle => 'أدعية وأذكار من مصادر قابلة للتتبع';
+
+  @override
+  String duaCount(int count) {
+    return 'عدد الأدعية: $count';
+  }
+
+  @override
+  String get noDuaCategories => 'لا توجد فئات أدعية متاحة بعد';
+
+  @override
+  String get noDuaFound => 'لم يتم العثور على دعاء مطابق';
+
+  @override
+  String get duaSearchMinCharacters => 'أدخل حرفين على الأقل للبحث';
+
+  @override
+  String get duaUnavailable => 'هذا الدعاء غير متاح';
+
+  @override
+  String get cachedDuaWarning =>
+      'يتم عرض نسخة محفوظة. سيتاح الصوت بعد التحقق من الإصدار الحالي.';
 
   @override
   String get duaAudio => 'صوت الدعاء';

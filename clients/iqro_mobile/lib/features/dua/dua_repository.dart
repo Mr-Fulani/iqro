@@ -4,7 +4,28 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
+
+typedef DuaCategoryIdentity = ({String collection, String slug});
+typedef DuaEntryIdentity = ({String collection, int sourceNumber});
+
+String duaEntryRoute(DuaEntry entry) =>
+    '/dua/${entry.collection}/${entry.sourceNumber}';
+
+bool isDuaEntryId(String value) =>
+    Uuid.isValidUUIDFormat(fromString: value.trim());
+
+bool canUseUnverifiedDuaFallback(Object error) {
+  if (error is FormatException || error is ArgumentError) return false;
+  if (error is! ApiException) return true;
+  final status = error.statusCode;
+  return status == null ||
+      status == 408 ||
+      status == 425 ||
+      status == 429 ||
+      status >= 500;
+}
 
 class DuaCategory {
   const DuaCategory({
@@ -12,6 +33,10 @@ class DuaCategory {
     required this.slug,
     required this.title,
     required this.entryCount,
+    this.collection = '',
+    this.collectionTitle = '',
+    this.collectionVersion = '',
+    this.sourceNumber = 0,
   });
 
   factory DuaCategory.fromJson(Map<String, Object?> json) => DuaCategory(
@@ -19,12 +44,25 @@ class DuaCategory {
     slug: json['slug']?.toString() ?? '',
     title: json['title']?.toString() ?? '',
     entryCount: (json['entry_count'] as num?)?.toInt() ?? 0,
+    collection: json['collection']?.toString() ?? '',
+    collectionTitle:
+        json['collection_title']?.toString() ??
+        json['collection']?.toString() ??
+        '',
+    collectionVersion: json['collection_version']?.toString() ?? '',
+    sourceNumber: (json['source_number'] as num?)?.toInt() ?? 0,
   );
 
   final String id;
   final String slug;
   final String title;
   final int entryCount;
+  final String collection;
+  final String collectionTitle;
+  final String collectionVersion;
+  final int sourceNumber;
+
+  DuaCategoryIdentity get identity => (collection: collection, slug: slug);
 }
 
 class DuaAudioAsset {
@@ -182,6 +220,7 @@ class DuaEntry {
     required this.collection,
     this.collectionVersion = '',
     required this.categoryTitle,
+    this.categorySlug = '',
     required this.arabicText,
     required this.meaning,
     required this.transliteration,
@@ -191,6 +230,7 @@ class DuaEntry {
     this.source,
     this.evidence = const <DuaEvidence>[],
     this.audio = const <DuaAudioAsset>[],
+    this.catalogVersionVerified = true,
   });
 
   factory DuaEntry.fromJson(Map<String, Object?> json) {
@@ -224,6 +264,10 @@ class DuaEntry {
           category['title']?.toString() ??
           json['category_title']?.toString() ??
           '',
+      categorySlug:
+          category['slug']?.toString() ??
+          json['category_slug']?.toString() ??
+          '',
       arabicText: json['arabic_text']?.toString() ?? '',
       meaning:
           translation['meaning_text']?.toString() ??
@@ -247,6 +291,7 @@ class DuaEntry {
   final String collection;
   final String collectionVersion;
   final String categoryTitle;
+  final String categorySlug;
   final String arabicText;
   final String meaning;
   final String transliteration;
@@ -256,6 +301,7 @@ class DuaEntry {
   final DuaSourceEdition? source;
   final List<DuaEvidence> evidence;
   final List<DuaAudioAsset> audio;
+  final bool catalogVersionVerified;
 
   String get favoriteKey => 'dua:$collection:$sourceNumber';
   bool get hasDeclaredSource =>
@@ -271,13 +317,33 @@ class DuaEntry {
       evidence.isNotEmpty &&
       evidence.every((item) => item.isEditoriallyVerified);
 
+  DuaEntry asUnverifiedCatalogFallback() => DuaEntry(
+    id: id,
+    sourceNumber: sourceNumber,
+    collection: collection,
+    collectionVersion: collectionVersion,
+    categoryTitle: categoryTitle,
+    categorySlug: categorySlug,
+    arabicText: arabicText,
+    meaning: meaning,
+    transliteration: transliteration,
+    repetitions: repetitions,
+    sourceLabel: sourceLabel,
+    repetitionLabel: repetitionLabel,
+    source: source,
+    evidence: evidence,
+    audio: audio,
+    catalogVersionVerified: false,
+  );
+
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
     'source_number': sourceNumber,
     'collection': collection,
     'collection_version': collectionVersion,
     'category_title': categoryTitle,
-    'category': <String, Object?>{'title': categoryTitle},
+    'category_slug': categorySlug,
+    'category': <String, Object?>{'slug': categorySlug, 'title': categoryTitle},
     'arabic_text': arabicText,
     'meaning': meaning,
     'transliteration': transliteration,
@@ -310,13 +376,25 @@ List<T> _modelList<T>(
 abstract interface class DuaRemoteGateway {
   Uri get apiBaseUri;
 
+  Future<Object?> collections(String locale);
+
   Future<Object?> categories(String locale);
 
   Future<Object?> entries(
     String locale, {
+    String? collection,
     String? category,
+    String? query,
     String? cursor,
     required int pageSize,
+  });
+
+  Future<Object?> entry(String locale, String id);
+
+  Future<Object?> resolveEntry(
+    String locale, {
+    required String collection,
+    required int sourceNumber,
   });
 
   Future<void> setFavorite(
@@ -335,6 +413,13 @@ class ApiDuaRemoteGateway implements DuaRemoteGateway {
   Uri get apiBaseUri => Uri.parse(_api.dio.options.baseUrl);
 
   @override
+  Future<Object?> collections(String locale) => _api.get(
+    '/dua/collections',
+    query: <String, Object?>{'language': locale},
+    public: true,
+  );
+
+  @override
   Future<Object?> categories(String locale) => _api.get(
     '/dua/categories',
     query: <String, Object?>{'language': locale},
@@ -344,16 +429,42 @@ class ApiDuaRemoteGateway implements DuaRemoteGateway {
   @override
   Future<Object?> entries(
     String locale, {
+    String? collection,
     String? category,
+    String? query,
     String? cursor,
     required int pageSize,
   }) => _api.get(
     '/dua/entries',
     query: <String, Object?>{
       'language': locale,
+      'collection': ?collection,
       'category': ?category,
+      'q': ?query,
       'page_size': pageSize,
       'cursor': ?cursor,
+    },
+    public: true,
+  );
+
+  @override
+  Future<Object?> entry(String locale, String id) => _api.get(
+    '/dua/entries/$id',
+    query: <String, Object?>{'language': locale},
+    public: true,
+  );
+
+  @override
+  Future<Object?> resolveEntry(
+    String locale, {
+    required String collection,
+    required int sourceNumber,
+  }) => _api.get(
+    '/dua/entries/resolve',
+    query: <String, Object?>{
+      'language': locale,
+      'collection': collection,
+      'source_number': sourceNumber,
     },
     public: true,
   );
@@ -385,7 +496,8 @@ class DuaRepository {
   static const _entryPageSize = 100;
   static const _featuredEntryCount = 20;
   static const _maxEntryPages = 50;
-  static const _entryCacheVersion = 'v3';
+  static const _categoryCacheVersion = 'v2';
+  static const _entryCacheVersion = 'v4';
 
   final DuaRemoteGateway _remote;
   final LocalDatabase _database;
@@ -423,9 +535,13 @@ class DuaRepository {
     }
   }
 
-  Future<void> _writeCacheSafely(String key, Object? payload) async {
+  Future<void> _writeCacheSafely(
+    String key,
+    Object? payload, {
+    Duration maxAge = const Duration(days: 7),
+  }) async {
     try {
-      await _database.writeCache(key, payload, maxAge: const Duration(days: 7));
+      await _database.writeCache(key, payload, maxAge: maxAge);
     } on Object {
       // Caching must not turn a valid online response into a user-facing
       // failure. A later request can try persisting the catalog again.
@@ -433,56 +549,211 @@ class DuaRepository {
   }
 
   Future<List<DuaCategory>> categories(String locale) async {
-    final key = 'dua:$_cacheNamespace:categories:$locale';
+    final key =
+        'dua:$_cacheNamespace:categories:$_categoryCacheVersion:$locale';
     final cached = await _readCacheSafely(key);
-    if (cached?.isFresh == true) {
+    List<DuaCategory>? cachedCategories;
+    if (cached != null) {
       try {
-        return _parseCategories(cached!.value);
+        cachedCategories = _parseCategoryCachePayload(cached.value);
       } on Object {
         // Ignore malformed local data and replace it after a complete load.
       }
     }
+    if (cached?.isFresh == true) {
+      try {
+        final activeVersions = await _activeCollectionVersions(locale);
+        if (cachedCategories != null &&
+            _cacheMatchesActiveVersions(cached!.value, activeVersions)) {
+          return cachedCategories;
+        }
+      } on Object catch (error, stack) {
+        if (cachedCategories != null && _canUseUnverifiedCache(error)) {
+          return cachedCategories;
+        }
+        Error.throwWithStackTrace(error, stack);
+      }
+    }
     try {
-      final payload = await _remote.categories(locale);
-      final parsed = _parseCategories(payload);
+      final payload = await _categoryCachePayload(locale);
+      final parsed = _parseCategoryCachePayload(payload);
       await _writeCacheSafely(key, payload);
       return parsed;
     } on Object catch (error, stack) {
-      if (cached != null) {
-        try {
-          return _parseCategories(cached.value);
-        } on Object {
-          // Preserve the online error when the fallback cache is also invalid.
-        }
+      if (cachedCategories != null && _canUseUnverifiedCache(error)) {
+        return cachedCategories;
       }
       Error.throwWithStackTrace(error, stack);
     }
   }
 
-  Future<List<DuaEntry>> entries(String locale, {String? category}) async {
+  Future<List<DuaEntry>> entries(
+    String locale, {
+    String? collection,
+    String? category,
+  }) async {
+    final normalizedCollection = _optionalCatalogSlug(
+      collection,
+      'collection',
+      maxLength: 100,
+    );
+    final normalizedCategory = _optionalCatalogSlug(
+      category,
+      'category',
+      maxLength: 120,
+    );
     final key =
         'dua:$_cacheNamespace:entries:$_entryCacheVersion:'
-        '$locale:${category ?? 'all'}';
+        '$locale:${Uri.encodeComponent(normalizedCollection ?? 'all')}:'
+        '${Uri.encodeComponent(normalizedCategory ?? 'all')}';
     final cached = await _readCacheSafely(key);
+    List<DuaEntry>? cachedEntries;
+    if (cached != null) {
+      try {
+        cachedEntries = _parseCompleteEntryPayload(cached.value);
+      } on Object {
+        // Ignore malformed local data and replace it after a complete load.
+      }
+    }
     if (cached?.isFresh == true) {
       try {
-        return _parseCompleteEntryPayload(cached!.value);
-      } on Object {
-        // A malformed cache is ignored and replaced only after a complete load.
+        final activeVersions = await _activeCollectionVersions(locale);
+        if (cachedEntries != null &&
+            _cacheMatchesActiveVersions(
+              cached!.value,
+              activeVersions,
+              collection: normalizedCollection,
+            )) {
+          return cachedEntries;
+        }
+      } on Object catch (error, stack) {
+        if (cachedEntries != null && _canUseUnverifiedCache(error)) {
+          return _asUnverifiedFallback(cachedEntries);
+        }
+        Error.throwWithStackTrace(error, stack);
       }
     }
     try {
-      final payload = await _completeEntryPayload(locale, category: category);
+      final payload = await _completeEntryPayload(
+        locale,
+        collection: normalizedCollection,
+        category: normalizedCategory,
+      );
       final parsed = _parseCompleteEntryPayload(payload);
       await _writeCacheSafely(key, payload);
       return parsed;
     } on Object catch (error, stack) {
-      if (cached != null) {
-        try {
-          return _parseCompleteEntryPayload(cached.value);
-        } on Object {
-          // Preserve the online error when the fallback cache is also invalid.
-        }
+      if (cachedEntries != null && _canUseUnverifiedCache(error)) {
+        return _asUnverifiedFallback(cachedEntries);
+      }
+      Error.throwWithStackTrace(error, stack);
+    }
+  }
+
+  Future<List<DuaEntry>> search(
+    String locale,
+    String query, {
+    String? collection,
+    String? category,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.length < 2) return const <DuaEntry>[];
+    if (normalizedQuery.length > 120) {
+      throw ArgumentError.value(
+        query,
+        'query',
+        'Search is limited to 120 characters',
+      );
+    }
+    final payload = await _completeEntryPayload(
+      locale,
+      collection: _optionalCatalogSlug(
+        collection,
+        'collection',
+        maxLength: 100,
+      ),
+      category: _optionalCatalogSlug(category, 'category', maxLength: 120),
+      query: normalizedQuery,
+    );
+    return _parseCompleteEntryPayload(payload);
+  }
+
+  Future<DuaEntry> entry(String locale, String id) async {
+    final normalizedId = id.trim().toLowerCase();
+    if (!isDuaEntryId(normalizedId)) {
+      throw const FormatException('Dua entry ID is invalid');
+    }
+    return _loadDetail(
+      key:
+          'dua:$_cacheNamespace:entry:$_entryCacheVersion:'
+          '$locale:$normalizedId',
+      load: () => _remote.entry(locale, normalizedId),
+      matches: (entry) => entry.id.toLowerCase() == normalizedId,
+    );
+  }
+
+  Future<DuaEntry> entryByReference(
+    String locale, {
+    required String collection,
+    required int sourceNumber,
+  }) async {
+    final normalizedCollection = _optionalCatalogSlug(
+      collection,
+      'collection',
+      maxLength: 100,
+    );
+    if (normalizedCollection == null) {
+      throw ArgumentError.value(collection, 'collection', 'Required');
+    }
+    if (sourceNumber < 1 || sourceNumber > 32767) {
+      throw ArgumentError.value(
+        sourceNumber,
+        'sourceNumber',
+        'Must be between 1 and 32767',
+      );
+    }
+    return _loadDetail(
+      key:
+          'dua:$_cacheNamespace:reference:$_entryCacheVersion:'
+          '$locale:$normalizedCollection:$sourceNumber',
+      load: () => _remote.resolveEntry(
+        locale,
+        collection: normalizedCollection,
+        sourceNumber: sourceNumber,
+      ),
+      matches: (entry) =>
+          entry.collection == normalizedCollection &&
+          entry.sourceNumber == sourceNumber,
+    );
+  }
+
+  Future<DuaEntry> _loadDetail({
+    required String key,
+    required Future<Object?> Function() load,
+    required bool Function(DuaEntry entry) matches,
+  }) async {
+    final cached = await _readCacheSafely(key);
+    DuaEntry? cachedEntry;
+    if (cached != null) {
+      try {
+        final parsed = _validatedRemoteEntry(cached.value);
+        if (matches(parsed)) cachedEntry = parsed;
+      } on Object {
+        // Ignore an invalid local detail. The authoritative endpoint is always
+        // revalidated so a withdrawn entry cannot survive in a fresh cache.
+      }
+    }
+    try {
+      final payload = await load();
+      final parsed = _validatedRemoteEntry(payload);
+      if (!matches(parsed)) {
+        throw const FormatException('Dua detail identity does not match');
+      }
+      await _writeCacheSafely(key, payload, maxAge: const Duration(hours: 1));
+      return parsed;
+    } on Object catch (error, stack) {
+      if (cachedEntry != null && _canUseUnverifiedCache(error)) {
+        return cachedEntry.asUnverifiedCatalogFallback();
       }
       Error.throwWithStackTrace(error, stack);
     }
@@ -493,28 +764,36 @@ class DuaRepository {
   Future<List<DuaEntry>> featuredEntries(String locale) async {
     final key = 'dua:$_cacheNamespace:featured:$_entryCacheVersion:$locale';
     final cached = await _readCacheSafely(key);
+    List<DuaEntry>? cachedEntries;
+    if (cached != null) {
+      try {
+        cachedEntries = _parseFeaturedCachePayload(cached.value);
+      } on Object {
+        // Ignore malformed local data and replace it after a validated load.
+      }
+    }
     if (cached?.isFresh == true) {
       try {
-        return _parseEntryPageResults(cached!.value);
-      } on Object {
-        // Ignore malformed local data and replace it after a valid response.
+        final activeVersions = await _activeCollectionVersions(locale);
+        if (cachedEntries != null &&
+            _cacheMatchesActiveVersions(cached!.value, activeVersions)) {
+          return cachedEntries;
+        }
+      } on Object catch (error, stack) {
+        if (cachedEntries != null && _canUseUnverifiedCache(error)) {
+          return _asUnverifiedFallback(cachedEntries);
+        }
+        Error.throwWithStackTrace(error, stack);
       }
     }
     try {
-      final payload = await _remote.entries(
-        locale,
-        pageSize: _featuredEntryCount,
-      );
-      final parsed = _parseEntryPageResults(payload);
+      final payload = await _featuredEntryPayload(locale);
+      final parsed = _parseFeaturedCachePayload(payload);
       await _writeCacheSafely(key, payload);
       return parsed;
     } on Object catch (error, stack) {
-      if (cached != null) {
-        try {
-          return _parseEntryPageResults(cached.value);
-        } on Object {
-          // Preserve the online error when the fallback cache is also invalid.
-        }
+      if (cachedEntries != null && _canUseUnverifiedCache(error)) {
+        return _asUnverifiedFallback(cachedEntries);
       }
       Error.throwWithStackTrace(error, stack);
     }
@@ -597,6 +876,7 @@ class DuaRepository {
     if (payload is! List || payload.any((item) => item is! Map)) {
       throw const FormatException('Dua categories payload is invalid');
     }
+    final identities = <DuaCategoryIdentity>{};
     return payload
         .map((item) {
           final category = DuaCategory.fromJson(
@@ -605,14 +885,34 @@ class DuaRepository {
           if (category.id.isEmpty ||
               category.slug.isEmpty ||
               category.title.isEmpty ||
-              category.entryCount < 0) {
+              category.entryCount < 0 ||
+              category.sourceNumber < 1 ||
+              category.collection.isEmpty ||
+              category.collectionVersion.isEmpty) {
             throw const FormatException(
               'Dua category is missing required fields',
             );
           }
+          if (!identities.add(category.identity)) {
+            throw const FormatException('Dua category identity is duplicated');
+          }
           return category;
         })
         .toList(growable: false);
+  }
+
+  List<DuaCategory> _parseCategoryCachePayload(Object? payload) {
+    if (payload is! Map) {
+      throw const FormatException('Dua category cache is invalid');
+    }
+    final categories = _parseCategories(payload['results']);
+    final versions = _validatedVersionSnapshot(payload);
+    for (final category in categories) {
+      if (versions[category.collection] != category.collectionVersion) {
+        throw const FormatException('Dua category cache version is invalid');
+      }
+    }
+    return categories;
   }
 
   List<DuaEntry> _parseCompleteEntryPayload(Object? payload) {
@@ -620,9 +920,11 @@ class DuaRepository {
     if (page['next'] != null) {
       throw const FormatException('Cached Dua catalog is incomplete');
     }
-    return (page['results']! as List<Object?>)
+    final entries = (page['results']! as List<Object?>)
         .map((item) => _validatedRemoteEntry(item))
         .toList(growable: false);
+    _validatedCachedVersionSnapshot(payload, entries);
+    return entries;
   }
 
   List<DuaEntry> _parseEntryPageResults(Object? payload) {
@@ -637,10 +939,21 @@ class DuaRepository {
         .toList(growable: false);
   }
 
+  List<DuaEntry> _parseFeaturedCachePayload(Object? payload) {
+    final entries = _parseEntryPageResults(payload);
+    _validatedCachedVersionSnapshot(payload, entries);
+    return entries;
+  }
+
   Future<Map<String, Object?>> _completeEntryPayload(
     String locale, {
+    String? collection,
     String? category,
+    String? query,
   }) async {
+    final initialVersions = _parseCollectionVersions(
+      await _remote.collections(locale),
+    );
     final entries = <DuaEntry>[];
     final identities = <String>{};
     final cursors = <String>{};
@@ -650,13 +963,26 @@ class DuaRepository {
     for (var page = 0; page < _maxEntryPages; page += 1) {
       final payload = await _remote.entries(
         locale,
+        collection: collection,
         category: category,
+        query: query,
         cursor: cursor,
         pageSize: _entryPageSize,
       );
       final pagePayload = _validatedEntryPage(payload);
       for (final item in pagePayload['results']! as List<Object?>) {
         final entry = _validatedRemoteEntry(item);
+        if (initialVersions[entry.collection] != entry.collectionVersion) {
+          throw const FormatException(
+            'Dua collection version changed during pagination',
+          );
+        }
+        if ((collection != null && entry.collection != collection) ||
+            (category != null && entry.categorySlug != category)) {
+          throw const FormatException(
+            'Dua entry does not match the requested catalog scope',
+          );
+        }
         final previousVersion = collectionVersions[entry.collection];
         if (previousVersion != null &&
             previousVersion != entry.collectionVersion) {
@@ -671,10 +997,22 @@ class DuaRepository {
 
       final nextCursor = _nextCursor(pagePayload);
       if (nextCursor == null) {
+        final finalVersions = _parseCollectionVersions(
+          await _remote.collections(locale),
+        );
+        if (!_sameCollectionVersions(initialVersions, finalVersions)) {
+          throw const FormatException(
+            'Dua collection version changed during pagination',
+          );
+        }
+        final snapshot = collection == null
+            ? initialVersions
+            : <String, String>{collection: ?initialVersions[collection]};
         return <String, Object?>{
           'count': entries.length,
           'next': null,
           'previous': null,
+          'collection_versions': snapshot,
           'results': entries
               .map((entry) => entry.toJson())
               .toList(growable: false),
@@ -689,6 +1027,150 @@ class DuaRepository {
       cursor = nextCursor;
     }
     throw const FormatException('Dua pagination did not terminate');
+  }
+
+  Map<String, String> _parseCollectionVersions(Object? payload) {
+    if (payload is! List || payload.any((item) => item is! Map)) {
+      throw const FormatException('Dua collections payload is invalid');
+    }
+    final versions = <String, String>{};
+    for (final item in payload) {
+      final json = Map<String, Object?>.from(item! as Map);
+      final slug = json['slug'];
+      final version = json['version'];
+      if (slug is! String ||
+          slug.trim().isEmpty ||
+          version is! String ||
+          version.trim().isEmpty ||
+          versions.containsKey(slug)) {
+        throw const FormatException('Dua collection version is invalid');
+      }
+      versions[slug] = version;
+    }
+    return versions;
+  }
+
+  Future<Map<String, String>> _activeCollectionVersions(String locale) async =>
+      _parseCollectionVersions(await _remote.collections(locale));
+
+  Future<Map<String, Object?>> _categoryCachePayload(String locale) async {
+    final initialVersions = await _activeCollectionVersions(locale);
+    final categories = _parseCategories(await _remote.categories(locale));
+    for (final category in categories) {
+      if (initialVersions[category.collection] != category.collectionVersion) {
+        throw const FormatException(
+          'Dua collection version changed while loading categories',
+        );
+      }
+    }
+    final finalVersions = await _activeCollectionVersions(locale);
+    if (!_sameCollectionVersions(initialVersions, finalVersions)) {
+      throw const FormatException(
+        'Dua collection version changed while loading categories',
+      );
+    }
+    return <String, Object?>{
+      'collection_versions': initialVersions,
+      'results': categories
+          .map(
+            (category) => <String, Object?>{
+              'id': category.id,
+              'collection': category.collection,
+              'collection_title': category.collectionTitle,
+              'collection_version': category.collectionVersion,
+              'source_number': category.sourceNumber,
+              'slug': category.slug,
+              'title': category.title,
+              'entry_count': category.entryCount,
+            },
+          )
+          .toList(growable: false),
+    };
+  }
+
+  Future<Map<String, Object?>> _featuredEntryPayload(String locale) async {
+    final initialVersions = await _activeCollectionVersions(locale);
+    final remotePayload = await _remote.entries(
+      locale,
+      pageSize: _featuredEntryCount,
+    );
+    final entries = _parseEntryPageResults(remotePayload);
+    for (final entry in entries) {
+      if (initialVersions[entry.collection] != entry.collectionVersion) {
+        throw const FormatException(
+          'Dua collection version changed while loading featured entries',
+        );
+      }
+    }
+    final finalVersions = await _activeCollectionVersions(locale);
+    if (!_sameCollectionVersions(initialVersions, finalVersions)) {
+      throw const FormatException(
+        'Dua collection version changed while loading featured entries',
+      );
+    }
+    return <String, Object?>{
+      'count': entries.length,
+      'next': null,
+      'previous': null,
+      'collection_versions': initialVersions,
+      'results': entries.map((entry) => entry.toJson()).toList(growable: false),
+    };
+  }
+
+  Map<String, String> _validatedCachedVersionSnapshot(
+    Object? payload,
+    List<DuaEntry> entries,
+  ) {
+    final versions = _validatedVersionSnapshot(payload);
+    for (final entry in entries) {
+      if (versions[entry.collection] != entry.collectionVersion) {
+        throw const FormatException('Dua cache version snapshot is invalid');
+      }
+    }
+    return versions;
+  }
+
+  Map<String, String> _validatedVersionSnapshot(Object? payload) {
+    if (payload is! Map || payload['collection_versions'] is! Map) {
+      throw const FormatException('Dua cache version snapshot is missing');
+    }
+    final rawVersions = Map<Object?, Object?>.from(
+      payload['collection_versions']! as Map,
+    );
+    final versions = <String, String>{};
+    for (final item in rawVersions.entries) {
+      if (item.key is! String ||
+          (item.key! as String).trim().isEmpty ||
+          item.value is! String ||
+          (item.value! as String).trim().isEmpty ||
+          versions.containsKey(item.key)) {
+        throw const FormatException('Dua cache version snapshot is invalid');
+      }
+      versions[item.key! as String] = item.value! as String;
+    }
+    return versions;
+  }
+
+  bool _cacheMatchesActiveVersions(
+    Object? payload,
+    Map<String, String> activeVersions, {
+    String? collection,
+  }) {
+    final cachedVersions = _validatedVersionSnapshot(payload);
+    if (collection == null) {
+      return _sameCollectionVersions(cachedVersions, activeVersions);
+    }
+    final activeVersion = activeVersions[collection];
+    return cachedVersions.length == (activeVersion == null ? 0 : 1) &&
+        cachedVersions[collection] == activeVersion;
+  }
+
+  List<DuaEntry> _asUnverifiedFallback(List<DuaEntry> entries) => entries
+      .map((entry) => entry.asUnverifiedCatalogFallback())
+      .toList(growable: false);
+
+  bool _canUseUnverifiedCache(Object error) {
+    return canUseUnverifiedDuaFallback(error);
   }
 
   String? _nextCursor(Object? payload) {
@@ -752,7 +1234,7 @@ class DuaRepository {
     final repetitions = json['repetitions'];
     final category = json['category'];
     if (json['id'] is! String ||
-        (json['id']! as String).trim().isEmpty ||
+        !Uuid.isValidUUIDFormat(fromString: (json['id']! as String).trim()) ||
         sourceNumber is! int ||
         sourceNumber < 1 ||
         json['collection'] is! String ||
@@ -760,6 +1242,8 @@ class DuaRepository {
         json['collection_version'] is! String ||
         (json['collection_version']! as String).trim().isEmpty ||
         category is! Map ||
+        category['slug'] is! String ||
+        (category['slug']! as String).trim().isEmpty ||
         category['title'] is! String ||
         (category['title']! as String).trim().isEmpty ||
         json['arabic_text'] is! String ||
@@ -813,6 +1297,28 @@ class DuaRepository {
     return entry;
   }
 }
+
+String? _optionalCatalogSlug(
+  String? value,
+  String name, {
+  required int maxLength,
+}) {
+  if (value == null) return null;
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  if (normalized.length > maxLength ||
+      !RegExp(r'^[-a-zA-Z0-9_]+$').hasMatch(normalized)) {
+    throw ArgumentError.value(value, name, 'Catalog slug is invalid');
+  }
+  return normalized;
+}
+
+bool _sameCollectionVersions(
+  Map<String, String> left,
+  Map<String, String> right,
+) =>
+    left.length == right.length &&
+    left.entries.every((entry) => right[entry.key] == entry.value);
 
 const int _maxPracticeRepetitions = 10000;
 const Set<String> _supportedEvidenceKinds = <String>{

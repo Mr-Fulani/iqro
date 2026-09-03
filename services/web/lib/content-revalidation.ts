@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { isEditionCode, isUuid } from "./public-content";
+import { isDuaCollectionSlug } from "./public-route-params";
 
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const QURAN_ACTIONS = new Set(["published", "activated", "withdrawn"]);
@@ -116,7 +117,7 @@ export function parseContentChange(value: unknown): ContentChange | null {
       typeof value.action !== "string" ||
       !DUA_ACTIONS.has(value.action) ||
       typeof value.collection !== "string" ||
-      !/^[a-z0-9][a-z0-9-]{0,99}$/.test(value.collection) ||
+      !isDuaCollectionSlug(value.collection) ||
       typeof value.version !== "string" ||
       !VERSION_PATTERN.test(value.version)
     ) return null;
@@ -154,6 +155,8 @@ export function revalidateContentChange(change: ContentChange): void {
     expireTag("dua:catalog");
     revalidatePath("/[locale]/dua", "page");
     revalidatePath("/[locale]/dua/[category]", "page");
+    revalidatePath("/[locale]/dua/[category]/categories/[topic]", "page");
+    revalidatePath("/[locale]/dua/[category]/[sourceNumber]", "page");
     return;
   }
 

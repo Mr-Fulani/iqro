@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/dua/dua_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -110,16 +111,21 @@ void main() {
       ]);
       for (final call in remote.entryCalls) {
         expect(call.locale, 'ru');
+        expect(call.collection, isNull);
         expect(call.category, 'sleep');
+        expect(call.query, isNull);
         expect(call.pageSize, 100);
       }
 
       final cacheRow = (await sqlDatabase.query('cache_entries')).single;
       expect(cacheRow['cache_key'], startsWith('dua:https%3A'));
-      expect(cacheRow['cache_key'], endsWith(':entries:v3:ru:sleep'));
+      expect(cacheRow['cache_key'], endsWith(':entries:v4:ru:all:sleep'));
       final cachedPayload = jsonDecode(cacheRow['payload']! as String) as Map;
       expect(cachedPayload['count'], 24);
       expect(cachedPayload['next'], isNull);
+      expect(cachedPayload['collection_versions'], <String, Object?>{
+        'hisn-al-muslim': 'hisn-full-test',
+      });
       expect(cachedPayload['results'], hasLength(24));
 
       remote.failEntries = true;
@@ -132,6 +138,7 @@ void main() {
       });
       final offline = await repository.entries('ru', category: 'sleep');
       expect(offline, hasLength(24));
+      expect(offline.every((entry) => !entry.catalogVersionVerified), isTrue);
       expect(remote.entryCalls, hasLength(3));
     },
   );
@@ -156,7 +163,113 @@ void main() {
     expect(remote.entryCalls, hasLength(1));
     expect(
       (await sqlDatabase.query('cache_entries')).single['cache_key'],
-      endsWith(':featured:v3:ru'),
+      endsWith(':featured:v4:ru'),
+    );
+  });
+
+  test(
+    'search forwards collection and query across every cursor page',
+    () async {
+      remote.onEntries = (call) => call.cursor == null
+          ? _page(<Object?>[_entryPayload(1)], next: _nextUrl('search-page'))
+          : _page(<Object?>[_entryPayload(2)]);
+
+      final results = await repository.search(
+        'ru',
+        '  утро  ',
+        collection: 'hisn-al-muslim',
+        category: 'sleep',
+      );
+
+      expect(results.map((entry) => entry.sourceNumber), <int>[1, 2]);
+      expect(remote.entryCalls, hasLength(2));
+      for (final call in remote.entryCalls) {
+        expect(call.collection, 'hisn-al-muslim');
+        expect(call.category, 'sleep');
+        expect(call.query, 'утро');
+      }
+    },
+  );
+
+  test(
+    'detail revalidates identity and uses cache only as untrusted fallback',
+    () async {
+      const entryId = '0192d920-4cb5-7e72-9a4d-9f0ab8d90e31';
+      remote.onEntry = (locale, id) => <String, Object?>{
+        ..._entryPayload(7),
+        'id': entryId,
+      };
+
+      final online = await repository.entry('ru', entryId.toUpperCase());
+      expect(online.id, entryId);
+      expect(remote.detailCalls, <String>[entryId]);
+
+      remote.failDetail = true;
+      final cached = await repository.entry('ru', entryId);
+      expect(cached.sourceNumber, 7);
+      expect(cached.catalogVersionVerified, isFalse);
+      expect(remote.detailCalls, hasLength(2));
+
+      await expectLater(
+        repository.entry('ru', 'not-a-uuid'),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test('detail never masks an authoritative withdrawal with cache', () async {
+    const entryId = '0192d920-4cb5-7e72-9a4d-9f0ab8d90e32';
+    remote.onEntry = (locale, id) => <String, Object?>{
+      ..._entryPayload(8),
+      'id': entryId,
+    };
+    await repository.entry('ru', entryId);
+    remote.onEntry = (locale, id) =>
+        throw const ApiException(message: 'withdrawn', statusCode: 404);
+
+    await expectLater(
+      repository.entry('ru', entryId),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          404,
+        ),
+      ),
+    );
+  });
+
+  test('canonical reference resolves the active replacement entry', () async {
+    final oldFavorite = DuaEntry.fromFavorite(<String, Object?>{
+      ..._entryPayload(9),
+      'id': '0192d920-4cb5-7e72-9a4d-000000000009',
+      'collection_version': 'hisn-old',
+    });
+    remote.onResolveEntry = (locale, collection, sourceNumber) =>
+        <String, Object?>{
+          ..._entryPayload(sourceNumber),
+          'id': '0192d920-4cb5-7e72-9a4d-000000009999',
+          'collection_version': 'hisn-full-test',
+        };
+
+    final current = await repository.entryByReference(
+      'ru',
+      collection: oldFavorite.collection,
+      sourceNumber: oldFavorite.sourceNumber,
+    );
+
+    expect(current.id, isNot(oldFavorite.id));
+    expect(current.collectionVersion, 'hisn-full-test');
+    expect(remote.referenceCalls, <DuaEntryIdentity>[
+      (collection: 'hisn-al-muslim', sourceNumber: 9),
+    ]);
+    await expectLater(
+      repository.entryByReference(
+        'ru',
+        collection: 'hisn-al-muslim',
+        sourceNumber: 32768,
+      ),
+      throwsArgumentError,
     );
   });
 
@@ -178,13 +291,13 @@ void main() {
   });
 
   test('corrupt cache rows recover from a valid network response', () async {
-    remote.onEntries = (_) => _page(<Object?>[_entryPayload(1)]);
+    remote.onEntries = (_) => _page(<Object?>[_scopedEntry('recovery', 1)]);
     await repository.entries('ru', category: 'recovery');
 
     await sqlDatabase.update('cache_entries', <String, Object?>{
       'payload': '{not-json',
     });
-    remote.onEntries = (_) => _page(<Object?>[_entryPayload(2)]);
+    remote.onEntries = (_) => _page(<Object?>[_scopedEntry('recovery', 2)]);
     expect(
       (await repository.entries(
         'ru',
@@ -197,7 +310,7 @@ void main() {
       'payload': jsonEncode('wrong-shape'),
       'updated_at': 'not-a-date',
     });
-    remote.onEntries = (_) => _page(<Object?>[_entryPayload(3)]);
+    remote.onEntries = (_) => _page(<Object?>[_scopedEntry('recovery', 3)]);
     expect(
       (await repository.entries(
         'ru',
@@ -233,7 +346,7 @@ void main() {
 
   test('rejects a repeated cursor without caching a partial catalog', () async {
     remote.onEntries = (call) => _page(<Object?>[
-      _entryPayload(call.cursor == null ? 1 : 2),
+      _scopedEntry('loop', call.cursor == null ? 1 : 2),
     ], next: _nextUrl('loop'));
 
     await expectLater(
@@ -255,7 +368,7 @@ void main() {
     remote.onEntries = (call) {
       final page = remote.entryCalls.length;
       return _page(<Object?>[
-        _entryPayload(page),
+        _scopedEntry('unbounded', page),
       ], next: _nextUrl('page-$page'));
     };
 
@@ -330,10 +443,12 @@ void main() {
 
   test('rejects a catalog version change between cursor pages', () async {
     remote.onEntries = (call) => call.cursor == null
-        ? _page(<Object?>[_entryPayload(1)], next: _nextUrl('new-version'))
+        ? _page(<Object?>[
+            _scopedEntry('version-race', 1),
+          ], next: _nextUrl('new-version'))
         : _page(<Object?>[
             <String, Object?>{
-              ..._entryPayload(2),
+              ..._scopedEntry('version-race', 2),
               'collection_version': 'hisn-full-next',
             },
           ]);
@@ -350,6 +465,36 @@ void main() {
     );
     expect(await sqlDatabase.query('cache_entries'), isEmpty);
   });
+
+  test(
+    'rejects an empty tail after the active catalog version changes',
+    () async {
+      remote.onCollections = (call) => <Object?>[
+        <String, Object?>{
+          'slug': 'hisn-al-muslim',
+          'version': call == 1 ? 'hisn-full-test' : 'hisn-full-next',
+        },
+      ];
+      remote.onEntries = (call) => call.cursor == null
+          ? _page(<Object?>[
+              _scopedEntry('snapshot-race', 1),
+            ], next: _nextUrl('new-version'))
+          : _page(const <Object?>[]);
+
+      await expectLater(
+        repository.entries('ru', category: 'snapshot-race'),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            contains('version changed'),
+          ),
+        ),
+      );
+      expect(remote.collectionCalls, 2);
+      expect(await sqlDatabase.query('cache_entries'), isEmpty);
+    },
+  );
 
   test(
     'rejects corrupt nested evidence instead of overstating verification',
@@ -413,18 +558,77 @@ void main() {
 
     expect(await sqlDatabase.query('cache_entries'), isEmpty);
   });
+
+  test('refreshes category metadata when the active version changes', () async {
+    remote.onCollections = (call) => <Object?>[
+      <String, Object?>{
+        'slug': 'hisn-al-muslim',
+        'version': call <= 2 ? 'hisn-full-test' : 'hisn-full-next',
+      },
+    ];
+    remote.categoryPayload = <Object?>[
+      _categoryPayload(title: 'Old title', version: 'hisn-full-test'),
+    ];
+
+    expect((await repository.categories('ru')).single.title, 'Old title');
+
+    remote.categoryPayload = <Object?>[
+      _categoryPayload(title: 'New title', version: 'hisn-full-next'),
+    ];
+    final refreshed = await repository.categories('ru');
+
+    expect(refreshed.single.title, 'New title');
+    expect(remote.categoryCalls, 2);
+    expect(remote.collectionCalls, 5);
+  });
+
+  test(
+    'category identity includes collection and rejects duplicates',
+    () async {
+      final category = <String, Object?>{
+        'id': 'category-1',
+        'collection': 'hisn-al-muslim',
+        'collection_version': 'hisn-full-test',
+        'source_number': 27,
+        'slug': 'sleep',
+        'title': 'Sleep',
+        'entry_count': 24,
+      };
+      remote.categoryPayload = <Object?>[category];
+
+      final parsed = await repository.categories('ru');
+
+      expect(parsed.single.identity, (
+        collection: 'hisn-al-muslim',
+        slug: 'sleep',
+      ));
+      expect(parsed.single.collectionVersion, 'hisn-full-test');
+      expect(parsed.single.sourceNumber, 27);
+
+      await sqlDatabase.delete('cache_entries');
+      remote.categoryPayload = <Object?>[
+        category,
+        {...category, 'id': 'category-2'},
+      ];
+      await expectLater(repository.categories('ru'), throwsFormatException);
+    },
+  );
 }
 
 class _EntryCall {
   const _EntryCall({
     required this.locale,
+    required this.collection,
     required this.category,
+    required this.query,
     required this.cursor,
     required this.pageSize,
   });
 
   final String locale;
+  final String? collection;
   final String? category;
+  final String? query;
   final String? cursor;
   final int pageSize;
 }
@@ -458,30 +662,80 @@ class _FakeDuaRemote implements DuaRemoteGateway {
   Uri get apiBaseUri => _apiBaseUri;
 
   final entryCalls = <_EntryCall>[];
+  final detailCalls = <String>[];
+  final referenceCalls = <DuaEntryIdentity>[];
+  var collectionCalls = 0;
+  var categoryCalls = 0;
   final favoriteWrites = <_FavoriteWrite>[];
   Object? Function(_EntryCall call)? onEntries;
   Object? categoryPayload = const <Object?>[];
   bool failEntries = false;
+  bool failDetail = false;
+  Object? Function(String locale, String id)? onEntry;
+  Object? Function(String locale, String collection, int sourceNumber)?
+  onResolveEntry;
+  Object? Function(int call)? onCollections;
 
   @override
-  Future<Object?> categories(String locale) async => categoryPayload;
+  Future<Object?> collections(String locale) async {
+    collectionCalls += 1;
+    return onCollections?.call(collectionCalls) ??
+        <Object?>[
+          <String, Object?>{
+            'slug': 'hisn-al-muslim',
+            'version': 'hisn-full-test',
+          },
+        ];
+  }
+
+  @override
+  Future<Object?> categories(String locale) async {
+    categoryCalls += 1;
+    return categoryPayload;
+  }
 
   @override
   Future<Object?> entries(
     String locale, {
+    String? collection,
     String? category,
+    String? query,
     String? cursor,
     required int pageSize,
   }) async {
     final call = _EntryCall(
       locale: locale,
+      collection: collection,
       category: category,
+      query: query,
       cursor: cursor,
       pageSize: pageSize,
     );
     entryCalls.add(call);
     if (failEntries) throw StateError('offline');
     return onEntries == null ? _page(const <Object?>[]) : onEntries!.call(call);
+  }
+
+  @override
+  Future<Object?> entry(String locale, String id) async {
+    detailCalls.add(id);
+    if (failDetail) throw StateError('offline');
+    final callback = onEntry;
+    if (callback == null) throw StateError('Unexpected detail request');
+    return callback(locale, id);
+  }
+
+  @override
+  Future<Object?> resolveEntry(
+    String locale, {
+    required String collection,
+    required int sourceNumber,
+  }) async {
+    referenceCalls.add((collection: collection, sourceNumber: sourceNumber));
+    if (failDetail) throw StateError('offline');
+    final callback = onResolveEntry;
+    if (callback == null) throw StateError('Unexpected reference request');
+    return callback(locale, collection, sourceNumber);
   }
 
   @override
@@ -502,6 +756,19 @@ Map<String, Object?> _page(List<Object?> results, {String? next}) =>
       'results': results,
     };
 
+Map<String, Object?> _categoryPayload({
+  required String title,
+  required String version,
+}) => <String, Object?>{
+  'id': '0192d920-4cb5-7e72-9a4d-000000000027',
+  'collection': 'hisn-al-muslim',
+  'collection_version': version,
+  'source_number': 27,
+  'slug': 'sleep',
+  'title': title,
+  'entry_count': 24,
+};
+
 String _nextUrl(String cursor, {String category = 'test'}) =>
     Uri.https('staging.iqro.forum', '/api/v1/dua/entries', <String, String>{
       'language': 'ru',
@@ -512,7 +779,7 @@ String _nextUrl(String cursor, {String category = 'test'}) =>
 
 Map<String, Object?> _entryPayload(int number, {String repetitionLabel = ''}) =>
     <String, Object?>{
-      'id': 'entry-$number',
+      'id': _entryId(number),
       'source_number': number,
       'collection': 'hisn-al-muslim',
       'collection_version': 'hisn-full-test',
@@ -567,6 +834,18 @@ Map<String, Object?> _entryPayload(int number, {String repetitionLabel = ''}) =>
         },
       ],
     };
+
+String _entryId(int number) =>
+    '0192d920-4cb5-7e72-9a4d-${number.toRadixString(16).padLeft(12, '0')}';
+
+Map<String, Object?> _scopedEntry(String category, int number) {
+  final entry = _entryPayload(number);
+  entry['category'] = <String, Object?>{
+    ...entry['category']! as Map,
+    'slug': category,
+  };
+  return entry;
+}
 
 Future<void> _createSchema(Database database) async {
   await database.execute('''

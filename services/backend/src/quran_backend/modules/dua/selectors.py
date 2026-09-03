@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db.models import Count, F, Prefetch, Q, QuerySet
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 
 from quran_backend.modules.dua.models import (
     DuaAudioAsset,
@@ -33,40 +33,79 @@ def published_dua_collections(language: str) -> QuerySet[DuaCollection]:
     )
 
 
-def published_dua_categories(language: str) -> QuerySet[DuaCategory]:
+def published_dua_categories(
+    language: str,
+    *,
+    collection: str = "",
+) -> QuerySet[DuaCategory]:
     localized_translations = DuaCategoryTranslation.objects.filter(language_code=language)
-    return (
-        DuaCategory.objects.filter(
+    localized_category_rows = localized_translations.filter(category_id=OuterRef("pk"))
+    localized_sources = DuaSourceEdition.objects.filter(language_code=language)
+    queryset = (
+        DuaCategory.objects.annotate(
+            has_localized_category=Exists(localized_category_rows),
+        )
+        .filter(
             collection_version__collection__active_version_id=F("collection_version_id"),
             collection_version__status=DuaPublicationStatus.PUBLISHED,
+            has_localized_category=True,
         )
-        .annotate(entry_count=Count("entries"))
+        .annotate(
+            entry_count=Count(
+                "entries",
+                filter=(
+                    Q(entries__collection_version_id=F("collection_version_id"))
+                    & Q(entries__translations__language_code=language)
+                ),
+                distinct=True,
+            )
+        )
+        .select_related("collection_version", "collection_version__collection")
         .prefetch_related(
             Prefetch(
                 "translations",
                 queryset=localized_translations,
                 to_attr="localized_category_translations",
-            )
+            ),
+            Prefetch(
+                "collection_version__source_editions",
+                queryset=localized_sources,
+                to_attr="localized_source_editions",
+            ),
         )
-        .order_by("sort_order", "source_number")
+    )
+    if collection:
+        queryset = queryset.filter(collection_version__collection__slug=collection)
+    return queryset.order_by(
+        "collection_version__collection__slug",
+        "sort_order",
+        "source_number",
+        "id",
     )
 
 
 def published_dua_entries(
     language: str,
     *,
+    collection: str = "",
     category: str = "",
     query: str = "",
 ) -> QuerySet[DuaEntry]:
     localized_entries = DuaEntryTranslation.objects.filter(language_code=language)
+    localized_entry_rows = localized_entries.filter(entry_id=OuterRef("pk"))
     localized_categories = DuaCategoryTranslation.objects.filter(language_code=language)
+    localized_category_rows = localized_categories.filter(category_id=OuterRef("category_id"))
     localized_sources = DuaSourceEdition.objects.filter(language_code=language)
     queryset = (
-        DuaEntry.objects.filter(
+        DuaEntry.objects.annotate(
+            has_localized_entry=Exists(localized_entry_rows),
+            has_localized_category=Exists(localized_category_rows),
+        )
+        .filter(
             collection_version__collection__active_version_id=F("collection_version_id"),
             collection_version__status=DuaPublicationStatus.PUBLISHED,
-            translations__language_code=language,
-            category__translations__language_code=language,
+            has_localized_entry=True,
+            has_localized_category=True,
         )
         .select_related("category", "collection_version", "collection_version__collection")
         .prefetch_related(
@@ -93,13 +132,23 @@ def published_dua_entries(
             Prefetch("evidence", queryset=DuaEvidence.objects.order_by("sort_order")),
         )
     )
+    if collection:
+        queryset = queryset.filter(collection_version__collection__slug=collection)
     if category:
         queryset = queryset.filter(category__slug=category)
     if query:
-        queryset = queryset.filter(
+        queryset = queryset.annotate(
+            matches_localized_entry=Exists(
+                localized_entry_rows.filter(
+                    Q(meaning_text__icontains=query) | Q(transliteration__icontains=query)
+                )
+            ),
+            matches_localized_category=Exists(
+                localized_category_rows.filter(title__icontains=query)
+            ),
+        ).filter(
             Q(arabic_text__icontains=query)
-            | Q(translations__meaning_text__icontains=query)
-            | Q(translations__transliteration__icontains=query)
-            | Q(category__translations__title__icontains=query)
+            | Q(matches_localized_entry=True)
+            | Q(matches_localized_category=True)
         )
     return queryset.distinct().order_by("sort_order", "id")

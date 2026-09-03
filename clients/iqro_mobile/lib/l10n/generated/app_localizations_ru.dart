@@ -495,7 +495,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dua => 'Ду’а';
 
   @override
-  String get duaSubtitle => 'Сборник «Крепость мусульманина»';
+  String get duaSubtitle => 'Ду’а и азкары из проверяемых источников';
+
+  @override
+  String duaCount(int count) {
+    return 'Ду’а: $count';
+  }
+
+  @override
+  String get noDuaCategories => 'Категории ду’а пока недоступны';
+
+  @override
+  String get noDuaFound => 'Подходящие ду’а не найдены';
+
+  @override
+  String get duaSearchMinCharacters => 'Введите минимум 2 символа для поиска';
+
+  @override
+  String get duaUnavailable => 'Это ду’а недоступно';
+
+  @override
+  String get cachedDuaWarning =>
+      'Показана сохранённая копия. Аудио станет доступно после проверки актуальной версии.';
 
   @override
   String get duaAudio => 'Аудио ду’а';

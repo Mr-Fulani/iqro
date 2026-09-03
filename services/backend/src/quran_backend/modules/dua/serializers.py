@@ -67,6 +67,43 @@ def _first_localized(obj: Any, attribute: str) -> Any | None:
     return values[0] if values else None
 
 
+class DuaCategoryListQuerySerializer(serializers.Serializer[Any]):
+    collection = serializers.SlugField(
+        required=False,
+        allow_blank=True,
+        max_length=100,
+        help_text="Limit categories to the active version of this collection slug.",
+    )
+
+
+class DuaEntryListQuerySerializer(DuaCategoryListQuerySerializer):
+    category = serializers.SlugField(
+        required=False,
+        allow_blank=True,
+        max_length=120,
+        help_text="Limit entries to this category slug, optionally within collection.",
+    )
+    q = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        min_length=2,
+        max_length=120,
+        help_text="Search Arabic text, localized meaning, transliteration and category title.",
+    )
+
+
+class DuaEntryResolveQuerySerializer(serializers.Serializer[Any]):
+    collection = serializers.SlugField(
+        max_length=100,
+        help_text="Canonical collection slug.",
+    )
+    source_number = serializers.IntegerField(
+        min_value=1,
+        max_value=32767,
+        help_text="Stable entry number within the collection.",
+    )
+
+
 class DuaCollectionSerializer(serializers.ModelSerializer[DuaCollection]):
     version = serializers.CharField(source="active_version.version", read_only=True)
     schema_version = serializers.IntegerField(
@@ -107,15 +144,37 @@ class DuaCollectionSerializer(serializers.ModelSerializer[DuaCollection]):
 
 class DuaCategorySerializer(serializers.ModelSerializer[DuaCategory]):
     title = serializers.SerializerMethodField()
+    collection_title = serializers.SerializerMethodField()
     entry_count = serializers.IntegerField(read_only=True)
+    collection = serializers.CharField(
+        source="collection_version.collection.slug",
+        read_only=True,
+    )
+    collection_version = serializers.CharField(
+        source="collection_version.version",
+        read_only=True,
+    )
 
     class Meta:
         model = DuaCategory
-        fields = ("id", "source_number", "slug", "title", "entry_count")
+        fields = (
+            "id",
+            "collection",
+            "collection_title",
+            "collection_version",
+            "source_number",
+            "slug",
+            "title",
+            "entry_count",
+        )
 
     def get_title(self, obj: DuaCategory) -> str:
         translation = _first_localized(obj, "localized_category_translations")
         return translation.title if translation else obj.slug
+
+    def get_collection_title(self, obj: DuaCategory) -> str:
+        source = _first_localized(obj.collection_version, "localized_source_editions")
+        return source.title if source else obj.collection_version.collection.slug
 
 
 class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):

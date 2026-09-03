@@ -65,11 +65,13 @@ void main() {
         translationLabel: 'Translation',
         repetitionLabel: 'Repetitions',
         sourceLabel: 'Source',
+        canonicalUrl: 'https://iqro.forum/dua/hisn-al-muslim/7',
       );
 
       expect(text, contains('Morning · #7'));
       expect(text, contains('Translation:\nA meaning'));
       expect(text, contains('Source: Hisn al-Muslim · Entry 7'));
+      expect(text, endsWith('https://iqro.forum/dua/hisn-al-muslim/7'));
       expect(text.toLowerCase(), isNot(contains('verified')));
     },
   );

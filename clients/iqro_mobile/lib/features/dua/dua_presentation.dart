@@ -65,6 +65,7 @@ String duaShareText(
   required String translationLabel,
   required String repetitionLabel,
   required String sourceLabel,
+  String? canonicalUrl,
 }) {
   final blocks = <String>[
     '${entry.categoryTitle} · #${entry.sourceNumber}',
@@ -97,6 +98,9 @@ String duaShareText(
   }
   if (provenance.isNotEmpty) {
     blocks.add('$sourceLabel: ${provenance.join(' · ')}');
+  }
+  if (canonicalUrl?.trim().isNotEmpty == true) {
+    blocks.add(canonicalUrl!.trim());
   }
   return blocks.where((block) => block.isNotEmpty).join('\n\n');
 }

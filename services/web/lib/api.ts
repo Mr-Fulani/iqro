@@ -327,6 +327,9 @@ export type DuaCollection = {
 
 export type DuaCategory = {
   id: string;
+  collection: string;
+  collection_title: string;
+  collection_version: string;
   source_number: number;
   slug: string;
   title: string;
@@ -1624,6 +1627,19 @@ export class ApiClient {
     return this.request<DuaCategory[]>(
       `/api/v1/dua/categories?language=${encodeURIComponent(language)}`,
     );
+  }
+
+  public async resolveDuaEntry(
+    collection: string,
+    sourceNumber: number,
+    language: SupportedLocale,
+  ): Promise<DuaEntry> {
+    const query = new URLSearchParams({
+      collection,
+      source_number: String(sourceNumber),
+      language,
+    });
+    return this.request<DuaEntry>(`/api/v1/dua/entries/resolve?${query}`);
   }
 
   public async getDuaEntries(params: {

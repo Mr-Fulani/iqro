@@ -18,9 +18,26 @@ import '../features/settings/settings_screen.dart';
 import '../features/share/share_screen.dart';
 import 'app_shell.dart';
 
+const _supportedWebLinkLocales = <String>{'ru', 'en', 'ar', 'tr'};
+
+String? normalizeLocalizedDuaDeepLink(Uri uri) {
+  final segments = uri.pathSegments;
+  if (segments.length < 2 ||
+      !_supportedWebLinkLocales.contains(segments.first) ||
+      segments[1] != 'dua') {
+    return null;
+  }
+  return Uri(
+    path: '/${segments.skip(1).join('/')}',
+    query: uri.hasQuery ? uri.query : null,
+    fragment: uri.hasFragment ? uri.fragment : null,
+  ).toString();
+}
+
 GoRouter createRouter({required bool onboardingComplete}) {
   return GoRouter(
     initialLocation: onboardingComplete ? '/app' : '/onboarding',
+    redirect: (context, state) => normalizeLocalizedDuaDeepLink(state.uri),
     routes: <RouteBase>[
       GoRoute(
         path: '/onboarding',
@@ -72,11 +89,34 @@ GoRouter createRouter({required bool onboardingComplete}) {
       ),
       GoRoute(path: '/dua', builder: (context, state) => const DuaScreen()),
       GoRoute(
+        path: '/dua/:collection/:sourceNumber',
+        builder: (context, state) {
+          final entry = state.extra;
+          return DuaEntryRouteScreen(
+            collection: state.pathParameters['collection'] ?? '',
+            sourceNumber:
+                int.tryParse(state.pathParameters['sourceNumber'] ?? '') ?? 0,
+            initialEntry: entry is DuaEntry ? entry : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/dua/:collection/categories/:category',
+        builder: (context, state) => DuaScreen(
+          initialCollection: state.pathParameters['collection'],
+          initialCategory: state.pathParameters['category'],
+        ),
+      ),
+      GoRoute(
         path: '/dua/:id',
         builder: (context, state) {
           final entry = state.extra;
-          if (entry is DuaEntry) return DuaEntryScreen(entry: entry);
-          return const DuaScreen();
+          final id = state.pathParameters['id'] ?? '';
+          if (!isDuaEntryId(id)) return DuaScreen(initialCategory: id);
+          return DuaEntryRouteScreen(
+            entryId: id,
+            initialEntry: entry is DuaEntry ? entry : null,
+          );
         },
       ),
       GoRoute(

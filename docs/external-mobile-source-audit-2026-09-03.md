@@ -80,6 +80,17 @@ IQRO API: безопасно пройти все cursor-страницы, сох
 добавить streaming audio, практический счётчик повторов, copy/share и честное различение
 `source_only` от `editorially_verified`.
 
+После первой реализации контракт дополнительно подготовлен к нескольким сборникам: категории
+содержат `collection` и `collection_version`, выбор категории передаёт оба идентификатора,
+поиск выполняется сервером по всему каталогу, а `/dua/:id` загружает карточку без зависимости
+от навигационного объекта в памяти. Мобильный клиент сверяет карту активных версий до и после
+cursor-пагинации и не кеширует смешанный/неполный snapshot, если публикация изменилась между
+страницами.
+
+Аудио в текущем staging-каталоге остаётся только streaming-функцией: у записей заполнен URL
+источника, но `rights_url` пуст. Это отдельный release gate. До подтверждения прав нельзя
+объявлять эти записи доступными для offline-загрузки или переносить их на собственный CDN.
+
 Автоматический remote pull избранного в этот этап не входит: локальные персональные таблицы
 мобильного клиента пока не разделены по профилям. До schema migration с отдельным
 `profile_scope_id` такой pull мог бы показать или перезаписать данные предыдущего аккаунта.
@@ -103,8 +114,9 @@ IQRO уже выполняет локальный расчёт и перепла
 | 604-page Mushaf, ayah hit map, offline | Готово | Готово | Не заменять старым font/PNG pipeline |
 | Word-level hit map/morphology | QF positioned words частично готовы | Нет UI | Отдельный versioned слой после source/license audit |
 | Quran FTS и Juz/Hizb/Rub navigation | Данные/API частично готовы | Неполная навигация/search | Реализовать независимо, без JMApps DB |
-| Dua full pagination | API готов | Дефект: только первая страница | Исправить немедленно |
-| Dua audio/repetition/evidence/share | API готов | Поля отбрасываются | Реализовать немедленно |
+| Dua full pagination | API готов | Полный version-checked snapshot | Реализовано независимо |
+| Dua audio/repetition/evidence/share | API готов | Streaming UI и metadata готовы | Реализовано; права на public release остаются gate |
+| Несколько Dua collections и global search | Collection filter добавлен | Qualified category/search/deep link | Реализовано |
 | Account-safe favorites pull | API готов | Нет profile partition | Сначала schema migration и auth-bound sync |
 | Пользовательские Dua collections | В roadmap | Нет | Следующий versioned domain increment |
 | Prayer advanced controls/widgets | Расчёт/напоминания готовы | Базовый UI | Следующий mobile increment |

@@ -285,7 +285,10 @@ class HomeScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => dailyDua == null
                         ? context.push('/dua')
-                        : context.push('/dua/${dailyDua.id}', extra: dailyDua),
+                        : context.push(
+                            duaEntryRoute(dailyDua),
+                            extra: dailyDua,
+                          ),
                   ),
                 ],
               ),

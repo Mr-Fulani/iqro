@@ -491,14 +491,146 @@ void main() {
         ),
       );
       final engine = _FakeAudioEngine()
-        ..nextSourceError = StateError('offline');
+        ..nextSourceError = const FormatException(
+          'decoder temporarily unavailable',
+        );
       final controller = AudioController(engine: engine, playbackStore: store);
       addTearDown(controller.dispose);
 
       await controller.restore();
 
       expect(await store.read(), isNotNull);
-      expect(controller.state.error, contains('offline'));
+      expect(
+        controller.state.error,
+        contains('decoder temporarily unavailable'),
+      );
+    },
+  );
+
+  test(
+    'restore clears invalid ranges before loading an audio source',
+    () async {
+      final cases =
+          <
+            ({
+              String name,
+              SurahPlayback playback,
+              int? startAyah,
+              int? endAyah,
+            })
+          >[
+            (
+              name: 'missing end boundary',
+              playback: _rangedPlayback,
+              startAyah: 1,
+              endAyah: null,
+            ),
+            (
+              name: 'missing start boundary',
+              playback: _rangedPlayback,
+              startAyah: null,
+              endAyah: 2,
+            ),
+            (
+              name: 'reversed boundaries',
+              playback: _rangedPlayback,
+              startAyah: 3,
+              endAyah: 1,
+            ),
+            (
+              name: 'non-chronological timings',
+              playback: _nonChronologicalPlayback,
+              startAyah: 1,
+              endAyah: 2,
+            ),
+          ];
+
+      for (final invalidCase in cases) {
+        final database = await _audioStoreDatabase();
+        final store = AudioPlaybackStore(database);
+        await store.write(
+          AudioPlaybackSnapshot(
+            playback: invalidCase.playback,
+            reciter: _reciter,
+            surahName: 'Saved range',
+            position: Duration.zero,
+            speed: 1,
+            repeatEnabled: false,
+            rangeStartAyah: invalidCase.startAyah,
+            rangeEndAyah: invalidCase.endAyah,
+            savedAt: DateTime.utc(2026, 9, 3),
+          ),
+        );
+        final engine = _FakeAudioEngine();
+        final controller = AudioController(
+          engine: engine,
+          playbackStore: store,
+        );
+
+        await controller.restore();
+
+        expect(engine.sources, isEmpty, reason: invalidCase.name);
+        expect(await store.read(), isNull, reason: invalidCase.name);
+        controller.dispose();
+        await database.close();
+      }
+    },
+  );
+
+  test('a stale completion cannot pause a newer pending source', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _playback,
+      reciter: _reciter,
+      surahName: 'Al-Fatiha',
+      autoplay: false,
+    );
+    engine.blockNextSource();
+    final newerLoad = controller.loadPlayback(
+      playback: _secondPlayback,
+      reciter: _reciter,
+      surahName: 'Al-Baqarah',
+    );
+    await engine.nextSourceStarted.future;
+
+    engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+    engine.releaseBlockedSource();
+    await newerLoad;
+    await pumpEventQueue(times: 5);
+
+    expect(controller.state.track?.id, 'track-2');
+    expect(engine.processingState, ProcessingState.ready);
+    expect(engine.pauseCalls, 0);
+    expect(engine.playCalls, 1);
+  });
+
+  test(
+    'external playback after terminal standalone stop is rejected',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Morning remembrance',
+        autoplay: false,
+      );
+      await controller.stopStandalone('dua:1');
+      expect(controller.state.anyAudioActive, isFalse);
+      expect(engine.clearCalls, 1);
+
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      await pumpEventQueue(times: 5);
+
+      expect(controller.state.anyAudioActive, isFalse);
+      expect(engine.playing, isFalse);
+      expect(engine.pauseCalls, 1);
+      expect(engine.clearCalls, 2);
     },
   );
 
@@ -602,6 +734,53 @@ const _secondPlayback = SurahPlayback(
   segments: <AudioSegment>[],
 );
 
+const _rangedPlayback = SurahPlayback(
+  track: _playbackTrack,
+  segments: <AudioSegment>[
+    AudioSegment(
+      ayahId: 'ayah-1',
+      surah: 1,
+      ayah: 1,
+      start: Duration.zero,
+      end: Duration(seconds: 10),
+    ),
+    AudioSegment(
+      ayahId: 'ayah-2',
+      surah: 1,
+      ayah: 2,
+      start: Duration(seconds: 10),
+      end: Duration(seconds: 20),
+    ),
+    AudioSegment(
+      ayahId: 'ayah-3',
+      surah: 1,
+      ayah: 3,
+      start: Duration(seconds: 20),
+      end: Duration(seconds: 30),
+    ),
+  ],
+);
+
+const _nonChronologicalPlayback = SurahPlayback(
+  track: _playbackTrack,
+  segments: <AudioSegment>[
+    AudioSegment(
+      ayahId: 'ayah-1',
+      surah: 1,
+      ayah: 1,
+      start: Duration(seconds: 20),
+      end: Duration(seconds: 30),
+    ),
+    AudioSegment(
+      ayahId: 'ayah-2',
+      surah: 1,
+      ayah: 2,
+      start: Duration.zero,
+      end: Duration(seconds: 10),
+    ),
+  ],
+);
+
 const _reciter = Reciter(
   id: 'reciter-1',
   slug: 'reciter',
@@ -616,6 +795,7 @@ const _reciter = Reciter(
 );
 
 class _FakeAudioEngine implements IqroAudioEngine {
+  final _playerStates = StreamController<PlayerState>.broadcast(sync: true);
   final sources = <AudioSource>[];
   final seekCalls = <Duration>[];
   var speed = 1.0;
@@ -652,14 +832,19 @@ class _FakeAudioEngine implements IqroAudioEngine {
     if (blocked != null && !blocked.isCompleted) blocked.complete();
   }
 
+  void emitPlayerState(PlayerState state) {
+    playing = state.playing;
+    processingState = state.processingState;
+    _playerStates.add(state);
+  }
+
   @override
   Stream<Duration?> get durationStream => const Stream<Duration?>.empty();
   @override
   Stream<PlayerException> get errorStream =>
       const Stream<PlayerException>.empty();
   @override
-  Stream<PlayerState> get playerStateStream =>
-      const Stream<PlayerState>.empty();
+  Stream<PlayerState> get playerStateStream => _playerStates.stream;
   @override
   Stream<Duration> get positionStream => const Stream<Duration>.empty();
   @override
@@ -678,6 +863,7 @@ class _FakeAudioEngine implements IqroAudioEngine {
     disposeCalls += 1;
     disposed = true;
     releaseBlockedSource();
+    await _playerStates.close();
   }
 
   @override

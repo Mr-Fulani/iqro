@@ -261,6 +261,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.postgres",
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
@@ -519,6 +520,7 @@ REST_FRAMEWORK: dict[str, Any] = {
         "referral_link": os.getenv("QURAN_REFERRAL_LINK_RATE", "30/hour"),
         "referral_redirect": os.getenv("QURAN_REFERRAL_REDIRECT_RATE", "300/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
+        "dua_search": os.getenv("QURAN_DUA_SEARCH_RATE", "60/minute"),
         "prayer_profile_mutation": os.getenv(
             "QURAN_PRAYER_PROFILE_MUTATION_RATE",
             "60/minute",

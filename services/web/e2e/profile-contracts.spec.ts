@@ -266,7 +266,7 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await expect(page.getByText("Тестовая закладка")).toBeVisible();
   await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна" })).toHaveAttribute(
     "href",
-    "/ru/dua/waking-up#dua-hisn-al-muslim-1",
+    "/ru/dua/hisn-al-muslim/categories/waking-up#dua-hisn-al-muslim-1",
   );
   await expect(page.getByRole("link", { name: "Открыть: Сура «Аль-Бакара», аят 5" })).toHaveAttribute(
     "href",

@@ -20,8 +20,12 @@ export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
 const PUBLIC_CONTENT_TIMEOUT_MS = 5_000;
 const EDITION_CODE_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
-const DUA_CATEGORY_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export {
+  isDuaCategorySlug,
+  isDuaCollectionSlug,
+} from "./public-route-params";
 
 export class PublicContentNotFoundError extends Error {
   constructor(path: string) {
@@ -32,10 +36,6 @@ export class PublicContentNotFoundError extends Error {
 
 export function isEditionCode(value: string): boolean {
   return value.length <= 64 && EDITION_CODE_PATTERN.test(value);
-}
-
-export function isDuaCategorySlug(value: string): boolean {
-  return value.length <= 180 && DUA_CATEGORY_SLUG_PATTERN.test(value);
 }
 
 export function isUuid(value: string): boolean {
@@ -300,10 +300,19 @@ export type PublishedDuaCategoryData = {
 };
 
 export const getPublishedDuaCategories = cache(
-  async (locale: SupportedLocale): Promise<DuaCategory[]> => {
+  async (
+    locale: SupportedLocale,
+    collection?: string,
+  ): Promise<DuaCategory[]> => {
+    const query = new URLSearchParams({ language: locale });
+    if (collection) query.set("collection", collection);
     const categories = await fetchPublishedJson<DuaCategory[]>(
-      `/api/v1/dua/categories?language=${encodeURIComponent(locale)}`,
-      ["dua:catalog", `dua:locale:${locale}`],
+      `/api/v1/dua/categories?${query.toString()}`,
+      [
+        "dua:catalog",
+        `dua:locale:${locale}`,
+        ...(collection ? [`dua:collection:${collection}`] : []),
+      ],
     );
     return assertArray(categories, "Dua category list");
   },
@@ -330,31 +339,76 @@ export const getPublishedDuaInitialData = cache(
 );
 
 export const getPublishedDuaCategoryData = cache(
-  async (locale: SupportedLocale, categorySlug: string): Promise<PublishedDuaCategoryData> => {
+  async (
+    locale: SupportedLocale,
+    categorySlug: string,
+    collectionSlug?: string,
+  ): Promise<PublishedDuaCategoryData> => {
     const [collections, categories] = await Promise.all([
       fetchPublishedJson<DuaCollection[]>(
         `/api/v1/dua/collections?language=${encodeURIComponent(locale)}`,
         ["dua:catalog", `dua:locale:${locale}`],
       ),
-      getPublishedDuaCategories(locale),
+      getPublishedDuaCategories(locale, collectionSlug),
     ]);
-    const category = categories.find((item) => item.slug === categorySlug);
-    if (!category) {
+    const matchingCategories = categories.filter(
+      (item) =>
+        item.slug === categorySlug &&
+        (!collectionSlug || item.collection === collectionSlug),
+    );
+    if (matchingCategories.length !== 1) {
       throw new PublicContentNotFoundError(`/api/v1/dua/categories/${categorySlug}`);
     }
+    const category = matchingCategories[0]!;
 
+    const entryQuery = new URLSearchParams({
+      language: locale,
+      collection: category.collection,
+      category: categorySlug,
+    });
     const entries = await fetchAllPublishedPages<DuaEntry>(
       "/api/v1/dua/entries",
-      new URLSearchParams({ language: locale, category: categorySlug }),
-      ["dua:catalog", `dua:locale:${locale}`, `dua:category:${categorySlug}`],
+      entryQuery,
+      [
+        "dua:catalog",
+        `dua:locale:${locale}`,
+        `dua:collection:${category.collection}`,
+        `dua:category:${category.collection}:${categorySlug}`,
+      ],
       "Dua category entry",
       100,
     );
     return {
-      collection: assertArray(collections, "Dua collection list")[0] ?? null,
+      collection:
+        assertArray(collections, "Dua collection list").find(
+          (item) => item.slug === category.collection,
+        ) ?? null,
       category,
       entries,
     };
+  },
+);
+
+export const getPublishedDuaEntryByReference = cache(
+  async (
+    locale: SupportedLocale,
+    collection: string,
+    sourceNumber: number,
+  ): Promise<DuaEntry> => {
+    const query = new URLSearchParams({
+      language: locale,
+      collection,
+      source_number: String(sourceNumber),
+    });
+    return fetchPublishedJson<DuaEntry>(
+      `/api/v1/dua/entries/resolve?${query.toString()}`,
+      [
+        "dua:catalog",
+        `dua:locale:${locale}`,
+        `dua:collection:${collection}`,
+        `dua:entry:${collection}:${sourceNumber}`,
+      ],
+    );
   },
 );
 

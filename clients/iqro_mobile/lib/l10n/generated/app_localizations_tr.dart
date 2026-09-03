@@ -496,7 +496,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dua => 'Dua';
 
   @override
-  String get duaSubtitle => 'Hisnü\'l-Müslim koleksiyonu';
+  String get duaSubtitle => 'Kaynağı izlenebilir dua ve zikirler';
+
+  @override
+  String duaCount(int count) {
+    return '$count dua';
+  }
+
+  @override
+  String get noDuaCategories => 'Henüz dua kategorisi yok';
+
+  @override
+  String get noDuaFound => 'Eşleşen dua bulunamadı';
+
+  @override
+  String get duaSearchMinCharacters => 'Aramak için en az 2 karakter girin';
+
+  @override
+  String get duaUnavailable => 'Bu dua kullanılamıyor';
+
+  @override
+  String get cachedDuaWarning =>
+      'Kaydedilmiş bir kopya gösteriliyor. Güncel sürüm doğrulandıktan sonra ses kullanılabilir.';
 
   @override
   String get duaAudio => 'Dua sesi';

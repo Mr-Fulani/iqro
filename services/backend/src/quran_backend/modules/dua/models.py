@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -175,6 +176,13 @@ class DuaCategoryTranslation(BaseModel):
     class Meta:
         db_table = "dua_category_translation"
         ordering = ("language_code",)
+        indexes = [
+            GinIndex(
+                fields=("title",),
+                name="dua_category_title_trgm_gin",
+                opclasses=("gin_trgm_ops",),
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("category", "language_code"),
@@ -226,6 +234,11 @@ class DuaEntry(BaseModel):
                 fields=("collection_version", "category", "sort_order"),
                 name="dua_entry_catalog_idx",
             ),
+            GinIndex(
+                fields=("arabic_text",),
+                name="dua_entry_arabic_trgm_gin",
+                opclasses=("gin_trgm_ops",),
+            ),
         ]
 
     def __str__(self) -> str:
@@ -254,6 +267,18 @@ class DuaEntryTranslation(BaseModel):
     class Meta:
         db_table = "dua_entry_translation"
         ordering = ("language_code",)
+        indexes = [
+            GinIndex(
+                fields=("meaning_text",),
+                name="dua_entry_meaning_trgm_gin",
+                opclasses=("gin_trgm_ops",),
+            ),
+            GinIndex(
+                fields=("transliteration",),
+                name="dua_entry_translit_trgm_gin",
+                opclasses=("gin_trgm_ops",),
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("entry", "language_code"),

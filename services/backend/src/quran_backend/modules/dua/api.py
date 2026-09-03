@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import NoReturn, cast
+from typing import Any, NoReturn, cast
 
 from django.db.models import QuerySet
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
@@ -12,7 +12,10 @@ from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
 from quran_backend.modules.accounts.models import User
-from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
+from quran_backend.modules.core.privacy import (
+    PRIVATE_NO_STORE_CACHE_CONTROL,
+    PrivateNoStoreResponseMixin,
+)
 from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
 from quran_backend.modules.dua.importer import SUPPORTED_DUA_LANGUAGES
 from quran_backend.modules.dua.models import DuaCategory, DuaCollection, DuaEntry
@@ -23,8 +26,11 @@ from quran_backend.modules.dua.selectors import (
     published_dua_entries,
 )
 from quran_backend.modules.dua.serializers import (
+    DuaCategoryListQuerySerializer,
     DuaCategorySerializer,
     DuaCollectionSerializer,
+    DuaEntryListQuerySerializer,
+    DuaEntryResolveQuerySerializer,
     DuaEntrySerializer,
     DuaFavoriteListSerializer,
     DuaFavoriteSerializer,
@@ -34,6 +40,10 @@ from quran_backend.modules.dua.services import (
     DuaFavoriteTargetNotFoundError,
     list_dua_favorites,
     set_dua_favorite,
+)
+from quran_backend.modules.dua.throttling import (
+    DuaSearchRateLimitExceeded,
+    DuaSearchRateThrottle,
 )
 from quran_backend.modules.reading.throttling import (
     ReadingMutationRateThrottle,
@@ -85,34 +95,92 @@ class DuaCategoryListView(PublicDuaViewMixin, generics.ListAPIView[DuaCategory])
     serializer_class = DuaCategorySerializer
     pagination_class = None
 
+    @extend_schema(parameters=[DuaCategoryListQuerySerializer])
+    def get(self, request: Request, *args: object, **kwargs: object) -> Response:
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self) -> QuerySet[DuaCategory]:
-        return published_dua_categories(self.selected_language())
+        query = DuaCategoryListQuerySerializer(data=self.request.query_params)
+        query.is_valid(raise_exception=True)
+        return published_dua_categories(
+            self.selected_language(),
+            collection=query.validated_data.get("collection", ""),
+        )
 
 
-@extend_schema(
-    tags=["dua"],
-    parameters=[
-        LANGUAGE_PARAMETER,
-        OpenApiParameter("category", str, OpenApiParameter.QUERY),
-        OpenApiParameter("q", str, OpenApiParameter.QUERY),
-    ],
-)
+@extend_schema(tags=["dua"], parameters=[LANGUAGE_PARAMETER])
 class DuaEntryListView(PublicDuaViewMixin, generics.ListAPIView[DuaEntry]):
     serializer_class = DuaEntrySerializer
     pagination_class = DuaEntryCursorPagination
+    throttle_classes = (DuaSearchRateThrottle,)
+
+    @extend_schema(
+        parameters=[DuaEntryListQuerySerializer],
+        responses={
+            status.HTTP_200_OK: DuaEntrySerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Query validation failed."),
+            status.HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(
+                description="Dua search rate limit exceeded."
+            ),
+        },
+    )
+    def get(self, request: Request, *args: object, **kwargs: object) -> Response:
+        return super().get(request, *args, **kwargs)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise DuaSearchRateLimitExceeded(wait=wait)
+
+    def finalize_response(
+        self,
+        request: Request,
+        response: Response,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        response = super().finalize_response(request, response, *args, **kwargs)
+        if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            response["Cache-Control"] = PRIVATE_NO_STORE_CACHE_CONTROL
+            response["Pragma"] = "no-cache"
+            response["Expires"] = "0"
+        return response
 
     def get_queryset(self) -> QuerySet[DuaEntry]:
-        query = self.request.query_params.get("q", "").strip()
-        if len(query) > 120:
-            raise ValidationError({"q": "Search text must not exceed 120 characters."})
-        category = self.request.query_params.get("category", "").strip()
-        if len(category) > 120:
-            raise ValidationError({"category": "Category slug is too long."})
+        query = DuaEntryListQuerySerializer(data=self.request.query_params)
+        query.is_valid(raise_exception=True)
         return published_dua_entries(
             self.selected_language(),
-            category=category,
-            query=query,
+            collection=query.validated_data.get("collection", ""),
+            category=query.validated_data.get("category", ""),
+            query=query.validated_data.get("q", ""),
         )
+
+
+@extend_schema(tags=["dua"], parameters=[LANGUAGE_PARAMETER])
+class DuaEntryResolveView(PublicDuaViewMixin, APIView):
+    @extend_schema(
+        parameters=[DuaEntryResolveQuerySerializer],
+        responses={
+            status.HTTP_200_OK: DuaEntrySerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Canonical identity validation failed."
+            ),
+            status.HTTP_404_NOT_FOUND: None,
+        },
+    )
+    def get(self, request: Request) -> Response:
+        query = DuaEntryResolveQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        entry = (
+            published_dua_entries(
+                self.selected_language(),
+                collection=query.validated_data["collection"],
+            )
+            .filter(source_number=query.validated_data["source_number"])
+            .first()
+        )
+        if entry is None:
+            raise NotFound("The published localized Dua entry was not found.")
+        return Response(DuaEntrySerializer(entry).data)
 
 
 @extend_schema(tags=["dua"], parameters=[LANGUAGE_PARAMETER])

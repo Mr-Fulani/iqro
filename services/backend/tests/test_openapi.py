@@ -301,6 +301,52 @@ def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
     assert {"url", "content_type", "bytes", "sha256", "etag"} <= asset_properties.keys()
 
 
+def test_openapi_declares_collection_scoped_dua_catalog() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    category_parameters = {
+        parameter["name"]: parameter
+        for parameter in paths["/api/v1/dua/categories"]["get"]["parameters"]
+    }
+    entry_parameters = {
+        parameter["name"]: parameter
+        for parameter in paths["/api/v1/dua/entries"]["get"]["parameters"]
+    }
+
+    category_collection_schema = category_parameters["collection"]["schema"]["oneOf"][0]
+    entry_collection_schema = entry_parameters["collection"]["schema"]["oneOf"][0]
+    entry_category_schema = entry_parameters["category"]["schema"]["oneOf"][0]
+    assert category_collection_schema["maxLength"] == 100
+    assert entry_collection_schema["maxLength"] == 100
+    assert entry_category_schema["maxLength"] == 120
+    assert category_collection_schema["pattern"] == r"^[-a-zA-Z0-9_]+$"
+    assert entry_collection_schema["pattern"] == r"^[-a-zA-Z0-9_]+$"
+    entry_query_schema = entry_parameters["q"]["schema"]["oneOf"][0]
+    assert entry_query_schema["minLength"] == 2
+    assert entry_query_schema["maxLength"] == 120
+    category_properties = schema["components"]["schemas"]["DuaCategory"]["properties"]
+    assert {"collection", "collection_version"} <= category_properties.keys()
+
+    resolver = paths["/api/v1/dua/entries/resolve"]["get"]
+    resolver_parameters = {parameter["name"]: parameter for parameter in resolver["parameters"]}
+    resolver_collection = resolver_parameters["collection"]["schema"]
+    assert resolver_parameters["collection"]["required"] is True
+    assert resolver_collection["maxLength"] == 100
+    assert resolver_collection["pattern"] == r"^[-a-zA-Z0-9_]+$"
+    assert resolver_parameters["source_number"]["required"] is True
+    assert resolver_parameters["source_number"]["schema"] == {
+        "type": "integer",
+        "maximum": 32767,
+        "minimum": 1,
+    }
+    assert {"200", "400", "404"} <= resolver["responses"].keys()
+    assert {"200", "400", "429"} <= paths["/api/v1/dua/entries"]["get"]["responses"].keys()
+
+
 def test_openapi_declares_device_inventory_and_deletion_lifecycle() -> None:
     schema = cast(
         dict[str, Any],

@@ -335,6 +335,9 @@ const server = createServer(async (request, response) => {
     const localized = duaContent[language] || duaContent.en;
     return sendJson(response, 200, [{
       id: "00000000-0000-7000-8000-000000000802",
+      collection: "hisn-al-muslim",
+      collection_title: localized.edition,
+      collection_version: "test-v1",
       source_number: 1,
       slug: "waking-up",
       title: localized.title,
@@ -343,6 +346,15 @@ const server = createServer(async (request, response) => {
   }
   if (path === "/api/v1/dua/entries") {
     return sendJson(response, 200, { next: null, previous: null, results: [duaEntry(language)] });
+  }
+  if (path === "/api/v1/dua/entries/resolve") {
+    if (
+      url.searchParams.get("collection") === "hisn-al-muslim"
+      && url.searchParams.get("source_number") === "1"
+    ) {
+      return sendJson(response, 200, duaEntry(language));
+    }
+    return sendJson(response, 404, { detail: "The published Dua entry was not found." });
   }
   if (path === "/api/v1/dua/entries/00000000-0000-7000-8000-000000000801") {
     return sendJson(response, 200, duaEntry(language));

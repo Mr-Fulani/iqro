@@ -360,13 +360,59 @@ final duaEntriesProvider = FutureProvider<List<DuaEntry>>((ref) {
   return ref.watch(duaRepositoryProvider).featuredEntries(locale);
 });
 final duaEntriesByCategoryProvider =
-    FutureProvider.family<List<DuaEntry>, String?>((ref, category) {
+    FutureProvider.family<List<DuaEntry>, DuaCategoryIdentity>((ref, identity) {
       final locale = ref.watch(
         appPreferencesProvider.select((value) => value.locale),
       );
       return ref
           .watch(duaRepositoryProvider)
-          .entries(locale, category: category);
+          .entries(
+            locale,
+            collection: identity.collection.isEmpty
+                ? null
+                : identity.collection,
+            category: identity.slug,
+          );
+    });
+
+typedef DuaSearchQuery = ({String query, String? collection, String? category});
+
+final duaSearchProvider = FutureProvider.autoDispose
+    .family<List<DuaEntry>, DuaSearchQuery>((ref, request) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return ref
+          .watch(duaRepositoryProvider)
+          .search(
+            locale,
+            request.query,
+            collection: request.collection,
+            category: request.category,
+          );
+    });
+
+final duaEntryProvider = FutureProvider.autoDispose.family<DuaEntry, String>((
+  ref,
+  id,
+) {
+  final locale = ref.watch(
+    appPreferencesProvider.select((value) => value.locale),
+  );
+  return ref.watch(duaRepositoryProvider).entry(locale, id);
+});
+final duaEntryByReferenceProvider = FutureProvider.autoDispose
+    .family<DuaEntry, DuaEntryIdentity>((ref, identity) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return ref
+          .watch(duaRepositoryProvider)
+          .entryByReference(
+            locale,
+            collection: identity.collection,
+            sourceNumber: identity.sourceNumber,
+          );
     });
 final prayerScheduleProvider = FutureProvider<PrayerSchedule?>((ref) {
   return ref.watch(prayerRepositoryProvider).cachedToday();

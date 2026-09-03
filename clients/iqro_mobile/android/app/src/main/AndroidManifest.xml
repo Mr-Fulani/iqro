@@ -17,6 +17,9 @@
         android:fullBackupContent="false"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false">
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="true" />
         <activity
             android:name="com.ryanheise.audioservice.AudioServiceActivity"
             android:exported="true"
@@ -37,6 +40,65 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="iqro"
+                    android:host="open"
+                    android:pathPrefix="/dua/" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ru/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/en/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ar/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/tr/dua/" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="staging.iqro.forum"
+                    android:pathPrefix="/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="staging.iqro.forum"
+                    android:pathPrefix="/ru/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="staging.iqro.forum"
+                    android:pathPrefix="/en/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="staging.iqro.forum"
+                    android:pathPrefix="/ar/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="staging.iqro.forum"
+                    android:pathPrefix="/tr/dua/" />
             </intent-filter>
         </activity>
         <service

@@ -164,11 +164,13 @@ test("published Dua catalog renders topic cards and provenance on the server", a
   expect(html).not.toContain("الْحَمْدُ للَّهِ");
   expect(html).toContain("Молитвы из Корана и Сунны");
   expect(html).toContain("https://islamhouse.com/ru/books/888254");
-  expect(html).toContain('href="/ru/dua/waking-up"');
+  expect(html).toContain(
+    'href="/ru/dua/hisn-al-muslim/categories/waking-up"',
+  );
 });
 
 test("published Dua topic route is localized, indexable, and server rendered", async ({ page, request }) => {
-  const topicPath = "/ru/dua/waking-up";
+  const topicPath = "/ru/dua/hisn-al-muslim/categories/waking-up";
   const response = await request.get(topicPath);
 
   expect(response.ok()).toBe(true);
@@ -185,11 +187,23 @@ test("published Dua topic route is localized, indexable, and server rendered", a
   );
   await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
     "href",
-    `${siteUrl}/en/dua/waking-up`,
+    `${siteUrl}/en/dua/hisn-al-muslim/categories/waking-up`,
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
   await expect(page.locator(".dua-entry-card")).toHaveCount(1);
   expect((await request.get("/ru/dua/not-a-published-topic")).status()).toBe(404);
+});
+
+test("published Dua canonical entry route resolves the active collection version", async ({ page }) => {
+  const entryPath = "/ru/dua/hisn-al-muslim/1";
+
+  await page.goto(entryPath);
+  await expect(page).toHaveTitle(/Слова поминания при пробуждении ото сна/);
+  await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${siteUrl}${entryPath}`,
+  );
 });
 
 test("published reciter and recitation routes render the licensed audio catalog on the server", async ({ page, request }) => {

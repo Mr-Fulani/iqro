@@ -211,6 +211,7 @@ class IqroStandaloneAudioState {
 }
 
 typedef _StandaloneRequest = ({String mediaId, int intent, Object? owner});
+typedef _RestoredPlaybackRange = ({AudioSegment? start, AudioSegment? end});
 
 class IqroAudioState {
   const IqroAudioState({
@@ -606,6 +607,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     _restoreStarted = true;
     _restoring = true;
     final restoreIntent = _sourceIntent;
+    var snapshotValidated = false;
     try {
       final snapshot = await _playbackStore.read();
       if (snapshot == null ||
@@ -617,36 +619,27 @@ class AudioController extends StateNotifier<IqroAudioState> {
               !snapshot.savedAt.isAfter(_restoredSavedAt!))) {
         return;
       }
-      final restoredStart = snapshot.rangeStartAyah == null
-          ? null
-          : snapshot.playback.segmentFor(snapshot.rangeStartAyah!);
-      final restoredEnd = snapshot.rangeEndAyah == null
-          ? restoredStart
-          : snapshot.playback.segmentFor(snapshot.rangeEndAyah!);
-      if ((snapshot.rangeStartAyah != null && restoredStart == null) ||
-          (snapshot.rangeEndAyah != null && restoredEnd == null)) {
-        throw const FormatException(
-          'Saved Quran playback range has no audio timings',
-        );
-      }
+      final playback = snapshot.playback.normalized();
+      final restoredRange = _validatedRestoredRange(snapshot, playback);
+      snapshotValidated = true;
       state = state.copyWith(
         speed: snapshot.speed,
         repeatEnabled: snapshot.repeatEnabled,
       );
       await _serializeSource(
         () => _loadPlayback(
-          playback: snapshot.playback,
+          playback: playback,
           reciter: snapshot.reciter,
           surahName: snapshot.surahName,
-          startSegment: restoredStart,
-          endSegment: restoredEnd,
+          startSegment: restoredRange.start,
+          endSegment: restoredRange.end,
           autoplay: false,
           intent: restoreIntent,
         ),
       );
       if (_disposed || restoreIntent != _sourceIntent) return;
       final generation = _sourceGeneration;
-      final trackId = snapshot.playback.track.id;
+      final trackId = playback.track.id;
       var restored = false;
       await _serializeSource(() async {
         if (restoreIntent != _sourceIntent ||
@@ -672,10 +665,13 @@ class AudioController extends StateNotifier<IqroAudioState> {
       if (restored) _restoredSavedAt = snapshot.savedAt;
     } on Object catch (error) {
       if (_disposed || restoreIntent != _sourceIntent) return;
-      if (!_isCorruptPlaybackSnapshotError(error)) {
+      if (snapshotValidated || !_isCorruptPlaybackSnapshotError(error)) {
         // Loading a valid saved stream can fail temporarily (for example when
-        // the device is offline). Keep the snapshot so a later restore can
-        // retry instead of permanently losing the user's last position.
+        // the device is offline or the decoder temporarily rejects a source).
+        // Keep the snapshot so a later restore can retry instead of
+        // permanently losing the user's last position. In particular, do not
+        // classify a FormatException raised by the audio engine as corrupt
+        // persisted JSON after the snapshot itself has passed validation.
         if (!state.anyAudioActive) {
           state = state.copyWith(
             playing: false,
@@ -700,6 +696,38 @@ class AudioController extends StateNotifier<IqroAudioState> {
     } finally {
       _restoring = false;
     }
+  }
+
+  _RestoredPlaybackRange _validatedRestoredRange(
+    AudioPlaybackSnapshot snapshot,
+    SurahPlayback playback,
+  ) {
+    final startAyah = snapshot.rangeStartAyah;
+    final endAyah = snapshot.rangeEndAyah;
+    if ((startAyah == null) != (endAyah == null)) {
+      throw const FormatException(
+        'Saved Quran playback range must have both boundaries',
+      );
+    }
+    if (startAyah == null) return (start: null, end: null);
+    if (startAyah < 1 || endAyah! < startAyah) {
+      throw const FormatException(
+        'Saved Quran playback range boundaries are invalid',
+      );
+    }
+    final start = playback.segmentFor(startAyah);
+    final end = playback.segmentFor(endAyah);
+    if (start == null || end == null) {
+      throw const FormatException(
+        'Saved Quran playback range has no audio timings',
+      );
+    }
+    if (start.start > end.start || start.end > end.end) {
+      throw const FormatException(
+        'Saved Quran playback range timings are not chronological',
+      );
+    }
+    return (start: start, end: end);
   }
 
   Future<void> load({

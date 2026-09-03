@@ -95,7 +95,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             padding: const EdgeInsets.only(bottom: 10),
                             child: IqroCard(
                               onTap: () => context.push(
-                                '/dua/${entry.id}',
+                                duaEntryRoute(entry),
                                 extra: entry,
                               ),
                               child: ListTile(

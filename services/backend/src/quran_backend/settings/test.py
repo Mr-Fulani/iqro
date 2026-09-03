@@ -49,6 +49,7 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "referral_link": "10000/minute",
     "referral_redirect": "10000/minute",
     "prayer_calculate": "10000/minute",
+    "dua_search": "10000/minute",
     "prayer_profile_mutation": "10000/minute",
     "reading_mutation": "10000/minute",
     "reminder_mutation": "10000/minute",

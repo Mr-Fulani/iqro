@@ -4208,8 +4208,14 @@ input:focus, select:focus, textarea:focus {
 
 .dua-search {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(180px, 0.65fr) minmax(220px, 1fr) auto auto;
   gap: 8px;
+}
+
+.dua-category-collection {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .dua-category-section {
@@ -4602,6 +4608,14 @@ input:focus, select:focus, textarea:focus {
 
   .dua-category-list {
     grid-template-columns: 1fr;
+  }
+
+  .dua-search {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dua-search .btn {
+    width: 100%;
   }
 
   .dua-category-chip {

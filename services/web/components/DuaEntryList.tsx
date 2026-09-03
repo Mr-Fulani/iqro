@@ -179,7 +179,7 @@ export function DuaEntryList({
                     className="dua-entry-title-link"
                     href={localizedPath(
                       locale,
-                      `/dua/${entry.category.slug}#${entryAnchor(entry)}`,
+                      `/dua/${entry.collection}/categories/${entry.category.slug}#${entryAnchor(entry)}`,
                     )}
                   >
                     {entry.category.title}

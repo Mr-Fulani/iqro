@@ -1047,8 +1047,44 @@ abstract class AppLocalizations {
   /// No description provided for @duaSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Hisn al-Muslim collection'**
+  /// **'Duas and adhkar from traceable sources'**
   String get duaSubtitle;
+
+  /// No description provided for @duaCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} duas'**
+  String duaCount(int count);
+
+  /// No description provided for @noDuaCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No dua categories are available yet'**
+  String get noDuaCategories;
+
+  /// No description provided for @noDuaFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching dua found'**
+  String get noDuaFound;
+
+  /// No description provided for @duaSearchMinCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 2 characters to search'**
+  String get duaSearchMinCharacters;
+
+  /// No description provided for @duaUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This dua is unavailable'**
+  String get duaUnavailable;
+
+  /// No description provided for @cachedDuaWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'A saved copy is shown. Audio becomes available after the current version is verified.'**
+  String get cachedDuaWarning;
 
   /// No description provided for @duaAudio.
   ///

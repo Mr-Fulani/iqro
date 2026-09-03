@@ -14,7 +14,10 @@ import 'dua_presentation.dart';
 import 'dua_repository.dart';
 
 class DuaScreen extends ConsumerStatefulWidget {
-  const DuaScreen({super.key});
+  const DuaScreen({this.initialCollection, this.initialCategory, super.key});
+
+  final String? initialCollection;
+  final String? initialCategory;
 
   @override
   ConsumerState<DuaScreen> createState() => _DuaScreenState();
@@ -22,11 +25,27 @@ class DuaScreen extends ConsumerStatefulWidget {
 
 class _DuaScreenState extends ConsumerState<DuaScreen> {
   final _searchController = TextEditingController();
-  DuaCategory? _category;
+  DuaCategoryIdentity? _categoryIdentity;
+  String? _legacyCategorySlug;
   var _query = '';
+  var _submittedQuery = '';
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    final collection = widget.initialCollection?.trim() ?? '';
+    final category = widget.initialCategory?.trim() ?? '';
+    if (collection.isNotEmpty && category.isNotEmpty) {
+      _categoryIdentity = (collection: collection, slug: category);
+    } else if (category.isNotEmpty) {
+      _legacyCategorySlug = category;
+    }
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -34,19 +53,46 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(duaCategoriesProvider);
-    final entries = _category == null
+    final legacyMatches = _legacyCategorySlug == null
+        ? const <DuaCategory>[]
+        : categories.valueOrNull
+                  ?.where((item) => item.slug == _legacyCategorySlug)
+                  .toList(growable: false) ??
+              const <DuaCategory>[];
+    final activeCategoryIdentity =
+        _categoryIdentity ??
+        (legacyMatches.length == 1 ? legacyMatches.single.identity : null);
+    final category = activeCategoryIdentity == null
         ? null
-        : ref.watch(duaEntriesByCategoryProvider(_category!.slug));
+        : categories.valueOrNull
+              ?.where((item) => item.identity == activeCategoryIdentity)
+              .firstOrNull;
+    final entries = activeCategoryIdentity == null
+        ? null
+        : ref.watch(duaEntriesByCategoryProvider(activeCategoryIdentity));
+    final searchRequest = (
+      query: _submittedQuery,
+      collection: null as String?,
+      category: null as String?,
+    );
+    final searchResults =
+        activeCategoryIdentity == null && _submittedQuery.length >= 2
+        ? ref.watch(duaSearchProvider(searchRequest))
+        : null;
     return PopScope(
-      canPop: _category == null,
+      canPop: activeCategoryIdentity == null,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _category != null) _openCategory(null);
+        if (!didPop && activeCategoryIdentity != null) _openCategory(null);
       },
       child: Scaffold(
         appBar: IqroTopBar(
-          title: _category?.title ?? context.l10n.dua,
-          subtitle: context.l10n.duaSubtitle,
-          leading: _category == null
+          title: category?.title ?? context.l10n.dua,
+          subtitle: category == null
+              ? context.l10n.duaSubtitle
+              : category.collectionTitle.isEmpty
+              ? category.collection
+              : category.collectionTitle,
+          leading: activeCategoryIdentity == null
               ? null
               : IconButton(
                   tooltip: context.l10n.back,
@@ -55,24 +101,30 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
                 ),
         ),
         body: IqroPage(
-          child: _category == null
-              ? _CategoryGrid(
+          scrollable: false,
+          child: activeCategoryIdentity == null
+              ? _DuaCatalog(
                   categories: categories,
+                  searchResults: searchResults,
+                  searchPending:
+                      _query.length >= 2 && _query != _submittedQuery,
                   query: _query,
                   searchController: _searchController,
-                  onQueryChanged: (value) =>
-                      setState(() => _query = value.trim().toLowerCase()),
+                  onQueryChanged: _onRootQueryChanged,
                   onOpen: _openCategory,
-                  onRetry: () => ref.invalidate(duaCategoriesProvider),
+                  onCategoriesRetry: () =>
+                      ref.invalidate(duaCategoriesProvider),
+                  onSearchRetry: () =>
+                      ref.invalidate(duaSearchProvider(searchRequest)),
                 )
               : _EntryList(
                   entries: entries!,
                   query: _query,
                   searchController: _searchController,
                   onQueryChanged: (value) =>
-                      setState(() => _query = value.trim().toLowerCase()),
+                      setState(() => _query = value.trim()),
                   onRetry: () => ref.invalidate(
-                    duaEntriesByCategoryProvider(_category!.slug),
+                    duaEntriesByCategoryProvider(activeCategoryIdentity),
                   ),
                 ),
         ),
@@ -81,30 +133,53 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
   }
 
   void _openCategory(DuaCategory? category) {
+    _searchDebounce?.cancel();
     _searchController.clear();
     setState(() {
-      _category = category;
+      _categoryIdentity = category?.identity;
+      _legacyCategorySlug = null;
       _query = '';
+      _submittedQuery = '';
+    });
+  }
+
+  void _onRootQueryChanged(String value) {
+    final query = value.trim();
+    _searchDebounce?.cancel();
+    setState(() {
+      _query = query;
+      if (query.length < 2) _submittedQuery = '';
+    });
+    if (query.length < 2) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted || _query != query) return;
+      setState(() => _submittedQuery = query);
     });
   }
 }
 
-class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({
+class _DuaCatalog extends StatelessWidget {
+  const _DuaCatalog({
     required this.categories,
+    required this.searchResults,
+    required this.searchPending,
     required this.query,
     required this.searchController,
     required this.onQueryChanged,
     required this.onOpen,
-    required this.onRetry,
+    required this.onCategoriesRetry,
+    required this.onSearchRetry,
   });
 
   final AsyncValue<List<DuaCategory>> categories;
+  final AsyncValue<List<DuaEntry>>? searchResults;
+  final bool searchPending;
   final String query;
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<DuaCategory> onOpen;
-  final VoidCallback onRetry;
+  final VoidCallback onCategoriesRetry;
+  final VoidCallback onSearchRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -118,56 +193,91 @@ class _CategoryGrid extends StatelessWidget {
           onChanged: onQueryChanged,
         ),
         const SizedBox(height: 18),
-        categories.when(
-          loading: () => const IqroLoading(),
-          error: (error, stack) => IqroAsyncError(
-            title: context.l10n.networkError,
-            onRetry: onRetry,
-          ),
-          data: (items) {
-            final visible = items
-                .where((item) => item.title.toLowerCase().contains(query))
-                .toList(growable: false);
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 1.18,
-              ),
-              itemCount: visible.length,
-              itemBuilder: (context, index) {
-                final category = visible[index];
-                return IqroCard(
-                  color: index.isEven
-                      ? context.iqroColors.sand
-                      : context.iqroColors.lavender,
-                  borderColor: Colors.transparent,
-                  onTap: () => onOpen(category),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Icon(Icons.auto_awesome_outlined),
-                      const Spacer(),
-                      Text(
-                        category.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${category.entryCount}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+        Expanded(
+          child: query.isNotEmpty
+              ? query.length < 2
+                    ? _DuaEmpty(message: context.l10n.duaSearchMinCharacters)
+                    : searchPending || searchResults == null
+                    ? const IqroLoading()
+                    : _AsyncDuaEntries(
+                        entries: searchResults!,
+                        query: '',
+                        onRetry: onSearchRetry,
+                      )
+              : categories.when(
+                  loading: () => const IqroLoading(),
+                  error: (error, stack) => IqroAsyncError(
+                    title: context.l10n.networkError,
+                    onRetry: onCategoriesRetry,
                   ),
-                );
-              },
-            );
-          },
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return _DuaEmpty(message: context.l10n.noDuaCategories);
+                    }
+                    final showCollection =
+                        items.map((item) => item.collection).toSet().length > 1;
+                    return ListView.separated(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      itemCount: items.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final category = items[index];
+                        return IqroCard(
+                          color: index.isEven
+                              ? context.iqroColors.sand
+                              : context.iqroColors.lavender,
+                          borderColor: Colors.transparent,
+                          onTap: () => onOpen(category),
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(Icons.auto_awesome_outlined),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      category.title,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleSmall,
+                                    ),
+                                    if (showCollection) ...<Widget>[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        category.collectionTitle.isEmpty
+                                            ? category.collection
+                                            : category.collectionTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelSmall,
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      context.l10n.duaCount(
+                                        category.entryCount,
+                                      ),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -200,104 +310,241 @@ class _EntryList extends StatelessWidget {
           onChanged: onQueryChanged,
         ),
         const SizedBox(height: 18),
-        entries.when(
-          loading: () => const IqroLoading(),
-          error: (error, stack) => IqroAsyncError(
-            title: context.l10n.networkError,
+        Expanded(
+          child: _AsyncDuaEntries(
+            entries: entries,
+            query: query,
             onRetry: onRetry,
           ),
-          data: (items) {
-            final visible = items
-                .where((entry) {
-                  if (query.isEmpty) return true;
-                  return entry.meaning.toLowerCase().contains(query) ||
-                      entry.transliteration.toLowerCase().contains(query) ||
-                      entry.arabicText.contains(query);
-                })
-                .toList(growable: false);
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: visible.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final entry = visible[index];
-                return IqroCard(
-                  onTap: () => context.push('/dua/${entry.id}', extra: entry),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              entry.categoryTitle,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                          Text(
-                            '#${entry.sourceNumber}',
-                            style: Theme.of(context).textTheme.labelMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        entry.arabicText,
-                        textDirection: TextDirection.rtl,
-                        textAlign: TextAlign.right,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontFamily: 'serif',
-                          height: 1.8,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: <Widget>[
-                          Icon(
-                            entry.isEditoriallyVerified
-                                ? Icons.verified_outlined
-                                : Icons.menu_book_outlined,
-                            size: 17,
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              entry.sourceLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          if (entry.audio.isNotEmpty) ...<Widget>[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.headphones_outlined, size: 17),
-                          ],
-                          if (entry.repetitions > 1 ||
-                              entry.repetitionLabel.isNotEmpty) ...<Widget>[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.repeat, size: 17),
-                          ],
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
         ),
       ],
     );
   }
 }
 
-class DuaEntryScreen extends ConsumerStatefulWidget {
-  const DuaEntryScreen({required this.entry, super.key});
+class _AsyncDuaEntries extends StatelessWidget {
+  const _AsyncDuaEntries({
+    required this.entries,
+    required this.query,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<DuaEntry>> entries;
+  final String query;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return entries.when(
+      loading: () => const IqroLoading(),
+      error: (error, stack) =>
+          IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      data: (items) {
+        final normalizedQuery = query.toLowerCase();
+        final visible = items
+            .where((entry) {
+              if (normalizedQuery.isEmpty) return true;
+              return entry.meaning.toLowerCase().contains(normalizedQuery) ||
+                  entry.transliteration.toLowerCase().contains(
+                    normalizedQuery,
+                  ) ||
+                  entry.arabicText.contains(query);
+            })
+            .toList(growable: false);
+        if (visible.isEmpty) {
+          return _DuaEmpty(message: context.l10n.noDuaFound);
+        }
+        return ListView.separated(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          itemCount: visible.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 10),
+          itemBuilder: (context, index) => _DuaEntryCard(entry: visible[index]),
+        );
+      },
+    );
+  }
+}
+
+class _DuaEntryCard extends StatelessWidget {
+  const _DuaEntryCard({required this.entry});
+
   final DuaEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return IqroCard(
+      onTap: () => context.push(duaEntryRoute(entry), extra: entry),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  entry.categoryTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                '#${entry.sourceNumber}',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            entry.arabicText,
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.right,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontFamily: 'serif', height: 1.8),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Icon(
+                entry.isEditoriallyVerified
+                    ? Icons.verified_outlined
+                    : Icons.menu_book_outlined,
+                size: 17,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  entry.sourceLabel.isEmpty
+                      ? context.l10n.sourceUnavailable
+                      : entry.sourceLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (entry.catalogVersionVerified &&
+                  entry.audio.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 8),
+                const Icon(Icons.headphones_outlined, size: 17),
+              ],
+              if (entry.repetitions > 1 ||
+                  entry.repetitionLabel.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 8),
+                const Icon(Icons.repeat, size: 17),
+              ],
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DuaEmpty extends StatelessWidget {
+  const _DuaEmpty({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 42,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DuaEntryRouteScreen extends ConsumerWidget {
+  const DuaEntryRouteScreen({
+    this.entryId,
+    this.collection,
+    this.sourceNumber,
+    this.initialEntry,
+    super.key,
+  }) : assert(entryId != null || (collection != null && sourceNumber != null));
+
+  final String? entryId;
+  final String? collection;
+  final int? sourceNumber;
+  final DuaEntry? initialEntry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final identity = collection == null || sourceNumber == null
+        ? null
+        : (collection: collection!, sourceNumber: sourceNumber!);
+    final result = identity == null
+        ? ref.watch(duaEntryProvider(entryId ?? ''))
+        : ref.watch(duaEntryByReferenceProvider(identity));
+    void retry() {
+      if (identity == null) {
+        ref.invalidate(duaEntryProvider(entryId ?? ''));
+      } else {
+        ref.invalidate(duaEntryByReferenceProvider(identity));
+      }
+    }
+
+    final error = result.hasError ? result.error : null;
+    final resolved = error == null ? result.valueOrNull : null;
+    final mayUseInitialEntry =
+        result.isLoading ||
+        (error != null && canUseUnverifiedDuaFallback(error));
+    final fallback = resolved ?? (mayUseInitialEntry ? initialEntry : null);
+    if (fallback != null) {
+      final trusted = resolved?.catalogVersionVerified == true;
+      final canRetry = !trusted && !result.isLoading;
+      return DuaEntryScreen(
+        key: ValueKey<String>(
+          '${fallback.id}:${fallback.collectionVersion}:$trusted',
+        ),
+        entry: fallback,
+        audioEnabled: trusted,
+        showCachedWarning: !trusted,
+        onRevalidate: canRetry ? retry : null,
+      );
+    }
+    return Scaffold(
+      appBar: IqroTopBar(title: context.l10n.dua),
+      body: result.when(
+        loading: () => const IqroLoading(),
+        error: (error, stack) =>
+            IqroAsyncError(title: context.l10n.duaUnavailable, onRetry: retry),
+        data: (_) => _DuaEmpty(message: context.l10n.noDuaFound),
+      ),
+    );
+  }
+}
+
+class DuaEntryScreen extends ConsumerStatefulWidget {
+  const DuaEntryScreen({
+    required this.entry,
+    this.audioEnabled = true,
+    this.showCachedWarning = false,
+    this.onRevalidate,
+    super.key,
+  });
+  final DuaEntry entry;
+  final bool audioEnabled;
+  final bool showCachedWarning;
+  final VoidCallback? onRevalidate;
 
   @override
   ConsumerState<DuaEntryScreen> createState() => _DuaEntryScreenState();
@@ -382,6 +629,17 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
+            if (widget.showCachedWarning) ...<Widget>[
+              IqroStatusBanner(
+                icon: Icons.cloud_off_outlined,
+                title: context.l10n.cachedDuaWarning,
+                actionLabel: widget.onRevalidate == null
+                    ? null
+                    : context.l10n.retry,
+                onAction: widget.onRevalidate,
+              ),
+              const SizedBox(height: 14),
+            ],
             IqroCard(
               color: context.iqroColors.ink,
               borderColor: Colors.transparent,
@@ -424,7 +682,7 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
                 ),
               ),
             ],
-            if (entry.audio.isNotEmpty) ...<Widget>[
+            if (widget.audioEnabled && entry.audio.isNotEmpty) ...<Widget>[
               const SizedBox(height: 14),
               _DuaAudioCard(
                 entry: entry,
@@ -522,6 +780,7 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
   Future<void> _retryAudio() => _playAudio(forceReload: true);
 
   Future<void> _playAudio({required bool forceReload}) async {
+    if (!widget.audioEnabled) return;
     final entry = widget.entry;
     if (entry.audio.isEmpty || _selectedAudioIndex >= entry.audio.length) {
       return;
@@ -531,7 +790,7 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
     final controller = _audioController;
     final current = ref.read(audioControllerProvider).standalone;
     try {
-      if (!forceReload && current?.mediaItem.id == id) {
+      if (!forceReload && current?.mediaItem.id == id && _ownedAudioId == id) {
         _ownedAudioId = id;
         await controller.toggleStandalone(id, owner: _audioOwner);
       } else {
@@ -580,6 +839,8 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
     translationLabel: context.l10n.translation,
     repetitionLabel: context.l10n.repetitionTarget,
     sourceLabel: context.l10n.sourceAndVerification,
+    canonicalUrl:
+        '${ref.read(appConfigProvider).apiBaseUrl}${duaEntryRoute(widget.entry)}',
   );
 
   Future<void> _copy() async {

@@ -147,7 +147,10 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.getByRole("heading", { level: 2, name: "Темы" })).toBeVisible();
   await expect(page.locator(".dua-category-list")).toHaveCSS("display", "grid");
   await expect(page.locator(".dua-category-chip")).toHaveCount(1);
-  await expect(page.locator(".dua-category-chip")).toHaveAttribute("href", "/ru/dua/waking-up");
+  await expect(page.locator(".dua-category-chip")).toHaveAttribute(
+    "href",
+    "/ru/dua/hisn-al-muslim/categories/waking-up",
+  );
   await expect(page.locator(".dua-category-chip")).toContainText("1 ду’а");
   expect(await page.locator(".dua-category-list").evaluate(
     (element) => element.scrollWidth <= element.clientWidth,
@@ -156,7 +159,7 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.locator(".dua-arabic")).toHaveCount(0);
 
   await page.locator(".dua-category-chip").click();
-  await expect(page).toHaveURL("/ru/dua/waking-up");
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
   await expect(page.getByRole("heading", { level: 1, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
   await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
   await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
@@ -183,7 +186,7 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   await expect(cards).toHaveCount(1);
 
   await cards.first().click();
-  await expect(page).toHaveURL("/ru/dua/waking-up");
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
   await expect(page.getByRole("heading", {
     level: 1,
     name: "Слова поминания при пробуждении ото сна",
@@ -199,13 +202,16 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   );
   await expect(page.getByRole("link", {
     name: "Слова поминания при пробуждении ото сна",
-  })).toHaveAttribute("href", "/ru/dua/waking-up#dua-hisn-al-muslim-1");
+  })).toHaveAttribute(
+    "href",
+    "/ru/dua/hisn-al-muslim/categories/waking-up#dua-hisn-al-muslim-1",
+  );
   await expect(page.locator(".dua-topic-content .dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
 });
 
 test("Dua cards expose source audio and account favorites", async ({ page }) => {
   await page.route("**/audio/ar/1.mp3", (route) => route.abort());
-  await page.goto("/ru/dua/waking-up");
+  await page.goto("/ru/dua/hisn-al-muslim/categories/waking-up");
 
   const play = page.getByRole("button", { name: "Прослушать ду’а" });
   const favorite = page.getByRole("button", { name: "Добавить в избранное" });

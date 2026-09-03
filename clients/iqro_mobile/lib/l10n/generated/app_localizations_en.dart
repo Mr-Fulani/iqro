@@ -497,7 +497,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dua => 'Dua';
 
   @override
-  String get duaSubtitle => 'Hisn al-Muslim collection';
+  String get duaSubtitle => 'Duas and adhkar from traceable sources';
+
+  @override
+  String duaCount(int count) {
+    return '$count duas';
+  }
+
+  @override
+  String get noDuaCategories => 'No dua categories are available yet';
+
+  @override
+  String get noDuaFound => 'No matching dua found';
+
+  @override
+  String get duaSearchMinCharacters => 'Enter at least 2 characters to search';
+
+  @override
+  String get duaUnavailable => 'This dua is unavailable';
+
+  @override
+  String get cachedDuaWarning =>
+      'A saved copy is shown. Audio becomes available after the current version is verified.';
 
   @override
   String get duaAudio => 'Dua audio';

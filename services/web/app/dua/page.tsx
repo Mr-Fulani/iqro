@@ -22,6 +22,7 @@ export default function DuaPage({
   const [categories, setCategories] = useState<DuaCategory[]>(initialData?.categories ?? []);
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
+  const [selectedCollection, setSelectedCollection] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(!initialData);
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [error, setError] = useState("");
@@ -34,6 +35,11 @@ export default function DuaPage({
         if (!active) return;
         setCollections(nextCollections);
         setCategories(nextCategories);
+        setSelectedCollection((current) =>
+          current && nextCollections.some((item) => item.slug === current)
+            ? current
+            : "",
+        );
         setError("");
       })
       .catch(() => {
@@ -49,12 +55,28 @@ export default function DuaPage({
 
   const visibleCategories = useMemo(() => {
     const normalizedQuery = appliedQuery.toLocaleLowerCase(locale).trim();
-    if (!normalizedQuery) return categories;
-    return categories.filter((category) =>
-      category.title.toLocaleLowerCase(locale).includes(normalizedQuery)
-      || String(category.source_number) === normalizedQuery,
-    );
-  }, [appliedQuery, categories, locale]);
+    return categories.filter((category) => {
+      if (selectedCollection && category.collection !== selectedCollection) return false;
+      if (!normalizedQuery) return true;
+      return category.title.toLocaleLowerCase(locale).includes(normalizedQuery)
+        || String(category.source_number) === normalizedQuery;
+    });
+  }, [appliedQuery, categories, locale, selectedCollection]);
+
+  const summaryCollections = useMemo(
+    () => selectedCollection
+      ? collections.filter((item) => item.slug === selectedCollection)
+      : collections,
+    [collections, selectedCollection],
+  );
+  const summaryEntryCount = summaryCollections.reduce(
+    (total, item) => total + item.entry_count,
+    0,
+  );
+  const summaryCategoryCount = summaryCollections.reduce(
+    (total, item) => total + item.category_count,
+    0,
+  );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,8 +87,6 @@ export default function DuaPage({
     setQuery("");
     setAppliedQuery("");
   };
-
-  const collection = collections[0];
 
   return (
     <div className="dua-page">
@@ -82,28 +102,44 @@ export default function DuaPage({
 
         <div className="dua-catalog-summary">
           <div>
-            <strong>{formatNumber(collection?.entry_count ?? 267)}</strong>
+            <strong>{formatNumber(summaryEntryCount)}</strong>
             <span>{t("dua.entriesAvailable")}</span>
           </div>
           <div>
-            <strong>{formatNumber(collection?.category_count ?? 132)}</strong>
+            <strong>{formatNumber(summaryCategoryCount)}</strong>
             <span>{t("dua.categoriesAvailable")}</span>
           </div>
           <p>{t("dua.starterNotice")}</p>
         </div>
 
-        {collection?.source ? (
-          <p className="dua-source-lead">
+        {summaryCollections.map((collection) => collection.source ? (
+          <p className="dua-source-lead" key={collection.slug}>
             {t("dua.sourceEdition")}: {collection.source.title} · {collection.source.author}.{" "}
             <a href={collection.source.source_url} target="_blank" rel="noreferrer">
-              IslamHouse ↗
+              {t("dua.openSource")} ↗
             </a>
           </p>
-        ) : null}
+        ) : null)}
       </section>
 
       <section className="surface dua-browser" aria-busy={catalogLoading}>
         <form className="dua-search" onSubmit={handleSearch}>
+          <label className="sr-only" htmlFor="dua-collection-filter">
+            {t("dua.collectionFilter")}
+          </label>
+          <select
+            id="dua-collection-filter"
+            value={selectedCollection}
+            onChange={(event) => setSelectedCollection(event.target.value)}
+            aria-label={t("dua.collectionFilter")}
+          >
+            <option value="">{t("dua.allCollections")}</option>
+            {collections.map((collection) => (
+              <option key={collection.slug} value={collection.slug}>
+                {collection.source?.title || collection.slug}
+              </option>
+            ))}
+          </select>
           <label className="sr-only" htmlFor="dua-search-input">{t("dua.searchLabel")}</label>
           <input
             id="dua-search-input"
@@ -130,7 +166,10 @@ export default function DuaPage({
             {visibleCategories.map((category) => (
               <Link
                 key={category.id}
-                href={localizedPath(locale, `/dua/${category.slug}`)}
+                href={localizedPath(
+                  locale,
+                  `/dua/${category.collection}/categories/${category.slug}`,
+                )}
                 className="dua-category-chip"
                 aria-label={t("dua.openTopic", { topic: category.title })}
               >
@@ -139,6 +178,11 @@ export default function DuaPage({
                   <span className="dua-category-number">{formatNumber(category.source_number)}</span>
                 </span>
                 <span className="dua-category-title">{category.title}</span>
+                {!selectedCollection && collections.length > 1 ? (
+                  <span className="dua-category-collection">
+                    {category.collection_title || category.collection}
+                  </span>
+                ) : null}
                 <span className="dua-category-meta">
                   <small>
                     {t("dua.categoryEntryCount", { count: formatNumber(category.entry_count) })}
