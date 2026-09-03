@@ -357,7 +357,7 @@ final duaEntriesProvider = FutureProvider<List<DuaEntry>>((ref) {
   final locale = ref.watch(
     appPreferencesProvider.select((value) => value.locale),
   );
-  return ref.watch(duaRepositoryProvider).entries(locale);
+  return ref.watch(duaRepositoryProvider).featuredEntries(locale);
 });
 final duaEntriesByCategoryProvider =
     FutureProvider.family<List<DuaEntry>, String?>((ref, category) {
@@ -454,7 +454,6 @@ final audioControllerProvider =
         playbackStore: AudioPlaybackStore(ref.watch(localDatabaseProvider)),
       );
       unawaited(controller.restore());
-      ref.onDispose(controller.dispose);
       return controller;
     });
 

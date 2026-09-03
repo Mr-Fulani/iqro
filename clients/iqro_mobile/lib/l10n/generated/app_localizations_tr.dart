@@ -496,7 +496,77 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dua => 'Dua';
 
   @override
-  String get duaSubtitle => 'Doğrulanmış Hisnü\'l-Müslim koleksiyonu';
+  String get duaSubtitle => 'Hisnü\'l-Müslim koleksiyonu';
+
+  @override
+  String get duaAudio => 'Dua sesi';
+
+  @override
+  String get duaAudioStreaming => 'Dinlemek için internet bağlantısı gerekir';
+
+  @override
+  String get duaAudioFailed => 'Ses oynatılamadı';
+
+  @override
+  String get duaPractice => 'Tekrar pratiği';
+
+  @override
+  String get duaPracticeHint =>
+      'Her okumadan sonra dokunun. Bu sayaç yalnızca bu ekranda tutulur.';
+
+  @override
+  String get reset => 'Sıfırla';
+
+  @override
+  String get sourceAndVerification => 'Kaynak ve doğrulama';
+
+  @override
+  String get sourceDeclared => 'Kaynak belirtildi';
+
+  @override
+  String get sourceUnavailable => 'Kaynak bilgileri kullanılamıyor';
+
+  @override
+  String get editoriallyVerified => 'Editöryal olarak doğrulandı';
+
+  @override
+  String get copyText => 'Metni kopyala';
+
+  @override
+  String get textCopied => 'Metin kopyalandı';
+
+  @override
+  String get shareDua => 'Duayı paylaş';
+
+  @override
+  String get duaReader => 'Okuyucu';
+
+  @override
+  String get practiceStage => 'Aşama';
+
+  @override
+  String get markRepetition => 'Tekrarı say';
+
+  @override
+  String get author => 'Yazar';
+
+  @override
+  String get translator => 'Çevirmen';
+
+  @override
+  String get reviewer => 'Editör';
+
+  @override
+  String get sourceVersion => 'Kaynak sürümü';
+
+  @override
+  String get sourceReference => 'Referans';
+
+  @override
+  String get grade => 'Derece';
+
+  @override
+  String get rights => 'Kullanım koşulları';
 
   @override
   String get favorites => 'Favoriler';

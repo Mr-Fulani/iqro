@@ -493,7 +493,77 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dua => 'الدعاء';
 
   @override
-  String get duaSubtitle => 'مجموعة حصن المسلم الموثقة';
+  String get duaSubtitle => 'مجموعة حصن المسلم';
+
+  @override
+  String get duaAudio => 'صوت الدعاء';
+
+  @override
+  String get duaAudioStreaming => 'يلزم الاتصال بالإنترنت للاستماع';
+
+  @override
+  String get duaAudioFailed => 'تعذر تشغيل الصوت';
+
+  @override
+  String get duaPractice => 'تدريب التكرار';
+
+  @override
+  String get duaPracticeHint =>
+      'اضغط بعد كل قراءة. يبقى هذا العداد في هذه الشاشة فقط.';
+
+  @override
+  String get reset => 'إعادة ضبط';
+
+  @override
+  String get sourceAndVerification => 'المصدر والتحقق';
+
+  @override
+  String get sourceDeclared => 'المصدر مذكور';
+
+  @override
+  String get sourceUnavailable => 'تفاصيل المصدر غير متاحة';
+
+  @override
+  String get editoriallyVerified => 'تم التحقق تحريرياً';
+
+  @override
+  String get copyText => 'نسخ النص';
+
+  @override
+  String get textCopied => 'تم نسخ النص';
+
+  @override
+  String get shareDua => 'مشاركة الدعاء';
+
+  @override
+  String get duaReader => 'القارئ';
+
+  @override
+  String get practiceStage => 'المرحلة';
+
+  @override
+  String get markRepetition => 'تسجيل تكرار';
+
+  @override
+  String get author => 'المؤلف';
+
+  @override
+  String get translator => 'المترجم';
+
+  @override
+  String get reviewer => 'المراجع';
+
+  @override
+  String get sourceVersion => 'إصدار المصدر';
+
+  @override
+  String get sourceReference => 'المرجع';
+
+  @override
+  String get grade => 'الدرجة';
+
+  @override
+  String get rights => 'شروط الاستخدام';
 
   @override
   String get favorites => 'المفضلة';

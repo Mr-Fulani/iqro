@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,9 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
+  double? _seekPreviewMilliseconds;
+  ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
+  ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +33,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ref.watch(quranCatalogProvider).valueOrNull?.surahs ?? const <Surah>[];
     final controlsEnabled = state.active && !state.buffering && !_changingSurah;
     final durationMs = state.effectiveDuration.inMilliseconds;
-    final positionMs = state.relativePosition.inMilliseconds.clamp(
+    final playbackIdentity = (
+      trackId: state.track?.id,
+      startAyah: state.rangeStartAyah,
+      endAyah: state.rangeEndAyah,
+    );
+    if (_renderedIdentity != playbackIdentity) {
+      _renderedIdentity = playbackIdentity;
+      _seekPreviewMilliseconds = null;
+      // A source/range replacement invalidates any gesture that started on
+      // the previous timeline. Its eventual pointer-up must not seek the new
+      // source, even if Flutter rebuilds the Slider mid-drag.
+      _dragIdentity = null;
+    }
+    final livePositionMs = state.relativePosition.inMilliseconds.clamp(
       0,
       durationMs == 0 ? 1 : durationMs,
     );
+    final positionMs = (_seekPreviewMilliseconds ?? livePositionMs.toDouble())
+        .clamp(0, durationMs <= 0 ? 1 : durationMs)
+        .toDouble();
     final currentAyah = state.displayedAyah;
     final reciter = state.reciter;
     final portraitUrl = reciter == null
@@ -93,13 +114,40 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               ),
               const SizedBox(height: 26),
               Slider(
-                value: positionMs.toDouble(),
+                value: positionMs,
                 min: 0,
                 max: durationMs <= 0 ? 1 : durationMs.toDouble(),
-                onChanged: state.active
-                    ? (value) => controller.seekInActiveRange(
-                        Duration(milliseconds: value.round()),
-                      )
+                onChangeStart: state.active && durationMs > 0
+                    ? (value) {
+                        setState(() {
+                          _dragIdentity = playbackIdentity;
+                          _seekPreviewMilliseconds = value;
+                        });
+                      }
+                    : null,
+                onChanged: state.active && durationMs > 0
+                    ? (value) {
+                        if (_dragIdentity == null) return;
+                        setState(() => _seekPreviewMilliseconds = value);
+                      }
+                    : null,
+                onChangeEnd: state.active && durationMs > 0
+                    ? (value) {
+                        final identity = _dragIdentity;
+                        setState(() {
+                          _dragIdentity = null;
+                          _seekPreviewMilliseconds = null;
+                        });
+                        if (identity?.trackId == null) return;
+                        unawaited(
+                          controller.seekInActiveRange(
+                            Duration(milliseconds: value.round()),
+                            expectedTrackId: identity!.trackId!,
+                            expectedStartAyah: identity.startAyah,
+                            expectedEndAyah: identity.endAyah,
+                          ),
+                        );
+                      }
                     : null,
               ),
               Padding(
@@ -107,7 +155,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text(_duration(state.relativePosition), style: _metaStyle),
+                    Text(
+                      _duration(Duration(milliseconds: positionMs.round())),
+                      style: _metaStyle,
+                    ),
                     Text(_duration(state.effectiveDuration), style: _metaStyle),
                   ],
                 ),
@@ -120,7 +171,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     onPressed: controlsEnabled
                         ? () => controller.seekInActiveRange(
                             Duration(
-                              milliseconds: (positionMs - 10000).clamp(
+                              milliseconds: (positionMs.round() - 10000).clamp(
                                 0,
                                 durationMs,
                               ),
@@ -173,7 +224,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     onPressed: controlsEnabled
                         ? () => controller.seekInActiveRange(
                             Duration(
-                              milliseconds: (positionMs + 10000).clamp(
+                              milliseconds: (positionMs.round() + 10000).clamp(
                                 0,
                                 durationMs,
                               ),

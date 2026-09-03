@@ -495,7 +495,78 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dua => 'Ду’а';
 
   @override
-  String get duaSubtitle => 'Проверенный сборник «Крепость мусульманина»';
+  String get duaSubtitle => 'Сборник «Крепость мусульманина»';
+
+  @override
+  String get duaAudio => 'Аудио ду’а';
+
+  @override
+  String get duaAudioStreaming =>
+      'Для прослушивания нужно подключение к интернету';
+
+  @override
+  String get duaAudioFailed => 'Не удалось воспроизвести аудио';
+
+  @override
+  String get duaPractice => 'Практика повторения';
+
+  @override
+  String get duaPracticeHint =>
+      'Нажимайте после каждого прочтения. Счётчик хранится только на этом экране.';
+
+  @override
+  String get reset => 'Сбросить';
+
+  @override
+  String get sourceAndVerification => 'Источник и проверка';
+
+  @override
+  String get sourceDeclared => 'Источник указан';
+
+  @override
+  String get sourceUnavailable => 'Сведения об источнике недоступны';
+
+  @override
+  String get editoriallyVerified => 'Проверено редакцией';
+
+  @override
+  String get copyText => 'Копировать текст';
+
+  @override
+  String get textCopied => 'Текст скопирован';
+
+  @override
+  String get shareDua => 'Поделиться ду’а';
+
+  @override
+  String get duaReader => 'Чтец';
+
+  @override
+  String get practiceStage => 'Этап';
+
+  @override
+  String get markRepetition => 'Засчитать повтор';
+
+  @override
+  String get author => 'Автор';
+
+  @override
+  String get translator => 'Переводчик';
+
+  @override
+  String get reviewer => 'Редактор';
+
+  @override
+  String get sourceVersion => 'Версия источника';
+
+  @override
+  String get sourceReference => 'Ссылка на источник';
+
+  @override
+  String get grade => 'Оценка';
+
+  @override
+  String get rights => 'Условия использования';
 
   @override
   String get favorites => 'Избранное';

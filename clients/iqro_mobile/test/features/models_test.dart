@@ -175,6 +175,72 @@ void main() {
     );
   });
 
+  test(
+    'Surah playback normalizes transport order before binary search use',
+    () {
+      final playback = SurahPlayback.fromJson(<String, Object?>{
+        'track': <String, Object?>{
+          'id': 'track',
+          'recitation_id': 'recitation',
+          'surah_number': 3,
+          'duration_ms': 12000,
+          'offline_download_allowed': false,
+          'asset': <String, Object?>{'url': 'https://cdn.example/3.mp3'},
+        },
+        'segments': <Object?>[
+          <String, Object?>{
+            'ayah_id': 'ayah-2',
+            'surah_number': 3,
+            'ayah_number': 2,
+            'start_ms': 5000,
+            'end_ms': 9000,
+          },
+          <String, Object?>{
+            'ayah_id': 'ayah-1',
+            'surah_number': 3,
+            'ayah_number': 1,
+            'start_ms': 0,
+            'end_ms': 5000,
+          },
+        ],
+      });
+
+      expect(playback.segments.map((segment) => segment.ayah), <int>[1, 2]);
+    },
+  );
+
+  test('Surah playback rejects overlapping or reversed ayah timings', () {
+    expect(
+      () => SurahPlayback.fromJson(<String, Object?>{
+        'track': <String, Object?>{
+          'id': 'track',
+          'recitation_id': 'recitation',
+          'surah_number': 3,
+          'duration_ms': 12000,
+          'offline_download_allowed': false,
+          'asset': <String, Object?>{'url': 'https://cdn.example/3.mp3'},
+        },
+        'segments': <Object?>[
+          <String, Object?>{
+            'ayah_id': 'ayah-1',
+            'surah_number': 3,
+            'ayah_number': 1,
+            'start_ms': 5000,
+            'end_ms': 9000,
+          },
+          <String, Object?>{
+            'ayah_id': 'ayah-2',
+            'surah_number': 3,
+            'ayah_number': 2,
+            'start_ms': 0,
+            'end_ms': 4000,
+          },
+        ],
+      }),
+      throwsFormatException,
+    );
+  });
+
   test('player exposes position relative to the selected ayah range', () {
     const track = AudioTrack(
       id: 'track',

@@ -1047,8 +1047,146 @@ abstract class AppLocalizations {
   /// No description provided for @duaSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Verified Hisn al-Muslim collection'**
+  /// **'Hisn al-Muslim collection'**
   String get duaSubtitle;
+
+  /// No description provided for @duaAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Dua audio'**
+  String get duaAudio;
+
+  /// No description provided for @duaAudioStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'An internet connection is required to listen'**
+  String get duaAudioStreaming;
+
+  /// No description provided for @duaAudioFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The audio could not be played'**
+  String get duaAudioFailed;
+
+  /// No description provided for @duaPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Repetition practice'**
+  String get duaPractice;
+
+  /// No description provided for @duaPracticeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap after each reading. This counter stays on this screen only.'**
+  String get duaPracticeHint;
+
+  /// No description provided for @reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// No description provided for @sourceAndVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Source and verification'**
+  String get sourceAndVerification;
+
+  /// No description provided for @sourceDeclared.
+  ///
+  /// In en, this message translates to:
+  /// **'Source provided'**
+  String get sourceDeclared;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Source details unavailable'**
+  String get sourceUnavailable;
+
+  /// No description provided for @editoriallyVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Editorially verified'**
+  String get editoriallyVerified;
+
+  /// No description provided for @copyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy text'**
+  String get copyText;
+
+  /// No description provided for @textCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Text copied'**
+  String get textCopied;
+
+  /// No description provided for @shareDua.
+  ///
+  /// In en, this message translates to:
+  /// **'Share dua'**
+  String get shareDua;
+
+  /// No description provided for @duaReader.
+  ///
+  /// In en, this message translates to:
+  /// **'Reader'**
+  String get duaReader;
+
+  /// No description provided for @practiceStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get practiceStage;
+
+  /// No description provided for @markRepetition.
+  ///
+  /// In en, this message translates to:
+  /// **'Count repetition'**
+  String get markRepetition;
+
+  /// No description provided for @author.
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get author;
+
+  /// No description provided for @translator.
+  ///
+  /// In en, this message translates to:
+  /// **'Translator'**
+  String get translator;
+
+  /// No description provided for @reviewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewer'**
+  String get reviewer;
+
+  /// No description provided for @sourceVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Source version'**
+  String get sourceVersion;
+
+  /// No description provided for @sourceReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get sourceReference;
+
+  /// No description provided for @grade.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade'**
+  String get grade;
+
+  /// No description provided for @rights.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage terms'**
+  String get rights;
 
   /// No description provided for @favorites.
   ///

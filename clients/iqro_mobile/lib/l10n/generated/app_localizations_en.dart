@@ -497,7 +497,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dua => 'Dua';
 
   @override
-  String get duaSubtitle => 'Verified Hisn al-Muslim collection';
+  String get duaSubtitle => 'Hisn al-Muslim collection';
+
+  @override
+  String get duaAudio => 'Dua audio';
+
+  @override
+  String get duaAudioStreaming =>
+      'An internet connection is required to listen';
+
+  @override
+  String get duaAudioFailed => 'The audio could not be played';
+
+  @override
+  String get duaPractice => 'Repetition practice';
+
+  @override
+  String get duaPracticeHint =>
+      'Tap after each reading. This counter stays on this screen only.';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get sourceAndVerification => 'Source and verification';
+
+  @override
+  String get sourceDeclared => 'Source provided';
+
+  @override
+  String get sourceUnavailable => 'Source details unavailable';
+
+  @override
+  String get editoriallyVerified => 'Editorially verified';
+
+  @override
+  String get copyText => 'Copy text';
+
+  @override
+  String get textCopied => 'Text copied';
+
+  @override
+  String get shareDua => 'Share dua';
+
+  @override
+  String get duaReader => 'Reader';
+
+  @override
+  String get practiceStage => 'Stage';
+
+  @override
+  String get markRepetition => 'Count repetition';
+
+  @override
+  String get author => 'Author';
+
+  @override
+  String get translator => 'Translator';
+
+  @override
+  String get reviewer => 'Reviewer';
+
+  @override
+  String get sourceVersion => 'Source version';
+
+  @override
+  String get sourceReference => 'Reference';
+
+  @override
+  String get grade => 'Grade';
+
+  @override
+  String get rights => 'Usage terms';
 
   @override
   String get favorites => 'Favorites';

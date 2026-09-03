@@ -215,26 +215,58 @@ class SurahPlayback {
   const SurahPlayback({required this.track, required this.segments});
 
   factory SurahPlayback.fromJson(Map<String, Object?> json) {
-    return SurahPlayback(
-      track: AudioTrack.fromPlayback(json),
-      segments:
-          (json['segments'] as List?)
-              ?.whereType<Map>()
-              .map(
-                (item) =>
-                    AudioSegment.fromJson(Map<String, Object?>.from(item)),
-              )
-              .where(
-                (item) =>
-                    item.surah > 0 && item.ayah > 0 && item.end > item.start,
-              )
-              .toList(growable: false) ??
-          const <AudioSegment>[],
+    final track = AudioTrack.fromPlayback(json);
+    final rawSegments = json['segments'];
+    if (rawSegments != null &&
+        (rawSegments is! List || rawSegments.any((item) => item is! Map))) {
+      throw const FormatException('Audio timing segments are invalid');
+    }
+    final playback = SurahPlayback(
+      track: track,
+      segments: rawSegments is List
+          ? rawSegments
+                .map(
+                  (item) => AudioSegment.fromJson(
+                    Map<String, Object?>.from(item! as Map),
+                  ),
+                )
+                .toList(growable: false)
+          : const <AudioSegment>[],
     );
+    return playback.normalized();
   }
 
   final AudioTrack track;
   final List<AudioSegment> segments;
+
+  SurahPlayback normalized() {
+    if (segments.isEmpty) return this;
+    final ordered = List<AudioSegment>.of(segments)
+      ..sort((left, right) {
+        final byStart = left.start.compareTo(right.start);
+        return byStart != 0 ? byStart : left.ayah.compareTo(right.ayah);
+      });
+    AudioSegment? previous;
+    final ayahs = <int>{};
+    for (final segment in ordered) {
+      if (segment.surah != track.surah ||
+          segment.ayah < 1 ||
+          segment.ayahId.trim().isEmpty ||
+          segment.start.isNegative ||
+          segment.end <= segment.start ||
+          !ayahs.add(segment.ayah) ||
+          (previous != null &&
+              (segment.ayah <= previous.ayah ||
+                  segment.start < previous.end))) {
+        throw const FormatException('Audio timing segments are inconsistent');
+      }
+      previous = segment;
+    }
+    return SurahPlayback(
+      track: track,
+      segments: List<AudioSegment>.unmodifiable(ordered),
+    );
+  }
 
   Map<String, Object?> toJson() => <String, Object?>{
     'track': track.toJson(),
