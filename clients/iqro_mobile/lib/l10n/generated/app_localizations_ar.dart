@@ -542,6 +542,24 @@ class AppLocalizationsAr extends AppLocalizations {
       'هذا اتجاه جغرافي وليس بوصلة مباشرة. حاذِ أعلى الهاتف مع الشمال أولًا ثم اتبع السهم.';
 
   @override
+  String get prayerCalendar => 'تقويم الصلاة الشهري';
+
+  @override
+  String get prayerCalendarHint => 'جميع أوقات الشهر المحدد متاحة دون اتصال';
+
+  @override
+  String get prayerCalendarUnavailable => 'تعذّر حساب هذا الشهر';
+
+  @override
+  String get prayerCalendarNeedsLocation => 'اختر الموقع من شاشة الصلاة أولًا';
+
+  @override
+  String get previousMonth => 'الشهر السابق';
+
+  @override
+  String get nextMonth => 'الشهر التالي';
+
+  @override
   String get prayerLocationPrivacy =>
       'تبقى إحداثياتك على هذا الجهاز ولا تُضاف إلى التحليلات.';
 

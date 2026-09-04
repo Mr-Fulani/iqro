@@ -1140,6 +1140,42 @@ abstract class AppLocalizations {
   /// **'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.'**
   String get qiblaNorthHint;
 
+  /// No description provided for @prayerCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly prayer calendar'**
+  String get prayerCalendar;
+
+  /// No description provided for @prayerCalendarHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All daily times for the selected month, available offline'**
+  String get prayerCalendarHint;
+
+  /// No description provided for @prayerCalendarUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not calculate this month'**
+  String get prayerCalendarUnavailable;
+
+  /// No description provided for @prayerCalendarNeedsLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a location on the prayer screen first'**
+  String get prayerCalendarNeedsLocation;
+
+  /// No description provided for @previousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get previousMonth;
+
+  /// No description provided for @nextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get nextMonth;
+
   /// No description provided for @prayerLocationPrivacy.
   ///
   /// In en, this message translates to:

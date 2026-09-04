@@ -545,6 +545,27 @@ class AppLocalizationsRu extends AppLocalizations {
       'Это географическое направление, а не живой компас. Сначала совместите верх телефона с севером, затем следуйте стрелке.';
 
   @override
+  String get prayerCalendar => 'Календарь намаза на месяц';
+
+  @override
+  String get prayerCalendarHint =>
+      'Все времена на выбранный месяц, доступны без интернета';
+
+  @override
+  String get prayerCalendarUnavailable =>
+      'Не удалось рассчитать выбранный месяц';
+
+  @override
+  String get prayerCalendarNeedsLocation =>
+      'Сначала выберите местоположение на экране намаза';
+
+  @override
+  String get previousMonth => 'Предыдущий месяц';
+
+  @override
+  String get nextMonth => 'Следующий месяц';
+
+  @override
   String get prayerLocationPrivacy =>
       'Координаты остаются на устройстве и никогда не попадают в аналитику.';
 

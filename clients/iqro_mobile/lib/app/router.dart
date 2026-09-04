@@ -11,6 +11,7 @@ import '../features/memorization/memorization_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/prayer/prayer_screen.dart';
+import '../features/prayer/prayer_calendar_screen.dart';
 import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
@@ -79,6 +80,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/prayer',
         builder: (context, state) => const PrayerScreen(),
+      ),
+      GoRoute(
+        path: '/prayer/calendar',
+        builder: (context, state) => const PrayerCalendarScreen(),
       ),
       GoRoute(
         path: '/reminders',

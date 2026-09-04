@@ -544,6 +544,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu canlı pusula değil, coğrafi bir açıdır. Oku izlemeden önce telefonun üstünü kuzeye hizalayın.';
 
   @override
+  String get prayerCalendar => 'Aylık namaz takvimi';
+
+  @override
+  String get prayerCalendarHint =>
+      'Seçilen ayın tüm vakitleri çevrimdışı kullanılabilir';
+
+  @override
+  String get prayerCalendarUnavailable => 'Bu ay hesaplanamadı';
+
+  @override
+  String get prayerCalendarNeedsLocation =>
+      'Önce namaz ekranında bir konum seçin';
+
+  @override
+  String get previousMonth => 'Önceki ay';
+
+  @override
+  String get nextMonth => 'Sonraki ay';
+
+  @override
   String get prayerLocationPrivacy =>
       'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
 

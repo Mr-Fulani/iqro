@@ -545,6 +545,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.';
 
   @override
+  String get prayerCalendar => 'Monthly prayer calendar';
+
+  @override
+  String get prayerCalendarHint =>
+      'All daily times for the selected month, available offline';
+
+  @override
+  String get prayerCalendarUnavailable => 'Could not calculate this month';
+
+  @override
+  String get prayerCalendarNeedsLocation =>
+      'Choose a location on the prayer screen first';
+
+  @override
+  String get previousMonth => 'Previous month';
+
+  @override
+  String get nextMonth => 'Next month';
+
+  @override
   String get prayerLocationPrivacy =>
       'Your coordinates stay on this device and are never added to analytics.';
 

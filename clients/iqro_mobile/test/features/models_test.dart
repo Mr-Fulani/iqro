@@ -625,4 +625,15 @@ void main() {
     expect(schedule.times['fajr']?.hour, 4);
     expect(schedule.timesUtc['fajr'], DateTime.utc(2026, 9, 1, 1, 51));
   });
+
+  test('Prayer calendar covers each civil day of the selected month', () {
+    final leapFebruary = prayerCalendarDates(DateTime(2028, 2, 20));
+    final september = prayerCalendarDates(DateTime(2026, 9, 30));
+
+    expect(leapFebruary, hasLength(29));
+    expect(leapFebruary.first, DateTime(2028, 2, 1));
+    expect(leapFebruary.last, DateTime(2028, 2, 29));
+    expect(september, hasLength(30));
+    expect(september.last, DateTime(2026, 9, 30));
+  });
 }

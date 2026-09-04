@@ -470,6 +470,7 @@ class PrayerRepository {
     } on ApiException catch (error) {
       if (error.code == 'account_scope_changed') rethrow;
       if (error.statusCode != 404 && !error.isOffline) rethrow;
+      await _persistProfile(method, preferences, scope);
       return PrayerProfileSelection(
         method: method,
         preferences: preferences,
@@ -518,8 +519,10 @@ class PrayerRepository {
     );
   }
 
-  Future<PrayerMethod?> selectedMethod() async {
-    final scope = await _database.captureAccount();
+  Future<PrayerMethod?> selectedMethod({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
     return _selectedMethodFor(scope);
   }
 
@@ -749,6 +752,36 @@ class PrayerRepository {
     return schedules;
   }
 
+  Future<List<PrayerSchedule>> calculateMonth({
+    required DateTime month,
+    PrayerMethod? method,
+    PrayerLocation? location,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final activeLocation = location ?? await _storedLocationFor(scope);
+    final activeMethod = method ?? await _selectedMethodFor(scope);
+    if (activeLocation == null ||
+        activeMethod == null ||
+        !activeMethod.supportsLocalCalculation) {
+      return const <PrayerSchedule>[];
+    }
+    final preferences = await _storedPreferencesFor(activeMethod, scope);
+    final schedules = <PrayerSchedule>[];
+    for (final date in prayerCalendarDates(month)) {
+      schedules.add(
+        await _calculateLocallyForDate(
+          method: activeMethod,
+          location: activeLocation,
+          date: date,
+          preferences: preferences,
+          scope: scope,
+        ),
+      );
+    }
+    return schedules;
+  }
+
   Future<PrayerSchedule> calculateLocallyForDate({
     required PrayerMethod method,
     required PrayerLocation location,
@@ -897,6 +930,15 @@ String _preferenceCacheKey(PrayerPreferences value) => <String>[
   value.polarResolution,
   for (final code in _prayerCodes) '${value.adjustments[code] ?? 0}',
 ].join(':');
+
+List<DateTime> prayerCalendarDates(DateTime month) {
+  final dayCount = DateTime(month.year, month.month + 1, 0).day;
+  return List<DateTime>.generate(
+    dayCount,
+    (index) => DateTime(month.year, month.month, index + 1),
+    growable: false,
+  );
+}
 
 const _prayerCodes = <String>[
   'fajr',

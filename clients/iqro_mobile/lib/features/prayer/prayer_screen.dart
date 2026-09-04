@@ -429,6 +429,34 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                 ),
               ),
             ],
+            const SizedBox(height: 10),
+            IqroCard(
+              onTap: _location == null || selectedMethod == null
+                  ? null
+                  : () => context.push('/prayer/calendar'),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.calendar_month_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          context.l10n.prayerCalendar,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          context.l10n.prayerCalendarHint,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
+            ),
             const SizedBox(height: 18),
             IqroCard(
               onTap: () => context.push('/reminders'),
