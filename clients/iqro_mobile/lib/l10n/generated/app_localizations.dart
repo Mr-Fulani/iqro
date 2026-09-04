@@ -486,6 +486,18 @@ abstract class AppLocalizations {
   /// **'Juz'**
   String get juz;
 
+  /// No description provided for @hizb.
+  ///
+  /// In en, this message translates to:
+  /// **'Hizb'**
+  String get hizb;
+
+  /// No description provided for @rubElHizb.
+  ///
+  /// In en, this message translates to:
+  /// **'Rub al-hizb'**
+  String get rubElHizb;
+
   /// No description provided for @page.
   ///
   /// In en, this message translates to:

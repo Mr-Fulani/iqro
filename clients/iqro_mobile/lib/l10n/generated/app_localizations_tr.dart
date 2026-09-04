@@ -207,6 +207,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get juz => 'Cüz';
 
   @override
+  String get hizb => 'Hizb';
+
+  @override
+  String get rubElHizb => 'Rub el-hizb';
+
+  @override
   String get page => 'Sayfa';
 
   @override

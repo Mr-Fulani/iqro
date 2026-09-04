@@ -617,6 +617,8 @@ class QuranDivision {
     required this.endAyah,
     required this.startPage,
     required this.endPage,
+    this.hizbNumber,
+    this.quarterNumber,
   });
 
   factory QuranDivision.fromJson(Map<String, Object?> json) {
@@ -632,6 +634,8 @@ class QuranDivision {
       endAyah: QuranAyahReference.fromJson(end),
       startPage: (json['start_page'] as num?)?.toInt() ?? 1,
       endPage: (json['end_page'] as num?)?.toInt() ?? 1,
+      hizbNumber: (json['hizb_number'] as num?)?.toInt(),
+      quarterNumber: (json['quarter_number'] as num?)?.toInt(),
     );
   }
 
@@ -640,6 +644,8 @@ class QuranDivision {
   final QuranAyahReference endAyah;
   final int startPage;
   final int endPage;
+  final int? hizbNumber;
+  final int? quarterNumber;
 }
 
 class QuranCatalog {

@@ -38,6 +38,32 @@ void main() {
     expect(track.duration, const Duration(seconds: 90));
   });
 
+  test('rub al-hizb contract preserves its parent hizb and quarter', () {
+    final division = QuranDivision.fromJson(<String, Object?>{
+      'number': 49,
+      'hizb_number': 13,
+      'quarter_number': 1,
+      'start_ayah': <String, Object?>{
+        'id': 'ayah-18-1',
+        'surah': 18,
+        'number': 1,
+      },
+      'end_ayah': <String, Object?>{
+        'id': 'ayah-18-16',
+        'surah': 18,
+        'number': 16,
+      },
+      'start_page': 293,
+      'end_page': 295,
+    });
+
+    expect(division.number, 49);
+    expect(division.hizbNumber, 13);
+    expect(division.quarterNumber, 1);
+    expect(division.startAyah.key, '18:1');
+    expect(division.startPage, 293);
+  });
+
   test('Mushaf page derives its real first ayah for reading progress', () {
     final page = MushafPageData.fromJson(<String, Object?>{
       'number': 2,

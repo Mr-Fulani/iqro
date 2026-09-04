@@ -73,14 +73,29 @@ class QuranRepository {
   }
 
   Future<List<QuranDivision>> juz({bool forceRefresh = false}) async {
-    const key = 'quran:$edition:juz';
+    return _divisions('juz', forceRefresh: forceRefresh);
+  }
+
+  Future<List<QuranDivision>> hizb({bool forceRefresh = false}) async {
+    return _divisions('hizb', forceRefresh: forceRefresh);
+  }
+
+  Future<List<QuranDivision>> rubElHizb({bool forceRefresh = false}) async {
+    return _divisions('rub-el-hizb', forceRefresh: forceRefresh);
+  }
+
+  Future<List<QuranDivision>> _divisions(
+    String kind, {
+    required bool forceRefresh,
+  }) async {
+    final key = 'quran:$edition:$kind';
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
       return _parseDivisions(cached!.value);
     }
     try {
       final payload = await _api.get(
-        '/quran/editions/$edition/juz',
+        '/quran/editions/$edition/$kind',
         public: true,
       );
       await _database.writeCache(

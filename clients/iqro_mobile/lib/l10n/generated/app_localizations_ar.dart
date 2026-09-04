@@ -206,6 +206,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get juz => 'الجزء';
 
   @override
+  String get hizb => 'الحزب';
+
+  @override
+  String get rubElHizb => 'ربع الحزب';
+
+  @override
   String get page => 'الصفحة';
 
   @override

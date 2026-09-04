@@ -320,19 +320,27 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   Future<void> _showQuickJump(BuildContext context) async {
     try {
       final repository = ref.read(quranRepositoryProvider);
-      final results = await Future.wait<Object>(<Future<Object>>[
-        repository.surahs(),
-        repository.juz(),
+      final results = await Future.wait<Object?>(<Future<Object?>>[
+        _optionalQuickJumpData(repository.surahs()),
+        _optionalQuickJumpData(repository.juz()),
+        _optionalQuickJumpData(repository.hizb()),
+        _optionalQuickJumpData(repository.rubElHizb()),
       ]);
-      final catalog = results[0] as QuranCatalog;
-      final juz = results[1] as List<QuranDivision>;
+      final catalog = results[0] as QuranCatalog?;
+      final juz = results[1] as List<QuranDivision>?;
+      final hizb = results[2] as List<QuranDivision>?;
+      final rubElHizb = results[3] as List<QuranDivision>?;
       if (!context.mounted) return;
       final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (context) =>
-            QuranQuickJumpSheet(surahs: catalog.surahs, juz: juz),
+        builder: (context) => QuranQuickJumpSheet(
+          surahs: catalog?.surahs ?? const <Surah>[],
+          juz: juz ?? const <QuranDivision>[],
+          hizb: hizb ?? const <QuranDivision>[],
+          rubElHizb: rubElHizb ?? const <QuranDivision>[],
+        ),
       );
       if (selection == null || !context.mounted) return;
       final readerMode = ref.read(appPreferencesProvider).readerMode;
@@ -358,6 +366,14 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    }
+  }
+
+  Future<T?> _optionalQuickJumpData<T>(Future<T> request) async {
+    try {
+      return await request;
+    } on Object {
+      return null;
     }
   }
 }

@@ -207,6 +207,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get juz => 'Juz';
 
   @override
+  String get hizb => 'Hizb';
+
+  @override
+  String get rubElHizb => 'Rub al-hizb';
+
+  @override
   String get page => 'Page';
 
   @override

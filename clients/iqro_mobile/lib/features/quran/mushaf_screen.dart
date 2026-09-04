@@ -515,21 +515,27 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     try {
       scope = await repository.captureAccount();
       if (!_isCurrentAccount(scope)) return;
-      final results = await Future.wait<Object>(<Future<Object>>[
-        repository.surahs(),
-        repository.juz(),
+      final results = await Future.wait<Object?>(<Future<Object?>>[
+        _optionalQuickJumpData(repository.surahs()),
+        _optionalQuickJumpData(repository.juz()),
+        _optionalQuickJumpData(repository.hizb()),
+        _optionalQuickJumpData(repository.rubElHizb()),
       ]);
       if (!_isCurrentAccount(scope) || !mounted) return;
-      final catalog = results[0] as QuranCatalog;
-      final juz = results[1] as List<QuranDivision>;
+      final catalog = results[0] as QuranCatalog?;
+      final juz = results[1] as List<QuranDivision>?;
+      final hizb = results[2] as List<QuranDivision>?;
+      final rubElHizb = results[3] as List<QuranDivision>?;
       final reference = _selectedAyah ?? _pageReference;
       final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         builder: (context) => QuranQuickJumpSheet(
-          surahs: catalog.surahs,
-          juz: juz,
+          surahs: catalog?.surahs ?? const <Surah>[],
+          juz: juz ?? const <QuranDivision>[],
+          hizb: hizb ?? const <QuranDivision>[],
+          rubElHizb: rubElHizb ?? const <QuranDivision>[],
           initialMode: QuranQuickJumpMode.page,
           initialSurah: reference?.surah ?? widget.surah,
           initialAyah: reference?.ayah ?? widget.ayah,
@@ -551,7 +557,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           surah: selection.surah,
           ayah: selection.ayah,
         );
-      } else if (selection.mode == QuranQuickJumpMode.juz) {
+      } else if (selection.mode != QuranQuickJumpMode.page) {
         targetReference = QuranAyahReference(
           id: '',
           surah: selection.surah,
@@ -567,6 +573,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    }
+  }
+
+  Future<T?> _optionalQuickJumpData<T>(Future<T> request) async {
+    try {
+      return await request;
+    } on AccountScopeChanged {
+      rethrow;
+    } on Object {
+      return null;
     }
   }
 
