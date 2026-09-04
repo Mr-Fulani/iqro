@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +8,7 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
-import '../audio/reciter_portraits.dart';
+import '../audio/mini_player.dart';
 import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
@@ -149,9 +146,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           surah: value.track?.surah,
           ayah: value.activeAyah,
           active: value.active,
-          playing: value.playing,
-          buffering: value.buffering,
-          reciter: value.reciter,
         ),
       ),
     );
@@ -159,16 +153,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         player.active && player.surah != null && player.ayah != null
         ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
         : null;
-    final reciters = player.reciter == null
-        ? null
-        : ref.watch(recitersProvider).valueOrNull;
-    final reciterPortraitUrl = player.reciter == null
-        ? null
-        : resolveReciterPortraitUrl(
-            player.reciter!,
-            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
-            reciters: reciters,
-          );
     final foreground = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFF3EEDC)
         : const Color(0xFF26261F);
@@ -409,25 +393,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             ),
             if (player.active && !_controlsVisible)
               PositionedDirectional(
-                start: 14,
-                end: 14,
+                start: 0,
+                end: 0,
                 bottom: 18 + MediaQuery.paddingOf(context).bottom,
-                child: _ReaderAudioPill(
-                  title: player.ayah == null
-                      ? '${context.l10n.surah} ${player.surah ?? ''}'
-                      : '${context.l10n.ayah} ${player.surah}:${player.ayah}',
-                  subtitle: player.reciter?.nameFor(
-                    Localizations.localeOf(context).languageCode,
-                  ),
-                  portraitUrl: reciterPortraitUrl,
-                  initials: player.reciter?.initials ?? 'IQ',
-                  playing: player.playing,
-                  buffering: player.buffering,
-                  onToggle: () =>
-                      ref.read(audioControllerProvider.notifier).toggle(),
-                  onStop: () =>
-                      ref.read(audioControllerProvider.notifier).stop(),
-                ),
+                child: const IqroMiniPlayer(),
               ),
             if (!_controlsVisible)
               PositionedDirectional(
@@ -804,135 +773,4 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       request == _positionRequest &&
       page == _currentPage &&
       _isCurrentAccount(scope);
-}
-
-class _ReaderAudioPill extends StatelessWidget {
-  const _ReaderAudioPill({
-    required this.title,
-    required this.subtitle,
-    required this.portraitUrl,
-    required this.initials,
-    required this.playing,
-    required this.buffering,
-    required this.onToggle,
-    required this.onStop,
-  });
-
-  final String title;
-  final String? subtitle;
-  final String? portraitUrl;
-  final String initials;
-  final bool playing;
-  final bool buffering;
-  final VoidCallback onToggle;
-  final VoidCallback onStop;
-
-  @override
-  Widget build(BuildContext context) {
-    final portraitFallback = ColoredBox(
-      color: const Color(0xFF163C33),
-      child: Center(
-        child: Text(initials, style: const TextStyle(color: Color(0xFF9BDECB))),
-      ),
-    );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0x52030F0C),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: .16)),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: SizedBox(
-              height: 66,
-              child: Row(
-                children: <Widget>[
-                  const SizedBox(width: 10),
-                  Semantics(
-                    image: true,
-                    label: subtitle ?? title,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF9BDECB),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: portraitUrl == null
-                            ? portraitFallback
-                            : CachedNetworkImage(
-                                imageUrl: portraitUrl!,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => portraitFallback,
-                                errorWidget: (context, url, error) =>
-                                    portraitFallback,
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleSmall?.copyWith(color: Colors.white),
-                        ),
-                        if (subtitle?.isNotEmpty == true)
-                          Text(
-                            subtitle!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: .68),
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: playing ? context.l10n.pause : context.l10n.play,
-                    onPressed: buffering ? null : onToggle,
-                    color: Colors.white,
-                    icon: buffering
-                        ? const SizedBox.square(
-                            dimension: 19,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(playing ? Icons.pause : Icons.play_arrow),
-                  ),
-                  IconButton(
-                    tooltip: context.l10n.close,
-                    onPressed: onStop,
-                    color: Colors.white70,
-                    icon: const Icon(Icons.close),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
