@@ -5,6 +5,16 @@ enum ReaderMode { text, mushaf }
 
 enum DailyUnit { minutes, pages, ayahs }
 
+const defaultReaderArabicFontSize = 30.0;
+const minReaderArabicFontSize = 24.0;
+const maxReaderArabicFontSize = 40.0;
+const defaultReaderLineHeight = 1.9;
+const minReaderLineHeight = 1.5;
+const maxReaderLineHeight = 2.4;
+const defaultReaderAyahSpacing = 10.0;
+const minReaderAyahSpacing = 4.0;
+const maxReaderAyahSpacing = 20.0;
+
 class AppPreferences {
   const AppPreferences({
     required this.onboardingComplete,
@@ -15,6 +25,10 @@ class AppPreferences {
     required this.goal,
     required this.dailyUnit,
     required this.dailyTarget,
+    this.readerArabicFontSize = defaultReaderArabicFontSize,
+    this.readerLineHeight = defaultReaderLineHeight,
+    this.readerAyahSpacing = defaultReaderAyahSpacing,
+    this.readerFocusMode = false,
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
     this.preferredRecitationId,
@@ -29,6 +43,10 @@ class AppPreferences {
       goal = 'reading',
       dailyUnit = DailyUnit.pages,
       dailyTarget = 6,
+      readerArabicFontSize = defaultReaderArabicFontSize,
+      readerLineHeight = defaultReaderLineHeight,
+      readerAyahSpacing = defaultReaderAyahSpacing,
+      readerFocusMode = false,
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
       preferredRecitationId = null;
@@ -41,6 +59,10 @@ class AppPreferences {
   final String goal;
   final DailyUnit dailyUnit;
   final int dailyTarget;
+  final double readerArabicFontSize;
+  final double readerLineHeight;
+  final double readerAyahSpacing;
+  final bool readerFocusMode;
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
   final String? preferredRecitationId;
@@ -54,6 +76,10 @@ class AppPreferences {
     String? goal,
     DailyUnit? dailyUnit,
     int? dailyTarget,
+    double? readerArabicFontSize,
+    double? readerLineHeight,
+    double? readerAyahSpacing,
+    bool? readerFocusMode,
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
     String? preferredRecitationId,
@@ -67,6 +93,10 @@ class AppPreferences {
       goal: goal ?? this.goal,
       dailyUnit: dailyUnit ?? this.dailyUnit,
       dailyTarget: dailyTarget ?? this.dailyTarget,
+      readerArabicFontSize: readerArabicFontSize ?? this.readerArabicFontSize,
+      readerLineHeight: readerLineHeight ?? this.readerLineHeight,
+      readerAyahSpacing: readerAyahSpacing ?? this.readerAyahSpacing,
+      readerFocusMode: readerFocusMode ?? this.readerFocusMode,
       preferredTranslationSourceId:
           preferredTranslationSourceId ?? this.preferredTranslationSourceId,
       preferredTafsirSourceId:
@@ -101,6 +131,25 @@ class PreferencesStore {
       goal: _preferences.getString('primary_goal') ?? 'reading',
       dailyUnit: _unitFromName(_preferences.getString('daily_unit') ?? 'pages'),
       dailyTarget: _preferences.getInt('daily_target') ?? 6,
+      readerArabicFontSize: _boundedDouble(
+        'reader_arabic_font_size',
+        defaultReaderArabicFontSize,
+        minReaderArabicFontSize,
+        maxReaderArabicFontSize,
+      ),
+      readerLineHeight: _boundedDouble(
+        'reader_line_height',
+        defaultReaderLineHeight,
+        minReaderLineHeight,
+        maxReaderLineHeight,
+      ),
+      readerAyahSpacing: _boundedDouble(
+        'reader_ayah_spacing',
+        defaultReaderAyahSpacing,
+        minReaderAyahSpacing,
+        maxReaderAyahSpacing,
+      ),
+      readerFocusMode: _preferences.getBool('reader_focus_mode') ?? false,
       preferredTranslationSourceId: _preferences.getInt(
         'reader_translation_source_id',
       ),
@@ -119,6 +168,13 @@ class PreferencesStore {
       _preferences.setString('primary_goal', value.goal),
       _preferences.setString('daily_unit', value.dailyUnit.name),
       _preferences.setInt('daily_target', value.dailyTarget),
+      _preferences.setDouble(
+        'reader_arabic_font_size',
+        value.readerArabicFontSize,
+      ),
+      _preferences.setDouble('reader_line_height', value.readerLineHeight),
+      _preferences.setDouble('reader_ayah_spacing', value.readerAyahSpacing),
+      _preferences.setBool('reader_focus_mode', value.readerFocusMode),
       if (value.preferredTranslationSourceId != null)
         _preferences.setInt(
           'reader_translation_source_id',
@@ -149,6 +205,17 @@ class PreferencesStore {
       (unit) => unit.name == value,
       orElse: () => DailyUnit.pages,
     );
+  }
+
+  double _boundedDouble(
+    String key,
+    double fallback,
+    double minimum,
+    double maximum,
+  ) {
+    final raw = _preferences.get(key);
+    if (raw is! num || !raw.toDouble().isFinite) return fallback;
+    return raw.toDouble().clamp(minimum, maximum).toDouble();
   }
 
   static String _mushafVariant(String? value) {

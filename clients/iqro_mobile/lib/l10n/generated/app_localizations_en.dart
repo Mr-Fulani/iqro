@@ -243,6 +243,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerSettings => 'Reading settings';
 
   @override
+  String get textAppearance => 'Text appearance';
+
+  @override
+  String get arabicTextSize => 'Arabic text size';
+
+  @override
+  String get lineSpacing => 'Line spacing';
+
+  @override
+  String get ayahSpacing => 'Spacing between ayahs';
+
+  @override
+  String get focusMode => 'Focus mode';
+
+  @override
+  String get focusModeDescription => 'Hide the top bar and secondary hints';
+
+  @override
+  String get exitFocusMode => 'Exit focus mode';
+
+  @override
   String get translation => 'Translation';
 
   @override

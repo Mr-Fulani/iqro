@@ -243,6 +243,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get readerSettings => 'Okuma ayarları';
 
   @override
+  String get textAppearance => 'Metin görünümü';
+
+  @override
+  String get arabicTextSize => 'Arapça metin boyutu';
+
+  @override
+  String get lineSpacing => 'Satır aralığı';
+
+  @override
+  String get ayahSpacing => 'Ayetler arası boşluk';
+
+  @override
+  String get focusMode => 'Odak modu';
+
+  @override
+  String get focusModeDescription => 'Üst çubuğu ve yardımcı ipuçlarını gizle';
+
+  @override
+  String get exitFocusMode => 'Odak modundan çık';
+
+  @override
   String get translation => 'Meal';
 
   @override

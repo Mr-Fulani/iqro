@@ -558,6 +558,48 @@ abstract class AppLocalizations {
   /// **'Reading settings'**
   String get readerSettings;
 
+  /// No description provided for @textAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Text appearance'**
+  String get textAppearance;
+
+  /// No description provided for @arabicTextSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic text size'**
+  String get arabicTextSize;
+
+  /// No description provided for @lineSpacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Line spacing'**
+  String get lineSpacing;
+
+  /// No description provided for @ayahSpacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing between ayahs'**
+  String get ayahSpacing;
+
+  /// No description provided for @focusMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus mode'**
+  String get focusMode;
+
+  /// No description provided for @focusModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the top bar and secondary hints'**
+  String get focusModeDescription;
+
+  /// No description provided for @exitFocusMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit focus mode'**
+  String get exitFocusMode;
+
   /// No description provided for @translation.
   ///
   /// In en, this message translates to:

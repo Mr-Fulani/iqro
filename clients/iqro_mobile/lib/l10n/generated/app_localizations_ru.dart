@@ -242,6 +242,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get readerSettings => 'Настройки чтения';
 
   @override
+  String get textAppearance => 'Оформление текста';
+
+  @override
+  String get arabicTextSize => 'Размер арабского текста';
+
+  @override
+  String get lineSpacing => 'Межстрочный интервал';
+
+  @override
+  String get ayahSpacing => 'Интервал между аятами';
+
+  @override
+  String get focusMode => 'Режим без отвлечений';
+
+  @override
+  String get focusModeDescription =>
+      'Скрыть верхнюю панель и служебные подсказки';
+
+  @override
+  String get exitFocusMode => 'Выйти из режима без отвлечений';
+
+  @override
   String get translation => 'Перевод';
 
   @override

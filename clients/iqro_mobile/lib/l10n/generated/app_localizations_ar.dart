@@ -242,6 +242,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get readerSettings => 'إعدادات القراءة';
 
   @override
+  String get textAppearance => 'تنسيق النص';
+
+  @override
+  String get arabicTextSize => 'حجم النص العربي';
+
+  @override
+  String get lineSpacing => 'تباعد الأسطر';
+
+  @override
+  String get ayahSpacing => 'المسافة بين الآيات';
+
+  @override
+  String get focusMode => 'وضع التركيز';
+
+  @override
+  String get focusModeDescription => 'إخفاء الشريط العلوي والتلميحات الإضافية';
+
+  @override
+  String get exitFocusMode => 'الخروج من وضع التركيز';
+
+  @override
   String get translation => 'الترجمة';
 
   @override

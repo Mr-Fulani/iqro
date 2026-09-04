@@ -121,6 +121,27 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setReaderMode(ReaderMode mode) =>
       _set(state.copyWith(readerMode: mode));
 
+  Future<void> setReaderTypography({
+    required double arabicFontSize,
+    required double lineHeight,
+    required double ayahSpacing,
+  }) => _set(
+    state.copyWith(
+      readerArabicFontSize: arabicFontSize
+          .clamp(minReaderArabicFontSize, maxReaderArabicFontSize)
+          .toDouble(),
+      readerLineHeight: lineHeight
+          .clamp(minReaderLineHeight, maxReaderLineHeight)
+          .toDouble(),
+      readerAyahSpacing: ayahSpacing
+          .clamp(minReaderAyahSpacing, maxReaderAyahSpacing)
+          .toDouble(),
+    ),
+  );
+
+  Future<void> setReaderFocusMode(bool enabled) =>
+      _set(state.copyWith(readerFocusMode: enabled));
+
   Future<void> setMushafVariant(String variant) =>
       _set(state.copyWith(mushafVariant: variant));
 

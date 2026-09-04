@@ -121,6 +121,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
     final ayahs = ref.watch(ayahsProvider(widget.surah));
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
+    final presentation = ref.watch(
+      appPreferencesProvider.select(
+        (value) => (
+          fontSize: value.readerArabicFontSize,
+          lineHeight: value.readerLineHeight,
+          ayahSpacing: value.readerAyahSpacing,
+          focusMode: value.readerFocusMode,
+        ),
+      ),
+    );
     final audio = ref.watch(
       audioControllerProvider.select(
         (value) => (
@@ -137,19 +147,30 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final title =
         surah?.nameFor(locale) ?? '${context.l10n.surah} ${widget.surah}';
     return Scaffold(
-      appBar: IqroTopBar(
-        title: title,
-        subtitle:
-            '${context.l10n.surah} ${widget.surah} · ${surah?.ayahCount ?? ''} ${context.l10n.ayahs}',
-        actions: <Widget>[
-          IconButton(
-            tooltip: context.l10n.readerSettings,
-            onPressed: _showSettings,
-            icon: const Icon(Icons.tune),
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
+      appBar: presentation.focusMode
+          ? null
+          : IqroTopBar(
+              title: title,
+              subtitle:
+                  '${context.l10n.surah} ${widget.surah} · ${surah?.ayahCount ?? ''} ${context.l10n.ayahs}',
+              actions: <Widget>[
+                IconButton(
+                  tooltip: context.l10n.readerSettings,
+                  onPressed: _showSettings,
+                  icon: const Icon(Icons.tune),
+                ),
+                const SizedBox(width: 6),
+              ],
+            ),
+      floatingActionButton: presentation.focusMode
+          ? FloatingActionButton.small(
+              tooltip: context.l10n.exitFocusMode,
+              onPressed: () => ref
+                  .read(appPreferencesProvider.notifier)
+                  .setReaderFocusMode(false),
+              child: const Icon(Icons.fullscreen_exit_rounded),
+            )
+          : null,
       body: ayahs.when(
         loading: () => const IqroLoading(),
         error: (error, stack) => IqroAsyncError(
@@ -158,32 +179,35 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ),
         data: (items) => Column(
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 14, 8),
-              child: IqroStatusBanner(
-                icon: Icons.sync,
-                title: context.l10n.savedAutomatically,
-                actionLabel: context.l10n.mushafMode,
-                onAction: () async {
-                  final page =
-                      items
-                          .where((item) => item.number == _selectedAyah)
-                          .firstOrNull
-                          ?.pages
-                          .firstOrNull ??
-                      surah?.firstPage ??
-                      1;
-                  await ref
-                      .read(appPreferencesProvider.notifier)
-                      .setReaderMode(ReaderMode.mushaf);
-                  if (!context.mounted) return;
-                  context.push(
-                    '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah',
-                  );
-                },
+            if (!presentation.focusMode)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 14, 8),
+                child: IqroStatusBanner(
+                  icon: Icons.sync,
+                  title: context.l10n.savedAutomatically,
+                  actionLabel: context.l10n.mushafMode,
+                  onAction: () async {
+                    final page =
+                        items
+                            .where((item) => item.number == _selectedAyah)
+                            .firstOrNull
+                            ?.pages
+                            .firstOrNull ??
+                        surah?.firstPage ??
+                        1;
+                    await ref
+                        .read(appPreferencesProvider.notifier)
+                        .setReaderMode(ReaderMode.mushaf);
+                    if (!context.mounted) return;
+                    context.push(
+                      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah',
+                    );
+                  },
+                ),
               ),
+            Expanded(
+              child: _readerList(items, surah, title, audio, presentation),
             ),
-            Expanded(child: _readerList(items, surah, title, audio)),
           ],
         ),
       ),
@@ -195,6 +219,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     Surah? surah,
     String title,
     ({int? surah, int? ayah, bool playing}) audio,
+    ({double fontSize, double lineHeight, double ayahSpacing, bool focusMode})
+    presentation,
   ) {
     _schedulePositionRestore(items);
     return NotificationListener<ScrollNotification>(
@@ -223,7 +249,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               audio.surah == ayah.surahNumber && audio.ayah == ayah.number;
           return Padding(
             key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: EdgeInsets.only(bottom: presentation.ayahSpacing),
             child: _AyahCard(
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
@@ -236,6 +262,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               translation: _translations[ayah.number],
               tafsir: _tafsirs[ayah.number],
               contentLoading: _contentLoading,
+              arabicFontSize: presentation.fontSize,
+              arabicLineHeight: presentation.lineHeight,
               onSelected: () => _select(ayah),
               onBookmark: () => _toggleBookmark(ayah),
               onPlay: () => audioActive
@@ -622,8 +650,30 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   }
 
   Future<void> _showSettings() async {
+    final preferences = ref.read(appPreferencesProvider);
+    var arabicFontSize = preferences.readerArabicFontSize;
+    var lineHeight = preferences.readerLineHeight;
+    var ayahSpacing = preferences.readerAyahSpacing;
+    var focusMode = preferences.readerFocusMode;
+    var typographyWrite = Future<void>.value();
+    void persistTypography() {
+      final nextFontSize = arabicFontSize;
+      final nextLineHeight = lineHeight;
+      final nextAyahSpacing = ayahSpacing;
+      typographyWrite = typographyWrite.then(
+        (_) => ref
+            .read(appPreferencesProvider.notifier)
+            .setReaderTypography(
+              arabicFontSize: nextFontSize,
+              lineHeight: nextLineHeight,
+              ayahSpacing: nextAyahSpacing,
+            ),
+      );
+    }
+
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) {
@@ -655,6 +705,78 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     ),
                   ],
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(context.l10n.focusMode),
+                  subtitle: Text(context.l10n.focusModeDescription),
+                  secondary: const Icon(Icons.fullscreen_rounded),
+                  value: focusMode,
+                  onChanged: (value) {
+                    setSheetState(() => focusMode = value);
+                    unawaited(
+                      ref
+                          .read(appPreferencesProvider.notifier)
+                          .setReaderFocusMode(value),
+                    );
+                  },
+                ),
+                const Divider(height: 28),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    context.l10n.textAppearance,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _ReaderSettingSlider(
+                  title: context.l10n.arabicTextSize,
+                  valueLabel: '${arabicFontSize.round()}',
+                  value: arabicFontSize,
+                  min: minReaderArabicFontSize,
+                  max: maxReaderArabicFontSize,
+                  divisions: 8,
+                  onChanged: (value) =>
+                      setSheetState(() => arabicFontSize = value),
+                  onChangeEnd: (_) => persistTypography(),
+                ),
+                _ReaderSettingSlider(
+                  title: context.l10n.lineSpacing,
+                  valueLabel: lineHeight.toStringAsFixed(1),
+                  value: lineHeight,
+                  min: minReaderLineHeight,
+                  max: maxReaderLineHeight,
+                  divisions: 9,
+                  onChanged: (value) => setSheetState(() => lineHeight = value),
+                  onChangeEnd: (_) => persistTypography(),
+                ),
+                _ReaderSettingSlider(
+                  title: context.l10n.ayahSpacing,
+                  valueLabel: '${ayahSpacing.round()}',
+                  value: ayahSpacing,
+                  min: minReaderAyahSpacing,
+                  max: maxReaderAyahSpacing,
+                  divisions: 8,
+                  onChanged: (value) =>
+                      setSheetState(() => ayahSpacing = value),
+                  onChangeEnd: (_) => persistTypography(),
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setSheetState(() {
+                        arabicFontSize = defaultReaderArabicFontSize;
+                        lineHeight = defaultReaderLineHeight;
+                        ayahSpacing = defaultReaderAyahSpacing;
+                      });
+                      persistTypography();
+                    },
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: Text(context.l10n.reset),
+                  ),
+                ),
+                const Divider(height: 28),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(context.l10n.translation),
@@ -745,6 +867,56 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         },
       ),
     );
+    await typographyWrite;
+  }
+}
+
+class _ReaderSettingSlider extends StatelessWidget {
+  const _ReaderSettingSlider({
+    required this.title,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+    required this.onChangeEnd,
+  });
+
+  final String title;
+  final String valueLabel;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: title,
+      value: valueLabel,
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(child: Text(title)),
+              Text(valueLabel, style: Theme.of(context).textTheme.labelLarge),
+            ],
+          ),
+          Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: valueLabel,
+            onChanged: onChanged,
+            onChangeEnd: onChangeEnd,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -798,6 +970,8 @@ class _AyahCard extends StatelessWidget {
     required this.translation,
     required this.tafsir,
     required this.contentLoading,
+    required this.arabicFontSize,
+    required this.arabicLineHeight,
     required this.onSelected,
     required this.onBookmark,
     required this.onPlay,
@@ -813,6 +987,8 @@ class _AyahCard extends StatelessWidget {
   final QuranAyahTranslation? translation;
   final QuranAyahTafsir? tafsir;
   final bool contentLoading;
+  final double arabicFontSize;
+  final double arabicLineHeight;
   final VoidCallback onSelected;
   final VoidCallback onBookmark;
   final VoidCallback onPlay;
@@ -874,8 +1050,8 @@ class _AyahCard extends StatelessWidget {
               textDirection: TextDirection.rtl,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontFamily: 'serif',
-                fontSize: 30,
-                height: 1.9,
+                fontSize: arabicFontSize,
+                height: arabicLineHeight,
               ),
             ),
             if (showTranslation) ...<Widget>[
