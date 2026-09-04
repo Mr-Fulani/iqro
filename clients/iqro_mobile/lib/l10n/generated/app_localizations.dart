@@ -786,6 +786,42 @@ abstract class AppLocalizations {
   /// **'Speed'**
   String get speed;
 
+  /// No description provided for @audioQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio quality'**
+  String get audioQuality;
+
+  /// No description provided for @qualityAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get qualityAutomatic;
+
+  /// No description provided for @qualityEconomy.
+  ///
+  /// In en, this message translates to:
+  /// **'Data saver'**
+  String get qualityEconomy;
+
+  /// No description provided for @qualityStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get qualityStandard;
+
+  /// No description provided for @qualityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get qualityHigh;
+
+  /// No description provided for @audioBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'{bitrate} kbps'**
+  String audioBitrate(int bitrate);
+
   /// No description provided for @range.
   ///
   /// In en, this message translates to:

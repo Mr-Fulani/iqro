@@ -137,6 +137,10 @@ class AudioTrack {
     required this.url,
     required this.duration,
     required this.offlineDownloadAllowed,
+    this.renditionQuality,
+    this.codec,
+    this.bitrateKbps,
+    this.renditions = const <AudioRendition>[],
   });
 
   factory AudioTrack.fromPlayback(Map<String, Object?> json) {
@@ -146,15 +150,45 @@ class AudioTrack {
     final asset = track['asset'] is Map
         ? Map<String, Object?>.from(track['asset']! as Map)
         : const <String, Object?>{};
+    final rawRenditions = track['renditions'];
+    if (rawRenditions != null &&
+        (rawRenditions is! List || rawRenditions.any((item) => item is! Map))) {
+      throw const FormatException('Audio renditions are invalid');
+    }
+    final renditions = rawRenditions is List
+        ? rawRenditions
+              .map(
+                (item) => AudioRendition.fromJson(
+                  Map<String, Object?>.from(item! as Map),
+                ),
+              )
+              .where((item) => item.url.isNotEmpty)
+              .toList(growable: false)
+        : const <AudioRendition>[];
+    final selectedQuality = track['selected_quality']?.toString();
+    AudioRendition? selected;
+    for (final rendition in renditions) {
+      if ((selectedQuality != null && rendition.quality == selectedQuality) ||
+          (selectedQuality == null && rendition.url == asset['url'])) {
+        selected = rendition;
+        break;
+      }
+    }
+    selected ??= renditions.where((item) => item.isDefault).firstOrNull;
     return AudioTrack(
       id: track['id']?.toString() ?? '',
       recitationId: track['recitation_id']?.toString() ?? '',
       surah: (track['surah_number'] as num?)?.toInt() ?? 1,
-      url: asset['url']?.toString() ?? '',
+      url: selected?.url ?? asset['url']?.toString() ?? '',
       duration: Duration(
         milliseconds: (track['duration_ms'] as num?)?.toInt() ?? 0,
       ),
       offlineDownloadAllowed: track['offline_download_allowed'] == true,
+      renditionQuality: selected?.quality ?? selectedQuality,
+      codec: selected?.codec ?? asset['codec']?.toString(),
+      bitrateKbps:
+          selected?.bitrateKbps ?? (asset['bitrate_kbps'] as num?)?.toInt(),
+      renditions: List<AudioRendition>.unmodifiable(renditions),
     );
   }
 
@@ -164,6 +198,34 @@ class AudioTrack {
   final String url;
   final Duration duration;
   final bool offlineDownloadAllowed;
+  final String? renditionQuality;
+  final String? codec;
+  final int? bitrateKbps;
+  final List<AudioRendition> renditions;
+
+  AudioTrack withPreferredQuality(String preference) {
+    if (renditions.isEmpty) return this;
+    AudioRendition? selected;
+    if (preference != 'auto') {
+      selected = renditions
+          .where((item) => item.quality == preference)
+          .firstOrNull;
+    }
+    selected ??= renditions.where((item) => item.isDefault).firstOrNull;
+    selected ??= renditions.first;
+    return AudioTrack(
+      id: id,
+      recitationId: recitationId,
+      surah: surah,
+      url: selected.url,
+      duration: duration,
+      offlineDownloadAllowed: offlineDownloadAllowed,
+      renditionQuality: selected.quality,
+      codec: selected.codec,
+      bitrateKbps: selected.bitrateKbps,
+      renditions: renditions,
+    );
+  }
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
@@ -171,7 +233,56 @@ class AudioTrack {
     'surah_number': surah,
     'duration_ms': duration.inMilliseconds,
     'offline_download_allowed': offlineDownloadAllowed,
-    'asset': <String, Object?>{'url': url},
+    'selected_quality': renditionQuality,
+    'asset': <String, Object?>{
+      'url': url,
+      'codec': codec,
+      'bitrate_kbps': bitrateKbps,
+    },
+    'renditions': renditions.map((item) => item.toJson()).toList(),
+  };
+}
+
+class AudioRendition {
+  const AudioRendition({
+    required this.id,
+    required this.quality,
+    required this.isDefault,
+    required this.url,
+    required this.codec,
+    required this.bitrateKbps,
+  });
+
+  factory AudioRendition.fromJson(Map<String, Object?> json) {
+    final asset = json['asset'] is Map
+        ? Map<String, Object?>.from(json['asset']! as Map)
+        : const <String, Object?>{};
+    return AudioRendition(
+      id: json['id']?.toString() ?? '',
+      quality: json['quality']?.toString() ?? '',
+      isDefault: json['is_default'] == true,
+      url: asset['url']?.toString() ?? '',
+      codec: asset['codec']?.toString() ?? '',
+      bitrateKbps: (asset['bitrate_kbps'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String id;
+  final String quality;
+  final bool isDefault;
+  final String url;
+  final String codec;
+  final int bitrateKbps;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'quality': quality,
+    'is_default': isDefault,
+    'asset': <String, Object?>{
+      'url': url,
+      'codec': codec,
+      'bitrate_kbps': bitrateKbps,
+    },
   };
 }
 
@@ -238,6 +349,11 @@ class SurahPlayback {
 
   final AudioTrack track;
   final List<AudioSegment> segments;
+
+  SurahPlayback withPreferredQuality(String preference) => SurahPlayback(
+    track: track.withPreferredQuality(preference),
+    segments: segments,
+  );
 
   SurahPlayback normalized() {
     if (segments.isEmpty) return this;

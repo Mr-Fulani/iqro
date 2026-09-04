@@ -114,6 +114,17 @@
   "nextSurah": "السورة التالية",
   "chooseSurah": "اختر السورة",
   "speed": "السرعة",
+  "audioQuality": "جودة الصوت",
+  "qualityAutomatic": "تلقائي",
+  "qualityEconomy": "توفير البيانات",
+  "qualityStandard": "قياسية",
+  "qualityHigh": "عالية",
+  "audioBitrate": "{bitrate} كيلوبت/ث",
+  "@audioBitrate": {
+    "placeholders": {
+      "bitrate": {"type": "int"}
+    }
+  },
   "range": "النطاق",
   "sleepTimer": "مؤقت النوم",
   "repeat": "التكرار",

@@ -9,13 +9,16 @@ class AudioRepository {
     required ApiClient api,
     required LocalDatabase database,
     required AudioOfflineRepository offline,
+    String Function()? preferredQuality,
   }) : _api = api,
        _database = database,
-       _offline = offline;
+       _offline = offline,
+       _preferredQuality = preferredQuality ?? _automaticQuality;
 
   final ApiClient _api;
   final LocalDatabase _database;
   final AudioOfflineRepository _offline;
+  final String Function() _preferredQuality;
   final Map<String, List<Recitation>> _recitationMemory = {};
   final Map<String, SurahPlayback> _playbackMemory = {};
 
@@ -137,7 +140,7 @@ class AudioRepository {
       final memory = _playbackMemory.remove(key);
       if (memory != null) {
         _playbackMemory[key] = memory;
-        return memory;
+        return memory.withPreferredQuality(_preferredQuality());
       }
     }
     final cached = await _database.readCache(key);
@@ -145,7 +148,7 @@ class AudioRepository {
       return _rememberPlayback(
         key,
         SurahPlayback.fromJson(jsonMap(cached!.value)),
-      );
+      ).withPreferredQuality(_preferredQuality());
     }
     try {
       final payload = await _api.get(
@@ -153,13 +156,16 @@ class AudioRepository {
         public: true,
       );
       await _database.writeCache(key, payload, maxAge: const Duration(days: 7));
-      return _rememberPlayback(key, SurahPlayback.fromJson(jsonMap(payload)));
+      return _rememberPlayback(
+        key,
+        SurahPlayback.fromJson(jsonMap(payload)),
+      ).withPreferredQuality(_preferredQuality());
     } on Object {
       if (cached != null) {
         return _rememberPlayback(
           key,
           SurahPlayback.fromJson(jsonMap(cached.value)),
-        );
+        ).withPreferredQuality(_preferredQuality());
       }
       rethrow;
     }
@@ -174,6 +180,8 @@ class AudioRepository {
     return value;
   }
 }
+
+String _automaticQuality() => 'auto';
 
 List<Recitation> _parseRecitations(Object? payload) {
   final items = jsonResults(payload)

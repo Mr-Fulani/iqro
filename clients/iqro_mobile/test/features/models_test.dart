@@ -38,6 +38,66 @@ void main() {
     expect(track.duration, const Duration(seconds: 90));
   });
 
+  test('audio track selects a published rendition with a safe fallback', () {
+    final playback = SurahPlayback.fromJson(<String, Object?>{
+      'track': <String, Object?>{
+        'id': 'track',
+        'recitation_id': 'recitation',
+        'surah_number': 1,
+        'duration_ms': 90000,
+        'offline_download_allowed': false,
+        'asset': <String, Object?>{
+          'url': 'https://cdn.example/standard.mp3',
+          'codec': 'mp3',
+          'bitrate_kbps': 128,
+        },
+        'renditions': <Object?>[
+          <String, Object?>{
+            'id': 'economy',
+            'quality': 'economy',
+            'is_default': false,
+            'asset': <String, Object?>{
+              'url': 'https://cdn.example/economy.opus',
+              'codec': 'opus',
+              'bitrate_kbps': 48,
+            },
+          },
+          <String, Object?>{
+            'id': 'standard',
+            'quality': 'standard',
+            'is_default': true,
+            'asset': <String, Object?>{
+              'url': 'https://cdn.example/standard.mp3',
+              'codec': 'mp3',
+              'bitrate_kbps': 128,
+            },
+          },
+          <String, Object?>{
+            'id': 'high',
+            'quality': 'high',
+            'is_default': false,
+            'asset': <String, Object?>{
+              'url': 'https://cdn.example/high.mp3',
+              'codec': 'mp3',
+              'bitrate_kbps': 256,
+            },
+          },
+        ],
+      },
+    });
+
+    final high = playback.withPreferredQuality('high');
+    final unavailable = playback.withPreferredQuality('future-quality');
+    final restored = SurahPlayback.fromJson(high.toJson());
+
+    expect(playback.track.renditionQuality, 'standard');
+    expect(high.track.url, 'https://cdn.example/high.mp3');
+    expect(high.track.bitrateKbps, 256);
+    expect(unavailable.track.url, 'https://cdn.example/standard.mp3');
+    expect(restored.track.renditionQuality, 'high');
+    expect(restored.track.renditions, hasLength(3));
+  });
+
   test('rub al-hizb contract preserves its parent hizb and quarter', () {
     final division = QuranDivision.fromJson(<String, Object?>{
       'number': 49,

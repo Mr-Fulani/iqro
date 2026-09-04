@@ -114,6 +114,17 @@
   "nextSurah": "Sonraki sure",
   "chooseSurah": "Sure seç",
   "speed": "Hız",
+  "audioQuality": "Ses kalitesi",
+  "qualityAutomatic": "Otomatik",
+  "qualityEconomy": "Veri tasarrufu",
+  "qualityStandard": "Standart",
+  "qualityHigh": "Yüksek",
+  "audioBitrate": "{bitrate} kb/sn",
+  "@audioBitrate": {
+    "placeholders": {
+      "bitrate": {"type": "int"}
+    }
+  },
   "range": "Aralık",
   "sleepTimer": "Uyku zamanlayıcısı",
   "repeat": "Tekrar",

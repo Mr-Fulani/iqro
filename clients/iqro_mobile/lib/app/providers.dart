@@ -153,6 +153,14 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
 
   Future<void> setPreferredRecitation(String recitationId) =>
       _set(state.copyWith(preferredRecitationId: recitationId));
+
+  Future<void> setPreferredAudioQuality(String quality) => _set(
+    state.copyWith(
+      preferredAudioQuality: supportedAudioQualityPreferences.contains(quality)
+          ? quality
+          : defaultPreferredAudioQuality,
+    ),
+  );
 }
 
 final appPreferencesProvider =

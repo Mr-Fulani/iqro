@@ -360,6 +360,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get speed => 'Скорость';
 
   @override
+  String get audioQuality => 'Качество аудио';
+
+  @override
+  String get qualityAutomatic => 'Автоматически';
+
+  @override
+  String get qualityEconomy => 'Экономия трафика';
+
+  @override
+  String get qualityStandard => 'Стандартное';
+
+  @override
+  String get qualityHigh => 'Высокое';
+
+  @override
+  String audioBitrate(int bitrate) {
+    return '$bitrate кбит/с';
+  }
+
+  @override
   String get range => 'Диапазон';
 
   @override

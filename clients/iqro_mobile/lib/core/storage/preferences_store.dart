@@ -14,6 +14,13 @@ const maxReaderLineHeight = 2.4;
 const defaultReaderAyahSpacing = 10.0;
 const minReaderAyahSpacing = 4.0;
 const maxReaderAyahSpacing = 20.0;
+const defaultPreferredAudioQuality = 'auto';
+const supportedAudioQualityPreferences = <String>{
+  defaultPreferredAudioQuality,
+  'economy',
+  'standard',
+  'high',
+};
 
 class AppPreferences {
   const AppPreferences({
@@ -32,6 +39,7 @@ class AppPreferences {
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
     this.preferredRecitationId,
+    this.preferredAudioQuality = defaultPreferredAudioQuality,
   });
 
   const AppPreferences.defaults()
@@ -49,7 +57,8 @@ class AppPreferences {
       readerFocusMode = false,
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
-      preferredRecitationId = null;
+      preferredRecitationId = null,
+      preferredAudioQuality = defaultPreferredAudioQuality;
 
   final bool onboardingComplete;
   final String locale;
@@ -66,6 +75,7 @@ class AppPreferences {
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
   final String? preferredRecitationId;
+  final String preferredAudioQuality;
 
   AppPreferences copyWith({
     bool? onboardingComplete,
@@ -83,6 +93,7 @@ class AppPreferences {
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
     String? preferredRecitationId,
+    String? preferredAudioQuality,
   }) {
     return AppPreferences(
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
@@ -103,6 +114,8 @@ class AppPreferences {
           preferredTafsirSourceId ?? this.preferredTafsirSourceId,
       preferredRecitationId:
           preferredRecitationId ?? this.preferredRecitationId,
+      preferredAudioQuality:
+          preferredAudioQuality ?? this.preferredAudioQuality,
     );
   }
 }
@@ -155,6 +168,9 @@ class PreferencesStore {
       ),
       preferredTafsirSourceId: _preferences.getInt('reader_tafsir_source_id'),
       preferredRecitationId: _preferences.getString('reader_recitation_id'),
+      preferredAudioQuality: _audioQuality(
+        _preferences.getString('audio_quality'),
+      ),
     );
   }
 
@@ -190,6 +206,7 @@ class PreferencesStore {
           'reader_recitation_id',
           value.preferredRecitationId!,
         ),
+      _preferences.setString('audio_quality', value.preferredAudioQuality),
     ]);
   }
 
@@ -222,6 +239,12 @@ class PreferencesStore {
     return supportedMushafVariants.contains(value)
         ? value!
         : defaultMushafVariant;
+  }
+
+  static String _audioQuality(String? value) {
+    return supportedAudioQualityPreferences.contains(value)
+        ? value!
+        : defaultPreferredAudioQuality;
   }
 }
 

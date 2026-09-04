@@ -101,6 +101,32 @@ void main() {
     expect(harness.engine.playCalls, 2);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('switches audio rendition without losing playback position', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+
+    expect(find.text('Автоматически · 128 кбит/с'), findsOneWidget);
+    await tester.ensureVisible(find.text('Качество аудио'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Качество аудио'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Высокое'));
+    await tester.pumpAndSettle();
+
+    expect(harness.controller.state.track?.renditionQuality, 'high');
+    expect(
+      harness.controller.state.track?.url,
+      'https://cdn.example.test/recitation-current-high.mp3',
+    );
+    expect(harness.controller.state.position, const Duration(seconds: 15));
+    expect(harness.controller.state.displayedAyah, 7);
+    expect(harness.controller.state.playing, isTrue);
+    expect(harness.engine.seekCalls.last, const Duration(seconds: 15));
+    expect(harness.engine.playCalls, 2);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
@@ -260,6 +286,27 @@ AudioTrack _track(Recitation recitation) => AudioTrack(
   url: 'https://cdn.example.test/${recitation.id}.mp3',
   duration: const Duration(minutes: 1),
   offlineDownloadAllowed: false,
+  renditionQuality: 'standard',
+  codec: 'mp3',
+  bitrateKbps: 128,
+  renditions: <AudioRendition>[
+    AudioRendition(
+      id: '${recitation.id}-standard',
+      quality: 'standard',
+      isDefault: true,
+      url: 'https://cdn.example.test/${recitation.id}.mp3',
+      codec: 'mp3',
+      bitrateKbps: 128,
+    ),
+    AudioRendition(
+      id: '${recitation.id}-high',
+      quality: 'high',
+      isDefault: false,
+      url: 'https://cdn.example.test/${recitation.id}-high.mp3',
+      codec: 'mp3',
+      bitrateKbps: 256,
+    ),
+  ],
 );
 
 SurahPlayback _playback(

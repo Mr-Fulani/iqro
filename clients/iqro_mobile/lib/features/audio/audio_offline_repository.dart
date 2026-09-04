@@ -128,6 +128,7 @@ class OfflineAudioTrack {
       'surah_number': surah,
       'duration_ms': durationMs,
       'offline_download_allowed': true,
+      'selected_quality': renditionQuality,
       'asset': <String, Object?>{'url': localUri.toString()},
     },
     'segments': segments
@@ -565,6 +566,7 @@ class AudioOfflineRepository {
         'surah_number': surah,
         'duration_ms': track['duration_ms'],
         'offline_download_allowed': true,
+        'selected_quality': track['rendition_quality'],
         'asset': <String, Object?>{'url': file.uri.toString()},
       },
       'segments': (track['segments']! as List)

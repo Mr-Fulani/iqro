@@ -361,6 +361,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speed => 'Speed';
 
   @override
+  String get audioQuality => 'Audio quality';
+
+  @override
+  String get qualityAutomatic => 'Automatic';
+
+  @override
+  String get qualityEconomy => 'Data saver';
+
+  @override
+  String get qualityStandard => 'Standard';
+
+  @override
+  String get qualityHigh => 'High';
+
+  @override
+  String audioBitrate(int bitrate) {
+    return '$bitrate kbps';
+  }
+
+  @override
   String get range => 'Range';
 
   @override

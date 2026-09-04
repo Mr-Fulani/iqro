@@ -27,6 +27,7 @@ void main() {
         preferredTranslationSourceId: 45,
         preferredTafsirSourceId: 170,
         preferredRecitationId: 'recitation-id',
+        preferredAudioQuality: 'high',
       );
 
       await store.write(value);
@@ -44,6 +45,7 @@ void main() {
       expect(restored.preferredTranslationSourceId, 45);
       expect(restored.preferredTafsirSourceId, 170);
       expect(restored.preferredRecitationId, 'recitation-id');
+      expect(restored.preferredAudioQuality, 'high');
 
       await store.write(value.copyWith(mushafVariant: '11'));
       expect(store.read().mushafVariant, defaultMushafVariant);
@@ -64,5 +66,14 @@ void main() {
     expect(restored.readerLineHeight, minReaderLineHeight);
     expect(restored.readerAyahSpacing, defaultReaderAyahSpacing);
     expect(restored.readerFocusMode, isFalse);
+  });
+
+  test('unknown audio quality falls back to automatic selection', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'audio_quality': 'unpublished-ultra',
+    });
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+
+    expect(store.read().preferredAudioQuality, defaultPreferredAudioQuality);
   });
 }

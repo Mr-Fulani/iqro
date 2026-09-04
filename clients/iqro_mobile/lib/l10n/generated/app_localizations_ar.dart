@@ -358,6 +358,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get speed => 'السرعة';
 
   @override
+  String get audioQuality => 'جودة الصوت';
+
+  @override
+  String get qualityAutomatic => 'تلقائي';
+
+  @override
+  String get qualityEconomy => 'توفير البيانات';
+
+  @override
+  String get qualityStandard => 'قياسية';
+
+  @override
+  String get qualityHigh => 'عالية';
+
+  @override
+  String audioBitrate(int bitrate) {
+    return '$bitrate كيلوبت/ث';
+  }
+
+  @override
   String get range => 'النطاق';
 
   @override

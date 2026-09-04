@@ -114,6 +114,17 @@
   "nextSurah": "Следующая сура",
   "chooseSurah": "Выбрать суру",
   "speed": "Скорость",
+  "audioQuality": "Качество аудио",
+  "qualityAutomatic": "Автоматически",
+  "qualityEconomy": "Экономия трафика",
+  "qualityStandard": "Стандартное",
+  "qualityHigh": "Высокое",
+  "audioBitrate": "{bitrate} кбит/с",
+  "@audioBitrate": {
+    "placeholders": {
+      "bitrate": {"type": "int"}
+    }
+  },
   "range": "Диапазон",
   "sleepTimer": "Таймер сна",
   "repeat": "Повтор",

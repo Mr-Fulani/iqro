@@ -114,6 +114,17 @@
   "nextSurah": "Next surah",
   "chooseSurah": "Choose surah",
   "speed": "Speed",
+  "audioQuality": "Audio quality",
+  "qualityAutomatic": "Automatic",
+  "qualityEconomy": "Data saver",
+  "qualityStandard": "Standard",
+  "qualityHigh": "High",
+  "audioBitrate": "{bitrate} kbps",
+  "@audioBitrate": {
+    "placeholders": {
+      "bitrate": {"type": "int"}
+    }
+  },
   "range": "Range",
   "sleepTimer": "Sleep timer",
   "repeat": "Repeat",

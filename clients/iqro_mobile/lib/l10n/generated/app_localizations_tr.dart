@@ -360,6 +360,26 @@ class AppLocalizationsTr extends AppLocalizations {
   String get speed => 'Hız';
 
   @override
+  String get audioQuality => 'Ses kalitesi';
+
+  @override
+  String get qualityAutomatic => 'Otomatik';
+
+  @override
+  String get qualityEconomy => 'Veri tasarrufu';
+
+  @override
+  String get qualityStandard => 'Standart';
+
+  @override
+  String get qualityHigh => 'Yüksek';
+
+  @override
+  String audioBitrate(int bitrate) {
+    return '$bitrate kb/sn';
+  }
+
+  @override
   String get range => 'Aralık';
 
   @override

@@ -101,6 +101,7 @@ class AppDependencies {
       api: api,
       database: database,
       offline: offlineAudio,
+      preferredQuality: () => preferences.read().preferredAudioQuality,
     );
     final playbackSync = AudioPlaybackSyncService(
       api: api,

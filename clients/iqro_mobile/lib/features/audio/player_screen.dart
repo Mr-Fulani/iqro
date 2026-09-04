@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
 import 'audio_models.dart';
 import 'reciter_catalog.dart';
@@ -21,6 +22,14 @@ String _recitationStyleLabel(BuildContext context, String style) =>
       'mujawwad' => context.l10n.styleMujawwad,
       'muallim' => context.l10n.styleMuallim,
       _ => style,
+    };
+
+String _audioQualityLabel(BuildContext context, String quality) =>
+    switch (quality) {
+      'economy' => context.l10n.qualityEconomy,
+      'standard' => context.l10n.qualityStandard,
+      'high' => context.l10n.qualityHigh,
+      _ => context.l10n.qualityAutomatic,
     };
 
 Duration? compatibleRecitationPosition({
@@ -61,12 +70,14 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
   var _changingReciter = false;
+  var _changingQuality = false;
   double? _seekPreviewMilliseconds;
   ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
   ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
   String? _ownerId;
   var _surahRequest = 0;
   var _reciterRequest = 0;
+  var _qualityRequest = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -75,8 +86,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _ownerId = ownerId;
       _surahRequest += 1;
       _reciterRequest += 1;
+      _qualityRequest += 1;
       _changingSurah = false;
       _changingReciter = false;
+      _changingQuality = false;
       _seekPreviewMilliseconds = null;
       _dragIdentity = null;
     }
@@ -92,11 +105,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       recitations,
       state.track?.recitationId,
     );
+    final preferredQuality = ref.watch(
+      appPreferencesProvider.select((value) => value.preferredAudioQuality),
+    );
     final controlsEnabled =
         state.active &&
         !state.buffering &&
         !_changingSurah &&
-        !_changingReciter;
+        !_changingReciter &&
+        !_changingQuality;
     final durationMs = state.effectiveDuration.inMilliseconds;
     final playbackIdentity = (
       trackId: state.track?.id,
@@ -173,7 +190,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     state.active &&
                     surahs.isNotEmpty &&
                     !_changingSurah &&
-                    !_changingReciter,
+                    !_changingReciter &&
+                    !_changingQuality,
                 onTap: () => _chooseSurah(surahs, currentSurah),
               ),
               const SizedBox(height: 8),
@@ -190,7 +208,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     reciters != null &&
                     recitations != null &&
                     !_changingSurah &&
-                    !_changingReciter,
+                    !_changingReciter &&
+                    !_changingQuality,
                 onTap: () => _chooseReciter(
                   reciters: reciters ?? const <Reciter>[],
                   recitations: recitations ?? const <Recitation>[],
@@ -288,7 +307,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       onPressed: controlsEnabled ? controller.toggle : null,
                       iconSize: 38,
                       icon:
-                          state.buffering || _changingSurah || _changingReciter
+                          state.buffering ||
+                              _changingSurah ||
+                              _changingReciter ||
+                              _changingQuality
                           ? const CircularProgressIndicator(strokeWidth: 2)
                           : Icon(
                               state.playing ? Icons.pause : Icons.play_arrow,
@@ -362,6 +384,27 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                         : context.l10n.repeatOff,
                     onTap: controller.toggleRepeat,
                   ),
+                  _PlayerOption(
+                    icon: Icons.graphic_eq_rounded,
+                    title: context.l10n.audioQuality,
+                    value: _qualityValue(
+                      context,
+                      state.track,
+                      preferredQuality,
+                    ),
+                    onTap:
+                        state.track != null &&
+                            state.track!.renditions.isNotEmpty &&
+                            !_changingSurah &&
+                            !_changingReciter &&
+                            !_changingQuality
+                        ? () => _chooseQuality(
+                            controller: controller,
+                            state: state,
+                            preferredQuality: preferredQuality,
+                          )
+                        : null,
+                  ),
                 ],
               ),
             ],
@@ -387,12 +430,34 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     return null;
   }
 
+  String _qualityValue(
+    BuildContext context,
+    AudioTrack? track,
+    String preferredQuality,
+  ) {
+    final label = preferredQuality == defaultPreferredAudioQuality
+        ? context.l10n.qualityAutomatic
+        : _audioQualityLabel(
+            context,
+            track?.renditionQuality ?? preferredQuality,
+          );
+    final bitrate = track?.bitrateKbps;
+    return bitrate == null || bitrate <= 0
+        ? label
+        : '$label · ${context.l10n.audioBitrate(bitrate)}';
+  }
+
   Future<void> _chooseReciter({
     required List<Reciter> reciters,
     required List<Recitation> recitations,
     required Recitation? currentRecitation,
   }) async {
-    if (_changingSurah || _changingReciter || reciters.isEmpty) return;
+    if (_changingSurah ||
+        _changingReciter ||
+        _changingQuality ||
+        reciters.isEmpty) {
+      return;
+    }
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
@@ -432,7 +497,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     required AccountScopeSnapshot expectedScope,
     required AudioController expectedController,
   }) async {
-    if (_changingSurah || _changingReciter) return;
+    if (_changingSurah || _changingReciter || _changingQuality) return;
     if (!_isCurrentController(expectedScope, expectedController)) return;
     final current = ref.read(audioControllerProvider);
     final surah = current.track?.surah;
@@ -528,7 +593,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   Future<void> _chooseSurah(List<Surah> surahs, int? currentSurah) async {
-    if (_changingSurah || surahs.isEmpty) return;
+    if (_changingSurah ||
+        _changingReciter ||
+        _changingQuality ||
+        surahs.isEmpty) {
+      return;
+    }
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
@@ -558,7 +628,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AccountScopeSnapshot? expectedScope,
     AudioController? expectedController,
   }) async {
-    if (_changingSurah || targetSurah < 1 || targetSurah > 114) return;
+    if (_changingSurah ||
+        _changingReciter ||
+        _changingQuality ||
+        targetSurah < 1 ||
+        targetSurah > 114) {
+      return;
+    }
     final scope =
         expectedScope ?? ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_sessionMatches(scope)) return;
@@ -642,6 +718,80 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     );
     if (speed != null && _isCurrentController(scope, controller)) {
       await controller.setSpeed(speed);
+    }
+  }
+
+  Future<void> _chooseQuality({
+    required AudioController controller,
+    required IqroAudioState state,
+    required String preferredQuality,
+  }) async {
+    final track = state.track;
+    final reciter = state.reciter;
+    if (track == null || reciter == null || track.renditions.isEmpty) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentController(scope, controller)) return;
+    final qualities = track.renditions
+        .map((item) => item.quality)
+        .where(supportedAudioQualityPreferences.contains)
+        .toSet()
+        .toList(growable: false);
+    final selection = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => _AudioQualitySheet(
+        renditions: track.renditions,
+        qualities: qualities,
+        selected: preferredQuality,
+      ),
+    );
+    if (selection == null ||
+        selection == preferredQuality ||
+        !_isCurrentController(scope, controller)) {
+      return;
+    }
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setPreferredAudioQuality(selection);
+    if (!_isCurrentController(scope, controller)) return;
+    final current = ref.read(audioControllerProvider);
+    final currentTrack = current.track;
+    final currentReciter = current.reciter;
+    if (currentTrack == null ||
+        currentReciter == null ||
+        currentTrack.id != track.id) {
+      return;
+    }
+    final targetTrack = currentTrack.withPreferredQuality(selection);
+    if (targetTrack.url == currentTrack.url) return;
+    final request = ++_qualityRequest;
+    setState(() => _changingQuality = true);
+    try {
+      await controller.loadPlayback(
+        playback: SurahPlayback(track: targetTrack, segments: current.segments),
+        reciter: currentReciter,
+        surahName: current.surahName,
+        startAyah: current.rangeStartAyah,
+        endAyah: current.rangeEndAyah,
+        autoplay: false,
+      );
+      if (!_isCurrentQualityRequest(scope, controller, request)) return;
+      await controller.seek(current.position);
+      if (!_isCurrentQualityRequest(scope, controller, request)) return;
+      if (current.playing) await controller.toggle();
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (!_isCurrentQualityRequest(scope, controller, request) || !mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+    } finally {
+      if (mounted && request == _qualityRequest) {
+        setState(() => _changingQuality = false);
+      }
     }
   }
 
@@ -793,6 +943,75 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AudioController controller,
     int request,
   ) => request == _reciterRequest && _isCurrentController(scope, controller);
+
+  bool _isCurrentQualityRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request,
+  ) => request == _qualityRequest && _isCurrentController(scope, controller);
+}
+
+class _AudioQualitySheet extends StatelessWidget {
+  const _AudioQualitySheet({
+    required this.renditions,
+    required this.qualities,
+    required this.selected,
+  });
+
+  final List<AudioRendition> renditions;
+  final List<String> qualities;
+  final String selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final defaultRendition = renditions
+        .where((item) => item.isDefault)
+        .firstOrNull;
+    return RadioGroup<String>(
+      groupValue: selected,
+      onChanged: (value) => Navigator.pop(context, value),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 8),
+              child: Text(
+                context.l10n.audioQuality,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            RadioListTile<String>(
+              value: defaultPreferredAudioQuality,
+              title: Text(context.l10n.qualityAutomatic),
+              subtitle: defaultRendition == null
+                  ? null
+                  : Text(_renditionDetails(context, defaultRendition)),
+            ),
+            for (final quality in qualities)
+              RadioListTile<String>(
+                value: quality,
+                title: Text(_audioQualityLabel(context, quality)),
+                subtitle: Text(
+                  _renditionDetails(
+                    context,
+                    renditions.firstWhere((item) => item.quality == quality),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _renditionDetails(BuildContext context, AudioRendition rendition) {
+    final bitrate = context.l10n.audioBitrate(rendition.bitrateKbps);
+    final codec = rendition.codec.trim().toUpperCase();
+    return codec.isEmpty ? bitrate : '$bitrate · $codec';
+  }
 }
 
 class _ReciterButton extends StatelessWidget {
