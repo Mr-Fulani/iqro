@@ -564,6 +564,32 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextMonth => 'Sonraki ay';
 
   @override
+  String get prayerWidget => 'Namaz vakitleri widget\'ı';
+
+  @override
+  String get prayerWidgetHint =>
+      'Sıradaki namaz ve beş vakit ana ekranınızda, internet olmadan da görünür';
+
+  @override
+  String get addPrayerWidget => 'Widget ekle';
+
+  @override
+  String get prayerWidgetPinRequested =>
+      'IQRO widget\'ı için ana ekranınızda bir yer seçin';
+
+  @override
+  String get prayerWidgetManualAndroid =>
+      'Ana ekranda boş bir alana dokunup basılı tutun, Widget\'ları açın ve IQRO\'yu seçin.';
+
+  @override
+  String get prayerWidgetManualIos =>
+      'Ana ekrana dokunup basılı tutun, + düğmesine dokunun, IQRO\'yu bulun ve widget\'ı ekleyin.';
+
+  @override
+  String get prayerWidgetNeedsLocation =>
+      'Önce bir konum seçip namaz vakitlerini hesaplayın';
+
+  @override
   String get prayerLocationPrivacy =>
       'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
 

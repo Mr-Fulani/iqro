@@ -565,6 +565,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextMonth => 'Next month';
 
   @override
+  String get prayerWidget => 'Prayer times widget';
+
+  @override
+  String get prayerWidgetHint =>
+      'The next prayer and all five times on your home screen, even offline';
+
+  @override
+  String get addPrayerWidget => 'Add widget';
+
+  @override
+  String get prayerWidgetPinRequested =>
+      'Choose where to place the IQRO widget on your home screen';
+
+  @override
+  String get prayerWidgetManualAndroid =>
+      'Touch and hold an empty area of the home screen, open Widgets, and choose IQRO.';
+
+  @override
+  String get prayerWidgetManualIos =>
+      'Touch and hold the home screen, tap +, find IQRO, and add the widget.';
+
+  @override
+  String get prayerWidgetNeedsLocation =>
+      'Choose a location and calculate prayer times first';
+
+  @override
   String get prayerLocationPrivacy =>
       'Your coordinates stay on this device and are never added to analytics.';
 

@@ -560,6 +560,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nextMonth => 'الشهر التالي';
 
   @override
+  String get prayerWidget => 'ويدجت أوقات الصلاة';
+
+  @override
+  String get prayerWidgetHint =>
+      'الصلاة القادمة والأوقات الخمسة على الشاشة الرئيسية، حتى بدون إنترنت';
+
+  @override
+  String get addPrayerWidget => 'إضافة الويدجت';
+
+  @override
+  String get prayerWidgetPinRequested =>
+      'اختر موضع ويدجت IQRO على الشاشة الرئيسية';
+
+  @override
+  String get prayerWidgetManualAndroid =>
+      'اضغط مطولاً على مساحة فارغة في الشاشة الرئيسية، ثم افتح الويدجت واختر IQRO.';
+
+  @override
+  String get prayerWidgetManualIos =>
+      'اضغط مطولاً على الشاشة الرئيسية، ثم اضغط +، وابحث عن IQRO وأضف الويدجت.';
+
+  @override
+  String get prayerWidgetNeedsLocation =>
+      'اختر الموقع واحسب أوقات الصلاة أولاً';
+
+  @override
   String get prayerLocationPrivacy =>
       'تبقى إحداثياتك على هذا الجهاز ولا تُضاف إلى التحليلات.';
 

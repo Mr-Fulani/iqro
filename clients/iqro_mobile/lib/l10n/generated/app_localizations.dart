@@ -1176,6 +1176,48 @@ abstract class AppLocalizations {
   /// **'Next month'**
   String get nextMonth;
 
+  /// No description provided for @prayerWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer times widget'**
+  String get prayerWidget;
+
+  /// No description provided for @prayerWidgetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The next prayer and all five times on your home screen, even offline'**
+  String get prayerWidgetHint;
+
+  /// No description provided for @addPrayerWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Add widget'**
+  String get addPrayerWidget;
+
+  /// No description provided for @prayerWidgetPinRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where to place the IQRO widget on your home screen'**
+  String get prayerWidgetPinRequested;
+
+  /// No description provided for @prayerWidgetManualAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and hold an empty area of the home screen, open Widgets, and choose IQRO.'**
+  String get prayerWidgetManualAndroid;
+
+  /// No description provided for @prayerWidgetManualIos.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and hold the home screen, tap +, find IQRO, and add the widget.'**
+  String get prayerWidgetManualIos;
+
+  /// No description provided for @prayerWidgetNeedsLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a location and calculate prayer times first'**
+  String get prayerWidgetNeedsLocation;
+
   /// No description provided for @prayerLocationPrivacy.
   ///
   /// In en, this message translates to:

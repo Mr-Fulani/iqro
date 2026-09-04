@@ -23,6 +23,7 @@ import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
+import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/quran_models.dart';
 import '../features/quran/mushaf_offline_repository.dart';
 import '../features/quran/quran_repository.dart';
@@ -68,6 +69,9 @@ final planUpdatesProvider = StreamProvider<int>(
 );
 final prayerRepositoryProvider = Provider<PrayerRepository>(
   (ref) => _missing('PrayerRepository'),
+);
+final prayerWidgetServiceProvider = Provider<PrayerWidgetService>(
+  (ref) => _missing('PrayerWidgetService'),
 );
 final reminderRepositoryProvider = Provider<ReminderRepository>(
   (ref) => _missing('ReminderRepository'),

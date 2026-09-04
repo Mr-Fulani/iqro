@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -33,6 +34,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
   var _loading = false;
   var _profileLoading = false;
   var _savingSettings = false;
+  var _addingWidget = false;
   var _profileOffline = false;
   var _retryLocationOnResume = false;
 
@@ -459,6 +461,39 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
             ),
             const SizedBox(height: 18),
             IqroCard(
+              onTap: _addingWidget ? null : _addPrayerWidget,
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.widgets_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          context.l10n.prayerWidget,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          context.l10n.prayerWidgetHint,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_addingWidget)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.add_to_home_screen_outlined),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            IqroCard(
               onTap: () => context.push('/reminders'),
               child: Row(
                 children: <Widget>[
@@ -552,6 +587,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       if (!mounted || _ownerId != expectedOwnerId || schedule == null) return;
       setState(() => _schedule = schedule);
       ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
+      await _refreshPrayerWidget(scope);
     } on AccountScopeChanged {
       // A fresh screen instance loads the new account profile.
     } on Object catch (error) {
@@ -614,6 +650,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         setState(() => _schedule = schedule);
         ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
         await ref.read(reminderProvider.notifier).replan();
+        await _refreshPrayerWidget(scope);
       }
     } on AccountScopeChanged {
       // The next screen instance owns the active account profile.
@@ -661,6 +698,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       });
       ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
       await ref.read(reminderProvider.notifier).replan();
+      await _refreshPrayerWidget(scope);
     } on AccountScopeChanged {
       // Ignore a completed location/calculation request from the old account.
     } on Object catch (error) {
@@ -724,6 +762,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       });
       ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
       await ref.read(reminderProvider.notifier).replan();
+      await _refreshPrayerWidget(scope);
     } on AccountScopeChanged {
       // Ignore a city selected for the previous account.
     } on Object catch (error) {
@@ -804,6 +843,105 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
           ),
         ),
       );
+
+  Future<void> _addPrayerWidget() async {
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || _location == null || _schedule == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.prayerWidgetNeedsLocation)),
+      );
+      return;
+    }
+    setState(() => _addingWidget = true);
+    try {
+      final service = ref.read(prayerWidgetServiceProvider);
+      final result = await service.update(
+        locale: Localizations.localeOf(context).languageCode,
+        accountScope: scope,
+      );
+      database.ensureCurrent(scope);
+      if (!mounted) return;
+      if (!result.hasSchedule) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.prayerWidgetNeedsLocation)),
+        );
+        return;
+      }
+      final requested = await service.requestPin();
+      if (!mounted) return;
+      if (requested) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.prayerWidgetPinRequested)),
+        );
+        return;
+      }
+      final isApple = defaultTargetPlatform == TargetPlatform.iOS;
+      await showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                context.l10n.addPrayerWidget,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                isApple
+                    ? context.l10n.prayerWidgetManualIos
+                    : context.l10n.prayerWidgetManualAndroid,
+              ),
+            ],
+          ),
+        ),
+      );
+    } on AccountScopeChanged {
+      // The new account will publish its own device-global widget timeline.
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'IQRO prayer widget',
+        ),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.prayerCalculationFailed)),
+        );
+      }
+    } finally {
+      if (mounted && database.accountScope.isCurrent(scope)) {
+        setState(() => _addingWidget = false);
+      }
+    }
+  }
+
+  Future<void> _refreshPrayerWidget(AccountScopeSnapshot scope) async {
+    try {
+      await ref
+          .read(prayerWidgetServiceProvider)
+          .update(
+            locale: Localizations.localeOf(context).languageCode,
+            accountScope: scope,
+          );
+    } on AccountScopeChanged {
+      // The newly active account owns the next update.
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'IQRO prayer widget',
+        ),
+      );
+    }
+  }
 
   String _nextPrayerName(BuildContext context) {
     if (_schedule == null) return context.l10n.prayerUnavailable;

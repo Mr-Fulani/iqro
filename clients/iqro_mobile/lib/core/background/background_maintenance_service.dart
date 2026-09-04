@@ -1,4 +1,5 @@
 import '../../features/prayer/prayer_repository.dart';
+import '../../features/prayer/prayer_widget_service.dart';
 import '../../features/reminders/reminder_repository.dart';
 import '../audio/audio_playback_sync_service.dart';
 import '../auth/account_scope.dart';
@@ -11,19 +12,26 @@ class BackgroundMaintenanceReport {
     required this.sync,
     required this.audio,
     required this.remindersScheduled,
+    this.prayerWidgetUpdated = false,
     this.reminderError,
+    this.prayerWidgetError,
   });
 
   final SyncReport sync;
   final AudioPlaybackSyncReport audio;
   final int remindersScheduled;
+  final bool prayerWidgetUpdated;
   final String? reminderError;
+  final String? prayerWidgetError;
 
   bool get audioDownloaded =>
       audio.status == AudioPlaybackSyncStatus.downloaded;
 
   bool get shouldRetry =>
-      sync.shouldRetry || audio.shouldRetry || reminderError != null;
+      sync.shouldRetry ||
+      audio.shouldRetry ||
+      reminderError != null ||
+      prayerWidgetError != null;
 }
 
 class BackgroundMaintenanceService {
@@ -32,6 +40,7 @@ class BackgroundMaintenanceService {
     required AudioPlaybackSyncService audio,
     required ReminderRepository reminders,
     required PrayerRepository prayer,
+    required PrayerWidgetService prayerWidget,
     required NotificationGateway notifications,
     required LocalDatabase database,
     required String Function() locale,
@@ -39,6 +48,7 @@ class BackgroundMaintenanceService {
        _audio = audio,
        _reminders = reminders,
        _prayer = prayer,
+       _prayerWidget = prayerWidget,
        _notifications = notifications,
        _database = database,
        _locale = locale;
@@ -49,6 +59,7 @@ class BackgroundMaintenanceService {
   final AudioPlaybackSyncService _audio;
   final ReminderRepository _reminders;
   final PrayerRepository _prayer;
+  final PrayerWidgetService _prayerWidget;
   final NotificationGateway _notifications;
   final LocalDatabase _database;
   final String Function() _locale;
@@ -104,6 +115,8 @@ class BackgroundMaintenanceService {
     _database.ensureCurrent(scope);
     var remindersScheduled = 0;
     String? reminderError;
+    var prayerWidgetUpdated = false;
+    String? prayerWidgetError;
     if (renewReminders) {
       try {
         final rules = await _reminders.localRules(accountScope: scope);
@@ -120,11 +133,23 @@ class BackgroundMaintenanceService {
         reminderError = error.toString();
       }
     }
+    try {
+      final widgetResult = await _prayerWidget.update(
+        locale: _locale(),
+        accountScope: scope,
+      );
+      _database.ensureCurrent(scope);
+      prayerWidgetUpdated = widgetResult.hasSchedule;
+    } on Object catch (error) {
+      prayerWidgetError = error.toString();
+    }
     final report = BackgroundMaintenanceReport(
       sync: syncReport,
       audio: audioReport,
       remindersScheduled: remindersScheduled,
+      prayerWidgetUpdated: prayerWidgetUpdated,
       reminderError: reminderError,
+      prayerWidgetError: prayerWidgetError,
     );
     await _database.writeState(diagnosticsStateKey, <String, Object?>{
       'completed_at': DateTime.now().toUtc().toIso8601String(),
@@ -136,6 +161,8 @@ class BackgroundMaintenanceService {
       'reminders_scheduled': remindersScheduled,
       'reminders_renewed': renewReminders,
       'reminders_ok': reminderError == null,
+      'prayer_widget_updated': prayerWidgetUpdated,
+      'prayer_widget_ok': prayerWidgetError == null,
       'retry_recommended': report.shouldRetry,
     }, accountScope: scope);
     return report;

@@ -18,6 +18,7 @@ import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
+import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/quran/mushaf_offline_repository.dart';
 import '../features/reminders/reminder_repository.dart';
@@ -38,6 +39,7 @@ class AppDependencies {
     required this.playbackSync,
     required this.plan,
     required this.prayer,
+    required this.prayerWidget,
     required this.reminders,
     required this.notifications,
     required this.memorization,
@@ -59,6 +61,7 @@ class AppDependencies {
   final AudioPlaybackSyncService playbackSync;
   final PlanRepository plan;
   final PrayerRepository prayer;
+  final PrayerWidgetService prayerWidget;
   final ReminderRepository reminders;
   final NotificationGateway notifications;
   final MemorizationRepository memorization;
@@ -92,6 +95,10 @@ class AppDependencies {
       locale: () => preferences.read().locale,
     );
     final prayer = PrayerRepository(api: api, database: database);
+    final prayerWidget = PrayerWidgetService(
+      prayer: prayer,
+      database: database,
+    );
     final reminders = ReminderRepository(api: api, database: database);
     final notifications = NotificationGateway(database: database);
     await notifications.initialize();
@@ -116,6 +123,7 @@ class AppDependencies {
       audio: playbackSync,
       reminders: reminders,
       prayer: prayer,
+      prayerWidget: prayerWidget,
       notifications: notifications,
       database: database,
       locale: () => preferences.read().locale,
@@ -133,6 +141,7 @@ class AppDependencies {
       playbackSync: playbackSync,
       plan: PlanRepository(database, api: api),
       prayer: prayer,
+      prayerWidget: prayerWidget,
       reminders: reminders,
       notifications: notifications,
       memorization: MemorizationRepository(api: api, database: database),
@@ -161,6 +170,7 @@ class AppDependencies {
     audioPlaybackSyncProvider.overrideWithValue(playbackSync),
     planRepositoryProvider.overrideWithValue(plan),
     prayerRepositoryProvider.overrideWithValue(prayer),
+    prayerWidgetServiceProvider.overrideWithValue(prayerWidget),
     reminderRepositoryProvider.overrideWithValue(reminders),
     notificationGatewayProvider.overrideWithValue(notifications),
     memorizationRepositoryProvider.overrideWithValue(memorization),

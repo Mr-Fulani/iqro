@@ -18,6 +18,12 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A1B2C3D4E5F60718293A4B5C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = F1B2C3D4E5F60718293A4B5C /* InfoPlist.strings */; };
 		CF4C85B5EC2A42584C892506 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1FC7F5B4072DB295F1A0232 /* Pods_Runner.framework */; };
+		943FD5E5651E5030595D02DB /* PrayerTimesHomeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BE291568DE74DD39279CBB8 /* PrayerTimesHomeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		90DF98DC5A0813F5E9020762 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70EF74398C6A18F421D061B3 /* WidgetKit.framework */; };
+		60A072D992A68CCC51B8A107 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66358DD020B80D416D22D842 /* SwiftUI.framework */; };
+		3F4612D1FC8CDD3A59D79BCF /* Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31052F8E5B6CCA998836E158 /* Widget.swift */; };
+		EA5092D1F0F7997A51372E87 /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3203FDA64C131BB90DD46B20 /* WidgetBundle.swift */; };
+		2992212B5C76D56A04969349 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 46BDF97636183193A8591FF8 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +33,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		D7B1E0A8BDAB7DF9A01EB2B6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C37FF7F91FD06A3E129E978B;
+			remoteInfo = PrayerTimesHomeWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -39,6 +52,17 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A1DECDE5B6847594DFFD288 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				943FD5E5651E5030595D02DB /* PrayerTimesHomeWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -73,6 +97,14 @@
 		E1B2C3D4E5F60718293A4B5C /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F664B2341CFAF52B20224AB7 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FABC4D1F605301C43F56D0C7 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		8BE291568DE74DD39279CBB8 /* PrayerTimesHomeWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PrayerTimesHomeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		70EF74398C6A18F421D061B3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		66358DD020B80D416D22D842 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0C7FF367DBAA6384DFD9CEA5 /* PrayerTimesHomeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PrayerTimesHomeWidget.entitlements; sourceTree = "<group>"; };
+		31052F8E5B6CCA998836E158 /* Widget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widget.swift; sourceTree = "<group>"; };
+		3203FDA64C131BB90DD46B20 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
+		D3FD8D252BC0C21296297863 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		46BDF97636183193A8591FF8 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +121,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				71C2F32B93497A0BE573DC56 /* Pods_RunnerTests.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A1BD46299674C7100CB4A20 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				60A072D992A68CCC51B8A107 /* SwiftUI.framework in Frameworks */,
+				90DF98DC5A0813F5E9020762 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,6 +188,8 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				7679AE268C55CA37E660783B /* Pods */,
 				43DBC87ACFD4A00C86E89356 /* Frameworks */,
+				0C7FF367DBAA6384DFD9CEA5 /* PrayerTimesHomeWidget.entitlements */,
+				AF156B5F9A44B0327268F4B1 /* PrayerTimesHomeWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -155,6 +198,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				8BE291568DE74DD39279CBB8 /* PrayerTimesHomeWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -174,6 +218,17 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		AF156B5F9A44B0327268F4B1 /* PrayerTimesHomeWidget */ = {
+			isa = PBXGroup;
+			children = (
+				31052F8E5B6CCA998836E158 /* Widget.swift */,
+				3203FDA64C131BB90DD46B20 /* WidgetBundle.swift */,
+				D3FD8D252BC0C21296297863 /* Info.plist */,
+				46BDF97636183193A8591FF8 /* Localizable.xcstrings */,
+			);
+			path = PrayerTimesHomeWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -208,17 +263,37 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
-				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				0A1DECDE5B6847594DFFD288 /* Embed Foundation Extensions */,
 				5D6F2218A45C33416CDFEC34 /* [CP] Embed Pods Frameworks */,
+				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6B780C65F146C918041C3C53 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C37FF7F91FD06A3E129E978B /* PrayerTimesHomeWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E582522EE7350A4F674279BC /* Build configuration list for PBXNativeTarget "PrayerTimesHomeWidget" */;
+			buildPhases = (
+				2335C8CF2F6FF67E9A1F6E71 /* Sources */,
+				7A1BD46299674C7100CB4A20 /* Frameworks */,
+				074020284C66DA6527853496 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+
+			name = PrayerTimesHomeWidget;
+			productName = PrayerTimesHomeWidget;
+			productReference = 8BE291568DE74DD39279CBB8 /* PrayerTimesHomeWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -258,6 +333,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				C37FF7F91FD06A3E129E978B /* PrayerTimesHomeWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -279,6 +355,14 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		074020284C66DA6527853496 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2992212B5C76D56A04969349 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,6 +482,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2335C8CF2F6FF67E9A1F6E71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3F4612D1FC8CDD3A59D79BCF /* Widget.swift in Sources */,
+				EA5092D1F0F7997A51372E87 /* WidgetBundle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -405,6 +498,11 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		6B780C65F146C918041C3C53 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C37FF7F91FD06A3E129E978B /* PrayerTimesHomeWidget */;
+			targetProxy = D7B1E0A8BDAB7DF9A01EB2B6 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -501,6 +599,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -684,6 +783,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -707,6 +807,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -718,6 +819,81 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		E1702D2BEC748E72C5E12109 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PrayerTimesHomeWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				INFOPLIST_FILE = PrayerTimesHomeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrayerTimesHomeWidget;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = forum.iqro.app.PrayerTimesHomeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F58804F57FBF002436737073 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PrayerTimesHomeWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				INFOPLIST_FILE = PrayerTimesHomeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrayerTimesHomeWidget;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = forum.iqro.app.PrayerTimesHomeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F65D17E1807A71D4D067738B /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PrayerTimesHomeWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				INFOPLIST_FILE = PrayerTimesHomeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrayerTimesHomeWidget;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = forum.iqro.app.PrayerTimesHomeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
 		};
 /* End XCBuildConfiguration section */
 
@@ -748,6 +924,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E582522EE7350A4F674279BC /* Build configuration list for PBXNativeTarget "PrayerTimesHomeWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1702D2BEC748E72C5E12109 /* Debug */,
+				F58804F57FBF002436737073 /* Release */,
+				F65D17E1807A71D4D067738B /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

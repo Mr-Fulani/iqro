@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_widget_prayer_times_label">Namaz vakitleri</string>
+    <string name="home_widget_prayer_times_description">Sıradaki namaz ve beş vakit namaz saatleri</string>
+</resources>

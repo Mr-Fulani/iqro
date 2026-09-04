@@ -377,7 +377,10 @@ multi-client MVP остаётся на этапах B–D.
   относительно географического севера без отправки координат в аналитику.
 - [x] Добавить offline-месячный календарь времени намаза с навигацией между месяцами,
   выбранными методом, Асром, ручными поправками, location и IANA timezone.
-- [ ] Добавить системные виджеты времени намаза.
+- [x] Добавить системный виджет времени намаза для Android/iOS: общий локальный восьмидневный
+  timeline, ближайшая молитва и пять времён, DST-safe абсолютные переходы, автоматическое
+  обновление после location/profile/locale и при foreground maintenance, Android pin request,
+  WidgetKit App Group и deep link на экран намаза.
 - [x] Versioned translation schema/API/UI и Quran.Foundation Content Sync; каждый перевод имеет
   собственные права, attribution, locale, immutable version и publication status; подключены
   все проверенные смысловые ресурсы активных языков, UI-каталог фильтруется текущей локалью.

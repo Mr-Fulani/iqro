@@ -43,7 +43,7 @@ void main() {
     expect(project, isNot(contains('IPHONEOS_DEPLOYMENT_TARGET = 13.0')));
     expect(
       RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = 14\.0;').allMatches(project).length,
-      3,
+      9,
     );
     expect(
       RegExp(

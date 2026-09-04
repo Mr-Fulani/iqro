@@ -566,6 +566,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextMonth => 'Следующий месяц';
 
   @override
+  String get prayerWidget => 'Виджет времени намаза';
+
+  @override
+  String get prayerWidgetHint =>
+      'Ближайшая молитва и пять времён на главном экране, даже без интернета';
+
+  @override
+  String get addPrayerWidget => 'Добавить виджет';
+
+  @override
+  String get prayerWidgetPinRequested =>
+      'Выберите место для виджета IQRO на главном экране';
+
+  @override
+  String get prayerWidgetManualAndroid =>
+      'Нажмите и удерживайте свободное место на главном экране, откройте «Виджеты» и выберите IQRO.';
+
+  @override
+  String get prayerWidgetManualIos =>
+      'Нажмите и удерживайте главный экран, нажмите «+», найдите IQRO и добавьте виджет.';
+
+  @override
+  String get prayerWidgetNeedsLocation =>
+      'Сначала выберите местоположение и рассчитайте время намаза';
+
+  @override
   String get prayerLocationPrivacy =>
       'Координаты остаются на устройстве и никогда не попадают в аналитику.';
 
