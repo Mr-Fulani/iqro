@@ -91,6 +91,41 @@ void main() {
       ),
     );
   });
+
+  test('applies Hanafi Asr and manual minute adjustments independently', () {
+    final standard = engine.calculate(
+      LocalPrayerInput(
+        latitude: 41.0082,
+        longitude: 28.9784,
+        date: DateTime.utc(2026, 8, 9),
+        method: method,
+        highLatitudeRule: 'middle_of_night',
+        polarResolution: 'unresolved',
+      ),
+    );
+    final customized = engine.calculate(
+      LocalPrayerInput(
+        latitude: 41.0082,
+        longitude: 28.9784,
+        date: DateTime.utc(2026, 8, 9),
+        method: method,
+        highLatitudeRule: 'middle_of_night',
+        polarResolution: 'unresolved',
+        hanafiAsr: true,
+        adjustments: const <String, int>{'fajr': 7},
+      ),
+    );
+
+    expect(
+      customized.timesUtc['fajr']!.difference(standard.timesUtc['fajr']!),
+      const Duration(minutes: 7),
+    );
+    expect(
+      customized.timesUtc['asr']!.isAfter(standard.timesUtc['asr']!),
+      isTrue,
+    );
+    expect(customized.timesUtc['dhuhr'], standard.timesUtc['dhuhr']);
+  });
 }
 
 final _kiritimatiDate = DateTime.utc(2026, 8, 9);

@@ -431,6 +431,81 @@ class AppLocalizationsTr extends AppLocalizations {
   String get calculationMethod => 'Hesaplama yöntemi';
 
   @override
+  String get prayerCalculationSettings => 'Namaz hesaplama ayarları';
+
+  @override
+  String get prayerSettingsDefault => 'Standart ikindi · elle düzeltme yok';
+
+  @override
+  String get prayerAdjustedTimes => 'vakit düzeltildi';
+
+  @override
+  String get savedOnDevice => 'Bu cihaza kaydedildi';
+
+  @override
+  String get prayerSettingsSyncPending =>
+      'Ayarlar çevrimdışı çalışır ve ağ geri geldiğinde hesabınızla eşitlenir.';
+
+  @override
+  String get asrCalculation => 'İkindi hesabı';
+
+  @override
+  String get asrStandard => 'Standart';
+
+  @override
+  String get asrHanafi => 'Hanefi';
+
+  @override
+  String get asrStandardHint =>
+      'Şafii, Maliki ve Hanbeli mezheplerinde kullanılan gölge katsayısı 1.';
+
+  @override
+  String get asrHanafiHint => 'Hanefi mezhebinde kullanılan gölge katsayısı 2.';
+
+  @override
+  String get manualPrayerAdjustments => 'Elle vakit düzeltmeleri';
+
+  @override
+  String get manualPrayerAdjustmentsHint =>
+      'Yalnızca güvendiğiniz yerel takvimle eşleştirmek için dakika ekleyin veya çıkarın.';
+
+  @override
+  String get advancedCalculationRules => 'Gelişmiş kurallar';
+
+  @override
+  String get highLatitudeRule => 'Yüksek enlem kuralı';
+
+  @override
+  String get polarResolution => 'Kutup dairesi işleme';
+
+  @override
+  String get middleOfNight => 'Gecenin ortası';
+
+  @override
+  String get seventhOfNight => 'Gecenin yedide biri';
+
+  @override
+  String get twilightAngle => 'Alacakaranlık açısı';
+
+  @override
+  String get noPolarSubstitution => 'Değiştirme yok';
+
+  @override
+  String get nearestLatitude => 'En yakın enlem';
+
+  @override
+  String get nearestDay => 'En yakın gün';
+
+  @override
+  String get sunrise => 'Güneş';
+
+  @override
+  String get decrease => 'Azalt';
+
+  @override
+  String get increase => 'Artır';
+
+  @override
   String get prayerLocationPrivacy =>
       'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
 

@@ -370,8 +370,10 @@ multi-client MVP остаётся на этапах B–D.
 - [x] Реализовать playback state sync при сохранении device-local очереди.
 - [x] Реализовать Flutter local prayer calculation и notification scheduler с
   timezone/location reschedule.
-- [ ] Добавить в мобильный UI выбор метода Асра/мазхаба, ручные корректировки времени,
-  fallback выбора города, киблу, месячный календарь и системные виджеты.
+- [x] Добавить в мобильный UI выбор метода Асра/мазхаба и ручные корректировки времени;
+  настройки используют общий revisioned prayer-profile, влияют на server/local calculation,
+  сохраняются offline и повторно синхронизируются после восстановления сети.
+- [ ] Добавить fallback выбора города, киблу, месячный календарь и системные виджеты.
 - [x] Versioned translation schema/API/UI и Quran.Foundation Content Sync; каждый перевод имеет
   собственные права, attribution, locale, immutable version и publication status; подключены
   все проверенные смысловые ресурсы активных языков, UI-каталог фильтруется текущей локалью.

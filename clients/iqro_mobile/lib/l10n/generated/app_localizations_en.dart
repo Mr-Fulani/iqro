@@ -432,6 +432,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calculationMethod => 'Calculation method';
 
   @override
+  String get prayerCalculationSettings => 'Prayer calculation settings';
+
+  @override
+  String get prayerSettingsDefault => 'Standard Asr · no manual adjustments';
+
+  @override
+  String get prayerAdjustedTimes => 'times adjusted';
+
+  @override
+  String get savedOnDevice => 'Saved on this device';
+
+  @override
+  String get prayerSettingsSyncPending =>
+      'The settings work offline and will sync with your account when the network returns.';
+
+  @override
+  String get asrCalculation => 'Asr calculation';
+
+  @override
+  String get asrStandard => 'Standard';
+
+  @override
+  String get asrHanafi => 'Hanafi';
+
+  @override
+  String get asrStandardHint =>
+      'Shadow factor 1, used by the Shafi\'i, Maliki and Hanbali schools.';
+
+  @override
+  String get asrHanafiHint => 'Shadow factor 2, used by the Hanafi school.';
+
+  @override
+  String get manualPrayerAdjustments => 'Manual time adjustments';
+
+  @override
+  String get manualPrayerAdjustmentsHint =>
+      'Add or subtract minutes only when your trusted local timetable requires it.';
+
+  @override
+  String get advancedCalculationRules => 'Advanced rules';
+
+  @override
+  String get highLatitudeRule => 'High-latitude rule';
+
+  @override
+  String get polarResolution => 'Polar-circle handling';
+
+  @override
+  String get middleOfNight => 'Middle of the night';
+
+  @override
+  String get seventhOfNight => 'Seventh of the night';
+
+  @override
+  String get twilightAngle => 'Twilight angle';
+
+  @override
+  String get noPolarSubstitution => 'No substitution';
+
+  @override
+  String get nearestLatitude => 'Nearest latitude';
+
+  @override
+  String get nearestDay => 'Nearest day';
+
+  @override
+  String get sunrise => 'Sunrise';
+
+  @override
+  String get decrease => 'Decrease';
+
+  @override
+  String get increase => 'Increase';
+
+  @override
   String get prayerLocationPrivacy =>
       'Your coordinates stay on this device and are never added to analytics.';
 

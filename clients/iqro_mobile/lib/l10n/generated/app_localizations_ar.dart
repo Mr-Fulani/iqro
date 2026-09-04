@@ -429,6 +429,81 @@ class AppLocalizationsAr extends AppLocalizations {
   String get calculationMethod => 'طريقة الحساب';
 
   @override
+  String get prayerCalculationSettings => 'إعدادات حساب الصلاة';
+
+  @override
+  String get prayerSettingsDefault => 'العصر القياسي · بلا تعديلات يدوية';
+
+  @override
+  String get prayerAdjustedTimes => 'أوقات معدّلة';
+
+  @override
+  String get savedOnDevice => 'تم الحفظ على هذا الجهاز';
+
+  @override
+  String get prayerSettingsSyncPending =>
+      'تعمل الإعدادات دون اتصال وستتم مزامنتها مع حسابك عند عودة الشبكة.';
+
+  @override
+  String get asrCalculation => 'حساب العصر';
+
+  @override
+  String get asrStandard => 'قياسي';
+
+  @override
+  String get asrHanafi => 'حنفي';
+
+  @override
+  String get asrStandardHint =>
+      'معامل الظل 1، ويُستخدم في المذاهب الشافعي والمالكي والحنبلي.';
+
+  @override
+  String get asrHanafiHint => 'معامل الظل 2، ويُستخدم في المذهب الحنفي.';
+
+  @override
+  String get manualPrayerAdjustments => 'تعديلات الوقت اليدوية';
+
+  @override
+  String get manualPrayerAdjustmentsHint =>
+      'أضف أو اطرح الدقائق فقط لمطابقة تقويم محلي موثوق.';
+
+  @override
+  String get advancedCalculationRules => 'القواعد المتقدمة';
+
+  @override
+  String get highLatitudeRule => 'قاعدة خطوط العرض العليا';
+
+  @override
+  String get polarResolution => 'معالجة الدائرة القطبية';
+
+  @override
+  String get middleOfNight => 'منتصف الليل';
+
+  @override
+  String get seventhOfNight => 'سُبع الليل';
+
+  @override
+  String get twilightAngle => 'زاوية الشفق';
+
+  @override
+  String get noPolarSubstitution => 'دون استبدال';
+
+  @override
+  String get nearestLatitude => 'أقرب خط عرض';
+
+  @override
+  String get nearestDay => 'أقرب يوم';
+
+  @override
+  String get sunrise => 'الشروق';
+
+  @override
+  String get decrease => 'إنقاص';
+
+  @override
+  String get increase => 'زيادة';
+
+  @override
   String get prayerLocationPrivacy =>
       'تبقى إحداثياتك على هذا الجهاز ولا تُضاف إلى التحليلات.';
 

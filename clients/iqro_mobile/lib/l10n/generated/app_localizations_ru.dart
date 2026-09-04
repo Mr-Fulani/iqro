@@ -431,6 +431,82 @@ class AppLocalizationsRu extends AppLocalizations {
   String get calculationMethod => 'Метод расчёта';
 
   @override
+  String get prayerCalculationSettings => 'Настройки расчёта намаза';
+
+  @override
+  String get prayerSettingsDefault => 'Стандартный Аср · без ручных поправок';
+
+  @override
+  String get prayerAdjustedTimes => 'времён с поправкой';
+
+  @override
+  String get savedOnDevice => 'Сохранено на устройстве';
+
+  @override
+  String get prayerSettingsSyncPending =>
+      'Настройки уже работают без сети и синхронизируются с аккаунтом после подключения.';
+
+  @override
+  String get asrCalculation => 'Расчёт Асра';
+
+  @override
+  String get asrStandard => 'Стандартный';
+
+  @override
+  String get asrHanafi => 'Ханафитский';
+
+  @override
+  String get asrStandardHint =>
+      'Коэффициент тени 1 — используется в шафиитском, маликитском и ханбалитском мазхабах.';
+
+  @override
+  String get asrHanafiHint =>
+      'Коэффициент тени 2 — используется в ханафитском мазхабе.';
+
+  @override
+  String get manualPrayerAdjustments => 'Ручные поправки времени';
+
+  @override
+  String get manualPrayerAdjustmentsHint =>
+      'Добавляйте или вычитайте минуты только для соответствия доверенному местному расписанию.';
+
+  @override
+  String get advancedCalculationRules => 'Расширенные правила';
+
+  @override
+  String get highLatitudeRule => 'Правило высоких широт';
+
+  @override
+  String get polarResolution => 'Расчёт за полярным кругом';
+
+  @override
+  String get middleOfNight => 'Середина ночи';
+
+  @override
+  String get seventhOfNight => 'Седьмая часть ночи';
+
+  @override
+  String get twilightAngle => 'Угол сумерек';
+
+  @override
+  String get noPolarSubstitution => 'Без замещения';
+
+  @override
+  String get nearestLatitude => 'Ближайшая широта';
+
+  @override
+  String get nearestDay => 'Ближайший день';
+
+  @override
+  String get sunrise => 'Восход';
+
+  @override
+  String get decrease => 'Уменьшить';
+
+  @override
+  String get increase => 'Увеличить';
+
+  @override
   String get prayerLocationPrivacy =>
       'Координаты остаются на устройстве и никогда не попадают в аналитику.';
 

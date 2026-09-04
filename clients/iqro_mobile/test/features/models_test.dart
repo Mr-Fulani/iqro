@@ -524,14 +524,61 @@ void main() {
         'en': 'Muslim World League',
         'ru': 'Всемирная исламская лига',
       },
-      'high_latitude_rules': <String, Object?>{'default': 'middle_of_night'},
-      'polar_resolutions': <String, Object?>{'default': 'unresolved'},
+      'high_latitude_rules': <String, Object?>{
+        'default': 'middle_of_night',
+        'supported': <Object?>['middle_of_night', 'seventh_of_night'],
+      },
+      'polar_resolutions': <String, Object?>{
+        'default': 'unresolved',
+        'supported': <Object?>['unresolved', 'aqrab_yaum'],
+      },
     });
 
     expect(method.nameFor('ru'), 'Всемирная исламская лига');
     expect(method.nameFor('tr'), 'Muslim World League');
     expect(method.highLatitudeRule, 'middle_of_night');
+    expect(method.supportedHighLatitudeRules, contains('seventh_of_night'));
+    expect(method.supportedPolarResolutions, contains('aqrab_yaum'));
   });
+
+  test(
+    'Prayer preferences validate the profile against method capabilities',
+    () {
+      final method = PrayerMethod.fromJson(<String, Object?>{
+        'id': 'method-id',
+        'code': 'test-method',
+        'checksum_sha256': 'checksum',
+        'high_latitude_rules': <String, Object?>{
+          'default': 'middle_of_night',
+          'supported': <Object?>['middle_of_night'],
+        },
+        'polar_resolutions': <String, Object?>{
+          'default': 'unresolved',
+          'supported': <Object?>['unresolved'],
+        },
+      });
+      final preferences = PrayerPreferences.fromJson(<String, Object?>{
+        'asr_method': 'hanafi',
+        'high_latitude_rule': 'unsupported',
+        'polar_resolution': 'unsupported',
+        'adjustments': <String, Object?>{'fajr': 5, 'isha': 500},
+        'timezone_mode': 'fixed',
+        'fixed_timezone': 'Europe/Istanbul',
+        'revision': 4,
+        'sync_pending': true,
+      }, method: method);
+
+      expect(preferences.hanafiAsr, isTrue);
+      expect(preferences.highLatitudeRule, 'middle_of_night');
+      expect(preferences.polarResolution, 'unresolved');
+      expect(preferences.adjustments['fajr'], 5);
+      expect(preferences.adjustments['isha'], 120);
+      expect(preferences.adjustments['dhuhr'], 0);
+      expect(preferences.fixedTimezone, 'Europe/Istanbul');
+      expect(preferences.revision, 4);
+      expect(preferences.syncPending, isTrue);
+    },
+  );
 
   test('Prayer method enables local calculation only for pinned engine', () {
     final method = PrayerMethod.fromJson(

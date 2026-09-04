@@ -924,6 +924,150 @@ abstract class AppLocalizations {
   /// **'Calculation method'**
   String get calculationMethod;
 
+  /// No description provided for @prayerCalculationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer calculation settings'**
+  String get prayerCalculationSettings;
+
+  /// No description provided for @prayerSettingsDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard Asr · no manual adjustments'**
+  String get prayerSettingsDefault;
+
+  /// No description provided for @prayerAdjustedTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'times adjusted'**
+  String get prayerAdjustedTimes;
+
+  /// No description provided for @savedOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device'**
+  String get savedOnDevice;
+
+  /// No description provided for @prayerSettingsSyncPending.
+  ///
+  /// In en, this message translates to:
+  /// **'The settings work offline and will sync with your account when the network returns.'**
+  String get prayerSettingsSyncPending;
+
+  /// No description provided for @asrCalculation.
+  ///
+  /// In en, this message translates to:
+  /// **'Asr calculation'**
+  String get asrCalculation;
+
+  /// No description provided for @asrStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get asrStandard;
+
+  /// No description provided for @asrHanafi.
+  ///
+  /// In en, this message translates to:
+  /// **'Hanafi'**
+  String get asrHanafi;
+
+  /// No description provided for @asrStandardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow factor 1, used by the Shafi\'i, Maliki and Hanbali schools.'**
+  String get asrStandardHint;
+
+  /// No description provided for @asrHanafiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow factor 2, used by the Hanafi school.'**
+  String get asrHanafiHint;
+
+  /// No description provided for @manualPrayerAdjustments.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual time adjustments'**
+  String get manualPrayerAdjustments;
+
+  /// No description provided for @manualPrayerAdjustmentsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or subtract minutes only when your trusted local timetable requires it.'**
+  String get manualPrayerAdjustmentsHint;
+
+  /// No description provided for @advancedCalculationRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced rules'**
+  String get advancedCalculationRules;
+
+  /// No description provided for @highLatitudeRule.
+  ///
+  /// In en, this message translates to:
+  /// **'High-latitude rule'**
+  String get highLatitudeRule;
+
+  /// No description provided for @polarResolution.
+  ///
+  /// In en, this message translates to:
+  /// **'Polar-circle handling'**
+  String get polarResolution;
+
+  /// No description provided for @middleOfNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle of the night'**
+  String get middleOfNight;
+
+  /// No description provided for @seventhOfNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Seventh of the night'**
+  String get seventhOfNight;
+
+  /// No description provided for @twilightAngle.
+  ///
+  /// In en, this message translates to:
+  /// **'Twilight angle'**
+  String get twilightAngle;
+
+  /// No description provided for @noPolarSubstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'No substitution'**
+  String get noPolarSubstitution;
+
+  /// No description provided for @nearestLatitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearest latitude'**
+  String get nearestLatitude;
+
+  /// No description provided for @nearestDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearest day'**
+  String get nearestDay;
+
+  /// No description provided for @sunrise.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunrise'**
+  String get sunrise;
+
+  /// No description provided for @decrease.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease'**
+  String get decrease;
+
+  /// No description provided for @increase.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase'**
+  String get increase;
+
   /// No description provided for @prayerLocationPrivacy.
   ///
   /// In en, this message translates to:

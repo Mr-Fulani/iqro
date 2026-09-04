@@ -86,7 +86,9 @@ class PrayerMethod {
     required this.checksum,
     required this.names,
     required this.highLatitudeRule,
+    required this.supportedHighLatitudeRules,
     required this.polarResolution,
+    required this.supportedPolarResolutions,
     required this.fajrAngle,
     required this.ishaAngle,
     required this.ishaIntervalMinutes,
@@ -128,7 +130,17 @@ class PrayerMethod {
       names: names.map((key, value) => MapEntry(key, value.toString())),
       highLatitudeRule:
           highLatitude['default']?.toString() ?? 'middle_of_night',
+      supportedHighLatitudeRules:
+          (highLatitude['supported'] as List?)
+              ?.map((value) => value.toString())
+              .toList(growable: false) ??
+          const <String>['middle_of_night'],
       polarResolution: polar['default']?.toString() ?? 'unresolved',
+      supportedPolarResolutions:
+          (polar['supported'] as List?)
+              ?.map((value) => value.toString())
+              .toList(growable: false) ??
+          const <String>['unresolved'],
       fajrAngle:
           double.tryParse(parameters['fajr_angle']?.toString() ?? '') ?? 0,
       ishaAngle: double.tryParse(isha['angle']?.toString() ?? ''),
@@ -149,7 +161,9 @@ class PrayerMethod {
   final String checksum;
   final Map<String, String> names;
   final String highLatitudeRule;
+  final List<String> supportedHighLatitudeRules;
   final String polarResolution;
+  final List<String> supportedPolarResolutions;
   final double fajrAngle;
   final double? ishaAngle;
   final int? ishaIntervalMinutes;
@@ -175,6 +189,140 @@ class PrayerMethod {
     ishaIntervalMinutes: ishaIntervalMinutes,
     adjustments: adjustments,
   );
+}
+
+class PrayerPreferences {
+  const PrayerPreferences({
+    required this.asrMethod,
+    required this.highLatitudeRule,
+    required this.polarResolution,
+    required this.adjustments,
+    required this.timezoneMode,
+    required this.revision,
+    this.fixedTimezone,
+    this.syncPending = false,
+  });
+
+  factory PrayerPreferences.defaultsFor(PrayerMethod method) =>
+      PrayerPreferences(
+        asrMethod: 'standard',
+        highLatitudeRule: method.highLatitudeRule,
+        polarResolution: method.polarResolution,
+        adjustments: const <String, int>{
+          'fajr': 0,
+          'sunrise': 0,
+          'dhuhr': 0,
+          'asr': 0,
+          'maghrib': 0,
+          'isha': 0,
+        },
+        timezoneMode: 'device_local',
+        revision: 0,
+      );
+
+  factory PrayerPreferences.fromJson(
+    Map<String, Object?> json, {
+    required PrayerMethod method,
+  }) {
+    final rawAdjustments = json['adjustments'] is Map
+        ? Map<String, Object?>.from(json['adjustments']! as Map)
+        : const <String, Object?>{};
+    final defaults = PrayerPreferences.defaultsFor(method);
+    final asrMethod = json['asr_method']?.toString();
+    final highLatitudeRule = json['high_latitude_rule']?.toString();
+    final polarResolution = json['polar_resolution']?.toString();
+    final timezoneMode = json['timezone_mode']?.toString();
+    final fixedTimezone = json['fixed_timezone']?.toString();
+    return PrayerPreferences(
+      asrMethod: asrMethod == 'hanafi' ? 'hanafi' : 'standard',
+      highLatitudeRule:
+          method.supportedHighLatitudeRules.contains(highLatitudeRule)
+          ? highLatitudeRule!
+          : defaults.highLatitudeRule,
+      polarResolution:
+          method.supportedPolarResolutions.contains(polarResolution)
+          ? polarResolution!
+          : defaults.polarResolution,
+      adjustments: <String, int>{
+        for (final code in _prayerCodes)
+          code: ((rawAdjustments[code] as num?)?.toInt() ?? 0).clamp(-120, 120),
+      },
+      timezoneMode: timezoneMode == 'fixed' ? 'fixed' : 'device_local',
+      fixedTimezone: fixedTimezone == null || fixedTimezone.isEmpty
+          ? null
+          : fixedTimezone,
+      revision: (json['revision'] as num?)?.toInt() ?? 0,
+      syncPending: json['sync_pending'] == true,
+    );
+  }
+
+  final String asrMethod;
+  final String highLatitudeRule;
+  final String polarResolution;
+  final Map<String, int> adjustments;
+  final String timezoneMode;
+  final String? fixedTimezone;
+  final int revision;
+  final bool syncPending;
+
+  bool get hanafiAsr => asrMethod == 'hanafi';
+
+  PrayerPreferences copyWith({
+    String? asrMethod,
+    String? highLatitudeRule,
+    String? polarResolution,
+    Map<String, int>? adjustments,
+    String? timezoneMode,
+    String? fixedTimezone,
+    bool clearFixedTimezone = false,
+    int? revision,
+    bool? syncPending,
+  }) => PrayerPreferences(
+    asrMethod: asrMethod ?? this.asrMethod,
+    highLatitudeRule: highLatitudeRule ?? this.highLatitudeRule,
+    polarResolution: polarResolution ?? this.polarResolution,
+    adjustments: Map<String, int>.unmodifiable(adjustments ?? this.adjustments),
+    timezoneMode: timezoneMode ?? this.timezoneMode,
+    fixedTimezone: clearFixedTimezone
+        ? null
+        : (fixedTimezone ?? this.fixedTimezone),
+    revision: revision ?? this.revision,
+    syncPending: syncPending ?? this.syncPending,
+  );
+
+  PrayerPreferences forMethod(PrayerMethod method) => copyWith(
+    highLatitudeRule:
+        method.supportedHighLatitudeRules.contains(highLatitudeRule)
+        ? highLatitudeRule
+        : method.highLatitudeRule,
+    polarResolution: method.supportedPolarResolutions.contains(polarResolution)
+        ? polarResolution
+        : method.polarResolution,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'asr_method': asrMethod,
+    'high_latitude_rule': highLatitudeRule,
+    'polar_resolution': polarResolution,
+    'adjustments': adjustments,
+    'timezone_mode': timezoneMode,
+    if (timezoneMode == 'fixed' && fixedTimezone != null)
+      'fixed_timezone': fixedTimezone,
+    'revision': revision,
+    'sync_pending': syncPending,
+  };
+}
+
+class PrayerProfileSelection {
+  const PrayerProfileSelection({
+    required this.method,
+    required this.preferences,
+    required this.offline,
+  });
+
+  final PrayerMethod method;
+  final PrayerPreferences preferences;
+  final bool offline;
 }
 
 class PrayerLocation {
@@ -256,6 +404,116 @@ class PrayerRepository {
     }, accountScope: scope);
   }
 
+  Future<PrayerPreferences> storedPreferences({
+    required PrayerMethod method,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    return _storedPreferencesFor(method, scope);
+  }
+
+  Future<PrayerPreferences> _storedPreferencesFor(
+    PrayerMethod method,
+    AccountScopeSnapshot scope,
+  ) async {
+    final raw = await _database.readState(
+      'prayer_preferences',
+      accountScope: scope,
+    );
+    return raw == null
+        ? PrayerPreferences.defaultsFor(method)
+        : PrayerPreferences.fromJson(raw, method: method).forMethod(method);
+  }
+
+  Future<PrayerProfileSelection> loadProfile({
+    required List<PrayerMethod> methods,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (methods.isEmpty) throw StateError('Prayer method catalog is empty');
+    final scope = accountScope ?? await _database.captureAccount();
+    final selectedCode = await selectedMethodCode(accountScope: scope);
+    var method =
+        methods.where((item) => item.code == selectedCode).firstOrNull ??
+        methods.first;
+    var preferences = await _storedPreferencesFor(method, scope);
+    try {
+      if (preferences.syncPending) {
+        return _saveProfile(
+          method: method,
+          preferences: preferences,
+          scope: scope,
+        );
+      }
+      final response = jsonMap(
+        await _api.get('/me/prayer-profile', accountScope: scope),
+      );
+      _database.ensureCurrent(scope);
+      final remoteMethod = jsonMap(response['method_config']);
+      final remoteCode = remoteMethod['code']?.toString();
+      method =
+          methods.where((item) => item.code == remoteCode).firstOrNull ??
+          method;
+      preferences = PrayerPreferences.fromJson(
+        response,
+        method: method,
+      ).copyWith(syncPending: false);
+      await _persistProfile(method, preferences, scope);
+      return PrayerProfileSelection(
+        method: method,
+        preferences: preferences,
+        offline: false,
+      );
+    } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') rethrow;
+      if (error.statusCode != 404 && !error.isOffline) rethrow;
+      return PrayerProfileSelection(
+        method: method,
+        preferences: preferences,
+        offline: error.isOffline,
+      );
+    }
+  }
+
+  Future<PrayerProfileSelection> saveProfile({
+    required PrayerMethod method,
+    required PrayerPreferences preferences,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final pending = preferences.forMethod(method).copyWith(syncPending: true);
+    await _persistProfile(method, pending, scope);
+    try {
+      return await _saveProfile(
+        method: method,
+        preferences: pending,
+        scope: scope,
+      );
+    } on ApiException catch (error) {
+      if (error.code == 'account_scope_changed') rethrow;
+      if (!error.isOffline) rethrow;
+      return PrayerProfileSelection(
+        method: method,
+        preferences: pending,
+        offline: true,
+      );
+    }
+  }
+
+  Future<void> _persistProfile(
+    PrayerMethod method,
+    PrayerPreferences preferences,
+    AccountScopeSnapshot scope,
+  ) async {
+    await _database.writeState('prayer_method', <String, Object?>{
+      'code': method.code,
+    }, accountScope: scope);
+    await _database.writeState(
+      'prayer_preferences',
+      preferences.toJson(),
+      accountScope: scope,
+    );
+  }
+
   Future<PrayerMethod?> selectedMethod() async {
     final scope = await _database.captureAccount();
     return _selectedMethodFor(scope);
@@ -319,20 +577,39 @@ class PrayerRepository {
       location.toJson(),
       accountScope: scope,
     );
+    final preferences = await _storedPreferencesFor(method, scope);
     final schedule = await _calculateLocallyForDate(
       method: method,
       location: location,
       date: DateTime.now(),
+      preferences: preferences,
       scope: scope,
     );
-    await _saveProfile(method, scope);
     return schedule;
+  }
+
+  Future<PrayerSchedule?> calculateForStoredLocation({
+    required PrayerMethod method,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final location = await _storedLocationFor(scope);
+    if (location == null) return null;
+    final preferences = await _storedPreferencesFor(method, scope);
+    return _calculateForDate(
+      method: method,
+      location: location,
+      date: DateTime.now(),
+      preferences: preferences,
+      scope: scope,
+    );
   }
 
   Future<PrayerSchedule> calculateForDate({
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    PrayerPreferences? preferences,
     AccountScopeSnapshot? accountScope,
   }) async {
     final scope = accountScope ?? await _database.captureAccount();
@@ -340,6 +617,7 @@ class PrayerRepository {
       method: method,
       location: location,
       date: date,
+      preferences: preferences ?? await _storedPreferencesFor(method, scope),
       scope: scope,
     );
   }
@@ -348,11 +626,12 @@ class PrayerRepository {
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    required PrayerPreferences preferences,
     required AccountScopeSnapshot scope,
   }) async {
     final dateValue = DateFormat('yyyy-MM-dd').format(date);
     final cacheKey =
-        'prayer:schedule:$dateValue:${method.checksum}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
+        'prayer:schedule:$dateValue:${method.checksum}:${_preferenceCacheKey(preferences)}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
     final cached = await _database.readAccountCache(
       cacheKey,
       accountScope: scope,
@@ -375,17 +654,10 @@ class PrayerRepository {
               },
               'method_config_id': method.id,
               'method_checksum_sha256': method.checksum,
-              'asr_method': 'standard',
-              'high_latitude_rule': method.highLatitudeRule,
-              'polar_resolution': method.polarResolution,
-              'adjustments': const <String, int>{
-                'fajr': 0,
-                'sunrise': 0,
-                'dhuhr': 0,
-                'asr': 0,
-                'maghrib': 0,
-                'isha': 0,
-              },
+              'asr_method': preferences.asrMethod,
+              'high_latitude_rule': preferences.highLatitudeRule,
+              'polar_resolution': preferences.polarResolution,
+              'adjustments': preferences.adjustments,
             },
           ),
         );
@@ -404,6 +676,7 @@ class PrayerRepository {
             method: method,
             location: location,
             date: date,
+            preferences: preferences,
             scope: scope,
           );
         }
@@ -433,6 +706,7 @@ class PrayerRepository {
       return const <PrayerSchedule>[];
     }
     final today = DateTime.now();
+    final preferences = await _storedPreferencesFor(method, scope);
     final schedules = <PrayerSchedule>[];
     for (var offset = 0; offset < days; offset++) {
       final date = DateTime(today.year, today.month, today.day + offset);
@@ -441,6 +715,7 @@ class PrayerRepository {
           method: method,
           location: location,
           date: date,
+          preferences: preferences,
           scope: scope,
         ),
       );
@@ -452,6 +727,7 @@ class PrayerRepository {
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    PrayerPreferences? preferences,
     AccountScopeSnapshot? accountScope,
   }) async {
     final scope = accountScope ?? await _database.captureAccount();
@@ -459,6 +735,7 @@ class PrayerRepository {
       method: method,
       location: location,
       date: date,
+      preferences: preferences ?? await _storedPreferencesFor(method, scope),
       scope: scope,
     );
   }
@@ -467,6 +744,7 @@ class PrayerRepository {
     required PrayerMethod method,
     required PrayerLocation location,
     required DateTime date,
+    required PrayerPreferences preferences,
     required AccountScopeSnapshot scope,
   }) async {
     _database.ensureCurrent(scope);
@@ -487,8 +765,10 @@ class PrayerRepository {
         longitude: location.longitude,
         date: date,
         method: method.localMethod,
-        highLatitudeRule: method.highLatitudeRule,
-        polarResolution: method.polarResolution,
+        highLatitudeRule: preferences.highLatitudeRule,
+        polarResolution: preferences.polarResolution,
+        hanafiAsr: preferences.hanafiAsr,
+        adjustments: preferences.adjustments,
       ),
       timezone,
     );
@@ -518,7 +798,7 @@ class PrayerRepository {
     );
     final dateValue = DateFormat('yyyy-MM-dd').format(date);
     final cacheKey =
-        'prayer:schedule:$dateValue:${method.checksum}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
+        'prayer:schedule:$dateValue:${method.checksum}:${_preferenceCacheKey(preferences)}:${location.latitude.toStringAsFixed(4)}:${location.longitude.toStringAsFixed(4)}:${location.timezone}';
     await _database.writeAccountCache(
       cacheKey,
       schedule.toJson(),
@@ -535,10 +815,11 @@ class PrayerRepository {
     return schedule;
   }
 
-  Future<void> _saveProfile(
-    PrayerMethod method,
-    AccountScopeSnapshot scope,
-  ) async {
+  Future<PrayerProfileSelection> _saveProfile({
+    required PrayerMethod method,
+    required PrayerPreferences preferences,
+    required AccountScopeSnapshot scope,
+  }) async {
     var revision = 0;
     try {
       final current = jsonMap(
@@ -549,33 +830,47 @@ class PrayerRepository {
     } on ApiException catch (error) {
       if (error.code == 'account_scope_changed') rethrow;
       if (error.statusCode != 404 && !error.isOffline) rethrow;
-      if (error.isOffline) return;
+      if (error.isOffline) rethrow;
     }
-    await _api.put(
-      '/me/prayer-profile',
-      data: <String, Object?>{
-        'base_revision': revision,
-        'method_config_id': method.id,
-        'method_checksum_sha256': method.checksum,
-        'asr_method': 'standard',
-        'high_latitude_rule': method.highLatitudeRule,
-        'polar_resolution': method.polarResolution,
-        'adjustments': const <String, int>{
-          'fajr': 0,
-          'sunrise': 0,
-          'dhuhr': 0,
-          'asr': 0,
-          'maghrib': 0,
-          'isha': 0,
+    final result = jsonMap(
+      await _api.put(
+        '/me/prayer-profile',
+        data: <String, Object?>{
+          'base_revision': revision,
+          'method_config_id': method.id,
+          'method_checksum_sha256': method.checksum,
+          'asr_method': preferences.asrMethod,
+          'high_latitude_rule': preferences.highLatitudeRule,
+          'polar_resolution': preferences.polarResolution,
+          'adjustments': preferences.adjustments,
+          'timezone_mode': preferences.timezoneMode,
+          if (preferences.timezoneMode == 'fixed')
+            'fixed_timezone': preferences.fixedTimezone,
+          'client_updated_at': DateTime.now().toUtc().toIso8601String(),
         },
-        'timezone_mode': 'device_local',
-        'client_updated_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      accountScope: scope,
+        accountScope: scope,
+      ),
     );
     _database.ensureCurrent(scope);
+    final saved = PrayerPreferences.fromJson(
+      result,
+      method: method,
+    ).copyWith(syncPending: false);
+    await _persistProfile(method, saved, scope);
+    return PrayerProfileSelection(
+      method: method,
+      preferences: saved,
+      offline: false,
+    );
   }
 }
+
+String _preferenceCacheKey(PrayerPreferences value) => <String>[
+  value.asrMethod,
+  value.highLatitudeRule,
+  value.polarResolution,
+  for (final code in _prayerCodes) '${value.adjustments[code] ?? 0}',
+].join(':');
 
 const _prayerCodes = <String>[
   'fajr',

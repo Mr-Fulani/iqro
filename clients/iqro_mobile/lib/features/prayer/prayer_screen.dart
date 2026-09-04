@@ -21,10 +21,15 @@ class PrayerScreen extends ConsumerStatefulWidget {
 class _PrayerScreenState extends ConsumerState<PrayerScreen>
     with WidgetsBindingObserver {
   PrayerSchedule? _schedule;
+  PrayerPreferences? _preferences;
   Object? _error;
   String? _selectedMethodCode;
   String? _ownerId;
+  String? _profileOwnerId;
   var _loading = false;
+  var _profileLoading = false;
+  var _savingSettings = false;
+  var _profileOffline = false;
   var _retryLocationOnResume = false;
 
   @override
@@ -56,8 +61,12 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     if (ownerId != _ownerId) {
       _ownerId = ownerId;
       _schedule = null;
+      _preferences = null;
       _selectedMethodCode = null;
       _error = null;
+      _profileOwnerId = null;
+      _profileLoading = false;
+      _profileOffline = false;
       if (ownerId != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _ownerId == ownerId) _loadAccountState(ownerId);
@@ -70,6 +79,17 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         .where((method) => method.code == _selectedMethodCode)
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
+    if (ownerId != null &&
+        methodItems.isNotEmpty &&
+        _profileOwnerId != ownerId &&
+        !_profileLoading) {
+      _profileLoading = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _ownerId == ownerId) {
+          _loadProfile(ownerId, methodItems);
+        }
+      });
+    }
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.prayer,
@@ -161,17 +181,70 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                             .accountScope
                             .current;
                         if (scope == null || scope.userId != _ownerId) return;
-                        setState(() => _selectedMethodCode = code);
-                        try {
-                          await ref
-                              .read(prayerRepositoryProvider)
-                              .selectMethod(code, accountScope: scope);
-                        } on AccountScopeChanged {
-                          // The newly mounted account owns its own selection.
-                        }
+                        final method = methodItems
+                            .where((item) => item.code == code)
+                            .firstOrNull;
+                        if (method == null) return;
+                        final preferences =
+                            (_preferences ??
+                                    PrayerPreferences.defaultsFor(method))
+                                .forMethod(method);
+                        setState(() {
+                          _selectedMethodCode = code;
+                          _preferences = preferences;
+                        });
+                        await _savePreferences(
+                          method,
+                          preferences,
+                          scope: scope,
+                        );
                       },
               ),
             ),
+            const SizedBox(height: 10),
+            IqroCard(
+              onTap: selectedMethod == null || _savingSettings
+                  ? null
+                  : () => _openCalculationSettings(selectedMethod),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.tune),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          context.l10n.prayerCalculationSettings,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _preferencesSummary(context),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_savingSettings)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
+            ),
+            if (_profileOffline) ...<Widget>[
+              const SizedBox(height: 10),
+              IqroStatusBanner(
+                icon: Icons.cloud_off_outlined,
+                title: context.l10n.savedOnDevice,
+                message: context.l10n.prayerSettingsSyncPending,
+              ),
+            ],
             const SizedBox(height: 14),
             if (_schedule == null)
               IqroCard(
@@ -322,6 +395,112 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     });
   }
 
+  Future<void> _loadProfile(
+    String expectedOwnerId,
+    List<PrayerMethod> methods,
+  ) async {
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || scope.userId != expectedOwnerId) return;
+    try {
+      final profile = await ref
+          .read(prayerRepositoryProvider)
+          .loadProfile(methods: methods, accountScope: scope);
+      database.ensureCurrent(scope);
+      if (!mounted || _ownerId != expectedOwnerId) return;
+      setState(() {
+        _selectedMethodCode = profile.method.code;
+        _preferences = profile.preferences;
+        _profileOffline = profile.offline;
+        _profileOwnerId = expectedOwnerId;
+        _profileLoading = false;
+      });
+      final schedule = await ref
+          .read(prayerRepositoryProvider)
+          .calculateForStoredLocation(
+            method: profile.method,
+            accountScope: scope,
+          );
+      database.ensureCurrent(scope);
+      if (!mounted || _ownerId != expectedOwnerId || schedule == null) return;
+      setState(() => _schedule = schedule);
+      ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
+    } on AccountScopeChanged {
+      // A fresh screen instance loads the new account profile.
+    } on Object catch (error) {
+      if (!mounted || _ownerId != expectedOwnerId) return;
+      setState(() {
+        _profileLoading = false;
+        _profileOwnerId = expectedOwnerId;
+        _error = error;
+      });
+    }
+  }
+
+  Future<void> _openCalculationSettings(PrayerMethod method) async {
+    final current = _preferences ?? PrayerPreferences.defaultsFor(method);
+    final result = await showModalBottomSheet<PrayerPreferences>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) =>
+          _PrayerSettingsSheet(method: method, initial: current),
+    );
+    if (result == null || !mounted) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || scope.userId != _ownerId) return;
+    setState(() => _preferences = result);
+    await _savePreferences(method, result, scope: scope);
+  }
+
+  Future<void> _savePreferences(
+    PrayerMethod method,
+    PrayerPreferences preferences, {
+    required AccountScopeSnapshot scope,
+  }) async {
+    if (_savingSettings) return;
+    setState(() {
+      _savingSettings = true;
+      _error = null;
+    });
+    final database = ref.read(localDatabaseProvider);
+    try {
+      final saved = await ref
+          .read(prayerRepositoryProvider)
+          .saveProfile(
+            method: method,
+            preferences: preferences,
+            accountScope: scope,
+          );
+      database.ensureCurrent(scope);
+      if (!mounted || _ownerId != scope.userId) return;
+      setState(() {
+        _selectedMethodCode = saved.method.code;
+        _preferences = saved.preferences;
+        _profileOffline = saved.offline;
+      });
+      final schedule = await ref
+          .read(prayerRepositoryProvider)
+          .calculateForStoredLocation(method: method, accountScope: scope);
+      database.ensureCurrent(scope);
+      if (mounted && _ownerId == scope.userId && schedule != null) {
+        setState(() => _schedule = schedule);
+        ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
+        await ref.read(reminderProvider.notifier).replan();
+      }
+    } on AccountScopeChanged {
+      // The next screen instance owns the active account profile.
+    } on Object catch (error) {
+      if (mounted && database.accountScope.isCurrent(scope)) {
+        setState(() => _error = error);
+      }
+    } finally {
+      if (mounted && database.accountScope.isCurrent(scope)) {
+        setState(() => _savingSettings = false);
+      }
+    }
+  }
+
   Future<void> _calculate() async {
     final expectedOwnerId = _ownerId;
     final database = ref.read(localDatabaseProvider);
@@ -414,7 +593,250 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     'maghrib' => context.l10n.maghrib,
     _ => context.l10n.isha,
   };
+
+  String _preferencesSummary(BuildContext context) {
+    final preferences = _preferences;
+    if (preferences == null) return context.l10n.prayerSettingsDefault;
+    final adjusted = preferences.adjustments.values
+        .where((value) => value != 0)
+        .length;
+    final asr = preferences.hanafiAsr
+        ? context.l10n.asrHanafi
+        : context.l10n.asrStandard;
+    return adjusted == 0
+        ? asr
+        : '$asr · $adjusted ${context.l10n.prayerAdjustedTimes}';
+  }
 }
+
+class _PrayerSettingsSheet extends StatefulWidget {
+  const _PrayerSettingsSheet({required this.method, required this.initial});
+
+  final PrayerMethod method;
+  final PrayerPreferences initial;
+
+  @override
+  State<_PrayerSettingsSheet> createState() => _PrayerSettingsSheetState();
+}
+
+class _PrayerSettingsSheetState extends State<_PrayerSettingsSheet> {
+  late String _asrMethod = widget.initial.asrMethod;
+  late String _highLatitudeRule = widget.initial.highLatitudeRule;
+  late String _polarResolution = widget.initial.polarResolution;
+  late Map<String, int> _adjustments = Map<String, int>.from(
+    widget.initial.adjustments,
+  );
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      12,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            context.l10n.prayerCalculationSettings,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 20),
+          IqroSectionHeader(title: context.l10n.asrCalculation),
+          const SizedBox(height: 10),
+          SegmentedButton<String>(
+            segments: <ButtonSegment<String>>[
+              ButtonSegment<String>(
+                value: 'standard',
+                label: Text(context.l10n.asrStandard),
+              ),
+              ButtonSegment<String>(
+                value: 'hanafi',
+                label: Text(context.l10n.asrHanafi),
+              ),
+            ],
+            selected: <String>{_asrMethod},
+            onSelectionChanged: (values) {
+              setState(() => _asrMethod = values.single);
+            },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _asrMethod == 'hanafi'
+                ? context.l10n.asrHanafiHint
+                : context.l10n.asrStandardHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 24),
+          IqroSectionHeader(title: context.l10n.manualPrayerAdjustments),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.manualPrayerAdjustmentsHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 10),
+          for (final code in _adjustmentCodes)
+            _AdjustmentRow(
+              label: _prayerName(context, code),
+              value: _adjustments[code] ?? 0,
+              onChanged: (value) => setState(() {
+                _adjustments = <String, int>{
+                  ..._adjustments,
+                  code: value.clamp(-120, 120),
+                };
+              }),
+            ),
+          const SizedBox(height: 20),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            title: Text(context.l10n.advancedCalculationRules),
+            children: <Widget>[
+              DropdownButtonFormField<String>(
+                initialValue: _highLatitudeRule,
+                decoration: InputDecoration(
+                  labelText: context.l10n.highLatitudeRule,
+                ),
+                items: widget.method.supportedHighLatitudeRules
+                    .map(
+                      (value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(_highLatitudeName(context, value)),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _highLatitudeRule = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _polarResolution,
+                decoration: InputDecoration(
+                  labelText: context.l10n.polarResolution,
+                ),
+                items: widget.method.supportedPolarResolutions
+                    .map(
+                      (value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(_polarName(context, value)),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _polarResolution = value);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(
+                widget.initial.copyWith(
+                  asrMethod: _asrMethod,
+                  highLatitudeRule: _highLatitudeRule,
+                  polarResolution: _polarResolution,
+                  adjustments: _adjustments,
+                ),
+              ),
+              child: Text(context.l10n.save),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AdjustmentRow extends StatelessWidget {
+  const _AdjustmentRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    title: Text(label),
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          tooltip: context.l10n.decrease,
+          onPressed: value <= -120 ? null : () => onChanged(value - 1),
+          icon: const Icon(Icons.remove_circle_outline),
+        ),
+        SizedBox(
+          width: 76,
+          child: Text(
+            '${value > 0 ? '+' : ''}$value ${context.l10n.minutes}',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
+        IconButton(
+          tooltip: context.l10n.increase,
+          onPressed: value >= 120 ? null : () => onChanged(value + 1),
+          icon: const Icon(Icons.add_circle_outline),
+        ),
+      ],
+    ),
+  );
+}
+
+String _prayerName(BuildContext context, String code) => switch (code) {
+  'fajr' => context.l10n.fajr,
+  'sunrise' => context.l10n.sunrise,
+  'dhuhr' => context.l10n.dhuhr,
+  'asr' => context.l10n.asr,
+  'maghrib' => context.l10n.maghrib,
+  _ => context.l10n.isha,
+};
+
+String _highLatitudeName(BuildContext context, String value) => switch (value) {
+  'seventh_of_night' => context.l10n.seventhOfNight,
+  'twilight_angle' => context.l10n.twilightAngle,
+  _ => context.l10n.middleOfNight,
+};
+
+String _polarName(BuildContext context, String value) => switch (value) {
+  'aqrab_balad' => context.l10n.nearestLatitude,
+  'aqrab_yaum' => context.l10n.nearestDay,
+  _ => context.l10n.noPolarSubstitution,
+};
+
+const _adjustmentCodes = <String>[
+  'fajr',
+  'sunrise',
+  'dhuhr',
+  'asr',
+  'maghrib',
+  'isha',
+];
 
 class _PrayerErrorBanner extends StatelessWidget {
   const _PrayerErrorBanner({
