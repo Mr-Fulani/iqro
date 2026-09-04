@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../core/audio/audio_controller.dart';
 import '../core/auth/account_scope.dart';
 import '../core/design_system/iqro_widgets.dart';
+import '../core/design_system/iqro_lazy_indexed_stack.dart';
 import '../core/storage/local_database.dart';
 import '../features/audio/audio_screen.dart';
 import '../features/audio/reciter_portraits.dart';
@@ -43,14 +44,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
+      body: IqroLazyIndexedStack(
         index: _index,
-        children: const <Widget>[
-          HomeScreen(),
-          QuranScreen(),
-          PlanScreen(),
-          AudioScreen(),
-          MoreScreen(),
+        builders: <WidgetBuilder>[
+          (_) => const HomeScreen(),
+          (_) => const QuranScreen(),
+          (_) => const PlanScreen(),
+          (_) => const AudioScreen(),
+          (_) => const MoreScreen(),
         ],
       ),
       bottomNavigationBar: Material(
