@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
-import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'audio_models.dart';
@@ -27,22 +26,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   String? _selectedRecitationId;
   var _loadingTrack = false;
   var _refreshingReciters = false;
-  String? _ownerId;
   var _playRequest = 0;
   var _refreshRequest = 0;
 
   @override
   Widget build(BuildContext context) {
-    final ownerId = ref.watch(sessionProvider).valueOrNull?.userId;
-    if (_ownerId != ownerId) {
-      _ownerId = ownerId;
-      _playRequest += 1;
-      _refreshRequest += 1;
-      _loadingTrack = false;
-      _refreshingReciters = false;
-      _selected = null;
-      _selectedRecitationId = null;
-    }
     final reciters = ref.watch(recitersProvider);
     final player = ref.watch(audioControllerProvider);
     final locale = Localizations.localeOf(context).languageCode;
@@ -319,9 +307,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
   Future<void> _refreshReciters() async {
     if (_refreshingReciters) return;
-    final database = ref.read(localDatabaseProvider);
-    final scope = database.accountScope.current;
-    if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final activeId = ref.read(audioControllerProvider).reciter?.id;
     final request = ++_refreshRequest;
@@ -330,7 +315,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       final items = await ref
           .read(audioRepositoryProvider)
           .reciters(forceRefresh: true);
-      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+      if (!_isCurrentAudioRequest(controller, request, refresh: true)) {
         return;
       }
 
@@ -353,17 +338,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
       ref.invalidate(recitersProvider);
       await ref.read(recitersProvider.future);
-      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+      if (!_isCurrentAudioRequest(controller, request, refresh: true)) {
         return;
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(context.l10n.recitersUpdated)));
-    } on AccountScopeChanged {
-      return;
     } on Object {
-      if (!_isCurrentAudioRequest(scope, controller, request, refresh: true)) {
+      if (!_isCurrentAudioRequest(controller, request, refresh: true)) {
         return;
       }
       if (!mounted) return;
@@ -381,9 +364,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
   Future<void> _playSelected() async {
     if (_loadingTrack) return;
-    final database = ref.read(localDatabaseProvider);
-    final scope = database.accountScope.current;
-    if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final repository = ref.read(audioRepositoryProvider);
     final selectedPersonKey = _selected;
@@ -396,7 +376,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     setState(() => _loadingTrack = true);
     try {
       final items = await repository.reciters();
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(controller, request)) return;
       final people = groupRecitersByPerson(items);
       final person =
           people.where((item) => item.key == selectedPersonKey).firstOrNull ??
@@ -405,7 +385,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       final variants = await repository.recitationsForReciters(
         person.sources.map((item) => item.id),
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(controller, request)) return;
       final recitation = preferredRecitation(
         variants,
         preferredId: selectedRecitationId ?? preferredRecitationId,
@@ -421,13 +401,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         recitationId: recitation.id,
         surah: 1,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(controller, request)) return;
       await controller.loadPlayback(
         playback: playback,
         reciter: person.portraitSource,
         surahName: surahName,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(controller, request)) return;
       _selectedRecitationId = recitation.id;
       unawaited(
         ref
@@ -436,10 +416,8 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       );
       if (!mounted) return;
       context.push('/player');
-    } on AccountScopeChanged {
-      return;
     } on Object {
-      if (_isCurrentAudioRequest(scope, controller, request)) {
+      if (_isCurrentAudioRequest(controller, request)) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -456,14 +434,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     ReciterPerson person, {
     required String? activePersonKey,
   }) async {
-    final database = ref.read(localDatabaseProvider);
-    final scope = database.accountScope.current;
-    if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final request = ++_playRequest;
     if (activePersonKey != null && activePersonKey != person.key) {
       await controller.stop();
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(controller, request)) return;
     }
     if (!mounted) return;
     setState(() {
@@ -472,19 +447,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     });
   }
 
-  bool _sessionMatches(AccountScopeSnapshot scope) =>
-      ref.read(sessionProvider).valueOrNull?.userId == scope.userId;
-
   bool _isCurrentAudioRequest(
-    AccountScopeSnapshot scope,
     AudioController controller,
     int request, {
     bool refresh = false,
   }) {
     return mounted &&
         request == (refresh ? _refreshRequest : _playRequest) &&
-        _sessionMatches(scope) &&
-        ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
         identical(ref.read(audioControllerProvider.notifier), controller);
   }
 }

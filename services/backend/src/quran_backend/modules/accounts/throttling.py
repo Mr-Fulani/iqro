@@ -24,6 +24,10 @@ class GuestBootstrapIPBurstThrottle(_IPBurstThrottle):
     scope = "guest_bootstrap_ip_burst"
 
 
+class DeviceRecoveryIPBurstThrottle(_IPBurstThrottle):
+    scope = "device_recovery_ip_burst"
+
+
 class RefreshTokenIPBurstThrottle(_IPBurstThrottle):
     scope = "token_refresh_ip_burst"
 
@@ -54,6 +58,29 @@ class GuestBootstrapInstallationThrottle(AtomicFixedWindowRateThrottle):
         identity = _keyed_cache_identity(
             setting_name="QURAN_GUEST_CREDENTIAL_HASH_KEY",
             namespace="guest-bootstrap",
+            value=f"{installation_identity}\x00{credential}",
+        )
+        return self.cache_format % {"scope": self.scope, "ident": identity}
+
+
+class DeviceRecoveryInstallationThrottle(AtomicFixedWindowRateThrottle):
+    """Limit recovery attempts by the complete installation proof."""
+
+    scope = "device_recovery_installation"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        data = request.data
+        installation_id = data.get("installation_id")
+        credential = data.get("installation_credential")
+        if not isinstance(installation_id, str) or not isinstance(credential, str):
+            return None
+        try:
+            installation_identity = str(UUID(installation_id))
+        except ValueError:
+            installation_identity = installation_id
+        identity = _keyed_cache_identity(
+            setting_name="QURAN_GUEST_CREDENTIAL_HASH_KEY",
+            namespace="device-recovery",
             value=f"{installation_identity}\x00{credential}",
         )
         return self.cache_format % {"scope": self.scope, "ident": identity}
@@ -136,6 +163,13 @@ class GuestBootstrapThrottle(_ShortCircuitThrottle):
     throttle_classes = (
         GuestBootstrapIPBurstThrottle,
         GuestBootstrapInstallationThrottle,
+    )
+
+
+class DeviceRecoveryThrottle(_ShortCircuitThrottle):
+    throttle_classes = (
+        DeviceRecoveryIPBurstThrottle,
+        DeviceRecoveryInstallationThrottle,
     )
 
 

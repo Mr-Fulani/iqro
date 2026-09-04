@@ -33,6 +33,8 @@ from quran_backend.modules.accounts.serializers import (
     CurrentSessionResponseSerializer,
     CurrentSessionUpdateSerializer,
     DeviceInventorySerializer,
+    DeviceRecoveryRequestSerializer,
+    DeviceRecoveryResponseSerializer,
     EmailChallengeStartRequestSerializer,
     EmailChallengeStartResponseSerializer,
     EmailChallengeVerifyRequestSerializer,
@@ -48,6 +50,7 @@ from quran_backend.modules.accounts.services import (
     IssuedCredentials,
     access_token_ttl_seconds,
     bootstrap_guest,
+    recover_device,
     refresh_token_ttl_seconds,
     revoke_access_session,
     revoke_all_user_sessions,
@@ -55,6 +58,7 @@ from quran_backend.modules.accounts.services import (
     update_session_locale,
 )
 from quran_backend.modules.accounts.throttling import (
+    DeviceRecoveryThrottle,
     EmailStartThrottle,
     EmailVerifyThrottle,
     GuestBootstrapThrottle,
@@ -95,6 +99,26 @@ class GuestBootstrapView(PrivateNoStoreResponseMixin, APIView):
         serializer = GuestBootstrapRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = bootstrap_guest(**serializer.validated_data)
+        return Response(_guest_response(result), status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["authentication"])
+class DeviceRecoveryView(PrivateNoStoreResponseMixin, APIView):
+    authentication_classes = ()
+    permission_classes = (AllowAny,)
+    throttle_classes = (DeviceRecoveryThrottle,)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise AuthRateLimitExceeded(wait)
+
+    @extend_schema(
+        request=DeviceRecoveryRequestSerializer,
+        responses={status.HTTP_200_OK: DeviceRecoveryResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        serializer = DeviceRecoveryRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = recover_device(**serializer.validated_data)
         return Response(_guest_response(result), status=status.HTTP_200_OK)
 
 

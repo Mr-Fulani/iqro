@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from quran_backend.modules.accounts.exceptions import (
     AccessTokenInvalid,
+    DeviceRecoveryUnavailable,
     GuestBootstrapUnavailable,
     RefreshTokenInvalid,
     RefreshTokenReused,
@@ -140,6 +141,78 @@ def bootstrap_guest(
             or user.status != UserStatus.GUEST
         ):
             raise GuestBootstrapUnavailable
+
+        device.locale = locale
+        device.app_version = app_version
+        device.last_seen_at = now
+        device.bootstrap_generation += 1
+        device.save(
+            update_fields=[
+                "locale",
+                "app_version",
+                "last_seen_at",
+                "bootstrap_generation",
+                "updated_at",
+            ]
+        )
+        if user.preferred_locale != locale:
+            user.preferred_locale = locale
+            user.save(update_fields=["preferred_locale", "updated_at"])
+
+        _revoke_device_sessions(device=device, revoked_at=now)
+        session = RefreshSession.objects.create(
+            user=user,
+            device=device,
+            expires_at=now + timedelta(seconds=refresh_token_ttl_seconds()),
+        )
+        credentials = _issue_credentials(session=session, now=now)
+
+    return GuestBootstrapResult(user=user, device=device, credentials=credentials)
+
+
+def recover_device(
+    *,
+    installation_id: UUID,
+    installation_credential: str,
+    platform: str,
+    locale: str,
+    app_version: str,
+) -> GuestBootstrapResult:
+    """Replace expired credentials for a previously trusted installation.
+
+    The installation credential is a high-entropy secret stored in the
+    platform keystore. It remains bound to one device and is independently
+    revocable, so recovery does not require weakening guest bootstrap rules or
+    exposing whether an installation identifier exists.
+    """
+
+    installation_id_hash = hash_installation_id(installation_id)
+    credential_hash = hash_installation_credential(installation_credential)
+    now = timezone.now()
+
+    with transaction.atomic():
+        device = (
+            Device.objects.select_for_update()
+            .select_related("user")
+            .filter(installation_id_hash=installation_id_hash)
+            .first()
+        )
+        if device is None:
+            raise DeviceRecoveryUnavailable
+
+        user = device.user
+        if (
+            not device.installation_credential_hash
+            or not secrets.compare_digest(
+                device.installation_credential_hash,
+                credential_hash,
+            )
+            or device.revoked_at is not None
+            or device.platform != platform
+            or not user.is_active
+            or user.status not in REFRESH_USER_STATUSES
+        ):
+            raise DeviceRecoveryUnavailable
 
         device.locale = locale
         device.app_version = app_version

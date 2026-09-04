@@ -491,6 +491,14 @@ REST_FRAMEWORK: dict[str, Any] = {
             "QURAN_GUEST_BOOTSTRAP_IP_BURST_RATE",
             "1200/minute",
         ),
+        "device_recovery_installation": os.getenv(
+            "QURAN_DEVICE_RECOVERY_INSTALLATION_RATE",
+            "12/minute",
+        ),
+        "device_recovery_ip_burst": os.getenv(
+            "QURAN_DEVICE_RECOVERY_IP_BURST_RATE",
+            "1200/minute",
+        ),
         "token_refresh_session": os.getenv(
             "QURAN_TOKEN_REFRESH_SESSION_RATE",
             "60/minute",

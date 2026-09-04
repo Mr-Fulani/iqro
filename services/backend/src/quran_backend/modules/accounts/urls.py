@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.urls import path
 
 from quran_backend.modules.accounts.views import (
+    DeviceRecoveryView,
     EmailChallengeStartView,
     EmailChallengeVerifyView,
     GuestBootstrapView,
@@ -15,6 +16,7 @@ app_name = "accounts"
 
 urlpatterns = [
     path("guest", GuestBootstrapView.as_view(), name="guest-bootstrap"),
+    path("device/recover", DeviceRecoveryView.as_view(), name="device-recovery"),
     path("email/start", EmailChallengeStartView.as_view(), name="email-start"),
     path("email/verify", EmailChallengeVerifyView.as_view(), name="email-verify"),
     path("token/refresh", RefreshTokenView.as_view(), name="token-refresh"),

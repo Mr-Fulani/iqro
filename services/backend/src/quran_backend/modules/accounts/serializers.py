@@ -75,6 +75,14 @@ class GuestBootstrapResponseSerializer(TokenPairResponseSerializer):
     device = DeviceSummarySerializer()
 
 
+class DeviceRecoveryRequestSerializer(GuestBootstrapRequestSerializer):
+    pass
+
+
+class DeviceRecoveryResponseSerializer(GuestBootstrapResponseSerializer):
+    pass
+
+
 class EmailChallengeStartRequestSerializer(serializers.Serializer[dict[str, str]]):
     email = serializers.EmailField(max_length=254)
 

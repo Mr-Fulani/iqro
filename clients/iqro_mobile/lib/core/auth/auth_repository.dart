@@ -192,10 +192,15 @@ class AuthRepository {
     if (cached?.canRefresh ?? false) {
       try {
         return await refresh();
-      } on ApiException {
-        // A rejected family is replaced through the stable installation proof.
+      } on ApiException catch (error) {
+        if (error.statusCode != 401) rethrow;
+        // An expired/revoked token family does not invalidate the device proof
+        // or locally owned data. Recover the same device before considering a
+        // new guest account.
       }
     }
+    final recovered = await _recoverDeviceSession(locale: locale);
+    if (recovered != null) return recovered;
     return bootstrapGuest(locale: locale);
   }
 
@@ -249,6 +254,48 @@ class AuthRepository {
     }
   }
 
+  Future<AuthSession?> _recoverDeviceSession({required String locale}) async {
+    if (!_startupResolved) await loadCachedSession();
+    if (_verificationGatePending) {
+      final recovered = await _retryPendingVerificationGate();
+      if (recovered != null && recovered.accessIsFresh) return recovered;
+    }
+    final stamp = _stamp();
+    final identity = await _storedInstallationIdentity(expected: stamp);
+    if (identity == null) return null;
+    final package = await PackageInfo.fromPlatform();
+    _ensureMatches(stamp);
+    try {
+      final response = await _dio.post<Object?>(
+        '/auth/device/recover',
+        data: <String, Object?>{
+          'installation_id': identity.$1,
+          'installation_credential': identity.$2,
+          'platform': 'android',
+          'locale': locale,
+          'app_version': _safeVersion(package.version),
+        },
+      );
+      final next = AuthSession.fromApi(
+        _jsonMap(response.data),
+        previous: stamp.session,
+      );
+      if (stamp.session != null &&
+          next.bootstrapGeneration < stamp.session!.bootstrapGeneration) {
+        return stamp.session;
+      }
+      await _persist(next, expected: stamp);
+      return next;
+    } on DioException catch (error) {
+      _ensureMatches(stamp);
+      final mapped = ApiException.fromDio(error);
+      // A missing endpoint keeps older servers compatible; an unknown or
+      // revoked installation may still legitimately bootstrap as a new guest.
+      if (mapped.statusCode == 403 || mapped.statusCode == 404) return null;
+      throw mapped;
+    }
+  }
+
   Future<AuthSession> refresh() async {
     await loadCachedSession();
     if (_verificationGatePending) await _retryPendingVerificationGate();
@@ -295,37 +342,9 @@ class AuthRepository {
       return next;
     } on DioException catch (error) {
       _ensureMatches(stamp);
-      if (error.response?.statusCode == 401) {
-        await _serializeTransition(() async {
-          if (_matches(stamp)) {
-            _session = null;
-            accountScope.deactivate();
-            _startupResolved = true;
-            _verificationGatePending = false;
-            _logoutGatePending = true;
-            _publishSession();
-            try {
-              await _writeLogoutTombstone(active: true);
-            } on Object {
-              // A neutralized canonical session is the fallback durable fence.
-            }
-            await _neutralizeSecureValue(_sessionKey, fallback: '{}');
-            await _neutralizeSecureValue(_pendingHandoffKey, fallback: '{}');
-            await _neutralizeSecureValue(
-              _pendingVerificationKey,
-              fallback: '{}',
-            );
-            await _neutralizeSecureValue(
-              _installationIdKey,
-              fallback: _uuid.v4(),
-            );
-            await _neutralizeSecureValue(
-              _installationCredentialKey,
-              fallback: _newInstallationCredential(),
-            );
-          }
-        });
-      }
+      // A rejected refresh family is not an explicit logout. Keep the cached
+      // account and installation proof available for offline use and device
+      // recovery; only clearSession() may create a durable logout fence.
       throw ApiException.fromDio(error);
     }
   }
@@ -583,6 +602,18 @@ class AuthRepository {
       await _storage.write(key: _installationCredentialKey, value: credential);
     }
     _ensureMatches(expected);
+    return (installationId, credential);
+  });
+
+  Future<(String, String)?> _storedInstallationIdentity({
+    required _AuthTransitionStamp expected,
+  }) => _serializeTransition(() async {
+    _ensureMatches(expected);
+    if (_logoutGatePending) return null;
+    final installationId = await _storage.read(key: _installationIdKey);
+    final credential = await _storage.read(key: _installationCredentialKey);
+    _ensureMatches(expected);
+    if (installationId == null || credential == null) return null;
     return (installationId, credential);
   });
 

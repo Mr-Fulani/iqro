@@ -93,6 +93,80 @@ def test_guest_bootstrap_accepts_turkish_locale(api_client: APIClient) -> None:
     assert Device.objects.get().locale == "tr"
 
 
+def test_device_recovery_restores_registered_account_and_rotates_session(
+    api_client: APIClient,
+) -> None:
+    payload = _payload(locale="en", app_version="1.0.0")
+    original = _bootstrap(api_client, payload)
+    original_session = RefreshSession.objects.get()
+    user = User.objects.get(id=original["user"]["id"])
+    user.email = "reader@example.test"
+    user.status = "active"
+    user.save(update_fields=["email", "status", "updated_at"])
+
+    response = api_client.post(
+        "/device/recover",
+        {**payload, "locale": "ru", "app_version": "1.1.0"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    recovered = response.json()
+    assert recovered["user"]["id"] == original["user"]["id"]
+    assert recovered["user"]["status"] == "active"
+    assert recovered["user"]["email"] == "reader@example.test"
+    assert recovered["device"]["id"] == original["device"]["id"]
+    assert recovered["device"]["bootstrap_generation"] == 2
+    assert recovered["refresh_token"] != original["refresh_token"]
+    assert response["Cache-Control"] == "private, no-store"
+    original_session.refresh_from_db()
+    assert original_session.revoked_at is not None
+    device = Device.objects.get()
+    assert device.locale == "ru"
+    assert device.app_version == "1.1.0"
+
+
+def test_device_recovery_rejects_wrong_proof_without_revoking_session(
+    api_client: APIClient,
+) -> None:
+    payload = _payload(installation_credential="A" * 43)
+    original = _bootstrap(api_client, payload)
+
+    response = api_client.post(
+        "/device/recover",
+        {**payload, "installation_credential": "B" * 43},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "device_recovery_unavailable"
+    assert RefreshSession.objects.get().revoked_at is None
+    assert original["access_token"]
+
+
+def test_device_recovery_does_not_create_an_unknown_installation(
+    api_client: APIClient,
+) -> None:
+    response = api_client.post("/device/recover", _payload(), format="json")
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "device_recovery_unavailable"
+    assert User.objects.count() == 0
+    assert Device.objects.count() == 0
+
+
+def test_device_recovery_rejects_revoked_device(api_client: APIClient) -> None:
+    payload = _payload()
+    _bootstrap(api_client, payload)
+    Device.objects.update(revoked_at=timezone.now())
+
+    response = api_client.post("/device/recover", payload, format="json")
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "device_recovery_unavailable"
+    assert RefreshSession.objects.get().revoked_at is None
+
+
 def test_access_authentication_resolves_bound_device_and_session(api_client: APIClient) -> None:
     auth_data = _bootstrap(api_client, _payload())
     factory = APIRequestFactory()

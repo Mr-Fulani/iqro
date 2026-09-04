@@ -39,6 +39,20 @@ stored locally. This prevents a delayed response from replacing a newer token fa
 credentials that the server has already revoked. The generation and token update must be
 one atomic secure-storage transaction.
 
+### Restore a trusted device session
+
+`POST /api/v1/auth/device/recover` accepts the same installation proof and
+device metadata as guest bootstrap. It replaces expired or revoked token
+families for the device's existing guest or registered account. Recovery never
+creates users or devices, requires an exact high-entropy installation
+credential, rejects revoked devices and suspended/deleted accounts, and returns
+the same user/device plus token-pair shape as guest bootstrap.
+
+Clients should try refresh first, then device recovery, and only then guest
+bootstrap. A refresh rejection is not an explicit logout: the installation
+proof and account-scoped offline data must be retained. Explicit logout remains
+the only flow that discards the local installation proof.
+
 Access tokens live for 15 minutes by default. Refresh tokens live for at most 30 days,
 are bound to one device/session family, and rotate on every use. Replaying an already-used
 refresh token revokes the whole family. This strict policy intentionally treats concurrent

@@ -958,49 +958,88 @@ void main() {
     },
   );
 
+  test('refresh 401 preserves the local owner and device proof', () async {
+    final original = jsonEncode(_storedSession('account-a').toJson());
+    final storage = _MemorySecureStorage(<String, String>{
+      'session.v1': original,
+      'installation_id.v1': 'installation-a',
+      'installation_credential.v1': 'credential-a',
+    });
+    storage.alwaysFailDeleteKeys.add('session.v1');
+    storage.alwaysFailWriteKeys.add('session.v1');
+    final adapter = _ScriptedAdapter((request) {
+      if (request.path == '/auth/token/refresh') {
+        return _jsonResponse(const <String, Object?>{
+          'code': 'refresh_rejected',
+        }, status: 401);
+      }
+      throw StateError('Unexpected request ${request.path}');
+    });
+    final repository = _repository(storage, adapter);
+    await repository.loadCachedSession();
+
+    await expectLater(
+      repository.refresh(),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          401,
+        ),
+      ),
+    );
+
+    expect(repository.current?.userId, 'account-a');
+    expect(repository.accountScope.current?.userId, 'account-a');
+    expect(storage.values['session.v1'], original);
+    expect(storage.values['logout_tombstone.v1'], isNull);
+    expect(storage.values['installation_id.v1'], 'installation-a');
+    expect(storage.values['installation_credential.v1'], 'credential-a');
+    final restarted = _repository(storage, adapter);
+    expect((await restarted.loadCachedSession())?.userId, 'account-a');
+    expect(restarted.accountScope.current?.userId, 'account-a');
+  });
+
   test(
-    'refresh 401 deactivates before storage cleanup and cannot resurrect',
+    'ensureSession recovers the same device after refresh rejection',
     () async {
-      final original = jsonEncode(_storedSession('account-a').toJson());
       final storage = _MemorySecureStorage(<String, String>{
-        'session.v1': original,
+        'session.v1': jsonEncode(
+          _storedSession(
+            'account-a',
+            accessExpiresAt: DateTime.utc(2020),
+            refreshExpiresAt: DateTime.utc(2036),
+          ).toJson(),
+        ),
         'installation_id.v1': 'installation-a',
         'installation_credential.v1': 'credential-a',
       });
-      storage.alwaysFailDeleteKeys.add('session.v1');
-      storage.alwaysFailWriteKeys.add('session.v1');
+      final paths = <String>[];
+      late Map<String, Object?> recoveryRequest;
       final adapter = _ScriptedAdapter((request) {
+        paths.add(request.path);
         if (request.path == '/auth/token/refresh') {
           return _jsonResponse(const <String, Object?>{
-            'code': 'refresh_rejected',
+            'code': 'refresh_token_invalid',
           }, status: 401);
+        }
+        if (request.path == '/auth/device/recover') {
+          recoveryRequest = Map<String, Object?>.from(request.data! as Map);
+          return _jsonResponse(_apiSession('account-a', status: 'active'));
         }
         throw StateError('Unexpected request ${request.path}');
       });
       final repository = _repository(storage, adapter);
-      await repository.loadCachedSession();
 
-      await expectLater(
-        repository.refresh(),
-        throwsA(
-          isA<ApiException>().having(
-            (error) => error.statusCode,
-            'statusCode',
-            401,
-          ),
-        ),
-      );
+      final session = await repository.ensureSession(locale: 'ru');
 
-      expect(repository.current, isNull);
-      expect(repository.accountScope.current, isNull);
-      expect(storage.values['session.v1'], original);
-      expect(
-        (jsonDecode(storage.values['logout_tombstone.v1']!) as Map)['active'],
-        isTrue,
-      );
-      final restarted = _repository(storage, adapter);
-      expect(await restarted.loadCachedSession(), isNull);
-      expect(restarted.accountScope.current, isNull);
+      expect(session.userId, 'account-a');
+      expect(session.userStatus, 'active');
+      expect(paths, <String>['/auth/token/refresh', '/auth/device/recover']);
+      expect(recoveryRequest['installation_id'], 'installation-a');
+      expect(recoveryRequest['installation_credential'], 'credential-a');
+      expect(repository.accountScope.current?.userId, 'account-a');
+      expect(storage.values['logout_tombstone.v1'], isNull);
     },
   );
 

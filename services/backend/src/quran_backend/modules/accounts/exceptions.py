@@ -29,6 +29,12 @@ class GuestBootstrapUnavailable(APIException):
     default_code = "guest_bootstrap_unavailable"
 
 
+class DeviceRecoveryUnavailable(APIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "Device session recovery is unavailable."
+    default_code = "device_recovery_unavailable"
+
+
 class AuthRateLimitExceeded(Throttled):
     default_detail = "Too many authentication requests. Retry later."
     default_code = "auth_rate_limited"
