@@ -8,6 +8,38 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'quran_models.dart';
 
+typedef MushafPageLayout = ({
+  double width,
+  double height,
+  double horizontalOffset,
+  bool fillsLandscapeWidth,
+});
+
+// The scanned Madani pages include a narrow paper gutter around their frame.
+// In landscape we let that gutter bleed outside the viewport so the readable
+// page reaches both screen edges without changing the scan's aspect ratio.
+const mushafLandscapeBleedFactor = 1.12;
+
+MushafPageLayout calculateMushafPageLayout({
+  required Size viewport,
+  required Size source,
+}) {
+  final viewportWidth = math.max(0, viewport.width).toDouble();
+  final viewportHeight = math.max(0, viewport.height).toDouble();
+  final sourceWidth = math.max(1, source.width).toDouble();
+  final sourceHeight = math.max(1, source.height).toDouble();
+  final fillsLandscapeWidth = viewportWidth > viewportHeight;
+  final scale = fillsLandscapeWidth
+      ? (viewportWidth * mushafLandscapeBleedFactor) / sourceWidth
+      : math.min(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
+  return (
+    width: sourceWidth * scale,
+    height: sourceHeight * scale,
+    horizontalOffset: (viewportWidth - sourceWidth * scale) / 2,
+    fillsLandscapeWidth: fillsLandscapeWidth,
+  );
+}
+
 class NativeMushafPageController {
   ValueChanged<double>? _setZoom;
 
@@ -121,16 +153,15 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
-        final sourceWidth = math.max(1, pageData.imageWidth).toDouble();
-        final sourceHeight = math.max(1, pageData.imageHeight).toDouble();
-        final fittedScale = math.min(
-          constraints.maxWidth / sourceWidth,
-          constraints.maxHeight / sourceHeight,
+        final layout = calculateMushafPageLayout(
+          viewport: Size(constraints.maxWidth, constraints.maxHeight),
+          source: Size(
+            pageData.imageWidth.toDouble(),
+            pageData.imageHeight.toDouble(),
+          ),
         );
-        final fittedWidth = sourceWidth * fittedScale;
-        final fittedHeight = sourceHeight * fittedScale;
         final asset = pageData.bestAssetFor(
-          fittedWidth,
+          layout.width,
           MediaQuery.devicePixelRatioOf(context),
         );
         if (asset == null) {
@@ -152,9 +183,16 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           child: ClipRect(
             child: InteractiveViewer(
               transformationController: _transformationController,
+              constrained: false,
+              alignment: layout.fillsLandscapeWidth
+                  ? Alignment.topCenter
+                  : Alignment.center,
               minScale: 1,
               maxScale: 3,
-              panEnabled: _scale > 1.01,
+              panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
+              panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
+                  ? PanAxis.vertical
+                  : PanAxis.free,
               scaleEnabled: true,
               clipBehavior: Clip.none,
               onInteractionEnd: (_) {
@@ -163,17 +201,18 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                 setState(() => _scale = scale);
                 widget.onScale(scale);
               },
-              child: Center(
+              child: Transform.translate(
+                offset: Offset(layout.horizontalOffset, 0),
                 child: SizedBox(
-                  width: fittedWidth,
-                  height: fittedHeight,
+                  width: layout.width,
+                  height: layout.height,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapUp: (details) {
                       final normalizedX =
-                          details.localPosition.dx / fittedWidth;
+                          details.localPosition.dx / layout.width;
                       final normalizedY =
-                          details.localPosition.dy / fittedHeight;
+                          details.localPosition.dy / layout.height;
                       final ayah = pageData.ayahAt(normalizedX, normalizedY);
                       if (ayah == null) {
                         widget.onBackgroundTap();
