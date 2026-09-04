@@ -36,7 +36,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   Widget build(BuildContext context) {
     final reciters = ref.watch(recitersProvider);
     final recitations = ref.watch(audioRecitationsProvider);
-    final player = ref.watch(audioControllerProvider);
+    final player = ref.watch(
+      audioControllerProvider.select(iqroAudioPresentation),
+    );
     final locale = Localizations.localeOf(context).languageCode;
     final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
     final preferredRecitationId = ref.watch(
@@ -57,7 +59,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   )
                 : const Icon(Icons.refresh_rounded),
           ),
-          if (player.active)
+          if (player.track != null)
             IconButton(
               tooltip: context.l10n.nowPlaying,
               onPressed: () => context.push('/player'),
@@ -67,7 +69,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         ],
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: player.active),
+        padding: iqroRootTabPadding(playerActive: player.track != null),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -84,7 +86,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                         IqroEyebrow(context.l10n.audioTitle, light: true),
                         const SizedBox(height: 6),
                         Text(
-                          player.active
+                          player.track != null
                               ? player.surahName
                               : context.l10n.alFatiha,
                           style: Theme.of(context).textTheme.headlineMedium
@@ -105,7 +107,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                     tooltip: player.playing
                         ? context.l10n.pause
                         : context.l10n.play,
-                    onPressed: player.active
+                    onPressed: player.track != null
                         ? () => ref
                               .read(audioControllerProvider.notifier)
                               .toggle()
@@ -152,7 +154,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   Widget _buildReciterCatalog({
     required List<Reciter> reciters,
     required List<Recitation> recitations,
-    required IqroAudioState player,
+    required IqroAudioPresentation player,
     required String locale,
     required String apiBaseUrl,
     required String? preferredRecitationId,

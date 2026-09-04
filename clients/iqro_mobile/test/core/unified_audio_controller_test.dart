@@ -13,6 +13,28 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   setUpAll(sqfliteFfiInit);
 
+  test('audio presentation ignores timeline-only position updates', () {
+    final current = IqroAudioState(
+      track: _playback.track,
+      reciter: _reciter,
+      surahName: 'Al-Fatiha',
+      playing: true,
+      duration: const Duration(minutes: 1),
+      position: const Duration(seconds: 10),
+    );
+
+    expect(
+      iqroAudioPresentation(
+        current.copyWith(position: const Duration(seconds: 11)),
+      ),
+      iqroAudioPresentation(current),
+    );
+    expect(
+      iqroAudioPresentation(current.copyWith(buffering: true)),
+      isNot(iqroAudioPresentation(current)),
+    );
+  });
+
   test(
     'Quran and standalone audio use one engine and preserve Quran options',
     () async {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -39,7 +40,9 @@ class HomeScreen extends ConsumerWidget {
     final memorizationState = ref.watch(memorizationProvider);
     final duaState = ref.watch(duaEntriesProvider);
     final session = ref.watch(sessionProvider).valueOrNull;
-    final player = ref.watch(audioControllerProvider);
+    final player = ref.watch(
+      audioControllerProvider.select(iqroAudioPresentation),
+    );
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurahNumber = position?.surah ?? 1;
     final currentSurah = findSurah(catalog, currentSurahNumber);
@@ -86,7 +89,7 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: player.active),
+        padding: iqroRootTabPadding(playerActive: player.track != null),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -249,7 +252,7 @@ class HomeScreen extends ConsumerWidget {
                     subtitle: Text(
                       reciter?.nameFor(locale) ?? context.l10n.audioTitle,
                     ),
-                    trailing: player.active
+                    trailing: player.track != null
                         ? IconButton(
                             tooltip: player.playing
                                 ? context.l10n.pause
@@ -273,7 +276,7 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                           )
                         : const Icon(Icons.chevron_right),
-                    onTap: () => player.active
+                    onTap: () => player.track != null
                         ? context.push('/player')
                         : context.push('/app?tab=3'),
                   ),

@@ -629,7 +629,6 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
   Widget build(BuildContext context) {
     final entry = widget.entry;
     final currentController = ref.watch(audioControllerProvider.notifier);
-    final audioState = ref.watch(audioControllerProvider).standalone;
     _synchronizeAccountBinding(currentController);
     final stages = duaRepetitionStages(
       entry.repetitionLabel,
@@ -723,7 +722,6 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
               _DuaAudioCard(
                 entry: entry,
                 selectedIndex: _selectedAudioIndex,
-                state: audioState,
                 loadFailed: _audioLoadFailed,
                 onSelected: _selectAudio,
                 onToggle: _toggleAudio,
@@ -1029,11 +1027,10 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
   }
 }
 
-class _DuaAudioCard extends StatelessWidget {
+class _DuaAudioCard extends ConsumerWidget {
   const _DuaAudioCard({
     required this.entry,
     required this.selectedIndex,
-    required this.state,
     required this.loadFailed,
     required this.onSelected,
     required this.onToggle,
@@ -1044,7 +1041,6 @@ class _DuaAudioCard extends StatelessWidget {
 
   final DuaEntry entry;
   final int selectedIndex;
-  final IqroStandaloneAudioState? state;
   final bool loadFailed;
   final ValueChanged<int> onSelected;
   final Future<void> Function() onToggle;
@@ -1053,7 +1049,10 @@ class _DuaAudioCard extends StatelessWidget {
   final Future<void> Function(String) onRepeat;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      audioControllerProvider.select((value) => value.standalone),
+    );
     final locale = Localizations.localeOf(context).languageCode;
     final safeIndex = selectedIndex.clamp(0, entry.audio.length - 1);
     final asset = entry.audio[safeIndex];

@@ -340,6 +340,22 @@ class IqroAudioState {
   }
 }
 
+typedef IqroAudioPresentation = ({
+  AudioTrack? track,
+  Reciter? reciter,
+  String surahName,
+  bool playing,
+  bool buffering,
+});
+
+IqroAudioPresentation iqroAudioPresentation(IqroAudioState state) => (
+  track: state.track,
+  reciter: state.reciter,
+  surahName: state.surahName,
+  playing: state.playing,
+  buffering: state.buffering,
+);
+
 class AudioController extends StateNotifier<IqroAudioState> {
   AudioController({
     AudioPlayer? player,

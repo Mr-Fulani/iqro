@@ -38,7 +38,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(audioControllerProvider);
+    final playerActive = ref.watch(
+      audioControllerProvider.select((value) => value.active),
+    );
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
@@ -56,7 +58,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (player.active) const _MiniPlayer(),
+            if (playerActive) const _MiniPlayer(),
             NavigationBar(
               backgroundColor: Theme.of(
                 context,
@@ -112,8 +114,10 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(audioControllerProvider);
-    final controller = ref.watch(audioControllerProvider.notifier);
+    final player = ref.watch(
+      audioControllerProvider.select(iqroAudioPresentation),
+    );
+    final controller = ref.read(audioControllerProvider.notifier);
     if (!identical(_visibleController, controller)) {
       _visibleController = controller;
       _changeRequest += 1;
@@ -129,7 +133,7 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
           );
     final controlsEnabled =
-        player.active && !player.buffering && !_changingSurah;
+        player.track != null && !player.buffering && !_changingSurah;
     return SafeArea(
       top: false,
       bottom: false,
