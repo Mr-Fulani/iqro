@@ -159,11 +159,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         player.active && player.surah != null && player.ayah != null
         ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
         : null;
+    final reciters = player.reciter == null
+        ? null
+        : ref.watch(recitersProvider).valueOrNull;
     final reciterPortraitUrl = player.reciter == null
         ? null
         : resolveReciterPortraitUrl(
             player.reciter!,
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+            reciters: reciters,
           );
     final foreground = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFF3EEDC)

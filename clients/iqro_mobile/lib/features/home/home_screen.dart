@@ -65,11 +65,15 @@ class HomeScreen extends ConsumerWidget {
     final prayerPages =
         plan?.prayerPages.values.fold<int>(0, (sum, item) => sum + item) ?? 0;
     final reciter = player.reciter;
+    final reciters = reciter == null
+        ? null
+        : ref.watch(recitersProvider).valueOrNull;
     final reciterPortrait = reciter == null
         ? null
         : resolveReciterPortraitUrl(
             reciter,
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+            reciters: reciters,
           );
     return Scaffold(
       appBar: IqroTopBar(

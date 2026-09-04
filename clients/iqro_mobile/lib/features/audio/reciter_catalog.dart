@@ -30,11 +30,22 @@ class ReciterPerson {
       reciterId != null && sources.any((item) => item.id == reciterId);
 
   Reciter get portraitSource {
+    if (primary.portraitUrl?.trim().isNotEmpty == true) return primary;
     for (final source in sources) {
       if (source.portraitUrl?.trim().isNotEmpty == true) return source;
     }
     return primary;
   }
+}
+
+Reciter reciterPortraitSourceFor(Reciter reciter, Iterable<Reciter> reciters) {
+  final personKey = reciterPersonKey(reciter);
+  for (final person in groupRecitersByPerson(
+    reciters.toList(growable: false),
+  )) {
+    if (person.key == personKey) return person.portraitSource;
+  }
+  return reciter;
 }
 
 List<ReciterPerson> groupRecitersByPerson(List<Reciter> reciters) {

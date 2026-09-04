@@ -1,4 +1,5 @@
 import 'audio_models.dart';
+import 'reciter_catalog.dart';
 
 const _fallbackPortraits = <String, String>{
   'qf-1-abdulbaset-abdulsamad-mujawwad':
@@ -27,15 +28,34 @@ const _fallbackPortraits = <String, String>{
 String? resolveReciterPortraitUrl(
   Reciter reciter, {
   required String apiBaseUrl,
+  Iterable<Reciter>? reciters,
 }) {
-  final managedUrl = reciter.portraitUrl?.trim();
+  final portraitSource = reciters == null
+      ? reciter
+      : reciterPortraitSourceFor(reciter, reciters);
+  final managedUrl = portraitSource.portraitUrl?.trim();
   if (managedUrl != null && managedUrl.isNotEmpty) {
     final uri = Uri.tryParse(managedUrl);
     if (uri?.hasScheme == true) return managedUrl;
     return Uri.parse(apiBaseUrl).resolve(managedUrl).toString();
   }
-  final fallbackPath = _fallbackPortraits[reciter.slug];
+  final fallbackPath = _fallbackPortraits[portraitSource.slug];
   return fallbackPath == null
       ? null
       : Uri.parse(apiBaseUrl).resolve(fallbackPath).toString();
+}
+
+Reciter reciterWithPersonPortrait(
+  Reciter reciter, {
+  required String apiBaseUrl,
+  required Iterable<Reciter> reciters,
+}) {
+  final portraitUrl = resolveReciterPortraitUrl(
+    reciter,
+    apiBaseUrl: apiBaseUrl,
+    reciters: reciters,
+  );
+  return portraitUrl == reciter.portraitUrl
+      ? reciter
+      : reciter.withPortraitUrl(portraitUrl);
 }

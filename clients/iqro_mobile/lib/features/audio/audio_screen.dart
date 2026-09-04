@@ -295,8 +295,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       if (activeId != null) {
         for (final person in groupRecitersByPerson(items)) {
           if (person.containsReciter(activeId)) {
+            final activeReciter = person.sources.firstWhere(
+              (item) => item.id == activeId,
+            );
             controller.updateReciterMetadata(
-              person.portraitSource,
+              reciterWithPersonPortrait(
+                activeReciter,
+                apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+                reciters: person.sources,
+              ),
               currentReciterId: activeId,
             );
             break;
@@ -363,7 +370,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       if (!_isCurrentAudioRequest(controller, request)) return;
       await controller.loadPlayback(
         playback: playback,
-        reciter: recitation.reciter,
+        reciter: reciterWithPersonPortrait(
+          recitation.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: person.sources,
+        ),
         surahName: surahName,
       );
       if (!_isCurrentAudioRequest(controller, request)) return;

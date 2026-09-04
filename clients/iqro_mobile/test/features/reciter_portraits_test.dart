@@ -39,6 +39,41 @@ void main() {
       isNull,
     );
   });
+
+  test('player variants use the canonical person portrait', () {
+    final mujawwad = _reciter(
+      slug: 'qf-1-abdulbaset-abdulsamad-mujawwad',
+      portraitUrl: 'https://cdn.example.test/variant.webp',
+    );
+    final murattal = _reciter(
+      slug: 'qf-2-abdul-baset-abdul-samad',
+      portraitUrl: 'https://cdn.example.test/person.webp',
+    );
+
+    expect(
+      resolveReciterPortraitUrl(
+        mujawwad,
+        apiBaseUrl: 'https://staging.iqro.forum',
+        reciters: <Reciter>[mujawwad, murattal],
+      ),
+      'https://cdn.example.test/person.webp',
+    );
+    expect(
+      reciterWithPersonPortrait(
+        mujawwad,
+        apiBaseUrl: 'https://staging.iqro.forum',
+        reciters: <Reciter>[mujawwad, murattal],
+      ),
+      isA<Reciter>()
+          .having((item) => item.id, 'id', mujawwad.id)
+          .having((item) => item.slug, 'slug', mujawwad.slug)
+          .having(
+            (item) => item.portraitUrl,
+            'portraitUrl',
+            'https://cdn.example.test/person.webp',
+          ),
+    );
+  });
 }
 
 Reciter _reciter({required String slug, String? portraitUrl}) => Reciter(

@@ -46,6 +46,21 @@ class Reciter {
   final String? portraitUrl;
   final String? countryCode;
 
+  Reciter withPortraitUrl(String? value) => Reciter(
+    id: id,
+    slug: slug,
+    nameAr: nameAr,
+    nameEn: nameEn,
+    nameRu: nameRu,
+    nameTr: nameTr,
+    biographyAr: biographyAr,
+    biographyEn: biographyEn,
+    biographyRu: biographyRu,
+    biographyTr: biographyTr,
+    portraitUrl: value,
+    countryCode: countryCode,
+  );
+
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
     'slug': slug,

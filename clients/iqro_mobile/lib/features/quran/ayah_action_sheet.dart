@@ -9,6 +9,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
+import '../audio/reciter_portraits.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 
@@ -532,7 +533,11 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
       if (!_isCurrentAudioRequest(scope, controller, request)) return;
       await controller.loadPlayback(
         playback: playback,
-        reciter: recitation.reciter,
+        reciter: reciterWithPersonPortrait(
+          recitation.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: _details!.recitations.map((item) => item.reciter),
+        ),
         surahName: surahName,
         startAyah: widget.reference.ayah,
         endAyah: widget.reference.ayah,

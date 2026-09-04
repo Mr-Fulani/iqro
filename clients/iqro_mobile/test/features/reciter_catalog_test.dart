@@ -34,6 +34,23 @@ void main() {
       'mujawwad',
     );
   });
+
+  test('all recitation variants resolve the same person portrait', () {
+    final mujawwad = _reciter(
+      '1',
+      'qf-1-abdulbaset-abdulsamad-mujawwad',
+      portraitUrl: 'https://media.example.test/variant.png',
+    );
+    final murattal = _reciter(
+      '2',
+      'qf-2-abdul-baset-abdul-samad',
+      portraitUrl: 'https://media.example.test/person.png',
+    );
+    final catalog = <Reciter>[mujawwad, murattal];
+
+    expect(reciterPortraitSourceFor(mujawwad, catalog), same(murattal));
+    expect(reciterPortraitSourceFor(murattal, catalog), same(murattal));
+  });
 }
 
 Reciter _reciter(String id, String slug, {String? portraitUrl}) => Reciter(

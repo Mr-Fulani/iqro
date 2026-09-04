@@ -127,11 +127,15 @@ class _MiniPlayerState extends ConsumerState<_MiniPlayer> {
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurah = player.track?.surah;
     final reciter = player.reciter;
+    final reciters = reciter == null
+        ? null
+        : ref.watch(recitersProvider).valueOrNull;
     final portraitUrl = reciter == null
         ? null
         : resolveReciterPortraitUrl(
             reciter,
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+            reciters: reciters,
           );
     final controlsEnabled =
         player.track != null && !player.buffering && !_changingSurah;

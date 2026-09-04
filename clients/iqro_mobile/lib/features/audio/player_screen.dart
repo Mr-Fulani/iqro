@@ -161,6 +161,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         : resolveReciterPortraitUrl(
             reciter,
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+            reciters: reciters,
           );
     return Scaffold(
       backgroundColor: const Color(0xFF061D18),
@@ -415,7 +416,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           playback.segmentFor(current.rangeEndAyah ?? 0) != null;
       await expectedController.loadPlayback(
         playback: playback,
-        reciter: selection.recitation.reciter,
+        reciter: reciterWithPersonPortrait(
+          selection.recitation.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: selection.person.sources,
+        ),
         surahName: current.surahName,
         startAyah: preserveRange ? current.rangeStartAyah : null,
         endAyah: preserveRange ? current.rangeEndAyah : null,
