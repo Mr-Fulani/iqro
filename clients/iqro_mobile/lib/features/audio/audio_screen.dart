@@ -25,6 +25,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   String? _selected;
   String? _selectedRecitationId;
   var _loadingTrack = false;
+  String? _loadingPersonKey;
   var _refreshingReciters = false;
   var _playRequest = 0;
   var _refreshRequest = 0;
@@ -200,14 +201,16 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                               reciter: reciter,
                               locale: locale,
                               active: active,
+                              loading:
+                                  _loadingTrack &&
+                                  _loadingPersonKey == person.key,
                               portraitUrl: resolveReciterPortraitUrl(
                                 person.portraitSource,
                                 apiBaseUrl: apiBaseUrl,
                               ),
-                              onTap: () => _selectPerson(
-                                person,
-                                activePersonKey: activePersonKey,
-                              ),
+                              onTap: _loadingTrack
+                                  ? null
+                                  : () => _openPlayerForPerson(person),
                             );
                           },
                         );
@@ -217,23 +220,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                 );
               },
             ),
-            if (!player.active) ...<Widget>[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _loadingTrack ? null : _playSelected,
-                  icon: _loadingTrack
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.play_arrow),
-                  label: Text(context.l10n.play),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -362,26 +348,26 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     }
   }
 
-  Future<void> _playSelected() async {
+  Future<void> _openPlayerForPerson(ReciterPerson person) async {
     if (_loadingTrack) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final repository = ref.read(audioRepositoryProvider);
-    final selectedPersonKey = _selected;
-    final selectedRecitationId = _selectedRecitationId;
+    final selectedRecitationId = _selected == person.key
+        ? _selectedRecitationId
+        : null;
     final preferredRecitationId = ref
         .read(appPreferencesProvider)
         .preferredRecitationId;
-    final surahName = context.l10n.alFatiha;
+    final player = ref.read(audioControllerProvider);
+    final surah = player.track?.surah ?? 1;
+    final surahName = _surahName(surah, fallback: player.surahName);
     final request = ++_playRequest;
-    setState(() => _loadingTrack = true);
+    setState(() {
+      _selected = person.key;
+      _loadingTrack = true;
+      _loadingPersonKey = person.key;
+    });
     try {
-      final items = await repository.reciters();
-      if (!_isCurrentAudioRequest(controller, request)) return;
-      final people = groupRecitersByPerson(items);
-      final person =
-          people.where((item) => item.key == selectedPersonKey).firstOrNull ??
-          people.firstOrNull;
-      if (person == null) return;
       final variants = await repository.recitationsForReciters(
         person.sources.map((item) => item.id),
       );
@@ -399,7 +385,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       }
       final playback = await repository.playback(
         recitationId: recitation.id,
-        surah: 1,
+        surah: surah,
       );
       if (!_isCurrentAudioRequest(controller, request)) return;
       await controller.loadPlayback(
@@ -425,26 +411,26 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       }
     } finally {
       if (mounted && request == _playRequest) {
-        setState(() => _loadingTrack = false);
+        setState(() {
+          _loadingTrack = false;
+          _loadingPersonKey = null;
+        });
       }
     }
   }
 
-  Future<void> _selectPerson(
-    ReciterPerson person, {
-    required String? activePersonKey,
-  }) async {
-    final controller = ref.read(audioControllerProvider.notifier);
-    final request = ++_playRequest;
-    if (activePersonKey != null && activePersonKey != person.key) {
-      await controller.stop();
-      if (!_isCurrentAudioRequest(controller, request)) return;
+  String _surahName(int surah, {required String fallback}) {
+    final active = ref.read(audioControllerProvider);
+    if (active.track?.surah == surah && fallback.trim().isNotEmpty) {
+      return fallback;
     }
-    if (!mounted) return;
-    setState(() {
-      _selected = person.key;
-      _selectedRecitationId = null;
-    });
+    final locale = Localizations.localeOf(context).languageCode;
+    final catalog = ref.read(quranCatalogProvider).valueOrNull;
+    final item = catalog?.surahs
+        .where((candidate) => candidate.number == surah)
+        .firstOrNull;
+    if (item != null) return item.nameFor(locale);
+    return surah == 1 ? context.l10n.alFatiha : '${context.l10n.surah} $surah';
   }
 
   bool _isCurrentAudioRequest(
@@ -603,6 +589,7 @@ class _ReciterCard extends StatelessWidget {
     required this.reciter,
     required this.locale,
     required this.active,
+    required this.loading,
     required this.portraitUrl,
     required this.onTap,
   });
@@ -610,15 +597,17 @@ class _ReciterCard extends StatelessWidget {
   final Reciter reciter;
   final String locale;
   final bool active;
+  final bool loading;
   final String? portraitUrl;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
-      button: true,
+      button: onTap != null,
       selected: active,
+      enabled: onTap != null,
       label: reciter.nameFor(locale),
       child: IqroCard(
         onTap: onTap,
@@ -631,6 +620,7 @@ class _ReciterCard extends StatelessWidget {
               initials: reciter.initials,
               portraitUrl: portraitUrl,
               active: active,
+              loading: loading,
             ),
             const SizedBox(height: 9),
             Text(
@@ -667,11 +657,13 @@ class _ReciterPortrait extends StatelessWidget {
     required this.initials,
     required this.portraitUrl,
     required this.active,
+    required this.loading,
   });
 
   final String initials;
   final String? portraitUrl;
   final bool active;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -729,11 +721,23 @@ class _ReciterPortrait extends StatelessWidget {
               ),
               child: Icon(
                 active ? Icons.check : Icons.play_arrow,
-                size: 17,
+                size: loading ? 0 : 17,
                 color: colorScheme.onPrimary,
               ),
             ),
           ),
+          if (loading)
+            PositionedDirectional(
+              end: 3,
+              bottom: 3,
+              child: SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colorScheme.onPrimary,
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -44,8 +44,10 @@ Screen → Riverpod controller/provider → Feature repository
 - `AudioPlaybackSyncService` использует server revision и timestamp клиента, поэтому
   изменения на двух устройствах разрешаются детерминированно, а снятый с публикации
   трек никогда не восстанавливается в плеер.
-- `AudioController` владеет единственным player instance. Смена чтеца останавливает
-  старый источник; MediaSession продолжает работать в фоне и на lock screen.
+- `AudioController` владеет единственным player instance. Тап по карточке чтеца сначала
+  разрешает совместимый вариант и текущую суру, затем атомарно заменяет источник и открывает
+  полный плеер; прежний поток не прерывается во время сетевого поиска новой дорожки.
+  MediaSession продолжает работать в фоне и на lock screen.
 
 ### Features
 
@@ -62,7 +64,8 @@ Screen → Riverpod controller/provider → Feature repository
 | Чтецы и аудиометаданные | cache fallback + проверенный audio package | позиция и настройки плеера | versioned account position API |
 | Позиция чтения и закладки | SQLite | SQLite + outbox | push/pull с revision |
 | Ду’а | локализованный cache fallback | избранное + outbox | идемпотентный PUT/retry |
-| План и заучивание | SQLite | SQLite | готовая граница repository для API-sync |
+| План чтения | SQLite | SQLite | backend parity для goals/sessions/history ещё не подключён |
+| Заучивание | cache fallback | API-команды с локальным fallback | versioned account API |
 | Share/referral events | встроенный fallback | outbox | идемпотентный event API |
 
 `MushafOfflineRepository` устанавливает новую версию в отдельный каталог, возобновляет
@@ -113,10 +116,13 @@ release-режиме пустая конфигурация запрещена, �
 
 ## Следующие безопасные расширения
 
-1. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages, когда
-   появятся независимые команды или отдельное Flutter-приложение.
-2. Добавить подписанный Play Console delivery pipeline после создания upload key и
-   защищённого CI secret environment.
-3. Добавить Android emulator smoke-test после появления отдельного CI-бюджета на
-   виртуальные устройства.
-4. Вынести обезличенную crash/QoE telemetry за отдельный consent и privacy review.
+1. Завершить связку Мусхаф ↔ аудио: выбор чтеца в полном плеере, дополнительные проверенные
+   native-варианты Мусхафа и навигация по хизбу/рубу без web-обёрток.
+2. Подключить мобильный План к backend goals/sessions/history и автоматическому зачёту
+   реально прочитанных страниц.
+3. Добавить расширенные настройки расчёта намаза и управление устройствами/приватностью.
+4. Добавить profile/release performance evidence, Android device integration smoke-tests,
+   подписанный Play Console pipeline и iPhone/iPad real-device matrix.
+5. Вынести обезличенную crash/QoE telemetry за отдельный consent и privacy review.
+6. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages только
+   после появления независимых команд или второго Flutter-приложения.

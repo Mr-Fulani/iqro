@@ -1,6 +1,6 @@
 # План и roadmap Quran Platform
 
-Дата обновления: 29 августа 2026 года
+Дата обновления: 4 сентября 2026 года
 
 Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Текущий
 статус реализации по P0 остаётся в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
@@ -316,27 +316,54 @@ multi-client MVP остаётся на этапах B–D.
 
 Цель: один backend обслуживает Flutter, web и Telegram Mini App без расхождения контрактов.
 
-- [ ] Создать Flutter workspace: generated API client, secure storage, local DB, auth/device
-  lifecycle, offline repository и durable outbox.
-- [ ] Реализовать Flutter Mushaf reader, bookmarks и cross-device sync.
+- [x] Создать Flutter workspace с secure storage, local DB, безопасным auth/device lifecycle,
+  offline repositories и durable outbox.
+- [x] Реализовать Flutter Mushaf reader, bookmarks и cross-device sync позиции чтения.
 - [ ] Создать отдельный Telegram Mini App shell/deployment с проверкой `initData`, theme/safe
   area adapters, deep links и связыванием identity.
-- [ ] Включить OpenAPI breaking-change gate и генерацию Dart/TypeScript SDK.
+- [ ] Включить OpenAPI breaking-change gate и заменить ручные клиентские модели на
+  генерируемые Dart/TypeScript SDK.
 - [ ] Добавить client capability matrix и contract tests для всех трёх клиентов.
-- [ ] Довести RU/EN/AR/TR и RTL parity до Flutter и Telegram Mini App.
+- [x] Довести RU/EN/AR/TR и RTL parity до Flutter.
+- [ ] Довести RU/EN/AR/TR и RTL parity до Telegram Mini App.
 
 Критерий выхода: гость начинает на любом клиенте, безопасно связывает аккаунт и продолжает
 чтение на другом устройстве без потери позиции, закладок и outbox.
 
 ## Этап C. Завершение Quran/audio/prayer P0
 
-- [ ] Offline package domain, manifests, resume/checksum и quota/eviction policy.
-- [ ] Flutter background audio, audio focus, lock-screen controls и восстановление очереди.
-- [ ] Полный разрешённый каталог чтецов и декламаций: автоматическое обнаружение новых ресурсов,
-  draft-first импорт, привязка к совместимому риваяту, проверенные bitrate renditions и
-  поэтапная публикация без необходимости выпускать новую версию приложения.
-- [ ] Playback state sync при сохранении device-local очереди.
-- [ ] Flutter local prayer calculation и notification scheduler с timezone/location reschedule.
+### Текущий приоритет: Мусхаф и плеер
+
+- [x] Реализовать полноэкранный scan-Мусхаф: 604 страницы, масштабирование, перелистывание,
+  скрываемые по тапу controls, hit map аятов, переход к аяту и offline package.
+- [x] По тапу на карточку/аватар чтеца выбирать подходящий вариант чтения, запускать текущую
+  суру (или Аль-Фатиху) и сразу открывать плеер без промежуточной кнопки «Воспроизвести».
+- [ ] Добавить выбор чтеца и варианта чтения непосредственно в развёрнутом плеере, сохраняя
+  текущую суру и позицию только там, где это поддерживают совместимые таймкоды.
+- [ ] Подключить в Flutter опубликованные и проверенные native-варианты Мусхафа помимо scan;
+  каждый вариант должен иметь собственные page assets, размеры, hit maps, manifest и checksum.
+- [ ] Довести навигацию Мусхафа до parity с backend: быстрый переход по суре, аяту, странице,
+  джузу, хизбу и рубу; поиск не должен обещать неподдерживаемые типы запроса.
+- [ ] Добавить в читалку пользовательские настройки типографики текста, интервалов и режима
+  без отвлечений, не затрагивая точную геометрию отсканированных страниц.
+
+### Остальной P0
+
+- [x] Реализовать offline package domain, manifests, Range-resume, checksum и атомарную
+  активацию полного Мусхафа и разрешённых аудиопакетов.
+- [ ] Добавить понятное управление занятым местом: оценка размера до загрузки, квота,
+  перечисление пакетов и подтверждаемое пользователем удаление; автоматическая очистка запрещена.
+- [x] Реализовать Flutter background audio, audio focus, lock-screen controls и восстановление
+  очереди/позиции.
+- [x] Подключить динамический каталог чтецов и декламаций к draft-first backend publication:
+  новые опубликованные записи и аватары появляются без выпуска новой версии приложения.
+- [ ] Добавить выбор разрешённого bitrate/rendition и завершить проверку покрытия всех
+  публикуемых декламаций.
+- [x] Реализовать playback state sync при сохранении device-local очереди.
+- [x] Реализовать Flutter local prayer calculation и notification scheduler с
+  timezone/location reschedule.
+- [ ] Добавить в мобильный UI выбор метода Асра/мазхаба, ручные корректировки времени,
+  fallback выбора города, киблу, месячный календарь и системные виджеты.
 - [x] Versioned translation schema/API/UI и Quran.Foundation Content Sync; каждый перевод имеет
   собственные права, attribution, locale, immutable version и publication status; подключены
   все проверенные смысловые ресурсы активных языков, UI-каталог фильтруется текущей локалью.
@@ -348,6 +375,9 @@ multi-client MVP остаётся на этапах B–D.
 - [x] Reading sessions, daily goals и streaks: автоматические и ручные записи пересчитывают
   прогресс без двойного зачёта; самостоятельный web-планировщик показывает календарь 7/30/90
   дней, фактические prayer check-ins и редактируемую историю без переноса пропусков в «долг».
+- [ ] Подключить мобильный План к этим backend-контрактам: редактируемая норма в минутах,
+  страницах или аятах, reading sessions/history, корректные prayer check-ins и автоматический
+  зачёт фактически прочитанных страниц.
 - [x] Центр уведомлений перенесён из аккаунта в План; отдельное ежедневное напоминание о чтении
   отключено, prayer toggles доступны также рядом с расписанием намаза, а предложение читать
   после намаза выключается независимо от уведомления о времени молитвы.
