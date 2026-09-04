@@ -15,6 +15,7 @@ import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/offline_storage_screen.dart';
 import '../features/share/share_screen.dart';
 import 'app_shell.dart';
 
@@ -130,6 +131,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/offline-storage',
+        builder: (context, state) => const OfflineStorageScreen(),
       ),
       GoRoute(path: '/share', builder: (context, state) => const ShareScreen()),
     ],

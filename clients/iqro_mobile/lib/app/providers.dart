@@ -30,6 +30,7 @@ import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
 import '../features/reminders/reminder_repository.dart';
 import '../features/share/share_repository.dart';
+import '../features/settings/offline_storage_repository.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
 
@@ -86,6 +87,13 @@ final syncServiceProvider = Provider<SyncService>(
 final backgroundMaintenanceProvider = Provider<BackgroundMaintenanceService>(
   (ref) => _missing('BackgroundMaintenanceService'),
 );
+final offlineStorageRepositoryProvider = Provider<OfflineStorageRepository>(
+  (ref) => OfflineStorageRepository(database: ref.watch(localDatabaseProvider)),
+);
+final offlinePackagesProvider =
+    FutureProvider.autoDispose<List<OfflinePackageSummary>>(
+      (ref) => ref.watch(offlineStorageRepositoryProvider).packages(),
+    );
 
 class AppPreferencesController extends StateNotifier<AppPreferences> {
   AppPreferencesController(this._store, this._plan) : super(_store.read());

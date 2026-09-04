@@ -796,6 +796,93 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu kayıt çevrimdışı indirme için lisanslı değil.';
 
   @override
+  String get offlineStorage => 'Çevrimdışı depolama';
+
+  @override
+  String get offlineStorageSettingsSubtitle =>
+      'İndirilen Mushaf sayfaları ve sesler';
+
+  @override
+  String offlineStorageUsed(String size) {
+    return 'Çevrimdışı kullanılan: $size';
+  }
+
+  @override
+  String get offlineStorageDescription =>
+      'Burada yalnızca uygulamanın indirdiği dosyalar gösterilir. Hiçbir şey otomatik olarak silinmez.';
+
+  @override
+  String offlineStorageQuota(String size) {
+    return 'Uygulama sınırı: $size';
+  }
+
+  @override
+  String get offlineStorageQuotaExceeded =>
+      'Bu paket çevrimdışı depolama sınırına sığmıyor. Önce gereksiz bir paketi silin.';
+
+  @override
+  String downloadOfflineConfirmation(String size) {
+    return 'Tam paket yaklaşık $size kullanacak. İndirme başlatılsın mı?';
+  }
+
+  @override
+  String get downloadedContent => 'İndirilen içerik';
+
+  @override
+  String get noOfflinePackages => 'Henüz çevrimdışı paket indirilmedi.';
+
+  @override
+  String get storageReadFailed => 'Çevrimdışı depolama okunamadı';
+
+  @override
+  String get tryAgain => 'Lütfen tekrar deneyin.';
+
+  @override
+  String get refresh => 'Yenile';
+
+  @override
+  String get deleteOfflinePackage => 'Çevrimdışı paketi sil';
+
+  @override
+  String deleteOfflinePackageConfirmation(String name, String size) {
+    return '“$name” ($size) bu cihazdan silinsin mi? Çevrimdışı kullanım için tekrar indirmeniz gerekir.';
+  }
+
+  @override
+  String deletePlayingAudioConfirmation(String name, String size) {
+    return '“$name” şu anda çalıyor. Oynatıcı durdurulup çevrimdışı paket ($size) bu cihazdan silinsin mi?';
+  }
+
+  @override
+  String get offlinePackageDeleted => 'Çevrimdışı paket silindi';
+
+  @override
+  String get offlinePackageDeleteFailed => 'Çevrimdışı paket silinemedi';
+
+  @override
+  String packageTotalSize(String size) {
+    return 'tam boyut $size';
+  }
+
+  @override
+  String get completeMushafPages => 'Eksiksiz Mushaf sayfaları';
+
+  @override
+  String get completeRecitation => 'Eksiksiz Kur\'an tilaveti';
+
+  @override
+  String get downloadInProgress => 'İndirme sürüyor';
+
+  @override
+  String get downloadFailed => 'İndirme kesildi';
+
+  @override
+  String get notReady => 'Hazır değil';
+
+  @override
+  String get availableOffline => 'Çevrimdışı kullanılabilir';
+
+  @override
   String get moreTools => 'Pratik ve araçlar';
 
   @override

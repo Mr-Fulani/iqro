@@ -791,6 +791,92 @@ class AppLocalizationsAr extends AppLocalizations {
       'هذه التلاوة غير مرخّصة للتنزيل دون إنترنت.';
 
   @override
+  String get offlineStorage => 'التخزين دون إنترنت';
+
+  @override
+  String get offlineStorageSettingsSubtitle => 'صفحات المصحف والصوت المنزّلة';
+
+  @override
+  String offlineStorageUsed(String size) {
+    return 'المستخدم دون إنترنت: $size';
+  }
+
+  @override
+  String get offlineStorageDescription =>
+      'تظهر هنا الملفات التي نزّلها التطبيق فقط. لا يُحذف أي شيء تلقائياً.';
+
+  @override
+  String offlineStorageQuota(String size) {
+    return 'حد التطبيق: $size';
+  }
+
+  @override
+  String get offlineStorageQuotaExceeded =>
+      'لا تتسع الحزمة ضمن حد التخزين دون إنترنت. احذف حزمة غير ضرورية أولاً.';
+
+  @override
+  String downloadOfflineConfirmation(String size) {
+    return 'ستشغل الحزمة الكاملة نحو $size. هل تريد بدء التنزيل؟';
+  }
+
+  @override
+  String get downloadedContent => 'المحتوى المنزّل';
+
+  @override
+  String get noOfflinePackages => 'لم يتم تنزيل حزم للعمل دون إنترنت بعد.';
+
+  @override
+  String get storageReadFailed => 'تعذرت قراءة التخزين دون إنترنت';
+
+  @override
+  String get tryAgain => 'يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get refresh => 'تحديث';
+
+  @override
+  String get deleteOfflinePackage => 'حذف حزمة دون إنترنت';
+
+  @override
+  String deleteOfflinePackageConfirmation(String name, String size) {
+    return 'حذف «$name» ($size) من هذا الجهاز؟ ستحتاج إلى تنزيلها مجدداً للاستخدام دون إنترنت.';
+  }
+
+  @override
+  String deletePlayingAudioConfirmation(String name, String size) {
+    return 'يتم تشغيل «$name» الآن. هل تريد إيقاف المشغّل وحذف الحزمة ($size) من هذا الجهاز؟';
+  }
+
+  @override
+  String get offlinePackageDeleted => 'تم حذف الحزمة';
+
+  @override
+  String get offlinePackageDeleteFailed => 'تعذر حذف الحزمة';
+
+  @override
+  String packageTotalSize(String size) {
+    return 'الحجم الكامل $size';
+  }
+
+  @override
+  String get completeMushafPages => 'صفحات المصحف كاملة';
+
+  @override
+  String get completeRecitation => 'تلاوة القرآن كاملة';
+
+  @override
+  String get downloadInProgress => 'التنزيل جارٍ';
+
+  @override
+  String get downloadFailed => 'توقف التنزيل';
+
+  @override
+  String get notReady => 'غير جاهز';
+
+  @override
+  String get availableOffline => 'متاح دون إنترنت';
+
+  @override
   String get moreTools => 'التدريب والأدوات';
 
   @override

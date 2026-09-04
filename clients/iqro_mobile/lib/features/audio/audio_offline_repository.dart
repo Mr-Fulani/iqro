@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'audio_models.dart';
 
@@ -416,24 +417,16 @@ class AudioOfflineRepository {
     int expectedTrackCount = 114,
     void Function(AudioDownloadSnapshot progress)? onProgress,
   }) async {
-    if (!_isUuid(recitationId) ||
-        (quality != null &&
-            (quality == 'default' || !_audioQualities.contains(quality)))) {
-      throw const FormatException('Offline audio request is invalid');
-    }
-    final payload = await _api.get(
-      '/recitations/$recitationId/offline-manifest',
-      query: quality == null ? null : <String, Object?>{'quality': quality},
-      public: true,
-    );
-    final manifest = OfflineAudioManifest.fromJson(
-      jsonMap(payload),
+    final manifest = await _manifest(
       recitationId: recitationId,
+      quality: quality,
+      expectedTrackCount: expectedTrackCount,
     );
-    if (manifest.tracks.length != expectedTrackCount) {
-      throw const FormatException('The offline audio package is not complete');
-    }
-
+    await ensureOfflineStorageCapacity(
+      _database,
+      packageId: manifest.packageId,
+      packageBytes: manifest.totalBytes,
+    );
     final support = await _supportDirectory();
     final packageDirectory = Directory(
       p.join(support.path, 'offline_packages', 'audio', manifest.packageId),
@@ -521,6 +514,51 @@ class AudioOfflineRepository {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
     }
+  }
+
+  Future<AudioDownloadSnapshot> estimate({
+    required String recitationId,
+    String? quality,
+    int expectedTrackCount = 114,
+  }) async {
+    final manifest = await _manifest(
+      recitationId: recitationId,
+      quality: quality,
+      expectedTrackCount: expectedTrackCount,
+    );
+    return AudioDownloadSnapshot(
+      status: AudioDownloadStatus.notDownloaded,
+      recitationId: recitationId,
+      packageId: manifest.packageId,
+      quality: manifest.quality,
+      totalTracks: manifest.tracks.length,
+      totalBytes: manifest.totalBytes,
+    );
+  }
+
+  Future<OfflineAudioManifest> _manifest({
+    required String recitationId,
+    required String? quality,
+    required int expectedTrackCount,
+  }) async {
+    if (!_isUuid(recitationId) ||
+        (quality != null &&
+            (quality == 'default' || !_audioQualities.contains(quality)))) {
+      throw const FormatException('Offline audio request is invalid');
+    }
+    final payload = await _api.get(
+      '/recitations/$recitationId/offline-manifest',
+      query: quality == null ? null : <String, Object?>{'quality': quality},
+      public: true,
+    );
+    final manifest = OfflineAudioManifest.fromJson(
+      jsonMap(payload),
+      recitationId: recitationId,
+    );
+    if (manifest.tracks.length != expectedTrackCount) {
+      throw const FormatException('The offline audio package is not complete');
+    }
+    return manifest;
   }
 
   Future<SurahPlayback?> activePlayback({

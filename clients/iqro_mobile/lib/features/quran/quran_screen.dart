@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/offline_storage_quota.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'mushaf_offline_repository.dart';
@@ -400,11 +403,18 @@ class _MushafOfflineIndicator extends ConsumerWidget {
   }
 }
 
-class _OfflineMushafCard extends ConsumerWidget {
+class _OfflineMushafCard extends ConsumerStatefulWidget {
   const _OfflineMushafCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_OfflineMushafCard> createState() => _OfflineMushafCardState();
+}
+
+class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
+  var _preparing = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(mushafDownloadProvider);
     final downloading = state.status == MushafDownloadStatus.downloading;
     final ready = state.status == MushafDownloadStatus.ready;
@@ -461,9 +471,15 @@ class _OfflineMushafCard extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: downloading
                     ? null
-                    : () =>
-                          ref.read(mushafDownloadProvider.notifier).download(),
-                icon: Icon(failed ? Icons.refresh : Icons.download_outlined),
+                    : _preparing
+                    ? null
+                    : _prepareDownload,
+                icon: _preparing
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(failed ? Icons.refresh : Icons.download_outlined),
                 label: Text(
                   failed
                       ? context.l10n.resumeDownload
@@ -475,6 +491,58 @@ class _OfflineMushafCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _prepareDownload() async {
+    if (_preparing) return;
+    setState(() => _preparing = true);
+    try {
+      final estimate = await ref
+          .read(mushafOfflineRepositoryProvider)
+          .estimate();
+      await ensureOfflineStorageCapacity(
+        ref.read(localDatabaseProvider),
+        packageId: estimate.packageId!,
+        packageBytes: estimate.totalBytes,
+      );
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.downloadForOffline),
+          content: Text(
+            context.l10n.downloadOfflineConfirmation(
+              _formatMegabytes(estimate.totalBytes),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(context.l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(context.l10n.downloadForOffline),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        unawaited(ref.read(mushafDownloadProvider.notifier).download());
+      }
+    } on OfflineStorageQuotaExceeded {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.offlineStorageQuotaExceeded)),
+      );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    } finally {
+      if (mounted) setState(() => _preparing = false);
+    }
   }
 }
 

@@ -22,6 +22,8 @@ class AudioRepository {
   final Map<String, List<Recitation>> _recitationMemory = {};
   final Map<String, SurahPlayback> _playbackMemory = {};
 
+  void clearPlaybackCache() => _playbackMemory.clear();
+
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async {
     const key = 'audio:reciters';
     final cached = await _database.readCache(key);

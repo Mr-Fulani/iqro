@@ -796,6 +796,95 @@ class AppLocalizationsEn extends AppLocalizations {
       'This recording is not licensed for offline download.';
 
   @override
+  String get offlineStorage => 'Offline storage';
+
+  @override
+  String get offlineStorageSettingsSubtitle =>
+      'Downloaded Mushaf pages and audio';
+
+  @override
+  String offlineStorageUsed(String size) {
+    return 'Used offline: $size';
+  }
+
+  @override
+  String get offlineStorageDescription =>
+      'Only files downloaded by the app are shown here. Nothing is removed automatically.';
+
+  @override
+  String offlineStorageQuota(String size) {
+    return 'App limit: $size';
+  }
+
+  @override
+  String get offlineStorageQuotaExceeded =>
+      'This package does not fit within the offline storage limit. Delete an unneeded package first.';
+
+  @override
+  String downloadOfflineConfirmation(String size) {
+    return 'The complete package will use about $size. Start downloading?';
+  }
+
+  @override
+  String get downloadedContent => 'Downloaded content';
+
+  @override
+  String get noOfflinePackages =>
+      'No offline packages have been downloaded yet.';
+
+  @override
+  String get storageReadFailed => 'Could not read offline storage';
+
+  @override
+  String get tryAgain => 'Please try again.';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get deleteOfflinePackage => 'Delete offline package';
+
+  @override
+  String deleteOfflinePackageConfirmation(String name, String size) {
+    return 'Delete “$name” ($size) from this device? You will need to download it again for offline use.';
+  }
+
+  @override
+  String deletePlayingAudioConfirmation(String name, String size) {
+    return '“$name” is playing now. Stop the player and delete its offline package ($size) from this device?';
+  }
+
+  @override
+  String get offlinePackageDeleted => 'Offline package deleted';
+
+  @override
+  String get offlinePackageDeleteFailed =>
+      'Could not delete the offline package';
+
+  @override
+  String packageTotalSize(String size) {
+    return 'full size $size';
+  }
+
+  @override
+  String get completeMushafPages => 'Complete Mushaf pages';
+
+  @override
+  String get completeRecitation => 'Complete Quran recitation';
+
+  @override
+  String get downloadInProgress => 'Download in progress';
+
+  @override
+  String get downloadFailed => 'Download interrupted';
+
+  @override
+  String get notReady => 'Not ready';
+
+  @override
+  String get availableOffline => 'Available offline';
+
+  @override
   String get moreTools => 'Practice and tools';
 
   @override

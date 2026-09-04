@@ -100,6 +100,13 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                   IqroListTile(
+                    icon: Icons.offline_pin_outlined,
+                    title: context.l10n.offlineStorage,
+                    subtitle: context.l10n.offlineStorageSettingsSubtitle,
+                    onTap: () => context.push('/settings/offline-storage'),
+                  ),
+                  const Divider(height: 1),
+                  IqroListTile(
                     icon: Icons.privacy_tip_outlined,
                     title: context.l10n.privacy,
                     subtitle: context.l10n.prayerLocationPrivacy,

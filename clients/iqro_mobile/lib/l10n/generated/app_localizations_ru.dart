@@ -796,6 +796,93 @@ class AppLocalizationsRu extends AppLocalizations {
       'Для этой записи право на офлайн-загрузку не предоставлено.';
 
   @override
+  String get offlineStorage => 'Офлайн-хранилище';
+
+  @override
+  String get offlineStorageSettingsSubtitle =>
+      'Скачанные страницы Мусхафа и аудио';
+
+  @override
+  String offlineStorageUsed(String size) {
+    return 'Занято офлайн: $size';
+  }
+
+  @override
+  String get offlineStorageDescription =>
+      'Здесь показаны только файлы, скачанные самим приложением. Ничего не удаляется автоматически.';
+
+  @override
+  String offlineStorageQuota(String size) {
+    return 'Лимит приложения: $size';
+  }
+
+  @override
+  String get offlineStorageQuotaExceeded =>
+      'Для этого пакета недостаточно места в лимите офлайн-хранилища. Сначала удалите ненужный пакет.';
+
+  @override
+  String downloadOfflineConfirmation(String size) {
+    return 'Полный пакет займёт примерно $size. Начать загрузку?';
+  }
+
+  @override
+  String get downloadedContent => 'Скачанный контент';
+
+  @override
+  String get noOfflinePackages => 'Офлайн-пакеты ещё не скачаны.';
+
+  @override
+  String get storageReadFailed => 'Не удалось прочитать офлайн-хранилище';
+
+  @override
+  String get tryAgain => 'Повторите попытку.';
+
+  @override
+  String get refresh => 'Обновить';
+
+  @override
+  String get deleteOfflinePackage => 'Удалить офлайн-пакет';
+
+  @override
+  String deleteOfflinePackageConfirmation(String name, String size) {
+    return 'Удалить «$name» ($size) с этого устройства? Для использования без интернета пакет потребуется скачать снова.';
+  }
+
+  @override
+  String deletePlayingAudioConfirmation(String name, String size) {
+    return 'Сейчас воспроизводится «$name». Остановить плеер и удалить офлайн-пакет ($size) с этого устройства?';
+  }
+
+  @override
+  String get offlinePackageDeleted => 'Офлайн-пакет удалён';
+
+  @override
+  String get offlinePackageDeleteFailed => 'Не удалось удалить офлайн-пакет';
+
+  @override
+  String packageTotalSize(String size) {
+    return 'полный размер $size';
+  }
+
+  @override
+  String get completeMushafPages => 'Полные страницы Мусхафа';
+
+  @override
+  String get completeRecitation => 'Полная запись Корана';
+
+  @override
+  String get downloadInProgress => 'Загрузка выполняется';
+
+  @override
+  String get downloadFailed => 'Загрузка прервана';
+
+  @override
+  String get notReady => 'Не готово';
+
+  @override
+  String get availableOffline => 'Доступно без интернета';
+
+  @override
   String get moreTools => 'Практика и инструменты';
 
   @override

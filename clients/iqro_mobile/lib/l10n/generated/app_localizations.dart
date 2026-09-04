@@ -1614,6 +1614,150 @@ abstract class AppLocalizations {
   /// **'This recording is not licensed for offline download.'**
   String get audioOfflineUnavailable;
 
+  /// No description provided for @offlineStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline storage'**
+  String get offlineStorage;
+
+  /// No description provided for @offlineStorageSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded Mushaf pages and audio'**
+  String get offlineStorageSettingsSubtitle;
+
+  /// No description provided for @offlineStorageUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used offline: {size}'**
+  String offlineStorageUsed(String size);
+
+  /// No description provided for @offlineStorageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Only files downloaded by the app are shown here. Nothing is removed automatically.'**
+  String get offlineStorageDescription;
+
+  /// No description provided for @offlineStorageQuota.
+  ///
+  /// In en, this message translates to:
+  /// **'App limit: {size}'**
+  String offlineStorageQuota(String size);
+
+  /// No description provided for @offlineStorageQuotaExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'This package does not fit within the offline storage limit. Delete an unneeded package first.'**
+  String get offlineStorageQuotaExceeded;
+
+  /// No description provided for @downloadOfflineConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'The complete package will use about {size}. Start downloading?'**
+  String downloadOfflineConfirmation(String size);
+
+  /// No description provided for @downloadedContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded content'**
+  String get downloadedContent;
+
+  /// No description provided for @noOfflinePackages.
+  ///
+  /// In en, this message translates to:
+  /// **'No offline packages have been downloaded yet.'**
+  String get noOfflinePackages;
+
+  /// No description provided for @storageReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read offline storage'**
+  String get storageReadFailed;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again.'**
+  String get tryAgain;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @deleteOfflinePackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete offline package'**
+  String get deleteOfflinePackage;
+
+  /// No description provided for @deleteOfflinePackageConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}” ({size}) from this device? You will need to download it again for offline use.'**
+  String deleteOfflinePackageConfirmation(String name, String size);
+
+  /// No description provided for @deletePlayingAudioConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” is playing now. Stop the player and delete its offline package ({size}) from this device?'**
+  String deletePlayingAudioConfirmation(String name, String size);
+
+  /// No description provided for @offlinePackageDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline package deleted'**
+  String get offlinePackageDeleted;
+
+  /// No description provided for @offlinePackageDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete the offline package'**
+  String get offlinePackageDeleteFailed;
+
+  /// No description provided for @packageTotalSize.
+  ///
+  /// In en, this message translates to:
+  /// **'full size {size}'**
+  String packageTotalSize(String size);
+
+  /// No description provided for @completeMushafPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Mushaf pages'**
+  String get completeMushafPages;
+
+  /// No description provided for @completeRecitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Quran recitation'**
+  String get completeRecitation;
+
+  /// No description provided for @downloadInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Download in progress'**
+  String get downloadInProgress;
+
+  /// No description provided for @downloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download interrupted'**
+  String get downloadFailed;
+
+  /// No description provided for @notReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Not ready'**
+  String get notReady;
+
+  /// No description provided for @availableOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Available offline'**
+  String get availableOffline;
+
   /// No description provided for @moreTools.
   ///
   /// In en, this message translates to:

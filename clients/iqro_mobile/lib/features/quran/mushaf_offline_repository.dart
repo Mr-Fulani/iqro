@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
 
@@ -255,16 +256,12 @@ class MushafOfflineRepository {
     int expectedPageCount = 604,
     void Function(MushafDownloadSnapshot progress)? onProgress,
   }) async {
-    final payload = await _api.get(
-      '/quran/editions/$_mushafEdition/offline-manifest',
-      query: width == null ? null : <String, Object?>{'width': width},
-      public: true,
+    final manifest = await _manifest(width, expectedPageCount);
+    await ensureOfflineStorageCapacity(
+      _database,
+      packageId: manifest.packageId,
+      packageBytes: manifest.totalBytes,
     );
-    final manifest = OfflineMushafManifest.fromJson(jsonMap(payload));
-    if (manifest.pages.length != expectedPageCount) {
-      throw const FormatException('The Mushaf package is not complete');
-    }
-
     final support = await _supportDirectory();
     final packageDirectory = Directory(
       p.join(support.path, 'offline_packages', 'mushaf', manifest.packageId),
@@ -341,6 +338,35 @@ class MushafOfflineRepository {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
     }
+  }
+
+  Future<MushafDownloadSnapshot> estimate({
+    int? width,
+    int expectedPageCount = 604,
+  }) async {
+    final manifest = await _manifest(width, expectedPageCount);
+    return MushafDownloadSnapshot(
+      status: MushafDownloadStatus.notDownloaded,
+      packageId: manifest.packageId,
+      totalPages: manifest.pages.length,
+      totalBytes: manifest.totalBytes,
+    );
+  }
+
+  Future<OfflineMushafManifest> _manifest(
+    int? width,
+    int expectedPageCount,
+  ) async {
+    final payload = await _api.get(
+      '/quran/editions/$_mushafEdition/offline-manifest',
+      query: width == null ? null : <String, Object?>{'width': width},
+      public: true,
+    );
+    final manifest = OfflineMushafManifest.fromJson(jsonMap(payload));
+    if (manifest.pages.length != expectedPageCount) {
+      throw const FormatException('The Mushaf package is not complete');
+    }
+    return manifest;
   }
 
   Future<void> _preparePackage(

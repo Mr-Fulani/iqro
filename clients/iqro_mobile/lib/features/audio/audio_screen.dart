@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/offline_storage_quota.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'audio_models.dart';
 import 'audio_offline_repository.dart';
@@ -414,13 +415,22 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   }
 }
 
-class _OfflineAudioCard extends ConsumerWidget {
+class _OfflineAudioCard extends ConsumerStatefulWidget {
   const _OfflineAudioCard({required this.recitation});
 
   final Recitation recitation;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_OfflineAudioCard> createState() => _OfflineAudioCardState();
+}
+
+class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
+  var _preparing = false;
+
+  Recitation get recitation => widget.recitation;
+
+  @override
+  Widget build(BuildContext context) {
     if (!recitation.offlineDownloadAllowed) {
       return IqroCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -476,12 +486,19 @@ class _OfflineAudioCard extends ConsumerWidget {
                       : context.l10n.downloadForOffline,
                   onPressed: downloading
                       ? null
-                      : () => ref
-                            .read(audioDownloadProvider(recitation.id).notifier)
-                            .download(),
-                  icon: Icon(
-                    failed ? Icons.refresh_rounded : Icons.download_rounded,
-                  ),
+                      : _preparing
+                      ? null
+                      : _prepareDownload,
+                  icon: _preparing
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          failed
+                              ? Icons.refresh_rounded
+                              : Icons.download_rounded,
+                        ),
                 ),
             ],
           ),
@@ -505,6 +522,60 @@ class _OfflineAudioCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _prepareDownload() async {
+    if (_preparing) return;
+    setState(() => _preparing = true);
+    try {
+      final estimate = await ref
+          .read(audioOfflineRepositoryProvider)
+          .estimate(recitationId: recitation.id);
+      await ensureOfflineStorageCapacity(
+        ref.read(localDatabaseProvider),
+        packageId: estimate.packageId!,
+        packageBytes: estimate.totalBytes,
+      );
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.downloadForOffline),
+          content: Text(
+            context.l10n.downloadOfflineConfirmation(
+              _formatAudioMegabytes(estimate.totalBytes),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(context.l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(context.l10n.downloadForOffline),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        unawaited(
+          ref.read(audioDownloadProvider(recitation.id).notifier).download(),
+        );
+      }
+    } on OfflineStorageQuotaExceeded {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.offlineStorageQuotaExceeded)),
+      );
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    } finally {
+      if (mounted) setState(() => _preparing = false);
+    }
   }
 }
 
