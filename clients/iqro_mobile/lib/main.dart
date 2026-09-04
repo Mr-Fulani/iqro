@@ -5,7 +5,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
-import 'core/background/background_work.dart';
+import 'core/startup/startup_tasks.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,16 +13,20 @@ void main() {
 }
 
 Future<AppDependencies> _initialize() async {
-  await initializeBackgroundWork();
+  return initializeCriticalStartup<AppDependencies>(
+    initializeDependencies: AppDependencies.initialize,
+    initializeAudioPlatform: _initializeAudioPlatform,
+  );
+}
+
+Future<void> _initializeAudioPlatform() async {
   await JustAudioBackground.init(
     androidNotificationChannelId: 'forum.iqro.app.audio',
     androidNotificationChannelName: 'IQRO Quran audio',
     androidNotificationOngoing: true,
   );
-  final dependencies = await AppDependencies.initialize();
   final audioSession = await AudioSession.instance;
   await audioSession.configure(const AudioSessionConfiguration.speech());
-  return dependencies;
 }
 
 class _IqroBootstrap extends StatefulWidget {

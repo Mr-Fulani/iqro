@@ -416,6 +416,9 @@ multi-client MVP остаётся на этапах B–D.
 Flutter и Telegram Mini App; уже закрытые проверки не отменяются, а подтверждаются на общем
 client workload mix.
 
+- [x] Сократить блокирующий Flutter startup path: независимые dependency/audio инициализации
+  запускаются параллельно, а идемпотентная регистрация Workmanager переносится после первого
+  кадра и не блокирует доступ к локальным данным или стартовому экрану.
 - [ ] Security/privacy review, SAST/SCA/container scan и threat-model update.
 - [ ] Dashboards, alerts, on-call ownership и runbooks DB/Redis/CDN/provider failure.
 - [ ] Offsite backup, PITR и измеренный restore drill.

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/background/background_maintenance_service.dart';
+import '../core/background/background_work.dart';
 import '../core/theme/iqro_theme.dart';
 import '../core/widgets/prayer_times.home_widget.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -26,6 +27,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   StreamSubscription<String>? _notificationRoutes;
   StreamSubscription<Uri>? _prayerWidgetRoutes;
   final _maintenance = AccountScopedMaintenanceCoordinator();
+  var _backgroundWorkRequested = false;
 
   @override
   void initState() {
@@ -49,8 +51,39 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       if (!mounted) return;
       final route = notifications.takeInitialRoute();
       if (route != null) _router.go(route);
+      _requestBackgroundWork();
       _requestMaintenance();
     });
+  }
+
+  void _requestBackgroundWork() {
+    if (_backgroundWorkRequested) return;
+    _backgroundWorkRequested = true;
+    late final Future<void> initialization;
+    try {
+      initialization = initializeBackgroundWork();
+    } on Object catch (error, stackTrace) {
+      _reportBackgroundWorkError(error, stackTrace);
+      return;
+    }
+    unawaited(
+      initialization.then<void>(
+        (_) {},
+        onError: (Object error, StackTrace stackTrace) {
+          _reportBackgroundWorkError(error, stackTrace);
+        },
+      ),
+    );
+  }
+
+  void _reportBackgroundWorkError(Object error, StackTrace stackTrace) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'IQRO deferred background work',
+      ),
+    );
   }
 
   void _requestMaintenance() {
