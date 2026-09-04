@@ -10,6 +10,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 
@@ -22,7 +23,8 @@ class ReaderScreen extends ConsumerStatefulWidget {
   ConsumerState<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends ConsumerState<ReaderScreen> {
+class _ReaderScreenState extends ConsumerState<ReaderScreen>
+    with WidgetsBindingObserver {
   final _bookmarks = <int>{};
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
@@ -47,23 +49,41 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   AccountScopeKey? _accountKey;
   var _audioRequest = 0;
   AccountScopeSnapshot? _initialAccountScope;
+  ReadingSessionRecorder? _readingSession;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedAyah = widget.initialAyah;
     _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
     _accountKey = _initialAccountScope == null
         ? null
         : accountScopeKey(_initialAccountScope!);
+    if (_initialAccountScope != null) {
+      _readingSession = ref
+          .read(planRepositoryProvider)
+          .startReadingSession(accountScope: _initialAccountScope!);
+    }
     if (_accountKey != null) _loadBookmarks(_accountKey!);
   }
 
   @override
   void dispose() {
     _audioRequest += 1;
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_readingSession?.finish());
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _readingSession?.resume();
+    } else {
+      _readingSession?.pause();
+    }
   }
 
   @override
@@ -396,6 +416,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             page: ayah.pages.firstOrNull ?? 1,
             accountScope: scope,
           );
+      _readingSession?.observe(
+        surah: ayah.surahNumber,
+        ayah: ayah.number,
+        page: ayah.pages.firstOrNull ?? 1,
+      );
       if (_isCurrentAccount(scope)) {
         ref.invalidate(readingPositionProvider(accountScopeKey(scope)));
       }

@@ -12,6 +12,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../audio/reciter_portraits.dart';
+import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
 import 'quick_jump_sheet.dart';
@@ -33,7 +34,8 @@ class MushafScreen extends ConsumerStatefulWidget {
   ConsumerState<MushafScreen> createState() => _MushafScreenState();
 }
 
-class _MushafScreenState extends ConsumerState<MushafScreen> {
+class _MushafScreenState extends ConsumerState<MushafScreen>
+    with WidgetsBindingObserver {
   late final PageController _pageController;
   final _zoomControllers = <int, NativeMushafPageController>{};
   var _currentPage = 1;
@@ -46,15 +48,22 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   AccountScopeKey? _accountKey;
   AccountScopeSnapshot? _pageTransitionScope;
   AccountScopeSnapshot? _initialAccountScope;
+  ReadingSessionRecorder? _readingSession;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentPage = widget.initialPage.clamp(1, 604);
     _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
     _accountKey = _initialAccountScope == null
         ? null
         : accountScopeKey(_initialAccountScope!);
+    if (_initialAccountScope != null) {
+      _readingSession = ref
+          .read(planRepositoryProvider)
+          .startReadingSession(accountScope: _initialAccountScope!);
+    }
     _selectedAyah = QuranAyahReference(
       id: '',
       surah: widget.surah,
@@ -84,9 +93,20 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   void dispose() {
     _positionRequest += 1;
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_readingSession?.finish());
     _pageController.dispose();
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _readingSession?.resume();
+    } else {
+      _readingSession?.pause();
+    }
   }
 
   Future<void> _setControls(bool visible) async {
@@ -687,6 +707,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         page: page,
         accountScope: scope,
       );
+      _readingSession?.observe(
+        surah: reference?.surah ?? current.surah,
+        ayah: reference?.ayah ?? current.ayah,
+        page: page,
+      );
     } on AccountScopeChanged {
       return;
     } on Object {
@@ -699,6 +724,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           ayah: preferredReference?.ayah ?? current.ayah,
           page: page,
           accountScope: scope,
+        );
+        _readingSession?.observe(
+          surah: preferredReference?.surah ?? current.surah,
+          ayah: preferredReference?.ayah ?? current.ayah,
+          page: page,
         );
       } on AccountScopeChanged {
         return;

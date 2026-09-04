@@ -135,7 +135,7 @@ runtime. Основной незакрытый объём находится в 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | Guest data не теряются после регистрации | ✅ | Verified-email вход транзакционно переносит позиции, закладки, reminders, профиль, feedback и устройства; merge и rollback покрыты тестами |
-| Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions и reminders имеют offline sync; daily goals доступны через единый server-authoritative API на всех устройствах | Goals ещё не входят в offline sync protocol; playback-state отсутствует |
+| Bookmarks/positions/goals/reminders/playback sync | 🟡 | Bookmarks, positions и reminders имеют offline sync; daily goals доступны через единый server-authoritative API на всех устройствах, а Flutter доставляет automatic reading sessions идемпотентно после восстановления сети | Goals ещё не входят в общий offline sync protocol; playback state синхронизируется отдельным revisioned API |
 | Повтор operation ID не создаёт дубликат | ✅ | Idempotency/fingerprint tests присутствуют |
 | Tombstones не возвращают удалённые данные | ✅ | Bookmark/reminder tombstones и retired-ID ledgers реализованы |
 | Full resync после expired cursor без потери outbox | ✅ | Backend token/restart/retention contract и web постраничный recovery с rebase/pull покрыты тестами |

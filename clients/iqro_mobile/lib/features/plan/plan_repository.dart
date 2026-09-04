@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:uuid/uuid.dart';
 
@@ -288,6 +290,11 @@ abstract interface class PlanRemoteGateway {
     AccountScopeSnapshot? accountScope,
   });
 
+  Future<Object?> recordAutomatic(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+
   Future<Object?> setPrayerPlan(
     Map<String, Object?> payload, {
     AccountScopeSnapshot? accountScope,
@@ -364,6 +371,16 @@ class ApiPlanRemoteGateway implements PlanRemoteGateway {
   );
 
   @override
+  Future<Object?> recordAutomatic(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.post(
+    '/me/reading-sessions/automatic',
+    data: payload,
+    accountScope: accountScope,
+  );
+
+  @override
   Future<Object?> setPrayerPlan(
     Map<String, Object?> payload, {
     AccountScopeSnapshot? accountScope,
@@ -426,10 +443,25 @@ class PlanRepository {
        _uuid = uuid;
 
   static const _cacheKey = 'reading:plan-dashboard';
+  static const _pendingSessionsKey = 'reading:pending-automatic-sessions';
   final LocalDatabase _database;
   final PlanRemoteGateway? _remote;
   final Future<String> Function() _timezoneLoader;
   final Uuid _uuid;
+  final StreamController<int> _updates = StreamController<int>.broadcast();
+  var _updateVersion = 0;
+
+  Stream<int> get updates => _updates.stream;
+
+  ReadingSessionRecorder startReadingSession({
+    required AccountScopeSnapshot accountScope,
+    DateTime Function()? clock,
+  }) => ReadingSessionRecorder._(
+    repository: this,
+    accountScope: accountScope,
+    id: _uuid.v7(),
+    clock: clock ?? DateTime.now,
+  );
 
   Future<DailyPlan> initialize({
     required int target,
@@ -501,6 +533,7 @@ class PlanRepository {
     final remote = _remote!;
     final timezoneName = await _safeTimezone();
     _database.ensureCurrent(scope);
+    await _flushAutomaticSessions(remote, scope);
     var today = jsonMap(await remote.today(timezoneName, accountScope: scope));
     _database.ensureCurrent(scope);
     if (today['goal'] == null && preferredTarget != null) {
@@ -739,6 +772,98 @@ class PlanRepository {
     }
   }
 
+  Future<void> _completeReadingSession(ReadingSessionRecorder session) async {
+    final remote = _remote;
+    if (remote == null) return;
+    final scope = session.accountScope;
+    try {
+      _database.ensureCurrent(scope);
+      final payload = session._payload(await _safeTimezone());
+      if (payload == null) return;
+      _database.ensureCurrent(scope);
+      await remote.recordAutomatic(payload, accountScope: scope);
+      _database.ensureCurrent(scope);
+      _notifyUpdated();
+    } on AccountScopeChanged {
+      // Finishing an old route after an account handoff must not attribute its
+      // reading to the new owner or surface an unhandled dispose-time error.
+      return;
+    } on Object {
+      try {
+        _database.ensureCurrent(scope);
+        final payload = session._payload(await _safeTimezone());
+        if (payload != null) {
+          await _savePendingAutomaticSession(payload, scope);
+        }
+      } on AccountScopeChanged {
+        return;
+      }
+    }
+  }
+
+  Future<void> _savePendingAutomaticSession(
+    Map<String, Object?> payload,
+    AccountScopeSnapshot scope,
+  ) async {
+    final state = await _database.readState(
+      _pendingSessionsKey,
+      accountScope: scope,
+    );
+    final pending = _pendingSessions(state);
+    if (!pending.any((item) => item['id'] == payload['id'])) {
+      pending.add(payload);
+    }
+    await _writePendingSessions(pending, scope);
+  }
+
+  Future<void> _flushAutomaticSessions(
+    PlanRemoteGateway remote,
+    AccountScopeSnapshot scope,
+  ) async {
+    final state = await _database.readState(
+      _pendingSessionsKey,
+      accountScope: scope,
+    );
+    final pending = _pendingSessions(state);
+    if (pending.isEmpty) return;
+    final remaining = <Map<String, Object?>>[];
+    var failed = false;
+    for (final payload in pending) {
+      if (failed) {
+        remaining.add(payload);
+        continue;
+      }
+      try {
+        await remote.recordAutomatic(payload, accountScope: scope);
+        _database.ensureCurrent(scope);
+        _notifyUpdated();
+      } on AccountScopeChanged {
+        rethrow;
+      } on Object {
+        failed = true;
+        remaining.add(payload);
+      }
+    }
+    await _writePendingSessions(remaining, scope);
+  }
+
+  List<Map<String, Object?>> _pendingSessions(Map<String, Object?>? state) {
+    final pending = <Map<String, Object?>>[];
+    for (final raw in (state?['items'] as List?) ?? const <Object?>[]) {
+      if (raw is Map) pending.add(Map<String, Object?>.from(raw));
+    }
+    return pending;
+  }
+
+  Future<void> _writePendingSessions(
+    List<Map<String, Object?>> pending,
+    AccountScopeSnapshot scope,
+  ) => _database.writeState(_pendingSessionsKey, <String, Object?>{
+    'items': pending,
+  }, accountScope: scope);
+
+  void _notifyUpdated() => _updates.add(++_updateVersion);
+
   Future<void> _storeLocal(DailyPlan plan, AccountScopeSnapshot scope) =>
       _database.writeState('daily_plan', plan.toJson(), accountScope: scope);
 
@@ -753,6 +878,109 @@ class PlanRepository {
 
   static Future<String> _deviceTimezone() async =>
       (await FlutterTimezone.getLocalTimezone()).identifier;
+}
+
+class ReadingSessionRecorder {
+  ReadingSessionRecorder._({
+    required PlanRepository repository,
+    required this.accountScope,
+    required String id,
+    required DateTime Function() clock,
+  }) : _repository = repository,
+       _id = id,
+       _clock = clock {
+    _startedAt = clock().toUtc();
+    _activeSince = _startedAt;
+  }
+
+  final PlanRepository _repository;
+  final AccountScopeSnapshot accountScope;
+  final String _id;
+  final DateTime Function() _clock;
+  late final DateTime _startedAt;
+  DateTime? _activeSince;
+  Duration _activeDuration = Duration.zero;
+  final Set<int> _creditedPages = <int>{};
+  final Set<String> _creditedAyahs = <String>{};
+  int? _lastPage;
+  int? _lastSurah;
+  int? _lastAyah;
+  DateTime? _endedAt;
+  Future<void>? _completion;
+
+  void observe({required int page, required int surah, required int ayah}) {
+    if (_completion != null || page < 1 || surah < 1 || ayah < 1) return;
+    final lastPage = _lastPage;
+    final lastSurah = _lastSurah;
+    final lastAyah = _lastAyah;
+    if (lastPage != null && lastSurah != null && lastAyah != null) {
+      final pageDelta = page - lastPage;
+      if (pageDelta == 1) _creditedPages.add(page);
+      if (pageDelta >= 0 && pageDelta <= 1) {
+        if (surah == lastSurah) {
+          final ayahDelta = ayah - lastAyah;
+          if (ayahDelta > 0 && ayahDelta <= 20) {
+            for (var number = lastAyah + 1; number <= ayah; number++) {
+              _creditedAyahs.add('$surah:$number');
+            }
+          }
+        } else if (surah == lastSurah + 1 && ayah <= 10) {
+          for (var number = 1; number <= ayah; number++) {
+            _creditedAyahs.add('$surah:$number');
+          }
+        }
+      }
+    }
+    _lastPage = page;
+    _lastSurah = surah;
+    _lastAyah = ayah;
+  }
+
+  void pause() {
+    if (_completion != null) return;
+    final activeSince = _activeSince;
+    if (activeSince == null) return;
+    final now = _clock().toUtc();
+    if (now.isAfter(activeSince)) {
+      _activeDuration += now.difference(activeSince);
+    }
+    _activeSince = null;
+  }
+
+  void resume() {
+    if (_completion != null || _activeSince != null) return;
+    _activeSince = _clock().toUtc();
+  }
+
+  Future<void> finish() {
+    final current = _completion;
+    if (current != null) return current;
+    pause();
+    _endedAt = _clock().toUtc();
+    return _completion = _repository._completeReadingSession(this);
+  }
+
+  Map<String, Object?>? _payload(String timezoneName) {
+    final endedAt = _endedAt;
+    if (endedAt == null) return null;
+    final elapsed = endedAt.difference(_startedAt).inSeconds.clamp(0, 86400);
+    final activeSeconds = _activeDuration.inSeconds.clamp(0, elapsed);
+    if (activeSeconds < 60 &&
+        _creditedPages.isEmpty &&
+        _creditedAyahs.isEmpty) {
+      return null;
+    }
+    return <String, Object?>{
+      'id': _id,
+      'timezone_name': timezoneName,
+      'started_at': _startedAt.toIso8601String(),
+      'ended_at': endedAt.toIso8601String(),
+      'active_seconds': activeSeconds,
+      'credited_pages': _creditedPages.length,
+      'credited_ayahs': _creditedAyahs.length,
+      'client_updated_at': endedAt.toIso8601String(),
+    };
+  }
 }
 
 const _prayerCodes = <String>['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];

@@ -95,6 +95,99 @@ void main() {
     expect(updated.prayerPages['fajr'], 2);
   });
 
+  test(
+    'automatic session counts active time and only sequential progress',
+    () async {
+      final remote = _FakePlanRemote();
+      final database = _FakeLocalDatabase();
+      var now = DateTime.utc(2026, 8, 29, 10);
+      final repository = PlanRepository(
+        database,
+        remote: remote,
+        timezoneLoader: () async => 'Europe/Istanbul',
+      );
+      final session = repository.startReadingSession(
+        accountScope: await database.captureAccount(),
+        clock: () => now,
+      );
+
+      session.observe(page: 1, surah: 1, ayah: 1);
+      session.observe(page: 300, surah: 50, ayah: 1);
+      session.observe(page: 301, surah: 50, ayah: 4);
+      now = now.add(const Duration(seconds: 30));
+      session.pause();
+      now = now.add(const Duration(minutes: 2));
+      session.resume();
+      now = now.add(const Duration(seconds: 40));
+      await session.finish();
+      await session.finish();
+
+      expect(remote.automaticPayloads, hasLength(1));
+      expect(remote.automaticPayloads.single['active_seconds'], 70);
+      expect(remote.automaticPayloads.single['credited_pages'], 1);
+      expect(remote.automaticPayloads.single['credited_ayahs'], 3);
+      expect(
+        remote.automaticPayloads.single['timezone_name'],
+        'Europe/Istanbul',
+      );
+    },
+  );
+
+  test('failed automatic session is delivered on the next refresh', () async {
+    final database = _FakeLocalDatabase();
+    final remote = _FakePlanRemote()..offline = true;
+    var now = DateTime.utc(2026, 8, 29, 10);
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    final session = repository.startReadingSession(
+      accountScope: await database.captureAccount(),
+      clock: () => now,
+    );
+    session.observe(page: 1, surah: 1, ayah: 1);
+    session.observe(page: 2, surah: 2, ayah: 1);
+    now = now.add(const Duration(seconds: 10));
+
+    await session.finish();
+    expect(
+      (database.states['reading:pending-automatic-sessions']?['items'] as List),
+      hasLength(1),
+    );
+
+    remote.offline = false;
+    await repository.load();
+
+    expect(remote.automaticPayloads, hasLength(1));
+    expect(
+      (database.states['reading:pending-automatic-sessions']?['items'] as List),
+      isEmpty,
+    );
+  });
+
+  test('opening and closing a reader does not create fake progress', () async {
+    final database = _FakeLocalDatabase();
+    final remote = _FakePlanRemote();
+    var now = DateTime.utc(2026, 8, 29, 10);
+    final session =
+        PlanRepository(
+          database,
+          remote: remote,
+          timezoneLoader: () async => 'UTC',
+        ).startReadingSession(
+          accountScope: await database.captureAccount(),
+          clock: () => now,
+        );
+    session.observe(page: 20, surah: 2, ayah: 15);
+    now = now.add(const Duration(seconds: 10));
+
+    await session.finish();
+
+    expect(remote.automaticPayloads, isEmpty);
+    expect(database.states['reading:pending-automatic-sessions'], isNull);
+  });
+
   test('new daily plan uses onboarding target with zero progress', () async {
     final database = _FakeLocalDatabase();
     final plan = await PlanRepository(database).load(preferredTarget: 1);
@@ -243,6 +336,7 @@ class _FakePlanRemote implements PlanRemoteGateway {
   Map<String, Object?>? savedPrayerCheckIn;
   Map<String, Object?>? prayerPlan;
   Map<String, Object?>? prayerCheckIn;
+  final List<Map<String, Object?>> automaticPayloads = <Map<String, Object?>>[];
 
   void _check(String timezoneName) {
     requestedTimezone = timezoneName;
@@ -340,6 +434,16 @@ class _FakePlanRemote implements PlanRemoteGateway {
     if (payload['metric'] == metric.wireValue) {
       achieved += (payload['amount'] as num).toInt();
     }
+    return <String, Object?>{'id': payload['id']};
+  }
+
+  @override
+  Future<Object?> recordAutomatic(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (offline) throw StateError('offline');
+    automaticPayloads.add(payload);
     return <String, Object?>{'id': payload['id']};
   }
 

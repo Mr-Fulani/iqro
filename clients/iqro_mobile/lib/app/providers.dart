@@ -63,6 +63,9 @@ final audioPlaybackSyncProvider = Provider<AudioPlaybackSyncService>(
 final planRepositoryProvider = Provider<PlanRepository>(
   (ref) => _missing('PlanRepository'),
 );
+final planUpdatesProvider = StreamProvider<int>(
+  (ref) => ref.watch(planRepositoryProvider).updates,
+);
 final prayerRepositoryProvider = Provider<PrayerRepository>(
   (ref) => _missing('PrayerRepository'),
 );
@@ -695,6 +698,7 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
 
 final planProvider =
     StateNotifierProvider<PlanController, AsyncValue<DailyPlan>>((ref) {
+      ref.watch(planUpdatesProvider);
       final accountKey = ref.watch(activeAccountScopeKeyProvider);
       final database = ref.watch(localDatabaseProvider);
       final currentScope = database.accountScope.current;
