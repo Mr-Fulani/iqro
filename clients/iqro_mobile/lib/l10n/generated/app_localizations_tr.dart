@@ -506,6 +506,44 @@ class AppLocalizationsTr extends AppLocalizations {
   String get increase => 'Artır';
 
   @override
+  String get currentLocation => 'Geçerli konum';
+
+  @override
+  String get locationNotSelected => 'Konum seçilmedi';
+
+  @override
+  String get cityFallbackHint => 'Cihaz konumunu kullanın veya şehir seçin';
+
+  @override
+  String get chooseCity => 'Şehir seç';
+
+  @override
+  String get chooseCityInstead => 'Bunun yerine şehir seç';
+
+  @override
+  String get cityFallbackDescription =>
+      'Şehir, kesin konum kullanılamadığında cihazda saklanan özel bir yedek seçenektir.';
+
+  @override
+  String get searchCity => 'Şehir ara';
+
+  @override
+  String get cityNotFound => 'Eşleşen şehir yok';
+
+  @override
+  String get qibla => 'Kıble';
+
+  @override
+  String get qiblaDirection => 'Kıble yönü';
+
+  @override
+  String get fromGeographicNorth => 'coğrafi kuzeyden';
+
+  @override
+  String get qiblaNorthHint =>
+      'Bu canlı pusula değil, coğrafi bir açıdır. Oku izlemeden önce telefonun üstünü kuzeye hizalayın.';
+
+  @override
   String get prayerLocationPrivacy =>
       'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
 

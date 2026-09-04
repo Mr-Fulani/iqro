@@ -1068,6 +1068,78 @@ abstract class AppLocalizations {
   /// **'Increase'**
   String get increase;
 
+  /// No description provided for @currentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Current location'**
+  String get currentLocation;
+
+  /// No description provided for @locationNotSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Location not selected'**
+  String get locationNotSelected;
+
+  /// No description provided for @cityFallbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use device location or choose a city'**
+  String get cityFallbackHint;
+
+  /// No description provided for @chooseCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose city'**
+  String get chooseCity;
+
+  /// No description provided for @chooseCityInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a city instead'**
+  String get chooseCityInstead;
+
+  /// No description provided for @cityFallbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A city is a private on-device fallback when precise location is unavailable.'**
+  String get cityFallbackDescription;
+
+  /// No description provided for @searchCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Search city'**
+  String get searchCity;
+
+  /// No description provided for @cityNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching city'**
+  String get cityNotFound;
+
+  /// No description provided for @qibla.
+  ///
+  /// In en, this message translates to:
+  /// **'Qibla'**
+  String get qibla;
+
+  /// No description provided for @qiblaDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Qibla direction'**
+  String get qiblaDirection;
+
+  /// No description provided for @fromGeographicNorth.
+  ///
+  /// In en, this message translates to:
+  /// **'from geographic north'**
+  String get fromGeographicNorth;
+
+  /// No description provided for @qiblaNorthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.'**
+  String get qiblaNorthHint;
+
   /// No description provided for @prayerLocationPrivacy.
   ///
   /// In en, this message translates to:

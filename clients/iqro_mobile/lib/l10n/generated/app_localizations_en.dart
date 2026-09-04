@@ -507,6 +507,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get increase => 'Increase';
 
   @override
+  String get currentLocation => 'Current location';
+
+  @override
+  String get locationNotSelected => 'Location not selected';
+
+  @override
+  String get cityFallbackHint => 'Use device location or choose a city';
+
+  @override
+  String get chooseCity => 'Choose city';
+
+  @override
+  String get chooseCityInstead => 'Choose a city instead';
+
+  @override
+  String get cityFallbackDescription =>
+      'A city is a private on-device fallback when precise location is unavailable.';
+
+  @override
+  String get searchCity => 'Search city';
+
+  @override
+  String get cityNotFound => 'No matching city';
+
+  @override
+  String get qibla => 'Qibla';
+
+  @override
+  String get qiblaDirection => 'Qibla direction';
+
+  @override
+  String get fromGeographicNorth => 'from geographic north';
+
+  @override
+  String get qiblaNorthHint =>
+      'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.';
+
+  @override
   String get prayerLocationPrivacy =>
       'Your coordinates stay on this device and are never added to analytics.';
 

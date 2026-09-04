@@ -330,22 +330,26 @@ class PrayerLocation {
     required this.latitude,
     required this.longitude,
     required this.timezone,
+    this.cityId,
   });
 
   final double latitude;
   final double longitude;
   final String timezone;
+  final String? cityId;
 
   factory PrayerLocation.fromJson(Map<String, Object?> json) => PrayerLocation(
     latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
     longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
     timezone: json['timezone']?.toString() ?? 'UTC',
+    cityId: json['city_id']?.toString(),
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
     'latitude': latitude,
     'longitude': longitude,
     'timezone': timezone,
+    if (cityId != null) 'city_id': cityId,
   };
 }
 
@@ -572,6 +576,28 @@ class PrayerRepository {
       longitude: deviceLocation.longitude,
       timezone: deviceLocation.timezone,
     );
+    return calculateForLocation(
+      method: method,
+      location: location,
+      accountScope: scope,
+    );
+  }
+
+  Future<PrayerSchedule> calculateForLocation({
+    required PrayerMethod method,
+    required PrayerLocation location,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    if (!location.latitude.isFinite ||
+        !location.longitude.isFinite ||
+        location.latitude < -90 ||
+        location.latitude > 90 ||
+        location.longitude < -180 ||
+        location.longitude > 180 ||
+        location.timezone.isEmpty) {
+      throw const FormatException('Invalid prayer location');
+    }
     await _database.writeState(
       'prayer_location',
       location.toJson(),

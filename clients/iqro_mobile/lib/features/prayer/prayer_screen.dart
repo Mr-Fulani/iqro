@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,6 +12,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'prayer_repository.dart';
+import 'prayer_places.dart';
 
 class PrayerScreen extends ConsumerStatefulWidget {
   const PrayerScreen({super.key});
@@ -21,6 +24,7 @@ class PrayerScreen extends ConsumerStatefulWidget {
 class _PrayerScreenState extends ConsumerState<PrayerScreen>
     with WidgetsBindingObserver {
   PrayerSchedule? _schedule;
+  PrayerLocation? _location;
   PrayerPreferences? _preferences;
   Object? _error;
   String? _selectedMethodCode;
@@ -61,6 +65,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     if (ownerId != _ownerId) {
       _ownerId = ownerId;
       _schedule = null;
+      _location = null;
       _preferences = null;
       _selectedMethodCode = null;
       _error = null;
@@ -79,6 +84,14 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         .where((method) => method.code == _selectedMethodCode)
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
+    final city = prayerCityById(_location?.cityId);
+    final locationName = city?.nameFor(locale) ?? context.l10n.currentLocation;
+    final qibla = _location == null
+        ? null
+        : qiblaBearing(
+            latitude: _location!.latitude,
+            longitude: _location!.longitude,
+          );
     if (ownerId != null &&
         methodItems.isNotEmpty &&
         _profileOwnerId != ownerId &&
@@ -131,6 +144,38 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
               title: context.l10n.privacy,
               message: context.l10n.prayerLocationPrivacy,
               color: context.iqroColors.lavender,
+            ),
+            const SizedBox(height: 10),
+            IqroCard(
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.location_on_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          _location == null
+                              ? context.l10n.locationNotSelected
+                              : locationName,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          _location?.timezone ?? context.l10n.cityFallbackHint,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: selectedMethod == null || _loading
+                        ? null
+                        : () => _selectCity(selectedMethod),
+                    child: Text(context.l10n.chooseCity),
+                  ),
+                ],
+              ),
             ),
             if (_error != null) ...<Widget>[
               const SizedBox(height: 10),
@@ -276,6 +321,17 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                         label: Text(context.l10n.useMyLocation),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading || selectedMethod == null
+                            ? null
+                            : () => _selectCity(selectedMethod),
+                        icon: const Icon(Icons.location_city_outlined),
+                        label: Text(context.l10n.chooseCityInstead),
+                      ),
+                    ),
                   ],
                 ),
               )
@@ -332,6 +388,47 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                 label: Text(context.l10n.retry),
               ),
             ],
+            if (qibla != null) ...<Widget>[
+              const SizedBox(height: 14),
+              IqroCard(
+                onTap: () => _showQibla(qibla, locationName),
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: context.iqroColors.lavender,
+                        ),
+                        child: Transform.rotate(
+                          angle: qibla * math.pi / 180,
+                          child: const Icon(Icons.navigation_rounded),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            context.l10n.qibla,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            '${qibla.round()}° · ${context.l10n.fromGeographicNorth}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.open_in_full, size: 18),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             IqroCard(
               onTap: () => context.push('/reminders'),
@@ -368,11 +465,12 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     final repository = ref.read(prayerRepositoryProvider);
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || scope.userId != expectedOwnerId) return;
-    late final (PrayerSchedule?, String?) values;
+    late final (PrayerSchedule?, String?, PrayerLocation?) values;
     try {
       values = await (
         repository.cachedToday(accountScope: scope),
         repository.selectedMethodCode(accountScope: scope),
+        repository.storedLocation(accountScope: scope),
       ).wait;
       ref.read(localDatabaseProvider).ensureCurrent(scope);
     } on AccountScopeChanged {
@@ -392,6 +490,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     setState(() {
       _schedule = values.$1;
       _selectedMethodCode = values.$2;
+      _location = values.$3;
     });
   }
 
@@ -523,9 +622,15 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       final value = await ref
           .read(prayerRepositoryProvider)
           .calculateForCurrentLocation(method: method, accountScope: scope);
+      final location = await ref
+          .read(prayerRepositoryProvider)
+          .storedLocation(accountScope: scope);
       database.ensureCurrent(scope);
       if (!mounted || _ownerId != expectedOwnerId) return;
-      setState(() => _schedule = value);
+      setState(() {
+        _schedule = value;
+        _location = location;
+      });
       ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
       await ref.read(reminderProvider.notifier).replan();
     } on AccountScopeChanged {
@@ -552,6 +657,125 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         : await Geolocator.openAppSettings();
     if (!opened) _retryLocationOnResume = false;
   }
+
+  Future<void> _selectCity(PrayerMethod method) async {
+    final locale = Localizations.localeOf(context).languageCode;
+    final city = await showModalBottomSheet<PrayerCity>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _PrayerCitySheet(locale: locale),
+    );
+    if (city == null || !mounted) return;
+    final database = ref.read(localDatabaseProvider);
+    final scope = database.accountScope.current;
+    if (scope == null || scope.userId != _ownerId) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final location = PrayerLocation(
+        latitude: city.latitude,
+        longitude: city.longitude,
+        timezone: city.timezone,
+        cityId: city.id,
+      );
+      final schedule = await ref
+          .read(prayerRepositoryProvider)
+          .calculateForLocation(
+            method: method,
+            location: location,
+            accountScope: scope,
+          );
+      database.ensureCurrent(scope);
+      if (!mounted || _ownerId != scope.userId) return;
+      setState(() {
+        _location = location;
+        _schedule = schedule;
+      });
+      ref.invalidate(prayerScheduleProvider(accountScopeKey(scope)));
+      await ref.read(reminderProvider.notifier).replan();
+    } on AccountScopeChanged {
+      // Ignore a city selected for the previous account.
+    } on Object catch (error) {
+      if (mounted && database.accountScope.isCurrent(scope)) {
+        setState(() => _error = error);
+      }
+    } finally {
+      if (mounted && database.accountScope.isCurrent(scope)) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _showQibla(double bearing, String locationName) =>
+      showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dividerColor,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                context.l10n.qiblaDirection,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 6),
+              Text(locationName, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 26),
+              SizedBox(
+                width: 190,
+                height: 190,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      const Positioned(top: 10, child: Text('N')),
+                      Transform.rotate(
+                        angle: bearing * math.pi / 180,
+                        child: Icon(
+                          Icons.navigation_rounded,
+                          size: 104,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '${bearing.round()}° ${context.l10n.fromGeographicNorth}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.qiblaNorthHint,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
 
   String _nextPrayerName(BuildContext context) {
     if (_schedule == null) return context.l10n.prayerUnavailable;
@@ -837,6 +1061,94 @@ const _adjustmentCodes = <String>[
   'maghrib',
   'isha',
 ];
+
+class _PrayerCitySheet extends StatefulWidget {
+  const _PrayerCitySheet({required this.locale});
+
+  final String locale;
+
+  @override
+  State<_PrayerCitySheet> createState() => _PrayerCitySheetState();
+}
+
+class _PrayerCitySheetState extends State<_PrayerCitySheet> {
+  var _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final cities = prayerCities
+        .where((city) => city.matches(_query))
+        .toList(growable: false);
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: .72,
+      minChildSize: .48,
+      maxChildSize: .94,
+      builder: (context, controller) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dividerColor,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              context.l10n.chooseCity,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              context.l10n.cityFallbackDescription,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              autofocus: false,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: context.l10n.searchCity,
+                prefixIcon: const Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: cities.isEmpty
+                  ? Center(child: Text(context.l10n.cityNotFound))
+                  : ListView.separated(
+                      controller: controller,
+                      itemCount: cities.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final city = cities[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.location_city_outlined),
+                          title: Text(city.nameFor(widget.locale)),
+                          subtitle: Text(city.timezone),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 15,
+                          ),
+                          onTap: () => Navigator.of(context).pop(city),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _PrayerErrorBanner extends StatelessWidget {
   const _PrayerErrorBanner({

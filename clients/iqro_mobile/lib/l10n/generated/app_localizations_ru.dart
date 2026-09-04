@@ -507,6 +507,44 @@ class AppLocalizationsRu extends AppLocalizations {
   String get increase => 'Увеличить';
 
   @override
+  String get currentLocation => 'Текущее местоположение';
+
+  @override
+  String get locationNotSelected => 'Местоположение не выбрано';
+
+  @override
+  String get cityFallbackHint => 'Используйте геолокацию или выберите город';
+
+  @override
+  String get chooseCity => 'Выбрать город';
+
+  @override
+  String get chooseCityInstead => 'Выбрать город вместо геолокации';
+
+  @override
+  String get cityFallbackDescription =>
+      'Город — приватный запасной вариант на устройстве, когда точная геолокация недоступна.';
+
+  @override
+  String get searchCity => 'Поиск города';
+
+  @override
+  String get cityNotFound => 'Подходящий город не найден';
+
+  @override
+  String get qibla => 'Кибла';
+
+  @override
+  String get qiblaDirection => 'Направление Киблы';
+
+  @override
+  String get fromGeographicNorth => 'от географического севера';
+
+  @override
+  String get qiblaNorthHint =>
+      'Это географическое направление, а не живой компас. Сначала совместите верх телефона с севером, затем следуйте стрелке.';
+
+  @override
   String get prayerLocationPrivacy =>
       'Координаты остаются на устройстве и никогда не попадают в аналитику.';
 

@@ -504,6 +504,44 @@ class AppLocalizationsAr extends AppLocalizations {
   String get increase => 'زيادة';
 
   @override
+  String get currentLocation => 'الموقع الحالي';
+
+  @override
+  String get locationNotSelected => 'لم يتم اختيار الموقع';
+
+  @override
+  String get cityFallbackHint => 'استخدم موقع الجهاز أو اختر مدينة';
+
+  @override
+  String get chooseCity => 'اختيار مدينة';
+
+  @override
+  String get chooseCityInstead => 'اختيار مدينة بدلًا من ذلك';
+
+  @override
+  String get cityFallbackDescription =>
+      'المدينة خيار احتياطي خاص محفوظ على الجهاز عند تعذر الموقع الدقيق.';
+
+  @override
+  String get searchCity => 'البحث عن مدينة';
+
+  @override
+  String get cityNotFound => 'لم يتم العثور على مدينة مطابقة';
+
+  @override
+  String get qibla => 'القبلة';
+
+  @override
+  String get qiblaDirection => 'اتجاه القبلة';
+
+  @override
+  String get fromGeographicNorth => 'من الشمال الجغرافي';
+
+  @override
+  String get qiblaNorthHint =>
+      'هذا اتجاه جغرافي وليس بوصلة مباشرة. حاذِ أعلى الهاتف مع الشمال أولًا ثم اتبع السهم.';
+
+  @override
   String get prayerLocationPrivacy =>
       'تبقى إحداثياتك على هذا الجهاز ولا تُضاف إلى التحليلات.';
 
