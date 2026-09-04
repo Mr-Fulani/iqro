@@ -8,9 +8,13 @@ void main() {
     final mushaf = await File(
       'lib/features/quran/mushaf_screen.dart',
     ).readAsString();
+    final miniPlayer = await File(
+      'lib/features/audio/mini_player.dart',
+    ).readAsString();
 
     expect(appShell, contains('const IqroMiniPlayer()'));
     expect(mushaf, contains('const IqroMiniPlayer()'));
     expect(mushaf, isNot(contains('_ReaderAudioPill')));
+    expect(miniPlayer, isNot(contains('BackdropFilter')));
   });
 }

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,86 +55,78 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(17),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0x52030F0C),
-                borderRadius: BorderRadius.circular(17),
-                border: Border.all(color: Colors.white.withValues(alpha: .16)),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0x52030F0C),
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(color: Colors.white.withValues(alpha: .16)),
+            ),
+            child: ListTile(
+              minTileHeight: 66,
+              contentPadding: const EdgeInsetsDirectional.fromSTEB(8, 0, 6, 0),
+              leading: _MiniPlayerPortrait(
+                portraitUrl: portraitUrl,
+                name: reciter?.nameFor(locale) ?? '',
               ),
-              child: ListTile(
-                minTileHeight: 66,
-                contentPadding: const EdgeInsetsDirectional.fromSTEB(
-                  8,
-                  0,
-                  6,
-                  0,
+              title: Text(
+                player.surahName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
                 ),
-                leading: _MiniPlayerPortrait(
-                  portraitUrl: portraitUrl,
-                  name: reciter?.nameFor(locale) ?? '',
-                ),
-                title: Text(
-                  player.surahName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  reciter?.nameFor(locale) ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: .68)),
-                ),
-                trailing: SizedBox(
-                  width: 144,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.previousSurah,
-                        icon: Icons.skip_previous_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                currentSurah != null &&
-                                currentSurah > 1
-                            ? () => _changeSurah(-1)
-                            : null,
-                      ),
-                      _MiniPlayerControl(
-                        tooltip: player.playing
-                            ? context.l10n.pause
-                            : context.l10n.play,
-                        icon: player.playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        emphasized: true,
-                        loading: player.buffering || _changingSurah,
-                        onPressed: controlsEnabled
-                            ? () => ref
-                                  .read(audioControllerProvider.notifier)
-                                  .toggle()
-                            : null,
-                      ),
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.nextSurah,
-                        icon: Icons.skip_next_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                currentSurah != null &&
-                                currentSurah < 114
-                            ? () => _changeSurah(1)
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-                onTap: () => context.push('/player'),
               ),
+              subtitle: Text(
+                reciter?.nameFor(locale) ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.white.withValues(alpha: .68)),
+              ),
+              trailing: SizedBox(
+                width: 144,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    _MiniPlayerControl(
+                      tooltip: context.l10n.previousSurah,
+                      icon: Icons.skip_previous_rounded,
+                      onPressed:
+                          controlsEnabled &&
+                              currentSurah != null &&
+                              currentSurah > 1
+                          ? () => _changeSurah(-1)
+                          : null,
+                    ),
+                    _MiniPlayerControl(
+                      tooltip: player.playing
+                          ? context.l10n.pause
+                          : context.l10n.play,
+                      icon: player.playing
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      emphasized: true,
+                      loading: player.buffering || _changingSurah,
+                      onPressed: controlsEnabled
+                          ? () => ref
+                                .read(audioControllerProvider.notifier)
+                                .toggle()
+                          : null,
+                    ),
+                    _MiniPlayerControl(
+                      tooltip: context.l10n.nextSurah,
+                      icon: Icons.skip_next_rounded,
+                      onPressed:
+                          controlsEnabled &&
+                              currentSurah != null &&
+                              currentSurah < 114
+                          ? () => _changeSurah(1)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+              onTap: () => context.push('/player'),
             ),
           ),
         ),
