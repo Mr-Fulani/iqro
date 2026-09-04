@@ -12,6 +12,7 @@ import '../audio/reciter_portraits.dart';
 import '../dua/dua_repository.dart';
 import '../memorization/memorization_repository.dart';
 import '../prayer/prayer_repository.dart';
+import '../plan/plan_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
 
@@ -52,11 +53,9 @@ class HomeScreen extends ConsumerWidget {
         : findSurah(catalog, memorizationPlan.startAyah.surah);
     final dailyDua = duaForDate(duaState.valueOrNull, DateTime.now());
     final achieved = plan?.achieved ?? 0;
-    final target =
-        plan?.target ??
-        (preferences.dailyUnit == DailyUnit.pages
-            ? preferences.dailyTarget
-            : 6);
+    final target = plan?.target ?? preferences.dailyTarget.toDouble();
+    final planMetric =
+        plan?.metric ?? readingMetricForDailyUnit(preferences.dailyUnit);
     final remaining = (target - achieved).clamp(0, target);
     final goalAchieved = achieved.clamp(0, target);
     final planLoading = planState.isLoading && plan == null;
@@ -150,11 +149,11 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Text(
-                            planLoading ? '—' : '$goalAchieved',
+                            planLoading ? '—' : _formatGoalAmount(goalAchieved),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           Text(
-                            '/ $target',
+                            '/ ${_formatGoalAmount(target)}',
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                         ],
@@ -178,8 +177,10 @@ class HomeScreen extends ConsumerWidget {
                         planLoading
                             ? context.l10n.loading
                             : target > 0 && achieved >= target
-                            ? '$achieved ${context.l10n.pages}'
-                            : '$remaining ${context.l10n.pages}',
+                            ? '${_formatGoalAmount(achieved)} '
+                                  '${_goalMetricLabel(context, planMetric)}'
+                            : '${_formatGoalAmount(remaining)} '
+                                  '${_goalMetricLabel(context, planMetric)}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 10),
@@ -604,3 +605,14 @@ class _ReciterAvatar extends StatelessWidget {
     );
   }
 }
+
+String _goalMetricLabel(BuildContext context, ReadingGoalMetric metric) =>
+    switch (metric) {
+      ReadingGoalMetric.minutes => context.l10n.minutes,
+      ReadingGoalMetric.pages => context.l10n.pages,
+      ReadingGoalMetric.ayahs => context.l10n.ayahs,
+    };
+
+String _formatGoalAmount(num value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');

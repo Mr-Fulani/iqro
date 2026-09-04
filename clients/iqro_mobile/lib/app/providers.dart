@@ -120,7 +120,10 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
         dailyTarget: target,
       ),
     );
-    await _plan.initialize(target: unit == DailyUnit.pages ? target : 6);
+    await _plan.initialize(
+      target: target,
+      metric: readingMetricForDailyUnit(unit),
+    );
   }
 
   Future<void> setLocale(String locale) => _set(state.copyWith(locale: locale));
@@ -169,6 +172,11 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
           : defaultPreferredAudioQuality,
     ),
   );
+
+  Future<void> setDailyReadingGoal({
+    required DailyUnit unit,
+    required int target,
+  }) => _set(state.copyWith(dailyUnit: unit, dailyTarget: target));
 }
 
 final appPreferencesProvider =
@@ -598,9 +606,11 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
     required LocalDatabase database,
     required AccountScopeSnapshot? accountScope,
     required int? preferredTarget,
+    required ReadingGoalMetric? preferredMetric,
   }) : _database = database,
        _accountScope = accountScope,
        _preferredTarget = preferredTarget,
+       _preferredMetric = preferredMetric,
        super(const AsyncValue.loading()) {
     unawaited(reload());
   }
@@ -608,6 +618,7 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
   final LocalDatabase _database;
   final AccountScopeSnapshot? _accountScope;
   final int? _preferredTarget;
+  final ReadingGoalMetric? _preferredMetric;
 
   bool isBoundTo(AccountScopeSnapshot scope) {
     final bound = _accountScope;
@@ -620,16 +631,48 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
   Future<void> reload() => _replace(
     (scope) => _repository.load(
       preferredTarget: _preferredTarget,
+      preferredMetric: _preferredMetric,
       accountScope: scope,
     ),
   );
 
-  Future<void> addPages(int pages) =>
-      _replace((scope) => _repository.addPages(pages, accountScope: scope));
+  Future<void> setGoal(ReadingGoalMetric metric, int target, int revision) =>
+      _mutate(
+        (scope) => _repository.setGoal(
+          metric,
+          target,
+          baseRevision: revision,
+          accountScope: scope,
+        ),
+      );
 
-  Future<void> setPrayerPages(String prayer, int pages) => _replace(
+  Future<void> addReading(int amount, ReadingGoalMetric metric) => _mutate(
+    (scope) =>
+        _repository.addReading(amount, metric: metric, accountScope: scope),
+  );
+
+  Future<void> addPages(int pages) =>
+      _mutate((scope) => _repository.addPages(pages, accountScope: scope));
+
+  Future<void> setPrayerPages(String prayer, int pages) => _mutate(
     (scope) => _repository.setPrayerPages(prayer, pages, accountScope: scope),
   );
+
+  Future<void> _mutate(
+    Future<DailyPlan> Function(AccountScopeSnapshot scope) load,
+  ) async {
+    final scope = _accountScope;
+    if (scope == null) return;
+    try {
+      final next = await load(scope);
+      _database.ensureCurrent(scope);
+      if (mounted) state = AsyncValue.data(next);
+    } on AccountScopeChanged {
+      // A disposed controller must never retry an A action under account B.
+    } on Object {
+      rethrow;
+    }
+  }
 
   Future<void> _replace(
     Future<DailyPlan> Function(AccountScopeSnapshot scope) load,
@@ -662,16 +705,29 @@ final planProvider =
           ? currentScope
           : null;
       final preferences = ref.watch(appPreferencesProvider);
-      final preferredTarget = preferences.dailyUnit == DailyUnit.pages
-          ? preferences.dailyTarget
-          : null;
+      final preferredTarget = preferences.dailyTarget;
+      final preferredMetric = readingMetricForDailyUnit(preferences.dailyUnit);
       return PlanController(
         ref.watch(planRepositoryProvider),
         database: database,
         accountScope: boundScope,
         preferredTarget: preferredTarget,
+        preferredMetric: preferredMetric,
       );
     });
+
+ReadingGoalMetric readingMetricForDailyUnit(DailyUnit unit) => switch (unit) {
+  DailyUnit.minutes => ReadingGoalMetric.minutes,
+  DailyUnit.pages => ReadingGoalMetric.pages,
+  DailyUnit.ayahs => ReadingGoalMetric.ayahs,
+};
+
+DailyUnit dailyUnitForReadingMetric(ReadingGoalMetric metric) =>
+    switch (metric) {
+      ReadingGoalMetric.minutes => DailyUnit.minutes,
+      ReadingGoalMetric.pages => DailyUnit.pages,
+      ReadingGoalMetric.ayahs => DailyUnit.ayahs,
+    };
 
 class MemorizationController
     extends StateNotifier<AsyncValue<MemorizationDashboard>> {

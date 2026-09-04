@@ -131,7 +131,7 @@ class AppDependencies {
       audio: audio,
       offlineAudio: offlineAudio,
       playbackSync: playbackSync,
-      plan: PlanRepository(database),
+      plan: PlanRepository(database, api: api),
       prayer: prayer,
       reminders: reminders,
       notifications: notifications,
