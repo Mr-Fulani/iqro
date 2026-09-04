@@ -25,90 +25,133 @@ void main() {
   testWidgets('tapping a reciter starts playback and opens the player', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues(const <String, Object>{});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final rawDatabase = await tester.runAsync(
-      () => databaseFactoryFfi.openDatabase(inMemoryDatabasePath),
-    );
-    final database = LocalDatabase.forTesting(rawDatabase!);
-    final preferences = AppPreferencesController(
-      PreferencesStore(sharedPreferences),
-      PlanRepository(database),
-    );
-    final repository = _AudioRepositoryFake();
-    final engine = _RecordingAudioEngine();
-    final controller = AudioController(engine: engine);
-    final router = GoRouter(
-      initialLocation: '/audio',
-      routes: <RouteBase>[
-        GoRoute(
-          path: '/audio',
-          builder: (context, state) => const AudioScreen(),
-        ),
-        GoRoute(
-          path: '/player',
-          builder: (context, state) => const Scaffold(body: Text('PLAYER')),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    addTearDown(controller.dispose);
-    addTearDown(() => tester.runAsync(rawDatabase.close));
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          appConfigProvider.overrideWithValue(
-            const AppConfig(
-              apiBaseUrl: 'https://staging.iqro.forum',
-              fallbackDownloadUrl: 'https://iqro.forum',
-              environment: 'staging',
-            ),
-          ),
-          appPreferencesProvider.overrideWith((ref) => preferences),
-          audioRepositoryProvider.overrideWithValue(repository),
-          audioControllerProvider.overrideWith((ref) => controller),
-          quranCatalogProvider.overrideWith(
-            (ref) async => const QuranCatalog(
-              surahs: <Surah>[
-                Surah(
-                  id: 'surah-1',
-                  number: 1,
-                  nameAr: 'الفاتحة',
-                  nameEn: 'Al-Fatihah',
-                  nameRu: 'Аль-Фатиха',
-                  ayahCount: 7,
-                  revelationType: 'meccan',
-                ),
-              ],
-              fromCache: false,
-            ),
-          ),
-        ],
-        child: MaterialApp.router(
-          locale: const Locale('ru'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          theme: IqroTheme.light(),
-          routerConfig: router,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    final harness = await _pumpAudioScreen(tester);
 
     expect(find.text('Воспроизвести'), findsNothing);
+    expect(find.text('Тестовый чтец'), findsOneWidget);
+    expect(find.text('Чтец муджаввада'), findsNothing);
 
     await tester.tap(find.text('Тестовый чтец'));
     await tester.pumpAndSettle();
 
-    expect(repository.requestedRecitationId, 'recitation-1');
-    expect(repository.requestedSurah, 1);
-    expect(controller.state.reciter?.id, 'reciter-1');
-    expect(controller.state.surahName, 'Аль-Фатиха');
-    expect(engine.playCalls, 1);
+    expect(harness.repository.requestedRecitationId, 'recitation-1');
+    expect(harness.repository.requestedSurah, 1);
+    expect(harness.controller.state.reciter?.id, 'reciter-1');
+    expect(harness.controller.state.surahName, 'Аль-Фатиха');
+    expect(harness.engine.playCalls, 1);
     expect(find.text('PLAYER'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('recitation style filters reciters and defaults to Murattal', (
+    tester,
+  ) async {
+    final harness = await _pumpAudioScreen(tester);
+
+    final murattal = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Мурратталь'),
+    );
+    expect(murattal.selected, isTrue);
+    expect(find.text('Тестовый чтец'), findsOneWidget);
+    expect(find.text('Чтец муджаввада'), findsNothing);
+
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    final mujawwad = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Муджаввад'),
+    );
+    expect(mujawwad.selected, isTrue);
+    expect(find.text('Тестовый чтец'), findsNothing);
+    expect(find.text('Чтец муджаввада'), findsOneWidget);
+
+    await tester.tap(find.text('Чтец муджаввада'));
+    await tester.pumpAndSettle();
+
+    expect(harness.repository.requestedRecitationId, 'recitation-2');
+    expect(harness.controller.state.reciter?.id, 'reciter-2');
+    expect(find.text('PLAYER'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
+  final sharedPreferences = await SharedPreferences.getInstance();
+  final rawDatabase = await tester.runAsync(
+    () => databaseFactoryFfi.openDatabase(inMemoryDatabasePath),
+  );
+  final database = LocalDatabase.forTesting(rawDatabase!);
+  final preferences = AppPreferencesController(
+    PreferencesStore(sharedPreferences),
+    PlanRepository(database),
+  );
+  final repository = _AudioRepositoryFake();
+  final engine = _RecordingAudioEngine();
+  final controller = AudioController(engine: engine);
+  final router = GoRouter(
+    initialLocation: '/audio',
+    routes: <RouteBase>[
+      GoRoute(path: '/audio', builder: (context, state) => const AudioScreen()),
+      GoRoute(
+        path: '/player',
+        builder: (context, state) => const Scaffold(body: Text('PLAYER')),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  addTearDown(controller.dispose);
+  addTearDown(() => tester.runAsync(rawDatabase.close));
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            apiBaseUrl: 'https://staging.iqro.forum',
+            fallbackDownloadUrl: 'https://iqro.forum',
+            environment: 'staging',
+          ),
+        ),
+        appPreferencesProvider.overrideWith((ref) => preferences),
+        audioRepositoryProvider.overrideWithValue(repository),
+        audioControllerProvider.overrideWith((ref) => controller),
+        quranCatalogProvider.overrideWith(
+          (ref) async => const QuranCatalog(
+            surahs: <Surah>[
+              Surah(
+                id: 'surah-1',
+                number: 1,
+                nameAr: 'الفاتحة',
+                nameEn: 'Al-Fatihah',
+                nameRu: 'Аль-Фатиха',
+                ayahCount: 7,
+                revelationType: 'meccan',
+              ),
+            ],
+            fromCache: false,
+          ),
+        ),
+      ],
+      child: MaterialApp.router(
+        locale: const Locale('ru'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        theme: IqroTheme.light(),
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return _AudioTestHarness(repository, engine, controller);
+}
+
+class _AudioTestHarness {
+  const _AudioTestHarness(this.repository, this.engine, this.controller);
+
+  final _AudioRepositoryFake repository;
+  final _RecordingAudioEngine engine;
+  final AudioController controller;
 }
 
 const _reciter = Reciter(
@@ -135,21 +178,43 @@ const _recitation = Recitation(
   offlineDownloadAllowed: false,
 );
 
+const _mujawwadReciter = Reciter(
+  id: 'reciter-2',
+  slug: 'test-mujawwad-reciter',
+  nameAr: 'القارئ المجود',
+  nameEn: 'Mujawwad reciter',
+  nameRu: 'Чтец муджаввада',
+  nameTr: 'Mücevved okuyucu',
+  biographyAr: '',
+  biographyEn: '',
+  biographyRu: '',
+  biographyTr: '',
+);
+
+const _mujawwadRecitation = Recitation(
+  id: 'recitation-2',
+  code: 'test-mujawwad-recitation',
+  reciter: _mujawwadReciter,
+  style: 'mujawwad',
+  timingsAvailable: true,
+  surahCount: 114,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+);
+
 class _AudioRepositoryFake implements AudioRepository {
   String? requestedRecitationId;
   int? requestedSurah;
 
   @override
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async =>
-      const <Reciter>[_reciter];
+      const <Reciter>[_reciter, _mujawwadReciter];
 
   @override
-  Future<List<Recitation>> recitationsForReciters(
-    Iterable<String> reciterIds,
-  ) async {
-    expect(reciterIds, contains(_reciter.id));
-    return const <Recitation>[_recitation];
-  }
+  Future<List<Recitation>> recitations({
+    String? reciterId,
+    bool forceRefresh = false,
+  }) async => const <Recitation>[_recitation, _mujawwadRecitation];
 
   @override
   Future<SurahPlayback> playback({

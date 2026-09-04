@@ -19,7 +19,6 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
-import '../features/audio/reciter_catalog.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
@@ -381,6 +380,9 @@ final mushafDownloadProvider =
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });
+final audioRecitationsProvider = FutureProvider<List<Recitation>>((ref) {
+  return ref.watch(audioRepositoryProvider).recitations();
+});
 final memorizationRecitationsProvider = FutureProvider<List<Recitation>>((
   ref,
 ) async {
@@ -389,16 +391,6 @@ final memorizationRecitationsProvider = FutureProvider<List<Recitation>>((
       .where((item) => item.streamAllowed && item.timingsAvailable)
       .toList(growable: false);
 });
-final recitationVariantsProvider =
-    FutureProvider.family<List<Recitation>, String>((ref, personKey) async {
-      final reciters = await ref.watch(recitersProvider.future);
-      final people = groupRecitersByPerson(reciters);
-      final person = people.where((item) => item.key == personKey).firstOrNull;
-      if (person == null) return const <Recitation>[];
-      return ref
-          .watch(audioRepositoryProvider)
-          .recitationsForReciters(person.sources.map((item) => item.id));
-    });
 
 class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
   AudioDownloadController(this._repository, this._recitationId)

@@ -24,6 +24,7 @@ class AudioScreen extends ConsumerStatefulWidget {
 class _AudioScreenState extends ConsumerState<AudioScreen> {
   String? _selected;
   String? _selectedRecitationId;
+  String _selectedStyle = 'murattal';
   var _loadingTrack = false;
   String? _loadingPersonKey;
   var _refreshingReciters = false;
@@ -33,6 +34,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   @override
   Widget build(BuildContext context) {
     final reciters = ref.watch(recitersProvider);
+    final recitations = ref.watch(audioRecitationsProvider);
     final player = ref.watch(audioControllerProvider);
     final locale = Localizations.localeOf(context).languageCode;
     final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
@@ -124,101 +126,21 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                 title: context.l10n.noAudio,
                 onRetry: () => ref.invalidate(recitersProvider),
               ),
-              data: (items) {
-                if (items.isEmpty) {
-                  return IqroStatusBanner(
-                    icon: Icons.volume_off_outlined,
-                    title: context.l10n.noAudio,
-                  );
-                }
-                final people = groupRecitersByPerson(items);
-                final activePersonKey = player.reciter == null
-                    ? null
-                    : reciterPersonKey(player.reciter!);
-                _selected ??= activePersonKey ?? people.first.key;
-                final selectedPerson = people.firstWhere(
-                  (item) => item.key == _selected,
-                  orElse: () => people.first,
-                );
-                final variants = ref.watch(
-                  recitationVariantsProvider(selectedPerson.key),
-                );
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    if (selectedPerson.sources.length > 1) ...<Widget>[
-                      _buildStyleSelector(
-                        variants,
-                        preferredRecitationId: preferredRecitationId,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    variants.when(
-                      loading: () => const SizedBox.shrink(),
-                      error: (error, stack) => const SizedBox.shrink(),
-                      data: (items) {
-                        final selected = preferredRecitation(
-                          items,
-                          preferredId:
-                              _selectedRecitationId ?? preferredRecitationId,
-                        );
-                        if (selected == null) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _OfflineAudioCard(recitation: selected),
-                        );
-                      },
-                    ),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final preferredColumns = switch (constraints.maxWidth) {
-                          < 340 => 2,
-                          < 620 => 3,
-                          < 900 => 4,
-                          _ => 6,
-                        };
-                        final columns =
-                            preferredColumns == 3 && people.length % 3 == 1
-                            ? 2
-                            : preferredColumns;
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: people.length,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                mainAxisExtent: 180,
-                              ),
-                          itemBuilder: (context, index) {
-                            final person = people[index];
-                            final reciter = person.primary;
-                            final active = person.key == selectedPerson.key;
-                            return _ReciterCard(
-                              reciter: reciter,
-                              locale: locale,
-                              active: active,
-                              loading:
-                                  _loadingTrack &&
-                                  _loadingPersonKey == person.key,
-                              portraitUrl: resolveReciterPortraitUrl(
-                                person.portraitSource,
-                                apiBaseUrl: apiBaseUrl,
-                              ),
-                              onTap: _loadingTrack
-                                  ? null
-                                  : () => _openPlayerForPerson(person),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
+              data: (items) => recitations.when(
+                loading: () => const IqroLoading(),
+                error: (error, stack) => IqroAsyncError(
+                  title: context.l10n.noAudio,
+                  onRetry: () => ref.invalidate(audioRecitationsProvider),
+                ),
+                data: (catalog) => _buildReciterCatalog(
+                  reciters: items,
+                  recitations: catalog,
+                  player: player,
+                  locale: locale,
+                  apiBaseUrl: apiBaseUrl,
+                  preferredRecitationId: preferredRecitationId,
+                ),
+              ),
             ),
           ],
         ),
@@ -226,69 +148,153 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     );
   }
 
-  Widget _buildStyleSelector(
-    AsyncValue<List<Recitation>> variants, {
+  Widget _buildReciterCatalog({
+    required List<Reciter> reciters,
+    required List<Recitation> recitations,
+    required IqroAudioState player,
+    required String locale,
+    required String apiBaseUrl,
     required String? preferredRecitationId,
   }) {
-    return variants.when(
-      loading: () => const _RecitationStyleCard.loading(),
-      error: (error, stack) =>
-          _RecitationStyleCard(value: context.l10n.noAudio, onTap: null),
-      data: (items) {
-        if (items.length < 2) return const SizedBox.shrink();
-        final selected = preferredRecitation(
-          items,
-          preferredId: _selectedRecitationId ?? preferredRecitationId,
-        );
-        return _RecitationStyleCard(
-          value: selected == null
-              ? context.l10n.chooseRecitationStyle
-              : _styleLabel(context, selected.style),
-          onTap: () => _chooseRecitationStyle(items, selected?.id),
-        );
-      },
+    if (reciters.isEmpty || recitations.isEmpty) {
+      return IqroStatusBanner(
+        icon: Icons.volume_off_outlined,
+        title: context.l10n.noAudio,
+      );
+    }
+    final people = groupRecitersByPerson(reciters);
+    final styles = _orderedRecitationStyles(recitations);
+    if (styles.isEmpty) {
+      return IqroStatusBanner(
+        icon: Icons.volume_off_outlined,
+        title: context.l10n.noAudio,
+      );
+    }
+    final selectedStyle = styles.contains(_selectedStyle)
+        ? _selectedStyle
+        : styles.first;
+    final visiblePeople = people
+        .where(
+          (person) => _recitationsForPerson(
+            person,
+            recitations,
+          ).any((item) => item.style == selectedStyle),
+        )
+        .toList(growable: false);
+    if (visiblePeople.isEmpty) {
+      return IqroStatusBanner(
+        icon: Icons.volume_off_outlined,
+        title: context.l10n.noAudio,
+      );
+    }
+    final activePersonKey = player.reciter == null
+        ? null
+        : reciterPersonKey(player.reciter!);
+    final selectedPerson = visiblePeople.firstWhere(
+      (item) => item.key == _selected,
+      orElse: () => visiblePeople.firstWhere(
+        (item) => item.key == activePersonKey,
+        orElse: () => visiblePeople.first,
+      ),
+    );
+    final selectedVariants = _recitationsForPerson(
+      selectedPerson,
+      recitations,
+    ).where((item) => item.style == selectedStyle).toList(growable: false);
+    final selectedRecitation = preferredRecitation(
+      selectedVariants,
+      preferredId: _selectedRecitationId ?? preferredRecitationId,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _RecitationStyleFilter(
+          styles: styles,
+          selected: selectedStyle,
+          onSelected: (style) {
+            if (style == selectedStyle || _loadingTrack) return;
+            setState(() {
+              _selectedStyle = style;
+              _selected = null;
+              _selectedRecitationId = null;
+            });
+          },
+        ),
+        if (selectedRecitation != null) ...<Widget>[
+          const SizedBox(height: 12),
+          _OfflineAudioCard(recitation: selectedRecitation),
+        ],
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final preferredColumns = switch (constraints.maxWidth) {
+              < 340 => 2,
+              < 620 => 3,
+              < 900 => 4,
+              _ => 6,
+            };
+            final columns =
+                preferredColumns == 3 && visiblePeople.length % 3 == 1
+                ? 2
+                : preferredColumns;
+            return GridView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visiblePeople.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent: 180,
+              ),
+              itemBuilder: (context, index) {
+                final person = visiblePeople[index];
+                final variants = _recitationsForPerson(person, recitations)
+                    .where((item) => item.style == selectedStyle)
+                    .toList(growable: false);
+                final recitation = preferredRecitation(
+                  variants,
+                  preferredId: preferredRecitationId,
+                );
+                final active = person.key == selectedPerson.key;
+                return _ReciterCard(
+                  reciter: person.primary,
+                  locale: locale,
+                  active: active,
+                  loading: _loadingTrack && _loadingPersonKey == person.key,
+                  portraitUrl: resolveReciterPortraitUrl(
+                    person.portraitSource,
+                    apiBaseUrl: apiBaseUrl,
+                  ),
+                  onTap: _loadingTrack || recitation == null
+                      ? null
+                      : () => _openPlayerForPerson(person, recitation),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Future<void> _chooseRecitationStyle(
-    List<Recitation> variants,
-    String? selectedId,
-  ) async {
-    final selected = await showModalBottomSheet<Recitation>(
-      context: context,
-      useSafeArea: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              title: Text(
-                context.l10n.chooseRecitationStyle,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            for (final variant in variants)
-              ListTile(
-                leading: Icon(
-                  variant.id == selectedId
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                ),
-                title: Text(_styleLabel(context, variant.style)),
-                onTap: () => Navigator.pop(context, variant),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || selected == null) return;
-    setState(() => _selectedRecitationId = selected.id);
-    unawaited(
-      ref
-          .read(appPreferencesProvider.notifier)
-          .setPreferredRecitation(selected.id),
-    );
+  List<Recitation> _recitationsForPerson(
+    ReciterPerson person,
+    List<Recitation> recitations,
+  ) {
+    return recitations
+        .where((item) => person.containsReciter(item.reciter.id))
+        .toList(growable: false);
+  }
+
+  List<String> _orderedRecitationStyles(List<Recitation> recitations) {
+    final available = recitations.map((item) => item.style).toSet();
+    return <String>[
+      for (final style in const <String>['murattal', 'mujawwad', 'muallim'])
+        if (available.remove(style)) style,
+      ...available.toList()..sort(),
+    ];
   }
 
   Future<void> _refreshReciters() async {
@@ -298,9 +304,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final request = ++_refreshRequest;
     setState(() => _refreshingReciters = true);
     try {
-      final items = await ref
-          .read(audioRepositoryProvider)
-          .reciters(forceRefresh: true);
+      final repository = ref.read(audioRepositoryProvider);
+      final items = await repository.reciters(forceRefresh: true);
+      await repository.recitations(forceRefresh: true);
       if (!_isCurrentAudioRequest(controller, request, refresh: true)) {
         return;
       }
@@ -323,7 +329,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       }
 
       ref.invalidate(recitersProvider);
-      await ref.read(recitersProvider.future);
+      ref.invalidate(audioRecitationsProvider);
+      await Future.wait(<Future<Object?>>[
+        ref.read(recitersProvider.future),
+        ref.read(audioRecitationsProvider.future),
+      ]);
       if (!_isCurrentAudioRequest(controller, request, refresh: true)) {
         return;
       }
@@ -348,16 +358,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     }
   }
 
-  Future<void> _openPlayerForPerson(ReciterPerson person) async {
+  Future<void> _openPlayerForPerson(
+    ReciterPerson person,
+    Recitation recitation,
+  ) async {
     if (_loadingTrack) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final repository = ref.read(audioRepositoryProvider);
-    final selectedRecitationId = _selected == person.key
-        ? _selectedRecitationId
-        : null;
-    final preferredRecitationId = ref
-        .read(appPreferencesProvider)
-        .preferredRecitationId;
     final player = ref.read(audioControllerProvider);
     final surah = player.track?.surah ?? 1;
     final surahName = _surahName(surah, fallback: player.surahName);
@@ -368,21 +375,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       _loadingPersonKey = person.key;
     });
     try {
-      final variants = await repository.recitationsForReciters(
-        person.sources.map((item) => item.id),
-      );
-      if (!_isCurrentAudioRequest(controller, request)) return;
-      final recitation = preferredRecitation(
-        variants,
-        preferredId: selectedRecitationId ?? preferredRecitationId,
-      );
-      if (recitation == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
-        return;
-      }
       final playback = await repository.playback(
         recitationId: recitation.id,
         surah: surah,
@@ -390,7 +382,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       if (!_isCurrentAudioRequest(controller, request)) return;
       await controller.loadPlayback(
         playback: playback,
-        reciter: person.portraitSource,
+        reciter: recitation.reciter,
         surahName: surahName,
       );
       if (!_isCurrentAudioRequest(controller, request)) return;
@@ -544,41 +536,39 @@ String _formatAudioMegabytes(int bytes) {
 }
 
 String _styleLabel(BuildContext context, String style) => switch (style) {
+  'murattal' => context.l10n.styleMurattal,
   'mujawwad' => context.l10n.styleMujawwad,
   'muallim' => context.l10n.styleMuallim,
-  _ => context.l10n.styleMurattal,
+  _ => style,
 };
 
-class _RecitationStyleCard extends StatelessWidget {
-  const _RecitationStyleCard({required this.value, required this.onTap})
-    : loading = false;
+class _RecitationStyleFilter extends StatelessWidget {
+  const _RecitationStyleFilter({
+    required this.styles,
+    required this.selected,
+    required this.onSelected,
+  });
 
-  const _RecitationStyleCard.loading()
-    : value = '',
-      onTap = null,
-      loading = true;
-
-  final String value;
-  final VoidCallback? onTap;
-  final bool loading;
+  final List<String> styles;
+  final String selected;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return IqroCard(
-      padding: EdgeInsets.zero,
-      onTap: onTap,
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.tune_rounded)),
-        title: Text(context.l10n.recitationStyle),
-        subtitle: loading ? null : Text(value),
-        trailing: loading
-            ? const SizedBox.square(
-                dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : onTap == null
-            ? null
-            : const Icon(Icons.expand_more_rounded),
+    return Semantics(
+      container: true,
+      label: context.l10n.recitationStyle,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: <Widget>[
+          for (final style in styles)
+            ChoiceChip(
+              label: Text(_styleLabel(context, style)),
+              selected: style == selected,
+              onSelected: (_) => onSelected(style),
+            ),
+        ],
       ),
     );
   }
