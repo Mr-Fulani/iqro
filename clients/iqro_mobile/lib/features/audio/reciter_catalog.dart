@@ -1,5 +1,12 @@
 import 'audio_models.dart';
 
+const defaultRecitationStyle = 'murattal';
+const recitationStyleOrder = <String>[
+  defaultRecitationStyle,
+  'mujawwad',
+  'muallim',
+];
+
 const _canonicalReciterSlugs = <String, String>{
   'qf-1-abdulbaset-abdulsamad-mujawwad': 'qf-2-abdul-baset-abdul-samad',
   'qf-12-mahmoud-khaleel-al-husary': 'qf-6-mahmoud-khaleel-al-husary',
@@ -69,4 +76,37 @@ Recitation? preferredRecitation(
     if (recitation.style == 'murattal') return recitation;
   }
   return candidates.first;
+}
+
+List<Recitation> recitationsForPerson(
+  ReciterPerson person,
+  Iterable<Recitation> recitations,
+) {
+  return recitations
+      .where((item) => person.containsReciter(item.reciter.id))
+      .toList(growable: false);
+}
+
+List<String> orderedRecitationStyles(Iterable<Recitation> recitations) {
+  final available = recitations.map((item) => item.style).toSet();
+  return <String>[
+    for (final style in recitationStyleOrder)
+      if (available.remove(style)) style,
+    ...available.toList()..sort(),
+  ];
+}
+
+Recitation? recitationForPersonStyle(
+  ReciterPerson person,
+  Iterable<Recitation> recitations,
+  String style, {
+  String? preferredId,
+}) {
+  return preferredRecitation(
+    recitationsForPerson(
+      person,
+      recitations,
+    ).where((item) => item.style == style).toList(growable: false),
+    preferredId: preferredId,
+  );
 }

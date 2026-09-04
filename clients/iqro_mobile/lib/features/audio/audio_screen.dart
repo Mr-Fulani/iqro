@@ -24,7 +24,7 @@ class AudioScreen extends ConsumerStatefulWidget {
 class _AudioScreenState extends ConsumerState<AudioScreen> {
   String? _selected;
   String? _selectedRecitationId;
-  String _selectedStyle = 'murattal';
+  String _selectedStyle = defaultRecitationStyle;
   var _loadingTrack = false;
   String? _loadingPersonKey;
   var _refreshingReciters = false;
@@ -163,7 +163,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       );
     }
     final people = groupRecitersByPerson(reciters);
-    final styles = _orderedRecitationStyles(recitations);
+    final styles = orderedRecitationStyles(recitations);
     if (styles.isEmpty) {
       return IqroStatusBanner(
         icon: Icons.volume_off_outlined,
@@ -175,10 +175,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         : styles.first;
     final visiblePeople = people
         .where(
-          (person) => _recitationsForPerson(
-            person,
-            recitations,
-          ).any((item) => item.style == selectedStyle),
+          (person) =>
+              recitationForPersonStyle(person, recitations, selectedStyle) !=
+              null,
         )
         .toList(growable: false);
     if (visiblePeople.isEmpty) {
@@ -197,12 +196,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         orElse: () => visiblePeople.first,
       ),
     );
-    final selectedVariants = _recitationsForPerson(
+    final selectedRecitation = recitationForPersonStyle(
       selectedPerson,
       recitations,
-    ).where((item) => item.style == selectedStyle).toList(growable: false);
-    final selectedRecitation = preferredRecitation(
-      selectedVariants,
+      selectedStyle,
       preferredId: _selectedRecitationId ?? preferredRecitationId,
     );
     return Column(
@@ -250,11 +247,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ),
               itemBuilder: (context, index) {
                 final person = visiblePeople[index];
-                final variants = _recitationsForPerson(person, recitations)
-                    .where((item) => item.style == selectedStyle)
-                    .toList(growable: false);
-                final recitation = preferredRecitation(
-                  variants,
+                final recitation = recitationForPersonStyle(
+                  person,
+                  recitations,
+                  selectedStyle,
                   preferredId: preferredRecitationId,
                 );
                 final active = person.key == selectedPerson.key;
@@ -277,24 +273,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         ),
       ],
     );
-  }
-
-  List<Recitation> _recitationsForPerson(
-    ReciterPerson person,
-    List<Recitation> recitations,
-  ) {
-    return recitations
-        .where((item) => person.containsReciter(item.reciter.id))
-        .toList(growable: false);
-  }
-
-  List<String> _orderedRecitationStyles(List<Recitation> recitations) {
-    final available = recitations.map((item) => item.style).toSet();
-    return <String>[
-      for (final style in const <String>['murattal', 'mujawwad', 'muallim'])
-        if (available.remove(style)) style,
-      ...available.toList()..sort(),
-    ];
   }
 
   Future<void> _refreshReciters() async {

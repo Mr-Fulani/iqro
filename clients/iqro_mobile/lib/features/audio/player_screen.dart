@@ -9,7 +9,47 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../quran/quran_models.dart';
+import 'audio_models.dart';
+import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
+
+typedef _ReciterSelection = ({ReciterPerson person, Recitation recitation});
+
+String _recitationStyleLabel(BuildContext context, String style) =>
+    switch (style) {
+      'murattal' => context.l10n.styleMurattal,
+      'mujawwad' => context.l10n.styleMujawwad,
+      'muallim' => context.l10n.styleMuallim,
+      _ => style,
+    };
+
+Duration? compatibleRecitationPosition({
+  required IqroAudioState current,
+  required SurahPlayback target,
+}) {
+  final ayah = current.displayedAyah;
+  final currentSegment = current.segmentForAyah(ayah);
+  final targetSegment = target.segmentFor(ayah ?? 0);
+  if (currentSegment == null || targetSegment == null) return null;
+  final currentLength = currentSegment.end - currentSegment.start;
+  final targetLength = targetSegment.end - targetSegment.start;
+  if (currentLength <= Duration.zero || targetLength <= Duration.zero) {
+    return null;
+  }
+  final elapsedMicroseconds = (current.position - currentSegment.start)
+      .inMicroseconds
+      .clamp(0, currentLength.inMicroseconds);
+  final progress = elapsedMicroseconds / currentLength.inMicroseconds;
+  final mappedMicroseconds =
+      targetSegment.start.inMicroseconds +
+      (targetLength.inMicroseconds * progress).round();
+  return Duration(
+    microseconds: mappedMicroseconds.clamp(
+      targetSegment.start.inMicroseconds,
+      targetSegment.end.inMicroseconds - 1,
+    ),
+  );
+}
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -20,11 +60,13 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
+  var _changingReciter = false;
   double? _seekPreviewMilliseconds;
   ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
   ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
   String? _ownerId;
   var _surahRequest = 0;
+  var _reciterRequest = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +74,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (_ownerId != ownerId) {
       _ownerId = ownerId;
       _surahRequest += 1;
+      _reciterRequest += 1;
       _changingSurah = false;
+      _changingReciter = false;
       _seekPreviewMilliseconds = null;
       _dragIdentity = null;
     }
@@ -42,7 +86,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final currentSurah = state.track?.surah;
     final surahs =
         ref.watch(quranCatalogProvider).valueOrNull?.surahs ?? const <Surah>[];
-    final controlsEnabled = state.active && !state.buffering && !_changingSurah;
+    final reciters = ref.watch(recitersProvider).valueOrNull;
+    final recitations = ref.watch(audioRecitationsProvider).valueOrNull;
+    final currentRecitation = _recitationById(
+      recitations,
+      state.track?.recitationId,
+    );
+    final controlsEnabled =
+        state.active &&
+        !state.buffering &&
+        !_changingSurah &&
+        !_changingReciter;
     final durationMs = state.effectiveDuration.inMilliseconds;
     final playbackIdentity = (
       trackId: state.track?.id,
@@ -115,13 +169,33 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               const SizedBox(height: 8),
               _SurahTitleButton(
                 title: state.active ? state.surahName : context.l10n.noAudio,
-                enabled: state.active && surahs.isNotEmpty && !_changingSurah,
+                enabled:
+                    state.active &&
+                    surahs.isNotEmpty &&
+                    !_changingSurah &&
+                    !_changingReciter,
                 onTap: () => _chooseSurah(surahs, currentSurah),
               ),
               const SizedBox(height: 8),
-              Text(
-                state.reciter?.nameFor(locale) ?? context.l10n.chooseReciter,
-                style: TextStyle(color: Colors.white.withValues(alpha: .65)),
+              _ReciterButton(
+                name:
+                    state.reciter?.nameFor(locale) ??
+                    context.l10n.chooseReciter,
+                style: currentRecitation == null
+                    ? null
+                    : _recitationStyleLabel(context, currentRecitation.style),
+                loading: _changingReciter,
+                enabled:
+                    state.active &&
+                    reciters != null &&
+                    recitations != null &&
+                    !_changingSurah &&
+                    !_changingReciter,
+                onTap: () => _chooseReciter(
+                  reciters: reciters ?? const <Reciter>[],
+                  recitations: recitations ?? const <Recitation>[],
+                  currentRecitation: currentRecitation,
+                ),
               ),
               const SizedBox(height: 26),
               Slider(
@@ -213,7 +287,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           : context.l10n.play,
                       onPressed: controlsEnabled ? controller.toggle : null,
                       iconSize: 38,
-                      icon: state.buffering || _changingSurah
+                      icon:
+                          state.buffering || _changingSurah || _changingReciter
                           ? const CircularProgressIndicator(strokeWidth: 2)
                           : Icon(
                               state.playing ? Icons.pause : Icons.play_arrow,
@@ -302,6 +377,145 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
+  }
+
+  Recitation? _recitationById(List<Recitation>? recitations, String? id) {
+    if (recitations == null || id == null) return null;
+    for (final recitation in recitations) {
+      if (recitation.id == id) return recitation;
+    }
+    return null;
+  }
+
+  Future<void> _chooseReciter({
+    required List<Reciter> reciters,
+    required List<Recitation> recitations,
+    required Recitation? currentRecitation,
+  }) async {
+    if (_changingSurah || _changingReciter || reciters.isEmpty) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final player = ref.read(audioControllerProvider);
+    if (!player.active || !_isCurrentController(scope, controller)) return;
+    final people = groupRecitersByPerson(reciters);
+    if (people.isEmpty || recitations.isEmpty) return;
+    final selection = await showModalBottomSheet<_ReciterSelection>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .88,
+        child: _ReciterPickerSheet(
+          people: people,
+          recitations: recitations,
+          currentRecitationId: player.track?.recitationId,
+          initialStyle: currentRecitation?.style ?? defaultRecitationStyle,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+        ),
+      ),
+    );
+    if (selection == null ||
+        selection.recitation.id == player.track?.recitationId ||
+        !_isCurrentController(scope, controller)) {
+      return;
+    }
+    await _loadReciter(
+      selection,
+      expectedScope: scope,
+      expectedController: controller,
+    );
+  }
+
+  Future<void> _loadReciter(
+    _ReciterSelection selection, {
+    required AccountScopeSnapshot expectedScope,
+    required AudioController expectedController,
+  }) async {
+    if (_changingSurah || _changingReciter) return;
+    if (!_isCurrentController(expectedScope, expectedController)) return;
+    final current = ref.read(audioControllerProvider);
+    final surah = current.track?.surah;
+    if (surah == null) return;
+    final request = ++_reciterRequest;
+    setState(() => _changingReciter = true);
+    try {
+      final playback = await ref
+          .read(audioRepositoryProvider)
+          .playback(recitationId: selection.recitation.id, surah: surah);
+      if (!_isCurrentReciterRequest(
+            expectedScope,
+            expectedController,
+            request,
+          ) ||
+          ref.read(audioControllerProvider).track?.id != current.track?.id) {
+        return;
+      }
+      final mappedPosition = compatibleRecitationPosition(
+        current: current,
+        target: playback,
+      );
+      final preserveRange =
+          current.hasActiveRange &&
+          playback.segmentFor(current.rangeStartAyah ?? 0) != null &&
+          playback.segmentFor(current.rangeEndAyah ?? 0) != null;
+      await expectedController.loadPlayback(
+        playback: playback,
+        reciter: selection.recitation.reciter,
+        surahName: current.surahName,
+        startAyah: preserveRange ? current.rangeStartAyah : null,
+        endAyah: preserveRange ? current.rangeEndAyah : null,
+        autoplay: false,
+      );
+      if (!_isCurrentReciterRequest(
+        expectedScope,
+        expectedController,
+        request,
+      )) {
+        return;
+      }
+      if (mappedPosition != null) {
+        await expectedController.seek(mappedPosition);
+      }
+      if (!_isCurrentReciterRequest(
+        expectedScope,
+        expectedController,
+        request,
+      )) {
+        return;
+      }
+      if (current.playing) await expectedController.toggle();
+      if (!_isCurrentReciterRequest(
+        expectedScope,
+        expectedController,
+        request,
+      )) {
+        return;
+      }
+      unawaited(
+        ref
+            .read(appPreferencesProvider.notifier)
+            .setPreferredRecitation(selection.recitation.id),
+      );
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (!_isCurrentReciterRequest(
+        expectedScope,
+        expectedController,
+        request,
+      )) {
+        return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+    } finally {
+      if (mounted && request == _reciterRequest) {
+        setState(() => _changingReciter = false);
+      }
+    }
   }
 
   Future<void> _changeSurah(int direction) async {
@@ -573,6 +787,335 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AudioController controller,
     int request,
   ) => request == _surahRequest && _isCurrentController(scope, controller);
+
+  bool _isCurrentReciterRequest(
+    AccountScopeSnapshot scope,
+    AudioController controller,
+    int request,
+  ) => request == _reciterRequest && _isCurrentController(scope, controller);
+}
+
+class _ReciterButton extends StatelessWidget {
+  const _ReciterButton({
+    required this.name,
+    required this.style,
+    required this.loading,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String name;
+  final String? style;
+  final bool loading;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = enabled
+        ? Colors.white.withValues(alpha: .82)
+        : Colors.white.withValues(alpha: .48);
+    return Semantics(
+      button: enabled,
+      label: context.l10n.chooseReciter,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(10, 5, 6, 5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: foreground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (style != null)
+                        Text(
+                          style!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .5),
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                if (loading)
+                  const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  Icon(Icons.expand_more_rounded, color: foreground, size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReciterPickerSheet extends StatefulWidget {
+  const _ReciterPickerSheet({
+    required this.people,
+    required this.recitations,
+    required this.currentRecitationId,
+    required this.initialStyle,
+    required this.apiBaseUrl,
+  });
+
+  final List<ReciterPerson> people;
+  final List<Recitation> recitations;
+  final String? currentRecitationId;
+  final String initialStyle;
+  final String apiBaseUrl;
+
+  @override
+  State<_ReciterPickerSheet> createState() => _ReciterPickerSheetState();
+}
+
+class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
+  late String _style;
+
+  @override
+  void initState() {
+    super.initState();
+    _style = widget.initialStyle;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final styles = orderedRecitationStyles(widget.recitations);
+    final selectedStyle = styles.contains(_style)
+        ? _style
+        : styles.firstOrNull ?? defaultRecitationStyle;
+    final people = widget.people
+        .where(
+          (person) =>
+              recitationForPersonStyle(
+                person,
+                widget.recitations,
+                selectedStyle,
+              ) !=
+              null,
+        )
+        .toList(growable: false);
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 10),
+        Container(
+          width: 42,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(context).dividerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 8),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  context.l10n.chooseReciter,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final style in styles)
+                  ChoiceChip(
+                    label: Text(_recitationStyleLabel(context, style)),
+                    selected: style == selectedStyle,
+                    onSelected: (_) => setState(() => _style = style),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = switch (constraints.maxWidth) {
+                < 380 => 3,
+                < 700 => 4,
+                _ => 6,
+              };
+              return GridView.builder(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 20),
+                itemCount: people.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  mainAxisExtent: 132,
+                ),
+                itemBuilder: (context, index) {
+                  final person = people[index];
+                  final recitation = recitationForPersonStyle(
+                    person,
+                    widget.recitations,
+                    selectedStyle,
+                    preferredId: widget.currentRecitationId,
+                  )!;
+                  return _PickerReciterCard(
+                    person: person,
+                    locale: locale,
+                    portraitUrl: resolveReciterPortraitUrl(
+                      person.portraitSource,
+                      apiBaseUrl: widget.apiBaseUrl,
+                    ),
+                    selected: recitation.id == widget.currentRecitationId,
+                    onTap: () => Navigator.pop<_ReciterSelection>(context, (
+                      person: person,
+                      recitation: recitation,
+                    )),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PickerReciterCard extends StatelessWidget {
+  const _PickerReciterCard({
+    required this.person,
+    required this.locale,
+    required this.portraitUrl,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ReciterPerson person;
+  final String locale;
+  final String? portraitUrl;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final fallback = ColoredBox(
+      color: colorScheme.primaryContainer,
+      child: Center(
+        child: Text(
+          person.primary.initials,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: person.primary.nameFor(locale),
+      child: Material(
+        color: selected ? colorScheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: <Widget>[
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    Container(
+                      width: 70,
+                      height: 70,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected
+                              ? colorScheme.primary
+                              : colorScheme.outlineVariant,
+                          width: selected ? 3 : 1,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: portraitUrl == null
+                            ? fallback
+                            : CachedNetworkImage(
+                                imageUrl: portraitUrl!,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => fallback,
+                                errorWidget: (context, url, error) => fallback,
+                              ),
+                      ),
+                    ),
+                    if (selected)
+                      PositionedDirectional(
+                        end: -2,
+                        bottom: -2,
+                        child: CircleAvatar(
+                          radius: 11,
+                          backgroundColor: colorScheme.primary,
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 15,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  person.primary.nameFor(locale),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SurahTitleButton extends StatelessWidget {
