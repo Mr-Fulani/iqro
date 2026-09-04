@@ -69,6 +69,42 @@ void main() {
     );
   });
 
+  test('player chrome ignores position ticks but tracks semantic changes', () {
+    final current = IqroAudioState(
+      track: _track(_currentRecitation),
+      reciter: _currentReciter,
+      surahName: 'Аль-Бакара',
+      playing: true,
+      duration: const Duration(minutes: 1),
+      position: const Duration(seconds: 10),
+      activeAyah: 7,
+      segments: const <AudioSegment>[
+        AudioSegment(
+          ayahId: '2:7',
+          surah: 2,
+          ayah: 7,
+          start: Duration(seconds: 10),
+          end: Duration(seconds: 20),
+        ),
+      ],
+    );
+
+    expect(
+      playerChromeSnapshot(
+        current.copyWith(position: const Duration(seconds: 11)),
+      ),
+      playerChromeSnapshot(current),
+    );
+    expect(
+      playerChromeSnapshot(current.copyWith(activeAyah: 8)),
+      isNot(playerChromeSnapshot(current)),
+    );
+    expect(
+      playerChromeSnapshot(current.copyWith(playing: false)),
+      isNot(playerChromeSnapshot(current)),
+    );
+  });
+
   testWidgets('switches style and reciter without losing the current ayah', (
     tester,
   ) async {

@@ -189,14 +189,16 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                           builder: (context, snapshot) {
                             final file = snapshot.data;
                             if (file != null) {
-                              return Image.file(
-                                file,
-                                fit: BoxFit.fill,
-                                filterQuality: FilterQuality.high,
-                                gaplessPlayback: true,
-                                semanticLabel:
-                                    '${context.l10n.mushafMode}, '
-                                    '${context.l10n.page} ${widget.page}',
+                              return RepaintBoundary(
+                                child: Image.file(
+                                  file,
+                                  fit: BoxFit.fill,
+                                  filterQuality: FilterQuality.high,
+                                  gaplessPlayback: true,
+                                  semanticLabel:
+                                      '${context.l10n.mushafMode}, '
+                                      '${context.l10n.page} ${widget.page}',
+                                ),
                               );
                             }
                             if (snapshot.hasError) {

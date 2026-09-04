@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,8 +12,146 @@ import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
-import 'mushaf_offline_repository.dart';
 import 'quran_models.dart';
+
+typedef MushafDigestReader = Future<String> Function(File file);
+
+class MushafAssetVerificationCache {
+  MushafAssetVerificationCache({
+    this.maxEntries = 12,
+    MushafDigestReader? digestReader,
+  }) : assert(maxEntries > 0),
+       _digestReader = digestReader ?? _readSha256;
+
+  final int maxEntries;
+  final MushafDigestReader _digestReader;
+  final LinkedHashMap<String, _VerifiedMushafAsset> _verified =
+      LinkedHashMap<String, _VerifiedMushafAsset>();
+
+  Future<bool> verify(
+    File file,
+    String expectedChecksum, {
+    required int? expectedBytes,
+  }) async {
+    try {
+      final stat = await file.stat();
+      if (stat.type != FileSystemEntityType.file ||
+          (expectedBytes != null && stat.size != expectedBytes)) {
+        _verified.remove(file.path);
+        return false;
+      }
+      final stamp = _VerifiedMushafAsset(
+        checksum: expectedChecksum,
+        expectedBytes: expectedBytes,
+        actualBytes: stat.size,
+        modifiedMicroseconds: stat.modified.microsecondsSinceEpoch,
+        changedMicroseconds: stat.changed.microsecondsSinceEpoch,
+      );
+      final cached = _verified.remove(file.path);
+      if (cached == stamp) {
+        _verified[file.path] = cached!;
+        return true;
+      }
+      final handle = await file.open();
+      late final List<int> header;
+      try {
+        header = await handle.read(16);
+      } finally {
+        await handle.close();
+      }
+      if (!_validWebp(header) ||
+          (expectedChecksum.isNotEmpty &&
+              await _digestReader(file) != expectedChecksum)) {
+        _verified.remove(file.path);
+        return false;
+      }
+      _remember(file.path, stamp);
+      return true;
+    } on FileSystemException {
+      _verified.remove(file.path);
+      return false;
+    }
+  }
+
+  Future<void> rememberVerified(
+    File file,
+    String expectedChecksum, {
+    required int? expectedBytes,
+  }) async {
+    final stat = await file.stat();
+    if (stat.type != FileSystemEntityType.file ||
+        (expectedBytes != null && stat.size != expectedBytes)) {
+      return;
+    }
+    _remember(
+      file.path,
+      _VerifiedMushafAsset(
+        checksum: expectedChecksum,
+        expectedBytes: expectedBytes,
+        actualBytes: stat.size,
+        modifiedMicroseconds: stat.modified.microsecondsSinceEpoch,
+        changedMicroseconds: stat.changed.microsecondsSinceEpoch,
+      ),
+    );
+  }
+
+  void _remember(String path, _VerifiedMushafAsset stamp) {
+    _verified.remove(path);
+    _verified[path] = stamp;
+    while (_verified.length > maxEntries) {
+      _verified.remove(_verified.keys.first);
+    }
+  }
+
+  static Future<String> _readSha256(File file) async =>
+      (await sha256.bind(file.openRead()).first).toString();
+}
+
+class _VerifiedMushafAsset {
+  const _VerifiedMushafAsset({
+    required this.checksum,
+    required this.expectedBytes,
+    required this.actualBytes,
+    required this.modifiedMicroseconds,
+    required this.changedMicroseconds,
+  });
+
+  final String checksum;
+  final int? expectedBytes;
+  final int actualBytes;
+  final int modifiedMicroseconds;
+  final int changedMicroseconds;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _VerifiedMushafAsset &&
+      other.checksum == checksum &&
+      other.expectedBytes == expectedBytes &&
+      other.actualBytes == actualBytes &&
+      other.modifiedMicroseconds == modifiedMicroseconds &&
+      other.changedMicroseconds == changedMicroseconds;
+
+  @override
+  int get hashCode => Object.hash(
+    checksum,
+    expectedBytes,
+    actualBytes,
+    modifiedMicroseconds,
+    changedMicroseconds,
+  );
+}
+
+bool _validWebp(List<int> bytes) {
+  return bytes.length >= 16 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50;
+}
 
 class QuranRepository {
   QuranRepository({
@@ -27,8 +166,10 @@ class QuranRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final Uuid _uuid;
-  final Map<String, Future<File>> _pageAssetDownloads =
-      <String, Future<File>>{};
+  final Map<(String, int, int, int?, String), Future<File>> _pageAssetRequests =
+      <(String, int, int, int?, String), Future<File>>{};
+  final MushafAssetVerificationCache _pageAssetVerifier =
+      MushafAssetVerificationCache();
   final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
   final Map<String, List<QuranAyahTafsir>> _tafsirMemory = {};
 
@@ -258,16 +399,41 @@ class QuranRepository {
     MushafPageData page,
     MushafAsset asset,
   ) async {
-    final offline = await _activeOfflineMushafPage(page, asset);
+    final checksum = asset.sha256.isNotEmpty
+        ? asset.sha256
+        : page.checksumSha256;
+    final requestKey = (
+      page.contentVersion,
+      page.number,
+      asset.width,
+      asset.bytes,
+      checksum,
+    );
+    final existing = _pageAssetRequests[requestKey];
+    if (existing != null) return existing;
+    final request = _cachedMushafPageAsset(page, asset, checksum);
+    _pageAssetRequests[requestKey] = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_pageAssetRequests[requestKey], request)) {
+        _pageAssetRequests.remove(requestKey);
+      }
+    }
+  }
+
+  Future<File> _cachedMushafPageAsset(
+    MushafPageData page,
+    MushafAsset asset,
+    String checksum,
+  ) async {
+    final offline = await _activeOfflineMushafPage(page, checksum);
     if (offline != null) return offline;
     final supportDirectory = await getApplicationSupportDirectory();
     final safeVersion = page.contentVersion.replaceAll(
       RegExp('[^a-zA-Z0-9._-]'),
       '_',
     );
-    final checksum = asset.sha256.isNotEmpty
-        ? asset.sha256
-        : page.checksumSha256;
     final checksumPrefix = checksum.length >= 16
         ? checksum.substring(0, 16)
         : 'unversioned';
@@ -285,22 +451,22 @@ class QuranRepository {
     if (await _validCachedPage(file, checksum, expectedBytes: asset.bytes)) {
       return file;
     }
-    final inFlight = _pageAssetDownloads.putIfAbsent(
-      file.path,
-      () => _downloadMushafPageAsset(file, asset, expectedChecksum: checksum),
+    final downloaded = await _downloadMushafPageAsset(
+      file,
+      asset,
+      expectedChecksum: checksum,
     );
-    try {
-      return await inFlight;
-    } finally {
-      if (identical(_pageAssetDownloads[file.path], inFlight)) {
-        _pageAssetDownloads.remove(file.path);
-      }
-    }
+    await _pageAssetVerifier.rememberVerified(
+      downloaded,
+      checksum,
+      expectedBytes: asset.bytes,
+    );
+    return downloaded;
   }
 
   Future<File?> _activeOfflineMushafPage(
     MushafPageData page,
-    MushafAsset asset,
+    String expectedChecksum,
   ) async {
     final rows = await _database.database.rawQuery(
       '''
@@ -317,22 +483,18 @@ class QuranRepository {
         AND item.checksum_sha256 = ?
       LIMIT 1
       ''',
-      <Object?>['quran-edition:$edition', page.number, asset.sha256],
+      <Object?>['quran-edition:$edition', page.number, expectedChecksum],
     );
     if (rows.isEmpty) return null;
     final row = rows.single;
     final file = File(row['local_path']! as String);
-    final offlinePage = OfflineMushafPage(
-      number: page.number,
-      url: Uri.parse(asset.url),
-      fileName: row['file_name']! as String,
-      width: asset.width,
-      height: asset.height ?? page.imageHeight,
-      bytes: row['size_bytes']! as int,
-      sha256: row['checksum_sha256']! as String,
-      metadata: const <String, Object?>{},
-    );
-    return await verifyMushafAssetFile(file, offlinePage) ? file : null;
+    return await _pageAssetVerifier.verify(
+          file,
+          row['checksum_sha256']! as String,
+          expectedBytes: row['size_bytes']! as int,
+        )
+        ? file
+        : null;
   }
 
   Future<File> _downloadMushafPageAsset(
@@ -372,28 +534,11 @@ class QuranRepository {
     File file,
     String expectedChecksum, {
     required int? expectedBytes,
-  }) async {
-    if (!await file.exists()) return false;
-    final bytes = await file.readAsBytes();
-    if (!_validWebp(bytes) ||
-        (expectedBytes != null && bytes.length != expectedBytes)) {
-      return false;
-    }
-    return expectedChecksum.isEmpty ||
-        sha256.convert(bytes).toString() == expectedChecksum;
-  }
-
-  bool _validWebp(List<int> bytes) {
-    return bytes.length >= 16 &&
-        bytes[0] == 0x52 &&
-        bytes[1] == 0x49 &&
-        bytes[2] == 0x46 &&
-        bytes[3] == 0x46 &&
-        bytes[8] == 0x57 &&
-        bytes[9] == 0x45 &&
-        bytes[10] == 0x42 &&
-        bytes[11] == 0x50;
-  }
+  }) => _pageAssetVerifier.verify(
+    file,
+    expectedChecksum,
+    expectedBytes: expectedBytes,
+  );
 
   List<QuranAyahTranslation> _rememberTranslations(
     String key,

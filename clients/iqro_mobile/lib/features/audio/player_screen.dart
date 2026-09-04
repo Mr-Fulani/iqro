@@ -16,6 +16,55 @@ import 'reciter_portraits.dart';
 
 typedef _ReciterSelection = ({ReciterPerson person, Recitation recitation});
 
+typedef PlayerChromeSnapshot = ({
+  AudioTrack? track,
+  Reciter? reciter,
+  String surahName,
+  bool playing,
+  bool buffering,
+  Duration duration,
+  double speed,
+  bool repeatEnabled,
+  int? sleepTimerMinutes,
+  List<AudioSegment> segments,
+  int? activeAyah,
+  int? rangeStartAyah,
+  int? rangeEndAyah,
+});
+
+PlayerChromeSnapshot playerChromeSnapshot(IqroAudioState state) => (
+  track: state.track,
+  reciter: state.reciter,
+  surahName: state.surahName,
+  playing: state.playing,
+  buffering: state.buffering,
+  duration: state.duration,
+  speed: state.speed,
+  repeatEnabled: state.repeatEnabled,
+  sleepTimerMinutes: state.sleepTimerMinutes,
+  segments: state.segments,
+  activeAyah: state.activeAyah,
+  rangeStartAyah: state.rangeStartAyah,
+  rangeEndAyah: state.rangeEndAyah,
+);
+
+IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
+    IqroAudioState(
+      track: chrome.track,
+      reciter: chrome.reciter,
+      surahName: chrome.surahName,
+      playing: chrome.playing,
+      buffering: chrome.buffering,
+      duration: chrome.duration,
+      speed: chrome.speed,
+      repeatEnabled: chrome.repeatEnabled,
+      sleepTimerMinutes: chrome.sleepTimerMinutes,
+      segments: chrome.segments,
+      activeAyah: chrome.activeAyah,
+      rangeStartAyah: chrome.rangeStartAyah,
+      rangeEndAyah: chrome.rangeEndAyah,
+    );
+
 String _recitationStyleLabel(BuildContext context, String style) =>
     switch (style) {
       'murattal' => context.l10n.styleMurattal,
@@ -71,9 +120,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
   var _changingReciter = false;
   var _changingQuality = false;
-  double? _seekPreviewMilliseconds;
-  ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
-  ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
   String? _ownerId;
   var _surahRequest = 0;
   var _reciterRequest = 0;
@@ -90,10 +136,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _changingSurah = false;
       _changingReciter = false;
       _changingQuality = false;
-      _seekPreviewMilliseconds = null;
-      _dragIdentity = null;
     }
-    final state = ref.watch(audioControllerProvider);
+    final state = _audioStateFromChrome(
+      ref.watch(audioControllerProvider.select(playerChromeSnapshot)),
+    );
     final controller = ref.read(audioControllerProvider.notifier);
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurah = state.track?.surah;
@@ -108,33 +154,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final preferredQuality = ref.watch(
       appPreferencesProvider.select((value) => value.preferredAudioQuality),
     );
-    final controlsEnabled =
-        state.active &&
-        !state.buffering &&
-        !_changingSurah &&
-        !_changingReciter &&
-        !_changingQuality;
-    final durationMs = state.effectiveDuration.inMilliseconds;
-    final playbackIdentity = (
-      trackId: state.track?.id,
-      startAyah: state.rangeStartAyah,
-      endAyah: state.rangeEndAyah,
-    );
-    if (_renderedIdentity != playbackIdentity) {
-      _renderedIdentity = playbackIdentity;
-      _seekPreviewMilliseconds = null;
-      // A source/range replacement invalidates any gesture that started on
-      // the previous timeline. Its eventual pointer-up must not seek the new
-      // source, even if Flutter rebuilds the Slider mid-drag.
-      _dragIdentity = null;
-    }
-    final livePositionMs = state.relativePosition.inMilliseconds.clamp(
-      0,
-      durationMs == 0 ? 1 : durationMs,
-    );
-    final positionMs = (_seekPreviewMilliseconds ?? livePositionMs.toDouble())
-        .clamp(0, durationMs <= 0 ? 1 : durationMs)
-        .toDouble();
     final currentAyah = state.displayedAyah;
     final reciter = state.reciter;
     final portraitUrl = reciter == null
@@ -217,133 +236,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 ),
               ),
               const SizedBox(height: 26),
-              Slider(
-                value: positionMs,
-                min: 0,
-                max: durationMs <= 0 ? 1 : durationMs.toDouble(),
-                onChangeStart: state.active && durationMs > 0
-                    ? (value) {
-                        setState(() {
-                          _dragIdentity = playbackIdentity;
-                          _seekPreviewMilliseconds = value;
-                        });
-                      }
-                    : null,
-                onChanged: state.active && durationMs > 0
-                    ? (value) {
-                        if (_dragIdentity == null) return;
-                        setState(() => _seekPreviewMilliseconds = value);
-                      }
-                    : null,
-                onChangeEnd: state.active && durationMs > 0
-                    ? (value) {
-                        final identity = _dragIdentity;
-                        setState(() {
-                          _dragIdentity = null;
-                          _seekPreviewMilliseconds = null;
-                        });
-                        if (identity?.trackId == null) return;
-                        unawaited(
-                          controller.seekInActiveRange(
-                            Duration(milliseconds: value.round()),
-                            expectedTrackId: identity!.trackId!,
-                            expectedStartAyah: identity.startAyah,
-                            expectedEndAyah: identity.endAyah,
-                          ),
-                        );
-                      }
-                    : null,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Text(
-                      _duration(Duration(milliseconds: positionMs.round())),
-                      style: _metaStyle,
-                    ),
-                    Text(_duration(state.effectiveDuration), style: _metaStyle),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
-                  IconButton(
-                    onPressed: controlsEnabled
-                        ? () => controller.seekInActiveRange(
-                            Duration(
-                              milliseconds: (positionMs.round() - 10000).clamp(
-                                0,
-                                durationMs,
-                              ),
-                            ),
-                          )
-                        : null,
-                    color: Colors.white,
-                    iconSize: 28,
-                    icon: const Icon(Icons.replay_10),
-                  ),
-                  IconButton(
-                    tooltip: context.l10n.previousSurah,
-                    onPressed:
-                        controlsEnabled &&
-                            currentSurah != null &&
-                            currentSurah > 1
-                        ? () => _changeSurah(-1)
-                        : null,
-                    color: Colors.white,
-                    icon: const Icon(Icons.skip_previous),
-                  ),
-                  SizedBox(
-                    width: 72,
-                    height: 72,
-                    child: IconButton.filled(
-                      tooltip: state.playing
-                          ? context.l10n.pause
-                          : context.l10n.play,
-                      onPressed: controlsEnabled ? controller.toggle : null,
-                      iconSize: 38,
-                      icon:
-                          state.buffering ||
-                              _changingSurah ||
-                              _changingReciter ||
-                              _changingQuality
-                          ? const CircularProgressIndicator(strokeWidth: 2)
-                          : Icon(
-                              state.playing ? Icons.pause : Icons.play_arrow,
-                            ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: context.l10n.nextSurah,
-                    onPressed:
-                        controlsEnabled &&
-                            currentSurah != null &&
-                            currentSurah < 114
-                        ? () => _changeSurah(1)
-                        : null,
-                    color: Colors.white,
-                    icon: const Icon(Icons.skip_next),
-                  ),
-                  IconButton(
-                    onPressed: controlsEnabled
-                        ? () => controller.seekInActiveRange(
-                            Duration(
-                              milliseconds: (positionMs.round() + 10000).clamp(
-                                0,
-                                durationMs,
-                              ),
-                            ),
-                          )
-                        : null,
-                    color: Colors.white,
-                    iconSize: 28,
-                    icon: const Icon(Icons.forward_10),
-                  ),
-                ],
+              _PlayerTransport(
+                sourceChangeInProgress:
+                    _changingSurah || _changingReciter || _changingQuality,
+                onPreviousSurah: () => _changeSurah(-1),
+                onNextSurah: () => _changeSurah(1),
               ),
               const SizedBox(height: 24),
               GridView.count(
@@ -412,14 +309,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
-  }
-
-  static const _metaStyle = TextStyle(color: Color(0x99FFFFFF), fontSize: 11);
-
-  static String _duration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 
   Recitation? _recitationById(List<Recitation>? recitations, String? id) {
@@ -949,6 +838,185 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     AudioController controller,
     int request,
   ) => request == _qualityRequest && _isCurrentController(scope, controller);
+}
+
+class _PlayerTransport extends ConsumerStatefulWidget {
+  const _PlayerTransport({
+    required this.sourceChangeInProgress,
+    required this.onPreviousSurah,
+    required this.onNextSurah,
+  });
+
+  final bool sourceChangeInProgress;
+  final VoidCallback onPreviousSurah;
+  final VoidCallback onNextSurah;
+
+  @override
+  ConsumerState<_PlayerTransport> createState() => _PlayerTransportState();
+}
+
+class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
+  static const _metaStyle = TextStyle(color: Color(0x99FFFFFF), fontSize: 11);
+
+  double? _seekPreviewMilliseconds;
+  ({String? trackId, int? startAyah, int? endAyah})? _renderedIdentity;
+  ({String? trackId, int? startAyah, int? endAyah})? _dragIdentity;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(audioControllerProvider);
+    final controller = ref.read(audioControllerProvider.notifier);
+    final durationMs = state.effectiveDuration.inMilliseconds;
+    final playbackIdentity = (
+      trackId: state.track?.id,
+      startAyah: state.rangeStartAyah,
+      endAyah: state.rangeEndAyah,
+    );
+    if (_renderedIdentity != playbackIdentity) {
+      _renderedIdentity = playbackIdentity;
+      _seekPreviewMilliseconds = null;
+      // A source/range replacement invalidates a gesture that started on the
+      // previous timeline. Its eventual pointer-up must not seek a new source.
+      _dragIdentity = null;
+    }
+    final livePositionMs = state.relativePosition.inMilliseconds.clamp(
+      0,
+      durationMs == 0 ? 1 : durationMs,
+    );
+    final positionMs = (_seekPreviewMilliseconds ?? livePositionMs.toDouble())
+        .clamp(0, durationMs <= 0 ? 1 : durationMs)
+        .toDouble();
+    final currentSurah = state.track?.surah;
+    final controlsEnabled =
+        state.active && !state.buffering && !widget.sourceChangeInProgress;
+
+    return Column(
+      children: <Widget>[
+        Slider(
+          value: positionMs,
+          min: 0,
+          max: durationMs <= 0 ? 1 : durationMs.toDouble(),
+          onChangeStart: state.active && durationMs > 0
+              ? (value) {
+                  setState(() {
+                    _dragIdentity = playbackIdentity;
+                    _seekPreviewMilliseconds = value;
+                  });
+                }
+              : null,
+          onChanged: state.active && durationMs > 0
+              ? (value) {
+                  if (_dragIdentity == null) return;
+                  setState(() => _seekPreviewMilliseconds = value);
+                }
+              : null,
+          onChangeEnd: state.active && durationMs > 0
+              ? (value) {
+                  final identity = _dragIdentity;
+                  setState(() {
+                    _dragIdentity = null;
+                    _seekPreviewMilliseconds = null;
+                  });
+                  if (identity?.trackId == null) return;
+                  unawaited(
+                    controller.seekInActiveRange(
+                      Duration(milliseconds: value.round()),
+                      expectedTrackId: identity!.trackId!,
+                      expectedStartAyah: identity.startAyah,
+                      expectedEndAyah: identity.endAyah,
+                    ),
+                  );
+                }
+              : null,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                _duration(Duration(milliseconds: positionMs.round())),
+                style: _metaStyle,
+              ),
+              Text(_duration(state.effectiveDuration), style: _metaStyle),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            IconButton(
+              onPressed: controlsEnabled
+                  ? () => controller.seekInActiveRange(
+                      Duration(
+                        milliseconds: (positionMs.round() - 10000).clamp(
+                          0,
+                          durationMs,
+                        ),
+                      ),
+                    )
+                  : null,
+              color: Colors.white,
+              iconSize: 28,
+              icon: const Icon(Icons.replay_10),
+            ),
+            IconButton(
+              tooltip: context.l10n.previousSurah,
+              onPressed:
+                  controlsEnabled && currentSurah != null && currentSurah > 1
+                  ? widget.onPreviousSurah
+                  : null,
+              color: Colors.white,
+              icon: const Icon(Icons.skip_previous),
+            ),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: IconButton.filled(
+                tooltip: state.playing ? context.l10n.pause : context.l10n.play,
+                onPressed: controlsEnabled ? controller.toggle : null,
+                iconSize: 38,
+                icon: state.buffering || widget.sourceChangeInProgress
+                    ? const CircularProgressIndicator(strokeWidth: 2)
+                    : Icon(state.playing ? Icons.pause : Icons.play_arrow),
+              ),
+            ),
+            IconButton(
+              tooltip: context.l10n.nextSurah,
+              onPressed:
+                  controlsEnabled && currentSurah != null && currentSurah < 114
+                  ? widget.onNextSurah
+                  : null,
+              color: Colors.white,
+              icon: const Icon(Icons.skip_next),
+            ),
+            IconButton(
+              onPressed: controlsEnabled
+                  ? () => controller.seekInActiveRange(
+                      Duration(
+                        milliseconds: (positionMs.round() + 10000).clamp(
+                          0,
+                          durationMs,
+                        ),
+                      ),
+                    )
+                  : null,
+              color: Colors.white,
+              iconSize: 28,
+              icon: const Icon(Icons.forward_10),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static String _duration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
 }
 
 class _AudioQualitySheet extends StatelessWidget {
