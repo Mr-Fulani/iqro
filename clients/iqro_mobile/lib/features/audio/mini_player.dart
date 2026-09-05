@@ -69,7 +69,9 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                 name: reciter?.nameFor(locale) ?? '',
               ),
               title: Text(
-                player.surahName,
+                player.track == null
+                    ? context.l10n.audioTitle
+                    : player.surahName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -78,7 +80,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                 ),
               ),
               subtitle: Text(
-                reciter?.nameFor(locale) ?? '',
+                reciter?.nameFor(locale) ?? context.l10n.chooseReciter,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: Colors.white.withValues(alpha: .68)),
@@ -107,7 +109,9 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                           : Icons.play_arrow_rounded,
                       emphasized: true,
                       loading: player.buffering || _changingSurah,
-                      onPressed: controlsEnabled
+                      onPressed: player.track == null
+                          ? () => context.push('/app?tab=3')
+                          : controlsEnabled
                           ? () => ref
                                 .read(audioControllerProvider.notifier)
                                 .toggle()
@@ -126,7 +130,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                   ],
                 ),
               ),
-              onTap: () => context.push('/player'),
+              onTap: () =>
+                  context.push(player.track == null ? '/app?tab=3' : '/player'),
             ),
           ),
         ),

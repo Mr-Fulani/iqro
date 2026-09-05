@@ -10,6 +10,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_portraits.dart';
+import 'mushaf_paper.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 
@@ -152,16 +153,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           padding: const EdgeInsetsDirectional.fromSTEB(18, 10, 18, 28),
           sliver: SliverList.list(
             children: <Widget>[
-              Text(
-                details.ayah?.textUthmani ?? '',
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontFamily: 'serif',
-                  fontSize: 30,
-                  height: 1.85,
-                ),
-              ),
+              MushafAyahText(text: details.ayah?.textUthmani ?? ''),
               const SizedBox(height: 12),
               _actionRow(playingThis, loadedThis),
               const SizedBox(height: 20),

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import 'mushaf_paper.dart';
 import 'quran_models.dart';
 
 typedef MushafPageLayout = ({
@@ -194,9 +195,9 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     final data = ref.watch(mushafPageProvider(widget.page));
     return data.when(
       loading: () =>
-          const ColoredBox(color: Color(0xFFEDE6D3), child: IqroLoading()),
+          const ColoredBox(color: mushafPaperColor, child: IqroLoading()),
       error: (error, stack) => ColoredBox(
-        color: const Color(0xFFEDE6D3),
+        color: mushafPaperColor,
         child: IqroAsyncError(
           title: context.l10n.noQuranData,
           message: context.l10n.networkError,
@@ -269,17 +270,14 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                   height: layout.height,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTapUp: (details) {
+                    onTap: widget.onBackgroundTap,
+                    onLongPressStart: (details) {
                       final normalizedX =
                           details.localPosition.dx / layout.width;
                       final normalizedY =
                           details.localPosition.dy / layout.height;
                       final ayah = pageData.ayahAt(normalizedX, normalizedY);
-                      if (ayah == null) {
-                        widget.onBackgroundTap();
-                      } else {
-                        widget.onSelectAyah(ayah);
-                      }
+                      if (ayah != null) widget.onSelectAyah(ayah);
                     },
                     child: Stack(
                       fit: StackFit.expand,

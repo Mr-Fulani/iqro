@@ -290,7 +290,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listen => 'Listen';
 
   @override
-  String get tapForControls => 'Tap to show controls';
+  String get tapForControls => 'Tap for player and controls';
 
   @override
   String get zoom => 'Zoom';
@@ -299,8 +299,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listenPage => 'Listen to this page';
 
   @override
-  String get tapAyahForDetails =>
-      'Tap an ayah for audio, translation and tafsir';
+  String get tapAyahForDetails => 'Hold an ayah for translation and tafsir';
 
   @override
   String get audioTitle => 'Listen to the Quran';

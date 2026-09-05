@@ -14,6 +14,7 @@ import '../audio/mini_player.dart';
 import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
+import 'mushaf_paper.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
@@ -183,9 +184,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         player.active && player.surah != null && player.ayah != null
         ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
         : null;
-    final foreground = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFF3EEDC)
-        : const Color(0xFF26261F);
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
@@ -195,7 +193,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFEDE6D3),
+        backgroundColor: mushafPaperColor,
         body: Stack(
           children: <Widget>[
             PageView.builder(
@@ -325,116 +323,115 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                   child: AnimatedOpacity(
                     opacity: _controlsVisible ? 1 : 0,
                     duration: const Duration(milliseconds: 180),
-                    child: Container(
-                      color: const Color(0xED071A16),
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        14,
-                        12,
-                        14,
-                        12 + MediaQuery.paddingOf(context).bottom,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              Icon(
-                                Icons.zoom_out,
-                                color: Colors.white.withValues(alpha: .8),
-                              ),
-                              Expanded(
-                                child: Slider(
-                                  value: _zoom.clamp(1, 3),
-                                  min: 1,
-                                  max: 3,
-                                  onChanged: (value) {
-                                    _zoomControllers[_currentPage]?.setZoom(
-                                      value,
-                                    );
-                                    setState(() => _zoom = value);
-                                  },
-                                ),
-                              ),
-                              Icon(
-                                Icons.zoom_in,
-                                color: Colors.white.withValues(alpha: .8),
-                              ),
-                              SizedBox(
-                                width: 42,
-                                child: Text(
-                                  '${(_zoom * 100).round()}%',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const IqroMiniPlayer(),
+                        const SizedBox(height: 8),
+                        Container(
+                          color: const Color(0xED071A16),
+                          padding: EdgeInsetsDirectional.fromSTEB(
+                            14,
+                            12,
+                            14,
+                            12 + MediaQuery.paddingOf(context).bottom,
                           ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
-                              IconButton.filledTonal(
-                                tooltip:
-                                    '${context.l10n.page} ${_currentPage - 1}',
-                                onPressed: _currentPage <= 1
-                                    ? null
-                                    : () => _turnPage(-1),
-                                icon: const Icon(Icons.chevron_left),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  children: <Widget>[
-                                    Text(
-                                      '$_currentPage / 604',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(color: Colors.white),
+                              Row(
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.zoom_out,
+                                    color: Colors.white.withValues(alpha: .8),
+                                  ),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _zoom.clamp(1, 3),
+                                      min: 1,
+                                      max: 3,
+                                      onChanged: (value) {
+                                        _zoomControllers[_currentPage]?.setZoom(
+                                          value,
+                                        );
+                                        setState(() => _zoom = value);
+                                      },
                                     ),
-                                    Text(
-                                      context.l10n.tapAyahForDetails,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: .65,
-                                        ),
-                                        fontSize: 12,
+                                  ),
+                                  Icon(
+                                    Icons.zoom_in,
+                                    color: Colors.white.withValues(alpha: .8),
+                                  ),
+                                  SizedBox(
+                                    width: 42,
+                                    child: Text(
+                                      '${(_zoom * 100).round()}%',
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              IconButton.filledTonal(
-                                tooltip:
-                                    '${context.l10n.page} ${_currentPage + 1}',
-                                onPressed: _currentPage >= 604
-                                    ? null
-                                    : () => _turnPage(1),
-                                icon: const Icon(Icons.chevron_right),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  IconButton.filledTonal(
+                                    tooltip:
+                                        '${context.l10n.page} ${_currentPage - 1}',
+                                    onPressed: _currentPage <= 1
+                                        ? null
+                                        : () => _turnPage(-1),
+                                    icon: const Icon(Icons.chevron_left),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      children: <Widget>[
+                                        Text(
+                                          '$_currentPage / 604',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(color: Colors.white),
+                                        ),
+                                        Text(
+                                          context.l10n.tapAyahForDetails,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: .65,
+                                            ),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton.filledTonal(
+                                    tooltip:
+                                        '${context.l10n.page} ${_currentPage + 1}',
+                                    onPressed: _currentPage >= 604
+                                        ? null
+                                        : () => _turnPage(1),
+                                    icon: const Icon(Icons.chevron_right),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-            if (player.active && !_controlsVisible)
-              PositionedDirectional(
-                start: 0,
-                end: 0,
-                bottom: 18 + MediaQuery.paddingOf(context).bottom,
-                child: const IqroMiniPlayer(),
-              ),
             if (!_controlsVisible)
               PositionedDirectional(
                 start: 0,
                 end: 0,
-                bottom:
-                    (player.active ? 98 : 58) +
-                    MediaQuery.paddingOf(context).bottom,
+                bottom: 58 + MediaQuery.paddingOf(context).bottom,
                 child: IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: .65,
@@ -442,11 +439,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Icon(Icons.more_horiz, color: foreground),
+                        const Icon(Icons.more_horiz, color: mushafInkColor),
                         const SizedBox(width: 6),
-                        Text(
-                          context.l10n.tapForControls,
-                          style: TextStyle(color: foreground, fontSize: 12),
+                        Flexible(
+                          child: Text(
+                            context.l10n.tapForControls,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: mushafInkColor,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -756,6 +759,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       return;
     }
     if (!_isCurrentAccount(scope)) return;
+    unawaited(HapticFeedback.selectionClick());
     _positionSaves.clearPending();
     _positionRequest++;
     setState(() {

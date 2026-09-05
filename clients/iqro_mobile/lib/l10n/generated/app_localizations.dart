@@ -651,7 +651,7 @@ abstract class AppLocalizations {
   /// No description provided for @tapForControls.
   ///
   /// In en, this message translates to:
-  /// **'Tap to show controls'**
+  /// **'Tap for player and controls'**
   String get tapForControls;
 
   /// No description provided for @zoom.
@@ -669,7 +669,7 @@ abstract class AppLocalizations {
   /// No description provided for @tapAyahForDetails.
   ///
   /// In en, this message translates to:
-  /// **'Tap an ayah for audio, translation and tafsir'**
+  /// **'Hold an ayah for translation and tafsir'**
   String get tapAyahForDetails;
 
   /// No description provided for @audioTitle.

@@ -290,7 +290,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listen => 'Dinle';
 
   @override
-  String get tapForControls => 'Menüyü göstermek için dokunun';
+  String get tapForControls => 'Oynatıcı ve menü için dokunun';
 
   @override
   String get zoom => 'Yakınlaştırma';
@@ -299,7 +299,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listenPage => 'Bu sayfayı dinle';
 
   @override
-  String get tapAyahForDetails => 'Ses, meal ve tefsir için bir ayete dokunun';
+  String get tapAyahForDetails => 'Meal ve tefsir için ayete basılı tutun';
 
   @override
   String get audioTitle => 'Kur\'an\'ı dinleyin';

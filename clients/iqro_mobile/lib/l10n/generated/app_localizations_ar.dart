@@ -288,7 +288,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listen => 'استمع';
 
   @override
-  String get tapForControls => 'اضغط لإظهار الأدوات';
+  String get tapForControls => 'اضغط لإظهار المشغّل والأدوات';
 
   @override
   String get zoom => 'التكبير';
@@ -297,7 +297,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listenPage => 'استمع إلى الصفحة الحالية';
 
   @override
-  String get tapAyahForDetails => 'اضغط على آية للصوت والترجمة والتفسير';
+  String get tapAyahForDetails => 'اضغط مطولًا على الآية للترجمة والتفسير';
 
   @override
   String get audioTitle => 'استمع إلى القرآن';
