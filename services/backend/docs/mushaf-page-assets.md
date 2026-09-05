@@ -224,16 +224,35 @@ asset с `manifest.json`.
 последнюю страницу во всех целевых размерах. После полного рендера рекомендуется
 выборочная визуальная проверка и автоматическая сверка manifest.
 
-Полученный каталог ещё не является опубликованным контентом. Provider-neutral create-only upload
-и регистрация page-only версии выполняются существующей командой:
+Полученный каталог ещё не является опубликованным контентом. Для новой полной версии уже
+работающего интерактивного Мусхафа сначала выполняется только provider-neutral create-only
+загрузка объектов:
 
 ```bash
 python manage.py publish_mushaf_pages \
   /data/builds/hafs-pages-v1/manifest.json \
-  --upload --activate
+  --upload --upload-only
 ```
 
-В production активация без `--upload` запрещена. Команда повторно проверяет manifest и каждый
-локальный SHA-256, создаёт либо идемпотентно сверяет immutable S3 object и только потом меняет БД.
-Привязка интерактивных областей аятов и религиозно-редакционная публикация полного Quran dataset
-остаются отдельным контролируемым процессом.
+Затем из последнего проверенного полного dataset и нового manifest создаётся новая полная версия:
+
+```bash
+python manage.py upgrade_quran_dataset_assets \
+  /data/quran/datasets/madani-hafs-1.0.2 \
+  /data/builds/hafs-pages-v1/manifest.json \
+  /data/quran/datasets/madani-hafs-1.0.3 \
+  --content-version 1.0.3
+
+python manage.py import_quran_dataset /data/quran/datasets/madani-hafs-1.0.3
+python manage.py publish_quran_version \
+  --edition madani-hafs \
+  --content-version 1.0.3 \
+  --activate
+```
+
+Upgrade-команда сохраняет байт-в-байт корпус, аяты, juz/hizb/rub, hit map и порядок чтения,
+заменяя только проверенные page assets и пересчитывая immutable checksums. Она требует наличие
+канонического разрешения, относительно которого зарегистрированы координаты, одинаковый набор
+ширин на всех страницах и совместимое соотношение сторон. В production активация страницы без
+предварительного `--upload` запрещена. Обычный режим `publish_mushaf_pages --activate` создаёт
+page-only версию и не должен применяться для обновления уже интерактивного издания.

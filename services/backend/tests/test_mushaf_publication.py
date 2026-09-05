@@ -197,6 +197,32 @@ def test_prepared_mushaf_catalog_uploads_all_assets_immutably(tmp_path: Path) ->
     assert uploader.specs[-1].content_type == "image/webp"
 
 
+@pytest.mark.django_db
+def test_upload_only_never_creates_a_page_only_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    manifest = _prepared_assets(media_root)
+    uploader = FakeMushafUploader()
+    monkeypatch.setattr(
+        "quran_backend.modules.quran.management.commands.publish_mushaf_pages."
+        "upload_prepared_mushaf_catalog",
+        lambda catalog, *, media_root: upload_prepared_mushaf_catalog(
+            catalog,
+            media_root=media_root,
+            uploader=uploader,
+        ),
+    )
+
+    with override_settings(MEDIA_ROOT=media_root):
+        call_command("publish_mushaf_pages", manifest, "--upload", "--upload-only")
+
+    assert len(uploader.specs) == 604
+    assert not QuranEdition.objects.filter(code="madani-hafs").exists()
+
+
 @override_settings(MEDIA_OBJECT_STORAGE_REQUIRED=True)
 def test_production_activation_requires_object_upload(tmp_path: Path) -> None:
     media_root = tmp_path / "media"

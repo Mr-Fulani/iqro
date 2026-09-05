@@ -40,8 +40,15 @@ class Command(BaseCommand):
             action="store_true",
             help="Create or verify every immutable page object before database publication.",
         )
+        parser.add_argument(
+            "--upload-only",
+            action="store_true",
+            help="Upload and verify immutable objects without creating a page-only Quran version.",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
+        if options["upload_only"] and (not options["upload"] or options["activate"]):
+            raise CommandError("--upload-only requires --upload and cannot be activated.")
         if options["activate"] and settings.MEDIA_OBJECT_STORAGE_REQUIRED and not options["upload"]:
             raise CommandError(
                 "Production activation requires --upload to verify immutable object storage."
@@ -59,23 +66,26 @@ class Command(BaseCommand):
                     catalog,
                     media_root=Path(settings.MEDIA_ROOT),
                 )
-            result = publish_prepared_mushaf_catalog(
-                catalog,
-                edition_code=edition_code,
-                version_value=options["content_version"],
-                activate=options["activate"],
-            )
+            result = None
+            if not options["upload_only"]:
+                result = publish_prepared_mushaf_catalog(
+                    catalog,
+                    edition_code=edition_code,
+                    version_value=options["content_version"],
+                    activate=options["activate"],
+                )
         except (MushafPublicationError, ObjectStorageError, OSError) as exc:
             raise CommandError(str(exc)) from exc
 
-        outcome = "created" if result.created else "already exists"
-        state = "published and active" if result.activated else "draft"
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Mushaf page version {result.version} {outcome}: "
-                f"{len(catalog.pages)} verified pages, {state}."
+        if result is not None:
+            outcome = "created" if result.created else "already exists"
+            state = "published and active" if result.activated else "draft"
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Mushaf page version {result.version} {outcome}: "
+                    f"{len(catalog.pages)} verified pages, {state}."
+                )
             )
-        )
         if upload_result is not None:
             self.stdout.write(
                 self.style.SUCCESS(

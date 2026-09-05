@@ -575,7 +575,7 @@ def _prepare_assets(
                 or height <= 0
                 or int(variant["bytes"]) <= 0
                 or abs(height / width - spec.registered_image_height / spec.registered_image_width)
-                > 0.002
+                > 0.001
             ):
                 raise QuranDatasetBuildError(
                     f"Page {page_number} contains an invalid or distorted asset variant."

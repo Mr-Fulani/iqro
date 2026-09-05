@@ -50,3 +50,35 @@ def test_region_audit_rejects_bbox_drift() -> None:
 
     with pytest.raises(QuranRegionAuditError, match="bbox does not match"):
         audit_quran_regions(pages=pages, ayahs=ayahs)
+
+
+def test_region_audit_allows_renderer_rounding_across_asset_widths() -> None:
+    ayahs = [{"surah": 1, "number": 1}]
+    pages = [
+        {
+            "number": 1,
+            "image_width": 900,
+            "image_height": 1380,
+            "assets": [
+                {"width": 900, "height": 1380},
+                {"width": 2700, "height": 4138},
+            ],
+            "regions": [
+                {
+                    "surah": 1,
+                    "ayah": 1,
+                    "reading_order": 1,
+                    "polygon": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.2]],
+                    "x": 0.1,
+                    "y": 0.1,
+                    "width": 0.8,
+                    "height": 0.1,
+                }
+            ],
+        }
+    ]
+
+    report = audit_quran_regions(pages=pages, ayahs=ayahs)
+
+    assert report.pages == 1
+    assert report.ayahs == 1

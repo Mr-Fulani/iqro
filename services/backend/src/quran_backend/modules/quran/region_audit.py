@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 COORDINATE_TOLERANCE = 1e-6
+ASSET_ASPECT_RATIO_TOLERANCE = 1e-3
 MIN_POLYGON_AREA = 1e-10
 
 
@@ -113,7 +114,7 @@ def _audit_asset_registration(page: dict[str, Any]) -> None:
         if asset_width <= 0 or asset_height <= 0:
             raise QuranRegionAuditError(f"Page {page_number} has invalid asset dimensions.")
         ratio_delta = abs(asset_width / asset_height - expected_ratio)
-        if ratio_delta > COORDINATE_TOLERANCE:
+        if ratio_delta > ASSET_ASPECT_RATIO_TOLERANCE:
             raise QuranRegionAuditError(
                 f"Page {page_number} asset aspect ratio does not match region coordinates."
             )

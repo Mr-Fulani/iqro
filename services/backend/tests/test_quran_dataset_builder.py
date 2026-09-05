@@ -9,6 +9,12 @@ import pytest
 from django.core.management import call_command
 
 from quran_backend.modules.quran import dataset_builder
+from quran_backend.modules.quran.dataset_asset_upgrade import upgrade_quran_dataset_assets
+from quran_backend.modules.quran.importer import validate_quran_dataset
+from quran_backend.modules.quran.mushaf_publication import (
+    PreparedMushafCatalog,
+    PreparedMushafPage,
+)
 
 
 def _write_sources(root: Path) -> tuple[Path, Path, Path]:
@@ -229,6 +235,54 @@ def test_keeps_all_page_renditions_without_changing_registered_geometry(
     assert (page["image_width"], page["image_height"]) == (900, 1380)
     assert [asset["width"] for asset in page["assets"]] == [900, 1800]
     assert page["checksum_sha256"] == page["assets"][0]["sha256"]
+
+    source = validate_quran_dataset(result.output)
+    upgraded = upgrade_quran_dataset_assets(
+        source,
+        PreparedMushafCatalog(
+            manifest_path=asset_manifest,
+            checksum_sha256="d" * 64,
+            pages=[
+                PreparedMushafPage(
+                    number=1,
+                    image_width=2700,
+                    image_height=4138,
+                    checksum_sha256="f" * 64,
+                    asset_variants=[
+                        {
+                            "format": "webp",
+                            "width": 900,
+                            "height": 1380,
+                            "path": "quran/madani-hafs/1.1.0/page-w900.webp",
+                            "sha256": "e" * 64,
+                            "bytes": 100,
+                        },
+                        {
+                            "format": "webp",
+                            "width": 2700,
+                            "height": 4138,
+                            "path": "quran/madani-hafs/1.1.0/page-w2700.webp",
+                            "sha256": "f" * 64,
+                            "bytes": 300,
+                        },
+                    ],
+                )
+            ],
+            logical_page_count=1,
+            cover_pdf_page_count=1,
+            edition_metadata={"code": "madani-hafs"},
+        ),
+        output=tmp_path / "asset-upgraded-output",
+        version_value="1.0.3",
+    )
+    upgraded_page = upgraded.pages[0]
+    assert upgraded.manifest["edition"]["version"] == "1.0.3"
+    assert [asset["width"] for asset in upgraded_page["assets"]] == [900, 2700]
+    assert upgraded_page["checksum_sha256"] == "e" * 64
+    assert upgraded.manifest["verification"]["semantic_source_content_sha256"] == (
+        source.aggregate_checksum
+    )
+    assert upgraded.manifest["files"]["ayahs.jsonl"] == source.manifest["files"]["ayahs.jsonl"]
 
 
 def test_rejects_page_assets_without_the_registered_geometry_rendition(tmp_path: Path) -> None:
