@@ -168,6 +168,8 @@ class QuranRepository {
   final Uuid _uuid;
   final Map<(String, int, int, int?, String), Future<File>> _pageAssetRequests =
       <(String, int, int, int?, String), Future<File>>{};
+  final Set<(int, String, int, int)> _pageResolutionRefreshAttempts =
+      <(int, String, int, int)>{};
   final MushafAssetVerificationCache _pageAssetVerifier =
       MushafAssetVerificationCache();
   final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
@@ -393,6 +395,26 @@ class QuranRepository {
       if (cached != null) return MushafPageData.fromJson(jsonMap(cached.value));
       rethrow;
     }
+  }
+
+  Future<bool> refreshMushafPageResolution(
+    MushafPageData current, {
+    required int minimumWidth,
+  }) async {
+    if (minimumWidth <= 0 || current.maximumAssetWidth >= minimumWidth) {
+      return false;
+    }
+    final attempt = (
+      current.number,
+      current.contentVersion,
+      current.maximumAssetWidth,
+      minimumWidth,
+    );
+    if (!_pageResolutionRefreshAttempts.add(attempt)) return false;
+
+    final refreshed = await mushafPage(current.number, forceRefresh: true);
+    return refreshed.contentVersion != current.contentVersion ||
+        refreshed.maximumAssetWidth > current.maximumAssetWidth;
   }
 
   Future<File> cachedMushafPageAsset(

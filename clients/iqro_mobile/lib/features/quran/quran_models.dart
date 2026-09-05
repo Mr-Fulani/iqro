@@ -307,6 +307,18 @@ class MushafPageData {
   final List<MushafAsset> assets;
   final List<MushafAyahRegion> regions;
 
+  int get maximumAssetWidth => assets.fold<int>(
+    0,
+    (maximum, asset) => asset.width > maximum ? asset.width : maximum,
+  );
+
+  bool needsHigherResolution(double logicalWidth, double devicePixelRatio) =>
+      logicalWidth.isFinite &&
+      devicePixelRatio.isFinite &&
+      logicalWidth > 0 &&
+      devicePixelRatio > 0 &&
+      maximumAssetWidth < logicalWidth * devicePixelRatio;
+
   ({int surah, int ayah})? get firstAyahReference {
     if (regions.isEmpty) return null;
     final ordered = List<MushafAyahRegion>.of(regions)

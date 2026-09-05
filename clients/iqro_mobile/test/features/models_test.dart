@@ -202,8 +202,11 @@ void main() {
     });
 
     expect(page.assets, hasLength(2));
+    expect(page.maximumAssetWidth, 1080);
     expect(page.bestAssetFor(360, 2)?.width, 720);
     expect(page.bestAssetFor(400, 3)?.width, 1080);
+    expect(page.needsHigherResolution(360, 2), isFalse);
+    expect(page.needsHigherResolution(400, 3), isTrue);
   });
 
   test('Mushaf reading progress follows canonical region order', () {

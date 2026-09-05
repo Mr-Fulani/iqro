@@ -22,6 +22,8 @@ DATASET_VERSION = "1.0.2"
 # quranpedia/quran-svg native coordinates were registered against the pinned PDF raster.
 # The KFQC page art is centered on the PDF page with the same scale on both axes.
 REGISTERED_PAGE_SCALE = 2.337
+REGISTERED_IMAGE_WIDTH = 900
+REGISTERED_IMAGE_HEIGHT = 1380
 STANDARD_VIEWBOX = (345.0, 550.0)
 OPENING_VIEWBOX = (235.0, 235.0)
 NUMBER_PATTERN = re.compile(r"-?\d+(?:\.\d+)?")
@@ -180,6 +182,8 @@ class QuranDatasetBuildSpec:
     expected_hizb_count: int
     expected_rub_el_hizb_count: int
     registered_page_scale: float
+    registered_image_width: int
+    registered_image_height: int
     standard_viewbox: tuple[float, float]
     opening_viewbox: tuple[float, float]
     opening_page_count: int
@@ -216,6 +220,8 @@ def madani_hafs_build_spec() -> QuranDatasetBuildSpec:
         expected_hizb_count=EXPECTED_HIZB_COUNT,
         expected_rub_el_hizb_count=EXPECTED_RUB_EL_HIZB_COUNT,
         registered_page_scale=REGISTERED_PAGE_SCALE,
+        registered_image_width=REGISTERED_IMAGE_WIDTH,
+        registered_image_height=REGISTERED_IMAGE_HEIGHT,
         standard_viewbox=STANDARD_VIEWBOX,
         opening_viewbox=OPENING_VIEWBOX,
         opening_page_count=min(2, EXPECTED_PAGE_COUNT),
@@ -278,6 +284,8 @@ def load_quran_dataset_build_spec(path: Path) -> QuranDatasetBuildSpec:
         expected_hizb_count=_positive_int(expected, "hizb"),
         expected_rub_el_hizb_count=_positive_int(expected, "rub_el_hizb"),
         registered_page_scale=_positive_float(geometry, "registered_page_scale"),
+        registered_image_width=_positive_int(geometry, "registered_image_width"),
+        registered_image_height=_positive_int(geometry, "registered_image_height"),
         standard_viewbox=_viewbox(geometry, "standard_viewbox"),
         opening_viewbox=_viewbox(geometry, "opening_viewbox"),
         opening_page_count=_nonnegative_int(geometry, "opening_page_count"),
@@ -371,17 +379,21 @@ def build_quran_dataset(  # noqa: PLR0915
     assets_by_page = _prepare_assets(
         assets_source,
         asset_manifest_path.parent,
-        edition_code=spec.edition_code,
-        asset_version=spec.asset_version,
-        page_count=spec.expected_page_count,
+        spec=spec,
     )
     pages: list[dict[str, Any]] = []
     polygon_keys: set[tuple[int, int]] = set()
     page_mapping_differences = 0
     for page_number in range(1, spec.expected_page_count + 1):
-        page_asset = assets_by_page[page_number]
-        image_width = int(page_asset["width"])
-        image_height = int(page_asset["height"])
+        page_assets = assets_by_page[page_number]
+        page_asset = next(
+            asset
+            for asset in page_assets
+            if asset["width"] == spec.registered_image_width
+            and asset["height"] == spec.registered_image_height
+        )
+        image_width = spec.registered_image_width
+        image_height = spec.registered_image_height
         source_regions = json.loads(
             (polygons_dir / f"{page_number:03}.json").read_text(encoding="utf-8")
         )
@@ -427,7 +439,7 @@ def build_quran_dataset(  # noqa: PLR0915
                 "image_width": image_width,
                 "image_height": image_height,
                 "checksum_sha256": page_asset["sha256"],
-                "assets": [page_asset],
+                "assets": page_assets,
                 "regions": regions,
             }
         )
@@ -507,29 +519,67 @@ def _prepare_assets(
     assets: list[dict[str, Any]],
     asset_root: Path,
     *,
-    edition_code: str,
-    asset_version: str,
-    page_count: int,
-) -> dict[int, dict[str, Any]]:
-    result: dict[int, dict[str, Any]] = {}
+    spec: QuranDatasetBuildSpec,
+) -> dict[int, list[dict[str, Any]]]:
+    result: dict[int, list[dict[str, Any]]] = {}
+    resolved_root = asset_root.resolve()
     for source in assets:
         page_number = int(source["logical_page"])
         dimensions = source["dimensions"]
         relative_path = Path(str(source["path"]))
         asset_path = (asset_root / relative_path).resolve(strict=True)
-        if not asset_path.is_relative_to(asset_root.resolve()):
+        if not asset_path.is_relative_to(resolved_root):
             raise QuranDatasetBuildError("Asset path escapes its manifest directory.")
         _require_sha256(asset_path, str(source["sha256"]), f"Page {page_number} asset")
-        result[page_number] = {
+        variant = {
             "format": source["format"],
             "width": int(dimensions["width"]),
             "height": int(dimensions["height"]),
-            "path": f"quran/{edition_code}/{asset_version}/{relative_path.as_posix()}",
+            "path": (f"quran/{spec.edition_code}/{spec.asset_version}/{relative_path.as_posix()}"),
             "sha256": source["sha256"],
             "bytes": int(source["bytes"]),
         }
-    if set(result) != set(range(1, page_count + 1)):
-        raise QuranDatasetBuildError(f"Asset manifest must cover pages 1-{page_count} exactly.")
+        result.setdefault(page_number, []).append(variant)
+    if set(result) != set(range(1, spec.expected_page_count + 1)):
+        raise QuranDatasetBuildError(
+            f"Asset manifest must cover pages 1-{spec.expected_page_count} exactly."
+        )
+
+    expected_widths: tuple[int, ...] | None = None
+    for page_number, variants in result.items():
+        variants.sort(key=lambda item: int(item["width"]))
+        widths = tuple(int(variant["width"]) for variant in variants)
+        if len(widths) != len(set(widths)):
+            raise QuranDatasetBuildError(
+                f"Asset manifest contains duplicate widths for page {page_number}."
+            )
+        if expected_widths is None:
+            expected_widths = widths
+        elif widths != expected_widths:
+            raise QuranDatasetBuildError("Every page must publish the same asset widths.")
+        if not any(
+            int(variant["width"]) == spec.registered_image_width
+            and int(variant["height"]) == spec.registered_image_height
+            for variant in variants
+        ):
+            raise QuranDatasetBuildError(
+                f"Page {page_number} is missing its registered geometry asset "
+                f"{spec.registered_image_width}x{spec.registered_image_height}."
+            )
+        for variant in variants:
+            width = int(variant["width"])
+            height = int(variant["height"])
+            if (
+                variant["format"] != "webp"
+                or width <= 0
+                or height <= 0
+                or int(variant["bytes"]) <= 0
+                or abs(height / width - spec.registered_image_height / spec.registered_image_width)
+                > 0.002
+            ):
+                raise QuranDatasetBuildError(
+                    f"Page {page_number} contains an invalid or distorted asset variant."
+                )
     return result
 
 
@@ -652,6 +702,10 @@ def _manifest_sources(
     sources["regions"]["aggregate_sha256"] = spec.polygon_set_sha256
     sources["assets"]["manifest_sha256"] = _sha256_file(asset_manifest_path)
     sources["assets"]["registered_scale"] = spec.registered_page_scale
+    sources["assets"]["registered_dimensions"] = [
+        spec.registered_image_width,
+        spec.registered_image_height,
+    ]
     return sources
 
 
@@ -698,8 +752,11 @@ def _validate_build_spec(spec: QuranDatasetBuildSpec) -> None:
         )
     if spec.opening_page_count > spec.expected_page_count:
         raise QuranDatasetBuildError("Build spec opening_page_count cannot exceed the page count.")
-    if spec.registered_page_scale <= 0 or any(
-        value <= 0 for value in (*spec.standard_viewbox, *spec.opening_viewbox)
+    if (
+        spec.registered_image_width <= 0
+        or spec.registered_image_height <= 0
+        or spec.registered_page_scale <= 0
+        or any(value <= 0 for value in (*spec.standard_viewbox, *spec.opening_viewbox))
     ):
         raise QuranDatasetBuildError("Build spec geometry values must be positive.")
     if set(spec.sources) != {"corpus", "regions", "assets"}:

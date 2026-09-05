@@ -47,6 +47,8 @@ uv run python manage.py build_quran_dataset \
   },
   "geometry": {
     "registered_page_scale": 2.337,
+    "registered_image_width": 900,
+    "registered_image_height": 1380,
     "standard_viewbox": [345.0, 550.0],
     "opening_viewbox": [235.0, 235.0],
     "opening_page_count": 2,
@@ -63,6 +65,11 @@ uv run python manage.py build_quran_dataset \
 Placeholder в примере намеренно не является допустимым входом. В рабочем JSON каждое поле
 `expected_counts` должно быть числом из проверенного source manifest конкретного риваята;
 нельзя переносить числа текущего Hafs dataset по предположению.
+
+`registered_image_width` и `registered_image_height` закрепляют растр, относительно которого
+были зарегистрированы polygon-координаты. Manifest страниц может содержать дополнительные
+WebP-варианты для экранов высокой плотности, но обязан сохранять этот канонический вариант;
+все страницы должны публиковать одинаковый набор ширин и неизменное соотношение сторон.
 
 Поле `surah_names_ru` можно не задавать для обычного полного набора из 114 сур: тогда
 используется встроенный проверенный список русских названий. Для набора с другим количеством

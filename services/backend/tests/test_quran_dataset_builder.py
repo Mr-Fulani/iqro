@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -110,6 +111,8 @@ def _write_warsh_build_spec(root: Path, corpus: Path, polygons: Path) -> Path:
                 },
                 "geometry": {
                     "registered_page_scale": dataset_builder.REGISTERED_PAGE_SCALE,
+                    "registered_image_width": dataset_builder.REGISTERED_IMAGE_WIDTH,
+                    "registered_image_height": dataset_builder.REGISTERED_IMAGE_HEIGHT,
                     "standard_viewbox": list(dataset_builder.STANDARD_VIEWBOX),
                     "opening_viewbox": list(dataset_builder.OPENING_VIEWBOX),
                     "opening_page_count": 1,
@@ -175,6 +178,74 @@ def test_builds_checksummed_dataset_from_verified_sources(
     assert page_payload["assets"][0]["path"] == "quran/madani-hafs/1.0.0/page.webp"
     assert json.loads((result.output / "hizb.json").read_text())[0]["number"] == 1
     assert json.loads((result.output / "rub-el-hizb.json").read_text())[0]["number"] == 1
+
+
+def test_keeps_all_page_renditions_without_changing_registered_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus, polygons, asset_manifest = _write_sources(tmp_path)
+    asset_root = asset_manifest.parent
+    high_resolution = asset_root / "page-w1800.webp"
+    high_resolution.write_bytes(b"test-page-high-resolution")
+    manifest = json.loads(asset_manifest.read_text(encoding="utf-8"))
+    manifest["assets"].insert(
+        0,
+        {
+            "logical_page": 1,
+            "dimensions": {"width": 1800, "height": 2760},
+            "format": "webp",
+            "path": high_resolution.name,
+            "sha256": hashlib.sha256(high_resolution.read_bytes()).hexdigest(),
+            "bytes": high_resolution.stat().st_size,
+        },
+    )
+    asset_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    polygon_hash = hashlib.sha256(
+        (f"001.json:{hashlib.sha256((polygons / '001.json').read_bytes()).hexdigest()}\n").encode()
+    ).hexdigest()
+    monkeypatch.setattr(
+        dataset_builder,
+        "EXPECTED_CORPUS_SHA256",
+        hashlib.sha256(corpus.read_bytes()).hexdigest(),
+    )
+    monkeypatch.setattr(dataset_builder, "EXPECTED_POLYGON_SET_SHA256", polygon_hash)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_SURAH_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_AYAH_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_PAGE_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_JUZ_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_HIZB_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "EXPECTED_RUB_EL_HIZB_COUNT", 1)
+    monkeypatch.setattr(dataset_builder, "RUSSIAN_SURAH_NAMES", ("Аль-Фатиха",))
+
+    result = dataset_builder.build_madani_hafs_dataset(
+        corpus_path=corpus,
+        polygons_dir=polygons,
+        asset_manifest_path=asset_manifest,
+        output=tmp_path / "multi-resolution-output",
+    )
+
+    page = json.loads((result.output / "pages.jsonl").read_text(encoding="utf-8"))
+    assert (page["image_width"], page["image_height"]) == (900, 1380)
+    assert [asset["width"] for asset in page["assets"]] == [900, 1800]
+    assert page["checksum_sha256"] == page["assets"][0]["sha256"]
+
+
+def test_rejects_page_assets_without_the_registered_geometry_rendition(tmp_path: Path) -> None:
+    _, _, asset_manifest = _write_sources(tmp_path)
+    manifest = json.loads(asset_manifest.read_text(encoding="utf-8"))
+    manifest["assets"][0]["dimensions"] = {"width": 1800, "height": 2760}
+    asset_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(dataset_builder.QuranDatasetBuildError, match="registered geometry asset"):
+        dataset_builder._prepare_assets(
+            manifest["assets"],
+            asset_manifest.parent,
+            spec=replace(
+                dataset_builder.madani_hafs_build_spec(),
+                expected_page_count=1,
+            ),
+        )
 
 
 def test_rejects_changed_corpus(tmp_path: Path) -> None:

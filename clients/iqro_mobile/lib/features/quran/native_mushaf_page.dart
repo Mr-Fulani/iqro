@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -91,6 +92,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   var _viewportSize = Size.zero;
   String? _assetCacheKey;
   Future<File>? _assetFile;
+  String? _resolutionRefreshKey;
 
   @override
   void initState() {
@@ -162,6 +164,31 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     });
   }
 
+  void _refreshResolutionIfNeeded(
+    MushafPageData pageData, {
+    required double logicalWidth,
+    required double devicePixelRatio,
+  }) {
+    if (!pageData.needsHigherResolution(logicalWidth, devicePixelRatio)) return;
+    final minimumWidth = (logicalWidth * devicePixelRatio).ceil();
+    final key =
+        '${pageData.contentVersion}:${pageData.number}:'
+        '${pageData.maximumAssetWidth}:$minimumWidth';
+    if (_resolutionRefreshKey == key) return;
+    _resolutionRefreshKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _resolutionRefreshKey != key) return;
+      unawaited(() async {
+        final changed = await ref
+            .read(quranRepositoryProvider)
+            .refreshMushafPageResolution(pageData, minimumWidth: minimumWidth);
+        if (changed && mounted && _resolutionRefreshKey == key) {
+          ref.invalidate(mushafPageProvider(widget.page));
+        }
+      }());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(mushafPageProvider(widget.page));
@@ -191,10 +218,8 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             pageData.imageHeight.toDouble(),
           ),
         );
-        final asset = pageData.bestAssetFor(
-          layout.width,
-          MediaQuery.devicePixelRatioOf(context),
-        );
+        final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+        final asset = pageData.bestAssetFor(layout.width, devicePixelRatio);
         if (asset == null) {
           return Center(
             child: Padding(
@@ -206,6 +231,11 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             ),
           );
         }
+        _refreshResolutionIfNeeded(
+          pageData,
+          logicalWidth: layout.width,
+          devicePixelRatio: devicePixelRatio,
+        );
         _loadAsset(pageData, asset);
 
         return GestureDetector(
