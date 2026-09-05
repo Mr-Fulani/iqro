@@ -20,6 +20,17 @@ typedef MushafPageLayout = ({
 // page reaches both screen edges without changing the scan's aspect ratio.
 const mushafLandscapeBleedFactor = 1.12;
 
+class MushafViewportOrientation {
+  bool? _landscape;
+
+  bool update(Size viewport) {
+    final next = viewport.width > viewport.height;
+    final changed = _landscape != null && _landscape != next;
+    _landscape = next;
+    return changed;
+  }
+}
+
 MushafPageLayout calculateMushafPageLayout({
   required Size viewport,
   required Size source,
@@ -74,7 +85,9 @@ class NativeMushafPage extends ConsumerStatefulWidget {
 
 class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   final _transformationController = TransformationController();
+  final _viewportOrientation = MushafViewportOrientation();
   var _scale = 1.0;
+  var _orientationRevision = 0;
   var _viewportSize = Size.zero;
   String? _assetCacheKey;
   Future<File>? _assetFile;
@@ -83,6 +96,24 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   void initState() {
     super.initState();
     widget.controller._setZoom = _applyZoom;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_viewportOrientation.update(MediaQuery.sizeOf(context))) return;
+
+    // A landscape page can carry a large vertical translation (or user zoom).
+    // Reusing that matrix after rotation can move the portrait page completely
+    // outside its viewport, so every orientation change starts from its own
+    // canonical fit.
+    _transformationController.value = Matrix4.identity();
+    _scale = 1;
+    final revision = ++_orientationRevision;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || revision != _orientationRevision) return;
+      widget.onScale(1);
+    });
   }
 
   @override
