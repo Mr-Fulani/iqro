@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'mushaf_paper.dart';
+import 'mushaf_raster.dart';
+import 'mushaf_scan_layout.dart';
 import 'quran_models.dart';
 
 typedef MushafPageLayout = ({
@@ -68,8 +71,11 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     required this.selectedAyah,
     required this.playingAyah,
     required this.onSelectAyah,
+    required this.onOpenAyah,
     required this.onBackgroundTap,
     required this.onScale,
+    this.surahs = const <Surah>[],
+    this.divisions = const <QuranDivision>[],
     super.key,
   });
 
@@ -78,8 +84,11 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   final QuranAyahReference? selectedAyah;
   final QuranAyahReference? playingAyah;
   final ValueChanged<QuranAyahReference> onSelectAyah;
+  final ValueChanged<QuranAyahReference> onOpenAyah;
   final VoidCallback onBackgroundTap;
   final ValueChanged<double> onScale;
+  final List<Surah> surahs;
+  final List<QuranDivision> divisions;
 
   @override
   ConsumerState<NativeMushafPage> createState() => _NativeMushafPageState();
@@ -94,6 +103,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   String? _assetCacheKey;
   Future<File>? _assetFile;
   String? _resolutionRefreshKey;
+  List<double> _verifiedCuts = const [];
 
   @override
   void initState() {
@@ -152,6 +162,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         '${pageData.contentVersion}:${asset.width}:${asset.sha256}';
     if (_assetCacheKey == cacheKey) return;
     _assetCacheKey = cacheKey;
+    _verifiedCuts = const [];
     _assetFile = ref
         .read(quranRepositoryProvider)
         .cachedMushafPageAsset(pageData, asset);
@@ -209,6 +220,93 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   }
 
   Widget _buildPage(MushafPageData pageData) {
+    final viewport = MediaQuery.sizeOf(context);
+    final portrait = viewport.height >= viewport.width;
+    final surahNumber = pageData.firstAyahReference?.surah;
+    final surah = widget.surahs
+        .where((s) => s.number == surahNumber)
+        .firstOrNull;
+    final juz = widget.divisions
+        .where((d) => widget.page >= d.startPage && widget.page <= d.endPage)
+        .firstOrNull;
+    final locale = Localizations.localeOf(context).languageCode;
+    return ColoredBox(
+      color: mushafPaperColor,
+      child: Column(
+        children: <Widget>[
+          if (portrait)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 16, 12, 6),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      surah?.nameFor(locale) ??
+                          '${context.l10n.surah} ${surahNumber ?? ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: mushafInkColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${context.l10n.juz} ${juz?.number ?? '—'}',
+                    style: const TextStyle(
+                      color: mushafInkColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(child: _buildScan(pageData)),
+          if (portrait)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 12, 14),
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1EBE1),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xFFC7BBA7),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.bookmark_border_rounded,
+                        color: mushafAccentColor,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${widget.page}',
+                        style: const TextStyle(
+                          color: mushafInkColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScan(MushafPageData pageData) {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -220,7 +318,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           ),
         );
         final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-        final asset = pageData.bestAssetFor(layout.width, devicePixelRatio);
+        final asset = pageData.bestAssetFor(
+          layout.fillsLandscapeWidth ? layout.width : _viewportSize.width,
+          devicePixelRatio,
+        );
         if (asset == null) {
           return Center(
             child: Padding(
@@ -238,6 +339,14 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           devicePixelRatio: devicePixelRatio,
         );
         _loadAsset(pageData, asset);
+        final scanLayout = MushafScanLayout.page(
+          page: pageData,
+          size: layout.fillsLandscapeWidth
+              ? Size(layout.width, layout.height)
+              : _viewportSize,
+          portrait: !layout.fillsLandscapeWidth,
+          verifiedCuts: _verifiedCuts,
+        );
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -264,20 +373,36 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                 widget.onScale(scale);
               },
               child: Transform.translate(
-                offset: Offset(layout.horizontalOffset, 0),
+                offset: Offset(
+                  layout.fillsLandscapeWidth ? layout.horizontalOffset : 0,
+                  0,
+                ),
                 child: SizedBox(
-                  width: layout.width,
-                  height: layout.height,
+                  width: scanLayout.size.width,
+                  height: scanLayout.size.height,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: widget.onBackgroundTap,
+                    onTapUp: (details) {
+                      final point = scanLayout.sourcePointAt(
+                        details.localPosition,
+                      );
+                      final ayah = point == null
+                          ? null
+                          : pageData.ayahAt(point.dx, point.dy);
+                      if (ayah == null) {
+                        widget.onBackgroundTap();
+                      } else {
+                        widget.onSelectAyah(ayah);
+                      }
+                    },
                     onLongPressStart: (details) {
-                      final normalizedX =
-                          details.localPosition.dx / layout.width;
-                      final normalizedY =
-                          details.localPosition.dy / layout.height;
-                      final ayah = pageData.ayahAt(normalizedX, normalizedY);
-                      if (ayah != null) widget.onSelectAyah(ayah);
+                      final point = scanLayout.sourcePointAt(
+                        details.localPosition,
+                      );
+                      final ayah = point == null
+                          ? null
+                          : pageData.ayahAt(point.dx, point.dy);
+                      if (ayah != null) widget.onOpenAyah(ayah);
                     },
                     child: Stack(
                       fit: StackFit.expand,
@@ -288,14 +413,33 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                             final file = snapshot.data;
                             if (file != null) {
                               return RepaintBoundary(
-                                child: Image.file(
-                                  file,
-                                  fit: BoxFit.fill,
-                                  filterQuality: FilterQuality.high,
-                                  gaplessPlayback: true,
-                                  semanticLabel:
-                                      '${context.l10n.mushafMode}, '
-                                      '${context.l10n.page} ${widget.page}',
+                                child: Semantics(
+                                  label:
+                                      '${context.l10n.mushafMode}, ${context.l10n.page} ${widget.page}',
+                                  image: true,
+                                  child: MushafRaster(
+                                    file: file,
+                                    cutCandidates: widget.page > 2
+                                        ? mushafLineBoundaries(pageData.regions)
+                                        : const [],
+                                    onVerifiedCuts: (cuts) {
+                                      if (mounted &&
+                                          !listEquals(_verifiedCuts, cuts)) {
+                                        setState(() => _verifiedCuts = cuts);
+                                      }
+                                    },
+                                    builder: (image) => CustomPaint(
+                                      painter: MushafScanPainter(
+                                        image: image,
+                                        layout: scanLayout,
+                                      ),
+                                    ),
+                                    fallback: IqroAsyncError(
+                                      title: context.l10n.noQuranData,
+                                      onRetry: () =>
+                                          _retryAsset(pageData, asset),
+                                    ),
+                                  ),
                                 ),
                               );
                             }
@@ -315,6 +459,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                               regions: pageData.regions,
                               selectedAyah: widget.selectedAyah,
                               playingAyah: widget.playingAyah,
+                              layout: scanLayout,
                             ),
                           ),
                         ),
@@ -336,19 +481,21 @@ class _AyahRegionPainter extends CustomPainter {
     required this.regions,
     required this.selectedAyah,
     required this.playingAyah,
+    required this.layout,
   });
 
   final List<MushafAyahRegion> regions;
   final QuranAyahReference? selectedAyah;
   final QuranAyahReference? playingAyah;
+  final MushafScanLayout layout;
 
   @override
   void paint(Canvas canvas, Size size) {
     final selectedFill = Paint()
-      ..color = const Color(0x52DCA928)
+      ..color = const Color(0x33857154)
       ..style = PaintingStyle.fill;
     final selectedStroke = Paint()
-      ..color = const Color(0xA6976A05)
+      ..color = const Color(0x99857154)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
     final playingFill = Paint()
@@ -363,40 +510,16 @@ class _AyahRegionPainter extends CustomPainter {
       final selected = region.ayah == selectedAyah;
       final playing = region.ayah == playingAyah;
       if (!selected && !playing) continue;
-      final path = _pathFor(region, size);
+      final path = layout.regionPath(region);
       canvas.drawPath(path, playing ? playingFill : selectedFill);
       canvas.drawPath(path, playing ? playingStroke : selectedStroke);
     }
   }
 
-  Path _pathFor(MushafAyahRegion region, Size size) {
-    final path = Path();
-    if (region.polygon.length >= 3) {
-      final first = region.polygon.first;
-      path.moveTo(first.x * size.width, first.y * size.height);
-      for (final point in region.polygon.skip(1)) {
-        path.lineTo(point.x * size.width, point.y * size.height);
-      }
-      path.close();
-      return path;
-    }
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          region.x * size.width,
-          region.y * size.height,
-          region.width * size.width,
-          region.height * size.height,
-        ),
-        const Radius.circular(3),
-      ),
-    );
-    return path;
-  }
-
   @override
   bool shouldRepaint(covariant _AyahRegionPainter oldDelegate) {
-    return oldDelegate.selectedAyah != selectedAyah ||
+    return oldDelegate.layout != layout ||
+        oldDelegate.selectedAyah != selectedAyah ||
         oldDelegate.playingAyah != playingAyah ||
         !identical(oldDelegate.regions, regions);
   }

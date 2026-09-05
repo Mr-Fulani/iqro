@@ -11,10 +11,13 @@ import '../../core/storage/local_database.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/utils/latest_async_work_queue.dart';
 import '../audio/mini_player.dart';
+import '../audio/reciter_catalog.dart';
+import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
 import 'mushaf_paper.dart';
+import 'mushaf_reader_controls.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
@@ -49,6 +52,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   var _currentPage = 1;
   var _controlsVisible = false;
   var _zoom = 1.0;
+  var _audioLoading = false;
+  var _audioRequest = 0;
+  var _playerExpanded = false;
+  var _bookmarkLoading = false;
+  var _detailsOpen = false;
   QuranAyahReference? _selectedAyah;
   QuranAyahReference? _pageReference;
   var _initialPageHandled = false;
@@ -150,6 +158,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     if (_accountKey != activeAccount) {
       _accountKey = activeAccount;
       _positionRequest += 1;
+      _audioRequest += 1;
       _pageTransitionScope = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _currentAccountKey() == activeAccount) {
@@ -159,16 +168,21 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           context.go('/app?tab=1');
         }
       });
-      // Keep the previous owner's page and selection out of the next frame.
       return const Scaffold(body: IqroLoading());
     }
-    final divisions = ref.watch(quranJuzProvider).valueOrNull;
+    final divisions =
+        ref.watch(quranJuzProvider).valueOrNull ?? const <QuranDivision>[];
+    final catalog = ref.watch(quranCatalogProvider).valueOrNull;
+    final reference = _selectedAyah ?? _pageReference;
+    final surah = catalog?.surahs
+        .where((s) => s.number == reference?.surah)
+        .firstOrNull;
+    final locale = Localizations.localeOf(context).languageCode;
+    final surahLabel = surah == null
+        ? '${context.l10n.surah} ${reference?.surah ?? widget.surah}'
+        : '${surah.number}. ${surah.nameFor(locale)}';
     final currentJuz = divisions
-        ?.where(
-          (division) =>
-              _currentPage >= division.startPage &&
-              _currentPage <= division.endPage,
-        )
+        .where((d) => _currentPage >= d.startPage && _currentPage <= d.endPage)
         .firstOrNull
         ?.number;
     final player = ref.watch(
@@ -177,6 +191,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           surah: value.track?.surah,
           ayah: value.activeAyah,
           active: value.active,
+          playing: value.playing,
+          buffering: value.buffering,
+          start: value.rangeStartAyah,
+          end: value.rangeEndAyah,
         ),
       ),
     );
@@ -184,6 +202,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         player.active && player.surah != null && player.ayah != null
         ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
         : null;
+    final playingSelected =
+        player.playing &&
+        player.surah == reference?.surah &&
+        player.start == reference?.ayah &&
+        player.end == reference?.ayah;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
@@ -196,267 +219,468 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         backgroundColor: mushafPaperColor,
         body: Stack(
           children: <Widget>[
-            PageView.builder(
-              controller: _pageController,
-              reverse: true,
-              physics: _zoom > 1.01
-                  ? const NeverScrollableScrollPhysics()
-                  : const PageScrollPhysics(parent: ClampingScrollPhysics()),
-              itemCount: 604,
-              onPageChanged: _onScanPageChanged,
-              itemBuilder: (context, index) {
-                final page = index + 1;
-                return NativeMushafPage(
-                  page: page,
-                  controller: _zoomControllers.putIfAbsent(
-                    page,
-                    NativeMushafPageController.new,
-                  ),
-                  selectedAyah: _selectedAyah,
-                  playingAyah: playingAyah,
-                  onSelectAyah: _selectAyah,
-                  onBackgroundTap: () => _setControls(!_controlsVisible),
-                  onScale: (value) {
-                    if (page == _currentPage && mounted) {
-                      setState(() => _zoom = value);
-                    }
-                  },
-                );
-              },
+            SafeArea(
+              child: PageView.builder(
+                controller: _pageController,
+                reverse: true,
+                physics: _zoom > 1.01
+                    ? const NeverScrollableScrollPhysics()
+                    : const PageScrollPhysics(parent: ClampingScrollPhysics()),
+                itemCount: 604,
+                onPageChanged: _onScanPageChanged,
+                itemBuilder: (context, index) {
+                  final page = index + 1;
+                  return NativeMushafPage(
+                    page: page,
+                    controller: _zoomControllers.putIfAbsent(
+                      page,
+                      NativeMushafPageController.new,
+                    ),
+                    selectedAyah: _selectedAyah,
+                    playingAyah: playingAyah,
+                    surahs: catalog?.surahs ?? const <Surah>[],
+                    divisions: divisions,
+                    onSelectAyah: _selectAyah,
+                    onOpenAyah: _openAyah,
+                    onBackgroundTap: () => _setControls(!_controlsVisible),
+                    onScale: (value) {
+                      if (page == _currentPage && mounted) {
+                        setState(() => _zoom = value);
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-            IgnorePointer(
-              ignoring: !_controlsVisible,
-              child: AnimatedSlide(
-                offset: _controlsVisible ? Offset.zero : const Offset(0, -1),
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
+            PositionedDirectional(
+              start: 12,
+              end: 12,
+              top: 8 + MediaQuery.paddingOf(context).top,
+              child: IgnorePointer(
+                ignoring: !_controlsVisible,
                 child: AnimatedOpacity(
                   opacity: _controlsVisible ? 1 : 0,
                   duration: const Duration(milliseconds: 180),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: <Color>[Color(0xDD071A16), Color(0x00071A16)],
+                  child: Row(
+                    children: <Widget>[
+                      MushafCircleButton(
+                        icon: Icons.arrow_back_rounded,
+                        tooltip: context.l10n.back,
+                        onPressed: () => context.pop(),
                       ),
-                    ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: SizedBox(
-                        height: 92,
-                        child: Row(
-                          children: <Widget>[
-                            const SizedBox(width: 6),
-                            IconButton(
-                              tooltip: context.l10n.back,
-                              onPressed: () => context.pop(),
-                              color: Colors.white,
-                              icon: const Icon(Icons.arrow_back),
-                            ),
-                            Expanded(
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: MushafControlSurface(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(40),
+                            onTap: () =>
+                                _showQuickJump(mode: QuranQuickJumpMode.ayah),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 7,
+                              ),
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
-                                  Text(
-                                    '${context.l10n.page} $_currentPage',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(color: Colors.white),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Flexible(
+                                        child: Text(
+                                          surahLabel,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: mushafInkColor,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.expand_more_rounded,
+                                        size: 18,
+                                        color: mushafInkColor,
+                                      ),
+                                    ],
                                   ),
                                   Text(
-                                    '${context.l10n.juz} ${currentJuz ?? '—'}',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: .7),
+                                    reference == null
+                                        ? context.l10n.mushafMode
+                                        : '${context.l10n.ayah} ${reference.key}',
+                                    style: const TextStyle(
+                                      color: mushafAccentColor,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      MushafControlSurface(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            IconButton(
+                              tooltip: context.l10n.favorites,
+                              onPressed: reference == null
+                                  ? null
+                                  : _bookmarkSelected,
+                              color: mushafAccentColor,
+                              icon: const Icon(Icons.bookmark_border_rounded),
+                            ),
                             IconButton(
                               tooltip: context.l10n.quickJump,
-                              onPressed: _showQuickJump,
-                              color: Colors.white,
-                              icon: const Icon(Icons.layers_outlined),
+                              onPressed: () =>
+                                  _showQuickJump(mode: QuranQuickJumpMode.ayah),
+                              color: mushafAccentColor,
+                              icon: const Icon(Icons.search_rounded),
                             ),
-                            IconButton(
-                              tooltip: context.l10n.textMode,
-                              onPressed: () async {
-                                final reference =
-                                    _selectedAyah ??
-                                    _pageReference ??
-                                    QuranAyahReference(
-                                      id: '',
-                                      surah: widget.surah,
-                                      ayah: widget.ayah,
-                                    );
-                                await ref
-                                    .read(appPreferencesProvider.notifier)
-                                    .setReaderMode(ReaderMode.text);
-                                if (!context.mounted) return;
-                                context.pushReplacement(
-                                  '/reader/${reference.surah}'
-                                  '?ayah=${reference.ayah}',
-                                );
-                              },
-                              color: Colors.white,
-                              icon: const Icon(Icons.format_list_bulleted),
-                            ),
-                            const SizedBox(width: 6),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-            IgnorePointer(
-              ignoring: !_controlsVisible,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: AnimatedSlide(
-                  offset: _controlsVisible ? Offset.zero : const Offset(0, 1),
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedOpacity(
-                    opacity: _controlsVisible ? 1 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const IqroMiniPlayer(),
-                        const SizedBox(height: 8),
-                        Container(
-                          color: const Color(0xED071A16),
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                            14,
-                            12,
-                            14,
-                            12 + MediaQuery.paddingOf(context).bottom,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+            PositionedDirectional(
+              start: 12,
+              end: 12,
+              bottom: 12 + MediaQuery.paddingOf(context).bottom,
+              child: IgnorePointer(
+                ignoring: !_controlsVisible,
+                child: AnimatedOpacity(
+                  opacity: _controlsVisible ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (_playerExpanded && player.active)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
                             children: <Widget>[
-                              Row(
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.zoom_out,
-                                    color: Colors.white.withValues(alpha: .8),
-                                  ),
-                                  Expanded(
-                                    child: Slider(
-                                      value: _zoom.clamp(1, 3),
-                                      min: 1,
-                                      max: 3,
-                                      onChanged: (value) {
-                                        _zoomControllers[_currentPage]?.setZoom(
-                                          value,
-                                        );
-                                        setState(() => _zoom = value);
-                                      },
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.zoom_in,
-                                    color: Colors.white.withValues(alpha: .8),
-                                  ),
-                                  SizedBox(
-                                    width: 42,
-                                    child: Text(
-                                      '${(_zoom * 100).round()}%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  IconButton.filledTonal(
-                                    tooltip:
-                                        '${context.l10n.page} ${_currentPage - 1}',
-                                    onPressed: _currentPage <= 1
-                                        ? null
-                                        : () => _turnPage(-1),
-                                    icon: const Icon(Icons.chevron_left),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      children: <Widget>[
-                                        Text(
-                                          '$_currentPage / 604',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(color: Colors.white),
-                                        ),
-                                        Text(
-                                          context.l10n.tapAyahForDetails,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: .65,
-                                            ),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton.filledTonal(
-                                    tooltip:
-                                        '${context.l10n.page} ${_currentPage + 1}',
-                                    onPressed: _currentPage >= 604
-                                        ? null
-                                        : () => _turnPage(1),
-                                    icon: const Icon(Icons.chevron_right),
-                                  ),
-                                ],
+                              const Expanded(child: IqroMiniPlayer()),
+                              IconButton(
+                                tooltip: context.l10n.close,
+                                onPressed: () =>
+                                    setState(() => _playerExpanded = false),
+                                icon: const Icon(Icons.expand_more_rounded),
+                                color: mushafAccentColor,
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      if (!_playerExpanded || !player.active)
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: SizedBox.square(
+                              dimension: 52,
+                              child: FloatingActionButton(
+                                heroTag: 'mushaf-play-selected',
+                                tooltip: playingSelected
+                                    ? context.l10n.pause
+                                    : '${context.l10n.listen} ${reference?.key ?? ''}',
+                                backgroundColor: mushafAccentColor,
+                                foregroundColor: Colors.white,
+                                elevation: 1,
+                                shape: const CircleBorder(),
+                                onPressed: reference == null || _audioLoading
+                                    ? null
+                                    : _playSelected,
+                                child:
+                                    _audioLoading ||
+                                        (playingSelected && player.buffering)
+                                    ? const SizedBox.square(
+                                        dimension: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Icon(
+                                        playingSelected
+                                            ? Icons.pause_rounded
+                                            : Icons.play_arrow_rounded,
+                                        size: 30,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Row(
+                        children: <Widget>[
+                          MushafCircleButton(
+                            icon: Icons.more_horiz,
+                            tooltip: context.l10n.readerSettings,
+                            onPressed: _showReaderOptions,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: MushafPageScrubber(
+                              page: _currentPage,
+                              juz: currentJuz,
+                              onJump: _scrubToPage,
+                              onCatalog: () => _showQuickJump(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          MushafCircleButton(
+                            icon: Icons.article_outlined,
+                            tooltip: context.l10n.translation,
+                            onPressed: reference == null
+                                ? null
+                                : () => _openAyah(reference),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            if (!_controlsVisible)
-              PositionedDirectional(
-                start: 0,
-                end: 0,
-                bottom: 58 + MediaQuery.paddingOf(context).bottom,
-                child: IgnorePointer(
-                  child: AnimatedOpacity(
-                    opacity: .65,
-                    duration: const Duration(milliseconds: 300),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        const Icon(Icons.more_horiz, color: mushafInkColor),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            context.l10n.tapForControls,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: mushafInkColor,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _selectAyah(QuranAyahReference reference) {
+    final scope = _database.accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final show = reference != _selectedAyah || !_controlsVisible;
+    _positionRequest++;
+    _audioRequest++;
+    setState(() {
+      _selectedAyah = reference;
+      _pageReference = reference;
+      _audioLoading = false;
+      _playerExpanded = false;
+    });
+    unawaited(_setControls(show));
+    _queuePagePositionSave(
+      _currentPage,
+      preferredReference: reference,
+      accountScope: scope,
+    );
+  }
+
+  Future<void> _playSelected() async {
+    final reference = _selectedAyah ?? _pageReference;
+    final scope = _database.accountScope.current;
+    if (_audioLoading ||
+        reference == null ||
+        scope == null ||
+        !_isCurrentAccount(scope)) {
+      return;
+    }
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    if (current.error == null &&
+        current.track?.surah == reference.surah &&
+        current.rangeStartAyah == reference.ayah &&
+        current.rangeEndAyah == reference.ayah) {
+      setState(() => _playerExpanded = true);
+      await controller.toggle();
+      return;
+    }
+    final request = ++_audioRequest;
+    final page = _currentPage;
+    bool ownsRequest() =>
+        _isCurrentAccount(scope) &&
+        request == _audioRequest &&
+        page == _currentPage &&
+        reference == (_selectedAyah ?? _pageReference) &&
+        identical(controller, ref.read(audioControllerProvider.notifier));
+    setState(() => _audioLoading = true);
+    try {
+      final repository = ref.read(audioRepositoryProvider);
+      final recitations = (await repository.recitations())
+          .where((r) => r.timingsAvailable && r.streamAllowed)
+          .toList();
+      if (!ownsRequest()) return;
+      final recitation = preferredRecitation(
+        recitations,
+        preferredId:
+            ref.read(appPreferencesProvider).preferredRecitationId ??
+            current.track?.recitationId,
+      );
+      if (recitation == null) throw StateError('No timed recitation');
+      final playback = await repository.playback(
+        recitationId: recitation.id,
+        surah: reference.surah,
+      );
+      if (!ownsRequest() || !mounted) return;
+      final surah = ref
+          .read(quranCatalogProvider)
+          .valueOrNull
+          ?.surahs
+          .where((s) => s.number == reference.surah)
+          .firstOrNull;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciterWithPersonPortrait(
+          recitation.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: recitations.map((r) => r.reciter),
+        ),
+        surahName:
+            surah?.nameFor(Localizations.localeOf(context).languageCode) ??
+            '${context.l10n.surah} ${reference.surah}',
+        startAyah: reference.ayah,
+        endAyah: reference.ayah,
+      );
+      if (ownsRequest()) setState(() => _playerExpanded = true);
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (ownsRequest() && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+    } finally {
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoading = false);
+      }
+    }
+  }
+
+  Future<void> _bookmarkSelected() async {
+    final reference = _selectedAyah ?? _pageReference;
+    final scope = _database.accountScope.current;
+    if (_bookmarkLoading ||
+        reference == null ||
+        scope == null ||
+        !_isCurrentAccount(scope)) {
+      return;
+    }
+    _bookmarkLoading = true;
+    try {
+      final saved = await _quranRepository.toggleBookmark(
+        reference.surah,
+        reference.ayah,
+        page: _currentPage,
+        accountScope: scope,
+      );
+      if (_isCurrentAccount(scope) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              saved ? context.l10n.bookmarkAdded : context.l10n.bookmarkRemoved,
+            ),
+          ),
+        );
+      }
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (_isCurrentAccount(scope) && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+      }
+    } finally {
+      _bookmarkLoading = false;
+    }
+  }
+
+  void _scrubToPage(int page) {
+    final scope = _database.accountScope.current;
+    if (scope != null && _isCurrentAccount(scope)) {
+      unawaited(_jumpToPage(page, null, accountScope: scope));
+    }
+  }
+
+  Future<void> _switchToText() async {
+    final reference = _selectedAyah ?? _pageReference;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setReaderMode(ReaderMode.text);
+    if (mounted) {
+      context.pushReplacement(
+        '/reader/${reference?.surah ?? widget.surah}?ayah=${reference?.ayah ?? widget.ayah}',
+      );
+    }
+  }
+
+  Future<void> _showReaderOptions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, update) => SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    context.l10n.readerSettings,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Row(
+                    children: <Widget>[
+                      const Icon(Icons.zoom_out_rounded),
+                      Expanded(
+                        child: Slider(
+                          value: _zoom.clamp(1, 3),
+                          min: 1,
+                          max: 3,
+                          onChanged: (value) {
+                            _zoomControllers[_currentPage]?.setZoom(value);
+                            setState(() => _zoom = value);
+                            update(() {});
+                          },
+                        ),
+                      ),
+                      Text('${(_zoom * 100).round()}%'),
+                    ],
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.headphones_rounded),
+                    title: Text(context.l10n.nowPlaying),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push(
+                        ref.read(audioControllerProvider).active
+                            ? '/player'
+                            : '/app?tab=3',
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.record_voice_over_rounded),
+                    title: Text(context.l10n.chooseReciter),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/app?tab=3');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.format_list_bulleted_rounded),
+                    title: Text(context.l10n.textMode),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      unawaited(_switchToText());
+                    },
+                  ),
+                  Text(
+                    context.l10n.tapAyahForDetails,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -475,6 +699,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       return;
     }
     if (page == _currentPage) return;
+    _audioRequest++;
+    _audioLoading = false;
+    _playerExpanded = false;
     _initialPageHandled = true;
     _zoomControllers[_currentPage]?.setZoom(1);
     setState(() {
@@ -513,27 +740,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
-  void _turnPage(int delta) {
-    final target = (_currentPage + delta).clamp(1, 604).toInt();
-    if (target == _currentPage) return;
-    final scope = ref.read(localDatabaseProvider).accountScope.current;
-    if (scope == null || !_isCurrentAccount(scope)) return;
-    _pageTransitionScope = scope;
-    final navigation = _pageController.animateToPage(
-      target - 1,
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeInOutCubic,
-    );
-    unawaited(
-      navigation.whenComplete(() {
-        if (identical(_pageTransitionScope, scope)) {
-          _pageTransitionScope = null;
-        }
-      }),
-    );
-  }
-
-  Future<void> _showQuickJump() async {
+  Future<void> _showQuickJump({
+    QuranQuickJumpMode mode = QuranQuickJumpMode.page,
+  }) async {
     final repository = ref.read(quranRepositoryProvider);
     AccountScopeSnapshot? scope;
     try {
@@ -560,7 +769,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           juz: juz ?? const <QuranDivision>[],
           hizb: hizb ?? const <QuranDivision>[],
           rubElHizb: rubElHizb ?? const <QuranDivision>[],
-          initialMode: QuranQuickJumpMode.page,
+          initialMode: mode,
           initialSurah: reference?.surah ?? widget.surah,
           initialAyah: reference?.ayah ?? widget.ayah,
           initialPage: _currentPage,
@@ -750,47 +959,41 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
-  Future<void> _selectAyah(QuranAyahReference reference) async {
-    final repository = ref.read(quranRepositoryProvider);
-    late final AccountScopeSnapshot scope;
-    try {
-      scope = await repository.captureAccount();
-    } on AccountScopeChanged {
-      return;
-    }
-    if (!_isCurrentAccount(scope)) return;
-    unawaited(HapticFeedback.selectionClick());
-    _positionSaves.clearPending();
+  Future<void> _openAyah(QuranAyahReference reference) async {
+    final scope = _database.accountScope.current;
+    if (_detailsOpen || scope == null || !_isCurrentAccount(scope)) return;
+    _detailsOpen = true;
+    _audioRequest++;
     _positionRequest++;
+    final page = _currentPage;
+    unawaited(HapticFeedback.selectionClick());
     setState(() {
       _selectedAyah = reference;
       _pageReference = reference;
       _controlsVisible = false;
+      _audioLoading = false;
+      _playerExpanded = false;
     });
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    if (!_isCurrentAccount(scope)) return;
-    try {
-      await repository.savePosition(
-        surah: reference.surah,
-        ayah: reference.ayah,
-        page: _currentPage,
-        accountScope: scope,
-      );
-    } on AccountScopeChanged {
-      return;
-    }
-    if (!_isCurrentAccount(scope) || !mounted) return;
-    ref.invalidate(readingPositionProvider(accountScopeKey(scope)));
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: false,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          AyahActionSheet(reference: reference, page: _currentPage),
+    _queuePagePositionSave(
+      page,
+      preferredReference: reference,
+      accountScope: scope,
     );
-    if (_isCurrentAccount(scope)) {
+    try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      if (!_isCurrentAccount(scope) || !mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: false,
+        backgroundColor: Colors.transparent,
+        builder: (context) => AyahActionSheet(reference: reference, page: page),
+      );
+    } finally {
+      _detailsOpen = false;
+      if (_isCurrentAccount(scope)) {
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
     }
   }
 

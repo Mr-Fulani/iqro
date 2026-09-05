@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
+import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -46,22 +47,25 @@ const _page = MushafPageData(
 );
 
 void main() {
-  testWidgets('short taps on ayah and paper toggle controls, not details', (
-    tester,
-  ) async {
-    final harness = await _pumpPage(tester);
+  testWidgets(
+    'short tap selects an ayah, paper toggles controls, neither opens details',
+    (tester) async {
+      final harness = await _pumpPage(tester);
 
-    await tester.tapAt(_pagePoint(tester, .5, .2));
-    await tester.pump();
-    expect(harness.taps, 1);
-    expect(harness.selections, isEmpty);
+      await tester.tapAt(_pagePoint(tester, .5, .2));
+      await tester.pump();
+      expect(harness.taps, 0);
+      expect(harness.shortSelections, <QuranAyahReference>[_ayah]);
+      expect(harness.selections, isEmpty);
 
-    await tester.tapAt(_pagePoint(tester, .5, .7));
-    await tester.pump();
-    expect(harness.taps, 2);
-    expect(harness.selections, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
+      await tester.tapAt(_pagePoint(tester, .5, .7));
+      await tester.pump();
+      expect(harness.taps, 1);
+      expect(harness.shortSelections, hasLength(1));
+      expect(harness.selections, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('holding an ayah selects it once without a release tap', (
     tester,
@@ -77,6 +81,7 @@ void main() {
     await tester.pump();
     expect(harness.taps, 0);
     expect(harness.selections, hasLength(1));
+    expect(harness.shortSelections, isEmpty);
   });
 
   testWidgets('holding blank paper does not select a neighbouring ayah', (
@@ -153,6 +158,7 @@ void main() {
 
 class _PageHarness {
   final controller = NativeMushafPageController();
+  final shortSelections = <QuranAyahReference>[];
   final selections = <QuranAyahReference>[];
   final pageChanges = <int>[];
   var taps = 0;
@@ -186,7 +192,8 @@ Future<_PageHarness> _pumpPage(
                 controller: harness.controller,
                 selectedAyah: null,
                 playingAyah: null,
-                onSelectAyah: harness.selections.add,
+                onSelectAyah: harness.shortSelections.add,
+                onOpenAyah: harness.selections.add,
                 onBackgroundTap: () => harness.taps++,
                 onScale: (_) {},
               ),
@@ -210,7 +217,14 @@ Offset _pagePoint(WidgetTester tester, double x, double y) {
     ),
   );
   final box = tester.renderObject<RenderBox>(surface);
-  return box.localToGlobal(Offset(box.size.width * x, box.size.height * y));
+  final portrait =
+      tester.view.physicalSize.height >= tester.view.physicalSize.width;
+  final layout = MushafScanLayout.page(
+    page: _page,
+    size: box.size,
+    portrait: portrait,
+  );
+  return box.localToGlobal(layout.displayPoint(Offset(x, y)));
 }
 
 class _PageRepository implements QuranRepository {

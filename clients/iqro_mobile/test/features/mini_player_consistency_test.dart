@@ -13,7 +13,7 @@ void main() {
     ).readAsString();
 
     expect(appShell, contains('const IqroMiniPlayer()'));
-    expect(mushaf, contains('const IqroMiniPlayer()'));
+    expect(mushaf, contains('IqroMiniPlayer()'));
     expect(mushaf, isNot(contains('_ReaderAudioPill')));
     expect(miniPlayer, isNot(contains('BackdropFilter')));
   });

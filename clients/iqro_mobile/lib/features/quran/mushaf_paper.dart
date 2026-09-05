@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-const mushafPaperColor = Color(0xFFEDE6D3);
-const mushafInkColor = Color(0xFF26261F);
+const mushafPaperColor = Color(0xFFFFFCF7);
+const mushafInkColor = Color(0xFF392D20);
+const mushafAccentColor = Color(0xFF857154);
 
 /// Reflowable Quran text on the same paper as the scanned reader. Explicit ink
 /// and paper colors keep the Arabic readable in both light and dark app themes.

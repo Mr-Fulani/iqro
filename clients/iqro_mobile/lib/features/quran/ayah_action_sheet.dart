@@ -11,6 +11,7 @@ import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_portraits.dart';
 import 'mushaf_paper.dart';
+import 'mushaf_ayah_excerpt.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 
@@ -153,7 +154,10 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           padding: const EdgeInsetsDirectional.fromSTEB(18, 10, 18, 28),
           sliver: SliverList.list(
             children: <Widget>[
-              MushafAyahText(text: details.ayah?.textUthmani ?? ''),
+              if (details.ayah != null)
+                MushafAyahExcerpt(ayah: details.ayah!, page: widget.page)
+              else
+                const MushafAyahText(text: ''),
               const SizedBox(height: 12),
               _actionRow(playingThis, loadedThis),
               const SizedBox(height: 20),
