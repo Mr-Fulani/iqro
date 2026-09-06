@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
@@ -22,6 +23,45 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets(
+    'page dots keep controls visible and vibrate once per actual page change',
+    (tester) async {
+      final vibrations = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') vibrations.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await _pump(tester);
+      expect(vibrations, isEmpty);
+      await _tapAyah(tester, .35);
+      await tester.tap(find.byKey(const ValueKey('mushaf-page-dot-123')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Страница 123').hitTestable(), findsOneWidget);
+      expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+      expect(vibrations, hasLength(1));
+      expect(vibrations.single.arguments, 'HapticFeedbackType.selectionClick');
+      await tester.tap(find.byKey(const ValueKey('mushaf-page-dot-123')));
+      await tester.pump();
+      expect(vibrations, hasLength(1));
+      final view = tester.widget<PageView>(find.byType(PageView));
+      view.controller!.jumpToPage(123);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
+      expect(vibrations, hasLength(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'tap selects without autoplay, round play button plays only that ayah',
     (tester) async {

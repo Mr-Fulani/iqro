@@ -72,7 +72,25 @@ class MushafPageScrubber extends StatefulWidget {
 }
 
 class _MushafPageScrubberState extends State<MushafPageScrubber> {
-  double? _preview;
+  int? _dragWindowStart;
+  int? _lastRequestedPage;
+
+  int get _windowStart => _dragWindowStart ?? (widget.page - 3).clamp(1, 598);
+
+  void _selectAt(double x, double width) {
+    if (width <= 0) return;
+    final slot = (x / width * 7).floor().clamp(0, 6);
+    // The Mushaf always progresses right-to-left, independent of UI language.
+    final page = _windowStart + 6 - slot;
+    if (page == (_lastRequestedPage ?? widget.page)) return;
+    _lastRequestedPage = page;
+    widget.onJump(page);
+  }
+
+  void _finishDrag() => setState(() {
+    _dragWindowStart = null;
+    _lastRequestedPage = null;
+  });
 
   @override
   Widget build(BuildContext context) => MushafControlSurface(
@@ -98,7 +116,7 @@ class _MushafPageScrubberState extends State<MushafPageScrubber> {
                   children: <Widget>[
                     Expanded(
                       child: Text(
-                        '${context.l10n.page} ${_preview?.round() ?? widget.page}',
+                        '${context.l10n.page} ${widget.page}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -117,32 +135,79 @@ class _MushafPageScrubberState extends State<MushafPageScrubber> {
                     ),
                   ],
                 ),
-                SizedBox(
-                  height: 24,
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3,
-                      thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 5,
-                      ),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 10,
-                      ),
+                const SizedBox(height: 3),
+                LayoutBuilder(
+                  builder: (context, constraints) => GestureDetector(
+                    key: const ValueKey('mushaf-page-dots'),
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) {
+                      _lastRequestedPage = null;
+                      _selectAt(details.localPosition.dx, constraints.maxWidth);
+                      _lastRequestedPage = null;
+                    },
+                    onHorizontalDragStart: (_) => setState(() {
+                      _dragWindowStart = _windowStart;
+                      _lastRequestedPage = widget.page;
+                    }),
+                    onHorizontalDragUpdate: (details) => _selectAt(
+                      details.localPosition.dx,
+                      constraints.maxWidth,
                     ),
-                    child: Slider(
-                      value: _preview ?? widget.page.toDouble(),
-                      min: 1,
-                      max: 604,
-                      divisions: 603,
-                      activeColor: mushafAccentColor,
-                      inactiveColor: const Color(0xFFDDD9D2),
-                      semanticFormatterCallback: (value) =>
-                          '${context.l10n.page} ${value.round()}',
-                      onChanged: (value) => setState(() => _preview = value),
-                      onChangeEnd: (value) {
-                        setState(() => _preview = null);
-                        widget.onJump(value.round());
-                      },
+                    onHorizontalDragEnd: (_) => _finishDrag(),
+                    onHorizontalDragCancel: _finishDrag,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8E6E3),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Row(
+                        textDirection: TextDirection.rtl,
+                        children: [
+                          for (
+                            var page = _windowStart;
+                            page < _windowStart + 7;
+                            page++
+                          )
+                            Expanded(
+                              child: Semantics(
+                                button: true,
+                                selected: page == widget.page,
+                                label: '${context.l10n.page} $page',
+                                onTap: () {
+                                  if (page != widget.page) widget.onJump(page);
+                                },
+                                child: SizedBox(
+                                  key: ValueKey('mushaf-page-dot-$page'),
+                                  height: 28,
+                                  child: Center(
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 120,
+                                      ),
+                                      width: 5,
+                                      height: page == widget.page ? 12 : 10,
+                                      decoration: BoxDecoration(
+                                        color: page == widget.page
+                                            ? mushafAccentColor
+                                            : const Color(
+                                                0xFFAAA8A3,
+                                              ).withValues(
+                                                alpha:
+                                                    (1 -
+                                                            (page - widget.page)
+                                                                    .abs() *
+                                                                .12)
+                                                        .clamp(.3, 1),
+                                              ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

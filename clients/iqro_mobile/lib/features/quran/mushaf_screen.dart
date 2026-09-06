@@ -57,6 +57,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   var _playerExpanded = false;
   var _bookmarkLoading = false;
   var _detailsOpen = false;
+  int? _dotTargetPage;
   QuranAyahReference? _selectedAyah;
   QuranAyahReference? _pageReference;
   var _initialPageHandled = false;
@@ -593,9 +594,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
 
   void _scrubToPage(int page) {
     final scope = _database.accountScope.current;
-    if (scope != null && _isCurrentAccount(scope)) {
-      unawaited(_jumpToPage(page, null, accountScope: scope));
+    if (scope == null || !_isCurrentAccount(scope) || page == _currentPage) {
+      return;
     }
+    _dotTargetPage = page.clamp(1, 604);
+    _pageTransitionScope = scope;
+    _zoomControllers[_currentPage]?.setZoom(1);
+    _pageController.jumpToPage(_dotTargetPage! - 1);
+    _pageTransitionScope = null;
   }
 
   Future<void> _switchToText() async {
@@ -699,6 +705,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       return;
     }
     if (page == _currentPage) return;
+    final keepControls = page == _dotTargetPage;
+    _dotTargetPage = null;
+    unawaited(HapticFeedback.selectionClick());
     _audioRequest++;
     _audioLoading = false;
     _playerExpanded = false;
@@ -706,13 +715,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     _zoomControllers[_currentPage]?.setZoom(1);
     setState(() {
       _currentPage = page;
-      _controlsVisible = false;
+      _controlsVisible = keepControls;
       _zoom = 1;
       _selectedAyah = null;
       _pageReference = null;
     });
     unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      SystemChrome.setEnabledSystemUIMode(
+        keepControls ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+      ),
     );
     _queuePagePositionSave(page, accountScope: _pageTransitionScope);
     _zoomControllers.removeWhere((key, value) => (key - page).abs() > 2);
