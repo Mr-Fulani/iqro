@@ -78,6 +78,16 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               child: Column(
                 children: <Widget>[
+                  SwitchListTile.adaptive(
+                    secondary: const Icon(Icons.vibration_rounded),
+                    title: Text(context.l10n.readerHaptics),
+                    subtitle: Text(context.l10n.readerHapticsHint),
+                    value: preferences.readerHaptics,
+                    onChanged: ref
+                        .read(appPreferencesProvider.notifier)
+                        .setReaderHaptics,
+                  ),
+                  const Divider(height: 1),
                   IqroListTile(
                     icon: Icons.notifications_active_outlined,
                     title: context.l10n.reminders,

@@ -1168,4 +1168,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sundayShort => 'Sun';
+
+  @override
+  String get readerHaptics => 'Page-turn vibration';
+
+  @override
+  String get readerHapticsHint =>
+      'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.';
 }

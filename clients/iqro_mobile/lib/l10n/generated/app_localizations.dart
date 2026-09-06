@@ -2297,6 +2297,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sun'**
   String get sundayShort;
+
+  /// No description provided for @readerHaptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Page-turn vibration'**
+  String get readerHaptics;
+
+  /// No description provided for @readerHapticsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.'**
+  String get readerHapticsHint;
 }
 
 class _AppLocalizationsDelegate

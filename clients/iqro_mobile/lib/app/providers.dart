@@ -160,6 +160,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setReaderFocusMode(bool enabled) =>
       _set(state.copyWith(readerFocusMode: enabled));
 
+  Future<void> setReaderHaptics(bool enabled) =>
+      _set(state.copyWith(readerHaptics: enabled));
+
   Future<void> setMushafVariant(String variant) =>
       _set(state.copyWith(mushafVariant: variant));
 

@@ -377,5 +377,7 @@
   "thursdayShort": "خ",
   "fridayShort": "ج",
   "saturdayShort": "س",
-  "sundayShort": "ح"
+  "sundayShort": "ح",
+  "readerHaptics": "الاهتزاز عند تقليب الصفحات",
+  "readerHapticsHint": "اهتزاز قصير عند تغيير صفحة المصحف. يجب أيضاً تفعيل اهتزاز اللمس في إعدادات أندرويد."
 }

@@ -6,6 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('page haptics default on and an explicit opt-out persists', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+    expect(store.read().readerHaptics, isTrue);
+    await store.write(store.read().copyWith(readerHaptics: false));
+    expect(store.read().readerHaptics, isFalse);
+  });
+
   test(
     'supported Mushaf choices persist and unknown choices migrate',
     () async {

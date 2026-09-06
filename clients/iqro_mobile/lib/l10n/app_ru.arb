@@ -377,5 +377,7 @@
   "thursdayShort": "Чт",
   "fridayShort": "Пт",
   "saturdayShort": "Сб",
-  "sundayShort": "Вс"
+  "sundayShort": "Вс",
+  "readerHaptics": "Вибрация при перелистывании",
+  "readerHapticsHint": "Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний."
 }

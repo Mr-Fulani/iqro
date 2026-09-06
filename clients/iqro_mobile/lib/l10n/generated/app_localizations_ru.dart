@@ -1169,4 +1169,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get sundayShort => 'Вс';
+
+  @override
+  String get readerHaptics => 'Вибрация при перелистывании';
+
+  @override
+  String get readerHapticsHint =>
+      'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
 }

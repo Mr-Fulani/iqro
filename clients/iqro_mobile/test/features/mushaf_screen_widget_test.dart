@@ -9,6 +9,7 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
+import 'package:iqro_mobile/core/platform/reader_haptics.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
@@ -28,15 +29,15 @@ void main() {
     (tester) async {
       final vibrations = <MethodCall>[];
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
+        ReaderHaptics.channel,
         (call) async {
-          if (call.method == 'HapticFeedback.vibrate') vibrations.add(call);
-          return null;
+          vibrations.add(call);
+          return 'played';
         },
       );
       addTearDown(
         () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
+          ReaderHaptics.channel,
           null,
         ),
       );
@@ -49,13 +50,11 @@ void main() {
       expect(find.text('Страница 123').hitTestable(), findsOneWidget);
       expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
       expect(vibrations, hasLength(1));
-      expect(vibrations.single.arguments, 'HapticFeedbackType.selectionClick');
+      expect(vibrations.single.method, 'pageTick');
       await tester.tap(find.byKey(const ValueKey('mushaf-page-dot-123')));
       await tester.pump();
       expect(vibrations, hasLength(1));
-      final view = tester.widget<PageView>(find.byType(PageView));
-      view.controller!.jumpToPage(123);
-      await tester.pump();
+      await tester.drag(find.byType(PageView), const Offset(600, 0));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
       expect(vibrations, hasLength(2));

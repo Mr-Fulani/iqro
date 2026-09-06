@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/platform/reader_haptics.dart';
+
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -707,7 +709,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     if (page == _currentPage) return;
     final keepControls = page == _dotTargetPage;
     _dotTargetPage = null;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(
+      ReaderHaptics.pageChanged(
+        enabled: ref.read(appPreferencesProvider).readerHaptics,
+      ),
+    );
     _audioRequest++;
     _audioLoading = false;
     _playerExpanded = false;

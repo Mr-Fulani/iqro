@@ -1158,4 +1158,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get sundayShort => 'ح';
+
+  @override
+  String get readerHaptics => 'الاهتزاز عند تقليب الصفحات';
+
+  @override
+  String get readerHapticsHint =>
+      'اهتزاز قصير عند تغيير صفحة المصحف. يجب أيضاً تفعيل اهتزاز اللمس في إعدادات أندرويد.';
 }

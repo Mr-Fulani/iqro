@@ -377,5 +377,7 @@
   "thursdayShort": "Per",
   "fridayShort": "Cum",
   "saturdayShort": "Cmt",
-  "sundayShort": "Paz"
+  "sundayShort": "Paz",
+  "readerHaptics": "Sayfa çevirme titreşimi",
+  "readerHapticsHint": "Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır."
 }

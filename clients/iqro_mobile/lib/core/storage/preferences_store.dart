@@ -36,6 +36,7 @@ class AppPreferences {
     this.readerLineHeight = defaultReaderLineHeight,
     this.readerAyahSpacing = defaultReaderAyahSpacing,
     this.readerFocusMode = false,
+    this.readerHaptics = true,
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
     this.preferredRecitationId,
@@ -55,6 +56,7 @@ class AppPreferences {
       readerLineHeight = defaultReaderLineHeight,
       readerAyahSpacing = defaultReaderAyahSpacing,
       readerFocusMode = false,
+      readerHaptics = true,
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
       preferredRecitationId = null,
@@ -72,6 +74,7 @@ class AppPreferences {
   final double readerLineHeight;
   final double readerAyahSpacing;
   final bool readerFocusMode;
+  final bool readerHaptics;
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
   final String? preferredRecitationId;
@@ -90,6 +93,7 @@ class AppPreferences {
     double? readerLineHeight,
     double? readerAyahSpacing,
     bool? readerFocusMode,
+    bool? readerHaptics,
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
     String? preferredRecitationId,
@@ -108,6 +112,7 @@ class AppPreferences {
       readerLineHeight: readerLineHeight ?? this.readerLineHeight,
       readerAyahSpacing: readerAyahSpacing ?? this.readerAyahSpacing,
       readerFocusMode: readerFocusMode ?? this.readerFocusMode,
+      readerHaptics: readerHaptics ?? this.readerHaptics,
       preferredTranslationSourceId:
           preferredTranslationSourceId ?? this.preferredTranslationSourceId,
       preferredTafsirSourceId:
@@ -163,6 +168,7 @@ class PreferencesStore {
         maxReaderAyahSpacing,
       ),
       readerFocusMode: _preferences.getBool('reader_focus_mode') ?? false,
+      readerHaptics: _preferences.getBool('reader_haptics') ?? true,
       preferredTranslationSourceId: _preferences.getInt(
         'reader_translation_source_id',
       ),
@@ -191,6 +197,7 @@ class PreferencesStore {
       _preferences.setDouble('reader_line_height', value.readerLineHeight),
       _preferences.setDouble('reader_ayah_spacing', value.readerAyahSpacing),
       _preferences.setBool('reader_focus_mode', value.readerFocusMode),
+      _preferences.setBool('reader_haptics', value.readerHaptics),
       if (value.preferredTranslationSourceId != null)
         _preferences.setInt(
           'reader_translation_source_id',

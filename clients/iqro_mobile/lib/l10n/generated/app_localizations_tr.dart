@@ -1166,4 +1166,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get sundayShort => 'Paz';
+
+  @override
+  String get readerHaptics => 'Sayfa çevirme titreşimi';
+
+  @override
+  String get readerHapticsHint =>
+      'Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır.';
 }
