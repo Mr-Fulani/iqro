@@ -68,5 +68,10 @@ artifact с незакрытым provenance, а не рендер конкрет
    конкретного immutable render release.
 
 После получения входов остаётся заполнить asset lock, запустить documented prepare batches,
-сравнить golden pages и выполнить publish. Изменений HTTP API или мобильного приложения для
-этого больше не требуется.
+сравнить golden pages и выполнить publish.
+
+Уточнение аудита клиента от 2026-09-07: это закрывает backend pixel pipeline, а не всю
+мобильную интеграцию. `MushafVariant.supportedOnMobile` всё ещё возвращает `false`,
+`native_rendering` не разбирается Flutter-моделью. Необходимы подключение versioned
+assets/cache и проверка точной карты аятов/аудио каждого издания. См.
+[`MUSHAF_SOURCE_INVENTORY.md`](../../clients/iqro_mobile/docs/MUSHAF_SOURCE_INVENTORY.md).

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +12,7 @@ import '../quran/quran_models.dart';
 import 'audio_models.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
+import 'premium_reciter_portrait.dart';
 
 typedef _ReciterSelection = ({ReciterPerson person, Recitation recitation});
 
@@ -1327,15 +1327,6 @@ class _PickerReciterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final fallback = ColoredBox(
-      color: colorScheme.primaryContainer,
-      child: Center(
-        child: Text(
-          person.primary.initials,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-      ),
-    );
     return Semantics(
       button: true,
       selected: selected,
@@ -1353,29 +1344,11 @@ class _PickerReciterCard extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: <Widget>[
-                    Container(
-                      width: 70,
-                      height: 70,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: selected
-                              ? colorScheme.primary
-                              : colorScheme.outlineVariant,
-                          width: selected ? 3 : 1,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: portraitUrl == null
-                            ? fallback
-                            : CachedNetworkImage(
-                                imageUrl: portraitUrl!,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => fallback,
-                                errorWidget: (context, url, error) => fallback,
-                              ),
-                      ),
+                    PremiumReciterPortrait(
+                      url: portraitUrl,
+                      size: 70,
+                      initials: person.primary.initials,
+                      selected: selected,
                     ),
                     if (selected)
                       PositionedDirectional(
@@ -1600,38 +1573,7 @@ class _Artwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = const ColoredBox(
-      color: Color(0xFF255E51),
-      child: Center(
-        child: Icon(Icons.person_rounded, size: 72, color: Color(0xFFB6E8D9)),
-      ),
-    );
-    return Container(
-      width: 210,
-      height: 210,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const RadialGradient(
-          colors: <Color>[
-            Color(0xFF2E7463),
-            Color(0xFF0C392F),
-            Color(0xFF061D18),
-          ],
-        ),
-        border: Border.all(color: Colors.white.withValues(alpha: .12)),
-      ),
-      child: ClipOval(
-        child: url == null
-            ? fallback
-            : CachedNetworkImage(
-                imageUrl: url!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => fallback,
-                errorWidget: (context, url, error) => fallback,
-              ),
-      ),
-    );
+    return PremiumReciterPortrait(url: url, size: 210, selected: true);
   }
 }
 

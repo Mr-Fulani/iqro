@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,15 +6,19 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/reciter_portraits.dart';
+import '../audio/premium_reciter_portrait.dart';
+import '../calendar/hijri_calendar_service.dart';
 import '../dua/dua_repository.dart';
 import '../memorization/memorization_repository.dart';
 import '../prayer/prayer_repository.dart';
 import '../plan/plan_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
+import 'home_hijri_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -44,6 +47,8 @@ class HomeScreen extends ConsumerWidget {
       audioControllerProvider.select(iqroAudioPresentation),
     );
     final locale = Localizations.localeOf(context).languageCode;
+    final clock =
+        ref.watch(calendarClockProvider).valueOrNull ?? DateTime.now();
     final currentSurahNumber = position?.surah ?? 1;
     final currentSurah = findSurah(catalog, currentSurahNumber);
     final currentSurahName =
@@ -54,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
     final memorizationSurah = memorizationPlan == null
         ? null
         : findSurah(catalog, memorizationPlan.startAyah.surah);
-    final dailyDua = duaForDate(duaState.valueOrNull, DateTime.now());
+    final dailyDua = duaForDate(duaState.valueOrNull, clock);
     final achieved = plan?.achieved ?? 0;
     final target = plan?.target ?? preferences.dailyTarget.toDouble();
     final planMetric =
@@ -77,11 +82,11 @@ class HomeScreen extends ConsumerWidget {
           );
     return Scaffold(
       appBar: IqroTopBar(
-        title: context.l10n.greeting,
-        subtitle: DateFormat.yMMMMEEEEd(locale).format(DateTime.now()),
+        title: 'IQRO',
+        subtitle: context.l10n.greeting,
         leading: const Padding(
-          padding: EdgeInsetsDirectional.only(start: 12),
-          child: _HomeLogo(),
+          padding: EdgeInsetsDirectional.only(start: 10, end: 8),
+          child: Center(child: IqroAnimatedLogo(size: 36)),
         ),
         actions: <Widget>[
           IconButton(
@@ -97,6 +102,16 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            HomeHijriCard(
+              clock: clock,
+              adjustment: preferences.hijriAdjustment,
+              maghribUtc:
+                  DateUtils.isSameDay(prayerState.valueOrNull?.date, clock)
+                  ? prayerState.valueOrNull?.timesUtc['maghrib']
+                  : null,
+              onTap: () => context.push('/calendar'),
+            ),
+            const SizedBox(height: 12),
             _ContinueCard(
               surahName: position == null
                   ? context.l10n.loading
@@ -189,14 +204,6 @@ class HomeScreen extends ConsumerWidget {
                             : '${_formatGoalAmount(remaining)} '
                                   '${_goalMetricLabel(context, planMetric)}',
                         style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
-                      LinearProgressIndicator(
-                        value: planLoading
-                            ? null
-                            : target == 0
-                            ? 0
-                            : goalAchieved / target,
                       ),
                     ],
                   ),
@@ -363,26 +370,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _HomeLogo extends StatelessWidget {
-  const _HomeLogo();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(7),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: context.iqroColors.ink,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: const Text(
-        'اق',
-        textDirection: TextDirection.rtl,
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
 class _ContinueCard extends StatelessWidget {
   const _ContinueCard({
     required this.surahName,
@@ -404,16 +391,13 @@ class _ContinueCard extends StatelessWidget {
       onTap: onTap,
       child: Stack(
         children: <Widget>[
-          PositionedDirectional(
-            end: -54,
-            top: -72,
-            child: Container(
-              width: 190,
-              height: 190,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: .12)),
-              ),
+          const PositionedDirectional(
+            end: -20,
+            top: -40,
+            bottom: -40,
+            width: 160,
+            child: IgnorePointer(
+              child: CustomPaint(painter: _ReadingArchPainter()),
             ),
           ),
           Column(
@@ -444,32 +428,42 @@ class _ContinueCard extends StatelessWidget {
                 icon: const Icon(Icons.menu_book_outlined),
                 label: Text(context.l10n.read),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.sync,
-                    size: 16,
-                    color: Colors.white.withValues(alpha: .72),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      context.l10n.savedAutomatically,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: .72),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ],
       ),
     );
   }
+}
+
+/// Quiet arch geometry echoes the existing mark, not a decorative image asset.
+class _ReadingArchPainter extends CustomPainter {
+  const _ReadingArchPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFC49647).withValues(alpha: .18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i++) {
+      final inset = 5.0 + i * 13;
+      final path = Path()
+        ..moveTo(inset, size.height)
+        ..lineTo(inset, size.height * .42)
+        ..quadraticBezierTo(inset, size.height * .2, size.width / 2, inset)
+        ..quadraticBezierTo(
+          size.width - inset,
+          size.height * .2,
+          size.width - inset,
+          size.height * .42,
+        )
+        ..lineTo(size.width - inset, size.height);
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ReadingArchPainter oldDelegate) => false;
 }
 
 class _PrayerStrip extends StatelessWidget {
@@ -604,12 +598,7 @@ class _ReciterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      backgroundImage: url == null ? null : CachedNetworkImageProvider(url!),
-      child: url == null ? Text(initials) : null,
-    );
+    return PremiumReciterPortrait(url: url, initials: initials, size: 44);
   }
 }
 

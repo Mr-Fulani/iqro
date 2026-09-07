@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +13,7 @@ import 'audio_models.dart';
 import 'audio_offline_repository.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
+import 'premium_reciter_portrait.dart';
 
 class AudioScreen extends ConsumerStatefulWidget {
   const AudioScreen({super.key});
@@ -720,17 +720,6 @@ class _ReciterPortrait extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final fallback = ColoredBox(
-      color: colorScheme.primaryContainer,
-      child: Center(
-        child: Text(
-          initials,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: colorScheme.onPrimaryContainer,
-          ),
-        ),
-      ),
-    );
     return SizedBox(
       width: 88,
       height: 88,
@@ -738,26 +727,11 @@ class _ReciterPortrait extends StatelessWidget {
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.surface,
-                border: Border.all(
-                  color: active ? colorScheme.primary : context.iqroColors.line,
-                  width: active ? 3 : 1,
-                ),
-              ),
-              child: ClipOval(
-                child: portraitUrl == null
-                    ? fallback
-                    : CachedNetworkImage(
-                        imageUrl: portraitUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => fallback,
-                        errorWidget: (context, url, error) => fallback,
-                      ),
-              ),
+            child: PremiumReciterPortrait(
+              url: portraitUrl,
+              size: 88,
+              initials: initials,
+              selected: active,
             ),
           ),
           PositionedDirectional(

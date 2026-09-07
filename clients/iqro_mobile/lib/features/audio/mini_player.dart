@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
 import 'reciter_portraits.dart';
+import 'premium_reciter_portrait.dart';
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({super.key});
@@ -230,34 +230,10 @@ class _MiniPlayerPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = ColoredBox(
-      color: const Color(0xFF163C33),
-      child: const Center(
-        child: Icon(Icons.person_rounded, color: Color(0xFF9BDECB)),
-      ),
-    );
     return Semantics(
       image: true,
       label: name,
-      child: Container(
-        width: 48,
-        height: 48,
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF9BDECB), width: 1.5),
-        ),
-        child: ClipOval(
-          child: portraitUrl == null
-              ? fallback
-              : CachedNetworkImage(
-                  imageUrl: portraitUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => fallback,
-                  errorWidget: (context, url, error) => fallback,
-                ),
-        ),
-      ),
+      child: PremiumReciterPortrait(url: portraitUrl, size: 48),
     );
   }
 }
