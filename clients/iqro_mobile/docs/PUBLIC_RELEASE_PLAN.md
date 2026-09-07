@@ -67,8 +67,21 @@
   не нужна миграция или повторная загрузка. Добавлены 4 регрессии, включая >2 MiB
   Unicode manifest и список больших Mushaf пакетов. Профильный прогон: **21 passed**,
   анализатор зелёный. Повторный полный прогон: **353 passed, 13 opt-in skipped**.
-  Финальная APK/restart-проверка индикатора выполняются.
+  Исправление `8d3a19c` зафиксировано. Финальная profile APK установлена (`Success`),
+  SHA-256 `34000a9adeb49c45cb358a4059d55d4c465b99c755e099fa134f27f9bc624962`.
+  После нового запуска **без сети**: каталог показывает выбранный QCF и
+  **«Доступен без интернета · 604/604 · 248 MB/248 MB»**, без повторной загрузки.
+  Страница 126 открыта из сохранённого пакета. В просмотренном логе финального
+  процесса `28520` нет SQLite/Flutter Unhandled/FATAL/overflow/ANR; это не soak
+  benchmark. Wi-Fi/data возвращены в 1/1; пользовательское место 126 / 5:109
+  возвращено после тестовых переходов. Приложение оставлено на QCF, аудио на паузе.
   Backend-образ не требует повторной сборки.
+- Техническое подключение полного QCF V2 на staging и Android завершено.
+  Доказательства устройства: `/private/tmp/iqro-qcf-final-ready-after-restart-20260907.png`,
+  `/private/tmp/iqro-qcf-final-offline-page126-20260907.png`,
+  `/private/tmp/iqro-qcf-page604-offline-20260907.png`,
+  `/private/tmp/iqro-qcf-page603-offline-20260907.png`.
+  Backend SHA остаётся `5ca2efa`; mobile-only исправления не требуют Docker build.
 - Это staging preview оформления IQRO, не официальное факсимиле и не разрешение
   production/store release. Контентный review и остальные release gates остаются.
 
@@ -250,10 +263,11 @@
   backup учитывать, что старые backup scripts содержат retention/prune:
   разрешение на новую копию **не** разрешает удалять прежние копии.
 
-Ближайшее продолжение: закончить regression/commit исправления Android SQLite,
-установить актуальную profile APK и повторить полный offline/restart на Redmi.
-Corpus QA, backup, staging publication, выбор/тап/удержание/аудио/поворот уже
-проверены в актуальном checkpoint выше. Не заменять device QA одними unit-тестами.
+Ближайшее продолжение: редакционная проверка новой раскладки и остальные release
+gates; другие издания из source inventory подключать отдельно, без смешивания
+данных. Corpus QA, backup, staging publication, выбор/тап/удержание/аудио/поворот,
+полная offline-загрузка и restart на Redmi проверены в актуальном checkpoint выше.
+Обе найденные Android SQLite/CursorWindow ошибки исправлены, финальная APK установлена.
 Действующий Мусхаф, аудио и портреты сохраняются.
 Для массового выпуска остаются
 остальные проверки этапа 6, production signing и согласование публикации.
