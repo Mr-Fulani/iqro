@@ -4,6 +4,7 @@ from typing import Any
 
 from django.conf import settings
 from django.db.models import F, Q, QuerySet, Subquery
+from django.db.models.fields.json import KeyTextTransform
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema
@@ -39,12 +40,14 @@ def visible_releases() -> QuerySet[MushafRenditionRelease]:
     current_qf_sources = QuranFoundationMushaf.objects.filter(
         environment=settings.QURAN_QF_ENV, source_id=5, is_available=True
     ).values("source_checksum_sha256")
-    releases = releases.filter(
+    releases = releases.alias(
+        current_source_checksum=KeyTextTransform("source_checksum_sha256", "source_metadata")
+    ).filter(
         Q(source_metadata={})
         | Q(
             source_metadata__kind="quran-foundation",
             source_metadata__source_id=5,
-            source_metadata__source_checksum_sha256__in=Subquery(current_qf_sources),
+            current_source_checksum__in=Subquery(current_qf_sources),
         )
     )
     if not getattr(settings, "MUSHAF_STAGING_PREVIEWS", False):

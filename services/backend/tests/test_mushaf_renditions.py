@@ -12,6 +12,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db.backends.postgresql.base import DatabaseWrapper
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -27,7 +28,17 @@ from quran_backend.modules.quran.models import (
     QuranFoundationMushaf,
     QuranFoundationMushafPage,
 )
+from quran_backend.modules.quran.rendition_api import visible_releases
 from quran_backend.modules.quran.serializers import OfflineMushafManifestSerializer
+
+
+def test_source_checksum_subquery_compares_text_on_postgresql() -> None:
+    # SQLite accepts JSON/string comparison; PostgreSQL rejects jsonb = varchar.
+    # Compile using the real PostgreSQL backend without connecting to a database.
+    postgres = DatabaseWrapper({"NAME": "compile_only"}, alias="compile_only")
+    sql, params = visible_releases().query.get_compiler(connection=postgres).as_sql()
+    assert '"source_metadata" ->> %s' in sql
+    assert "source_checksum_sha256" in params
 
 
 @pytest.fixture
