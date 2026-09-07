@@ -7,6 +7,7 @@ import 'package:iqro_mobile/features/audio/premium_reciter_portrait.dart';
 import 'package:iqro_mobile/features/calendar/hijri_calendar_screen.dart';
 import 'package:iqro_mobile/features/calendar/hijri_calendar_service.dart';
 import 'package:iqro_mobile/features/home/home_hijri_card.dart';
+import 'package:iqro_mobile/features/home/home_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -50,6 +51,11 @@ void main() {
           await tester.pumpAndSettle();
           final context = tester.element(find.byType(HomeHijriCard));
           expect(
+            hijriNumber(context, 1448).length,
+            4,
+            reason: 'A calendar year must not have a thousands separator',
+          );
+          expect(
             find.text(
               hijriDateLabel(context, const HijriDate(1448, 9, 23, 30)),
             ),
@@ -65,6 +71,52 @@ void main() {
         },
       );
     }
+    testWidgets('$locale reading card fills available width with short text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 950);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      var opened = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: IqroTheme.light(),
+          locale: Locale(locale),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(1.8)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    HomeContinueReadingCard(
+                      surahName: 'Нух',
+                      ayah: 1,
+                      page: 570,
+                      onTap: () => opened = true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(HomeContinueReadingCard)).width, 328);
+      await tester.tap(find.byType(FilledButton));
+      expect(opened, isTrue);
+      expect(tester.takeException(), isNull);
+    });
   }
   testWidgets('logo finishes once and remains idle on rebuild', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: IqroAnimatedLogo()));

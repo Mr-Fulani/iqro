@@ -112,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/calendar'),
             ),
             const SizedBox(height: 12),
-            _ContinueCard(
+            HomeContinueReadingCard(
               surahName: position == null
                   ? context.l10n.loading
                   : currentSurahName,
@@ -370,8 +370,9 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({
+class HomeContinueReadingCard extends StatelessWidget {
+  const HomeContinueReadingCard({
+    super.key,
     required this.surahName,
     required this.ayah,
     required this.page,
@@ -384,53 +385,56 @@ class _ContinueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IqroCard(
-      color: context.iqroColors.ink,
-      borderColor: Colors.transparent,
-      padding: const EdgeInsets.all(22),
-      onTap: onTap,
-      child: Stack(
-        children: <Widget>[
-          const PositionedDirectional(
-            end: -20,
-            top: -40,
-            bottom: -40,
-            width: 160,
-            child: IgnorePointer(
-              child: CustomPaint(painter: _ReadingArchPainter()),
+    return SizedBox(
+      width: double.infinity,
+      child: IqroCard(
+        color: context.iqroColors.ink,
+        borderColor: Colors.transparent,
+        padding: const EdgeInsets.all(22),
+        onTap: onTap,
+        child: Stack(
+          children: <Widget>[
+            const PositionedDirectional(
+              end: -20,
+              top: -40,
+              bottom: -40,
+              width: 160,
+              child: IgnorePointer(
+                child: CustomPaint(painter: _ReadingArchPainter()),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              IqroEyebrow(context.l10n.continueReading, light: true),
-              const SizedBox(height: 10),
-              Text(
-                surahName,
-                style: Theme.of(
-                  context,
-                ).textTheme.displaySmall?.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                ayah == null || page == null
-                    ? context.l10n.loading
-                    : '${context.l10n.ayah} $ayah · ${context.l10n.page} $page',
-                style: TextStyle(color: Colors.white.withValues(alpha: .76)),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFFCF5),
-                  foregroundColor: context.iqroColors.ink,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                IqroEyebrow(context.l10n.continueReading, light: true),
+                const SizedBox(height: 10),
+                Text(
+                  surahName,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.displaySmall?.copyWith(color: Colors.white),
                 ),
-                onPressed: onTap,
-                icon: const Icon(Icons.menu_book_outlined),
-                label: Text(context.l10n.read),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 6),
+                Text(
+                  ayah == null || page == null
+                      ? context.l10n.loading
+                      : '${context.l10n.ayah} $ayah · ${context.l10n.page} $page',
+                  style: TextStyle(color: Colors.white.withValues(alpha: .76)),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFFCF5),
+                    foregroundColor: context.iqroColors.ink,
+                  ),
+                  onPressed: onTap,
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: Text(context.l10n.read),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

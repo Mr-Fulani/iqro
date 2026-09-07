@@ -10,10 +10,10 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'hijri_calendar_service.dart';
 
-String hijriNumber(BuildContext context, int value) =>
-    NumberFormat.decimalPattern(
-      Localizations.localeOf(context).languageCode,
-    ).format(value);
+String hijriNumber(BuildContext context, int value) => NumberFormat(
+  '0',
+  Localizations.localeOf(context).languageCode,
+).format(value);
 
 String hijriDateLabel(BuildContext context, HijriDate date) =>
     '${hijriNumber(context, date.day)} ${context.l10n.hijriMonthName('m${date.month}')} '
