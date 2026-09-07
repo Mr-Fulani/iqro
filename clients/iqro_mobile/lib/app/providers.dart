@@ -163,6 +163,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setReaderHaptics(bool enabled) =>
       _set(state.copyWith(readerHaptics: enabled));
 
+  Future<void> setHijriAdjustment(int days) =>
+      _set(state.copyWith(hijriAdjustment: days.clamp(-2, 2)));
+
   Future<void> setMushafVariant(String variant) =>
       _set(state.copyWith(mushafVariant: variant));
 

@@ -102,6 +102,108 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @hijriCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Hijri calendar'**
+  String get hijriCalendar;
+
+  /// No description provided for @hijriMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Umm al-Qura · offline'**
+  String get hijriMethod;
+
+  /// No description provided for @hijriDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated dates may differ from local moon sighting. Confirm Ramadan and Eid with your local community. The Islamic day begins at sunset on the preceding civil day.'**
+  String get hijriDisclaimer;
+
+  /// No description provided for @hijriAdjustment.
+  ///
+  /// In en, this message translates to:
+  /// **'Date adjustment'**
+  String get hijriAdjustment;
+
+  /// No description provided for @hijriAdjustmentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Match your local community\'s calendar. The adjustment applies throughout the calendar.'**
+  String get hijriAdjustmentHint;
+
+  /// No description provided for @hijriSources.
+  ///
+  /// In en, this message translates to:
+  /// **'References and sources'**
+  String get hijriSources;
+
+  /// No description provided for @hijriNoEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No special markers for this day.'**
+  String get hijriNoEvents;
+
+  /// No description provided for @hijriUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Date outside the supported calendar (1937–2077).'**
+  String get hijriUnavailable;
+
+  /// No description provided for @hijriToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today in Hijri'**
+  String get hijriToday;
+
+  /// No description provided for @hijriCivilDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Civil date'**
+  String get hijriCivilDate;
+
+  /// No description provided for @hijriSunsetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date adjusted for local Maghrib'**
+  String get hijriSunsetDate;
+
+  /// No description provided for @hijriCivilHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Without today\'s Maghrib time, the civil day\'s date is shown.'**
+  String get hijriCivilHint;
+
+  /// No description provided for @hijriYearSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'AH'**
+  String get hijriYearSuffix;
+
+  /// No description provided for @hijriEventHint.
+  ///
+  /// In en, this message translates to:
+  /// **'These are reference markers, not a personal religious ruling. Eid is not marked as a voluntary fasting day; pilgrims have separate guidance for Arafah.'**
+  String get hijriEventHint;
+
+  /// No description provided for @appLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Component licenses'**
+  String get appLicenses;
+
+  /// No description provided for @hijriMonthName.
+  ///
+  /// In en, this message translates to:
+  /// **'{month, select, m1{Muharram} m2{Safar} m3{Rabi al-Awwal} m4{Rabi al-Thani} m5{Jumada al-Ula} m6{Jumada al-Thani} m7{Rajab} m8{Shaban} m9{Ramadan} m10{Shawwal} m11{Dhul-Qadah} m12{Dhul-Hijjah} other{Hijri}}'**
+  String hijriMonthName(String month);
+
+  /// No description provided for @hijriEventName.
+  ///
+  /// In en, this message translates to:
+  /// **'{event, select, ramadan{Ramadan} eidFitr{Eid al-Fitr} arafah{Day of Arafah} eidAdha{Eid al-Adha} tashriq{Days of Tashriq} ashura{Ashura} whiteDays{White days · 13–15} lastTenNights{Last ten nights of Ramadan} other{Notable date}}'**
+  String hijriEventName(String event);
+
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:

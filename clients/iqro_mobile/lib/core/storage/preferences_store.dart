@@ -37,6 +37,7 @@ class AppPreferences {
     this.readerAyahSpacing = defaultReaderAyahSpacing,
     this.readerFocusMode = false,
     this.readerHaptics = true,
+    this.hijriAdjustment = 0,
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
     this.preferredRecitationId,
@@ -57,6 +58,7 @@ class AppPreferences {
       readerAyahSpacing = defaultReaderAyahSpacing,
       readerFocusMode = false,
       readerHaptics = true,
+      hijriAdjustment = 0,
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
       preferredRecitationId = null,
@@ -75,6 +77,7 @@ class AppPreferences {
   final double readerAyahSpacing;
   final bool readerFocusMode;
   final bool readerHaptics;
+  final int hijriAdjustment;
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
   final String? preferredRecitationId;
@@ -94,6 +97,7 @@ class AppPreferences {
     double? readerAyahSpacing,
     bool? readerFocusMode,
     bool? readerHaptics,
+    int? hijriAdjustment,
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
     String? preferredRecitationId,
@@ -113,6 +117,7 @@ class AppPreferences {
       readerAyahSpacing: readerAyahSpacing ?? this.readerAyahSpacing,
       readerFocusMode: readerFocusMode ?? this.readerFocusMode,
       readerHaptics: readerHaptics ?? this.readerHaptics,
+      hijriAdjustment: (hijriAdjustment ?? this.hijriAdjustment).clamp(-2, 2),
       preferredTranslationSourceId:
           preferredTranslationSourceId ?? this.preferredTranslationSourceId,
       preferredTafsirSourceId:
@@ -169,6 +174,10 @@ class PreferencesStore {
       ),
       readerFocusMode: _preferences.getBool('reader_focus_mode') ?? false,
       readerHaptics: _preferences.getBool('reader_haptics') ?? true,
+      hijriAdjustment: (_preferences.getInt('hijri_adjustment') ?? 0).clamp(
+        -2,
+        2,
+      ),
       preferredTranslationSourceId: _preferences.getInt(
         'reader_translation_source_id',
       ),
@@ -198,6 +207,10 @@ class PreferencesStore {
       _preferences.setDouble('reader_ayah_spacing', value.readerAyahSpacing),
       _preferences.setBool('reader_focus_mode', value.readerFocusMode),
       _preferences.setBool('reader_haptics', value.readerHaptics),
+      _preferences.setInt(
+        'hijri_adjustment',
+        value.hijriAdjustment.clamp(-2, 2),
+      ),
       if (value.preferredTranslationSourceId != null)
         _preferences.setInt(
           'reader_translation_source_id',

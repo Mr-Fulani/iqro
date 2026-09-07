@@ -9,6 +9,92 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get hijriCalendar => 'التقويم الهجري';
+
+  @override
+  String get hijriMethod => 'أم القرى · دون إنترنت';
+
+  @override
+  String get hijriDisclaimer =>
+      'قد تختلف التواريخ الحسابية عن رؤية الهلال المحلية. تحقّق من بداية رمضان والعيدين لدى الجهات المعتمدة في بلدك. يبدأ اليوم الهجري عند غروب شمس اليوم المدني السابق.';
+
+  @override
+  String get hijriAdjustment => 'تصحيح التاريخ';
+
+  @override
+  String get hijriAdjustmentHint =>
+      'اضبط التاريخ وفق التقويم المعتمد محلياً. يسري التصحيح على التقويم كله.';
+
+  @override
+  String get hijriSources => 'المراجع والمصادر';
+
+  @override
+  String get hijriNoEvents => 'لا توجد علامات خاصة لهذا اليوم.';
+
+  @override
+  String get hijriUnavailable =>
+      'التاريخ خارج نطاق التقويم المدعوم (١٩٣٧–٢٠٧٧).';
+
+  @override
+  String get hijriToday => 'اليوم هجرياً';
+
+  @override
+  String get hijriCivilDate => 'التاريخ المدني';
+
+  @override
+  String get hijriSunsetDate => 'التاريخ وفق المغرب المحلي';
+
+  @override
+  String get hijriCivilHint =>
+      'عند غياب وقت المغرب لليوم يُعرض تاريخ اليوم المدني.';
+
+  @override
+  String get hijriYearSuffix => 'هـ';
+
+  @override
+  String get hijriEventHint =>
+      'هذه علامات مرجعية وليست فتوى شخصية. لا تُعرض أيام العيد كأيام صيام تطوع، وللحجاج أحكام خاصة بيوم عرفة.';
+
+  @override
+  String get appLicenses => 'تراخيص المكونات';
+
+  @override
+  String hijriMonthName(String month) {
+    String _temp0 = intl.Intl.selectLogic(month, {
+      'm1': 'محرم',
+      'm2': 'صفر',
+      'm3': 'ربيع الأول',
+      'm4': 'ربيع الآخر',
+      'm5': 'جمادى الأولى',
+      'm6': 'جمادى الآخرة',
+      'm7': 'رجب',
+      'm8': 'شعبان',
+      'm9': 'رمضان',
+      'm10': 'شوال',
+      'm11': 'ذو القعدة',
+      'm12': 'ذو الحجة',
+      'other': 'هجري',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String hijriEventName(String event) {
+    String _temp0 = intl.Intl.selectLogic(event, {
+      'ramadan': 'رمضان',
+      'eidFitr': 'عيد الفطر',
+      'arafah': 'يوم عرفة',
+      'eidAdha': 'عيد الأضحى',
+      'tashriq': 'أيام التشريق',
+      'ashura': 'عاشوراء',
+      'whiteDays': 'الأيام البيض · ١٣–١٥',
+      'lastTenNights': 'العشر الأواخر من رمضان',
+      'other': 'تاريخ مميز',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'إقرأ';
 
   @override

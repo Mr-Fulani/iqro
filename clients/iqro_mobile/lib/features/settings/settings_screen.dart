@@ -121,6 +121,16 @@ class SettingsScreen extends ConsumerWidget {
                     title: context.l10n.privacy,
                     subtitle: context.l10n.prayerLocationPrivacy,
                   ),
+                  const Divider(height: 1),
+                  IqroListTile(
+                    icon: Icons.description_outlined,
+                    title: context.l10n.appLicenses,
+                    subtitle: 'IQRO',
+                    onTap: () => showLicensePage(
+                      context: context,
+                      applicationName: 'IQRO',
+                    ),
+                  ),
                 ],
               ),
             ),

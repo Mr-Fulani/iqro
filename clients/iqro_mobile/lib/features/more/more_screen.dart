@@ -34,6 +34,12 @@ class MoreScreen extends ConsumerWidget {
               physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
                 _ToolCard(
+                  icon: Icons.calendar_month_outlined,
+                  title: context.l10n.hijriCalendar,
+                  color: context.iqroColors.sand,
+                  onTap: () => context.push('/calendar'),
+                ),
+                _ToolCard(
                   icon: Icons.mosque_outlined,
                   title: context.l10n.prayer,
                   color: context.iqroColors.sand,

@@ -9,6 +9,92 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get hijriCalendar => 'Hijri calendar';
+
+  @override
+  String get hijriMethod => 'Umm al-Qura · offline';
+
+  @override
+  String get hijriDisclaimer =>
+      'Calculated dates may differ from local moon sighting. Confirm Ramadan and Eid with your local community. The Islamic day begins at sunset on the preceding civil day.';
+
+  @override
+  String get hijriAdjustment => 'Date adjustment';
+
+  @override
+  String get hijriAdjustmentHint =>
+      'Match your local community\'s calendar. The adjustment applies throughout the calendar.';
+
+  @override
+  String get hijriSources => 'References and sources';
+
+  @override
+  String get hijriNoEvents => 'No special markers for this day.';
+
+  @override
+  String get hijriUnavailable =>
+      'Date outside the supported calendar (1937–2077).';
+
+  @override
+  String get hijriToday => 'Today in Hijri';
+
+  @override
+  String get hijriCivilDate => 'Civil date';
+
+  @override
+  String get hijriSunsetDate => 'Date adjusted for local Maghrib';
+
+  @override
+  String get hijriCivilHint =>
+      'Without today\'s Maghrib time, the civil day\'s date is shown.';
+
+  @override
+  String get hijriYearSuffix => 'AH';
+
+  @override
+  String get hijriEventHint =>
+      'These are reference markers, not a personal religious ruling. Eid is not marked as a voluntary fasting day; pilgrims have separate guidance for Arafah.';
+
+  @override
+  String get appLicenses => 'Component licenses';
+
+  @override
+  String hijriMonthName(String month) {
+    String _temp0 = intl.Intl.selectLogic(month, {
+      'm1': 'Muharram',
+      'm2': 'Safar',
+      'm3': 'Rabi al-Awwal',
+      'm4': 'Rabi al-Thani',
+      'm5': 'Jumada al-Ula',
+      'm6': 'Jumada al-Thani',
+      'm7': 'Rajab',
+      'm8': 'Shaban',
+      'm9': 'Ramadan',
+      'm10': 'Shawwal',
+      'm11': 'Dhul-Qadah',
+      'm12': 'Dhul-Hijjah',
+      'other': 'Hijri',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String hijriEventName(String event) {
+    String _temp0 = intl.Intl.selectLogic(event, {
+      'ramadan': 'Ramadan',
+      'eidFitr': 'Eid al-Fitr',
+      'arafah': 'Day of Arafah',
+      'eidAdha': 'Eid al-Adha',
+      'tashriq': 'Days of Tashriq',
+      'ashura': 'Ashura',
+      'whiteDays': 'White days · 13–15',
+      'lastTenNights': 'Last ten nights of Ramadan',
+      'other': 'Notable date',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'IQRO';
 
   @override

@@ -9,6 +9,92 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String get hijriCalendar => 'Hicri takvim';
+
+  @override
+  String get hijriMethod => 'Ümmü\'l-Kurâ · çevrimdışı';
+
+  @override
+  String get hijriDisclaimer =>
+      'Hesaplanan tarihler yerel hilal gözleminden farklı olabilir. Ramazan ve bayram başlangıçlarını yerel yetkili mercilerden doğrulayın. Hicri gün, önceki miladi günün gün batımında başlar.';
+
+  @override
+  String get hijriAdjustment => 'Tarih düzeltmesi';
+
+  @override
+  String get hijriAdjustmentHint =>
+      'Yerel takviminize göre ayarlayın. Düzeltme tüm takvime uygulanır.';
+
+  @override
+  String get hijriSources => 'Dayanaklar ve kaynaklar';
+
+  @override
+  String get hijriNoEvents => 'Bu gün için özel bir işaret yok.';
+
+  @override
+  String get hijriUnavailable =>
+      'Tarih desteklenen takvim aralığının dışında (1937–2077).';
+
+  @override
+  String get hijriToday => 'Bugünün hicri tarihi';
+
+  @override
+  String get hijriCivilDate => 'Miladi tarih';
+
+  @override
+  String get hijriSunsetDate => 'Yerel akşam vaktine göre tarih';
+
+  @override
+  String get hijriCivilHint =>
+      'Bugünün akşam vakti yoksa miladi günün karşılığı gösterilir.';
+
+  @override
+  String get hijriYearSuffix => 'H';
+
+  @override
+  String get hijriEventHint =>
+      'Bunlar kaynak işaretleridir, kişisel fetva değildir. Bayramlar nafile oruç günü olarak işaretlenmez; hacılar için Arefe gününün hükümleri farklıdır.';
+
+  @override
+  String get appLicenses => 'Bileşen lisansları';
+
+  @override
+  String hijriMonthName(String month) {
+    String _temp0 = intl.Intl.selectLogic(month, {
+      'm1': 'Muharrem',
+      'm2': 'Safer',
+      'm3': 'Rebiülevvel',
+      'm4': 'Rebiülahir',
+      'm5': 'Cemaziyelevvel',
+      'm6': 'Cemaziyelahir',
+      'm7': 'Recep',
+      'm8': 'Şaban',
+      'm9': 'Ramazan',
+      'm10': 'Şevval',
+      'm11': 'Zilkade',
+      'm12': 'Zilhicce',
+      'other': 'Hicri',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String hijriEventName(String event) {
+    String _temp0 = intl.Intl.selectLogic(event, {
+      'ramadan': 'Ramazan',
+      'eidFitr': 'Ramazan Bayramı',
+      'arafah': 'Arefe günü',
+      'eidAdha': 'Kurban Bayramı',
+      'tashriq': 'Teşrik günleri',
+      'ashura': 'Aşure günü',
+      'whiteDays': 'Eyyâm-ı bîd · 13–15',
+      'lastTenNights': 'Ramazan\'ın son on gecesi',
+      'other': 'Önemli gün',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'IQRO';
 
   @override

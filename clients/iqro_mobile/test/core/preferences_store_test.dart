@@ -6,6 +6,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'Hijri adjustment is bounded and persists independently of locale',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'hijri_adjustment': 50,
+      });
+      final store = PreferencesStore(await SharedPreferences.getInstance());
+      expect(store.read().hijriAdjustment, 2);
+      await store.write(
+        store.read().copyWith(hijriAdjustment: -1, locale: 'ar'),
+      );
+      expect(store.read().hijriAdjustment, -1);
+    },
+  );
+
   test('page haptics default on and an explicit opt-out persists', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = PreferencesStore(await SharedPreferences.getInstance());

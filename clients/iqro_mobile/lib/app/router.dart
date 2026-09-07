@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/design_system/iqro_widgets.dart';
 import '../features/account/account_screen.dart';
+import '../features/calendar/hijri_calendar_screen.dart';
 import '../features/audio/player_screen.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_screen.dart';
@@ -84,6 +85,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/prayer/calendar',
         builder: (context, state) => const PrayerCalendarScreen(),
+      ),
+      GoRoute(
+        path: '/calendar',
+        builder: (context, state) => const HijriCalendarScreen(),
       ),
       GoRoute(
         path: '/reminders',

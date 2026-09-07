@@ -9,6 +9,92 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get hijriCalendar => 'Календарь Хиджры';
+
+  @override
+  String get hijriMethod => 'Умм аль-Кура · офлайн';
+
+  @override
+  String get hijriDisclaimer =>
+      'Расчётные даты могут отличаться от местного наблюдения луны. Начало Рамадана и праздников уточняйте в своей общине. Исламский день начинается с заходом солнца предыдущего гражданского дня.';
+
+  @override
+  String get hijriAdjustment => 'Поправка даты';
+
+  @override
+  String get hijriAdjustmentHint =>
+      'Настройте дату по календарю вашей общины. Поправка применяется ко всему календарю.';
+
+  @override
+  String get hijriSources => 'Основания и источники';
+
+  @override
+  String get hijriNoEvents => 'Для этого дня нет специальных отметок.';
+
+  @override
+  String get hijriUnavailable =>
+      'Дата вне поддерживаемого календаря (1937–2077).';
+
+  @override
+  String get hijriToday => 'Сегодня по Хиджре';
+
+  @override
+  String get hijriCivilDate => 'Гражданская дата';
+
+  @override
+  String get hijriSunsetDate => 'Дата с учётом местного магриба';
+
+  @override
+  String get hijriCivilHint =>
+      'Без текущего времени магриба показана дата гражданского дня.';
+
+  @override
+  String get hijriYearSuffix => 'г. х.';
+
+  @override
+  String get hijriEventHint =>
+      'Это справочные отметки, а не отдельная фетва. Пост в праздничные дни не отмечается как желательный; день Арафа указан с учётом того, что для паломников действуют отдельные положения.';
+
+  @override
+  String get appLicenses => 'Лицензии компонентов';
+
+  @override
+  String hijriMonthName(String month) {
+    String _temp0 = intl.Intl.selectLogic(month, {
+      'm1': 'Мухаррам',
+      'm2': 'Сафар',
+      'm3': 'Раби аль-авваль',
+      'm4': 'Раби ас-сани',
+      'm5': 'Джумада аль-уля',
+      'm6': 'Джумада ас-сания',
+      'm7': 'Раджаб',
+      'm8': 'Шаабан',
+      'm9': 'Рамадан',
+      'm10': 'Шавваль',
+      'm11': 'Зуль-каада',
+      'm12': 'Зуль-хиджа',
+      'other': 'Хиджра',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String hijriEventName(String event) {
+    String _temp0 = intl.Intl.selectLogic(event, {
+      'ramadan': 'Рамадан',
+      'eidFitr': 'Ид аль-Фитр · Ураза-байрам',
+      'arafah': 'День Арафа',
+      'eidAdha': 'Ид аль-Адха · Курбан-байрам',
+      'tashriq': 'Дни ташрика',
+      'ashura': 'Ашура',
+      'whiteDays': 'Белые дни · 13–15',
+      'lastTenNights': 'Последние десять ночей Рамадана',
+      'other': 'Памятная дата',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'IQRO';
 
   @override
