@@ -7,6 +7,34 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
+    'native Mushaf preference persists without touching recitation or haptics',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = PreferencesStore(await SharedPreferences.getInstance());
+      await store.write(
+        store.read().copyWith(
+          mushafVariant: 'native:qcf-v2-hafs',
+          preferredRecitationId: 'chosen-reciter',
+          readerHaptics: true,
+        ),
+      );
+      expect(store.read().mushafVariant, 'native:qcf-v2-hafs');
+      expect(store.read().preferredRecitationId, 'chosen-reciter');
+      expect(store.read().readerHaptics, isTrue);
+      for (final invalid in [
+        'native:../page',
+        'native:',
+        'native:a/b',
+        'native:A',
+        'native:a?b',
+      ]) {
+        await store.write(store.read().copyWith(mushafVariant: invalid));
+        expect(store.read().mushafVariant, defaultMushafVariant);
+      }
+    },
+  );
+
+  test(
     'Hijri adjustment is bounded and persists independently of locale',
     () async {
       SharedPreferences.setMockInitialValues(<String, Object>{

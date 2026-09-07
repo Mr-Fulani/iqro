@@ -73,6 +73,7 @@
   "chooseMushaf": "Mushaf seçin",
   "mushafScanName": "Medine Mushafı",
   "mushafScanDescription": "Orijinal sayfalar · Hafs",
+  "mushafPreviewDescription": "Hafs · IQRO düzeni · ön izleme",
   "mushafTextDescription": "Ekrana uyarlanmış net metin",
   "mushafWebOnly": "Bu yazı tipi şimdilik yalnızca web sürümünde kullanılabilir",
   "mushafUnavailable": "Kaynakta geçici olarak kullanılamıyor",

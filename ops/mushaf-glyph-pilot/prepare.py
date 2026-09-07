@@ -19,12 +19,12 @@ from xml.sax.saxutils import escape
 import fontTools
 from fontTools.pens.basePen import BasePen
 from fontTools.pens.boundsPen import BoundsPen
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
 import uharfbuzz as hb
 
 WIDTH, HEIGHT, MARGIN, ROW = 1000, 1600, 24, 96
 TOP = (HEIGHT - ROW * 15) / 2
-VERSION = "iqro-glyph-pilot-2"
+VERSION = "iqro-glyph-pilot-3"
 EXPECTED_RUNTIME = {"fonttools": "4.43.0", "uharfbuzz": "0.56.1", "harfbuzz": "14.4.0"}
 
 
@@ -187,7 +187,36 @@ class SourceFont:
             self.glyphs = self.tt.getGlyphSet()
             self.cmap = self.tt.getBestCmap()
             self.order = self.tt.getGlyphOrder()
-            self.font = hb.Font(hb.Face(path.read_bytes()))
+            face = hb.Face(path.read_bytes())
+            self.font = hb.Font(face)
+            # The pinned p245 font contains a truncated legacy Macintosh cmap.
+            # HarfBuzz rejects the entire cmap, even though both Unicode maps
+            # agree. Supply ONLY the original Unicode maps in memory; all other
+            # tables, glyph IDs, outlines and shaping rules remain byte-identical.
+            if any(self.font.get_nominal_glyph(c) != self.tt.getGlyphID(g)
+                   for c, g in self.cmap.items()):
+                require(expected_name == "QCF2245" and digest(path) ==
+                        "3aa219eb172861eee4915f284f4c2cc11c9ee8caa21fda7c3c8bbcb517773d68",
+                        "Unverified font character map; fallback forbidden")
+                unicode_maps = [t for t in self.tt["cmap"].tables if t.isUnicode()]
+                require(len(unicode_maps) == 2 and all(t.cmap == self.cmap for t in unicode_maps),
+                        "Conflicting Unicode character maps")
+                cmap = newTable("cmap")
+                cmap.tableVersion = 0
+                cmap.tables = unicode_maps
+                cmap_data = cmap.compile(self.tt)
+                self._source_face = face
+                self._unicode_cmap = cmap_data
+                # uharfbuzz callbacks require the backing bytes to outlive the
+                # face. Keep every table alive; never return temporary blobs.
+                self._table_data = {tag: face.reference_table(tag).data for tag in face.table_tags}
+                self._table_data["cmap"] = cmap_data
+                face = hb.Face.create_for_tables(
+                    lambda _, tag, data: data.get(tag, b""),
+                    self._table_data)
+                self.font = hb.Font(face)
+                require(all(self.font.get_nominal_glyph(c) == self.tt.getGlyphID(g)
+                            for c, g in self.cmap.items()), "Unicode map normalization failed")
             self.font.scale = (self.tt["head"].unitsPerEm,) * 2
             hb.ot_font_set_funcs(self.font)
             self.outlines = {}

@@ -99,11 +99,13 @@ class _MushafAyahExcerptState extends ConsumerState<MushafAyahExcerpt> {
     final width =
         MediaQuery.sizeOf(context).width *
         MediaQuery.devicePixelRatioOf(context);
-    final key = '${widget.ayah.id}:${widget.page}:$width';
+    final repository = ref.read(selectedMushafRepositoryProvider);
+    final key =
+        '${ref.read(selectedMushafIdentityProvider).code}:${widget.ayah.id}:${widget.page}:$width';
     if (_key == key) return;
     _key = key;
     _pages = loadMushafExcerpt(
-      repository: ref.read(quranRepositoryProvider),
+      repository: repository,
       ayah: widget.ayah,
       tappedPage: widget.page,
       pixelWidth: width,

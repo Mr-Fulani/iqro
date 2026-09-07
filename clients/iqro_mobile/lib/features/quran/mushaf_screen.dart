@@ -234,6 +234,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 itemBuilder: (context, index) {
                   final page = index + 1;
                   return NativeMushafPage(
+                    key: ValueKey(
+                      '${ref.watch(selectedMushafIdentityProvider).code}:$page',
+                    ),
                     page: page,
                     controller: _zoomControllers.putIfAbsent(
                       page,
@@ -739,7 +742,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   void _prefetchAdjacentPages(int page) {
     final logicalWidth = MediaQuery.sizeOf(context).width;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final repository = ref.read(quranRepositoryProvider);
+    final repository = ref.read(selectedMushafRepositoryProvider);
     for (final candidate in <int>[page - 1, page + 1]) {
       if (candidate < 1 || candidate > 604) continue;
       final pageFuture = ref.read(mushafPageProvider(candidate).future);

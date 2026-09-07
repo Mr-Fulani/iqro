@@ -73,6 +73,7 @@
   "chooseMushaf": "Choose Mushaf",
   "mushafScanName": "Madani Mushaf",
   "mushafScanDescription": "Original pages · Hafs",
+  "mushafPreviewDescription": "Hafs · IQRO layout · preview",
   "mushafTextDescription": "Crisp text adapted to your screen",
   "mushafWebOnly": "This font is currently available in the web version only",
   "mushafUnavailable": "Temporarily unavailable from the source",

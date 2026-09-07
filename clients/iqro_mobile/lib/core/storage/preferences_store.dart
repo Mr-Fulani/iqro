@@ -256,7 +256,10 @@ class PreferencesStore {
   }
 
   static String _mushafVariant(String? value) {
-    return supportedMushafVariants.contains(value)
+    return supportedMushafVariants.contains(value) ||
+            (value != null &&
+                value.length <= 71 &&
+                RegExp(r'^native:[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value))
         ? value!
         : defaultMushafVariant;
   }

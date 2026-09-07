@@ -39,6 +39,7 @@ class MushafViewportOrientation {
 MushafPageLayout calculateMushafPageLayout({
   required Size viewport,
   required Size source,
+  double landscapeBleedFactor = mushafLandscapeBleedFactor,
 }) {
   final viewportWidth = math.max(0, viewport.width).toDouble();
   final viewportHeight = math.max(0, viewport.height).toDouble();
@@ -46,7 +47,7 @@ MushafPageLayout calculateMushafPageLayout({
   final sourceHeight = math.max(1, source.height).toDouble();
   final fillsLandscapeWidth = viewportWidth > viewportHeight;
   final scale = fillsLandscapeWidth
-      ? (viewportWidth * mushafLandscapeBleedFactor) / sourceWidth
+      ? (viewportWidth * landscapeBleedFactor) / sourceWidth
       : math.min(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
   return (
     width: sourceWidth * scale,
@@ -164,7 +165,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     _assetCacheKey = cacheKey;
     _verifiedCuts = const [];
     _assetFile = ref
-        .read(quranRepositoryProvider)
+        .read(selectedMushafRepositoryProvider)
         .cachedMushafPageAsset(pageData, asset);
   }
 
@@ -192,7 +193,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
       if (!mounted || _resolutionRefreshKey != key) return;
       unawaited(() async {
         final changed = await ref
-            .read(quranRepositoryProvider)
+            .read(selectedMushafRepositoryProvider)
             .refreshMushafPageResolution(pageData, minimumWidth: minimumWidth);
         if (changed && mounted && _resolutionRefreshKey == key) {
           ref.invalidate(mushafPageProvider(widget.page));
@@ -311,6 +312,9 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
         final layout = calculateMushafPageLayout(
+          landscapeBleedFactor: pageData.editionCode == 'madani-hafs'
+              ? mushafLandscapeBleedFactor
+              : 1,
           viewport: Size(constraints.maxWidth, constraints.maxHeight),
           source: Size(
             pageData.imageWidth.toDouble(),

@@ -8,6 +8,9 @@ from django.core.exceptions import ImproperlyConfigured
 from quran_backend.settings.production import *  # noqa: F403
 from quran_backend.settings.production import MAILERS
 
+# Complete, validated visual bundles may be tested without publishing them in production.
+MUSHAF_STAGING_PREVIEWS = True
+
 STAGING_EMAIL_DELIVERY_MODE = os.getenv("STAGING_EMAIL_DELIVERY_MODE", "mailpit").strip().lower()
 if STAGING_EMAIL_DELIVERY_MODE not in {"mailpit", "smtp"}:
     raise ImproperlyConfigured("STAGING_EMAIL_DELIVERY_MODE must be either 'mailpit' or 'smtp'")

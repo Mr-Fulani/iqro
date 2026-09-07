@@ -268,10 +268,12 @@ class MushafPageData {
     required this.imageHeight,
     required this.assets,
     required this.regions,
+    this.editionCode = 'madani-hafs',
   });
 
   factory MushafPageData.fromJson(Map<String, Object?> json) {
     return MushafPageData(
+      editionCode: json['edition_code']?.toString() ?? 'madani-hafs',
       number: (json['number'] as num?)?.toInt() ?? 1,
       contentVersion: json['content_version']?.toString() ?? 'unknown',
       checksumSha256: json['checksum_sha256']?.toString() ?? '',
@@ -300,6 +302,7 @@ class MushafPageData {
   }
 
   final int number;
+  final String editionCode;
   final String contentVersion;
   final String checksumSha256;
   final int imageWidth;

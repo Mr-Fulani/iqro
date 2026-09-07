@@ -176,7 +176,7 @@ Future<_PageHarness> _pumpPage(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        quranRepositoryProvider.overrideWithValue(_PageRepository()),
+        selectedMushafRepositoryProvider.overrideWithValue(_PageRepository()),
         mushafPageProvider(122).overrideWith((ref) async => _page),
       ],
       child: MaterialApp(

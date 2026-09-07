@@ -259,6 +259,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafScanDescription => 'Оригинальные страницы · Хафс';
 
   @override
+  String get mushafPreviewDescription =>
+      'Хафс · оформление IQRO · тестовая версия';
+
+  @override
   String get mushafTextDescription => 'Чёткий текст, адаптированный для экрана';
 
   @override

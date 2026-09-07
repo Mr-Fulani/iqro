@@ -12,8 +12,8 @@ import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
+import 'mushaf_edition.dart';
 
-const _mushafContentKey = 'quran-edition:madani-hafs';
 const _mushafEdition = 'madani-hafs';
 const _approvedMushafAssetHosts = <String>{
   'media.staging.iqro.forum',
@@ -83,7 +83,10 @@ class OfflineMushafManifest {
     required this.raw,
   });
 
-  factory OfflineMushafManifest.fromJson(Map<String, Object?> json) {
+  factory OfflineMushafManifest.fromJson(
+    Map<String, Object?> json, {
+    String expectedEdition = _mushafEdition,
+  }) {
     final rights = jsonMap(json['rights']);
     final identity = jsonMap(json['mushaf']);
     final source = jsonMap(json['source']);
@@ -98,7 +101,7 @@ class OfflineMushafManifest {
     if (json['schema_version'] != 1 ||
         json['package_type'] != 'mushaf_pages' ||
         rights['offline_download'] != true ||
-        identity['edition_code'] != _mushafEdition ||
+        identity['edition_code'] != expectedEdition ||
         !RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(packageId) ||
         version.isEmpty ||
         !_isSha256(packageChecksum) ||
@@ -111,7 +114,13 @@ class OfflineMushafManifest {
 
     final pages = rawPages
         .whereType<Map>()
-        .map((item) => _parsePage(Map<String, Object?>.from(item), width))
+        .map(
+          (item) => _parsePage(
+            Map<String, Object?>.from(item),
+            width,
+            expectedEdition,
+          ),
+        )
         .toList(growable: false);
     if (pages.length != rawPages.length ||
         pages.length != declaredPageCount ||
@@ -173,7 +182,11 @@ class OfflineMushafManifest {
         .toString();
   }
 
-  static OfflineMushafPage _parsePage(Map<String, Object?> json, int width) {
+  static OfflineMushafPage _parsePage(
+    Map<String, Object?> json,
+    int width,
+    String expectedEdition,
+  ) {
     final number = (json['number'] as num?)?.toInt() ?? 0;
     final asset = jsonMap(json['asset']);
     final metadata = jsonMap(json['metadata']);
@@ -201,6 +214,7 @@ class OfflineMushafManifest {
     final pageData = MushafPageData.fromJson(metadata);
     final metadataAsset = pageData.assets.singleOrNull;
     if (pageData.number != number ||
+        pageData.editionCode != expectedEdition ||
         metadataAsset == null ||
         metadataAsset.url != url.toString() ||
         metadataAsset.width != width ||
@@ -231,6 +245,7 @@ class MushafOfflineRepository {
     required ApiClient api,
     required LocalDatabase database,
     MushafDirectoryProvider? supportDirectory,
+    this.mushaf = MushafIdentity.canonical,
   }) : _api = api,
        _database = database,
        _supportDirectory = supportDirectory ?? getApplicationSupportDirectory;
@@ -238,12 +253,24 @@ class MushafOfflineRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final MushafDirectoryProvider _supportDirectory;
+  final MushafIdentity mushaf;
+  String get _mushafContentKey => mushaf.contentKey;
+
+  MushafOfflineRepository forMushaf(MushafIdentity identity) =>
+      identity == mushaf
+      ? this
+      : MushafOfflineRepository(
+          api: _api,
+          database: _database,
+          supportDirectory: _supportDirectory,
+          mushaf: identity,
+        );
 
   Future<MushafDownloadSnapshot> snapshot() async {
     final rows = await _database.database.query(
       'offline_packages',
       where: 'content_key = ?',
-      whereArgs: const <Object?>[_mushafContentKey],
+      whereArgs: <Object?>[_mushafContentKey],
       orderBy: 'is_active DESC, updated_at DESC',
       limit: 1,
     );
@@ -358,11 +385,14 @@ class MushafOfflineRepository {
     int expectedPageCount,
   ) async {
     final payload = await _api.get(
-      '/quran/editions/$_mushafEdition/offline-manifest',
+      '${mushaf.apiPath}/offline-manifest',
       query: width == null ? null : <String, Object?>{'width': width},
       public: true,
     );
-    final manifest = OfflineMushafManifest.fromJson(jsonMap(payload));
+    final manifest = OfflineMushafManifest.fromJson(
+      jsonMap(payload),
+      expectedEdition: mushaf.code,
+    );
     if (manifest.pages.length != expectedPageCount) {
       throw const FormatException('The Mushaf package is not complete');
     }
@@ -487,7 +517,7 @@ class MushafOfflineRepository {
     await _database.database.transaction((transaction) async {
       for (final page in manifest.pages) {
         await transaction.insert('cache_entries', <String, Object?>{
-          'cache_key': 'quran:$_mushafEdition:page:${page.number}',
+          'cache_key': mushaf.pageCacheKey(page.number),
           'payload': jsonEncode(page.metadata),
           'etag': null,
           'updated_at': now.toIso8601String(),
@@ -498,7 +528,7 @@ class MushafOfflineRepository {
         'offline_packages',
         <String, Object?>{'is_active': 0},
         where: 'content_key = ?',
-        whereArgs: const <Object?>[_mushafContentKey],
+        whereArgs: <Object?>[_mushafContentKey],
       );
       await transaction.update(
         'offline_packages',

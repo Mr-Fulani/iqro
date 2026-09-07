@@ -102,6 +102,37 @@ class ContractTests(unittest.TestCase):
 
 
 SOURCE = os.environ.get("IQRO_MUSHAF_SOURCE_DIR")
+FULL_SOURCE = os.environ.get("IQRO_MUSHAF_FULL_SOURCE_DIR")
+
+
+@unittest.skipUnless(FULL_SOURCE, "Set IQRO_MUSHAF_FULL_SOURCE_DIR for page 245 regression")
+class FullSourceTests(unittest.TestCase):
+    def test_legacy_cmap_normalization_preserves_every_other_font_table(self):
+        path = Path(FULL_SOURCE) / "p245.ttf"
+        before = p.digest(path)
+        font = p.SourceFont(path, "QCF2245")
+        try:
+            source = p.hb.Face(path.read_bytes())
+            self.assertIsNone(p.hb.Font(source).get_nominal_glyph(0xFC41))
+            for tag in source.table_tags:
+                if tag != "cmap":
+                    self.assertEqual(font.font.face.reference_table(tag).data,
+                                     source.reference_table(tag).data, tag)
+            for code, glyph in font.cmap.items():
+                self.assertEqual(font.font.get_nominal_glyph(code), font.tt.getGlyphID(glyph))
+            self.assertTrue(font.shape("\ufc53\ufc54").pieces)
+            self.assertEqual(p.digest(path), before)
+        finally:
+            font.close()
+
+    def test_complete_page_245_has_no_missing_glyphs_or_regions(self):
+        root = Path(FULL_SOURCE)
+        lock = json.loads((root / "source.full.lock.json").read_text())
+        with p.open_database(root / "mushaf_database.db") as db:
+            page = p.build_page(db, root, lock, 245)
+        p.validate_artifact(page)
+        self.assertEqual({r["surah"] for r in page["ayah_regions"]}, {12})
+        self.assertEqual({r["ayah"] for r in page["ayah_regions"]}, set(range(79, 87)))
 
 
 @unittest.skipUnless(SOURCE, "Set IQRO_MUSHAF_SOURCE_DIR for pinned source integration tests")

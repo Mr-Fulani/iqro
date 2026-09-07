@@ -7,6 +7,49 @@ const sharp = require('sharp');
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const requireValue = (value, message) => { if (!value) throw new Error(message); };
 const widths = [720, 1440, 2160];
+const expectedRuntime = {sharp: '0.35.4', vips: '8.18.6', rsvg: '2.62.91', webp: '1.6.0'};
+
+function validateSvg(svg) {
+  const text = svg.toString('utf8');
+  requireValue(!/(?:href|url\(|<script|<image|<use|<text|<foreignObject|<!|<\?|style\s*=)/i.test(text), 'External/text SVG content');
+  requireValue(!/<\/?(?!svg\b|title\b|rect\b|path\b)[a-z]/i.test(text), 'Unexpected SVG element');
+}
+
+async function writeOnce(file, bytes) {
+  try { await fs.writeFile(file, bytes, {flag: 'wx'}); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const stat = await fs.lstat(file);
+    requireValue(stat.isFile() && !stat.isSymbolicLink() &&
+      (await fs.readFile(file)).equals(Buffer.from(bytes)), 'Existing artifact differs; nothing overwritten');
+  }
+}
+
+async function renderPage(svg, output, stem) {
+  for (const [name, version] of Object.entries(expectedRuntime)) {
+    requireValue(sharp.versions[name] === version, `Unverified raster runtime: ${name}`);
+  }
+  validateSvg(svg);
+  requireValue(/^page-\d{3}$/.test(stem), 'Invalid page stem');
+  sharp.cache(false);
+  sharp.concurrency(1);
+  const assets = [];
+  for (const width of widths) {
+    const height = Math.round(width * 1.6);
+    const png = await sharp(svg, {density: width / 1000 * 72, limitInputPixels: 20_000_000})
+      .resize(width, height, {fit: 'fill'}).png().toBuffer();
+    const webp = await sharp(png).webp({lossless: true, effort: 6}).toBuffer();
+    const reference = await sharp(png).ensureAlpha().raw().toBuffer();
+    const decoded = await sharp(webp).ensureAlpha().raw().toBuffer();
+    requireValue(reference.equals(decoded), 'Lossless pixel comparison failed');
+    const metadata = await sharp(webp).metadata();
+    requireValue(metadata.format === 'webp' && metadata.width === width && metadata.height === height, 'Wrong raster dimensions');
+    const name = `${stem}-w${width}.webp`;
+    await writeOnce(path.join(output, name), webp);
+    assets.push({path: name, width, height, bytes: webp.length, sha256: sha(webp), lossless: true});
+  }
+  return assets;
+}
 
 async function checkedFile(root, name, expectedHash) {
   const file = path.join(root, name);
@@ -18,7 +61,7 @@ async function checkedFile(root, name, expectedHash) {
 }
 
 async function rasterize(source, output) {
-  const expected = {sharp: '0.35.4', vips: '8.18.6', rsvg: '2.62.91', webp: '1.6.0'};
+  const expected = expectedRuntime;
   for (const [name, version] of Object.entries(expected)) {
     requireValue(sharp.versions[name] === version, `Unverified raster runtime: ${name}`);
   }
@@ -38,9 +81,7 @@ async function rasterize(source, output) {
     const svg = await checkedFile(source, `${stem}.svg`, entry.svg_sha256);
     const geometry = await checkedFile(source, `${stem}.mobile.json`, entry.mobile_sha256);
     // Only our closed path SVG format is accepted: never fetch links or use system fonts.
-    const text = svg.toString('utf8');
-    requireValue(!/(?:href|url\(|<script|<image|<use|<text|<foreignObject|<!|<\?|style\s*=)/i.test(text), 'External/text SVG content');
-    requireValue(!/<\/?(?!svg\b|title\b|rect\b|path\b)[a-z]/i.test(text), 'Unexpected SVG element');
+    validateSvg(svg);
     const model = JSON.parse(geometry);
     requireValue(model.status === 'draft' && model.number === entry.page && model.assets.length === 0 &&
       model.image_width === 1000 && model.image_height === 1600, 'Geometry identity mismatch');
@@ -53,23 +94,7 @@ async function rasterize(source, output) {
   sharp.cache(false);
   sharp.concurrency(1);
   for (const {entry, stem, svg, geometry} of inputs) {
-    const assets = [];
-    for (const width of widths) {
-      // SVG is rasterized at target density, not enlarged from a smaller bitmap.
-      const height = Math.round(width * 1.6);
-      const png = await sharp(svg, {density: width / 1000 * 72, limitInputPixels: 20_000_000})
-        .resize(width, height, {fit: 'fill'}).png().toBuffer();
-      const webp = await sharp(png).webp({lossless: true, effort: 6}).toBuffer();
-      // Verify decoded pixels, not just the encoder's lossless flag.
-      const reference = await sharp(png).ensureAlpha().raw().toBuffer();
-      const decoded = await sharp(webp).ensureAlpha().raw().toBuffer();
-      requireValue(reference.equals(decoded), 'Lossless pixel comparison failed');
-      const metadata = await sharp(webp).metadata();
-      requireValue(metadata.format === 'webp' && metadata.width === width && metadata.height === height, 'Wrong raster dimensions');
-      const name = `${stem}-w${width}.webp`;
-      await fs.writeFile(path.join(output, name), webp, {flag: 'wx'});
-      assets.push({path: name, width, height, bytes: webp.length, sha256: sha(webp), lossless: true});
-    }
+    const assets = await renderPage(svg, output, stem);
     const geometryPath = `${stem}.mobile.json`;
     await fs.writeFile(path.join(output, geometryPath), geometry, {flag: 'wx'});
     manifest.pages.push({page: entry.page, source_svg_sha256: entry.svg_sha256,
@@ -79,7 +104,7 @@ async function rasterize(source, output) {
   return manifest;
 }
 
-module.exports = {rasterize, checkedFile};
+module.exports = {rasterize, checkedFile, renderPage, writeOnce};
 if (require.main === module) {
   const [source, output, ...extra] = process.argv.slice(2);
   if (!source || !output || extra.length) {

@@ -259,6 +259,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mushafScanDescription => 'Orijinal sayfalar · Hafs';
 
   @override
+  String get mushafPreviewDescription => 'Hafs · IQRO düzeni · ön izleme';
+
+  @override
   String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
 
   @override

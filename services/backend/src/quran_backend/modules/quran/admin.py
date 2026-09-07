@@ -8,6 +8,9 @@ from quran_backend.modules.quran.models import (
     Hizb,
     Juz,
     MushafPage,
+    MushafRendition,
+    MushafRenditionPage,
+    MushafRenditionRelease,
     QuranEdition,
     QuranEditionVersion,
     QuranFoundationMushaf,
@@ -32,6 +35,24 @@ class CanonicalReadOnlyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def has_delete_permission(self, request: object, obj: object | None = None) -> bool:  # noqa: ARG002
         return False
+
+
+@admin.register(MushafRendition)
+class MushafRenditionAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("code", "names", "active_release")
+    search_fields = ("code",)
+
+
+@admin.register(MushafRenditionRelease)
+class MushafRenditionReleaseAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("rendition", "version", "page_count", "staging_only", "published_at")
+    list_filter = ("staging_only", "rendition")
+
+
+@admin.register(MushafRenditionPage)
+class MushafRenditionPageAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("release", "number", "image_width", "image_height")
+    list_filter = ("release",)
 
 
 @admin.register(QuranEdition)

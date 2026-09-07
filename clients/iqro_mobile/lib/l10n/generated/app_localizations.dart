@@ -528,6 +528,12 @@ abstract class AppLocalizations {
   /// **'Original pages · Hafs'**
   String get mushafScanDescription;
 
+  /// No description provided for @mushafPreviewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Hafs · IQRO layout · preview'**
+  String get mushafPreviewDescription;
+
   /// No description provided for @mushafTextDescription.
   ///
   /// In en, this message translates to:

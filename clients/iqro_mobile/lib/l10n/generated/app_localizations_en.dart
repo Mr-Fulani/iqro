@@ -259,6 +259,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafScanDescription => 'Original pages · Hafs';
 
   @override
+  String get mushafPreviewDescription => 'Hafs · IQRO layout · preview';
+
+  @override
   String get mushafTextDescription => 'Crisp text adapted to your screen';
 
   @override

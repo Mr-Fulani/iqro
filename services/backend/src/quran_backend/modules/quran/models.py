@@ -735,3 +735,90 @@ class QuranFoundationNativePageAsset(BaseModel):
 
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and set(value) <= set("0123456789abcdef")
+
+
+class MushafRendition(BaseModel):
+    """Visual presentation only: never replaces canonical Quran/audio identities."""
+
+    code = models.SlugField("Код оформления", max_length=64, unique=True)
+    names = models.JSONField("Названия на языках приложения", default=dict)
+    active_release = models.ForeignKey(
+        "MushafRenditionRelease",
+        verbose_name="Доступная версия страниц",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="active_for",
+    )
+
+    class Meta:
+        db_table = "quran_mushaf_rendition"
+        verbose_name = "оформление Мусхафа"
+        verbose_name_plural = "Оформления Мусхафа"
+
+    def __str__(self) -> str:
+        return str(self.names.get("ru") or self.code)
+
+
+class MushafRenditionRelease(BaseModel):
+    rendition = models.ForeignKey(
+        MushafRendition, on_delete=models.PROTECT, related_name="releases"
+    )
+    version = models.CharField("Версия набора", max_length=64)
+    canonical_version = models.ForeignKey(
+        QuranEditionVersion,
+        verbose_name="Канонические аяты (не изменяются)",
+        on_delete=models.PROTECT,
+    )
+    checksum_sha256 = models.CharField("SHA-256 полного набора", max_length=64)
+    source_commit = models.CharField("Commit источника", max_length=40)
+    source_url = models.URLField("Источник страниц")
+    renderer = models.CharField("Версия раскладки", max_length=64)
+    widths = models.JSONField("Разрешения страниц", default=list)
+    page_count = models.PositiveSmallIntegerField("Количество страниц", default=604)
+    staging_only = models.BooleanField("Только тестовый сервер", default=True)
+    published_at = models.DateTimeField("Подключено", null=True, blank=True)
+
+    class Meta:
+        db_table = "quran_mushaf_rendition_release"
+        verbose_name = "версия оформления Мусхафа"
+        verbose_name_plural = "Версии оформления Мусхафа"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["rendition", "version"],
+                name="quran_rendition_version_unique",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.rendition.code}@{self.version}"
+
+
+class MushafRenditionPage(BaseModel):
+    release = models.ForeignKey(
+        MushafRenditionRelease, on_delete=models.PROTECT, related_name="pages"
+    )
+    number = models.PositiveSmallIntegerField("Номер страницы")
+    image_width = models.PositiveIntegerField("Ширина исходной раскладки")
+    image_height = models.PositiveIntegerField("Высота исходной раскладки")
+    checksum_sha256 = models.CharField("SHA-256 карты страницы", max_length=64)
+    assets = models.JSONField("Проверенные изображения", default=list)
+    regions = models.JSONField("Области аятов", default=list)
+
+    class Meta:
+        db_table = "quran_mushaf_rendition_page"
+        verbose_name = "страница оформления Мусхафа"
+        verbose_name_plural = "Страницы оформления Мусхафа"
+        ordering = ["number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["release", "number"], name="quran_rendition_page_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(number__gte=1, number__lte=604),
+                name="quran_rendition_page_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.release}: {self.number}"

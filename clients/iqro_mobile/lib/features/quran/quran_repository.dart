@@ -13,6 +13,7 @@ import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
+import 'mushaf_edition.dart';
 
 typedef MushafDigestReader = Future<String> Function(File file);
 
@@ -158,11 +159,52 @@ class QuranRepository {
     required ApiClient api,
     required LocalDatabase database,
     Uuid? uuid,
+    this.mushaf = MushafIdentity.canonical,
   }) : _api = api,
        _database = database,
        _uuid = uuid ?? const Uuid();
 
   static const edition = 'madani-hafs';
+  final MushafIdentity mushaf;
+
+  QuranRepository forMushaf(MushafIdentity identity) => identity == mushaf
+      ? this
+      : QuranRepository(
+          api: _api,
+          database: _database,
+          uuid: _uuid,
+          mushaf: identity,
+        );
+
+  Future<List<NativeMushafEdition>> mushafRenditions({
+    bool forceRefresh = false,
+  }) async {
+    final key = 'mushaf-renditions:${_api.dio.options.baseUrl}';
+    final cached = await _database.readCache(key);
+    List<NativeMushafEdition> parse(Object? payload) => payload is List
+        ? payload
+              .whereType<Map>()
+              .map(
+                (e) => NativeMushafEdition.parse(Map<String, Object?>.from(e)),
+              )
+              .whereType<NativeMushafEdition>()
+              .toList(growable: false)
+        : const [];
+    if (!forceRefresh && cached?.isFresh == true) return parse(cached!.value);
+    try {
+      final payload = await _api.get('/quran/mushaf-renditions', public: true);
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(hours: 1),
+      );
+      return parse(payload);
+    } on Object {
+      if (cached != null) return parse(cached.value);
+      rethrow;
+    }
+  }
+
   final ApiClient _api;
   final LocalDatabase _database;
   final Uuid _uuid;
@@ -375,26 +417,35 @@ class QuranRepository {
     int page, {
     bool forceRefresh = false,
   }) async {
-    final key = 'quran:$edition:page:$page';
+    final key = mushaf.pageCacheKey(page);
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
-      return MushafPageData.fromJson(jsonMap(cached!.value));
+      return _parseMushafPage(cached!.value, page);
     }
     try {
       final payload = await _api.get(
-        '/quran/editions/$edition/pages/$page',
+        '${mushaf.apiPath}/pages/$page',
         public: true,
       );
+      final parsed = _parseMushafPage(payload, page);
       await _database.writeCache(
         key,
         payload,
         maxAge: const Duration(days: 30),
       );
-      return MushafPageData.fromJson(jsonMap(payload));
+      return parsed;
     } on Object {
-      if (cached != null) return MushafPageData.fromJson(jsonMap(cached.value));
+      if (cached != null) return _parseMushafPage(cached.value, page);
       rethrow;
     }
+  }
+
+  MushafPageData _parseMushafPage(Object? payload, int number) {
+    final parsed = MushafPageData.fromJson(jsonMap(payload));
+    if (parsed.number != number || parsed.editionCode != mushaf.code) {
+      throw const FormatException('Mushaf page identity mismatch');
+    }
+    return parsed;
   }
 
   Future<bool> refreshMushafPageResolution(
@@ -421,6 +472,9 @@ class QuranRepository {
     MushafPageData page,
     MushafAsset asset,
   ) async {
+    if (page.editionCode != mushaf.code) {
+      throw const FormatException('Mushaf asset edition mismatch');
+    }
     final checksum = asset.sha256.isNotEmpty
         ? asset.sha256
         : page.checksumSha256;
@@ -460,7 +514,7 @@ class QuranRepository {
         ? checksum.substring(0, 16)
         : 'unversioned';
     final directory = Directory(
-      p.join(supportDirectory.path, 'mushaf_pages', edition, safeVersion),
+      p.join(supportDirectory.path, 'mushaf_pages', mushaf.code, safeVersion),
     );
     await directory.create(recursive: true);
     final file = File(
@@ -505,7 +559,7 @@ class QuranRepository {
         AND item.checksum_sha256 = ?
       LIMIT 1
       ''',
-      <Object?>['quran-edition:$edition', page.number, expectedChecksum],
+      <Object?>[mushaf.contentKey, page.number, expectedChecksum],
     );
     if (rows.isEmpty) return null;
     final row = rows.single;

@@ -144,7 +144,7 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
           .read(offlineStorageRepositoryProvider)
           .deletePackage(package.packageId);
       ref.read(audioRepositoryProvider).clearPlaybackCache();
-      ref.invalidate(mushafDownloadProvider);
+      ref.invalidate(selectedMushafDownloadControllerProvider);
       ref.invalidate(audioDownloadProvider);
       ref.invalidate(mushafPageProvider);
       ref.invalidate(offlinePackagesProvider);

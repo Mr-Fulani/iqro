@@ -22,6 +22,9 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "quran.Surah": ("сура", "суры"),
     "quran.Ayah": ("аят", "аяты"),
     "quran.MushafPage": ("страница Мусхафа", "страницы Мусхафа"),
+    "quran.MushafRendition": ("оформление Мусхафа", "оформления Мусхафа"),
+    "quran.MushafRenditionRelease": ("версия оформления Мусхафа", "версии оформления Мусхафа"),
+    "quran.MushafRenditionPage": ("страница оформления Мусхафа", "страницы оформлений Мусхафа"),
     "quran.AyahPageRegion": ("область аята", "области аятов на страницах"),
     "quran.Juz": ("джуз", "джузы"),
     "quran.Hizb": ("хизб", "хизбы"),
@@ -161,6 +164,16 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
 
 
 FIELD_LABELS: dict[str, str] = {
+    "names": "Название на языках приложения",
+    "active_release": "Доступная читателям версия",
+    "rendition": "Оформление Мусхафа",
+    "canonical_version": "Канонический текст и ссылки на аяты",
+    "source_commit": "Зафиксированная версия источника",
+    "renderer": "Версия подготовки страниц",
+    "widths": "Разрешения страниц по ширине",
+    "staging_only": "Только на тестовом сервере",
+    "assets": "Проверенные изображения страниц",
+    "regions": "Области нажатия на аяты",
     "account_mode": "Тип аккаунта",
     "android_url": "Ссылка Google Play",
     "approved_at": "Одобрено",
@@ -544,6 +557,11 @@ FIELD_LABELS: dict[str, str] = {
 }
 
 
+MODEL_FIELD_LABELS = {
+    ("quran.MushafRenditionPage", "release"): "Версия оформления Мусхафа",
+}
+
+
 def configure_russian_admin() -> None:
     """Apply operator-facing Russian labels without changing database schema."""
 
@@ -557,7 +575,9 @@ def configure_russian_admin() -> None:
             model._meta.verbose_name, model._meta.verbose_name_plural = labels
 
         for field in model._meta.fields:
-            translated_label = FIELD_LABELS.get(field.name)
+            translated_label = MODEL_FIELD_LABELS.get(
+                (model._meta.label, field.name), FIELD_LABELS.get(field.name)
+            )
             if translated_label is not None:
                 field.verbose_name = translated_label
 

@@ -25,6 +25,7 @@ import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/quran_models.dart';
+import '../features/quran/mushaf_edition.dart';
 import '../features/quran/mushaf_offline_repository.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
@@ -372,9 +373,37 @@ final ayahsProvider = FutureProvider.family<List<QuranAyah>, int>((ref, surah) {
 final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
   return ref.watch(quranRepositoryProvider).juz();
 });
+final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
+  ref,
+) {
+  return ref.watch(quranRepositoryProvider).mushafRenditions(forceRefresh: true);
+});
+final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
+  final preference = ref.watch(
+    appPreferencesProvider.select((p) => p.mushafVariant),
+  );
+  final identity = MushafIdentity.fromPreference(preference);
+  if (identity.isCanonical) return identity;
+  // Staging previews must never leak into a production build via preferences.
+  if (ref.watch(appConfigProvider).isProduction) {
+    return MushafIdentity.canonical;
+  }
+  return identity;
+});
+final selectedMushafRepositoryProvider = Provider<QuranRepository>((ref) {
+  final identity = ref.watch(selectedMushafIdentityProvider);
+  final repository = ref.watch(quranRepositoryProvider);
+  return identity.isCanonical ? repository : repository.forMushaf(identity);
+});
+final selectedMushafOfflineRepositoryProvider =
+    Provider<MushafOfflineRepository>((ref) {
+      final identity = ref.watch(selectedMushafIdentityProvider);
+      final repository = ref.watch(mushafOfflineRepositoryProvider);
+      return identity.isCanonical ? repository : repository.forMushaf(identity);
+    });
 final mushafPageProvider = FutureProvider.autoDispose
     .family<MushafPageData, int>((ref, page) {
-      return ref.watch(quranRepositoryProvider).mushafPage(page);
+      return ref.watch(selectedMushafRepositoryProvider).mushafPage(page);
     });
 
 class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
@@ -386,7 +415,10 @@ class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
   final MushafOfflineRepository _repository;
 
   Future<void> initialize() async {
-    state = await _repository.snapshot();
+    final snapshot = await _repository.snapshot();
+    if (mounted && state.status != MushafDownloadStatus.downloading) {
+      state = snapshot;
+    }
   }
 
   Future<void> download({int? width}) async {
@@ -400,15 +432,20 @@ class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
       totalBytes: state.totalBytes,
     );
     try {
-      state = await _repository.install(
+      final installed = await _repository.install(
         width: width,
-        onProgress: (progress) => state = progress,
+        onProgress: (progress) {
+          if (mounted) state = progress;
+        },
       );
+      if (!mounted) return;
+      state = installed;
       for (var page = 1; page <= state.totalPages; page += 1) {
         refInvalidateMushafPage?.call(page);
       }
     } on Object catch (error) {
       final persisted = await _repository.snapshot();
+      if (!mounted) return;
       state = MushafDownloadSnapshot(
         status: MushafDownloadStatus.failed,
         packageId: persisted.packageId,
@@ -424,17 +461,40 @@ class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
   void Function(int page)? refInvalidateMushafPage;
 }
 
-final mushafDownloadProvider =
-    StateNotifierProvider<MushafDownloadController, MushafDownloadSnapshot>((
-      ref,
-    ) {
+// Keep one download controller per edition, even when the reader switches away.
+// Otherwise returning to an edition can start two writers for the same package.
+final mushafDownloadsByEditionProvider =
+    StateNotifierProvider.family<
+      MushafDownloadController,
+      MushafDownloadSnapshot,
+      MushafIdentity
+    >((ref, identity) {
+      final repository = ref.watch(mushafOfflineRepositoryProvider);
       final controller = MushafDownloadController(
-        ref.watch(mushafOfflineRepositoryProvider),
+        identity.isCanonical ? repository : repository.forMushaf(identity),
       );
-      controller.refInvalidateMushafPage = (page) =>
+      controller.refInvalidateMushafPage = (page) {
+        if (ref.read(selectedMushafIdentityProvider) == identity) {
           ref.invalidate(mushafPageProvider(page));
+        }
+      };
       return controller;
     });
+final selectedMushafDownloadControllerProvider =
+    Provider<MushafDownloadController>((ref) {
+      final identity = ref.watch(selectedMushafIdentityProvider);
+      final controller = ref.watch(
+        mushafDownloadsByEditionProvider(identity).notifier,
+      );
+      unawaited(controller.initialize());
+      return controller;
+    });
+final mushafDownloadProvider = Provider<MushafDownloadSnapshot>((ref) {
+  ref.watch(selectedMushafDownloadControllerProvider);
+  return ref.watch(
+    mushafDownloadsByEditionProvider(ref.watch(selectedMushafIdentityProvider)),
+  );
+});
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });

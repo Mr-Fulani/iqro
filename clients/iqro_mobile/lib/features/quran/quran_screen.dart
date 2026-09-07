@@ -39,6 +39,14 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         ? null
         : ref.watch(readingPositionProvider(accountScopeKey)).valueOrNull;
     final locale = Localizations.localeOf(context).languageCode;
+    final identity = ref.watch(selectedMushafIdentityProvider);
+    final rendition = identity.isCanonical
+        ? null
+        : ref
+              .watch(mushafRenditionsProvider)
+              .valueOrNull
+              ?.where((item) => item.identity == identity)
+              .firstOrNull;
     final positionSurah = catalog.valueOrNull?.surahs
         .where((surah) => surah.number == (position?.surah ?? 1))
         .firstOrNull;
@@ -105,12 +113,17 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              context.l10n.mushafScanName,
+                              identity.isCanonical
+                                  ? context.l10n.mushafScanName
+                                  : rendition?.nameFor(locale) ??
+                                        'QCF V2 · IQRO',
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              context.l10n.mushafScanDescription,
+                              identity.isCanonical
+                                  ? context.l10n.mushafScanDescription
+                                  : context.l10n.mushafPreviewDescription,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -276,40 +289,72 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
   }
 
   Future<void> _showMushafPicker(BuildContext context) async {
-    final current = ref.read(appPreferencesProvider).mushafVariant;
+    ref.invalidate(mushafRenditionsProvider);
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (context) => RadioGroup<String>(
-        groupValue: current,
-        onChanged: (value) => _selectMushaf(context, value),
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 20),
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 12),
-              child: Text(
-                context.l10n.chooseMushaf,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+      builder: (context) => Consumer(
+        builder: (context, sheetRef, _) {
+          final current = sheetRef.watch(selectedMushafIdentityProvider);
+          final catalog = sheetRef.watch(mushafRenditionsProvider);
+          final locale = Localizations.localeOf(context).languageCode;
+          return RadioGroup<String>(
+            groupValue: current.preference,
+            onChanged: (value) => _selectMushaf(context, value),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 20),
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 12),
+                  child: Text(
+                    context.l10n.chooseMushaf,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                RadioListTile<String>(
+                  value: defaultMushafVariant,
+                  title: Text(context.l10n.mushafScanName),
+                  subtitle: Text(context.l10n.mushafScanDescription),
+                  secondary: const Icon(Icons.image_outlined),
+                ),
+                ...catalog.when(
+                  loading: () => <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: IqroLoading(),
+                    ),
+                  ],
+                  error: (_, _) => <Widget>[
+                    ListTile(
+                      title: Text(context.l10n.networkError),
+                      trailing: IconButton(
+                        tooltip: context.l10n.retry,
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () =>
+                            sheetRef.invalidate(mushafRenditionsProvider),
+                      ),
+                    ),
+                  ],
+                  data: (editions) => <Widget>[
+                    for (final edition in editions)
+                      if (!sheetRef.read(appConfigProvider).isProduction)
+                        RadioListTile<String>(
+                          value: edition.identity.preference,
+                          title: Text(edition.nameFor(locale)),
+                          subtitle: Text(context.l10n.mushafPreviewDescription),
+                          secondary: const Icon(Icons.auto_stories_outlined),
+                        ),
+                  ],
+                ),
+                const Divider(height: 28),
+                const _OfflineMushafCard(),
+                const SizedBox(height: 12),
+              ],
             ),
-            RadioListTile<String>(
-              value: defaultMushafVariant,
-              title: Text(context.l10n.mushafScanName),
-              subtitle: Text(context.l10n.mushafScanDescription),
-              secondary: const Icon(Icons.image_outlined),
-            ),
-            const Divider(height: 28),
-            const _OfflineMushafCard(),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(context.l10n.mushafUnavailable),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -498,7 +543,7 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
     setState(() => _preparing = true);
     try {
       final estimate = await ref
-          .read(mushafOfflineRepositoryProvider)
+          .read(selectedMushafOfflineRepositoryProvider)
           .estimate();
       await ensureOfflineStorageCapacity(
         ref.read(localDatabaseProvider),
@@ -528,7 +573,9 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
         ),
       );
       if (confirmed == true && mounted) {
-        unawaited(ref.read(mushafDownloadProvider.notifier).download());
+        unawaited(
+          ref.read(selectedMushafDownloadControllerProvider).download(),
+        );
       }
     } on OfflineStorageQuotaExceeded {
       if (!mounted) return;

@@ -6,6 +6,45 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/mushaf_offline_repository.dart';
 
 void main() {
+  test('native offline package is bound to its own visual edition', () {
+    final fixture = _manifestFixture();
+    fixture['mushaf'] = {'edition_code': 'qcf-v2-hafs'};
+    final pages = (fixture['pages']! as List).cast<Map<String, Object?>>();
+    for (final page in pages) {
+      (page['metadata']! as Map)['edition_code'] = 'qcf-v2-hafs';
+    }
+    final provisional = OfflineMushafManifest(
+      packageId: 'mushaf-rendition-qcf-v2-hafs-v1-w1024',
+      version: fixture['version']! as String,
+      packageChecksum: '',
+      sourceChecksum: 'a' * 64,
+      width: 1024,
+      totalBytes: fixture['total_bytes']! as int,
+      pages: pages.map(_offlinePageFromFixture).toList(),
+      raw: fixture,
+    );
+    fixture['package_id'] = provisional.packageId;
+    fixture['package_checksum_sha256'] = provisional.computedChecksum;
+    expect(
+      OfflineMushafManifest.fromJson(
+        fixture,
+        expectedEdition: 'qcf-v2-hafs',
+      ).pages,
+      hasLength(2),
+    );
+    expect(
+      () => OfflineMushafManifest.fromJson(fixture),
+      throwsFormatException,
+    );
+    (pages.first['metadata']! as Map)['edition_code'] = 'madani-hafs';
+    expect(
+      () => OfflineMushafManifest.fromJson(
+        fixture,
+        expectedEdition: 'qcf-v2-hafs',
+      ),
+      throwsFormatException,
+    );
+  });
   test('offline Mushaf manifest verifies coverage and canonical checksum', () {
     final fixture = _manifestFixture();
 
