@@ -380,6 +380,10 @@ final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
       .watch(quranRepositoryProvider)
       .mushafRenditions(forceRefresh: true);
 });
+final cachedMushafRenditionsProvider =
+    FutureProvider<List<NativeMushafEdition>>((ref) {
+      return ref.watch(quranRepositoryProvider).cachedMushafRenditions();
+    });
 final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   final preference = ref.watch(
     appPreferencesProvider.select((p) => p.mushafVariant),
@@ -390,10 +394,12 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   // The repository persists that catalog for a cold offline restart. A saved
   // staging preference alone must never authorize a preview in production.
   if (ref.watch(appConfigProvider).isProduction) {
-    return productionMushafIdentity(
-      identity,
-      ref.watch(mushafRenditionsProvider).valueOrNull ?? const [],
-    );
+    final currentCatalog = ref.watch(mushafRenditionsProvider);
+    final catalog = currentCatalog.hasValue
+        ? currentCatalog.valueOrNull!
+        : ref.watch(cachedMushafRenditionsProvider).valueOrNull ??
+              const <NativeMushafEdition>[];
+    return productionMushafIdentity(identity, catalog);
   }
   return identity;
 });

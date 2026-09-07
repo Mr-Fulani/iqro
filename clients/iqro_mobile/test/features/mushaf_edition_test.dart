@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,6 +72,7 @@ void main() {
           preferencesStoreProvider.overrideWithValue(store),
           planRepositoryProvider.overrideWithValue(_Plan()),
           mushafRenditionsProvider.overrideWith((ref) async => const []),
+          cachedMushafRenditionsProvider.overrideWith((ref) async => const []),
           appConfigProvider.overrideWithValue(
             AppConfig(
               apiBaseUrl: 'https://iqro.forum',
@@ -146,6 +148,49 @@ void main() {
   );
 
   test(
+    'cold production start uses its published cache before HTTP completes, then honors withdrawal',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PreferencesStore(await SharedPreferences.getInstance());
+      await store.write(
+        store.read().copyWith(mushafVariant: native.preference),
+      );
+      final pendingNetwork = Completer<List<NativeMushafEdition>>();
+      final cached = NativeMushafEdition(
+        identity: native,
+        names: const {'en': 'Published QCF'},
+        stagingOnly: false,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          preferencesStoreProvider.overrideWithValue(store),
+          planRepositoryProvider.overrideWithValue(_Plan()),
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              apiBaseUrl: 'https://iqro.forum',
+              fallbackDownloadUrl: 'https://iqro.forum',
+              environment: 'production',
+            ),
+          ),
+          mushafRenditionsProvider.overrideWith((ref) => pendingNetwork.future),
+          cachedMushafRenditionsProvider.overrideWith((ref) async => [cached]),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(selectedMushafIdentityProvider);
+      await container.read(cachedMushafRenditionsProvider.future);
+      expect(pendingNetwork.isCompleted, isFalse);
+      expect(container.read(selectedMushafIdentityProvider), native);
+      pendingNetwork.complete([]);
+      await container.read(mushafRenditionsProvider.future);
+      expect(
+        container.read(selectedMushafIdentityProvider),
+        MushafIdentity.canonical,
+      );
+    },
+  );
+
+  test(
     'switching edition during a download does not update a disposed controller',
     () async {
       final repo = _Offline();
@@ -158,6 +203,40 @@ void main() {
         const MushafDownloadSnapshot(status: MushafDownloadStatus.ready),
       );
       await task;
+    },
+  );
+
+  test(
+    'expired production catalog is readable immediately and isolated from staging',
+    () async {
+      final cache = _Cache();
+      cache.entries['mushaf-renditions:https://iqro.forum/api/v1'] =
+          CachedValue(
+            updatedAt: DateTime(2020),
+            value: [
+              {
+                'code': 'kfgqpc-hafs',
+                'names': {'en': 'KFGQPC'},
+                'available': true,
+                'canonical_edition': 'madani-hafs',
+                'pages_count': 604,
+                'format': 'raster-regions-v1',
+                'checksum_sha256': 'a' * 64,
+                'version': 'v1',
+                'staging_only': false,
+              },
+            ],
+          );
+      final prod = QuranRepository(
+        api: _Api(origin: 'https://iqro.forum/api/v1'),
+        database: cache,
+      );
+      expect(
+        (await prod.cachedMushafRenditions()).single.identity.code,
+        'kfgqpc-hafs',
+      );
+      final staging = QuranRepository(api: _Api(), database: cache);
+      expect(await staging.cachedMushafRenditions(), isEmpty);
     },
   );
 
@@ -237,6 +316,10 @@ class _Cache implements LocalDatabase {
 }
 
 class _Api implements ApiClient {
+  _Api({String origin = 'https://staging.iqro.forum/api/v1'})
+    : dio = Dio(BaseOptions(baseUrl: origin));
+  @override
+  final Dio dio;
   bool offline = false;
   bool wrongEdition = false;
   @override

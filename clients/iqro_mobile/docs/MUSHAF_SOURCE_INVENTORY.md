@@ -10,6 +10,14 @@ offline/release находятся в [плане выпуска](PUBLIC_RELEASE
 
 Ниже — результаты исходного аудита остальных источников, не акт их установки.
 
+Обновление KFGQPC HAFS (source 5): полный 604-страничный mobile bundle подготовлен
+**локально** из существующего backend snapshot и оригинального `UthmanicHafs1Ver18`.
+Все 6236 ayah/page mappings совпали, 1812 WebP и hit regions проверены. Адаптер
+публикует его в общий `/mushaf-renditions` как `kfgqpc-hafs`; Git commit для QF
+не выдумывается, версия snapshot/font сохраняется отдельно. Подключение на staging
+ждёт разрешения на offsite backup, поэтому таблица текущего публичного API ниже
+пока остаётся верной. Подробности: [подготовка KFGQPC](../../../ops/mushaf-glyph-pilot/KFGQPC.md).
+
 ## Наш backend / Quran.Foundation
 
 Проверен публичный staging endpoint `/api/v1/quran/foundation/mushafs`.

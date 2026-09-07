@@ -48,6 +48,37 @@
   Другие QF варианты (включая V4 Tajweed) этим адаптером автоматически не подключаются.
 - Воспроизводимая подготовка: [KFGQPC.md](../../../ops/mushaf-glyph-pilot/KFGQPC.md).
 
+#### Завершение локальной подготовки KFGQPC
+
+- Код подготовки/публикации/production-каталога: `894dfa2`. Полный bundle
+  `/private/tmp/iqro-kfgqpc-full-20260907` завершён: **604 страницы, 1812 WebP**.
+  Manifest SHA `cc9419d4cd157e1ced820578048b5ebe3a5e0749212eb81bc803c963af91a0e6`.
+  Raster bytes: 720 → 62 919 514; 1440 → 144 454 582; 2160 → 228 046 646.
+  Сумма всех разрешений: 435 420 742 байта. Исходный WOFF2 — 87 760 байт.
+- Сравнение всех 604 page/ayah sets с canonical staging snapshot: **0 различий**.
+  Отдельный backend full-bundle тест прошёл (1812 mocked uploads, real integrity
+  validation, unchanged canonical UUID); Flutter full-bundle тест прошёл:
+  реальное декодирование всех 1812 файлов и hit-testing всех аятов.
+- Контрольные страницы 3, 77, 604 просмотрены. IQRO-раскладка сохраняет исходные
+  слова/строки и оригинальный шрифт; короткие строки центрируются без растяжения
+  текста. Это не полный редакционный просмотр 604 страниц и не facsimile sign-off.
+- Дополнительно исправлен cold-start production: сохранённый опубликованный каталог
+  читается сразу из SQLite, без ожидания HTTP timeout. Свежий пустой каталог имеет
+  приоритет и отзывает доступ; staging/prod caches разделены по API URL.
+  **356 Flutter tests passed, 13 opt-in skipped**, analyze зелёный; full-bundle
+  проверка выполнена отдельно. Backend итог: **761 passed, 7 skipped**, Mypy/Ruff
+  зелёные; 26 Python source tests и 4 Node raster tests прошли.
+- На сервере создана локальная backup-копия
+  `quran_staging_20260907T200827Z.dump`, pg_restore structure verified,
+  `BACKUP_RETENTION_DAYS=0`. Старые копии сохранены. **Автопроверка разрешений
+  отклонила offsite upload**; пользователь запрошен о передаче конкретного дампа
+  в прежний приватный `iqro-postgres-backups`. До подтверждения/проверки offsite
+  код и KFGQPC на сервер не передаются; миграция `0006` на staging не применялась.
+  Действующий backend SHA остаётся `5ca2efa`.
+- Перед deploy все прежние fingerprints совпали: 18 чтецов, 36 recitations,
+  4104 tracks, 1 canonical edition, 12472 ayahs двух версий. Никакой очистки
+  диска в этом этапе не выполнялось. Production/store publication не выполнялась.
+
 ### Актуальный checkpoint: QCF V2 опубликован на staging
 
 - Staging восстановлен без повторной сборки после согласованного удаления только

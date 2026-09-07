@@ -181,16 +181,9 @@ class QuranRepository {
   }) async {
     final key = 'mushaf-renditions:${_api.dio.options.baseUrl}';
     final cached = await _database.readCache(key);
-    List<NativeMushafEdition> parse(Object? payload) => payload is List
-        ? payload
-              .whereType<Map>()
-              .map(
-                (e) => NativeMushafEdition.parse(Map<String, Object?>.from(e)),
-              )
-              .whereType<NativeMushafEdition>()
-              .toList(growable: false)
-        : const [];
-    if (!forceRefresh && cached?.isFresh == true) return parse(cached!.value);
+    if (!forceRefresh && cached?.isFresh == true) {
+      return _parseRenditions(cached!.value);
+    }
     try {
       final payload = await _api.get('/quran/mushaf-renditions', public: true);
       await _database.writeCache(
@@ -198,12 +191,30 @@ class QuranRepository {
         payload,
         maxAge: const Duration(hours: 1),
       );
-      return parse(payload);
+      return _parseRenditions(payload);
     } on Object {
-      if (cached != null) return parse(cached.value);
+      if (cached != null) return _parseRenditions(cached.value);
       rethrow;
     }
   }
+
+  /// Previously published catalog, scoped to this API origin. A cold offline
+  /// start must not wait for an HTTP timeout to authorize a downloaded edition.
+  Future<List<NativeMushafEdition>> cachedMushafRenditions() async {
+    final cached = await _database.readCache(
+      'mushaf-renditions:${_api.dio.options.baseUrl}',
+    );
+    return _parseRenditions(cached?.value);
+  }
+
+  static List<NativeMushafEdition> _parseRenditions(Object? payload) =>
+      payload is List
+      ? payload
+            .whereType<Map>()
+            .map((e) => NativeMushafEdition.parse(Map<String, Object?>.from(e)))
+            .whereType<NativeMushafEdition>()
+            .toList(growable: false)
+      : const [];
 
   final ApiClient _api;
   final LocalDatabase _database;
