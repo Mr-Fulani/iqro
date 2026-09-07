@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_package_queries.dart';
 
 const _mushafPackageType = 'mushaf_pages';
 const _audioPackageType = 'surah_audio';
@@ -72,6 +72,7 @@ class OfflineStorageRepository {
   Future<List<OfflinePackageSummary>> packages() async {
     final rows = await _database.database.query(
       'offline_packages',
+      columns: offlinePackageSummaryColumns,
       orderBy: 'is_active DESC, updated_at DESC, package_id ASC',
     );
     if (rows.isEmpty) return const <OfflinePackageSummary>[];
@@ -80,7 +81,9 @@ class OfflineStorageRepository {
     for (final row in rows) {
       final packageId = row['package_id']?.toString() ?? '';
       final packageType = row['package_type']?.toString() ?? '';
-      final manifest = _manifest(row['manifest']);
+      final manifest = packageType == _audioPackageType
+          ? await readOfflineAudioSummary(_database.database, packageId)
+          : const <String, Object?>{};
       var usedBytes = 0;
       final directory = _packageDirectory(support, packageType, packageId);
       if (directory != null) usedBytes = await _directoryBytes(directory);
@@ -109,6 +112,7 @@ class OfflineStorageRepository {
     }
     final rows = await _database.database.query(
       'offline_packages',
+      columns: const ['package_type', 'status'],
       where: 'package_id = ?',
       whereArgs: <Object?>[packageId],
       limit: 1,
@@ -199,15 +203,6 @@ class OfflineStorageRepository {
     final path = p.normalize(p.absolute(p.join(root, category, packageId)));
     if (!p.isWithin(root, path)) return null;
     return Directory(path);
-  }
-}
-
-Map<String, Object?> _manifest(Object? value) {
-  try {
-    final decoded = jsonDecode(value?.toString() ?? '');
-    return decoded is Map ? Map<String, Object?>.from(decoded) : const {};
-  } on FormatException {
-    return const <String, Object?>{};
   }
 }
 

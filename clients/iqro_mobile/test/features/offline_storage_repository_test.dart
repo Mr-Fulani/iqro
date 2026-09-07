@@ -13,6 +13,37 @@ void main() {
   setUpAll(sqfliteFfiInit);
 
   test(
+    'storage list omits large Mushaf manifests and keeps audio labels',
+    () async {
+      final harness = await _harness();
+      for (final type in ['mushaf_pages', 'surah_audio']) {
+        await _insertPackage(
+          harness.database,
+          packageId: type,
+          packageType: type,
+          contentKey: type,
+          status: 'ready',
+          localPath: '/not-used-for-read-only-list',
+        );
+      }
+      await harness.database.database.update(
+        'offline_packages',
+        {
+          'manifest': jsonEncode({'pages': 'x' * (3 * 1024 * 1024)}),
+        },
+        where: 'package_id = ?',
+        whereArgs: ['mushaf_pages'],
+      );
+      final packages = await harness.repository.packages();
+      expect(packages.firstWhere((p) => p.isMushaf).manifest, isEmpty);
+      final audio = packages.firstWhere((p) => p.isAudio);
+      expect(audio.quality, 'standard');
+      expect(audio.reciterNameFor('ru'), 'Тестовый чтец');
+      expect(packages.every((p) => p.status == 'ready'), isTrue);
+    },
+  );
+
+  test(
     'lists actual package bytes and deletes only the confirmed package',
     () async {
       final harness = await _harness();

@@ -10,6 +10,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_package_items.dart';
+import '../../core/storage/offline_package_queries.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -270,6 +271,7 @@ class MushafOfflineRepository {
   Future<MushafDownloadSnapshot> snapshot() async {
     final rows = await _database.database.query(
       'offline_packages',
+      columns: offlinePackageSummaryColumns,
       where: 'content_key = ?',
       whereArgs: <Object?>[_mushafContentKey],
       orderBy: 'is_active DESC, updated_at DESC',

@@ -10,6 +10,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_package_items.dart';
+import '../../core/storage/offline_package_queries.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'audio_models.dart';
@@ -403,13 +404,19 @@ class AudioOfflineRepository {
   Future<AudioDownloadSnapshot> snapshot(String recitationId) async {
     final rows = await _database.database.query(
       'offline_packages',
+      columns: offlinePackageSummaryColumns,
       where: 'content_key = ?',
       whereArgs: <Object?>[_contentKey(recitationId)],
       orderBy: 'is_active DESC, updated_at DESC',
       limit: 1,
     );
     if (rows.isEmpty) return AudioDownloadSnapshot.empty(recitationId);
-    return _snapshotFromRow(rows.single, recitationId);
+    final row = rows.single;
+    final summary = await readOfflineAudioSummary(
+      _database.database,
+      row['package_id']! as String,
+    );
+    return _snapshotFromRow(row, recitationId, summary['quality']?.toString());
   }
 
   Future<AudioDownloadSnapshot> install({
@@ -749,6 +756,7 @@ class AudioOfflineRepository {
   AudioDownloadSnapshot _snapshotFromRow(
     Map<String, Object?> row,
     String recitationId,
+    String? quality,
   ) {
     final status = switch (row['status']) {
       'ready' => AudioDownloadStatus.ready,
@@ -756,8 +764,6 @@ class AudioOfflineRepository {
       'failed' => AudioDownloadStatus.failed,
       _ => AudioDownloadStatus.notDownloaded,
     };
-    final manifest = jsonDecode(row['manifest']! as String);
-    final quality = manifest is Map ? manifest['quality']?.toString() : null;
     return AudioDownloadSnapshot(
       status: status,
       recitationId: recitationId,
