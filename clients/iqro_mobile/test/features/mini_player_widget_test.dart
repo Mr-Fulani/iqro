@@ -55,7 +55,7 @@ void main() {
         await tester.pumpAndSettle();
         final l10n = AppLocalizations.of(
           tester.element(find.byType(IqroMiniPlayer)),
-      );
+        );
         expect(find.text(l10n.audioTitle), findsOneWidget);
         expect(find.text(l10n.chooseReciter), findsOneWidget);
         await tester.tap(find.byTooltip(l10n.play));
