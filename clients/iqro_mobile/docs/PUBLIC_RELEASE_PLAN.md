@@ -126,6 +126,39 @@
 
 ### Android checkpoint полного подключения
 
+### Попытка staging deployment 5ca2efa: требуется дополнительное место
+
+- Пользователь согласовал точные 51 ID старого BuildKit-кэша. Адресная обработка
+  выполнена в два прохода (дочерние/родительские зависимости); без расширения списка,
+  без удаления images/volumes/backups. Перед сборкой свободно 3.8 GiB.
+- Backup `quran_staging_20260907T164810Z.dump` создан с local retention=0,
+  отправлен с `upload --keep-existing`; локальная SHA/структура и полное offsite
+  скачивание/проверка успешно завершились. Предыдущие копии сохранены.
+- На сервер через git archive передан `5ca2efac9cc09bd5721563ff9ab422d18a12132e`.
+  Все 5 staging images собраны. Но новый build-кэш занял остаток диска:
+  `/dev/sda1` available=0. При `up --no-build` PostgreSQL не стартовал:
+  `could not write lock file postmaster.pid: No space left on device`.
+  Остальные новые сервисы остались Created. **Staging временно недоступен.**
+  Миграция QCF и публикация ещё не выполнены. Нельзя считать deployment успешным.
+- Новый кэш не входит в разрешённые 51 ID; его не удалять без нового согласия.
+  Точный новый список: `/private/tmp/iqro-staging-new-build-cache-20260907.md`.
+  После согласованного освобождения места **не повторять сборку**: выполнить
+  compose с теми же production/staging/budget файлами, `APP_VERSION=staging-5ca2efa`,
+  `up --no-build --detach --wait`, затем `make staging-budget-runtime-verify` и ps.
+  После recovery передать QCF bundle и выполнить validate-only/publication/Android QA.
+- До обновления read-only fingerprint: Reciter 18, RecitationEdition 36,
+  AudioTrack 4104, QuranEdition 1, Ayah 12472 (две canonical versions).
+  SHA-256: Reciter `48d3418bd4c11bad48345f633ee4780fe3f325acfd0c7914fc6d03664070797e`,
+  editions `348e2b266238c21e3dfb2f70901025379c541aa0c1dbf0896b7383a4af42f32f`,
+  tracks `e21262390695eed29225efa4a529402a7223b0105dea4486d49ee87055beb0bc`,
+  QuranEdition `0f5c4c21526079e8c19ae8e343dc8398438853cf263823064d85f16976ad59a5`,
+  Ayah `32bde1be772dff8aee118cd14f10112fe73994289da36e234b9eb12dd2ec7bfa`.
+  Script повторной проверки: `/private/tmp/iqro-catalog-fingerprint-20260907.py`.
+- Android `91aedea7` подключён, IQRO запускается. Исходные настройки поворота:
+  accelerometer_rotation=1, user_rotation=0; не изменялись. QCF end-to-end пока не проверен.
+
+### Предыдущий Android checkpoint полного подключения
+
 - Код `a6bd353` зафиксирован. Profile staging APK установлен через
   `adb -s 91aedea7 install --no-streaming -r` на Redmi Note 7; ответ `Success`.
   Размер 58 376 794 байта, SHA-256
