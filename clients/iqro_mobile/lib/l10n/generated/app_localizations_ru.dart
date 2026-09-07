@@ -263,6 +263,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Хафс · оформление IQRO · тестовая версия';
 
   @override
+  String get mushafPublishedDescription =>
+      'Хафс · чтение онлайн и без интернета';
+
+  @override
   String get mushafTextDescription => 'Чёткий текст, адаптированный для экрана';
 
   @override

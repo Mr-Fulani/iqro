@@ -70,6 +70,7 @@ void main() {
         overrides: [
           preferencesStoreProvider.overrideWithValue(store),
           planRepositoryProvider.overrideWithValue(_Plan()),
+          mushafRenditionsProvider.overrideWith((ref) async => const []),
           appConfigProvider.overrideWithValue(
             AppConfig(
               apiBaseUrl: 'https://iqro.forum',
@@ -86,6 +87,37 @@ void main() {
       container.dispose();
     }
   });
+
+  test(
+    'production accepts published editions but never previews or unknown preferences',
+    () {
+      final ready = NativeMushafEdition(
+        identity: MushafIdentity.fromPreference('native:kfgqpc-hafs'),
+        names: const {'en': 'KFGQPC HAFS'},
+        stagingOnly: false,
+      );
+      final preview = NativeMushafEdition(
+        identity: native,
+        names: const {'en': 'QCF V2'},
+        stagingOnly: true,
+      );
+      expect(
+        productionMushafIdentity(ready.identity, [ready, preview]),
+        ready.identity,
+      );
+      expect(
+        productionMushafIdentity(native, [ready, preview]),
+        MushafIdentity.canonical,
+      );
+      expect(
+        productionMushafIdentity(ready.identity, []),
+        MushafIdentity.canonical,
+      );
+      expect(ready.availableIn(isProduction: true), isTrue);
+      expect(preview.availableIn(isProduction: true), isFalse);
+      expect(preview.availableIn(isProduction: false), isTrue);
+    },
+  );
 
   test(
     'page cache and API paths are isolated across visual editions',

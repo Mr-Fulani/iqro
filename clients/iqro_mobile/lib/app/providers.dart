@@ -376,7 +376,9 @@ final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
 final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
   ref,
 ) {
-  return ref.watch(quranRepositoryProvider).mushafRenditions(forceRefresh: true);
+  return ref
+      .watch(quranRepositoryProvider)
+      .mushafRenditions(forceRefresh: true);
 });
 final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   final preference = ref.watch(
@@ -384,9 +386,14 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   );
   final identity = MushafIdentity.fromPreference(preference);
   if (identity.isCanonical) return identity;
-  // Staging previews must never leak into a production build via preferences.
+  // Only a published production catalog can authorize a non-default edition.
+  // The repository persists that catalog for a cold offline restart. A saved
+  // staging preference alone must never authorize a preview in production.
   if (ref.watch(appConfigProvider).isProduction) {
-    return MushafIdentity.canonical;
+    return productionMushafIdentity(
+      identity,
+      ref.watch(mushafRenditionsProvider).valueOrNull ?? const [],
+    );
   }
   return identity;
 });

@@ -17,10 +17,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("manifest", type=Path)
         parser.add_argument("--validate-only", action="store_true")
+        parser.add_argument("--upload-workers", type=int, choices=(1, 2, 3, 4), default=1)
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
         try:
-            release = publish_rendition(options["manifest"], validate_only=options["validate_only"])
+            release = publish_rendition(
+                options["manifest"],
+                validate_only=options["validate_only"],
+                upload_workers=options["upload_workers"],
+            )
         except (ValueError, OSError, KeyError, TypeError) as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write(

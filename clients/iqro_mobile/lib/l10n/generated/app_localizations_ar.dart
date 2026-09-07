@@ -262,6 +262,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafPreviewDescription => 'حفص · تنسيق IQRO · نسخة تجريبية';
 
   @override
+  String get mushafPublishedDescription => 'حفص · القراءة مع الإنترنت وبدونه';
+
+  @override
   String get mushafTextDescription => 'نص واضح متكيف مع الشاشة';
 
   @override

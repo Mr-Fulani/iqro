@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "edition": "kfgqpc-hafs",
+  "source_id": 5,
+  "source_checksum_sha256": "bc049eb9587142b267fe4308dd31adc646128b95cde3c8b7b238af4f78953a7e",
+  "snapshot_sha256": "5132e93c98cf90d1b07fddf4b479e5a430707c8de9590820d74aa10e44538674",
+  "font_url": "https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2",
+  "font_sha256": "8c00e7a7d5f773bcfb1642fdcfba505dbd81975fef39f14718827a32d075020c",
+  "font_bytes": 87760,
+  "publication_scope": "staging",
+  "layout": "IQRO; not an official print facsimile"
+}

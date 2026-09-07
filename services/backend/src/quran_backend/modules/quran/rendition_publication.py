@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,9 +29,57 @@ from quran_backend.modules.quran.models import (
     PublicationStatus,
     QuranEdition,
     QuranEditionVersion,
+    QuranFoundationMushaf,
 )
 
 SOURCE_COMMIT = "1d040f68d284f8e6db515157f8425abfefd78df6"
+KFGQPC_FONT_SHA = "8c00e7a7d5f773bcfb1642fdcfba505dbd81975fef39f14718827a32d075020c"
+KFGQPC_SOURCE_SHA = "bc049eb9587142b267fe4308dd31adc646128b95cde3c8b7b238af4f78953a7e"
+KFGQPC_SNAPSHOT_SHA = "5132e93c98cf90d1b07fddf4b479e5a430707c8de9590820d74aa10e44538674"
+
+
+def source_identity(manifest: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+    """Never invent a Git commit for a Content API snapshot."""
+    if manifest["edition"] == "qcf-v2-hafs":
+        return SOURCE_COMMIT, f"https://github.com/JMApps/mymushaf/tree/{SOURCE_COMMIT}", {}
+    return (
+        "",
+        "https://api-docs.quran.foundation/docs/tutorials/fonts/font-rendering/",
+        manifest["source"],
+    )
+
+
+def validate_source(manifest: dict[str, Any]) -> bool:
+    if manifest.get("edition") == "qcf-v2-hafs":
+        return manifest.get("source_commit") == SOURCE_COMMIT
+    source = manifest.get("source", {})
+    return bool(
+        manifest.get("edition") == "kfgqpc-hafs"
+        and isinstance(source, dict)
+        and source.get("kind") == "quran-foundation"
+        and source.get("source_id") == 5
+        and source.get("edition") == "kfgqpc-hafs"
+        and source.get("source_checksum_sha256") == KFGQPC_SOURCE_SHA
+        and source.get("snapshot_sha256") == KFGQPC_SNAPSHOT_SHA
+        and source.get("font_sha256") == KFGQPC_FONT_SHA
+    )
+
+
+def require_current_source(manifest: dict[str, Any], *, lock: bool = False) -> None:
+    if manifest["edition"] == "kfgqpc-hafs":
+        sources = QuranFoundationMushaf.objects.all()
+        if lock:
+            sources = sources.select_for_update()
+        require(
+            sources.filter(
+                environment=settings.QURAN_QF_ENV,
+                source_id=5,
+                is_available=True,
+                source_checksum_sha256=manifest["source"]["source_checksum_sha256"],
+            ).first()
+            is not None,
+            "Quran.Foundation source changed; rebuild before publication",
+        )
 
 
 def require(value: object, message: str) -> None:
@@ -111,9 +160,8 @@ def load_manifest(manifest_path: Path) -> tuple[dict[str, Any], str]:
         manifest.get("schema_version") == 1
         and manifest.get("status") == "prepared"
         and manifest.get("publication_scope") == "staging"
-        and manifest.get("source_commit") == SOURCE_COMMIT
+        and validate_source(manifest)
         and manifest.get("canonical_edition") == "madani-hafs"
-        and manifest.get("edition") == "qcf-v2-hafs"
         and manifest.get("page_count") == 604
         and manifest.get("widths") == [720, 1440, 2160],
         "Unsupported complete rendition",
@@ -130,6 +178,7 @@ def load_manifest(manifest_path: Path) -> tuple[dict[str, Any], str]:
 
 def prepare_rendition(manifest_path: Path) -> PreparedRendition:
     manifest, checksum = load_manifest(manifest_path)
+    require_current_source(manifest)
     root = manifest_path.parent.resolve()
     version = manifest["version"]
     entries = manifest["pages"]
@@ -271,7 +320,9 @@ def publish_rendition(
     *,
     uploader: ObjectUploader | None = None,
     validate_only: bool = False,
+    upload_workers: int = 1,
 ) -> MushafRenditionRelease | None:
+    require(type(upload_workers) is int and 1 <= upload_workers <= 4, "Upload workers must be 1..4")
     bundle = prepare_rendition(manifest_path)
     if validate_only:
         return None
@@ -280,22 +331,24 @@ def publish_rendition(
     prepared = bundle.pages
     actual_uploader = uploader or configured_object_uploader()
     # No public pointers until every immutable object has been uploaded/verified.
-    for file, spec in bundle.uploads:
-        actual_uploader.upload_path(file, spec)
+    upload_files(bundle.uploads, actual_uploader, workers=upload_workers)
     with transaction.atomic():
         locked_edition = QuranEdition.objects.select_for_update().get(pk=canonical.edition_id)
         require(
             locked_edition.active_version_id == canonical.pk,
             "Canonical version changed during upload",
         )
+        require_current_source(manifest, lock=True)
+        commit, source_url, source_metadata = source_identity(manifest)
+        label = "KFGQPC HAFS" if manifest["edition"] == "kfgqpc-hafs" else "QCF V2 · IQRO"
         rendition, _ = MushafRendition.objects.get_or_create(
             code=manifest["edition"],
             defaults={
                 "names": {
-                    "ru": "QCF V2 · IQRO",
-                    "en": "QCF V2 · IQRO",
-                    "ar": "مصحف QCF V2",
-                    "tr": "QCF V2 · IQRO",
+                    "ru": label,
+                    "en": label,
+                    "ar": "مصحف حفص" if manifest["edition"] == "kfgqpc-hafs" else "مصحف QCF V2",
+                    "tr": label,
                 },
             },
         )
@@ -306,8 +359,9 @@ def publish_rendition(
             defaults={
                 "canonical_version": canonical,
                 "checksum_sha256": checksum,
-                "source_commit": SOURCE_COMMIT,
-                "source_url": f"https://github.com/JMApps/mymushaf/tree/{SOURCE_COMMIT}",
+                "source_commit": commit,
+                "source_url": source_url,
+                "source_metadata": source_metadata,
                 "renderer": manifest["renderer"],
                 "widths": manifest["widths"],
                 "page_count": 604,
@@ -336,3 +390,23 @@ def publish_rendition(
         rendition.active_release = release
         rendition.save(update_fields=["active_release", "updated_at"])
     return release
+
+
+def upload_files(
+    uploads: list[tuple[Path, ImmutableObjectSpec]], uploader: ObjectUploader, *, workers: int
+) -> None:
+    """Bound network concurrency; join every worker before touching public state."""
+    require(type(workers) is int and 1 <= workers <= 4, "Upload workers must be 1..4")
+    if workers == 1:
+        for file, spec in uploads:
+            uploader.upload_path(file, spec)
+        return
+
+    def upload(item: tuple[Path, ImmutableObjectSpec]) -> None:
+        uploader.upload_path(*item)
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        # A small buffer avoids queuing the whole corpus. On failure no public
+        # pointer is changed; successfully stored objects remain reusable.
+        for _ in executor.map(upload, uploads, buffersize=workers):
+            pass

@@ -70,4 +70,20 @@ class NativeMushafEdition {
   }
 
   String nameFor(String locale) => names[locale] ?? names['en']!;
+
+  bool availableIn({required bool isProduction}) =>
+      !isProduction || !stagingOnly;
 }
+
+MushafIdentity productionMushafIdentity(
+  MushafIdentity requested,
+  Iterable<NativeMushafEdition> catalog,
+) =>
+    requested.isCanonical ||
+        catalog.any(
+          (edition) =>
+              edition.identity == requested &&
+              edition.availableIn(isProduction: true),
+        )
+    ? requested
+    : MushafIdentity.canonical;

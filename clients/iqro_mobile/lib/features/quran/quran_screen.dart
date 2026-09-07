@@ -339,11 +339,19 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                   ],
                   data: (editions) => <Widget>[
                     for (final edition in editions)
-                      if (!sheetRef.read(appConfigProvider).isProduction)
+                      if (edition.availableIn(
+                        isProduction: sheetRef
+                            .read(appConfigProvider)
+                            .isProduction,
+                      ))
                         RadioListTile<String>(
                           value: edition.identity.preference,
                           title: Text(edition.nameFor(locale)),
-                          subtitle: Text(context.l10n.mushafPreviewDescription),
+                          subtitle: Text(
+                            edition.stagingOnly
+                                ? context.l10n.mushafPreviewDescription
+                                : context.l10n.mushafPublishedDescription,
+                          ),
                           secondary: const Icon(Icons.auto_stories_outlined),
                         ),
                   ],

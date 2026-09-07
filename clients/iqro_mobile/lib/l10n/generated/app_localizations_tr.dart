@@ -262,6 +262,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mushafPreviewDescription => 'Hafs · IQRO düzeni · ön izleme';
 
   @override
+  String get mushafPublishedDescription =>
+      'Hafs · çevrimiçi ve çevrimdışı okuma';
+
+  @override
   String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
 
   @override

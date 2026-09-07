@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
 import sqlite3
@@ -187,7 +188,16 @@ class SourceFont:
             self.glyphs = self.tt.getGlyphSet()
             self.cmap = self.tt.getBestCmap()
             self.order = self.tt.getGlyphOrder()
-            face = hb.Face(path.read_bytes())
+            if self.tt.flavor is not None:
+                # HarfBuzz consumes SFNT, not the WOFF2 transport wrapper.
+                # Decode in memory; never rewrite the original source asset.
+                sfnt = io.BytesIO()
+                self.tt.flavor = None
+                self.tt.save(sfnt, reorderTables=False)
+                self._sfnt_bytes = sfnt.getvalue()
+            else:
+                self._sfnt_bytes = path.read_bytes()
+            face = hb.Face(self._sfnt_bytes)
             self.font = hb.Font(face)
             # The pinned p245 font contains a truncated legacy Macintosh cmap.
             # HarfBuzz rejects the entire cmap, even though both Unicode maps
@@ -238,6 +248,10 @@ class SourceFont:
         for info, pos in zip(buf.glyph_infos, buf.glyph_positions, strict=True):
             require(info.codepoint != 0, "HarfBuzz produced .notdef")
             name = self.order[info.codepoint]
+            if name == self.cmap.get(32) and " " in text:
+                x += pos.x_advance
+                y += pos.y_advance
+                continue
             if name not in self.outlines:
                 pen = OutlinePen(self.glyphs)
                 bounds = BoundsPen(self.glyphs)

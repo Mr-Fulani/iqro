@@ -28,10 +28,16 @@ app_name = "quran"
 
 urlpatterns = [
     path("mushaf-renditions", MushafRenditionListView.as_view(), name="rendition-list"),
-    path("mushaf-renditions/<slug:code>/pages/<int:page>",
-         MushafRenditionPageView.as_view(), name="rendition-page"),
-    path("mushaf-renditions/<slug:code>/offline-manifest",
-         MushafRenditionOfflineView.as_view(), name="rendition-offline"),
+    path(
+        "mushaf-renditions/<slug:code>/pages/<int:page>",
+        MushafRenditionPageView.as_view(),
+        name="rendition-page",
+    ),
+    path(
+        "mushaf-renditions/<slug:code>/offline-manifest",
+        MushafRenditionOfflineView.as_view(),
+        name="rendition-offline",
+    ),
     path("editions", QuranEditionListView.as_view(), name="edition-list"),
     path("editions/<slug:edition>", QuranEditionDetailView.as_view(), name="edition-detail"),
     path("editions/<slug:edition>/surahs", SurahListView.as_view(), name="surah-list"),

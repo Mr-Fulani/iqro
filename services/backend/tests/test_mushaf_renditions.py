@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from django.conf import settings
 from django.contrib import admin
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -20,6 +24,8 @@ from quran_backend.modules.quran.models import (
     MushafRenditionPage,
     MushafRenditionRelease,
     PublicationStatus,
+    QuranFoundationMushaf,
+    QuranFoundationMushafPage,
 )
 from quran_backend.modules.quran.serializers import OfflineMushafManifestSerializer
 
@@ -299,3 +305,158 @@ def test_admin_cannot_manually_mutate_rendition_content(rendition: MushafRenditi
         assert not view.has_add_permission(request)
         assert not view.has_change_permission(request)
         assert not view.has_delete_permission(request)
+
+
+def kfgqpc_source() -> dict[str, Any]:
+    return {
+        "kind": "quran-foundation",
+        "source_id": 5,
+        "edition": "kfgqpc-hafs",
+        "source_checksum_sha256": publication.KFGQPC_SOURCE_SHA,
+        "snapshot_sha256": publication.KFGQPC_SNAPSHOT_SHA,
+        "font_sha256": publication.KFGQPC_FONT_SHA,
+    }
+
+
+def create_qf_source() -> QuranFoundationMushaf:
+    return QuranFoundationMushaf.objects.create(
+        environment=settings.QURAN_QF_ENV,
+        source_id=5,
+        name="KFGQPC HAFS",
+        qirat_name="Hafs",
+        pages_count=604,
+        lines_per_page=15,
+        schema_version="1",
+        sync_sequence=1,
+        source_checksum_sha256=publication.KFGQPC_SOURCE_SHA,
+        last_synced_at=timezone.now(),
+    )
+
+
+@pytest.mark.parametrize(
+    "field", ["source_id", "font_sha256", "snapshot_sha256", "source_checksum_sha256", "kind"]
+)
+def test_kfgqpc_requires_the_matching_font_and_snapshot(field: str) -> None:
+    source = kfgqpc_source()
+    manifest = {"edition": "kfgqpc-hafs", "source": source}
+    assert publication.validate_source(manifest)
+    source[field] = "wrong"
+    assert not publication.validate_source(manifest)
+    assert not publication.validate_source({"edition": "unknown", "source": {}})
+
+
+@pytest.mark.django_db
+@override_settings(MUSHAF_STAGING_PREVIEWS=True)
+def test_qf_snapshot_change_hides_only_derived_rendition(
+    api_client: APIClient, rendition: MushafRenditionRelease
+) -> None:
+    source = create_qf_source()
+    rendition.source_metadata = kfgqpc_source()
+    rendition.source_commit = ""
+    rendition.save()
+    url = reverse("quran:rendition-list")
+    assert len(api_client.get(url).json()) == 1
+    source.source_checksum_sha256 = "b" * 64
+    source.save()
+    assert api_client.get(url).json() == []
+    assert rendition.pages.count() == 1  # No content deletion.
+    rendition.source_metadata = {}
+    rendition.save()
+    assert len(api_client.get(url).json()) == 1  # Existing JMApps unchanged.
+
+
+@pytest.mark.django_db
+def test_kfgqpc_publication_preserves_api_provenance_without_fake_git_commit(
+    quran_dataset: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    create_qf_source()
+    manifest = {
+        "edition": "kfgqpc-hafs",
+        "version": "v1",
+        "renderer": "test",
+        "widths": [720],
+        "source": kfgqpc_source(),
+    }
+    bundle = publication.PreparedRendition(
+        manifest, "a" * 64, quran_dataset["version"], [page_fields(quran_dataset)], []
+    )
+    monkeypatch.setattr(publication, "prepare_rendition", lambda _: bundle)
+    release = publication.publish_rendition(tmp_path / "manifest.json", uploader=Mock())
+    assert release is not None
+    assert release.source_commit == ""
+    assert release.source_metadata == kfgqpc_source()
+    assert release.rendition.names["ru"] == "KFGQPC HAFS"
+    assert release.staging_only is True
+
+
+@pytest.mark.django_db
+def test_qf_change_during_upload_prevents_activation(
+    quran_dataset: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = create_qf_source()
+    manifest = {"edition": "kfgqpc-hafs", "version": "v1", "source": kfgqpc_source()}
+    bundle = publication.PreparedRendition(
+        manifest,
+        "a" * 64,
+        quran_dataset["version"],
+        [],
+        [(tmp_path / "page.webp", ImmutableObjectSpec("test", "image/webp", 1, "a" * 64))],
+    )
+    monkeypatch.setattr(publication, "prepare_rendition", lambda _: bundle)
+
+    def update_source(*args: Any) -> None:
+        source.source_checksum_sha256 = "b" * 64
+        source.save()
+
+    uploader = Mock()
+    uploader.upload_path.side_effect = update_source
+    with pytest.raises(ValueError, match="source changed"):
+        publication.publish_rendition(tmp_path / "manifest.json", uploader=uploader)
+    assert not MushafRenditionRelease.objects.exists()
+
+
+@pytest.mark.django_db
+def test_export_source_is_public_content_only_and_rejects_partial_snapshot(
+    quran_dataset: dict[str, Any],
+) -> None:
+    source = create_qf_source()
+    output = StringIO()
+    with pytest.raises(CommandError, match="Incomplete source"):
+        call_command("export_qf_mushaf_source", mushaf=5, stdout=output)
+    assert output.getvalue() == ""
+    source.pages_count = 1
+    source.save()
+    QuranFoundationMushafPage.objects.create(
+        mushaf=source,
+        source_id=1,
+        page_number=1,
+        verse_mapping={"1": "1-2"},
+        verses_count=2,
+        words=[{"id": 1, "text": "بِسْمِ"}],
+    )
+    call_command("export_qf_mushaf_source", mushaf=5, stdout=output)
+    exported = json.loads(output.getvalue())
+    assert exported["source_checksum_sha256"] == publication.KFGQPC_SOURCE_SHA
+    assert exported["surahs"][0]["number"] == 1
+    assert set(exported["pages"][0]) == {"page_number", "verse_mapping", "words"}
+    assert "environment" not in exported
+    assert "settings" not in exported
+    assert source.cached_pages.count() == 1
+
+
+def test_bounded_parallel_uploads_finish_before_returning(tmp_path: Path) -> None:
+    uploads = [
+        (tmp_path / f"{n}.webp", ImmutableObjectSpec(str(n), "image/webp", 1, "a" * 64))
+        for n in range(30)
+    ]
+    uploader = Mock()
+    publication.upload_files(uploads, uploader, workers=4)
+    assert uploader.upload_path.call_count == 30
+    assert {call.args[1].key for call in uploader.upload_path.call_args_list} == {
+        str(n) for n in range(30)
+    }
+    uploader.upload_path.side_effect = ObjectStorageError("failed")
+    with pytest.raises(ObjectStorageError):
+        publication.upload_files(uploads, uploader, workers=4)
+    with pytest.raises(ValueError, match="workers"):
+        publication.upload_files(uploads, uploader, workers=100)

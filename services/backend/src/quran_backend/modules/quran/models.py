@@ -771,7 +771,8 @@ class MushafRenditionRelease(BaseModel):
         on_delete=models.PROTECT,
     )
     checksum_sha256 = models.CharField("SHA-256 полного набора", max_length=64)
-    source_commit = models.CharField("Commit источника", max_length=40)
+    source_commit = models.CharField("Git commit источника (если есть)", max_length=40, blank=True)
+    source_metadata = models.JSONField("Источник: издание, версия данных и шрифта", default=dict)
     source_url = models.URLField("Источник страниц")
     renderer = models.CharField("Версия раскладки", max_length=64)
     widths = models.JSONField("Разрешения страниц", default=list)

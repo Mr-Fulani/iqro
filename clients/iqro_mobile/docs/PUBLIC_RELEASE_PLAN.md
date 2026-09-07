@@ -24,6 +24,30 @@
 
 ## Состояние 2026-09-07
 
+### Следующий этап: существующий KFGQPC HAFS (Quran.Foundation 5)
+
+- Подготовлен отдельный адаптер **существующих** слов/строк QF 5 и официального
+  Unicode-шрифта `UthmanicHafs1Ver18`. Это не ещё один JMApps QCF. Полный read-only
+  snapshot закреплён по SHA; все 604 страницы и 6236 аятов прошли геометрический
+  аудит. Изображения готовятся отдельно от API/телефона в 720/1440/2160 px.
+- Публикация принимает `kfgqpc-hafs` в общий `/mushaf-renditions`, сохраняя
+  source metadata вместо выдуманного Git commit. Добавочная миграция `0006`;
+  canonical/audio/портреты не импортируются и не меняются. Смена QF source SHA
+  скрывает старое производное оформление без удаления данных.
+- Исправлен **production blocker Flutter**: раньше любая дополнительная визуальная
+  версия принудительно заменялась старым сканом. Теперь production допускает
+  только опубликованные `staging_only=false` записи из своего каталога; preview
+  или одна сохранённая preference доступа не дают. Каталог сохраняется для offline.
+  RU/EN/AR/TR различают опубликованное издание и staging preview.
+- Код: **761 backend tests passed, 7 opt-in skipped**, coverage 82.68%; Ruff/Mypy
+  зелёные, **354 Flutter tests passed, 13 opt-in skipped**, analyze без замечаний;
+  **26 source/renderer Python tests** прошли, включая прежние QCF-шрифты.
+- На этом checkpoint полный растровый bundle ещё строится; **не считать KFGQPC
+  установленным на сервере/телефоне или одобренным для production**. Следом:
+  full-bundle проверки, точечный staging deploy после backup, publication и device QA.
+  Другие QF варианты (включая V4 Tajweed) этим адаптером автоматически не подключаются.
+- Воспроизводимая подготовка: [KFGQPC.md](../../../ops/mushaf-glyph-pilot/KFGQPC.md).
+
 ### Актуальный checkpoint: QCF V2 опубликован на staging
 
 - Staging восстановлен без повторной сборки после согласованного удаления только

@@ -21,6 +21,7 @@ from quran_backend.modules.quran.models import (
     Surah,
 )
 from quran_backend.modules.quran.rendition_publication import publish_rendition
+from tests.test_mushaf_renditions import create_qf_source
 
 BUNDLE = os.environ.get("IQRO_MUSHAF_FULL_BUNDLE_DIR")
 MAPPING = os.environ.get("IQRO_CANONICAL_PAGE_MAPPING")
@@ -101,6 +102,8 @@ def test_full_bundle_publication_preserves_canonical_ids(quran_dataset: dict[str
     )
     uploader = Mock()
     manifest = Path(BUNDLE) / "manifest.json"
+    if json.loads(manifest.read_bytes())["edition"] == "kfgqpc-hafs":
+        create_qf_source()
     assert publish_rendition(manifest, uploader=uploader, validate_only=True) is None
     uploader.upload_path.assert_not_called()
     assert not MushafRenditionRelease.objects.exists()

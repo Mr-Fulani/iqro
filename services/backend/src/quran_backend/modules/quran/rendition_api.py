@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.conf import settings
-from django.db.models import F, QuerySet
+from django.db.models import F, Q, QuerySet, Subquery
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema
@@ -19,6 +19,7 @@ from quran_backend.modules.quran.models import (
     MushafRenditionPage,
     MushafRenditionRelease,
     PublicationStatus,
+    QuranFoundationMushaf,
 )
 from quran_backend.modules.quran.serializers import (
     MushafPageSerializer,
@@ -33,6 +34,19 @@ def visible_releases() -> QuerySet[MushafRenditionRelease]:
         canonical_version__status=PublicationStatus.PUBLISHED,
         published_at__isnull=False,
     ).select_related("rendition", "canonical_version__edition")
+    # QF content corrections invalidate old derived pages, never silently mix
+    # new words with old pixels/hit regions. Legacy JMApps releases remain valid.
+    current_qf_sources = QuranFoundationMushaf.objects.filter(
+        environment=settings.QURAN_QF_ENV, source_id=5, is_available=True
+    ).values("source_checksum_sha256")
+    releases = releases.filter(
+        Q(source_metadata={})
+        | Q(
+            source_metadata__kind="quran-foundation",
+            source_metadata__source_id=5,
+            source_metadata__source_checksum_sha256__in=Subquery(current_qf_sources),
+        )
+    )
     if not getattr(settings, "MUSHAF_STAGING_PREVIEWS", False):
         releases = releases.filter(staging_only=False)
     return releases

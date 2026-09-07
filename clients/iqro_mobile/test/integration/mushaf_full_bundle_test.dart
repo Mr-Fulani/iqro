@@ -12,14 +12,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final root = Platform.environment['IQRO_MUSHAF_FULL_BUNDLE_DIR'];
   test(
-    'complete QCF V2 bundle: 604 pages, canonical hits, all raster decoders',
+    'complete native bundle: 604 pages, canonical hits, all raster decoders',
     () async {
       final manifestBytes = await File('$root/manifest.json').readAsBytes();
       final checksumFile = await File('$root/manifest.sha256').readAsString();
       expect(checksumFile, '${sha256.convert(manifestBytes)}  manifest.json\n');
       final manifest = jsonDecode(utf8.decode(manifestBytes)) as Map;
       expect(manifest['publication_scope'], 'staging');
-      expect(manifest['edition'], 'qcf-v2-hafs');
+      expect(manifest['edition'], anyOf('qcf-v2-hafs', 'kfgqpc-hafs'));
       final pages = (manifest['pages'] as List).cast<Map>();
       expect(pages.map((p) => p['page']), List.generate(604, (i) => i + 1));
       final verses = <String>{};
@@ -32,7 +32,7 @@ void main() {
         );
         final page = MushafPageData.fromJson({
           ...raw,
-          'edition_code': 'qcf-v2-hafs',
+          'edition_code': manifest['edition'],
         });
         for (final size in [const Size(360, 720), const Size(800, 1280)]) {
           final layout = MushafScanLayout.page(

@@ -534,6 +534,12 @@ abstract class AppLocalizations {
   /// **'Hafs · IQRO layout · preview'**
   String get mushafPreviewDescription;
 
+  /// No description provided for @mushafPublishedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Hafs · online and offline reading'**
+  String get mushafPublishedDescription;
+
   /// No description provided for @mushafTextDescription.
   ///
   /// In en, this message translates to:
