@@ -78,6 +78,13 @@
 - Перед deploy все прежние fingerprints совпали: 18 чтецов, 36 recitations,
   4104 tracks, 1 canonical edition, 12472 ayahs двух версий. Никакой очистки
   диска в этом этапе не выполнялось. Production/store publication не выполнялась.
+- Cold-start исправление и результаты полного набора закоммичены в `4a5969c`.
+  Финальная staging profile APK собрана (36.3 s), 58 376 794 байта, SHA-256
+  `5b8b0712cec6a5a66eb743b1053198f95f83b5d303008405fafa145b024eb7ef`.
+  Установлена поверх `forum.iqro.app` на Redmi Note 7 / `91aedea7`: `Success`.
+  Это обновление **кода**, не установка KFGQPC-контента на устройство: его каталог
+  появится после разрешённого staging deploy/publication. Полное device QA нового
+  KFGQPC (audio/hold/rotation/offline) остаётся после публикации.
 
 ### Актуальный checkpoint: QCF V2 опубликован на staging
 
