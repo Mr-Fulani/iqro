@@ -24,7 +24,71 @@
 
 ## Состояние 2026-09-07
 
-### Следующий этап: существующий KFGQPC HAFS (Quran.Foundation 5)
+### Актуальный checkpoint: KFGQPC опубликован, Android/offline QA пройдено
+
+- Пользователь подтвердил offsite-передачу конкретного дампа
+  `quran_staging_20260907T200827Z.dump` в прежний приватный bucket. Upload с
+  `--keep-existing` и полное обратное скачивание/SHA verification прошли;
+  старые резервные копии сохранены.
+- На staging доставлен commit `a0624fb`, применена добавочная миграция `0006`.
+  Backend собран штатным Dockerfile; неизменённые web/gateway/postgres/caddy
+  образы переиспользованы без повторной сборки. Секреты и volumes не менялись.
+- `kfgqpc-hafs@kfgqpc-iqro-20260907-v1` включён атомарно после **1812/1812**
+  immutable uploads/checks. Передача полного набора на сервер выполнена через
+  одноразовый RAM mount (512 MiB; контейнер ограничен 1 GiB, наблюдалось около
+  541 MiB), без второй дисковой копии bundle. Локальный набор сохранён.
+- Проверка публичного API выявила PostgreSQL-specific ошибку `jsonb = varchar`
+  в source checksum subquery. Исправлена `KeyTextTransform`, добавлена регрессия
+  с настоящим PostgreSQL SQL compiler: fail до исправления, pass после.
+  **762 backend tests passed, 7 opt-in skipped**, coverage 82.68%; Ruff/format
+  и Mypy (270 файлов) зелёные. Дополнительный read-only прогон на реальном
+  staging PostgreSQL проверил catalog/page/offline для обоих изданий и закрытый
+  production gate. Никакие тестовые таблицы в рабочей базе не создавались.
+- Действующий backend/worker/beat commit **`5b4ae94`**. Исправленный immutable
+  образ собран поверх точного `a0624fb` image с заменой единственного изменённого
+  runtime-модуля; dependency lock/Dockerfile/остальной runtime не менялись.
+  SHA модуля в работающем контейнере совпал с Git. Повторная полная сборка при
+  ограниченном диске не выполнялась. Не использовать промежуточный `a0624fb`
+  как rollback target: в нём есть известная ошибка SQL.
+- Public API с мобильными `Accept`/`Accept-Language` показывает оба native
+  издания. Все три ширины страниц **1, 3, 50, 77, 604** скачаны с CDN и проверены
+  по SHA/размеру. KFGQPC offline: 604 страницы, 2160 px, **228 046 646 байт**,
+  checksum `da6f1e6081148a1570f7dfd04603e18fd92c69cd56b06bb9084e14088e02b094`.
+- После публикации все прежние fingerprints снова совпали: 18 чтецов с admin
+  портретами, 36 recitations, 4104 tracks, canonical edition/12472 ayahs двух
+  версий. Обычный Мадинский Мусхаф и ранее скачанный QCF не изменены.
+- На установленной profile APK Redmi Note 7 выбран KFGQPC, открыта страница 50.
+  Short tap выделил **3:7**, play запустил «Аль Имран · 7» / Saad al-Ghamdi
+  (MediaSession state=3, error=null). Hold открыл фрагмент той же страницы с
+  оригинальным шрифтом и переводом. Landscape → portrait: текст виден, страница
+  и выделение сохраняются; системные rotation 1/0 возвращены. Аудио на паузе.
+- Перетягивание точек перевело KFGQPC **50 → 51**, `dumpsys vibrator` подтвердил
+  OneShot 22 ms от `forum.iqro.app`. Чтение работало во время загрузки; разовый
+  `dumpsys meminfo` показал ~293 MiB total PSS (не полноценный performance benchmark).
+- Полная offline-загрузка завершена: **604/604, 217 MB/217 MB, ready**.
+  После force-stop и cold start (3002 ms) при **Active default network: none**
+  выбранный KFGQPC и offline-статус сохранились. Впервые открыты его страницы
+  **604 → 603** из локального пакета, текст полностью виден. В просмотренном
+  логе нового процесса `11756` нет Unhandled/SQLiteException/DatabaseException/
+  FATAL/overflow/ANR. Wi-Fi/data восстановлены в 1/1, rotation в 1/0.
+  Возвращено пользовательское место **страница 50 / 3:7**, выбран KFGQPC,
+  аудио не воспроизводится. Завершение device QA — ночь 2026-09-08, без повторной
+  установки APK. Полное скачивание заняло около 10 минут на этой сети/устройстве;
+  это фоновая установка, чтение при ней оставалось доступным.
+- Доказательства: `/private/tmp/iqro-kfgqpc-download-ready-check-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-ayah7-selected-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-ayah7-playing-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-ayah7-details-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-landscape-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-portrait-return-20260907.png`,
+  `/private/tmp/iqro-kfgqpc-page604-offline-20260908.png`,
+  `/private/tmp/iqro-kfgqpc-page603-offline-20260908.png`.
+- Health/runtime budget зелёные, backup/heartbeat timers активны. Web smoke
+  RU/EN/AR/TR выполнен в браузере. На сервере осталось около **0.85 GiB**:
+  дальнейшие тяжёлые сборки требуют отдельного решения по ёмкости; **никакой
+  очистки диска не выполнялось**. Production/store release не выполнялся.
+
+### История: подготовка существующего KFGQPC HAFS (Quran.Foundation 5)
 
 - Подготовлен отдельный адаптер **существующих** слов/строк QF 5 и официального
   Unicode-шрифта `UthmanicHafs1Ver18`. Это не ещё один JMApps QCF. Полный read-only
@@ -86,7 +150,7 @@
   появится после разрешённого staging deploy/publication. Полное device QA нового
   KFGQPC (audio/hold/rotation/offline) остаётся после публикации.
 
-### Актуальный checkpoint: QCF V2 опубликован на staging
+### Предыдущий checkpoint: QCF V2 опубликован на staging
 
 - Staging восстановлен без повторной сборки после согласованного удаления только
   42 новых BuildKit cache IDs. Действующий backend commit `5ca2efa`, health/runtime

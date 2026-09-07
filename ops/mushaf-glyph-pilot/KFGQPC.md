@@ -50,3 +50,35 @@
 Полные существующие backend/Flutter bundle-тесты принимают `kfgqpc-hafs` и
 проверяют все 1812 файлов, canonical ayah IDs и попадания тапов. В обычном прогоне
 без пути к полному набору эти тесты пропускаются, а не объявляются выполненными.
+
+## Staging publication 2026-09-07
+
+- Полный release: `kfgqpc-iqro-20260907-v1`; manifest SHA
+  `cc9419d4cd157e1ced820578048b5ebe3a5e0749212eb81bc803c963af91a0e6`.
+  Включён после проверки всех 1812 объектов. Публичные контрольные страницы:
+  1, 3, 50, 77, 604, все три разрешения. Проверять `/quran/mushaf-renditions`,
+  а не legacy-флаг `foundation/mushafs[].native_rendering`.
+- Backend исправление `5b4ae94`: JSON checksum перед сравнением с varchar
+  subquery преобразуется `KeyTextTransform` (PostgreSQL `->>`). SQLite-тестов
+  недостаточно: добавить SQL compiler regression и read-only live PostgreSQL
+  smoke каталога, page и offline для обоих изданий. В staging не запускать pytest
+  с созданием/очисткой таблиц рабочей БД.
+- На малом staging использован дополнительный **одноразовый** compose override:
+  backend `mem_limit: 1024m`, tmpfs `/bundle:size=512m,mode=0777`. Архив поступает
+  через stdin в `run --rm --no-deps -T`, распаковывается только в RAM, затем
+  выполняются validate-only и publication (`upload_workers=4`). Это не изменение
+  лимитов работающего API и не повод очищать Docker/диск. Наблюдалось ~541 MiB.
+  Обязательны заранее проверенный backup и достаточный MemAvailable.
+- После полной сборки `a0624fb` на диске осталось ~0.85 GiB. Для SQL-исправления
+  только `rendition_api.py` помещён отдельным COPY-слоем поверх **точного**
+  исходного runtime image; никаких изменений в live container вручную.
+  Новый image digest:
+  `sha256:2c5b5495fabef3ba9f197e260cd6e38e63c5e1541be372069de97e0793a31391`.
+  Runtime source SHA:
+  `f5ceb14dc616f94a38e59f980f58e23b449b0497f79218a5cb4627e7e5de33a9`.
+  Этот приём допустим только при доказанно неизменных dependencies/Dockerfile
+  и остальных runtime-файлах; не заменяет обычную полную release-сборку.
+- Промежуточный `a0624fb` содержит SQL-ошибку: не откатываться на него.
+  Предыдущий известный исправный backend — `5ca2efa`; добавочная миграция `0006`
+  совместима с ним без удаления нового столбца. Перед любым откатом всё равно
+  проверить совместимость текущих данных/релизов. Данные и медиа не удалять.

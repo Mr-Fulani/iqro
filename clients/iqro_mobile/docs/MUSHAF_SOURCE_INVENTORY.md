@@ -11,23 +11,27 @@ offline/release находятся в [плане выпуска](PUBLIC_RELEASE
 Ниже — результаты исходного аудита остальных источников, не акт их установки.
 
 Обновление KFGQPC HAFS (source 5): полный 604-страничный mobile bundle подготовлен
-**локально** из существующего backend snapshot и оригинального `UthmanicHafs1Ver18`.
+из существующего backend snapshot и оригинального `UthmanicHafs1Ver18` и **опубликован
+на staging** как `kfgqpc-hafs@kfgqpc-iqro-20260907-v1`.
 Все 6236 ayah/page mappings совпали, 1812 WebP и hit regions проверены. Адаптер
 публикует его в общий `/mushaf-renditions` как `kfgqpc-hafs`; Git commit для QF
-не выдумывается, версия snapshot/font сохраняется отдельно. Подключение на staging
-ждёт разрешения на offsite backup, поэтому таблица текущего публичного API ниже
-пока остаётся верной. Подробности: [подготовка KFGQPC](../../../ops/mushaf-glyph-pilot/KFGQPC.md).
+не выдумывается, версия snapshot/font сохраняется отдельно. Выбор на Android,
+страница 50, tap/аудио 3:7, hold/перевод и поворот проверены. Полный пакет
+604/604 (217 MiB) скачан; после cold restart без сети открыты страницы 604 и 603.
+Точный итог QA — в [плане выпуска](PUBLIC_RELEASE_PLAN.md). Подробности:
+[подготовка KFGQPC](../../../ops/mushaf-glyph-pilot/KFGQPC.md).
 
 ## Наш backend / Quran.Foundation
 
 Проверен публичный staging endpoint `/api/v1/quran/foundation/mushafs`.
 Все четыре записи относятся к Hafs, 604 страницы, 15 строк — это не четыре
-разных риваята. Во всех `native_rendering.available=false`.
+разных риваята. В исходном legacy-каталоге `native_rendering.available=false`;
+готовые дополнительные оформления выдаются через `/quran/mushaf-renditions`.
 
-| Source | Издание | Web | Что отсутствует для native |
+| Source | Издание | Web | Статус native |
 |---|---|---|---|
 | 1 | QCF V2, печать 1441 AH | Постраничные WOFF2 | Опубликованный проверенный native bundle |
-| 5 | KFGQPC HAFS | Unicode WOFF2 | Native страницы/раскладка и точная карта аятов |
+| 5 | KFGQPC HAFS | Unicode WOFF2 | Подключён через общий каталог: 604 страницы, точные regions, 3 ширины |
 | 11 | Uthmani Recite Quran tajweed images | Asset URL недоступен | Подтверждённый источник изображений и native bundle |
 | 19 | QCF V4 Tajweed | Постраничные COLRv1 WOFF2 | Проверенный цветной native render и карта аятов |
 
@@ -36,7 +40,7 @@ offline/release находятся в [плане выпуска](PUBLIC_RELEASE
 сама по себе не откроет издание в приложении. Нужно реализовать edition-aware
 manifest/cache/page renderer и ayah hit testing, затем убрать запрет для
 проверенных возможностей. Нельзя безусловно заменить `false` на `true`.
-Новый JMApps QCF подключён через отдельный `/quran/mushaf-renditions` и
+Новые JMApps QCF и QF 5 KFGQPC подключены через отдельный `/quran/mushaf-renditions` и
 `NativeMushafEdition`, с раздельными content/cache identities, не через этот флаг.
 
 Существующий [backend pipeline](../../../services/backend/docs/qf-native-mushaf-pages.md)
