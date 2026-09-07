@@ -407,6 +407,17 @@ make staging-backup-offsite-verify
 make staging-backup-offsite-restore-check
 ```
 
+Если операция согласована **без удаления прежних копий**, стандартный
+`staging-backup-offsite` не использовать: он запускает retention pruning. Локальный
+dump создавать с runtime override `BACKUP_RETENTION_DAYS=0`, затем запускать
+`offsite.py upload --keep-existing` в operations-контейнере и обычный `verify`.
+Флаг отключает перечисление/удаление старых offsite объектов; проверка SHA-256 и
+обновление указателя `latest.json` сохраняются. Настройки в `staging.env` не менять.
+Перед обновлением старого deployment новый проверенный helper можно доставить в
+отдельный временный каталог и подключить read-only, не заменяя действующий код.
+Недостаток свободного места не обходить снижением backup safety threshold:
+сначала согласовать точную очистку или увеличение диска.
+
 Одноразовая настройка отдельного private R2 bucket выполняется без вывода credentials:
 
 ```bash

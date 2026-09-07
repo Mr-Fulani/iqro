@@ -303,7 +303,9 @@ def _verify_head(
         )
 
 
-def upload_latest(settings: Settings, store: ObjectStore) -> dict[str, Any]:
+def upload_latest(
+    settings: Settings, store: ObjectStore, *, keep_existing: bool = False
+) -> dict[str, Any]:
     backup = latest_backup(settings.backup_dir)
     checksum = expected_checksum(backup)
     size = backup.stat().st_size
@@ -365,7 +367,10 @@ def upload_latest(settings: Settings, store: ObjectStore) -> dict[str, Any]:
         CacheControl="no-store",
         Metadata={"sha256": checksum, "environment": settings.environment},
     )
-    prune(settings, store, preserve={key, checksum_key, settings.latest_manifest_key})
+    if not keep_existing:
+        prune(
+            settings, store, preserve={key, checksum_key, settings.latest_manifest_key}
+        )
     return manifest
 
 
@@ -491,7 +496,12 @@ def _parser() -> argparse.ArgumentParser:
         description="Upload and verify immutable PostgreSQL backups in private S3 storage."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("upload")
+    upload = subparsers.add_parser("upload")
+    upload.add_argument(
+        "--keep-existing",
+        action="store_true",
+        help="Skip retention pruning and preserve all previous offsite backups.",
+    )
     subparsers.add_parser("verify")
     download = subparsers.add_parser("download")
     download.add_argument("--output", type=Path, required=True)
@@ -505,7 +515,7 @@ def main(argv: list[str] | None = None) -> int:
         settings = load_settings()
         store = object_store(settings)
         if args.command == "upload":
-            manifest = upload_latest(settings, store)
+            manifest = upload_latest(settings, store, keep_existing=args.keep_existing)
             print(
                 "Offsite PostgreSQL backup uploaded and HEAD/checksum verified: "
                 f"{manifest['filename']}"

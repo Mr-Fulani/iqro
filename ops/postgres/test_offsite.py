@@ -8,6 +8,7 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from ops.postgres.offsite import (
     OffsiteBackupError,
@@ -15,6 +16,7 @@ from ops.postgres.offsite import (
     download_latest,
     latest_backup,
     load_settings,
+    main,
     prune,
     upload_latest,
     verify_latest,
@@ -103,6 +105,29 @@ def write_backup(directory: Path, name: str, content: bytes) -> Path:
 
 
 class OffsiteBackupTests(unittest.TestCase):
+    def test_upload_keep_existing_never_lists_or_deletes_old_backups(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            backup = write_backup(directory, "quran_20260907T010000Z.dump", b"database")
+            config = settings(directory)
+            store = FakeStore()
+            old_key = f"{config.root_prefix}/quran_20200101T010000Z.dump"
+            store.objects[old_key] = b"previous database"
+            with (
+                patch.object(
+                    store, "get_paginator", side_effect=AssertionError("pruning")
+                ),
+                patch.object(
+                    store, "delete_objects", side_effect=AssertionError("deletion")
+                ),
+                patch("ops.postgres.offsite.load_settings", return_value=config),
+                patch("ops.postgres.offsite.object_store", return_value=store),
+            ):
+                self.assertEqual(main(["upload", "--keep-existing"]), 0)
+                verified = verify_latest(config, store)
+            self.assertEqual(verified["filename"], backup.name)
+            self.assertEqual(store.objects[old_key], b"previous database")
+
     def test_settings_require_private_https_storage(self) -> None:
         values = {
             "BACKUP_OBJECT_STORAGE_ENDPOINT_URL": "http://user:secret@example.test",
