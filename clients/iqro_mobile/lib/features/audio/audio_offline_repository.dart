@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_package_items.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'audio_models.dart';
@@ -654,50 +655,24 @@ class AudioOfflineRepository {
         where: 'package_id = ?',
         whereArgs: <Object?>[manifest.packageId],
       );
+      final items = transaction.batch();
       for (final track in manifest.tracks) {
         final localPath = p.join(packageDirectory.path, track.asset.fileName);
-        await transaction.rawInsert(
-          '''
-          INSERT INTO offline_package_items (
-            package_id, item_key, item_number, file_name, local_path, url,
-            checksum_sha256, size_bytes, metadata, status,
-            downloaded_bytes, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)
-          ON CONFLICT(package_id, item_key) DO UPDATE SET
-            file_name = excluded.file_name,
-            local_path = excluded.local_path,
-            url = excluded.url,
-            metadata = excluded.metadata,
-            updated_at = excluded.updated_at,
-            status = CASE
-              WHEN offline_package_items.checksum_sha256 = excluded.checksum_sha256
-                AND offline_package_items.size_bytes = excluded.size_bytes
-              THEN offline_package_items.status
-              ELSE 'pending'
-            END,
-            downloaded_bytes = CASE
-              WHEN offline_package_items.checksum_sha256 = excluded.checksum_sha256
-                AND offline_package_items.size_bytes = excluded.size_bytes
-              THEN offline_package_items.downloaded_bytes
-              ELSE 0
-            END,
-            checksum_sha256 = excluded.checksum_sha256,
-            size_bytes = excluded.size_bytes
-          ''',
-          <Object?>[
-            manifest.packageId,
-            'surah:${track.surah}',
-            track.surah,
-            track.asset.fileName,
-            localPath,
-            track.asset.url.toString(),
-            track.asset.sha256,
-            track.asset.bytes,
-            jsonEncode(track.checksumJson),
-            now,
-          ],
+        enqueueOfflinePackageItem(
+          items,
+          packageId: manifest.packageId,
+          itemKey: 'surah:${track.surah}',
+          itemNumber: track.surah,
+          fileName: track.asset.fileName,
+          localPath: localPath,
+          url: track.asset.url.toString(),
+          checksum: track.asset.sha256,
+          sizeBytes: track.asset.bytes,
+          metadata: jsonEncode(track.checksumJson),
+          updatedAt: now,
         );
       }
+      await items.commit(noResult: true);
     });
   }
 

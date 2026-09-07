@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_package_items.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -434,50 +435,24 @@ class MushafOfflineRepository {
         where: 'package_id = ?',
         whereArgs: <Object?>[manifest.packageId],
       );
+      final items = transaction.batch();
       for (final page in manifest.pages) {
         final localPath = p.join(packageDirectory.path, page.fileName);
-        await transaction.rawInsert(
-          '''
-          INSERT INTO offline_package_items (
-            package_id, item_key, item_number, file_name, local_path, url,
-            checksum_sha256, size_bytes, metadata, status,
-            downloaded_bytes, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)
-          ON CONFLICT(package_id, item_key) DO UPDATE SET
-            file_name = excluded.file_name,
-            local_path = excluded.local_path,
-            url = excluded.url,
-            metadata = excluded.metadata,
-            updated_at = excluded.updated_at,
-            status = CASE
-              WHEN offline_package_items.checksum_sha256 = excluded.checksum_sha256
-                AND offline_package_items.size_bytes = excluded.size_bytes
-              THEN offline_package_items.status
-              ELSE 'pending'
-            END,
-            downloaded_bytes = CASE
-              WHEN offline_package_items.checksum_sha256 = excluded.checksum_sha256
-                AND offline_package_items.size_bytes = excluded.size_bytes
-              THEN offline_package_items.downloaded_bytes
-              ELSE 0
-            END,
-            checksum_sha256 = excluded.checksum_sha256,
-            size_bytes = excluded.size_bytes
-          ''',
-          <Object?>[
-            manifest.packageId,
-            'page:${page.number}',
-            page.number,
-            page.fileName,
-            localPath,
-            page.url.toString(),
-            page.sha256,
-            page.bytes,
-            jsonEncode(page.metadata),
-            now,
-          ],
+        enqueueOfflinePackageItem(
+          items,
+          packageId: manifest.packageId,
+          itemKey: 'page:${page.number}',
+          itemNumber: page.number,
+          fileName: page.fileName,
+          localPath: localPath,
+          url: page.url.toString(),
+          checksum: page.sha256,
+          sizeBytes: page.bytes,
+          metadata: jsonEncode(page.metadata),
+          updatedAt: now,
         );
       }
+      await items.commit(noResult: true);
     });
   }
 

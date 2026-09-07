@@ -24,6 +24,38 @@
 
 ## Состояние 2026-09-07
 
+### Актуальный checkpoint: QCF V2 опубликован на staging
+
+- Staging восстановлен без повторной сборки после согласованного удаления только
+  42 новых BuildKit cache IDs. Действующий backend commit `5ca2efa`, health/runtime
+  checks и timers зелёные; прежние backups, volumes и секреты сохранены.
+- `qcf-v2-hafs@qcf-v2-iqro-20260907-v3` атомарно подключён после **1812/1812**
+  uploads и проверок. Public API: 604 страницы, widths 720/1440/2160.
+  Публичные файлы страниц 1, 3, 245, 604 сверены по размеру/SHA во всех разрешениях.
+  Default offline manifest: 604 страницы, 259 748 712 байт, checksum
+  `5f3801c48e621d5ae849c6050b2832700bffafa9a15677d11cb9884098d1e9ca`.
+- После publication все 5 fingerprints каталогов ниже снова совпали: чтецы,
+  загруженные admin портреты, 36 recitations, 4104 tracks и canonical IDs сохранены.
+- Новый вариант появился на Android после штатного обновления edge cache (ключ
+  зависит также от `Accept`; проверять с `Accept: application/json`, `Accept-Language: ru`).
+  Кэш не очищался. SHA установленной APK совпал с подготовленной `737c5644…`.
+- На Redmi Note 7 открыты QCF страницы 126 и 127; короткий тап выделяет 5:111,
+  play запускает «Аль-Маида · 111» / Saad al-Ghamdi, MediaSession state=3/error=null.
+  Удержание: фрагмент той же QCF-страницы, перевод и тафсир. Портрет → альбомный →
+  портрет: страница сохраняется, текст виден; исходные rotation 1/0 восстановлены.
+- Device QA обнаружил **реальный offline blocker**: SQLite на Redmi отвергает
+  `ON CONFLICT ... DO UPDATE` (`near "ON": syntax error`). Тот же код был в аудио.
+  Подготовка items заменена общим transactional batch: INSERT OR IGNORE + UPDATE,
+  без REPLACE/удаления записей, с сохранением прогресса при прежних SHA/размере.
+  7 новых регрессий + профильный прогон **17 passed**, анализатор без замечаний.
+  Полный обычный прогон: **349 passed, 13 skipped** (opt-in source/full-bundle
+  проверки выполнялись отдельно до deploy, см. ниже). Обновлённая APK и повторная
+  offline-проверка ещё выполняются. Backend-образ не требует повторной сборки.
+- Это staging preview оформления IQRO, не официальное факсимиле и не разрешение
+  production/store release. Контентный review и остальные release gates остаются.
+
+### История выполненных этапов и предыдущих ограничений
+
 - Этап 1: `1db18d2`, Android native 22 ms page tick, настройка приложения,
   системный opt-out, unit/widget-тесты. Profile APK установлен; `dumpsys vibrator`
   показывает OneShot 22 ms от `forum.iqro.app` при перелистывании. Пользователь
@@ -124,8 +156,6 @@
 - Redmi Note 7 `91aedea7` снова определяется по USB; новый QCF нельзя проверить
   end-to-end до завершения staging publication. Установленная APK остаётся прежней.
 
-### Android checkpoint полного подключения
-
 ### Попытка staging deployment 5ca2efa: требуется дополнительное место
 
 - Пользователь согласовал точные 51 ID старого BuildKit-кэша. Адресная обработка
@@ -157,6 +187,26 @@
 - Android `91aedea7` подключён, IQRO запускается. Исходные настройки поворота:
   accelerometer_rotation=1, user_rotation=0; не изменялись. QCF end-to-end пока не проверен.
 
+### Staging восстановлен после отдельного разрешения на новый кэш
+
+- Пользователь отдельно согласовал 42 ID нового кэша (около 3.12 GB). Удалены
+  только эти записи через точные ID, с проверкой Reclaimable/Shared; images,
+  контейнеры данных, volumes, backups и secret env не удалялись.
+- Запущены **уже собранные** `staging-5ca2efa` images через `up --no-build`.
+  PostgreSQL healthy; `quran.0005_mushaf_renditions` applied; полный runtime budget
+  check зелёный. `/api/v1/health/ready`: database/cache/throttling=true.
+  `/` перенаправляет на `/ru`; robots.txt запрещает индексацию; оба timer active.
+- После recovery все пять catalog fingerprints выше совпали байт-в-байт.
+  В браузере открыты RU/EN/AR/TR; на RU загрузились каталоги чтецов и сур.
+- Полный QCF bundle передан отдельно в
+  `/opt/quran/mushaf-renditions/qcf-v2-iqro-20260907-v3` (483 MiB).
+  Manifest SHA совпал; **серверный validate-only: 604 pages verified; no writes**.
+  Свободно около 2.3 GiB. Начата immutable publication; включение каталога
+  только после всех 1812 uploads/проверок. Не считать начало публикации её завершением.
+- Для следующей сборки текущего запаса недостаточно: прежние 3.8 GiB были заняты
+  пересозданным build-кэшем. До нового build требуется отдельное планирование места;
+  не запускать очистку автоматически и не повторять build ради старта готовых images.
+
 ### Предыдущий Android checkpoint полного подключения
 
 - Код `a6bd353` зафиксирован. Profile staging APK установлен через
@@ -182,9 +232,10 @@
   backup учитывать, что старые backup scripts содержат retention/prune:
   разрешение на новую копию **не** разрешает удалять прежние копии.
 
-Ближайшее продолжение: полный corpus QA → commit → разрешённый проверенный backup
-→ staging publication → актуальная profile APK → Android выбор/тап/удержание/
-аудио/аватарки/поворот/offline/restart. Не помечать этот чеклист выполненным по
-одним только unit-тестам. Действующий Мусхаф, аудио и портреты сохраняются.
+Ближайшее продолжение: закончить regression/commit исправления Android SQLite,
+установить актуальную profile APK и повторить полный offline/restart на Redmi.
+Corpus QA, backup, staging publication, выбор/тап/удержание/аудио/поворот уже
+проверены в актуальном checkpoint выше. Не заменять device QA одними unit-тестами.
+Действующий Мусхаф, аудио и портреты сохраняются.
 Для массового выпуска остаются
 остальные проверки этапа 6, production signing и согласование публикации.
