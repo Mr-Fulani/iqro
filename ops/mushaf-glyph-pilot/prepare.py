@@ -25,7 +25,7 @@ import uharfbuzz as hb
 
 WIDTH, HEIGHT, MARGIN, ROW = 1000, 1600, 24, 96
 TOP = (HEIGHT - ROW * 15) / 2
-VERSION = "iqro-glyph-pilot-3"
+VERSION = "iqro-glyph-pilot-4"
 EXPECTED_RUNTIME = {"fonttools": "4.43.0", "uharfbuzz": "0.56.1", "harfbuzz": "14.4.0"}
 
 
@@ -282,6 +282,77 @@ def place(shaped, x, baseline, scale):
     return result
 
 
+@dataclass(frozen=True)
+class PageTypography:
+    """One baseline grid and glyph scale; never justify by deforming a word.
+
+    Ink bounds differ with diacritics. Those differences must not move the
+    baseline or the following row. Use the page's shared ascent/descent, not
+    the ink height of each individual line. Gaps are in canvas units so both
+    source adapters follow the same optical spacing policy.
+    """
+    row_height: float
+    scale: float
+    baseline_offset: float
+
+    @classmethod
+    def fit(cls, verse_lines, row_height=ROW):
+        shapes = [s for items in verse_lines for s, _ in items]
+        require(shapes and row_height > 0, "Missing line metrics")
+        ascent = max(s.bounds[3] for s in shapes)
+        descent = min(s.bounds[1] for s in shapes)
+        minimum_gap = row_height / 12
+        width_scale = min((WIDTH - 2 * MARGIN - minimum_gap * (len(items) - 1)) /
+                          sum(s.width for s, _ in items) for items in verse_lines)
+        scale = min(width_scale, (row_height - row_height / 12) / (ascent - descent))
+        require(math.isfinite(scale) and scale > 0, "Invalid line metrics")
+        baseline = (row_height - (ascent - descent) * scale) / 2 + ascent * scale
+        return cls(row_height, scale, baseline)
+
+    def horizontal(self, widths, *, centered):
+        require(widths and all(math.isfinite(w) and w > 0 for w in widths), "Invalid word widths")
+        free = WIDTH - 2 * MARGIN - sum(widths)
+        require(free >= -0.000001, "Line overflows page")
+        # A short source line stays short. Never turn unused paper width into
+        # unbounded spaces (previously up to 72 units in KFGQPC, uncapped in QCF).
+        gap = min(self.row_height / (8 if centered else 4),
+                  max(0, free) / max(1, len(widths) - 1))
+        total = sum(widths) + gap * (len(widths) - 1)
+        right = (WIDTH + total) / 2 if centered else WIDTH - MARGIN
+        return gap, right
+
+
+def validate_typography(page):
+    """Fail the content build before publishing drifting rows or spaced-out words."""
+    rows = page["lines"]
+    require(rows and len({r["line"] for r in rows}) == len(rows), "Duplicate/missing typography rows")
+    verses = [r for r in rows if r["kind"] == "ayah"]
+    require(verses, "Missing verse line metrics")
+    first = verses[0]
+    by_line = {r["line"]: r for r in rows}
+    for row in rows:
+        require(all(math.isfinite(row[k]) for k in ("top", "height", "baseline", "scale", "word_gap")),
+                "Nonfinite typography")
+        require(abs(row["height"] - first["height"]) < .0001, "Uneven line grid")
+        require(0 <= row["word_gap"] <= row["height"] / (8 if row["centered"] else 4) + .0001,
+                "Excessive word spacing")
+        if row["kind"] == "ayah":
+            require(abs(row["scale"] - first["scale"]) < .0000001, "Verse font scale changes within page")
+            require(abs(row["baseline"] - first["baseline"] -
+                        (row["line"] - first["line"]) * first["height"]) < .0001,
+                    "Uneven text baselines")
+    previous = {}
+    for glyph in page["glyphs"]:
+        row = by_line[glyph["line"]]
+        left, top, right, bottom = glyph["bounds"]
+        require(top + .0001 >= row["top"] and bottom - .0001 <= row["top"] + row["height"],
+                "Glyph leaves its row")
+        if glyph["line"] in previous:
+            require(abs(previous[glyph["line"]] - right - row["word_gap"]) < .0002,
+                    "Word positions differ from spacing metrics")
+        previous[glyph["line"]] = left
+
+
 def build_page(db, root, lock, number):
     require(number in lock["sample_pages"], "Page not pinned by this pilot lock")
     fonts = {}
@@ -312,27 +383,16 @@ def build_page(db, root, lock, number):
             prepared.append((row, items))
         require(verse_shapes, "Page has no verse glyphs")
         verse_lines = [items for row, items in prepared if row["line_type"] == "ayah"]
-        longest = max(sum(s.width for s, _ in items) for items in verse_lines)
-        ink_height = sum(max(s.bounds[3] for s, _ in items) - min(s.bounds[1] for s, _ in items)
-                         for items in verse_lines)
-        # One uniform font scale for the entire page. Allocate vertical space by
-        # each line's actual ink bounds instead of combining the tallest mark on
-        # one line with the deepest descender from a different line 15 times.
-        # Leading remains >= 6 canvas units; no line intersects its neighbour.
-        scale = min((WIDTH - 2 * MARGIN - 48) / longest,
-                    len(verse_lines) * (ROW - 6) / ink_height)
-        leading = (len(verse_lines) * ROW - ink_height * scale) / len(verse_lines)
+        typography = PageTypography.fit(verse_lines)
         block_offset = (15 - len(rows)) / 2 if number in (1, 2) else 0
-        glyphs, regions = [], []
+        glyphs, regions, line_metrics = [], [], []
         top = TOP + block_offset * ROW
         for row, items in prepared:
             is_verse = row["line_type"] == "ayah"
+            row_height = ROW
             if is_verse:
-                line_scale = scale
-                ascent = max(s.bounds[3] for s, _ in items)
-                descent = min(s.bounds[1] for s, _ in items)
-                row_height = (ascent - descent) * scale + leading
-                baseline = top + leading / 2 + ascent * scale
+                line_scale = typography.scale
+                baseline = top + typography.baseline_offset
             else:
                 row_height = ROW
                 box = union([s.bounds for s, _ in items])
@@ -341,10 +401,10 @@ def build_page(db, root, lock, number):
                 baseline = top + ROW / 2 + (box[3] + box[1]) * line_scale / 2
             widths = [s.width * line_scale for s, _ in items]
             centered = bool(row["is_centered"])
-            gap = 7 if centered else (WIDTH - 2 * MARGIN - sum(widths)) / max(1, len(items) - 1)
-            require(gap >= 0, "Line overflows page")
-            total_width = sum(widths) + gap * (len(items) - 1)
-            right = (WIDTH + total_width) / 2 if centered else WIDTH - MARGIN
+            gap, right = typography.horizontal(widths, centered=centered)
+            line_metrics.append({"line": row["line_number"], "kind": row["line_type"],
+                                 "top": top, "height": row_height, "baseline": baseline,
+                                 "scale": line_scale, "word_gap": gap, "centered": centered})
             verse_boxes = defaultdict(list)
             for (shaped, word), width in zip(items, widths, strict=True):
                 left = right - width
@@ -367,7 +427,7 @@ def build_page(db, root, lock, number):
                   "edition": lock["edition"], "source_commit": lock["commit"],
                   "source_lock_sha256": hashlib.sha256(canonical(lock)).hexdigest(),
                   "page": number, "width": WIDTH, "height": HEIGHT,
-                  "glyphs": glyphs, "ayah_regions": regions}
+                  "glyphs": glyphs, "ayah_regions": regions, "lines": line_metrics}
         validate_artifact(result)
         return result
     finally:
@@ -380,6 +440,8 @@ def validate_artifact(page):
     require(page["schema_version"] == 1 and 1 <= page["page"] <= 604, "Invalid page identity")
     require(page["width"] == WIDTH and page["height"] == HEIGHT, "Invalid canvas")
     require(page["glyphs"] and page["ayah_regions"], "Empty page")
+    if "lines" in page:
+        validate_typography(page)
     counts = {"M": 3, "L": 3, "Q": 5, "C": 7, "Z": 1}
     expected_regions = defaultdict(list)
     for glyph in page["glyphs"]:

@@ -9,6 +9,20 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get checkMushafUpdates => 'Проверить обновления';
+
+  @override
+  String get mushafUpToDate => 'Скачанный Мусхаф уже обновлён';
+
+  @override
+  String get updateMushaf => 'Обновить Мусхаф';
+
+  @override
+  String updateMushafConfirmation(String size) {
+    return 'Скачать обновлённые страницы ($size). Текущий Мусхаф останется доступен до завершения загрузки и проверки нового пакета.';
+  }
+
+  @override
   String get hijriCalendar => 'Календарь Хиджры';
 
   @override

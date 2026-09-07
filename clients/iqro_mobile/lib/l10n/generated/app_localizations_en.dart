@@ -9,6 +9,20 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get checkMushafUpdates => 'Check for updates';
+
+  @override
+  String get mushafUpToDate => 'Your downloaded Mushaf is up to date';
+
+  @override
+  String get updateMushaf => 'Update Mushaf';
+
+  @override
+  String updateMushafConfirmation(String size) {
+    return 'Download the updated pages ($size). Your current Mushaf stays available until the new package has been downloaded and verified.';
+  }
+
+  @override
   String get hijriCalendar => 'Hijri calendar';
 
   @override

@@ -17,8 +17,6 @@ class MushafRaster extends StatefulWidget {
     required this.file,
     required this.builder,
     this.fallback,
-    this.cutCandidates = const [],
-    this.onVerifiedCuts,
     this.cropRegions = const [],
     this.onVerifiedCrops,
     super.key,
@@ -26,8 +24,6 @@ class MushafRaster extends StatefulWidget {
   final File file;
   final Widget Function(ui.Image image) builder;
   final Widget? fallback;
-  final List<double> cutCandidates;
-  final ValueChanged<List<double>>? onVerifiedCuts;
   final List<Rect> cropRegions;
   final ValueChanged<List<Rect>>? onVerifiedCrops;
 
@@ -36,7 +32,6 @@ class MushafRaster extends StatefulWidget {
 }
 
 class _MushafRasterState extends State<MushafRaster> {
-  static final _whitespaceCache = <String, Future<List<double>>>{};
   static final _cropCache = <String, Future<List<Rect>>>{};
   ImageStream? _stream;
   ImageInfo? _image;
@@ -78,57 +73,10 @@ class _MushafRasterState extends State<MushafRaster> {
       _image?.dispose();
       _image = image;
       _error = null;
-      _analysisPending =
-          widget.onVerifiedCrops != null ||
-          (widget.onVerifiedCuts != null && widget.cutCandidates.isNotEmpty);
+      _analysisPending = widget.onVerifiedCrops != null;
     });
-    if (widget.onVerifiedCuts != null && widget.cutCandidates.isNotEmpty) {
-      unawaited(_verifyCuts(image.image));
-    } else if (widget.onVerifiedCrops != null) {
+    if (widget.onVerifiedCrops != null) {
       unawaited(_verifyCrops(image.image));
-    }
-  }
-
-  Future<void> _verifyCuts(ui.Image image) async {
-    final path = widget.file.path;
-    final candidates = widget.cutCandidates;
-    final key = '$path:${image.width}:${image.height}:${candidates.join(',')}';
-    var result = _whitespaceCache[key];
-    if (result == null) {
-      // Keep only tiny analysis results/futures, never decoded image buffers.
-      if (_whitespaceCache.length >= 6) {
-        _whitespaceCache.remove(_whitespaceCache.keys.first);
-      }
-      final retained = image.clone();
-      result = () async {
-        try {
-          final bytes = await retained.toByteData(
-            format: ui.ImageByteFormat.rawRgba,
-          );
-          if (bytes == null) return const <double>[];
-          return await compute(verifyMushafWhitespace, (
-            pixels: TransferableTypedData.fromList([
-              bytes.buffer.asUint8List(),
-            ]),
-            width: retained.width,
-            height: retained.height,
-            candidates: candidates,
-          ));
-        } on Object {
-          // A failed analysis must never lead to guessed/corrupt scan cuts.
-          return const <double>[];
-        } finally {
-          retained.dispose();
-        }
-      }();
-      _whitespaceCache[key] = result;
-    }
-    final cuts = await result;
-    if (mounted &&
-        widget.file.path == path &&
-        identical(_image?.image, image)) {
-      widget.onVerifiedCuts?.call(cuts);
-      setState(() => _analysisPending = false);
     }
   }
 

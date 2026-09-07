@@ -58,6 +58,13 @@ class KfgqpcSourceTests(unittest.TestCase):
                 self.assertEqual({(r["ayah"]["surah"], r["ayah"]["number"]) for r in geometry["regions"]},
                                  {self.refs[w["verse_id"]] for w in source["words"]})
 
+    def test_surah_closing_line_is_centered_from_source_marker_not_gap_size(self):
+        page = k.compose(self.data, self.data["pages"][254], self.font, self.refs, self.lock)
+        lines = {r["line"]: r for r in page["lines"]}
+        self.assertFalse(lines[1]["centered"])
+        self.assertTrue(lines[2]["centered"])
+        self.assertEqual(lines[2]["word_gap"], 12)
+
 
 if __name__ == "__main__":
     unittest.main()

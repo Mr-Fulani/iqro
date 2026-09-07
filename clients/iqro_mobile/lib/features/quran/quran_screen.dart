@@ -357,7 +357,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                   ],
                 ),
                 const Divider(height: 28),
-                const _OfflineMushafCard(),
+                const OfflineMushafCard(),
                 const SizedBox(height: 12),
               ],
             ),
@@ -456,14 +456,14 @@ class _MushafOfflineIndicator extends ConsumerWidget {
   }
 }
 
-class _OfflineMushafCard extends ConsumerStatefulWidget {
-  const _OfflineMushafCard();
+class OfflineMushafCard extends ConsumerStatefulWidget {
+  const OfflineMushafCard({super.key});
 
   @override
-  ConsumerState<_OfflineMushafCard> createState() => _OfflineMushafCardState();
+  ConsumerState<OfflineMushafCard> createState() => _OfflineMushafCardState();
 }
 
-class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
+class _OfflineMushafCardState extends ConsumerState<OfflineMushafCard> {
   var _preparing = false;
 
   @override
@@ -517,7 +517,7 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
             const SizedBox(height: 7),
             Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
           ],
-          if (!ready) ...<Widget>[
+          ...<Widget>[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -532,9 +532,15 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(failed ? Icons.refresh : Icons.download_outlined),
+                    : Icon(
+                        ready || failed
+                            ? Icons.refresh
+                            : Icons.download_outlined,
+                      ),
                 label: Text(
-                  failed
+                  ready
+                      ? context.l10n.checkMushafUpdates
+                      : failed
                       ? context.l10n.resumeDownload
                       : context.l10n.downloadForOffline,
                 ),
@@ -548,25 +554,47 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
 
   Future<void> _prepareDownload() async {
     if (_preparing) return;
+    final identity = ref.read(selectedMushafIdentityProvider);
+    final installed = ref.read(mushafDownloadProvider);
+    final updating = installed.status == MushafDownloadStatus.ready;
     setState(() => _preparing = true);
     try {
       final estimate = await ref
           .read(selectedMushafOfflineRepositoryProvider)
           .estimate();
+      if (!mounted || ref.read(selectedMushafIdentityProvider) != identity) {
+        return;
+      }
+      if (updating && estimate.packageId == installed.packageId) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.mushafUpToDate)));
+        return;
+      }
       await ensureOfflineStorageCapacity(
         ref.read(localDatabaseProvider),
         packageId: estimate.packageId!,
         packageBytes: estimate.totalBytes,
       );
-      if (!mounted) return;
+      if (!mounted || ref.read(selectedMushafIdentityProvider) != identity) {
+        return;
+      }
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(context.l10n.downloadForOffline),
+          title: Text(
+            updating
+                ? context.l10n.updateMushaf
+                : context.l10n.downloadForOffline,
+          ),
           content: Text(
-            context.l10n.downloadOfflineConfirmation(
-              _formatMegabytes(estimate.totalBytes),
-            ),
+            updating
+                ? context.l10n.updateMushafConfirmation(
+                    _formatMegabytes(estimate.totalBytes),
+                  )
+                : context.l10n.downloadOfflineConfirmation(
+                    _formatMegabytes(estimate.totalBytes),
+                  ),
           ),
           actions: <Widget>[
             TextButton(
@@ -575,12 +603,18 @@ class _OfflineMushafCardState extends ConsumerState<_OfflineMushafCard> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(context.l10n.downloadForOffline),
+              child: Text(
+                updating
+                    ? context.l10n.updateMushaf
+                    : context.l10n.downloadForOffline,
+              ),
             ),
           ],
         ),
       );
-      if (confirmed == true && mounted) {
+      if (confirmed == true &&
+          mounted &&
+          ref.read(selectedMushafIdentityProvider) == identity) {
         unawaited(
           ref.read(selectedMushafDownloadControllerProvider).download(),
         );

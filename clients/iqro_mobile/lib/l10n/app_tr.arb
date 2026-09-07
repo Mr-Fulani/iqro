@@ -1,4 +1,8 @@
 {
+  "checkMushafUpdates": "Güncellemeleri denetle",
+  "mushafUpToDate": "İndirilen Mushaf güncel",
+  "updateMushaf": "Mushafı güncelle",
+  "updateMushafConfirmation": "Güncellenen sayfaları indir ({size}). Yeni paket indirilip doğrulanana kadar mevcut Mushaf kullanılabilir kalır.",
   "hijriCalendar": "Hicri takvim",
   "hijriMethod": "Ümmü'l-Kurâ · çevrimdışı",
   "hijriDisclaimer": "Hesaplanan tarihler yerel hilal gözleminden farklı olabilir. Ramazan ve bayram başlangıçlarını yerel yetkili mercilerden doğrulayın. Hicri gün, önceki miladi günün gün batımında başlar.",

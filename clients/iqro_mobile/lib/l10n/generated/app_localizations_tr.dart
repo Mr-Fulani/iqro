@@ -9,6 +9,20 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String get checkMushafUpdates => 'Güncellemeleri denetle';
+
+  @override
+  String get mushafUpToDate => 'İndirilen Mushaf güncel';
+
+  @override
+  String get updateMushaf => 'Mushafı güncelle';
+
+  @override
+  String updateMushafConfirmation(String size) {
+    return 'Güncellenen sayfaları indir ($size). Yeni paket indirilip doğrulanana kadar mevcut Mushaf kullanılabilir kalır.';
+  }
+
+  @override
   String get hijriCalendar => 'Hicri takvim';
 
   @override

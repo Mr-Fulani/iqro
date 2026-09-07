@@ -13,7 +13,7 @@ import subprocess
 import prepare as p
 from build_full import write_once
 
-VERSION = "iqro-kfgqpc-1"
+VERSION = "iqro-kfgqpc-2"
 FONT = "UthmanicHafs1Ver18.woff2"
 
 
@@ -79,8 +79,15 @@ def compose(data, page, font, references, lock):
         surah, ayah = references[word["verse_id"]]
         groups[word["line_number"]].append((font.shape(word["text"]),
             {**word, "surah_number": surah, "ayah_number": ayah}))
-    rows = {line: ({"line_number": line, "line_type": "ayah", "is_centered": number in (1, 2)}, items)
-            for line, items in groups.items()}
+    rows = {}
+    for line, items in groups.items():
+        last = items[-1][1]
+        # The source has no centering flag. A surah's final line is identified
+        # by its actual terminal marker, not by an arbitrary pixel-gap cutoff.
+        closes_surah = (last["text"].isdecimal() and
+                        last["ayah_number"] == data["surahs"][last["surah_number"] - 1]["ayah_count"])
+        rows[line] = ({"line_number": line, "line_type": "ayah",
+                       "is_centered": number in (1, 2) or closes_surah}, items)
     basmala = [w["text"] for w in data["pages"][0]["words"] if w["verse_id"] == 1 and w["char_type_name"] == "word"]
     for word in page["words"]:
         surah, ayah = references[word["verse_id"]]
@@ -103,37 +110,29 @@ def compose(data, page, font, references, lock):
     row_height = p.ROW * 15 / max(15, len(lines))
     # Empty source rows remain empty; they are never filled with guessed words.
     verse_lines = [items for row, items in rows.values() if row["line_type"] == "ayah"]
-    longest = max(sum(s.width for s, _ in items) for items in verse_lines)
-    ink_height = sum(max(s.bounds[3] for s, _ in items) - min(s.bounds[1] for s, _ in items)
-                     for items in verse_lines)
-    scale = min((p.WIDTH - 2 * p.MARGIN - 48) / longest, len(verse_lines) * (row_height - 6) / ink_height)
-    leading = (len(verse_lines) * row_height - ink_height * scale) / len(verse_lines)
+    typography = p.PageTypography.fit(verse_lines, row_height)
     top = p.TOP + (15 - len(lines)) * row_height / 2 if number in (1, 2) else p.TOP
-    glyphs, regions = [], []
+    glyphs, regions, line_metrics = [], [], []
     for line in lines:
         if line not in rows:
             top += row_height
             continue
         row, items = rows[line]
+        height = row_height
         if row["line_type"] == "ayah":
-            line_scale = scale
-            ascent, descent = max(s.bounds[3] for s, _ in items), min(s.bounds[1] for s, _ in items)
-            height = (ascent - descent) * scale + leading
-            baseline = top + leading / 2 + ascent * scale
+            line_scale = typography.scale
+            baseline = top + typography.baseline_offset
         else:
             height = row_height
             box = p.union([s.bounds for s, _ in items])
             line_scale = min(row_height * .6 / (box[3] - box[1]), p.WIDTH * .66 / sum(s.width for s, _ in items))
             baseline = top + row_height / 2 + (box[3] + box[1]) * line_scale / 2
         widths = [s.width * line_scale for s, _ in items]
-        # Do not spread the few words of a short closing line across the
-        # entire screen. Only spacing changes; font size and source rows do not.
-        natural_gap = (p.WIDTH - 2 * p.MARGIN - sum(widths)) / max(1, len(items) - 1)
-        centered = row["is_centered"] or len(items) == 1 or natural_gap > 72
-        gap = 12 if centered else (p.WIDTH - 2 * p.MARGIN - sum(widths)) / (len(items) - 1)
-        p.require(gap >= 0, "Line overflow")
-        total = sum(widths) + gap * (len(items) - 1)
-        right = (p.WIDTH + total) / 2 if centered else p.WIDTH - p.MARGIN
+        centered = bool(row["is_centered"])
+        gap, right = typography.horizontal(widths, centered=centered)
+        line_metrics.append({"line": line, "kind": row["line_type"], "top": top,
+                             "height": height, "baseline": baseline, "scale": line_scale,
+                             "word_gap": gap, "centered": centered})
         boxes = defaultdict(list)
         for (shape, word), width in zip(items, widths, strict=True):
             left = right - width
@@ -152,7 +151,8 @@ def compose(data, page, font, references, lock):
         top += height
     result = {"schema_version": 1, "status": "draft", "renderer": VERSION, "edition": "kfgqpc-hafs",
               "source_lock_sha256": hashlib.sha256(p.canonical(lock)).hexdigest(),
-              "page": number, "width": p.WIDTH, "height": p.HEIGHT, "glyphs": glyphs, "ayah_regions": regions}
+              "page": number, "width": p.WIDTH, "height": p.HEIGHT, "glyphs": glyphs,
+              "ayah_regions": regions, "lines": line_metrics}
     p.validate_artifact(result)
     return result
 
@@ -211,7 +211,7 @@ def main():
     load_source(args.source_dir)
     if not args.pages and not args.audit_only:
         manifest = {**identity, "status": "prepared", "publication_scope": "staging", "canonical_edition": "madani-hafs",
-                    "version": "kfgqpc-iqro-20260907-v1", "page_count": 604, "pages": entries}
+                    "version": "kfgqpc-iqro-20260908-v2", "page_count": 604, "pages": entries}
         raw = p.canonical(manifest)
         write_once(args.output_dir / "manifest.json", raw)
         write_once(args.output_dir / "manifest.sha256", f"{hashlib.sha256(raw).hexdigest()}  manifest.json\n".encode())

@@ -42,7 +42,10 @@ def main():
     parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--raster-cache-dir", type=Path)
+    parser.add_argument("--pages", help="Comma-separated sample; never writes a publication manifest")
     args = parser.parse_args()
+    selected = list(map(int, args.pages.split(","))) if args.pages else list(range(1, 605))
+    p.require(selected == sorted(set(selected)) and all(1 <= n <= 604 for n in selected), "Invalid page selection")
     runtime = p.verify_runtime()
     lock = json.loads((args.source_dir / "source.full.lock.json").read_text())
     p.require(lock["sample_pages"] == list(range(1, 605)), "Full source lock required")
@@ -59,7 +62,7 @@ def main():
     entries = []
     with closing(p.open_database(args.source_dir / "mushaf_database.db")) as db:
         audit = p.audit_corpus(db)
-        for number in range(1, 605):
+        for number in selected:
             stem = f"page-{number:03d}"
             receipt = args.output_dir / f"{stem}.bundle.json"
             if receipt.exists():
@@ -91,8 +94,11 @@ def main():
             if number % 10 == 0 or number == 604:
                 print(f"Verified native pages: {number}/604", flush=True)
     p.verify_files(args.source_dir, lock)
+    if args.pages:
+        print(f"Verified {len(entries)} sample pages; no publication manifest", flush=True)
+        return
     manifest = {**identity, "status": "prepared", "publication_scope": "staging",
-                "canonical_edition": "madani-hafs", "version": "qcf-v2-iqro-20260907-v3",
+                "canonical_edition": "madani-hafs", "version": "qcf-v2-iqro-20260908-v4",
                 "page_count": 604, "corpus_audit": audit, "pages": entries}
     payload = p.canonical(manifest)
     write_once(args.output_dir / "manifest.json", payload)

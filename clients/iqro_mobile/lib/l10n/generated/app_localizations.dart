@@ -102,6 +102,30 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @checkMushafUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get checkMushafUpdates;
+
+  /// No description provided for @mushafUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your downloaded Mushaf is up to date'**
+  String get mushafUpToDate;
+
+  /// No description provided for @updateMushaf.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Mushaf'**
+  String get updateMushaf;
+
+  /// No description provided for @updateMushafConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Download the updated pages ({size}). Your current Mushaf stays available until the new package has been downloaded and verified.'**
+  String updateMushafConfirmation(String size);
+
   /// No description provided for @hijriCalendar.
   ///
   /// In en, this message translates to:

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -104,7 +103,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   String? _assetCacheKey;
   Future<File>? _assetFile;
   String? _resolutionRefreshKey;
-  List<double> _verifiedCuts = const [];
 
   @override
   void initState() {
@@ -163,7 +161,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         '${pageData.contentVersion}:${asset.width}:${asset.sha256}';
     if (_assetCacheKey == cacheKey) return;
     _assetCacheKey = cacheKey;
-    _verifiedCuts = const [];
     _assetFile = ref
         .read(selectedMushafRepositoryProvider)
         .cachedMushafPageAsset(pageData, asset);
@@ -349,7 +346,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
               ? Size(layout.width, layout.height)
               : _viewportSize,
           portrait: !layout.fillsLandscapeWidth,
-          verifiedCuts: _verifiedCuts,
         );
 
         return GestureDetector(
@@ -423,15 +419,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                   image: true,
                                   child: MushafRaster(
                                     file: file,
-                                    cutCandidates: widget.page > 2
-                                        ? mushafLineBoundaries(pageData.regions)
-                                        : const [],
-                                    onVerifiedCuts: (cuts) {
-                                      if (mounted &&
-                                          !listEquals(_verifiedCuts, cuts)) {
-                                        setState(() => _verifiedCuts = cuts);
-                                      }
-                                    },
                                     builder: (image) => CustomPaint(
                                       painter: MushafScanPainter(
                                         image: image,

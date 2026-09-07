@@ -9,6 +9,20 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get checkMushafUpdates => 'التحقق من التحديثات';
+
+  @override
+  String get mushafUpToDate => 'المصحف المحمّل محدّث';
+
+  @override
+  String get updateMushaf => 'تحديث المصحف';
+
+  @override
+  String updateMushafConfirmation(String size) {
+    return 'تنزيل الصفحات المحدّثة ($size). سيبقى المصحف الحالي متاحًا حتى اكتمال تنزيل الحزمة الجديدة والتحقق منها.';
+  }
+
+  @override
   String get hijriCalendar => 'التقويم الهجري';
 
   @override

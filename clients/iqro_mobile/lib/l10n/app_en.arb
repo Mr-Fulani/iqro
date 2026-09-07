@@ -1,4 +1,9 @@
 {
+  "checkMushafUpdates": "Check for updates",
+  "mushafUpToDate": "Your downloaded Mushaf is up to date",
+  "updateMushaf": "Update Mushaf",
+  "updateMushafConfirmation": "Download the updated pages ({size}). Your current Mushaf stays available until the new package has been downloaded and verified.",
+  "@updateMushafConfirmation": {"placeholders": {"size": {"type": "String"}}},
   "hijriCalendar": "Hijri calendar",
   "hijriMethod": "Umm al-Qura · offline",
   "hijriDisclaimer": "Calculated dates may differ from local moon sighting. Confirm Ramadan and Eid with your local community. The Islamic day begins at sunset on the preceding civil day.",
