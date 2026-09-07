@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "edition": "qcf-v2-hafs-jmapps-pilot",
+  "status": "draft",
+  "repository": "https://github.com/JMApps/mymushaf",
+  "commit": "1d040f68d284f8e6db515157f8425abfefd78df6",
+  "source_pages": 604,
+  "sample_pages": [1, 2, 3, 50, 255, 604],
+  "publication_approved": false,
+  "files": {
+    "mushaf_database.db": {"bytes": 20221952, "sha256": "92fe8c2bfbcf982f59a12e6d97dce0f0948ddb378a0cb722f00d5a607054a8d2"},
+    "p1.ttf": {"bytes": 618744, "sha256": "1686695486474b88a24a05cd4578f5295961bc9516885309ec95be574f213c27"},
+    "p2.ttf": {"bytes": 357932, "sha256": "305ca9b7aaf39b47551a7b9b73501b761068052e3f51bdf7d2b37d4e39177ece"},
+    "p3.ttf": {"bytes": 884644, "sha256": "90184ad1d7ed6f5e2d9cc8e456635bce66a8ee3ad5ff54f4856faa71f809ffef"},
+    "p50.ttf": {"bytes": 323348, "sha256": "80b3b3df1c02460f54ab9ef0279ab2487f20db40d8a5248b383c724a6ccb76be"},
+    "p255.ttf": {"bytes": 271124, "sha256": "aa34c1a6e098daabe5395b9d3afab78897c4d8a901c85c06ea98fdc58c9983fb"},
+    "p604.ttf": {"bytes": 163044, "sha256": "9e5705d1aae6a02bce46bca026d1048f19f76bac013c28d5934806390493c43a"},
+    "qcf_bsml.ttf": {"bytes": 19596, "sha256": "5ef3317483b09ecfd8a885b31472681e489e50d2b0b4b68aacd9a19a06f920a0"},
+    "surah_name_v4.ttf": {"bytes": 215592, "sha256": "026cfe8ac461531a7b1c8e4edd05ce3343f09e9c73447ff14c6bc93f3193d661"}
+  }
+}

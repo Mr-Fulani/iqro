@@ -1,0 +1,3 @@
+# Isolated content-preparation tool. Not a mobile/runtime dependency.
+fonttools==4.43.0
+uharfbuzz==0.56.1

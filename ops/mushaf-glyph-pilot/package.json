@@ -1,0 +1,9 @@
+{
+  "name": "@iqro/mushaf-glyph-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline, unpublished QCF V2 source and native raster pilot",
+  "engines": {"node": ">=22.19.0 <25"},
+  "scripts": {"test": "node --test raster.test.cjs"},
+  "dependencies": {"sharp": "0.35.4"}
+}

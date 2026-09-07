@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IQRO — контрольные страницы, черновик</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px system-ui; background: #ece8df; color: #241e17; }
+  header { padding: 8px 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+  button { font: inherit; padding: 6px 12px; cursor: pointer; }
+  button[aria-pressed=true] { background: #665238; color: white; }
+  main { position: relative; width: min(100vw, calc((100dvh - 104px) * .625)); margin: auto; }
+  img { display: block; width: 100%; height: auto; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  rect { fill: transparent; cursor: pointer; }
+  rect.selected { fill: #ad884133; }
+  footer { text-align: center; padding: 8px; }
+</style>
+<header><strong>IQRO · Черновик QCF V2</strong><nav aria-label="Контрольные страницы"></nav>
+<span>Не опубликовано · нажмите на аят</span></header>
+<main><img alt="Контрольная страница Мусхафа"><svg viewBox="0 0 1000 1600" aria-label="Области аятов"></svg></main>
+<footer role="status">Загрузка…</footer>
+<script type="module">
+  const audit = await fetch('audit.json').then(r => r.json());
+  const nav = document.querySelector('nav');
+  const image = document.querySelector('img');
+  const overlay = document.querySelector('svg');
+  const status = document.querySelector('footer');
+  let revision = 0;
+  async function show(number) {
+    const current = ++revision;
+    overlay.replaceChildren();
+    status.textContent = 'Загрузка…';
+    const stem = `page-${String(number).padStart(3, '0')}`;
+    image.src = `${stem}.svg`;
+    image.alt = `Страница ${number}, черновик`;
+    const page = await fetch(`${stem}.mobile.json`).then(r => r.json());
+    if (current !== revision) return;
+    for (const region of page.regions) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      for (const key of ['x', 'width']) rect.setAttribute(key, region[key] * 1000);
+      for (const key of ['y', 'height']) rect.setAttribute(key, region[key] * 1600);
+      const verse = `${region.ayah.surah}:${region.ayah.number}`;
+      rect.dataset.verse = verse;
+      rect.setAttribute('aria-label', `Аят ${verse}`);
+      rect.addEventListener('click', () => {
+        overlay.querySelectorAll('rect').forEach(r => r.classList.toggle('selected', r.dataset.verse === verse));
+        status.textContent = `Страница ${number} · Аят ${verse} · Аудио в этом локальном просмотре не подключено`;
+      });
+      overlay.append(rect);
+    }
+    nav.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.page === String(number)));
+    status.textContent = `Страница ${number} · ${page.regions.length} областей аятов`;
+  }
+  for (const entry of audit.pages_prepared) {
+    const button = document.createElement('button');
+    button.textContent = entry.page;
+    button.dataset.page = entry.page;
+    button.addEventListener('click', () => show(entry.page));
+    nav.append(button);
+  }
+  await show(audit.pages_prepared[0].page);
+</script>
+</html>
