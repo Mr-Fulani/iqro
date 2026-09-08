@@ -17,6 +17,7 @@ class MushafRaster extends StatefulWidget {
     required this.file,
     required this.builder,
     this.fallback,
+    this.continuityKey,
     this.cropRegions = const [],
     this.onVerifiedCrops,
     super.key,
@@ -24,6 +25,10 @@ class MushafRaster extends StatefulWidget {
   final File file;
   final Widget Function(ui.Image image) builder;
   final Widget? fallback;
+
+  /// Retain a decoded page while a sharper asset of the same content loads.
+  /// Must include edition, content version and page; null disables retention.
+  final Object? continuityKey;
   final List<Rect> cropRegions;
   final ValueChanged<List<Rect>>? onVerifiedCrops;
 
@@ -42,23 +47,33 @@ class _MushafRasterState extends State<MushafRaster> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _resolve();
+    _resolve(retainImage: widget.continuityKey != null);
   }
 
   @override
   void didUpdateWidget(covariant MushafRaster oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.file.path != widget.file.path) _resolve();
+    if (oldWidget.file.path != widget.file.path) {
+      _resolve(
+        retainImage:
+            widget.continuityKey != null &&
+            oldWidget.continuityKey == widget.continuityKey,
+      );
+    }
   }
 
-  void _resolve() {
+  void _resolve({required bool retainImage}) {
     final stream = FileImage(
       widget.file,
     ).resolve(createLocalImageConfiguration(context));
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
-    _image?.dispose();
-    _image = null;
+    // Excerpts must wait for their own verified crop geometry. Only full-page
+    // rasters opt in, and only until the replacement frame has decoded.
+    if (!retainImage || widget.onVerifiedCrops != null) {
+      _image?.dispose();
+      _image = null;
+    }
     _error = null;
     _analysisPending = false;
     _stream = stream..addListener(_listener);

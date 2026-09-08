@@ -259,7 +259,12 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                 ],
               ),
             ),
-          Expanded(child: _buildScan(pageData)),
+          Expanded(
+            // Header/footer appear only in portrait. Preserve the scan subtree
+            // when its sibling index changes, including its decoded frame.
+            key: const ValueKey('native-mushaf-scan'),
+            child: _buildScan(pageData),
+          ),
           if (portrait)
             Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 12, 14),
@@ -340,6 +345,8 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           devicePixelRatio: devicePixelRatio,
         );
         _loadAsset(pageData, asset);
+        final rasterIdentity =
+            '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}';
         final scanLayout = MushafScanLayout.page(
           page: pageData,
           size: layout.fillsLandscapeWidth
@@ -408,6 +415,9 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       fit: StackFit.expand,
                       children: <Widget>[
                         FutureBuilder<File>(
+                          // Never retain a previous edition/page's file while
+                          // loading new content, even when geometry is similar.
+                          key: ValueKey(rasterIdentity),
                           future: _assetFile,
                           builder: (context, snapshot) {
                             final file = snapshot.data;
@@ -419,6 +429,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                   image: true,
                                   child: MushafRaster(
                                     file: file,
+                                    continuityKey: rasterIdentity,
                                     builder: (image) => CustomPaint(
                                       painter: MushafScanPainter(
                                         image: image,
