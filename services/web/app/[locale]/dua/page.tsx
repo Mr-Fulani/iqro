@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import DuaPage from "../../dua/page";
+import DuaPage from "../../../components/DuaCatalogPage";
 import { isLocale } from "../../../lib/i18n";
 import { getPublishedDuaInitialData } from "../../../lib/public-content";
 import { createPageMetadata } from "../../../lib/seo";
