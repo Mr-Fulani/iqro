@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy
 
 MODEL_LABELS: dict[str, tuple[str, str]] = {
+    "calendar.CalendarEvent": ("событие календаря", "события календаря"),
     "accounts.User": ("пользователь", "пользователи"),
     "accounts.AuthIdentity": ("способ входа", "способы входа"),
     "accounts.Device": ("устройство", "устройства"),
@@ -164,6 +165,17 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
 
 
 FIELD_LABELS: dict[str, str] = {
+    "month": "Месяц по Хиджре",
+    "day_start": "С какого числа",
+    "day_end": "По какое число включительно",
+    "exclude_ramadan": "Не показывать в Рамадан",
+    "title_ru": "Название на русском",
+    "title_en": "Название на английском",
+    "title_ar": "Название на арабском",
+    "title_tr": "Название на турецком",
+    "description_tr": "Пояснение на турецком",
+    "source_label": "Название источника",
+    "is_published": "Показывать на сайте и в приложении",
     "names": "Название на языках приложения",
     "active_release": "Доступная читателям версия",
     "rendition": "Оформление Мусхафа",
@@ -559,6 +571,9 @@ FIELD_LABELS: dict[str, str] = {
 
 
 MODEL_FIELD_LABELS = {
+    ("calendar.CalendarEvent", "kind"): "Тип отметки",
+    ("calendar.CalendarEvent", "code"): "Автоматический код события",
+    ("calendar.CalendarEvent", "source_url"): "Ссылка на источник",
     ("quran.MushafRenditionPage", "release"): "Версия оформления Мусхафа",
 }
 

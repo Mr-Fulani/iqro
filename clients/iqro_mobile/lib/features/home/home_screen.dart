@@ -12,6 +12,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../audio/reciter_portraits.dart';
 import '../audio/premium_reciter_portrait.dart';
 import '../calendar/hijri_calendar_service.dart';
+import '../calendar/calendar_catalog.dart';
 import '../dua/dua_repository.dart';
 import '../memorization/memorization_repository.dart';
 import '../prayer/prayer_repository.dart';
@@ -103,6 +104,7 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             HomeHijriCard(
+              catalog: ref.watch(calendarCatalogProvider).valueOrNull,
               clock: clock,
               adjustment: preferences.hijriAdjustment,
               maghribUtc:

@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'hijri_calendar_service.dart';
+import 'calendar_catalog.dart';
 
 String hijriNumber(BuildContext context, int value) => NumberFormat(
   '0',
@@ -50,13 +51,21 @@ class _HijriCalendarScreenState extends ConsumerState<HijriCalendarScreen> {
     final length = _service.monthLength(year, month);
     final day = math.min(_day ?? today.day, length);
     final selected = HijriDate(year, month, day, length);
-    final events = islamicDays(selected);
+    final catalog = ref.watch(calendarCatalogProvider).valueOrNull;
+    final events = catalog?.forDate(selected) ?? <CalendarEvent>[];
     final civil = _service.civilDate(year, month, day, adjustment: adjustment);
     final locale = Localizations.localeOf(context).languageCode;
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.hijriCalendar,
         subtitle: context.l10n.hijriMethod,
+        actions: [
+          IconButton(
+            tooltip: context.l10n.refresh,
+            onPressed: () => ref.invalidate(calendarCatalogProvider),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
       body: IqroPage(
         child: Column(
@@ -97,6 +106,7 @@ class _HijriCalendarScreenState extends ConsumerState<HijriCalendarScreen> {
                   ),
                   const SizedBox(height: 10),
                   HijriMonthGrid(
+                    catalog: catalog,
                     year: year,
                     month: month,
                     selectedDay: day,
@@ -137,9 +147,9 @@ class _HijriCalendarScreenState extends ConsumerState<HijriCalendarScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.auto_awesome_outlined),
-                      title: Text(context.l10n.hijriEventName(event.name)),
+                      title: Text(event.title(locale)),
                       trailing: const Icon(Icons.info_outline),
-                      onTap: () => showHijriSources(context, event),
+                      onTap: () => showCalendarSources(context, [event]),
                     ),
                 ],
               ),
@@ -183,7 +193,8 @@ class _HijriCalendarScreenState extends ConsumerState<HijriCalendarScreen> {
             ),
             const SizedBox(height: 10),
             TextButton.icon(
-              onPressed: () => showHijriSources(context),
+              onPressed: () =>
+                  showCalendarSources(context, catalog?.events ?? []),
               icon: const Icon(Icons.library_books_outlined),
               label: Text(context.l10n.hijriSources),
             ),
@@ -211,11 +222,13 @@ class HijriMonthGrid extends StatelessWidget {
     required this.today,
     required this.adjustment,
     required this.onSelect,
+    this.catalog,
     super.key,
   });
   final int year, month, selectedDay, adjustment;
   final HijriDate today;
   final ValueChanged<int> onSelect;
+  final CalendarCatalog? catalog;
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +277,7 @@ class HijriMonthGrid extends StatelessWidget {
                 adjustment: adjustment,
               );
               final hDate = HijriDate(year, month, day, length);
-              final events = islamicDays(hDate);
+              final events = catalog?.forDate(hDate) ?? <CalendarEvent>[];
               final selected = day == selectedDay;
               final isToday =
                   today.year == year &&
@@ -277,7 +290,7 @@ class HijriMonthGrid extends StatelessWidget {
                 button: true,
                 label:
                     '${hijriDateLabel(context, hDate)}. ${DateFormat.yMd(Localizations.localeOf(context).languageCode).format(civil)}. '
-                    '${isToday ? context.l10n.today : ''} ${events.map((e) => context.l10n.hijriEventName(e.name)).join(', ')}',
+                    '${isToday ? context.l10n.today : ''} ${events.map((e) => e.title(Localizations.localeOf(context).languageCode)).join(', ')}',
                 child: ExcludeSemantics(
                   child: Padding(
                     padding: const EdgeInsets.all(2),
@@ -341,51 +354,56 @@ class HijriMonthGrid extends StatelessWidget {
   }
 }
 
-Future<void> showHijriSources(BuildContext context, [IslamicDay? event]) =>
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.hijriSources),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(context.l10n.hijriDisclaimer),
-              const SizedBox(height: 12),
-              Text(context.l10n.hijriEventHint),
-              const SizedBox(height: 16),
-              for (final item
-                  in event == null ? IslamicDay.values : [event]) ...[
-                Text(
-                  context.l10n.hijriEventName(item.name),
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                SelectableText(
-                  islamicDaySource(item),
-                  textDirection: TextDirection.ltr,
-                ),
-                TextButton.icon(
-                  onPressed: () => Clipboard.setData(
-                    ClipboardData(text: islamicDaySource(item)),
-                  ),
-                  icon: const Icon(Icons.copy_outlined, size: 16),
-                  label: Text(context.l10n.copyLink),
-                ),
-              ],
-              Text(context.l10n.hijriMethod),
-              const SelectableText(
-                'hijri 3.0.1 · BSD-2-Clause\nhttps://pub.dev/packages/hijri',
-                textDirection: TextDirection.ltr,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.close),
+Future<void> showCalendarSources(
+  BuildContext context,
+  List<CalendarEvent> events,
+) => showDialog<void>(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: Text(context.l10n.hijriSources),
+    content: SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(context.l10n.hijriDisclaimer),
+          const SizedBox(height: 12),
+          Text(context.l10n.hijriEventHint),
+          const SizedBox(height: 16),
+          for (final item in events) ...[
+            Text(
+              item.title(Localizations.localeOf(context).languageCode),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            Text(
+              item.description(Localizations.localeOf(context).languageCode),
+            ),
+            const SizedBox(height: 8),
+            Text(item.source['label']!),
+            SelectableText(
+              item.source['url']!,
+              textDirection: TextDirection.ltr,
+            ),
+            TextButton.icon(
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: item.source['url']!)),
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              label: Text(context.l10n.copyLink),
+            ),
+          ],
+          Text(context.l10n.hijriMethod),
+          const SelectableText(
+            'hijri 3.0.1 · BSD-2-Clause\nhttps://pub.dev/packages/hijri',
+            textDirection: TextDirection.ltr,
           ),
         ],
       ),
-    );
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(context.l10n.close),
+      ),
+    ],
+  ),
+);

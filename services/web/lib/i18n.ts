@@ -9,6 +9,13 @@ export const DEFAULT_LOCALE: Locale = "ru";
 const message = (ru: string, en: string, ar: string, tr: string) => ({ ru, en, ar, tr });
 
 export const MESSAGES = {
+  "calendar.title": message("Календарь", "Calendar", "التقويم", "Takvim"),
+  "calendar.description": message(
+    "Мусульманский календарь по Хиджре: даты, значимые дни и проверяемые источники.",
+    "Hijri calendar: dates, notable days and verifiable sources.",
+    "التقويم الهجري: التواريخ والأيام المهمة والمصادر الموثوقة.",
+    "Hicri takvim: tarihler, önemli günler ve doğrulanabilir kaynaklar.",
+  ),
   "meta.title": message(
     "Quran Platform — чтение и прослушивание Корана",
     "Quran Platform — read and listen to the Quran",

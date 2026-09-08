@@ -279,6 +279,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.dua.apps.DuaConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
     "quran_backend.modules.website.apps.WebsiteConfig",
+    "quran_backend.modules.calendar.apps.CalendarConfig",
     "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
 ]
 

@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "method": "ummalqura-hijri-3.0.1",
+  "min_year": 1356,
+  "max_year": 1500,
+  "civil_start": "1937-03-14",
+  "civil_end": "2077-11-16",
+  "events": [
+    {
+      "code": "ramadan",
+      "month": 9,
+      "day_start": 1,
+      "day_end": 30,
+      "kind": "occasion",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Рамадан",
+        "en": "Ramadan",
+        "ar": "رمضان",
+        "tr": "Ramazan"
+      },
+      "descriptions": {
+        "ru": "Месяц поста и ниспослания Корана. Начало уточняйте в своей общине.",
+        "en": "The month of fasting and revelation of the Quran. Confirm its start locally.",
+        "ar": "شهر الصيام ونزول القرآن. تحقّق من بدايته لدى الجهات المحلية المعتمدة.",
+        "tr": "Oruç ve Kur'an'ın indirildiği ay. Başlangıcını yerel yetkililerden doğrulayın."
+      },
+      "source": {
+        "label": "Quran 2:185",
+        "url": "https://quran.com/2/185"
+      }
+    },
+    {
+      "code": "eid_fitr",
+      "month": 10,
+      "day_start": 1,
+      "day_end": 1,
+      "kind": "no_fast",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Ид аль-Фитр · Ураза-байрам",
+        "en": "Eid al-Fitr",
+        "ar": "عيد الفطر",
+        "tr": "Ramazan Bayramı"
+      },
+      "descriptions": {
+        "ru": "Первый день Шавваля. В день праздника не постятся.",
+        "en": "The first day of Shawwal. Fasting on Eid is prohibited.",
+        "ar": "أول شوال. يحرم صيام يوم العيد.",
+        "tr": "Şevval'in ilk günü. Bayram günü oruç tutulmaz."
+      },
+      "source": {
+        "label": "Sahih al-Bukhari 1990",
+        "url": "https://sunnah.com/bukhari:1990"
+      }
+    },
+    {
+      "code": "arafah",
+      "month": 12,
+      "day_start": 9,
+      "day_end": 9,
+      "kind": "voluntary_fast",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "День Арафа",
+        "en": "Day of Arafah",
+        "ar": "يوم عرفة",
+        "tr": "Arefe günü"
+      },
+      "descriptions": {
+        "ru": "9 Зуль-хиджа. Источник о достоинстве поста; для совершающих хадж действуют отдельные положения.",
+        "en": "9 Dhul-Hijjah. A reference on the merit of fasting; pilgrims have separate guidance.",
+        "ar": "٩ ذو الحجة. مصدر في فضل الصيام، وللحجاج أحكام خاصة.",
+        "tr": "9 Zilhicce. Orucun faziletine dair kaynak; hacılar için ayrı hükümler geçerlidir."
+      },
+      "source": {
+        "label": "Sahih Muslim 1162b",
+        "url": "https://sunnah.com/muslim:1162b"
+      }
+    },
+    {
+      "code": "eid_adha",
+      "month": 12,
+      "day_start": 10,
+      "day_end": 10,
+      "kind": "no_fast",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Ид аль-Адха · Курбан-байрам",
+        "en": "Eid al-Adha",
+        "ar": "عيد الأضحى",
+        "tr": "Kurban Bayramı"
+      },
+      "descriptions": {
+        "ru": "Десятый день Зуль-хиджа. В день праздника не постятся.",
+        "en": "The tenth day of Dhul-Hijjah. Fasting on Eid is prohibited.",
+        "ar": "العاشر من ذي الحجة. يحرم صيام يوم العيد.",
+        "tr": "Zilhicce'nin onuncu günü. Bayram günü oruç tutulmaz."
+      },
+      "source": {
+        "label": "Sahih al-Bukhari 1990",
+        "url": "https://sunnah.com/bukhari:1990"
+      }
+    },
+    {
+      "code": "tashriq",
+      "month": 12,
+      "day_start": 11,
+      "day_end": 13,
+      "kind": "no_fast",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Дни ташрика",
+        "en": "Days of Tashriq",
+        "ar": "أيام التشريق",
+        "tr": "Teşrik günleri"
+      },
+      "descriptions": {
+        "ru": "11–13 Зуль-хиджа: дни еды, питья и поминания Аллаха. Не отмечаются как дни добровольного поста.",
+        "en": "11–13 Dhul-Hijjah: days of eating, drinking and remembering Allah, not voluntary fasting reminders.",
+        "ar": "١١–١٣ من ذي الحجة: أيام أكل وشرب وذكر لله، ولا تُعرض كتذكير بصيام التطوع.",
+        "tr": "11–13 Zilhicce: yeme, içme ve Allah'ı anma günleri; nafile oruç hatırlatması gösterilmez."
+      },
+      "source": {
+        "label": "Sahih Muslim 1141a",
+        "url": "https://sunnah.com/muslim:1141a"
+      }
+    },
+    {
+      "code": "ashura",
+      "month": 1,
+      "day_start": 10,
+      "day_end": 10,
+      "kind": "voluntary_fast",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Ашура",
+        "en": "Ashura",
+        "ar": "عاشوراء",
+        "tr": "Aşure günü"
+      },
+      "descriptions": {
+        "ru": "10 Мухаррама. Источник о достоинстве поста в день Ашура.",
+        "en": "10 Muharram. A reference on the merit of fasting on Ashura.",
+        "ar": "١٠ محرم. مصدر في فضل صيام عاشوراء.",
+        "tr": "10 Muharrem. Aşure günü orucunun faziletine dair kaynak."
+      },
+      "source": {
+        "label": "Sahih Muslim 1162b",
+        "url": "https://sunnah.com/muslim:1162b"
+      }
+    },
+    {
+      "code": "white_days",
+      "month": 0,
+      "day_start": 13,
+      "day_end": 15,
+      "kind": "voluntary_fast",
+      "exclude_ramadan": true,
+      "titles": {
+        "ru": "Белые дни · 13–15",
+        "en": "White days · 13–15",
+        "ar": "الأيام البيض · ١٣–١٥",
+        "tr": "Eyyâm-ı bîd · 13–15"
+      },
+      "descriptions": {
+        "ru": "13–15 числа лунного месяца. В Рамадан и дни без добровольного поста эта отметка не показывается.",
+        "en": "The 13th–15th of the lunar month. Hidden in Ramadan and on days excluded from voluntary fasting.",
+        "ar": "الأيام ١٣–١٥ من الشهر القمري. لا تظهر العلامة في رمضان وأيام منع صيام التطوع.",
+        "tr": "Kameri ayın 13–15. günleri. Ramazan'da ve nafile oruç tutulmayan günlerde gösterilmez."
+      },
+      "source": {
+        "label": "Sunan Abi Dawud 2449",
+        "url": "https://sunnah.com/abudawud:2449"
+      }
+    },
+    {
+      "code": "last_ten_nights",
+      "month": 9,
+      "day_start": 21,
+      "day_end": 30,
+      "kind": "occasion",
+      "exclude_ramadan": false,
+      "titles": {
+        "ru": "Последние десять ночей Рамадана",
+        "en": "Last ten nights of Ramadan",
+        "ar": "العشر الأواخر من رمضان",
+        "tr": "Ramazan'ın son on gecesi"
+      },
+      "descriptions": {
+        "ru": "Период последних десяти ночей Рамадана. Ночь предопределения не привязана здесь к одной гарантированной дате.",
+        "en": "The last ten nights of Ramadan. Laylat al-Qadr is not assigned one guaranteed date here.",
+        "ar": "العشر الأواخر من رمضان. لا تُحدّد ليلة القدر هنا بتاريخ واحد مؤكد.",
+        "tr": "Ramazan'ın son on gecesi. Kadir Gecesi burada kesin bir tek tarihe bağlanmaz."
+      },
+      "source": {
+        "label": "Sahih al-Bukhari 2017",
+        "url": "https://sunnah.com/bukhari:2017"
+      }
+    }
+  ],
+  "version": "f6ea92f74d97bb8b381ca3cc8851dc0167de547bff614209a622f7d9b461fb80"
+}

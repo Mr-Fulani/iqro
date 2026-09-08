@@ -27,6 +27,7 @@ export function Header() {
     { href: "/dua", label: t("nav.dua"), icon: "🤲" },
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
+    { href: "/calendar", label: t("calendar.title"), icon: "☾" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];
 

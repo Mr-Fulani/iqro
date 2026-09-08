@@ -5,6 +5,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../calendar/hijri_calendar_screen.dart';
 import '../calendar/hijri_calendar_service.dart';
+import '../calendar/calendar_catalog.dart';
 
 class HomeHijriCard extends StatelessWidget {
   const HomeHijriCard({
@@ -13,11 +14,13 @@ class HomeHijriCard extends StatelessWidget {
     required this.adjustment,
     required this.onTap,
     this.maghribUtc,
+    this.catalog,
   });
   final DateTime clock;
   final int adjustment;
   final DateTime? maghribUtc;
   final VoidCallback onTap;
+  final CalendarCatalog? catalog;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +29,9 @@ class HomeHijriCard extends StatelessWidget {
       adjustment: adjustment,
       maghribUtc: maghribUtc,
     );
-    final days = date == null ? <IslamicDay>[] : islamicDays(date);
+    final days = date == null
+        ? <CalendarEvent>[]
+        : catalog?.forDate(date) ?? <CalendarEvent>[];
     final sunset = clock.isUtc ? maghribUtc?.toUtc() : maghribUtc?.toLocal();
     final hasSunset = sunset != null && DateUtils.isSameDay(sunset, clock);
     return IqroCard(
@@ -66,7 +71,11 @@ class HomeHijriCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     days
-                        .map((d) => context.l10n.hijriEventName(d.name))
+                        .map(
+                          (d) => d.title(
+                            Localizations.localeOf(context).languageCode,
+                          ),
+                        )
                         .join(' · '),
                     style: Theme.of(context).textTheme.labelMedium,
                   ),

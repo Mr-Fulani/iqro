@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/v1/dua/", include("quran_backend.modules.dua.urls")),
     path("api/v1/", include("quran_backend.modules.dua.personal_urls")),
     path("api/v1/site/", include("quran_backend.modules.website.urls")),
+    path("api/v1/calendar/", include("quran_backend.modules.calendar.urls")),
     path("api/v1/", include("quran_backend.modules.reading.urls")),
     path("api/v1/", include("quran_backend.modules.memorization.urls")),
     path("api/v1/", include("quran_backend.modules.reminders.urls")),

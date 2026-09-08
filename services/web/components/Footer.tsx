@@ -29,6 +29,7 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
             <Link href={localizedPath(locale, "/memorization")}>{t("nav.memorization")}</Link>
             <Link href={localizedPath(locale, "/planner")}>{t("nav.planner")}</Link>
             <Link href={localizedPath(locale, "/dua")}>{t("nav.dua")}</Link>
+            <Link href={localizedPath(locale, "/calendar")}>{t("calendar.title")}</Link>
             <Link href={localizedPath(locale, "/audio/reciters")}>{t("footer.reciters")}</Link>
             <Link href={localizedPath(locale, "/prayer")}>{t("footer.prayer")}</Link>
             <Link href={localizedPath(locale, "/profile")}>{t("footer.sync")}</Link>
