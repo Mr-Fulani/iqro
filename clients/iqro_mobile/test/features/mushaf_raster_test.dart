@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -12,63 +13,89 @@ import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
-  testWidgets('rotation preserves the scan subtree and its decoded frame', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(400, 800);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-    final low = _PendingRaster('rotation-low');
-    final high = _PendingRaster('rotation-high');
-    final repository = _PageRepository(low.file, high.file);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          selectedMushafRepositoryProvider.overrideWithValue(repository),
-          mushafPageProvider(51).overrideWith((ref) async => _metadata),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: NativeMushafPage(
-            page: 51,
-            controller: NativeMushafPageController(),
-            selectedAyah: null,
-            playingAyah: null,
-            onSelectAyah: (_) {},
-            onOpenAyah: (_) {},
-            onBackgroundTap: () {},
-            onScale: (_) {},
+  for (final edition in ['qcf-v4-tajweed-hafs', 'madani-hafs']) {
+    testWidgets('rotation preserves the $edition scan and its decoded frame', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(400, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final low = _PendingRaster('rotation-low');
+      final high = _PendingRaster('rotation-high');
+      final repository = _PageRepository(low.file, high.file);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            selectedMushafRepositoryProvider.overrideWithValue(repository),
+            mushafPageProvider(51).overrideWith(
+              (ref) async => MushafPageData(
+                number: _metadata.number,
+                editionCode: edition,
+                contentVersion: _metadata.contentVersion,
+                checksumSha256: _metadata.checksumSha256,
+                imageWidth: _metadata.imageWidth,
+                imageHeight: _metadata.imageHeight,
+                assets: _metadata.assets,
+                regions: _metadata.regions,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NativeMushafPage(
+              page: 51,
+              controller: NativeMushafPageController(),
+              selectedAyah: null,
+              playingAyah: null,
+              onSelectAyah: (_) {},
+              onOpenAyah: (_) {},
+              onBackgroundTap: () {},
+              onScale: (_) {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-    low.frame.complete(await _frame(tester, 10));
-    await tester.pump();
-    final originalState = tester.state(find.byType(MushafRaster));
-    expect(_paintedWidth(tester), 10);
+      );
+      await tester.pump();
+      await tester.pump();
+      low.frame.complete(await _frame(tester, 10));
+      await tester.pump();
+      final originalState = tester.state(find.byType(MushafRaster));
+      expect(_paintedWidth(tester), 10);
+      expect(find.text('51'), findsOneWidget);
+      final paper = tester.widget<ColoredBox>(
+        find
+            .descendant(
+              of: find.byType(NativeMushafPage),
+              matching: find.byType(ColoredBox),
+            )
+            .first,
+      );
+      expect(
+        paper.color,
+        edition == 'madani-hafs' ? Colors.white : mushafPaperColor,
+      );
 
-    tester.view.physicalSize = const Size(1200, 600);
-    await tester.pump();
-    await tester.pump();
-    expect(tester.state(find.byType(MushafRaster)), same(originalState));
-    expect(repository.widths, contains(2160));
-    expect(_paintedWidth(tester), 10);
-    high.frame.complete(await _frame(tester, 20));
-    await tester.pump();
-    await tester.pump();
-    expect(_paintedWidth(tester), 20);
+      tester.view.physicalSize = const Size(1200, 600);
+      await tester.pump();
+      await tester.pump();
+      expect(tester.state(find.byType(MushafRaster)), same(originalState));
+      expect(repository.widths, contains(2160));
+      expect(_paintedWidth(tester), 10);
+      high.frame.complete(await _frame(tester, 20));
+      await tester.pump();
+      await tester.pump();
+      expect(_paintedWidth(tester), 20);
 
-    tester.view.physicalSize = const Size(400, 800);
-    await tester.pump();
-    await tester.pump();
-    expect(tester.state(find.byType(MushafRaster)), same(originalState));
-    expect(_paintedWidth(tester), isNotNull);
-    expect(tester.takeException(), isNull);
-  });
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pump();
+      await tester.pump();
+      expect(tester.state(find.byType(MushafRaster)), same(originalState));
+      expect(_paintedWidth(tester), isNotNull);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('keeps the current page until its sharper frame is decoded', (
     tester,

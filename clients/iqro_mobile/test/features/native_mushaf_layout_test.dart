@@ -28,17 +28,30 @@ void main() {
     expect(layout.width / layout.height, closeTo(2 / 3, .001));
   });
 
-  test('landscape page bleeds scan gutters without changing aspect ratio', () {
+  test('landscape preserves both book edges without changing aspect ratio', () {
     final layout = calculateMushafPageLayout(
       viewport: const Size(800, 400),
       source: source,
     );
 
     expect(layout.fillsLandscapeWidth, isTrue);
-    expect(layout.width, closeTo(896, .001));
-    expect(layout.height, closeTo(1344, .001));
-    expect(layout.horizontalOffset, closeTo(-48, .001));
-    expect(layout.width, greaterThan(800));
+    expect(layout.width, closeTo(800, .001));
+    expect(layout.height, closeTo(1200, .001));
+    expect(layout.horizontalOffset, closeTo(0, .001));
     expect(layout.width / layout.height, closeTo(2 / 3, .001));
   });
+
+  test(
+    'short portrait viewport keeps equal side margins and the full page',
+    () {
+      final layout = calculateMushafPageLayout(
+        viewport: const Size(500, 600),
+        source: source,
+      );
+      expect(layout.width, 400);
+      expect(layout.height, 600);
+      expect(layout.horizontalOffset, 50);
+      expect(500 - layout.width - layout.horizontalOffset, 50);
+    },
+  );
 }

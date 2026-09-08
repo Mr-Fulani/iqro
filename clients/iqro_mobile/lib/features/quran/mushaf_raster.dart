@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/iqro_widgets.dart';
-import 'mushaf_paper.dart';
 import 'mushaf_scan_layout.dart';
 import 'mushaf_scan_whitespace.dart';
 
@@ -169,12 +168,9 @@ class MushafScanPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     if (clip != null) canvas.clipPath(clip!);
-    final ink = Paint()
-      ..filterQuality = FilterQuality.high
-      ..colorFilter = const ColorFilter.mode(
-        mushafPaperColor,
-        BlendMode.multiply,
-      );
+    // Source pixels include the edition's paper and (for Tajweed) colour key.
+    // A theme tint would alter that source, including the ayah detail excerpt.
+    final ink = Paint()..filterQuality = FilterQuality.high;
     for (final band in layout.bands) {
       final source = Rect.fromLTRB(
         band.source.left * image.width,

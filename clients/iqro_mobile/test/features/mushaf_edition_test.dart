@@ -293,7 +293,6 @@ void main() {
       final layout = calculateMushafPageLayout(
         viewport: const Size(800, 400),
         source: const Size(1000, 1600),
-        landscapeBleedFactor: 1,
       );
       expect(layout.width, 800);
       expect(layout.horizontalOffset, 0);

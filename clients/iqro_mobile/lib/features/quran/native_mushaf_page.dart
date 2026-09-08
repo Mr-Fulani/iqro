@@ -19,11 +19,6 @@ typedef MushafPageLayout = ({
   bool fillsLandscapeWidth,
 });
 
-// The scanned Madani pages include a narrow paper gutter around their frame.
-// In landscape we let that gutter bleed outside the viewport so the readable
-// page reaches both screen edges without changing the scan's aspect ratio.
-const mushafLandscapeBleedFactor = 1.12;
-
 class MushafViewportOrientation {
   bool? _landscape;
 
@@ -38,7 +33,6 @@ class MushafViewportOrientation {
 MushafPageLayout calculateMushafPageLayout({
   required Size viewport,
   required Size source,
-  double landscapeBleedFactor = mushafLandscapeBleedFactor,
 }) {
   final viewportWidth = math.max(0, viewport.width).toDouble();
   final viewportHeight = math.max(0, viewport.height).toDouble();
@@ -46,7 +40,7 @@ MushafPageLayout calculateMushafPageLayout({
   final sourceHeight = math.max(1, source.height).toDouble();
   final fillsLandscapeWidth = viewportWidth > viewportHeight;
   final scale = fillsLandscapeWidth
-      ? (viewportWidth * landscapeBleedFactor) / sourceWidth
+      ? viewportWidth / sourceWidth
       : math.min(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
   return (
     width: sourceWidth * scale,
@@ -229,7 +223,11 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
     return ColoredBox(
-      color: mushafPaperColor,
+      // Madani's published PDF raster has white paper. Keep the letterbox
+      // neutral without tinting the source image or its printed ink.
+      color: pageData.editionCode == 'madani-hafs'
+          ? Colors.white
+          : mushafPaperColor,
       child: Column(
         children: <Widget>[
           if (portrait)
@@ -314,9 +312,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
         final layout = calculateMushafPageLayout(
-          landscapeBleedFactor: pageData.editionCode == 'madani-hafs'
-              ? mushafLandscapeBleedFactor
-              : 1,
           viewport: Size(constraints.maxWidth, constraints.maxHeight),
           source: Size(
             pageData.imageWidth.toDouble(),
