@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./mobile.css";
 import { AuthProvider } from "../lib/auth-context";
 import { I18nProvider } from "../lib/i18n-context";
 import { directionFor } from "../lib/i18n";
 import { Header } from "../components/Header";
+import { MobileNavigation } from "../components/MobileNavigation";
 import { Footer } from "../components/Footer";
 import { AudioPlayerProvider } from "../lib/audio-player-context";
 import { requestLocale } from "../lib/server-locale";
@@ -60,6 +62,7 @@ export default async function RootLayout({
                 <Header />
                 <main>{children}</main>
                 <Footer socialProfiles={socialProfiles} />
+                <MobileNavigation />
               </div>
             </AudioPlayerProvider>
           </AuthProvider>

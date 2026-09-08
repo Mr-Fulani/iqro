@@ -21,6 +21,7 @@ import {
 } from "../../components/PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
+import { MobileDisclosure } from "../../components/MobileDisclosure";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -1333,7 +1334,7 @@ function QuranContent() {
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="quran-mode-switch">
             <button
               className={`btn ${viewMode === "text" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => {
@@ -1472,213 +1473,215 @@ function QuranContent() {
           </div>
         </div>
 
-        <div className="translation-settings" style={{ marginTop: 14 }}>
-          <label className="translation-toggle" htmlFor="translation-enabled">
-            <input
-              id="translation-enabled"
-              type="checkbox"
-              checked={translationEnabled}
-              onChange={(event) => setTranslationEnabled(event.target.checked)}
-              disabled={translationEditions.length === 0}
-            />
-            <span>
-              <strong>{t("quran.translationToggle")}</strong>
-              <small>{t("quran.translationHelp")}</small>
-            </span>
-          </label>
-          <div className="translation-edition-control">
-            <label className="form-label" htmlFor="translation-edition">
-              {t("quran.translationEdition")}
+        <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings">
+          <div className="translation-settings" style={{ marginTop: 14 }}>
+            <label className="translation-toggle" htmlFor="translation-enabled">
+              <input
+                id="translation-enabled"
+                type="checkbox"
+                checked={translationEnabled}
+                onChange={(event) => setTranslationEnabled(event.target.checked)}
+                disabled={translationEditions.length === 0}
+              />
+              <span>
+                <strong>{t("quran.translationToggle")}</strong>
+                <small>{t("quran.translationHelp")}</small>
+              </span>
             </label>
-            <select
-              id="translation-edition"
-              value={selectedTranslationId ?? ""}
-              onChange={(event) => {
-                const sourceId = Number(event.target.value);
-                setSelectedTranslationId(
-                  Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
-                );
-              }}
-              disabled={!translationEnabled || translationEditions.length === 0}
-            >
-              {translationEditions.length === 0 ? (
-                <option value="">{t("quran.translationUnavailable")}</option>
-              ) : selectedTranslationId === null ? (
-                <option value="">{t("quran.translationChoose")}</option>
-              ) : null}
-              {translationEditions.map((edition) => (
-                <option key={edition.source_id} value={edition.source_id}>
-                  {edition.name} · {edition.author_name}
-                </option>
-              ))}
-            </select>
+            <div className="translation-edition-control">
+              <label className="form-label" htmlFor="translation-edition">
+                {t("quran.translationEdition")}
+              </label>
+              <select
+                id="translation-edition"
+                value={selectedTranslationId ?? ""}
+                onChange={(event) => {
+                  const sourceId = Number(event.target.value);
+                  setSelectedTranslationId(
+                    Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
+                  );
+                }}
+                disabled={!translationEnabled || translationEditions.length === 0}
+              >
+                {translationEditions.length === 0 ? (
+                  <option value="">{t("quran.translationUnavailable")}</option>
+                ) : selectedTranslationId === null ? (
+                  <option value="">{t("quran.translationChoose")}</option>
+                ) : null}
+                {translationEditions.map((edition) => (
+                  <option key={edition.source_id} value={edition.source_id}>
+                    {edition.name} · {edition.author_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {translationEnabled && selectedTranslation && (
+              <p className="translation-source-note">
+                {selectedTranslation.name} · {selectedTranslation.author_name}.{" "}
+                <a href={selectedTranslation.source.url} target="_blank" rel="noreferrer">
+                  {selectedTranslation.source.attribution}
+                </a>
+              </p>
+            )}
+            {locale === "ar" && translationEditions.length === 0 && (
+              <p className="translation-context-note">
+                {t("quran.translationArabicTafsirNotice")}
+              </p>
+            )}
+            {translationError && (
+              <p className="translation-error" role="status">
+                {t("quran.translationError")}
+              </p>
+            )}
           </div>
-          {translationEnabled && selectedTranslation && (
-            <p className="translation-source-note">
-              {selectedTranslation.name} · {selectedTranslation.author_name}.{" "}
-              <a href={selectedTranslation.source.url} target="_blank" rel="noreferrer">
-                {selectedTranslation.source.attribution}
-              </a>
-            </p>
-          )}
-          {locale === "ar" && translationEditions.length === 0 && (
-            <p className="translation-context-note">
-              {t("quran.translationArabicTafsirNotice")}
-            </p>
-          )}
-          {translationError && (
-            <p className="translation-error" role="status">
-              {t("quran.translationError")}
-            </p>
-          )}
-        </div>
 
-        <div className="translation-settings tafsir-settings" style={{ marginTop: 12 }}>
-          <label className="translation-toggle" htmlFor="tafsir-enabled">
-            <input
-              id="tafsir-enabled"
-              type="checkbox"
-              checked={tafsirEnabled}
-              onChange={(event) => setTafsirEnabled(event.target.checked)}
-              disabled={tafsirEditions.length === 0 || selectedTafsirId === null}
-            />
-            <span>
-              <strong>{t("quran.tafsirToggle")}</strong>
-              <small>{t("quran.tafsirHelp")}</small>
-            </span>
-          </label>
-          <div className="translation-edition-control">
-            <label className="form-label" htmlFor="tafsir-edition">
-              {t("quran.tafsirEdition")}
+          <div className="translation-settings tafsir-settings" style={{ marginTop: 12 }}>
+            <label className="translation-toggle" htmlFor="tafsir-enabled">
+              <input
+                id="tafsir-enabled"
+                type="checkbox"
+                checked={tafsirEnabled}
+                onChange={(event) => setTafsirEnabled(event.target.checked)}
+                disabled={tafsirEditions.length === 0 || selectedTafsirId === null}
+              />
+              <span>
+                <strong>{t("quran.tafsirToggle")}</strong>
+                <small>{t("quran.tafsirHelp")}</small>
+              </span>
             </label>
-            <select
-              id="tafsir-edition"
-              value={selectedTafsirId ?? ""}
-              onChange={(event) => {
-                const sourceId = Number(event.target.value);
-                setSelectedTafsirId(
-                  Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
-                );
-              }}
-              disabled={tafsirEditions.length === 0}
-            >
-              {tafsirEditions.length === 0 ? (
-                <option value="">{t("quran.tafsirUnavailable")}</option>
-              ) : selectedTafsirId === null ? (
-                <option value="">{t("quran.tafsirChoose")}</option>
-              ) : null}
-              {tafsirEditions.map((edition) => (
-                <option key={edition.source_id} value={edition.source_id}>
-                  {edition.name} · {edition.author_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {selectedTafsir && (
-            <p className="translation-source-note">
-              {selectedTafsir.name} · {selectedTafsir.author_name}.{" "}
-              <a href={selectedTafsir.source.url} target="_blank" rel="noreferrer">
-                {selectedTafsir.source.attribution}
-              </a>
-            </p>
-          )}
-          {locale === "tr" && !tafsirEditions.some((edition) => edition.language_code === "tr") && (
-            <p className="translation-context-note">{t("quran.tafsirTurkishUnavailable")}</p>
-          )}
-          {tafsirError && (
-            <p className="translation-error" role="status">
-              {t("quran.tafsirError")}
-            </p>
-          )}
-          {preferenceSyncError && (
-            <p className="translation-context-note" role="status">
-              {t("quran.preferenceSyncError")}
-            </p>
-          )}
-        </div>
-
-        <div className="form-row" style={{ marginTop: 14 }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="juz-navigation">{t("quran.juz")}</label>
-            <select
-              id="juz-navigation"
-              value=""
-              onChange={(event) => {
-                const division = juz.find((item) => item.number === Number(event.target.value));
-                if (division) navigateToDivision(division);
-              }}
-              disabled={juz.length === 0}
-            >
-              <option value="">{t("quran.goJuz")}</option>
-              {juz.map((item) => (
-                <option key={item.id} value={item.number}>
-                  {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
-                </option>
-              ))}
-            </select>
+            <div className="translation-edition-control">
+              <label className="form-label" htmlFor="tafsir-edition">
+                {t("quran.tafsirEdition")}
+              </label>
+              <select
+                id="tafsir-edition"
+                value={selectedTafsirId ?? ""}
+                onChange={(event) => {
+                  const sourceId = Number(event.target.value);
+                  setSelectedTafsirId(
+                    Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null,
+                  );
+                }}
+                disabled={tafsirEditions.length === 0}
+              >
+                {tafsirEditions.length === 0 ? (
+                  <option value="">{t("quran.tafsirUnavailable")}</option>
+                ) : selectedTafsirId === null ? (
+                  <option value="">{t("quran.tafsirChoose")}</option>
+                ) : null}
+                {tafsirEditions.map((edition) => (
+                  <option key={edition.source_id} value={edition.source_id}>
+                    {edition.name} · {edition.author_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedTafsir && (
+              <p className="translation-source-note">
+                {selectedTafsir.name} · {selectedTafsir.author_name}.{" "}
+                <a href={selectedTafsir.source.url} target="_blank" rel="noreferrer">
+                  {selectedTafsir.source.attribution}
+                </a>
+              </p>
+            )}
+            {locale === "tr" && !tafsirEditions.some((edition) => edition.language_code === "tr") && (
+              <p className="translation-context-note">{t("quran.tafsirTurkishUnavailable")}</p>
+            )}
+            {tafsirError && (
+              <p className="translation-error" role="status">
+                {t("quran.tafsirError")}
+              </p>
+            )}
+            {preferenceSyncError && (
+              <p className="translation-context-note" role="status">
+                {t("quran.preferenceSyncError")}
+              </p>
+            )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="hizb-navigation">{t("quran.hizb")}</label>
-            <select
-              id="hizb-navigation"
-              value=""
-              onChange={(event) => {
-                const division = hizb.find((item) => item.number === Number(event.target.value));
-                if (division) navigateToDivision(division);
-              }}
-              disabled={hizb.length === 0}
-            >
-              <option value="">{t("quran.goHizb")}</option>
-              {hizb.map((item) => (
-                <option key={item.id} value={item.number}>
-                  {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="form-row" style={{ marginTop: 14 }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="juz-navigation">{t("quran.juz")}</label>
+              <select
+                id="juz-navigation"
+                value=""
+                onChange={(event) => {
+                  const division = juz.find((item) => item.number === Number(event.target.value));
+                  if (division) navigateToDivision(division);
+                }}
+                disabled={juz.length === 0}
+              >
+                <option value="">{t("quran.goJuz")}</option>
+                {juz.map((item) => (
+                  <option key={item.id} value={item.number}>
+                    {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="rub-navigation">{t("quran.rub")}</label>
-            <select
-              id="rub-navigation"
-              value=""
-              onChange={(event) => {
-                const division = rubElHizb.find(
-                  (item) => item.number === Number(event.target.value),
-                );
-                if (division) navigateToDivision(division);
-              }}
-              disabled={rubElHizb.length === 0}
-            >
-              <option value="">{t("quran.goRub")}</option>
-              {rubElHizb.map((item) => (
-                <option key={item.id} value={item.number}>
-                  {t("quran.rubOption", { number: item.number, hizb: item.hizb_number, quarter: item.quarter_number, surah: item.start_ayah.surah, ayah: item.start_ayah.number })}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="hizb-navigation">{t("quran.hizb")}</label>
+              <select
+                id="hizb-navigation"
+                value=""
+                onChange={(event) => {
+                  const division = hizb.find((item) => item.number === Number(event.target.value));
+                  if (division) navigateToDivision(division);
+                }}
+                disabled={hizb.length === 0}
+              >
+                <option value="">{t("quran.goHizb")}</option>
+                {hizb.map((item) => (
+                  <option key={item.id} value={item.number}>
+                    {t("quran.divisionOption", { number: item.number, surah: item.start_ayah.surah, ayah: item.start_ayah.number, page: item.start_page })}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="ayah-navigation">
-              {t("quran.surahAyah", { count: currentSurahObj?.ayah_count || "—" })}
-            </label>
-            <select
-              id="ayah-navigation"
-              value=""
-              onChange={(event) => navigateToAyah(Number(event.target.value))}
-              disabled={ayahs.length === 0}
-            >
-              <option value="">{t("quran.goAyah")}</option>
-              {ayahs.map((ayah) => (
-                <option key={ayah.id} value={ayah.number}>
-                  {t("quran.ayahOption", { surah: selectedSurah, ayah: ayah.number, pages: ayah.pages.join(", ") })}
-                </option>
-              ))}
-            </select>
+            <div className="form-group">
+              <label className="form-label" htmlFor="rub-navigation">{t("quran.rub")}</label>
+              <select
+                id="rub-navigation"
+                value=""
+                onChange={(event) => {
+                  const division = rubElHizb.find(
+                    (item) => item.number === Number(event.target.value),
+                  );
+                  if (division) navigateToDivision(division);
+                }}
+                disabled={rubElHizb.length === 0}
+              >
+                <option value="">{t("quran.goRub")}</option>
+                {rubElHizb.map((item) => (
+                  <option key={item.id} value={item.number}>
+                    {t("quran.rubOption", { number: item.number, hizb: item.hizb_number, quarter: item.quarter_number, surah: item.start_ayah.surah, ayah: item.start_ayah.number })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="ayah-navigation">
+                {t("quran.surahAyah", { count: currentSurahObj?.ayah_count || "—" })}
+              </label>
+              <select
+                id="ayah-navigation"
+                value=""
+                onChange={(event) => navigateToAyah(Number(event.target.value))}
+                disabled={ayahs.length === 0}
+              >
+                <option value="">{t("quran.goAyah")}</option>
+                {ayahs.map((ayah) => (
+                  <option key={ayah.id} value={ayah.number}>
+                    {t("quran.ayahOption", { surah: selectedSurah, ayah: ayah.number, pages: ayah.pages.join(", ") })}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        </MobileDisclosure>
       </section>
 
       <section className="surface quran-audio-surface" aria-label={t("audio.playerTitle")}>

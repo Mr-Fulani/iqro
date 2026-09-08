@@ -109,6 +109,8 @@ test("verified email login returns to the previous page without persisting token
 }) => {
   await installAuthMocks(page);
   await page.goto("/");
+  // Wait for session restoration/hydration before following the SSR link.
+  await expect(page.getByTestId("today-reading").getByRole("button", { name: "Создать норму" })).toBeVisible();
   await page.locator("main").getByRole("link", { name: "Войти по email" }).first().click();
   await expect(page).toHaveURL(/\/login$/);
 

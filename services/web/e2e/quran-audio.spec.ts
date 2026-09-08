@@ -750,7 +750,7 @@ test("arabic reader does not select an English translation automatically", async
 test("catalog loads all 114 surahs and starts the first track on one click", async ({ page }) => {
   await page.goto("/audio");
 
-  await expect(page.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Популярные чтецы" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toHaveCount(0);
   const reciterCards = page.getByTestId("audio-reciter");
   await expect(reciterCards).toHaveCount(2);
@@ -874,7 +874,7 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   await expect(player).toBeVisible();
   await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
   await expect(settingsButton).toBeVisible();
-  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await settingsButton.boundingBox())!.width).toBe(44);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
@@ -887,11 +887,13 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
 
   await page.locator('.brand-link[href="/ru"]').click();
   await expect(page).toHaveURL("/ru");
-  expect((await settingsButton.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await settingsButton.boundingBox())!.width).toBe(44);
   expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
   const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
   await expect(audioLink).toBeVisible();
-  expect((await audioLink.boundingBox())!.width).toBeLessThanOrEqual(40);
+  expect((await audioLink.boundingBox())!.width).toBe(44);
+  expect((await player.boundingBox())!.y + (await player.boundingBox())!.height)
+    .toBeLessThanOrEqual((await page.locator(".mobile-navigation").boundingBox())!.y - 7);
 
   await page.setViewportSize({ width: 768, height: 1024 });
   const tabletPlayerBox = await player.boundingBox();
@@ -1544,6 +1546,9 @@ test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", asy
   const stage = page.locator(".mushaf-page-container");
   const image = page.locator(".mushaf-image");
   await expect(reader).toBeInViewport();
+  await expect(page.locator(".mobile-navigation")).toBeHidden();
+  await expect(reader).toHaveCSS("padding-left", "0px");
+  await expect(reader).toHaveCSS("padding-right", "0px");
   await expect(page.locator(".mushaf-reader-toolbar")).toBeVisible();
   await expect(image).toHaveAttribute("data-page-number", "128");
 
@@ -1589,6 +1594,8 @@ test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", asy
   });
   await expect(image).toHaveAttribute("data-page-number", "128");
   await expect(page.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "previous");
+  await page.getByRole("button", { name: /Текст/ }).click();
+  await expect(page.locator(".mobile-navigation")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );

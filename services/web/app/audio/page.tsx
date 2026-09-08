@@ -306,9 +306,9 @@ export default function AudioPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div className="audio-page">
       {/* Header Controls */}
-      <section className="surface">
+      <section className="surface audio-controls">
         <div className="surface-head">
           <div>
             <p className="eyebrow">{t("audio.eyebrow")}</p>
@@ -354,19 +354,7 @@ export default function AudioPage() {
         </div>
 
         {selectedReciter && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: 14,
-              background: "var(--bg-subtle)",
-              borderRadius: "var(--radius-md)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
+          <div className="audio-reciter-summary">
             <div>
               <strong>{reciterName(selectedReciter)}</strong> ({selectedReciter.name_ar})
               <p className="kpi-desc">
@@ -437,7 +425,7 @@ export default function AudioPage() {
       </section>
 
       {/* Tracks List */}
-      <section className="surface">
+      <section className="surface audio-tracks">
         <div className="surface-head">
           <h3 className="surface-title">{t("audio.trackList")}</h3>
           <span className="kpi-desc">{t("audio.foundTracks", { count: tracks.length })}</span>

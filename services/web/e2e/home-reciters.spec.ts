@@ -222,13 +222,14 @@ test("home hero links Quran, audio, Dua and prayer with optimized landmark slide
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
-  const carouselBottom = await hero.locator(".hero-carousel").evaluate(
-    (element) => element.getBoundingClientRect().bottom,
-  );
-  const eyebrowTop = await hero.locator(".hero-content .eyebrow").evaluate(
+  const carouselTop = await hero.locator(".hero-carousel").evaluate(
     (element) => element.getBoundingClientRect().top,
   );
-  expect(carouselBottom).toBeLessThanOrEqual(eyebrowTop);
+  const actionsBottom = await hero.locator(".hero-actions").evaluate(
+    (element) => element.getBoundingClientRect().bottom,
+  );
+  expect(carouselTop).toBeGreaterThanOrEqual(actionsBottom);
+  expect((await hero.getByTestId("hero-slide-1").boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
 test("home prayer preview reuses the saved prayer location and profile", async ({ page }) => {

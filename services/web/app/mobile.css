@@ -1,0 +1,1029 @@
+/* Mobile presentation mirrors clients/iqro_mobile/lib/core/theme/iqro_theme.dart.
+   Keep the desktop cascade and all Quran glyph/page geometry in globals.css.
+   Components without a native equivalent retain their existing web controls. */
+.mobile-navigation,
+.mobile-home-title {
+  display: none;
+}
+
+.mobile-disclosure > summary {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --bg: #f7f4ec;
+    --bg-subtle: #efeee8;
+    --panel: #fffdf8;
+    --panel-hover: #f7f4ec;
+    --panel-active: #d9eee7;
+    --text-primary: #17201d;
+    --text-secondary: #4b5b53;
+    --text-muted: #636c63;
+    --border: #dcd8ce;
+    --border-strong: #cbc8be;
+    --border-focus: #0b5d4a;
+    --primary: #0b5d4a;
+    --primary-hover: #073e34;
+    --primary-subtle: #d9eee7;
+    --primary-border: #afcfc1;
+    --primary-text: #063e33;
+    --accent-gold: #9a6d22;
+    --accent-gold-subtle: #f5ead5;
+    --accent-gold-border: #ddc9a5;
+    --mobile-ink: #073e34;
+    --mobile-lavender: #ece8f6;
+    --mobile-nav-height: 72px;
+    --mobile-nav-space: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 22px;
+    --radius-xl: 22px;
+    --shadow-sm: none;
+  }
+
+  html {
+    scroll-padding-block: 16px calc(var(--mobile-nav-space) + 24px);
+  }
+
+  body {
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .app-container {
+    width: 100%;
+    margin: 0;
+    gap: 8px;
+    padding-block: env(safe-area-inset-top, 0px) calc(var(--mobile-nav-space) + 16px);
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .app-container > main,
+  .app-container > main > *,
+  .surface,
+  .form-group,
+  .form-row > *,
+  .track-row-copy {
+    min-width: 0;
+  }
+
+  /* Native top bar: 64 logical pixels, with account/language actions intact. */
+  .app-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    min-height: 64px;
+    gap: 8px 12px;
+    padding: 8px 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--bg);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .app-header .app-menu,
+  .app-header .brand-mark,
+  .app-header .brand-title {
+    display: none;
+  }
+
+  .app-header .brand-link {
+    min-height: 44px;
+  }
+
+  .app-header .brand-link .eyebrow {
+    color: var(--text-primary);
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-inline-start: auto;
+    max-width: 100%;
+  }
+
+  .language-switcher {
+    min-height: 44px;
+    padding: 0 6px;
+    border-radius: 14px;
+    background: var(--panel);
+  }
+
+  .language-switcher select {
+    min-width: 0;
+    max-width: 105px;
+    min-height: 44px;
+    padding-inline: 4px 0;
+    font-size: 16px;
+  }
+
+  .header-actions .status-chip {
+    max-width: 150px;
+    font-size: 11px;
+    white-space: normal;
+    padding: 6px 8px;
+  }
+
+  /* Five destinations match AppShell. More is a native keyboard-operable
+     disclosure of existing routes, and resets on navigation via its React key. */
+  .mobile-navigation {
+    position: fixed;
+    z-index: 90;
+    inset-inline: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+    min-height: var(--mobile-nav-space);
+    padding-block: 4px calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text-secondary);
+  }
+
+  .mobile-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 63px;
+    padding: 4px 1px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    list-style: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-tab::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-tab-icon {
+    display: grid;
+    place-items: center;
+    width: min(64px, 100%);
+    height: 32px;
+    border-radius: 999px;
+  }
+
+  .mobile-tab[aria-current="page"],
+  .mobile-tab.is-active,
+  .mobile-more[open] > summary {
+    color: var(--primary-text);
+  }
+
+  .mobile-tab[aria-current="page"] .mobile-tab-icon,
+  .mobile-tab.is-active .mobile-tab-icon,
+  .mobile-more[open] .mobile-tab-icon {
+    background: var(--primary-subtle);
+  }
+
+  .mobile-tab:focus-visible,
+  .mobile-more-links a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -3px;
+    border-radius: 12px;
+  }
+
+  .mobile-more-panel {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    max-height: calc(100dvh - var(--mobile-nav-space) - env(safe-area-inset-top, 0px) - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 28px 28px 0 0;
+    background: var(--panel);
+    box-shadow: 0 -16px 48px #073e3426;
+  }
+
+  .mobile-more:not([open]) .mobile-more-panel {
+    display: none;
+  }
+
+  .mobile-more-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 18px;
+    border-radius: 4px;
+    background: var(--border-strong);
+  }
+
+  .mobile-more-panel h2 {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    font-size: 24px;
+  }
+
+  .mobile-more-links {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+  }
+
+  .mobile-more-links a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 64px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .mobile-more-links a + a {
+    border-top: 1px solid var(--border);
+  }
+
+  .mobile-more-links a[aria-current="page"] {
+    background: var(--primary-subtle);
+  }
+
+  .mobile-more-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    height: 40px;
+    border-radius: 13px;
+    color: var(--primary);
+    background: var(--bg-subtle);
+  }
+
+  .mobile-more-chevron {
+    margin-inline-start: auto;
+    font-size: 24px;
+    color: var(--text-muted);
+  }
+
+  [dir="rtl"] .mobile-more-chevron {
+    transform: scaleX(-1);
+  }
+
+  /* Shared native surfaces and a 44px minimum touch target (52px primary). */
+  .surface,
+  .kpi-card {
+    padding: 16px;
+    border-radius: 22px;
+    box-shadow: none;
+  }
+
+  .surface-head {
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+
+  .surface-title {
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 700;
+    overflow-wrap: break-word;
+  }
+
+  h1.surface-title {
+    font-size: 28px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+
+  .surface-subtitle {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 1.6px;
+  }
+
+  .btn {
+    min-height: 52px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.3;
+    font-weight: 700;
+    white-space: normal;
+    overflow-wrap: break-word;
+    box-shadow: none;
+  }
+
+  .btn-sm {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+  }
+
+  .btn-secondary {
+    background: var(--panel);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    min-width: 0;
+    min-height: 52px;
+    max-width: 100%;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background-color: var(--panel);
+    font-size: 16px; /* Avoid iOS zoom when focusing controls. */
+    line-height: 1.3;
+  }
+
+  .language-switcher select {
+    min-height: 44px;
+    padding: 6px 0 6px 4px;
+    background: transparent;
+  }
+
+  .form-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 12px;
+  }
+
+  .form-label {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .status-chip {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .alert {
+    padding: 14px;
+    border-radius: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  /* Home: restrained emerald reading hero, sand prayer card and quiet panels. */
+  .home-page {
+    gap: 12px;
+  }
+
+  .hero-card {
+    min-height: 0;
+    padding: 22px;
+    background: var(--mobile-ink);
+    border-radius: 22px;
+    flex-direction: column;
+    align-items: stretch;
+    box-shadow: none;
+  }
+
+  .hero-media {
+    opacity: 0.12;
+    animation: none;
+  }
+
+  .hero-scrim,
+  [dir="rtl"] .hero-scrim {
+    background: linear-gradient(0deg, var(--mobile-ink), #073e3480);
+  }
+
+  .hero-content {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .hero-content h1 {
+    margin: 8px 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.15;
+    text-shadow: none;
+  }
+
+  .desktop-home-title,
+  .hero-content > p:not(.eyebrow) {
+    display: none;
+  }
+
+  .mobile-home-title {
+    display: inline;
+  }
+
+  .hero-content p {
+    font-size: 14px;
+    line-height: 1.45;
+    color: #d9eee7;
+    text-shadow: none;
+  }
+
+  .hero-content .eyebrow {
+    font-size: 11px;
+  }
+
+  .hero-actions {
+    margin-top: 18px;
+  }
+
+  .hero-actions .btn {
+    min-height: 48px;
+    border-radius: 15px;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .hero-primary-action {
+    background: var(--panel);
+    color: var(--primary-text);
+  }
+
+  .hero-secondary-action {
+    background: transparent;
+    border-color: #ffffff40;
+  }
+
+  .hero-carousel {
+    position: static;
+    align-self: flex-end;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    gap: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .hero-carousel-dots {
+    gap: 0;
+  }
+
+  .hero-carousel-dot,
+  .hero-carousel-dot.is-active {
+    width: 44px;
+    height: 44px;
+    border: 18px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  .hero-carousel-toggle {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+    background: transparent;
+  }
+
+  .today-reading,
+  .planner-summary,
+  .memorization-hero {
+    background: var(--panel);
+  }
+
+  .home-page .prayer-reading-plan,
+  .home-prayer-schedule {
+    background: var(--accent-gold-subtle);
+    border-color: var(--accent-gold-border);
+  }
+
+  .home-page .memorization-planner-card,
+  .home-planner-cta {
+    background: var(--mobile-lavender);
+  }
+
+  .surface.home-account-card {
+    background: var(--primary-subtle);
+  }
+
+  .home-page .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .home-page .kpi-card {
+    padding: 14px;
+    min-width: 0;
+  }
+
+  .home-page .kpi-value {
+    font-size: 17px;
+  }
+
+  .home-surah-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .home-surah-list .track-row {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 72px;
+    padding-inline: 0;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .home-surah-list .track-row:last-child {
+    border-bottom: 0;
+  }
+
+  /* Reciter portraits and list tiles share Flutter's 22px card silhouette. */
+  .reciter-showcase {
+    background: var(--panel);
+  }
+
+  .reciter-showcase .reciter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .reciter-showcase .reciter-card {
+    min-width: 0;
+    padding: 12px 8px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--panel);
+    gap: 9px;
+    box-shadow: none;
+  }
+
+  .reciter-showcase .reciter-avatar {
+    width: 88px;
+    height: 88px;
+  }
+
+  .reciter-showcase .reciter-card-copy strong {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .reciter-showcase .reciter-card-copy span {
+    font-size: 13px;
+  }
+
+  .audio-reciter-card.is-selected {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+  }
+
+  .audio-page {
+    gap: 16px;
+  }
+
+  .audio-reciter-summary {
+    background: var(--mobile-ink);
+    border-radius: 22px;
+    padding: 18px;
+    color: #fff;
+  }
+
+  .audio-reciter-summary .kpi-desc {
+    color: #d9eee7;
+    overflow-wrap: anywhere;
+  }
+
+  .audio-reciter-summary > div {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .audio-tracks .track-row {
+    padding: 14px 0;
+    gap: 10px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .audio-tracks .track-row:last-child {
+    border-bottom: 0;
+  }
+
+  .track-row-main {
+    gap: 12px;
+  }
+
+  .track-row-actions {
+    flex-wrap: wrap;
+  }
+
+  .ayah-badge {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 12px;
+    background: var(--primary-subtle);
+    color: var(--primary-text);
+  }
+
+  /* Reader controls only: do not change Quran fonts, line metrics, page
+     ratios, verse overlays, selection hitboxes or the Mushaf renderer. */
+  .quran-page-layout {
+    gap: 12px;
+  }
+
+  body:has(.quran-page-layout.is-mushaf-mode) {
+    --mobile-nav-space: env(safe-area-inset-bottom, 0px);
+  }
+
+  body:has(.quran-page-layout.is-mushaf-mode) .mobile-navigation {
+    display: none;
+  }
+
+  .quran-control-surface > .surface-head {
+    gap: 16px;
+  }
+
+  .quran-control-surface > .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .quran-control-surface > .form-row > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+  }
+
+  .quran-audio-surface {
+    order: 4;
+  }
+
+  .quran-mode-switch {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+  }
+
+  .quran-mode-switch .btn {
+    min-height: 48px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .quran-mode-switch .btn + .btn {
+    border-inline-start: 1px solid var(--border-strong);
+  }
+
+  .quran-mode-switch .btn-primary {
+    background: var(--primary-subtle);
+    color: var(--primary-text);
+  }
+
+  .translation-settings {
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--bg-subtle);
+  }
+
+  .mobile-disclosure {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .mobile-disclosure > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding-block: 12px;
+    color: var(--primary);
+    font-weight: 700;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .mobile-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-disclosure > summary > span {
+    flex: 0 0 auto;
+    font-size: 20px;
+  }
+
+  .mobile-disclosure[open] > summary > span {
+    transform: rotate(180deg);
+  }
+
+  .mobile-disclosure > summary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  .translation-toggle {
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .ayah-card {
+    padding: 16px;
+    border-radius: 22px;
+    background: var(--panel);
+  }
+
+  .ayah-actions,
+  .ayah-action-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ayah-icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Planner, prayer and memorization keep all form fields and progress data. */
+  .planner-page,
+  .planner-dashboard,
+  .memorization-stack,
+  .dua-page {
+    gap: 16px;
+  }
+
+  .today-goal-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .today-goal-form .today-reading-actions {
+    grid-column: 1 / -1;
+  }
+
+  .today-reading-body {
+    gap: 16px;
+  }
+
+  .today-streak,
+  .planner-stats article,
+  .planner-detail-card {
+    background: var(--bg-subtle);
+    border-color: var(--border);
+    border-radius: 16px;
+  }
+
+  .today-progress-track {
+    background: var(--border);
+  }
+
+  .today-progress-track > span {
+    background: var(--primary);
+  }
+
+  .prayer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .prayer-time-card {
+    min-width: 0;
+    padding: 14px 10px;
+    background: var(--panel);
+    border-radius: 18px;
+  }
+
+  .prayer-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 24px;
+  }
+
+  .home-prayer-schedule .prayer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .home-prayer-schedule .prayer-time-card {
+    padding: 10px 4px;
+    gap: 3px;
+    border-color: var(--accent-gold-border);
+  }
+
+  .home-prayer-schedule .prayer-time {
+    font-size: 20px;
+  }
+
+  .memorization-mode-tabs .btn,
+  .memorization-assessment-actions .btn {
+    flex: 1 1 100px;
+  }
+
+  .dua-hero {
+    background: var(--accent-gold-subtle);
+  }
+
+  .dua-category-chip,
+  .dua-entry-card {
+    border-radius: 22px;
+    background: var(--panel);
+    box-shadow: none;
+  }
+
+  .profile-favorite-filters {
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .profile-favorite-filter {
+    min-height: 44px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* The global audio dock always clears the five-tab bar and home indicator. */
+  .global-audio-player-dock {
+    bottom: calc(var(--mobile-nav-space) + 8px);
+    width: calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    max-height: calc(100dvh - var(--mobile-nav-space) - env(safe-area-inset-top, 0px) - 24px);
+    border-color: var(--border);
+    border-radius: 22px;
+    background: var(--panel);
+    box-shadow: 0 6px 24px #073e3426;
+    overscroll-behavior: contain;
+  }
+
+  .global-audio-player-dock.is-compact,
+  .global-audio-player-dock.is-compact.has-reciter-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .global-audio-player-dock.is-compact .global-audio-player-head {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: 0;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-player {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 6px;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-summary {
+    grid-column: 1;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-native-controls {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
+  .global-audio-player-actions .btn {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px;
+  }
+
+  .global-audio-player-actions {
+    align-self: start;
+    flex-wrap: wrap;
+    max-width: 44px;
+  }
+
+  .global-audio-player-spacer.is-compact {
+    height: 170px;
+  }
+
+  .global-audio-player-spacer.is-compact.has-reciter-controls {
+    height: 230px;
+  }
+
+  .app-footer {
+    margin-top: 24px;
+    padding: 20px 0 0;
+    background: transparent;
+    border-radius: 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .mobile-footer-details {
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  .mobile-footer-details > summary {
+    font-size: 14px;
+  }
+
+  .footer-content {
+    gap: 24px;
+  }
+
+  .footer-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 16px;
+  }
+
+  .footer-column {
+    min-width: 0;
+  }
+
+  .footer-column a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+
+  .footer-bottom {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 768px) {
+  .reciter-showcase .reciter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .prayer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-player {
+    grid-template-columns: minmax(100px, 0.6fr) minmax(0, 1.4fr) 44px;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-native-controls {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle {
+    grid-column: 3;
+  }
+
+  .global-audio-player-actions {
+    align-self: center;
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-actions .status-chip {
+    max-width: 110px;
+  }
+
+  .hero-card {
+    padding: 18px;
+  }
+
+  .today-goal-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reciter-showcase .reciter-avatar {
+    width: 76px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 600px) {
+  .surface.mushaf-reader-surface {
+    padding: 0;
+    border-radius: 0;
+  }
+}
