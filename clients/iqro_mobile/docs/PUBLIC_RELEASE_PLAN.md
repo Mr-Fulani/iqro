@@ -22,6 +22,52 @@
 
 Дисковое пространство не освобождать удалением без отдельного точного разрешения пользователя.
 
+### 2026-09-08 — календарь и Tajweed опубликованы, APK обновлён
+
+- Код зафиксирован этапами: `5d04dcb` общий календарь и
+  **`c909c72e68df2f6b945c2e7c48bb15ebcb58ab80`** QCF V4 Tajweed. Именно c909c72
+  доставлен чистым `git archive` на staging после verified backup. Budget build/up,
+  healthchecks, миграции calendar 0001/0002 и runtime limits прошли; оба системных
+  таймера active. Секреты и volumes не заменялись. После сборки свободно около 1.5 GiB.
+- `https://staging.iqro.forum/ru/calendar`: живой календарь; проверены RU/EN/AR/TR,
+  текущий месяц, отметка белых дней, пояснение/источник. Общий API отдаёт 8 событий
+  версии `f6ea92f74d97bb8b381ca3cc8851dc0167de547bff614209a622f7d9b461fb80`.
+  `/admin/calendar/calendarevent/` доступен через штатную авторизацию. В browser QA
+  не было авторизованной admin-сессии; вёрстка/валидация формы проверены backend-тестом,
+  не выдавать страницу входа за проверку сохранения записи на live сервере.
+- **QCF V4 · Таджвид** / `qcf-v4-tajweed-hafs@qcf-v4-tajweed-iqro-20260908-v1`
+  опубликован штатным publisher: 604 страницы. Все 2418 файлов (476.5 MiB, включая
+  manifest/геометрию/три ширины) сверены SHA на staging. Передача SSH заняла почти
+  3 часа; один оборванный фрагмент повторён по checksum. До завершения публикация
+  не включалась. Одноразовое RAM-задание завершено штатно.
+- Public CDN smoke: страницы 1/2/3/27/51/208/604, все 720/1440/2160 px, bytes/SHA
+  совпали. RU/EN/AR/TR native catalog и полный offline manifest прошли. Пакет 2160 px:
+  **256491814 bytes (~245 MiB)**, checksum
+  `3a7202365e2ae53e4a0cdc428cec9f88ab9dfce664e8d11bfcadb1e95d20670f`.
+  Отчёт: `tmp/mushaf-tajweed-20260908/live-verification.json`.
+- Полные read-only fingerprints после deploy и после publication **совпали с baseline**:
+  18 чтецов, 36 recitation editions, 4104 tracks, 12472 ayahs и все 6236 canonical refs.
+  Сохранены прежние KFGQPC/QCF V2/Madani и администраторские портреты.
+- Итоговые local gates: **787 backend passed / 7 skipped; 371 Flutter passed /
+  13 opt-in skipped**, analyzers чистые, 5 web E2E и production build прошли.
+  Дополнительно source tests (4), backend full publication (1) и Flutter full corpus
+  (1) прошли с реальными 604 страницами. Новые provider tests (3) подтверждают
+  быстрый seed, обновление/кеширование, сохранение пустого каталога при offline и retry.
+- Android arm64 profile staging APK **установлен через `adb install -r`, Success**,
+  58376892 bytes, SHA256
+  `1913eefb1e1961aa2de18d14cab756bfd57a0dae935214a0c8d67af42cceac51`.
+  Сохранены аккаунт, данные, прогресс 3:11/p51, чтец/портрет Саада аль-Гамди и пауза
+  плеера. Проверены главная, сетка календаря, выделение 13-го дня и диалог пояснения
+  с источником. Скриншоты: `tmp/calendar-tajweed-staging-20260908/android-calendar*.png`.
+- **Нативный QCF V4 device/offline QA ещё не подтверждён на этом checkpoint.** После
+  сна телефон показал lock screen, последующие USB screencap вернули пустые файлы.
+  Запасная запись снимка на `/sdcard` заблокирована проверкой разрешений и не выполнена.
+  Пользователю предложено разблокировать телефон. Последний read-only статус: питание
+  есть, 100%, 37 °C. Не менять настройки блокировки и не очищать данные ради QA.
+
+Production/store публикация не выполнялась: полный редакционный и device sign-off
+остаётся отдельным release gate, даже при зелёной технической проверке корпуса.
+
 ### 2026-09-08 — общий календарь и полный QF19 Tajweed: код и local gates
 
 - Реализованы backend/admin/API событий календаря и веб `/{locale}/calendar`.
