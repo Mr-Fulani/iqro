@@ -25,7 +25,7 @@ import uharfbuzz as hb
 
 WIDTH, HEIGHT, MARGIN, ROW = 1000, 1600, 24, 96
 TOP = (HEIGHT - ROW * 15) / 2
-VERSION = "iqro-glyph-pilot-4"
+VERSION = "iqro-glyph-pilot-5"
 EXPECTED_RUNTIME = {"fonttools": "4.43.0", "uharfbuzz": "0.56.1", "harfbuzz": "14.4.0"}
 
 
@@ -167,10 +167,16 @@ class OutlinePen(BasePen):
 class Shaped:
     pieces: list
     bounds: tuple
+    advance: float | None = None
+    space: float = 0
 
     @property
     def width(self):
         return self.bounds[2] - self.bounds[0]
+
+    @property
+    def cursor_advance(self):
+        return self.width if self.advance is None else self.advance
 
 
 def union(rects):
@@ -266,7 +272,46 @@ class SourceFont:
             x += pos.x_advance
             y += pos.y_advance
         require(pieces, "No shaped glyphs")
-        return Shaped(pieces, union(boxes))
+        space = self.font.get_glyph_h_advance(self.font.get_nominal_glyph(32)) if 32 in self.cmap else 0
+        return Shaped(pieces, union(boxes), x, space)
+
+
+def source_line(shapes):
+    """RTL pen positions in font units, retaining bearings and source advances.
+
+    Ink widths must not be used to advance the pen: a page font encodes part
+    of the printed spacing in the glyph bearings. No added justification,
+    stretching, inserted letters, or content-dependent gap caps here.
+    """
+    require(shapes, "Empty source line")
+    cursor, origins, left, right = 0., [], 0., 0.
+    for index, shape in enumerate(shapes):
+        advance = shape.cursor_advance
+        require(math.isfinite(advance) and advance >= 0 and
+                math.isfinite(shape.space) and shape.space >= 0, "Invalid font advance")
+        # Some page-font records are combining marks on the preceding record.
+        # Preserve a genuine zero advance; never turn its ink width into a gap.
+        require(advance > 0 or index > 0, "Unanchored zero-advance glyph")
+        require(len(shape.bounds) == 4 and all(math.isfinite(v) for v in shape.bounds) and
+                shape.bounds[0] < shape.bounds[2] and shape.bounds[1] < shape.bounds[3], "Invalid ink bounds")
+        cursor -= advance
+        origins.append(cursor)
+        left = min(left, cursor, cursor + shape.bounds[0])
+        right = max(right, cursor + advance, cursor + shape.bounds[2])
+        if index < len(shapes) - 1:
+            cursor -= shape.space
+    return origins, left, right
+
+
+def positioned_line(shapes, scale):
+    origins, left, right = source_line(shapes)
+    width = (right - left) * scale
+    require(0 < width <= WIDTH - 2 * MARGIN + .0001, "Source line overflows page")
+    shift = (WIDTH - width) / 2 - left * scale
+    return [(origin * scale + shift,
+             (origin + shape.bounds[0]) * scale + shift,
+             (origin + shape.bounds[2]) * scale + shift)
+            for origin, shape in zip(origins, shapes, strict=True)]
 
 
 def place(shaped, x, baseline, scale):
@@ -284,12 +329,12 @@ def place(shaped, x, baseline, scale):
 
 @dataclass(frozen=True)
 class PageTypography:
-    """One baseline grid and glyph scale; never justify by deforming a word.
+    """One baseline grid and glyph scale, preserving the source pen advances.
 
     Ink bounds differ with diacritics. Those differences must not move the
     baseline or the following row. Use the page's shared ascent/descent, not
-    the ink height of each individual line. Gaps are in canvas units so both
-    source adapters follow the same optical spacing policy.
+    the ink height of each individual line. This is a glyph layout, NOT proof
+    of print fidelity: that requires the original complete page and geometry.
     """
     row_height: float
     scale: float
@@ -301,26 +346,12 @@ class PageTypography:
         require(shapes and row_height > 0, "Missing line metrics")
         ascent = max(s.bounds[3] for s in shapes)
         descent = min(s.bounds[1] for s in shapes)
-        minimum_gap = row_height / 12
-        width_scale = min((WIDTH - 2 * MARGIN - minimum_gap * (len(items) - 1)) /
-                          sum(s.width for s, _ in items) for items in verse_lines)
+        spans = [source_line([s for s, _ in items])[1:] for items in verse_lines]
+        width_scale = min((WIDTH - 2 * MARGIN) / (right - left) for left, right in spans)
         scale = min(width_scale, (row_height - row_height / 12) / (ascent - descent))
         require(math.isfinite(scale) and scale > 0, "Invalid line metrics")
         baseline = (row_height - (ascent - descent) * scale) / 2 + ascent * scale
         return cls(row_height, scale, baseline)
-
-    def horizontal(self, widths, *, centered):
-        require(widths and all(math.isfinite(w) and w > 0 for w in widths), "Invalid word widths")
-        free = WIDTH - 2 * MARGIN - sum(widths)
-        require(free >= -0.000001, "Line overflows page")
-        # A short source line stays short. Never turn unused paper width into
-        # unbounded spaces (previously up to 72 units in KFGQPC, uncapped in QCF).
-        gap = min(self.row_height / (8 if centered else 4),
-                  max(0, free) / max(1, len(widths) - 1))
-        total = sum(widths) + gap * (len(widths) - 1)
-        right = (WIDTH + total) / 2 if centered else WIDTH - MARGIN
-        return gap, right
-
 
 def validate_typography(page):
     """Fail the content build before publishing drifting rows or spaced-out words."""
@@ -334,23 +365,44 @@ def validate_typography(page):
         require(all(math.isfinite(row[k]) for k in ("top", "height", "baseline", "scale", "word_gap")),
                 "Nonfinite typography")
         require(abs(row["height"] - first["height"]) < .0001, "Uneven line grid")
-        require(0 <= row["word_gap"] <= row["height"] / (8 if row["centered"] else 4) + .0001,
-                "Excessive word spacing")
+        require(row["word_gap"] == 0 and row.get("spacing") == "source-advance",
+                "Non-source word spacing")
         if row["kind"] == "ayah":
             require(abs(row["scale"] - first["scale"]) < .0000001, "Verse font scale changes within page")
             require(abs(row["baseline"] - first["baseline"] -
                         (row["line"] - first["line"]) * first["height"]) < .0001,
                     "Uneven text baselines")
     previous = {}
+    line_glyphs = defaultdict(list)
     for glyph in page["glyphs"]:
+        line_glyphs[glyph["line"]].append(glyph)
         row = by_line[glyph["line"]]
         left, top, right, bottom = glyph["bounds"]
         require(top + .0001 >= row["top"] and bottom - .0001 <= row["top"] + row["height"],
                 "Glyph leaves its row")
+        require(all(math.isfinite(glyph[k]) for k in ("origin_x", "advance", "space")) and
+                glyph["advance"] >= 0 and glyph["space"] >= 0, "Invalid glyph advance")
+        if glyph["advance"] == 0:
+            anchor = previous.get(glyph["line"])
+            require(anchor and anchor["advance"] > 0 and glyph["verse"] and
+                    anchor["verse"] == glyph["verse"] and
+                    anchor["hit_bounds"][0] <= left and right <= anchor["hit_bounds"][2],
+                    "Unanchored or cross-ayah combining glyph")
         if glyph["line"] in previous:
-            require(abs(previous[glyph["line"]] - right - row["word_gap"]) < .0002,
-                    "Word positions differ from spacing metrics")
-        previous[glyph["line"]] = left
+            last = previous[glyph["line"]]
+            require(abs(last["origin_x"] - last["space"] -
+                        glyph["advance"] - glyph["origin_x"]) < .0002,
+                    "Font advances changed")
+        previous[glyph["line"]] = glyph
+        hit = glyph["hit_bounds"]
+        require(abs(hit[0] - glyph["origin_x"]) < .0001 and
+                abs(hit[2] - glyph["origin_x"] - glyph["advance"]) < .0001 and
+                abs(hit[1] - row["top"]) < .0001 and
+                abs(hit[3] - row["top"] - row["height"]) < .0001, "Hit cell differs from source advance")
+    for glyphs in line_glyphs.values():
+        left = min(min(g["origin_x"], g["bounds"][0]) for g in glyphs)
+        right = max(max(g["origin_x"] + g["advance"], g["bounds"][2]) for g in glyphs)
+        require(abs(left + right - WIDTH) < .0002, "Source line is not centered")
 
 
 def build_page(db, root, lock, number):
@@ -399,25 +451,34 @@ def build_page(db, root, lock, number):
                 line_scale = min(ROW * .60 / (box[3] - box[1]),
                                  WIDTH * .66 / sum(s.width for s, _ in items))
                 baseline = top + ROW / 2 + (box[3] + box[1]) * line_scale / 2
-            widths = [s.width * line_scale for s, _ in items]
+            shapes = [s for s, _ in items]
+            # Decorative fonts may have large side bearings too.
+            _, source_left, source_right = source_line(shapes)
+            if not is_verse:
+                line_scale = min(line_scale, (WIDTH - 2 * MARGIN) / (source_right - source_left))
+                baseline = top + ROW / 2 + (box[3] + box[1]) * line_scale / 2
             centered = bool(row["is_centered"])
-            gap, right = typography.horizontal(widths, centered=centered)
+            positions = positioned_line(shapes, line_scale)
             line_metrics.append({"line": row["line_number"], "kind": row["line_type"],
                                  "top": top, "height": row_height, "baseline": baseline,
-                                 "scale": line_scale, "word_gap": gap, "centered": centered})
+                                 "scale": line_scale, "word_gap": 0, "centered": centered,
+                                 "spacing": "source-advance"})
             verse_boxes = defaultdict(list)
-            for (shaped, word), width in zip(items, widths, strict=True):
-                left = right - width
+            for (shaped, word), (origin, left, right) in zip(items, positions, strict=True):
                 bounds = [left, baseline - shaped.bounds[3] * line_scale,
                           right, baseline - shaped.bounds[1] * line_scale]
+                hit_bounds = [round(v, 4) for v in
+                              (origin, top, origin + shaped.cursor_advance * line_scale, top + row_height)]
                 glyphs.append({"line": row["line_number"], "kind": row["line_type"],
                                "word_id": word["id"] if word else None,
                                "verse": f"{word['surah_number']}:{word['ayah_number']}" if word else None,
+                               "origin_x": origin, "advance": shaped.cursor_advance * line_scale,
+                               "space": shaped.space * line_scale,
+                               "hit_bounds": hit_bounds,
                                "bounds": [round(v, 4) for v in bounds],
                                "commands": place(shaped, left, baseline, line_scale)})
                 if word:
-                    verse_boxes[(word["surah_number"], word["ayah_number"])].append(bounds)
-                right = left - gap
+                    verse_boxes[(word["surah_number"], word["ayah_number"])].append(hit_bounds)
             for (surah, ayah), boxes in verse_boxes.items():
                 left, _, right, _ = union(boxes)
                 regions.append({"surah": surah, "ayah": ayah, "line": row["line_number"],
@@ -465,7 +526,15 @@ def validate_artifact(page):
         require(not contour, "Unclosed contour")
         if glyph["word_id"] is not None:
             require(glyph["kind"] == "ayah" and glyph["verse"], "Missing verse identity")
-            expected_regions[(glyph["verse"], glyph["line"])].append(box)
+            # Typographic hit cells follow the pen advances, not overhanging
+            # diacritic ink. Neighbouring glyphs' ink boxes can legitimately
+            # overlap; moving the glyph to make its hit box fit corrupts spacing.
+            hit = glyph.get("hit_bounds", box)
+            require(0 <= hit[0] <= hit[2] <= page["width"] and
+                    0 <= hit[1] < hit[3] <= page["height"], "Hit cell outside page")
+            require(hit[0] < hit[2] or ("lines" in page and glyph.get("advance") == 0),
+                    "Unverified zero-width hit cell")
+            expected_regions[(glyph["verse"], glyph["line"])].append(hit)
         else:
             require(glyph["verse"] is None and glyph["kind"] != "ayah", "Decoration is not an ayah")
     seen = set()
@@ -477,7 +546,7 @@ def validate_artifact(page):
         seen.add(key)
         # Region boundaries and paths share the same coordinate system and rounding.
         for box in expected_regions[key]:
-            require(l <= box[0] and t <= box[1] and r >= box[2] and b >= box[3], "Ayah region misses ink")
+            require(l <= box[0] and t <= box[1] and r >= box[2] and b >= box[3], "Ayah region misses hit cell")
     require(seen == set(expected_regions), "Missing ayah regions")
     for index, a in enumerate(page["ayah_regions"]):
         for b in page["ayah_regions"][index + 1:]:

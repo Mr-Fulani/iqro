@@ -98,7 +98,7 @@ def main():
         print(f"Verified {len(entries)} sample pages; no publication manifest", flush=True)
         return
     manifest = {**identity, "status": "prepared", "publication_scope": "staging",
-                "canonical_edition": "madani-hafs", "version": "qcf-v2-iqro-20260908-v4",
+                "canonical_edition": "madani-hafs", "version": "qcf-v2-iqro-20260908-v5",
                 "page_count": 604, "corpus_audit": audit, "pages": entries}
     payload = p.canonical(manifest)
     write_once(args.output_dir / "manifest.json", payload)

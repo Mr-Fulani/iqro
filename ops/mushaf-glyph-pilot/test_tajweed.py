@@ -52,7 +52,8 @@ class TajweedTests(unittest.TestCase):
             font.close()
 
     def test_control_pages_keep_every_word_and_hit_region(self):
-        for number in (1, 2, 3, 5, 27, 51, 208, 245, 604):
+        pages = range(1, 605) if os.environ.get("IQRO_MUSHAF_TYPOGRAPHY_FULL") else (1, 2, 3, 5, 27, 51, 208, 245, 475, 604)
+        for number in pages:
             with self.subTest(page=number):
                 font = t.ColorFont(self.root / f"p{number}.woff2", number)
                 try:
@@ -68,6 +69,35 @@ class TajweedTests(unittest.TestCase):
                 for glyph in page["glyphs"]:
                     if "layers" in glyph:
                         self.assertEqual(glyph["commands"], [cmd for layer in glyph["layers"] for cmd in layer["commands"]])
+
+    def test_page_475_combining_mark_keeps_source_advance_and_same_ayah(self):
+        font = t.ColorFont(self.root / "p475.woff2", 475)
+        try:
+            source = self.data["pages"][474]
+            row = [w for w in source["words"] if w["line_number"] == 14]
+            shapes = [font.shape(w["text"]) for w in row]
+            self.assertEqual(shapes[6].advance, 0)
+            # Independently shape the whole original line. Splitting provider
+            # records must preserve every outline, CPAL layer and pen position.
+            whole = font.shape(" ".join(w["text"] for w in row))
+            origins, _, _ = p.source_line(shapes)
+            total = sum(s.advance for s in shapes) + sum(s.space for s in shapes[:-1])
+            split = [(commands, dx + origin + total, dy, rgba)
+                     for shape, origin in reversed(list(zip(shapes, origins)))
+                     for (commands, dx, dy), rgba in zip(shape.pieces, shape.colors)]
+            self.assertEqual(split, [(commands, dx, dy, rgba)
+                                    for (commands, dx, dy), rgba in zip(whole.pieces, whole.colors)])
+            page = t.compose(self.data, source, font, self.heading, self.basmala, self.refs, self.lock)
+        finally:
+            font.close()
+        mark = next(g for g in page["glyphs"] if g["word_id"] == 2012086)
+        anchor = next(g for g in page["glyphs"] if g["word_id"] == 2012085)
+        self.assertAlmostEqual(mark["origin_x"], anchor["origin_x"] - anchor["space"])
+        self.assertEqual(mark["verse"], "40:77")
+        broken = copy.deepcopy(page)
+        next(g for g in broken["glyphs"] if g["word_id"] == 2012086)["verse"] = "40:76"
+        with self.assertRaisesRegex(ValueError, "cross-ayah"):
+            p.validate_artifact(broken)
 
 
 if __name__ == "__main__":

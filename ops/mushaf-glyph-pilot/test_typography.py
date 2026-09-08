@@ -25,17 +25,24 @@ def assert_grid(test, page):
                                (second["line"] - first["line"]) * height)
     by_line = defaultdict(list)
     for glyph in page["glyphs"]:
-        by_line[glyph["line"]].append(glyph["bounds"])
+        by_line[glyph["line"]].append(glyph)
     for row in rows:
-        test.assertGreaterEqual(row["word_gap"], 0)
-        test.assertLessEqual(row["word_gap"], height / (8 if row["centered"] else 4))
-        boxes = by_line[row["line"]]
-        for box in boxes:
+        test.assertEqual(row["word_gap"], 0)
+        test.assertEqual(row["spacing"], "source-advance")
+        glyphs = by_line[row["line"]]
+        for glyph in glyphs:
+            box = glyph["bounds"]
             test.assertGreaterEqual(box[1] + .0001, row["top"])
             test.assertLessEqual(box[3] - .0001, row["top"] + height)
-        # Reading order is RTL; bounds, paths and regions share this spacing.
-        for right, left in zip(boxes, boxes[1:]):
-            test.assertAlmostEqual(right[0] - left[2], row["word_gap"], delta=.0002)
+        # Check pen positions, not ink widths (bearings belong to the font).
+        for right, left in zip(glyphs, glyphs[1:]):
+            test.assertAlmostEqual(right["origin_x"] - right["space"] - left["advance"],
+                                   left["origin_x"], delta=.0002)
+        left = min(g["origin_x"] for g in glyphs)
+        left = min(left, *(g["bounds"][0] for g in glyphs))
+        right = max(g["origin_x"] + g["advance"] for g in glyphs)
+        right = max(right, *(g["bounds"][2] for g in glyphs))
+        test.assertAlmostEqual(left, p.WIDTH - right, delta=.0002)
     p.validate_artifact(page)
 
 
@@ -49,31 +56,42 @@ class TypographyTests(unittest.TestCase):
             self.assertGreaterEqual(grid.baseline_offset - shape.bounds[3] * grid.scale, 4)
             self.assertLessEqual(grid.baseline_offset - shape.bounds[1] * grid.scale, 92)
 
-    def test_dense_line_reserves_space_before_fitting_glyphs(self):
-        shapes = [(p.Shaped([], (0, -10, 100, 80)), None)] * 18
+    def test_dense_line_fits_source_advances_and_real_spaces(self):
+        shapes = [(p.Shaped([], (10, -10, 100, 80), 120, 15), None)] * 18
         grid = p.PageTypography.fit([shapes])
-        gap, right = grid.horizontal([s.width * grid.scale for s, _ in shapes], centered=False)
-        self.assertGreaterEqual(gap + .000001, grid.row_height / 12)
-        self.assertEqual(right, p.WIDTH - p.MARGIN)
+        positions = p.positioned_line([s for s, _ in shapes], grid.scale)
+        self.assertGreaterEqual(min(left for _, left, _ in positions), p.MARGIN)
+        self.assertLessEqual(max(right for _, _, right in positions), p.WIDTH - p.MARGIN)
 
-    def test_short_line_does_not_expand_spaces_to_fill_paper(self):
-        grid = p.PageTypography(96, 1, 70)
-        gap, right = grid.horizontal([100, 100, 100], centered=False)
-        self.assertEqual(gap, 24)
-        self.assertEqual(right, 976)
-        self.assertGreater(right - 300 - gap * 2, p.MARGIN)
+    def test_short_line_is_centered_without_inventing_spaces(self):
+        shapes = [p.Shaped([], (0, -10, 100, 60), 100)] * 3
+        positions = p.positioned_line(shapes, 1)
+        self.assertEqual(positions, [(550, 550, 650), (450, 450, 550), (350, 350, 450)])
 
-    def test_centered_line_uses_same_natural_gap_in_both_adapters(self):
-        grid = p.PageTypography(96, 1, 70)
-        gap, right = grid.horizontal([100, 100, 100], centered=True)
-        self.assertEqual(gap, 12)
-        self.assertEqual(right, (1000 + 300 + 24) / 2)
+    def test_bearings_and_advance_survive_instead_of_tight_ink_packing(self):
+        shapes = [p.Shaped([], (10, -10, 90, 60), 120, 20),
+                  p.Shaped([], (-5, -10, 60, 60), 80, 20)]
+        origins, left, right = p.source_line(shapes)
+        self.assertEqual(origins, [-120, -220])
+        self.assertEqual((left, right), (-225, 0))
+        placed = p.positioned_line(shapes, 2)
+        self.assertEqual(placed[0][0] - placed[1][0], 200)
+        self.assertEqual(placed[0][1] - placed[1][2], 100)
 
     def test_overflow_and_nonfinite_width_are_rejected(self):
-        grid = p.PageTypography(96, 1, 70)
-        for widths in ([], [1000], [float('nan')], [0]):
-            with self.subTest(widths=widths), self.assertRaises(ValueError):
-                grid.horizontal(widths, centered=False)
+        for shapes in ([], [p.Shaped([], (0, 0, 1000, 10), 1000)],
+                       [p.Shaped([], (0, 0, 10, 10), float('nan'))],
+                       [p.Shaped([], (0, 0, 10, 10), 0)]):
+            with self.subTest(shapes=shapes), self.assertRaises(ValueError):
+                p.positioned_line(shapes, 1)
+
+    def test_combining_record_does_not_invent_a_word_gap(self):
+        shapes = [p.Shaped([], (0, -10, 100, 60), 100),
+                  p.Shaped([], (20, 65, 30, 75), 0),
+                  p.Shaped([], (0, -10, 80, 60), 80)]
+        origins, left, right = p.source_line(shapes)
+        self.assertEqual(origins, [-100, -100, -180])
+        self.assertEqual((left, right), (-180, 0))
 
 
 @unittest.skipUnless(os.environ.get("IQRO_KFGQPC_SOURCE_DIR"), "Pinned KFGQPC source required")

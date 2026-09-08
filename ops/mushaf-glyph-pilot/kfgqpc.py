@@ -13,7 +13,7 @@ import subprocess
 import prepare as p
 from build_full import write_once
 
-VERSION = "iqro-kfgqpc-2"
+VERSION = "iqro-kfgqpc-3"
 FONT = "UthmanicHafs1Ver18.woff2"
 
 
@@ -127,23 +127,29 @@ def compose(data, page, font, references, lock):
             box = p.union([s.bounds for s, _ in items])
             line_scale = min(row_height * .6 / (box[3] - box[1]), p.WIDTH * .66 / sum(s.width for s, _ in items))
             baseline = top + row_height / 2 + (box[3] + box[1]) * line_scale / 2
-        widths = [s.width * line_scale for s, _ in items]
+        shapes = [s for s, _ in items]
+        if row["line_type"] != "ayah":
+            _, source_left, source_right = p.source_line(shapes)
+            line_scale = min(line_scale, (p.WIDTH - 2 * p.MARGIN) / (source_right - source_left))
+            baseline = top + row_height / 2 + (box[3] + box[1]) * line_scale / 2
         centered = bool(row["is_centered"])
-        gap, right = typography.horizontal(widths, centered=centered)
+        positions = p.positioned_line(shapes, line_scale)
         line_metrics.append({"line": line, "kind": row["line_type"], "top": top,
                              "height": height, "baseline": baseline, "scale": line_scale,
-                             "word_gap": gap, "centered": centered})
+                             "word_gap": 0, "centered": centered, "spacing": "source-advance"})
         boxes = defaultdict(list)
-        for (shape, word), width in zip(items, widths, strict=True):
-            left = right - width
+        for (shape, word), (origin, left, right) in zip(items, positions, strict=True):
             bounds = [left, baseline - shape.bounds[3] * line_scale, right, baseline - shape.bounds[1] * line_scale]
+            hit_bounds = [round(v, 4) for v in
+                          (origin, top, origin + shape.cursor_advance * line_scale, top + height)]
             verse = f"{word['surah_number']}:{word['ayah_number']}" if word else None
             glyphs.append({"line": line, "kind": row["line_type"], "word_id": word["id"] if word else None,
                            "verse": verse, "bounds": [round(v, 4) for v in bounds],
+                           "origin_x": origin, "advance": shape.cursor_advance * line_scale, "space": shape.space * line_scale,
+                           "hit_bounds": hit_bounds,
                            "commands": p.place(shape, left, baseline, line_scale)})
             if word:
-                boxes[(word["surah_number"], word["ayah_number"])].append(bounds)
-            right = left - gap
+                boxes[(word["surah_number"], word["ayah_number"])].append(hit_bounds)
         for (surah, ayah), values in boxes.items():
             left, _, right, _ = p.union(values)
             regions.append({"surah": surah, "ayah": ayah, "line": line,
@@ -211,7 +217,7 @@ def main():
     load_source(args.source_dir)
     if not args.pages and not args.audit_only:
         manifest = {**identity, "status": "prepared", "publication_scope": "staging", "canonical_edition": "madani-hafs",
-                    "version": "kfgqpc-iqro-20260908-v2", "page_count": 604, "pages": entries}
+                    "version": "kfgqpc-iqro-20260908-v3", "page_count": 604, "pages": entries}
         raw = p.canonical(manifest)
         write_once(args.output_dir / "manifest.json", raw)
         write_once(args.output_dir / "manifest.sha256", f"{hashlib.sha256(raw).hexdigest()}  manifest.json\n".encode())

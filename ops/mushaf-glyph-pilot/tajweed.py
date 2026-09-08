@@ -22,7 +22,7 @@ from build_full import write_once
 import kfgqpc
 import prepare as p
 
-VERSION = "iqro-qcf-v4-tajweed-1"
+VERSION = "iqro-qcf-v4-tajweed-2"
 EDITION = "qcf-v4-tajweed-hafs"
 
 
@@ -89,7 +89,8 @@ class ColorFont:
             x += pos.x_advance
             y += pos.y_advance
         p.require(pieces and boxes, "Entire word has no visible source outline")
-        shape = p.Shaped(pieces, p.union(boxes))
+        space = self.font.get_glyph_h_advance(self.font.get_nominal_glyph(32)) if 32 in self.cmap else 0
+        shape = p.Shaped(pieces, p.union(boxes), x, space)
         shape.colors = colors
         return shape
 
@@ -148,23 +149,29 @@ def compose(data, page, font, heading, basmala, refs, lock):
             box = p.union([shape.bounds for shape, _ in items])
             scale = min(row_height * .6 / (box[3] - box[1]), p.WIDTH * .66 / sum(s.width for s, _ in items))
             baseline = top + row_height / 2 + (box[3] + box[1]) * scale / 2
-        widths = [shape.width * scale for shape, _ in items]
-        gap, right = typography.horizontal(widths, centered=centered)
-        metrics.append({"line": line, "kind": kind, "top": top, "height": row_height, "baseline": baseline, "scale": scale, "word_gap": gap, "centered": centered})
+        shapes = [shape for shape, _ in items]
+        if kind != "ayah":
+            _, source_left, source_right = p.source_line(shapes)
+            scale = min(scale, (p.WIDTH - 2 * p.MARGIN) / (source_right - source_left))
+            baseline = top + row_height / 2 + (box[3] + box[1]) * scale / 2
+        positions = p.positioned_line(shapes, scale)
+        metrics.append({"line": line, "kind": kind, "top": top, "height": row_height, "baseline": baseline, "scale": scale,
+                        "word_gap": 0, "centered": centered, "spacing": "source-advance"})
         boxes = defaultdict(list)
-        for (shape, word), width in zip(items, widths, strict=True):
-            left = right - width
+        for (shape, word), (origin, left, right) in zip(items, positions, strict=True):
             box = [left, baseline - shape.bounds[3] * scale, right, baseline - shape.bounds[1] * scale]
+            hit_bounds = [round(v, 4) for v in (origin, top, origin + shape.cursor_advance * scale, top + row_height)]
             glyph = {"line": line, "kind": kind, "word_id": word["id"] if word else None,
                 "verse": f"{word['surah']}:{word['ayah']}" if word else None,
+                "origin_x": origin, "advance": shape.cursor_advance * scale, "space": shape.space * scale,
+                "hit_bounds": hit_bounds,
                 "bounds": [round(v, 4) for v in box], "commands": p.place(shape, left, baseline, scale)}
             if hasattr(shape, "colors"):
                 glyph["layers"] = [{"rgba": color, "commands": p.place(p.Shaped([piece], shape.bounds), left, baseline, scale)}
                     for piece, color in zip(shape.pieces, shape.colors, strict=True)]
             glyphs.append(glyph)
             if word:
-                boxes[(word["surah"], word["ayah"])].append(box)
-            right = left - gap
+                boxes[(word["surah"], word["ayah"])].append(hit_bounds)
         for (surah, ayah), values in boxes.items():
             left, _, right, _ = p.union(values)
             regions.append({"surah": surah, "ayah": ayah, "line": line,
@@ -244,7 +251,7 @@ def main():
         first.close()
     if not args.pages:
         manifest = {**identity, "status": "prepared", "publication_scope": "staging", "canonical_edition": "madani-hafs",
-            "version": "qcf-v4-tajweed-iqro-20260908-v1", "page_count": 604, "pages": entries}
+            "version": "qcf-v4-tajweed-iqro-20260908-v2", "page_count": 604, "pages": entries}
         raw = p.canonical(manifest)
         write_once(args.output_dir / "manifest.json", raw)
         write_once(args.output_dir / "manifest.sha256", f"{hashlib.sha256(raw).hexdigest()}  manifest.json\n".encode())

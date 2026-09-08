@@ -63,7 +63,8 @@ class KfgqpcSourceTests(unittest.TestCase):
         lines = {r["line"]: r for r in page["lines"]}
         self.assertFalse(lines[1]["centered"])
         self.assertTrue(lines[2]["centered"])
-        self.assertEqual(lines[2]["word_gap"], 12)
+        self.assertEqual(lines[2]["word_gap"], 0)
+        self.assertEqual(lines[2]["spacing"], "source-advance")
 
 
 if __name__ == "__main__":
