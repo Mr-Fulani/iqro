@@ -9,7 +9,7 @@ import { MemorizationPlannerCard } from "../components/MemorizationPlannerCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
-import { groupRecitersByPerson } from "../lib/reciter-catalog";
+import { selectHomePopularReciters } from "../lib/reciter-catalog";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { rememberReciterPreference } from "../lib/reciter-preference";
@@ -70,7 +70,7 @@ export default function HomePage() {
 
     api
       .getReciters()
-      .then((res) => setFeaturedReciters(groupRecitersByPerson(res.results || []).slice(0, 10)))
+      .then((res) => setFeaturedReciters(selectHomePopularReciters(res.results || [])))
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 

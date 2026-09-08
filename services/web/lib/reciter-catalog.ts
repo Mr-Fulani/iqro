@@ -5,6 +5,17 @@ const CANONICAL_RECITER_SLUGS: Readonly<Record<string, string>> = {
   "qf-12-mahmoud-khaleel-al-husary": "qf-6-mahmoud-khaleel-al-husary",
 };
 
+export const HOME_POPULAR_RECITER_SLUGS = [
+  "qf-7-mishari-rashid-al-afasy",
+  "qf-3-abdur-rahman-as-sudais",
+  "qf-2-abdul-baset-abdul-samad",
+  "qf-9-muhammad-siddiq-al-minshawi",
+  "qf-6-mahmoud-khaleel-al-husary",
+  "qf-159-maher-al-muaiqly",
+  "qf-13-saad-al-ghamdi",
+  "qf-10-saud-ash-shuraym",
+] as const;
+
 export function reciterPersonKey(reciter: Pick<Reciter, "slug"> | string): string {
   const slug = typeof reciter === "string" ? reciter : reciter.slug;
   return CANONICAL_RECITER_SLUGS[slug] || slug;
@@ -31,6 +42,19 @@ export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
     );
   }
   return [...people.values()];
+}
+
+export function selectHomePopularReciters(reciters: Reciter[]): Reciter[] {
+  const people = groupRecitersByPerson(reciters);
+  const bySlug = new Map(people.map((reciter) => [reciterPersonKey(reciter), reciter]));
+  const ranked = HOME_POPULAR_RECITER_SLUGS.flatMap((slug) => {
+    const reciter = bySlug.get(slug);
+    return reciter ? [reciter] : [];
+  });
+  const rankedKeys = new Set(ranked.map(reciterPersonKey));
+
+  return [...ranked, ...people.filter((reciter) => !rankedKeys.has(reciterPersonKey(reciter)))]
+    .slice(0, HOME_POPULAR_RECITER_SLUGS.length);
 }
 
 export function reciterSourcesForPerson(reciters: Reciter[], selected: Reciter): Reciter[] {

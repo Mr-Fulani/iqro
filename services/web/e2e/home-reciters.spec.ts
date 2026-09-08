@@ -1,7 +1,7 @@
 import { access, stat } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { groupRecitersByPerson } from "../lib/reciter-catalog";
+import { groupRecitersByPerson, selectHomePopularReciters } from "../lib/reciter-catalog";
 import { RECITER_PORTRAITS } from "../lib/reciter-portraits";
 
 const productionReciterSlugs = [
@@ -177,6 +177,16 @@ test("portrait manifest covers the full production reciter catalog", async () =>
     slug: "qf-2-abdul-baset-abdul-samad",
     portrait_url: uploadedPortrait,
   });
+
+  expect(selectHomePopularReciters(reciters)).toHaveLength(8);
+  expect(selectHomePopularReciters(reciters).slice(0, 6).map((reciter) => reciter.slug)).toEqual([
+    "qf-7-mishari-rashid-al-afasy",
+    "qf-3-abdur-rahman-as-sudais",
+    "qf-2-abdul-baset-abdul-samad",
+    "qf-9-muhammad-siddiq-al-minshawi",
+    "qf-6-mahmoud-khaleel-al-husary",
+    "qf-10-saud-ash-shuraym",
+  ]);
 });
 
 test("home hero links Quran, audio, Dua and prayer with optimized landmark slides", async ({ page }) => {
@@ -365,20 +375,20 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
   await page.goto("/");
 
   const section = page.getByTestId("featured-reciters");
-  await expect(section.getByRole("heading", { name: "Слушайте любимых чтецов" })).toBeVisible();
-  await expect(section.getByTestId("featured-reciter")).toHaveCount(10);
-  await expect(section.getByTestId("reciter-avatar")).toHaveCount(10);
-  await expect(section.locator("img")).toHaveCount(10);
+  await expect(section.getByRole("heading", { name: "Популярные чтецы" })).toBeVisible();
+  await expect(section.getByTestId("featured-reciter")).toHaveCount(8);
+  await expect(section.getByTestId("reciter-avatar")).toHaveCount(8);
+  await expect(section.locator("img")).toHaveCount(8);
   await expect(section.getByTestId("reciter-avatar").first().locator(".reciter-avatar-initials"))
     .toHaveCount(0);
   await expect(section.locator("img").nth(0)).toHaveAttribute(
     "src",
-    /\/reciters\/abdul-baset-abdul-samad\.webp$/,
+    /\/reciters\/mishari-rashid-al-afasy\.webp$/,
   );
   const portraitSources = await section.locator("img").evaluateAll((images) =>
     images.map((image) => image.getAttribute("src")),
   );
-  expect(new Set(portraitSources).size).toBe(10);
+  expect(new Set(portraitSources).size).toBe(8);
   expect(
     await section.locator(".reciter-grid").evaluate((grid) =>
       getComputedStyle(grid).gridTemplateColumns.split(" ").length,

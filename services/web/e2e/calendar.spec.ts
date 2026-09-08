@@ -1,11 +1,33 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { calendarCopy } from "../lib/calendar";
+import { calendarCopy, calendarEventsForDay, type CalendarMonth } from "../lib/calendar";
 
 const dataRoot = "../backend/src/quran_backend/modules/calendar/data/";
 const seed = JSON.parse(readFileSync(`${dataRoot}events-v1.json`, "utf8"));
 const starts: number[] = JSON.parse(readFileSync(`${dataRoot}ummalqura-v1.json`, "utf8")).month_starts_mcjdn;
 const dayMs = 86_400_000;
+
+test("weekly fast markers respect Ramadan, Eid and Tashriq exclusions", () => {
+  const month = (hijriMonth: number, day: number): CalendarMonth => ({
+    method: seed.method,
+    year: 1448,
+    month: hijriMonth,
+    selected_day: day,
+    adjustment: 0,
+    first_weekday: 1,
+    days: [{day, civil_date: "2026-07-16", events: []}],
+    catalog: seed,
+  });
+
+  expect(calendarEventsForDay(month(2, 4), month(2, 4).days[0]).map((event) => event.code))
+    .toContain("monday_thursday_fast");
+  expect(calendarEventsForDay(month(9, 4), month(9, 4).days[0]).map((event) => event.code))
+    .not.toContain("monday_thursday_fast");
+  expect(calendarEventsForDay(month(10, 1), month(10, 1).days[0]).map((event) => event.code))
+    .not.toContain("monday_thursday_fast");
+  expect(calendarEventsForDay(month(12, 11), month(12, 11).days[0]).map((event) => event.code))
+    .not.toContain("monday_thursday_fast");
+});
 
 for (const locale of ["ru", "en", "ar", "tr"] as const) {
   test(`${locale} shared calendar: month, event, source and adjustment`, async ({page}) => {
@@ -60,4 +82,38 @@ test("calendar reports failure and retry recovers without blanking the screen", 
   await page.getByRole("button", {name: "Refresh", exact: true}).click();
   await expect(page.getByText(calendarCopy.en.error)).not.toBeVisible();
   await expect(page.getByRole("heading", {name: seed.events.find((e: {code: string}) => e.code === "eid_fitr").titles.en})).toBeVisible();
+});
+
+test("calendar marks Monday and Thursday fasts with an icon, explanation and hadith source", async ({page}) => {
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({status: 401, json: {}}));
+  await page.route("**/api/v1/calendar/month?*", (route) => route.fulfill({json: {
+    method: seed.method,
+    catalog: seed,
+    catalog_version: seed.version,
+    year: 1448,
+    month: 2,
+    selected_day: 2,
+    adjustment: 0,
+    first_weekday: 1,
+    days: [
+      {day: 1, civil_date: "2026-07-13", events: []},
+      {day: 2, civil_date: "2026-07-14", events: []},
+      {day: 3, civil_date: "2026-07-15", events: []},
+      {day: 4, civil_date: "2026-07-16", events: []},
+    ],
+  }}));
+
+  await page.goto("/ru/calendar");
+  const monday = page.getByTestId("calendar-day-1");
+  const thursday = page.getByTestId("calendar-day-4");
+  await expect(monday.getByTestId("calendar-marker-monday_thursday_fast")).toBeVisible();
+  await expect(thursday.getByTestId("calendar-marker-monday_thursday_fast")).toBeVisible();
+  await monday.getByTestId("calendar-marker-monday_thursday_fast").hover();
+  await expect(monday.getByRole("tooltip")).toContainText("Пост в понедельник и четверг");
+  await monday.getByTestId("calendar-marker-monday_thursday_fast").click();
+  await expect(page.getByRole("heading", {name: "Пост в понедельник и четверг"})).toBeVisible();
+  await expect(page.getByRole("link", {name: /Jami‘ at-Tirmidhi 747/})).toHaveAttribute(
+    "href",
+    "https://sunnah.com/tirmidhi:747",
+  );
 });

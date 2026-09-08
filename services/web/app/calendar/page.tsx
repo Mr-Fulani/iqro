@@ -2,11 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { calendarCopy, civilToday, sourceHref, type CalendarMonth } from "../../lib/calendar";
+import {
+  calendarCopy,
+  calendarEventsForDay,
+  civilToday,
+  sourceHref,
+  type CalendarEvent,
+  type CalendarMonth,
+} from "../../lib/calendar";
 import { useI18n } from "../../lib/i18n-context";
 import styles from "./page.module.css";
 
 const preferenceKey = "iqro_hijri_adjustment_v1";
+
+const eventIcon = (event: CalendarEvent) => event.kind === "voluntary_fast"
+  ? "☾"
+  : event.kind === "no_fast"
+    ? "✦"
+    : "◆";
 
 export default function CalendarPage() {
   const { locale } = useI18n();
@@ -57,7 +70,7 @@ export default function CalendarPage() {
     calendar: "gregory", timeZone: "UTC", ...(full ? {dateStyle: "full" as const} : {day: "numeric" as const}),
   }).format(new Date(`${value}T12:00:00Z`));
   const day = data?.days.find((value) => value.day === selected);
-  const events = data?.catalog.events.filter((event) => day?.events.includes(event.code)) ?? [];
+  const events = data && day ? calendarEventsForDay(data, day) : [];
   const firstWeekday = locale === "ar" ? 7 : 1;
   const skip = data ? (data.first_weekday - firstWeekday + 7) % 7 : 0;
   const shift = (delta: number) => {
@@ -100,18 +113,38 @@ export default function CalendarPage() {
           <h2>{copy.months[data.month - 1]} {number(data.year)}</h2>
           <button className="btn btn-ghost" aria-label={copy.next} disabled={loading || (data.year === 1500 && data.month === 12)} onClick={() => shift(1)}>{locale === "ar" ? "←" : "→"}</button>
         </div>
+        <div className={styles.legend} aria-label={copy.legend}>
+          <span><i className={styles.occasionMarker} aria-hidden="true">◆</i>{copy.occasion}</span>
+          <span><i className={styles.fastMarker} aria-hidden="true">☾</i>{copy.voluntaryFast}</span>
+          <span><i className={styles.noFastMarker} aria-hidden="true">✦</i>{copy.noFast}</span>
+        </div>
+        <p className={styles.markerHint}>{copy.markerHint}</p>
         <div className={styles.grid}>
           {Array.from({length: 7}, (_, index) => <div className={styles.weekday} key={`weekday-${index}`}>
             {new Intl.DateTimeFormat(locale, {weekday: "short", timeZone: "UTC"}).format(new Date(Date.UTC(2026, 0, 5 + (firstWeekday - 1 + index) % 7)))}
           </div>)}
           {Array.from({length: skip}, (_, index) => <span key={`empty-${index}`} />)}
-          {data.days.map((item) => <button key={item.day} className={`${styles.day} ${item.day === selected ? styles.selected : ""}`}
-            aria-pressed={item.day === selected} disabled={loading}
-            aria-label={`${number(item.day)} ${copy.months[data.month - 1]}, ${civilLabel(item.civil_date, true)}${item.events.length ? ` · ${data.catalog.events.filter((e) => item.events.includes(e.code)).map((e) => e.titles[locale]).join(", ")}` : ""}`}
-            onClick={() => setSelected(item.day)}>
-            <strong>{number(item.day)}</strong><span>{civilLabel(item.civil_date)}</span>
-            <i aria-hidden="true" className={item.events.length ? styles.marked : ""} />
-          </button>)}
+          {data.days.map((item) => {
+            const itemEvents = calendarEventsForDay(data, item);
+            const eventTitles = itemEvents.map((event) => event.titles[locale]).join(" · ");
+            return <button key={item.day} className={`${styles.day} ${item.day === selected ? styles.selected : ""}`}
+              aria-pressed={item.day === selected} disabled={loading}
+              aria-label={`${number(item.day)} ${copy.months[data.month - 1]}, ${civilLabel(item.civil_date, true)}${eventTitles ? ` · ${eventTitles}` : ""}`}
+              data-testid={`calendar-day-${item.day}`}
+              onClick={() => setSelected(item.day)}>
+              <strong>{number(item.day)}</strong><span>{civilLabel(item.civil_date)}</span>
+              {itemEvents.length > 0 && <>
+                <span className={styles.markers} aria-hidden="true">
+                  {itemEvents.map((event) => <i
+                    key={event.code}
+                    className={event.kind === "voluntary_fast" ? styles.fastMarker : event.kind === "no_fast" ? styles.noFastMarker : styles.occasionMarker}
+                    data-testid={`calendar-marker-${event.code}`}
+                  >{eventIcon(event)}</i>)}
+                </span>
+                <span className={styles.dayTooltip} role="tooltip">{eventTitles}</span>
+              </>}
+            </button>;
+          })}
         </div>
       </section>
       <aside className={styles.panel} aria-live="polite">
@@ -120,7 +153,11 @@ export default function CalendarPage() {
         {day && <p className={styles.note}>{civilLabel(day.civil_date, true)}</p>}
         {!events.length && <p>{copy.noEvents}</p>}
         {events.map((event) => <article className={styles.event} key={event.code}>
-          <h3>{event.titles[locale]}</h3><p>{event.descriptions[locale]}</p>
+          <div className={styles.eventHeading}>
+            <i className={event.kind === "voluntary_fast" ? styles.fastMarker : event.kind === "no_fast" ? styles.noFastMarker : styles.occasionMarker} aria-hidden="true">{eventIcon(event)}</i>
+            <div><span>{event.kind === "voluntary_fast" ? copy.voluntaryFast : event.kind === "no_fast" ? copy.noFast : copy.occasion}</span><h3>{event.titles[locale]}</h3></div>
+          </div>
+          <p>{event.descriptions[locale]}</p>
           {sourceHref(event.source.url) && <a href={sourceHref(event.source.url)} target="_blank" rel="noopener noreferrer">{copy.source}: {event.source.label} ↗</a>}
         </article>)}
       </aside>
