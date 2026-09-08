@@ -49,6 +49,16 @@ void main() {
       'staging_only': true,
     };
     expect(NativeMushafEdition.parse(json)!.nameFor('ar'), 'مصحف');
+    final tajweed = NativeMushafEdition.parse({
+      ...json,
+      'code': 'qcf-v4-tajweed-hafs',
+      'names': {'en': 'QCF V4 · Tajweed', 'ru': 'QCF V4 · Таджвид'},
+    });
+    expect(tajweed!.nameFor('ru'), 'QCF V4 · Таджвид');
+    expect(
+      MushafIdentity.fromPreference('native:qcf-v4-tajweed-hafs').apiPath,
+      '/quran/mushaf-renditions/qcf-v4-tajweed-hafs',
+    );
     expect(NativeMushafEdition.parse(json)!.nameFor('tr'), 'QCF V2');
     for (final change in <Map<String, Object?>>[
       {'pages_count': 603},

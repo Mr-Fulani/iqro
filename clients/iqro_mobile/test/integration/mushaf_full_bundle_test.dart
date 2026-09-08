@@ -19,7 +19,10 @@ void main() {
       expect(checksumFile, '${sha256.convert(manifestBytes)}  manifest.json\n');
       final manifest = jsonDecode(utf8.decode(manifestBytes)) as Map;
       expect(manifest['publication_scope'], 'staging');
-      expect(manifest['edition'], anyOf('qcf-v2-hafs', 'kfgqpc-hafs'));
+      expect(
+        manifest['edition'],
+        anyOf('qcf-v2-hafs', 'kfgqpc-hafs', 'qcf-v4-tajweed-hafs'),
+      );
       final pages = (manifest['pages'] as List).cast<Map>();
       expect(pages.map((p) => p['page']), List.generate(604, (i) => i + 1));
       final verses = <String>{};

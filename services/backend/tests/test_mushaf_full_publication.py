@@ -20,7 +20,7 @@ from quran_backend.modules.quran.models import (
     MushafRenditionRelease,
     Surah,
 )
-from quran_backend.modules.quran.rendition_publication import publish_rendition
+from quran_backend.modules.quran.rendition_publication import TAJWEED_SOURCE_SHA, publish_rendition
 from tests.test_mushaf_renditions import create_qf_source
 
 BUNDLE = os.environ.get("IQRO_MUSHAF_FULL_BUNDLE_DIR")
@@ -102,8 +102,13 @@ def test_full_bundle_publication_preserves_canonical_ids(quran_dataset: dict[str
     )
     uploader = Mock()
     manifest = Path(BUNDLE) / "manifest.json"
-    if json.loads(manifest.read_bytes())["edition"] == "kfgqpc-hafs":
-        create_qf_source()
+    edition = json.loads(manifest.read_bytes())["edition"]
+    if edition in {"kfgqpc-hafs", "qcf-v4-tajweed-hafs"}:
+        source = create_qf_source()
+        if edition == "qcf-v4-tajweed-hafs":
+            source.source_id = 19
+            source.source_checksum_sha256 = TAJWEED_SOURCE_SHA
+            source.save()
     assert publish_rendition(manifest, uploader=uploader, validate_only=True) is None
     uploader.upload_path.assert_not_called()
     assert not MushafRenditionRelease.objects.exists()

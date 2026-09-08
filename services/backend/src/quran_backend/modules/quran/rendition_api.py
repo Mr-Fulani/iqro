@@ -38,18 +38,20 @@ def visible_releases() -> QuerySet[MushafRenditionRelease]:
     # QF content corrections invalidate old derived pages, never silently mix
     # new words with old pixels/hit regions. Legacy JMApps releases remain valid.
     current_qf_sources = QuranFoundationMushaf.objects.filter(
-        environment=settings.QURAN_QF_ENV, source_id=5, is_available=True
-    ).values("source_checksum_sha256")
+        environment=settings.QURAN_QF_ENV, is_available=True
+    )
+    source_filter = Q(source_metadata={})
+    for source_id in (5, 19):
+        source_filter |= Q(
+            source_metadata__kind="quran-foundation",
+            source_metadata__source_id=source_id,
+            current_source_checksum__in=Subquery(
+                current_qf_sources.filter(source_id=source_id).values("source_checksum_sha256")
+            ),
+        )
     releases = releases.alias(
         current_source_checksum=KeyTextTransform("source_checksum_sha256", "source_metadata")
-    ).filter(
-        Q(source_metadata={})
-        | Q(
-            source_metadata__kind="quran-foundation",
-            source_metadata__source_id=5,
-            current_source_checksum__in=Subquery(current_qf_sources),
-        )
-    )
+    ).filter(source_filter)
     if not getattr(settings, "MUSHAF_STAGING_PREVIEWS", False):
         releases = releases.filter(staging_only=False)
     return releases
@@ -133,6 +135,8 @@ class MushafRenditionOfflineView(PublicReadOnlyViewMixin, APIView):
         if [p.number for p in pages] != list(range(1, release.page_count + 1)):
             raise NotFound("Complete rendition unavailable")
         package_id = f"mushaf-rendition-{code}-{release.version}-w{width}"
+        source_name = release.rendition.names.get("en", code)
+        provider = "Quran.Foundation" if release.source_metadata else "JMApps"
         entries = []
         checksum_pages = []
         total = 0
@@ -190,22 +194,25 @@ class MushafRenditionOfflineView(PublicReadOnlyViewMixin, APIView):
                 "publication_checksum_sha256": release.checksum_sha256,
                 "published_at": release.published_at,
                 "source": {
-                    "name": "QCF V2 / JMApps · IQRO layout",
+                    "name": f"{source_name} / {provider} · IQRO layout",
                     "url": release.source_url,
                     "checksum_sha256": release.checksum_sha256,
                 },
                 "rights": {
                     "offline_download": True,
                     "attribution_required": True,
-                    "attribution": "QCF V2 / JMApps · IQRO layout · Staging preview",
+                    "attribution": (
+                        f"{source_name} / {provider} · IQRO layout"
+                        + (" · Staging preview" if release.staging_only else "")
+                    ),
                     "license_name": "",
                     "license_url": "",
                 },
                 "mushaf": {
-                    "source_id": None,
+                    "source_id": release.source_metadata.get("source_id"),
                     "edition_code": code,
                     "canonical_edition_code": release.canonical_version.edition.code,
-                    "name": "QCF V2",
+                    "name": source_name,
                     "qirat_name": "Hafs",
                     "lines_per_page": 15,
                 },

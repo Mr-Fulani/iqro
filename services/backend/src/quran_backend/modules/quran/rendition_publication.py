@@ -36,6 +36,36 @@ SOURCE_COMMIT = "1d040f68d284f8e6db515157f8425abfefd78df6"
 KFGQPC_FONT_SHA = "8c00e7a7d5f773bcfb1642fdcfba505dbd81975fef39f14718827a32d075020c"
 KFGQPC_SOURCE_SHA = "bc049eb9587142b267fe4308dd31adc646128b95cde3c8b7b238af4f78953a7e"
 KFGQPC_SNAPSHOT_SHA = "5132e93c98cf90d1b07fddf4b479e5a430707c8de9590820d74aa10e44538674"
+TAJWEED_SOURCE_SHA = "b7f0bcd06bfd51232555a163c1f1ce404bd62b14791ce357c7c5689d70b72e60"
+TAJWEED_LOCK_SHA = "414069309a42a6a539d42b3f122232c48ef41a5c2f3e173570cf5250c8e42c8f"
+TAJWEED_LOCK_KEYS = (
+    "source_id",
+    "source_checksum_sha256",
+    "snapshot_sha256",
+    "font_url_template",
+    "palette_index",
+    "files",
+)
+RENDITION_NAMES = {
+    "qcf-v2-hafs": {
+        "ru": "QCF V2 · IQRO",
+        "en": "QCF V2 · IQRO",
+        "ar": "مصحف QCF V2",
+        "tr": "QCF V2 · IQRO",
+    },
+    "kfgqpc-hafs": {
+        "ru": "KFGQPC HAFS",
+        "en": "KFGQPC HAFS",
+        "ar": "مصحف حفص",
+        "tr": "KFGQPC HAFS",
+    },
+    "qcf-v4-tajweed-hafs": {
+        "ru": "QCF V4 · Таджвид",
+        "en": "QCF V4 · Tajweed",
+        "ar": "مصحف QCF V4 بالتجويد",
+        "tr": "QCF V4 · Tecvid",
+    },
+}
 
 
 def source_identity(manifest: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
@@ -53,6 +83,24 @@ def validate_source(manifest: dict[str, Any]) -> bool:
     if manifest.get("edition") == "qcf-v2-hafs":
         return manifest.get("source_commit") == SOURCE_COMMIT
     source = manifest.get("source", {})
+    if manifest.get("edition") == "qcf-v4-tajweed-hafs":
+        if not isinstance(source, dict):
+            return False
+        source_lock = {key: source.get(key) for key in TAJWEED_LOCK_KEYS}
+        checksum = hashlib.sha256(
+            json.dumps(
+                source_lock,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        return (
+            source.get("kind") == "quran-foundation"
+            and source.get("edition") == "qcf-v4-tajweed-hafs"
+            and source.get("decoration_font_sha256") == KFGQPC_FONT_SHA
+            and checksum == TAJWEED_LOCK_SHA
+        )
     return bool(
         manifest.get("edition") == "kfgqpc-hafs"
         and isinstance(source, dict)
@@ -66,14 +114,14 @@ def validate_source(manifest: dict[str, Any]) -> bool:
 
 
 def require_current_source(manifest: dict[str, Any], *, lock: bool = False) -> None:
-    if manifest["edition"] == "kfgqpc-hafs":
+    if manifest["edition"] in ("kfgqpc-hafs", "qcf-v4-tajweed-hafs"):
         sources = QuranFoundationMushaf.objects.all()
         if lock:
             sources = sources.select_for_update()
         require(
             sources.filter(
                 environment=settings.QURAN_QF_ENV,
-                source_id=5,
+                source_id=manifest["source"]["source_id"],
                 is_available=True,
                 source_checksum_sha256=manifest["source"]["source_checksum_sha256"],
             ).first()
@@ -340,16 +388,10 @@ def publish_rendition(
         )
         require_current_source(manifest, lock=True)
         commit, source_url, source_metadata = source_identity(manifest)
-        label = "KFGQPC HAFS" if manifest["edition"] == "kfgqpc-hafs" else "QCF V2 · IQRO"
         rendition, _ = MushafRendition.objects.get_or_create(
             code=manifest["edition"],
             defaults={
-                "names": {
-                    "ru": label,
-                    "en": label,
-                    "ar": "مصحف حفص" if manifest["edition"] == "kfgqpc-hafs" else "مصحف QCF V2",
-                    "tr": label,
-                },
+                "names": RENDITION_NAMES[manifest["edition"]],
             },
         )
         rendition = MushafRendition.objects.select_for_update().get(pk=rendition.pk)

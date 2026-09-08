@@ -22,6 +22,33 @@
 
 Дисковое пространство не освобождать удалением без отдельного точного разрешения пользователя.
 
+### 2026-09-08 — общий календарь и полный QF19 Tajweed: код и local gates
+
+- Реализованы backend/admin/API событий календаря и веб `/{locale}/calendar`.
+  Flutter использует общий каталог с persistent offline fallback, без изменения
+  локального метода Умм аль-Кура. Четыре языка, источники, автоматический код события,
+  проверка полного перевода перед публикацией. Инструкция: `HIJRI_CALENDAR.md`.
+- Полный source19 QCF V4 Tajweed: 604 страницы, 6236 canonical references,
+  1812 lossless WebP, исходные цветные слои и единая IQRO grid. Manifest
+  `8c9bbab040e59a5000a2c443f2f416b61a0ecad029eec0ad7b3ad8bb0c59c68d`.
+  Все source tests, backend full publication в изолированной тестовой БД и Flutter
+  all-pages/all-widths decode/hit-test прошли. `ops/mushaf-glyph-pilot/TAJWEED.md`.
+- Backend full suite: 786 passed / 7 opt-in skipped, mypy/ruff чистые; затем добавлен
+  отдельный admin-form test, все 19 calendar tests прошли. OpenAPI validation: 0 errors,
+  4 предупреждения enum naming существующих API; строгий fail-on-warn не зелёный.
+- Web typecheck/lint/production build успешны; 5 browser tests RU/EN/AR/TR + retry
+  прошли. Во время локального Next build upstream demo API не отдавал часть Dua
+  endpoints (404), сработал существующий fallback; это не live content smoke.
+- Пользователь разрешил ровно 8 obsolete backend images. Они удалены по точным
+  SHA, без force/prune, свободно около 3 GiB; текущие и два fallback releases оставлены.
+  Никакое дальнейшее освобождение места не разрешено этим согласием.
+- Fresh backup `quran_staging_20260908T070402Z.dump`: offsite full download verification
+  прошла после восстановления SSH. Baseline: 18 Reciter / 36 editions / 4104 tracks /
+  12472 Ayah, canonical `01a06fb5-19b2-7465-af74-4b579e50c7be`; hashes совпадают с предыдущим.
+- Телефон вновь подключён: Redmi Note 7 `91aedea7`, батарея 100%, 33 °C, питание есть,
+  /data свободно 1.3 GiB. Новая установка и live публикация на этом checkpoint ещё
+  не выполнены: последующий итог дописывается только после фактического завершения.
+
 ### 2026-09-08 — доступ восстановлен; оба полных typography releases опубликованы
 
 - После возвращения пользователем прежнего IP SSH восстановился. Runtime остаётся

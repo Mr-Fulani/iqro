@@ -344,6 +344,61 @@ def create_qf_source() -> QuranFoundationMushaf:
     )
 
 
+def tajweed_source() -> dict[str, Any]:
+    lock = json.loads(
+        (Path(__file__).parent / "fixtures/mushaf/tajweed.source.lock.json").read_bytes()
+    )
+    return {
+        "kind": "quran-foundation",
+        "edition": "qcf-v4-tajweed-hafs",
+        **lock,
+        "decoration_font_sha256": publication.KFGQPC_FONT_SHA,
+    }
+
+
+@pytest.mark.parametrize(
+    "field", ["source_id", "palette_index", "files", "snapshot_sha256", "decoration_font_sha256"]
+)
+def test_tajweed_requires_exact_color_fonts_snapshot_and_palette(field: str) -> None:
+    source = tajweed_source()
+    manifest = {"edition": "qcf-v4-tajweed-hafs", "source": source}
+    assert publication.validate_source(manifest)
+    source[field] = "wrong"
+    assert not publication.validate_source(manifest)
+
+
+@pytest.mark.django_db
+@override_settings(MUSHAF_STAGING_PREVIEWS=True)
+def test_tajweed_visibility_and_offline_provenance_are_source_specific(
+    api_client: APIClient,
+    rendition: MushafRenditionRelease,
+) -> None:
+    source = create_qf_source()
+    source.source_id = 19
+    source.source_checksum_sha256 = publication.TAJWEED_SOURCE_SHA
+    source.save()
+    rendition.source_metadata = tajweed_source()
+    rendition.source_commit = ""
+    rendition.save()
+    visual = rendition.rendition
+    visual.code = "qcf-v4-tajweed-hafs"
+    visual.names = publication.RENDITION_NAMES[visual.code]
+    visual.save()
+    catalog_url = reverse("quran:rendition-list")
+    assert api_client.get(catalog_url).json()[0]["code"] == visual.code
+    payload = api_client.get(
+        reverse("quran:rendition-offline", kwargs={"code": visual.code})
+    ).json()
+    assert payload["mushaf"]["source_id"] == 19
+    assert payload["mushaf"]["name"] == "QCF V4 · Tajweed"
+    assert "Quran.Foundation" in payload["source"]["name"]
+    assert "JMApps" not in payload["rights"]["attribution"]
+    # An identical checksum on a DIFFERENT source cannot authorize this release.
+    source.source_id = 5
+    source.save()
+    assert api_client.get(catalog_url).json() == []
+
+
 @pytest.mark.parametrize(
     "field", ["source_id", "font_sha256", "snapshot_sha256", "source_checksum_sha256", "kind"]
 )

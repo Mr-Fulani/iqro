@@ -30,10 +30,12 @@ offline/release находятся в [плане выпуска](PUBLIC_RELEASE
 
 | Source | Издание | Web | Статус native |
 |---|---|---|---|
-| 1 | QCF V2, печать 1441 AH | Постраничные WOFF2 | Опубликованный проверенный native bundle |
+| 1 | QCF V2, печать 1441 AH | Постраничные WOFF2 | Этот QF-источник не опубликован нативно; действующий QCF V2 получен отдельно из закреплённого JMApps набора |
 | 5 | KFGQPC HAFS | Unicode WOFF2 | Подключён через общий каталог: 604 страницы, точные regions, 3 ширины |
-| 11 | Uthmani Recite Quran tajweed images | Asset URL недоступен | Подтверждённый источник изображений и native bundle |
-| 19 | QCF V4 Tajweed | Постраничные COLRv1 WOFF2 | Проверенный цветной native render и карта аятов |
+| 11 | Uthmani Recite Quran tajweed images | Asset URL недоступен | Готового native bundle нет; запись каталога не означает наличие изображений |
+| 19 | QCF V4 Tajweed | Постраничные цветные WOFF2, фактически COLR v0 | Новый полный проверенный bundle 604 страниц; фактическая публикация/Android QA — в плане выпуска |
+
+Подробности QF19: [цветной renderer и provenance](../../../ops/mushaf-glyph-pilot/TAJWEED.md).
 
 Для каталога **Quran.Foundation** остаётся клиентский долг: `MushafVariant.supportedOnMobile` пока всегда
 `false`; `native_rendering` не разбирается мобильной моделью. Backend-публикация
