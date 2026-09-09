@@ -876,6 +876,7 @@ export const MESSAGES = {
   "player.status.idle": message("Аудио не запущено", "Audio not started", "لم يبدأ الصوت", "Ses başlatılmadı"),
   "player.status.resumePrompt": message("Позиция сохранена — нажмите Play в плеере", "Position saved — press Play in the player", "تم حفظ الموضع — اضغط تشغيل في المشغل", "Konum kaydedildi — oynatıcıda Play'e basın"),
   "player.autoplayBlocked": message("Браузер заблокировал автозапуск аудио.", "The browser blocked audio autoplay.", "حظر المتصفح التشغيل التلقائي للصوت.", "Tarayıcı sesin otomatik başlamasını engelledi."),
+  "player.playbackFailed": message("Не удалось загрузить аудио. Попробуйте ещё раз.", "Audio could not be loaded. Please try again.", "تعذر تحميل الصوت. حاول مرة أخرى.", "Ses yüklenemedi. Lütfen tekrar deneyin."),
   "player.status.starting": message("Запуск воспроизведения…", "Starting playback…", "جارٍ بدء التشغيل…", "Oynatma başlatılıyor…"),
   "player.status.ready": message("Готово к воспроизведению", "Ready to play", "جاهز للتشغيل", "Oynatmaya hazır"),
   "player.status.sleepPosition": message("Таймер сна остановил воспроизведение · позиция сохранена", "Sleep timer stopped playback · position saved", "أوقف مؤقت النوم التشغيل · تم حفظ الموضع", "Uyku zamanlayıcısı oynatmayı durdurdu · konum kaydedildi"),

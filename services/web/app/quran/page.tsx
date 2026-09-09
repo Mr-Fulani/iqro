@@ -250,6 +250,14 @@ function expandVerseMapping(mapping: Record<string, string>): string[] {
   return keys;
 }
 
+function divisionAtAyah(divisions: QuranDivision[], ayahKey: string | null): number | "" {
+  if (!ayahKey) return "";
+  const [surah, ayah] = ayahKey.split(":").map(Number);
+  const position = surah * 1000 + ayah;
+  return divisions.find((division) => position >= division.start_ayah.surah * 1000 + division.start_ayah.number
+    && position <= division.end_ayah.surah * 1000 + division.end_ayah.number)?.number ?? "";
+}
+
 function QuranContent() {
   const searchParams = useSearchParams();
   const deepLinkSurah = positiveInteger(searchParams.get("surah")) || 1;
@@ -343,6 +351,8 @@ function QuranContent() {
     playbackRate: 1,
   });
   const pendingNavigationPage = useRef<number | null>(null);
+  const initializedAyahEdition = useRef<string | null>(null);
+  const textReadingAyah = useRef<string | null>(null);
   const handledDeepLink = useRef<string | null>(null);
   const handledPageDeepLink = useRef<number | null>(null);
   const pendingTextAyah = useRef<string | null>(null);
@@ -385,10 +395,22 @@ function QuranContent() {
       .filter((ayah) => ayah.pages.includes(currentPage))
       .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
   }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
+  const currentAyahKey = viewMode === "mushaf"
+    ? (selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) ? selectedMushafAyah : mushafVerseKeys[0] ?? null)
+    : selectedMushafAyah?.startsWith(`${selectedSurah}:`) ? selectedMushafAyah : `${selectedSurah}:1`;
+  const currentAyah = ayahs.find((ayah) => `${ayah.surah_number}:${ayah.number}` === currentAyahKey);
+
+  // Page data establishes the reading position; loading a surah must not navigate.
+  useEffect(() => {
+    if (viewMode !== "mushaf" || !currentAyahKey || initializedAyahEdition.current !== selectedEdition) return;
+    if (deepLinkKey && handledDeepLink.current !== deepLinkKey) return;
+    if (pendingNavigationPage.current !== null || (pendingMushafAyah.current && pendingMushafAyah.current !== currentAyahKey)) return;
+    setSelectedSurah(Number(currentAyahKey.split(":")[0]));
+  }, [ayahs, currentAyahKey, deepLinkKey, selectedEdition, viewMode]);
   const requiredTranslationSurahs = useMemo(() => {
     if (viewMode === "text") return [selectedSurah];
     const pageSurahs = mushafVerseKeys.map((key) => Number(key.split(":")[0]));
-    return [...new Set([selectedSurah, ...pageSurahs])].filter(Number.isSafeInteger);
+    return [...new Set(pageSurahs.length ? pageSurahs : [selectedSurah])].filter(Number.isSafeInteger);
   }, [mushafVerseKeys, selectedSurah, viewMode]);
   const translationSurahKey = requiredTranslationSurahs.join(",");
   const mushafTranslations = useMemo(
@@ -805,27 +827,29 @@ function QuranContent() {
   // Load Ayahs when surah changes
   useEffect(() => {
     if (!selectedEdition || !selectedSurah) return;
+    let cancelled = false;
     setLoading(true);
     api
       .getAyahs(selectedEdition, selectedSurah)
       .then((res) => {
+        if (cancelled) return;
         setAyahs(res);
         setLoading(false);
         if (pendingNavigationPage.current !== null) {
           setCurrentPage(pendingNavigationPage.current);
           pendingNavigationPage.current = null;
-        } else if (deepLinkAyah === null && deepLinkPage !== null) {
-          setCurrentPage(deepLinkPage);
-          handledPageDeepLink.current = deepLinkPage;
-        } else if (res.length > 0 && res[0].pages?.length > 0) {
+        } else if (initializedAyahEdition.current !== selectedEdition && deepLinkPage === null && res[0]?.pages.length) {
           setCurrentPage(res[0].pages[0]);
         }
+        initializedAyahEdition.current = selectedEdition;
       })
       .catch((err) => {
+        if (cancelled) return;
         setLoading(false);
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
-  }, [deepLinkAyah, deepLinkPage, selectedEdition, selectedSurah]);
+    return () => { cancelled = true; };
+  }, [deepLinkPage, selectedEdition, selectedSurah]);
 
   // Notification links include the first ayah of a review range. Wait until
   // that surah's ayahs are loaded, then open its Mushaf page and highlight it.
@@ -978,10 +1002,10 @@ function QuranContent() {
     if (surahNumber !== selectedSurah) return;
     const activeAyah = ayahs.find((ayah) => ayah.number === ayahNumber);
     const nextPage = activeAyah?.pages[0];
-    if (viewMode === "mushaf" && nextPage) {
+    if (viewMode === "mushaf" && nextPage && !mushafVerseKeys.includes(ayahKey)) {
       setCurrentPage((page) => nextPage === page ? page : nextPage);
     }
-  }, [ayahs, isImmersiveReader, selectedSurah, viewMode]);
+  }, [ayahs, isImmersiveReader, mushafVerseKeys, selectedSurah, viewMode]);
 
   const navigateToDivision = useCallback((division: QuranDivision) => {
     const targetSurah = division.start_ayah.surah;
@@ -1006,6 +1030,7 @@ function QuranContent() {
     const ayah = ayahs.find((item) => item.number === ayahNumber);
     if (!ayah) return;
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
+    textReadingAyah.current = ayahKey;
     pendingTextAyah.current = viewMode === "text" ? ayahKey : null;
     pendingMushafAyah.current = viewMode === "mushaf" ? ayahKey : null;
     setSelectedMushafAyah(ayahKey);
@@ -1033,7 +1058,8 @@ function QuranContent() {
   useEffect(() => {
     if (viewMode !== "text" || ayahs.length === 0) return;
     let scrollTimeout: number | undefined;
-    const markScrollIntent = () => {
+    const markScrollIntent = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest("button, a, input, select, summary")) return;
       textScrollIntent.current = true;
     };
     const rememberVisibleAyah = () => {
@@ -1057,6 +1083,7 @@ function QuranContent() {
           .sort((left, right) => left.distance - right.distance)[0]?.ayah;
         const pageNumber = visibleAyah?.pages[0];
         if (!visibleAyah || pageNumber === undefined) return;
+        textReadingAyah.current = `${visibleAyah.surah_number}:${visibleAyah.number}`;
         setCurrentPage(pageNumber);
         queueReadingPlace({
           pageNumber,
@@ -1085,6 +1112,8 @@ function QuranContent() {
     setSelectedMushafAyah(ayahKey);
     const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
     if (!Number.isSafeInteger(surahNumber) || !Number.isSafeInteger(ayahNumber)) return;
+    setSelectedSurah(surahNumber);
+    textReadingAyah.current = ayahKey;
     const knownAyah = ayahs.find(
       (ayah) => ayah.surah_number === surahNumber && ayah.number === ayahNumber,
     );
@@ -1273,8 +1302,14 @@ function QuranContent() {
           <div className="quran-mode-switch">
             <button
               className={`btn ${viewMode === "text" ? "btn-primary" : "btn-secondary"}`}
+              disabled={viewMode === "mushaf" && pageLoading}
               onClick={() => {
-                pendingTextAyah.current = selectedMushafAyah;
+                const target = currentAyahKey;
+                pendingTextAyah.current = target;
+                textReadingAyah.current = target;
+                textScrollIntent.current = false;
+                setSelectedMushafAyah(target);
+                if (target) setSelectedSurah(Number(target.split(":")[0]));
                 setViewMode("text");
               }}
             >
@@ -1283,7 +1318,10 @@ function QuranContent() {
             <button
               className={`btn ${viewMode === "mushaf" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => {
-                pendingMushafAyah.current = selectedMushafAyah;
+                const target = textReadingAyah.current ?? selectedMushafAyah;
+                pendingMushafAyah.current = target;
+                setSelectedMushafAyah(target);
+                textScrollIntent.current = false;
                 setViewMode("mushaf");
               }}
             >
@@ -1350,6 +1388,7 @@ function QuranContent() {
                 onChange={(event) => {
                   const targetSurah = Number(event.target.value);
                   const targetAyahKey = `${targetSurah}:1`;
+                  textReadingAyah.current = targetAyahKey;
                   const targetPage = surahs.find((item) => item.number === targetSurah)?.first_page;
                   pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
                   pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
@@ -1542,7 +1581,7 @@ function QuranContent() {
               <label className="form-label" htmlFor="juz-navigation">{t("quran.juz")}</label>
               <select
                 id="juz-navigation"
-                value=""
+                value={currentAyah?.juz_number ?? divisionAtAyah(juz, currentAyahKey)}
                 onChange={(event) => {
                   const division = juz.find((item) => item.number === Number(event.target.value));
                   if (division) navigateToDivision(division);
@@ -1562,7 +1601,7 @@ function QuranContent() {
               <label className="form-label" htmlFor="hizb-navigation">{t("quran.hizb")}</label>
               <select
                 id="hizb-navigation"
-                value=""
+                value={currentAyah?.hizb_number ?? divisionAtAyah(hizb, currentAyahKey)}
                 onChange={(event) => {
                   const division = hizb.find((item) => item.number === Number(event.target.value));
                   if (division) navigateToDivision(division);
@@ -1582,7 +1621,7 @@ function QuranContent() {
               <label className="form-label" htmlFor="rub-navigation">{t("quran.rub")}</label>
               <select
                 id="rub-navigation"
-                value=""
+                value={currentAyah?.rub_el_hizb_number ?? divisionAtAyah(rubElHizb, currentAyahKey)}
                 onChange={(event) => {
                   const division = rubElHizb.find(
                     (item) => item.number === Number(event.target.value),
@@ -1606,7 +1645,7 @@ function QuranContent() {
               </label>
               <select
                 id="ayah-navigation"
-                value=""
+                value={currentAyahKey?.split(":")[1] ?? ""}
                 onChange={(event) => navigateToAyah(Number(event.target.value))}
                 disabled={ayahs.length === 0}
               >
@@ -1633,7 +1672,7 @@ function QuranContent() {
           editionCode={selectedEdition}
           selectedSurah={selectedSurah}
           selectedAyahKey={selectedMushafAyah}
-          readerPageKey={`${selectedEdition}:${selectedFoundationMushafId ?? "image"}:${currentPage}`}
+          readerPageKey={viewMode === "mushaf" ? `${selectedEdition}:${selectedFoundationMushafId ?? "image"}:${currentPage}` : undefined}
           readerAyahKey={selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah)
             && !mushafPageLoading && !foundationPageLoading
             && (selectedFoundationMushafId !== null ? foundationMushafPage?.page_number === currentPage : mushafPage?.number === currentPage)
