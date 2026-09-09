@@ -41,3 +41,19 @@ page deep link, задержанные тайминги и поздние metada
 образ `quran-platform-web:staging-8064be5`. Используется существующий web-only compose
 путь с сохранением предыдущего образа и исходников. Backend, данные и release tooling
 не меняются. Новый дамп для этих изменений не требуется.
+
+Код: `8e791e7`, merge: `2798dc4e58a53cb6df5eae58e1bfb00c7b39efca`.
+Локальная production-сборка и CSS integrity прошли (2 чанка, 117821 байт).
+
+```text
+archive=/private/tmp/iqro-reader-position-source-2798dc4.tar.gz
+SHA256=9b617811a67bb2ffb9be5c20cc9eac5e5cbde8993104577b44ac248bc212fadc
+destination=root@162.55.35.8:/opt/quran/releases/web-reader-position-20260909/source-2798dc4.tar.gz
+WEB_IMAGE=quran-platform-web:staging-2798dc4
+.deployed-commit=2798dc4e58a53cb6df5eae58e1bfb00c7b39efca
+```
+
+Архив проверен по SHA256, исходники распакованы, Docker-образ `quran-platform-web:staging-2798dc4` успешно собран и развёрнут на staging (`https://staging.iqro.forum`).
+Контейнер `quran-staging-web-1` получил статус `healthy`, `readiness` вернул `status=ok`, HTTP 200 на `/ru/quran`.
+Прежний образ `staging-8064be5` и исходники сохранены в `/opt/quran/releases/web-reader-position-20260909/` для отката.
+
