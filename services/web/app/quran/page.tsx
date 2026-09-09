@@ -415,7 +415,8 @@ function QuranContent() {
   const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
   const previousPage = useRef(currentPage);
   const mushafReader = useRef<HTMLElement | null>(null);
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeStart = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const suppressMushafClick = useRef(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
   const [readingPlaceCandidate, setReadingPlaceCandidate] = useState<ReadingPlaceCandidate | null>(null);
@@ -1211,18 +1212,24 @@ function QuranContent() {
   }, [currentPage, mushafPageCount, queueReadingPlace]);
 
   const handleMushafPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    swipeStart.current = null;
+    suppressMushafClick.current = false;
     const target = event.target as Element;
-    if (target.closest("button, a, input, select, [role='button']")) return;
-    swipeStart.current = { x: event.clientX, y: event.clientY };
+    const touchAyah = event.pointerType !== "mouse" && target.closest("[data-ayah-key]");
+    if (target.closest("button, a, input, select, [role='button']") && !touchAyah) return;
+    swipeStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
   }, []);
 
   const handleMushafPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
     swipeStart.current = null;
-    if (!start) return;
     const deltaX = event.clientX - start.x;
     const deltaY = event.clientY - start.y;
     if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+    // A horizontal gesture over an ayah turns the page without selecting it.
+    suppressMushafClick.current = true;
     // A Mushaf progresses right-to-left: dragging the page to the right opens
     // the next page, while dragging it to the left returns to the previous one.
     turnMushafPage(deltaX > 0 ? "next" : "previous");
@@ -1358,118 +1365,120 @@ function QuranContent() {
           </div>
         )}
 
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t("quran.edition")}</label>
-            <select
-              value={selectedEdition}
-              onChange={(e) => setSelectedEdition(e.target.value)}
-              disabled={editions.length === 0}
-            >
-              {editions.map((ed) => (
-                <option key={ed.id} value={ed.code}>
-                  {editionName(ed)} ({ed.riwayah})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="mushaf-variant">
-              {t("quran.mushafVariant")}
-            </label>
-            <select
-              id="mushaf-variant"
-              value={selectedFoundationMushafId === null ? "image" : String(selectedFoundationMushafId)}
-              onChange={(event) => {
-                const value = event.target.value;
-                const sourceId = value === "image" ? null : Number(value);
-                setSelectedFoundationMushafId(sourceId);
-                writeMushafVariantPreference(sourceId);
-                setSelectedMushafAyah(null);
-              }}
-            >
-              <option value="image">{t("quran.mushafVariantImage")}</option>
-              {foundationMushafs.map((mushaf) => (
-                <option value={mushaf.source_id} key={mushaf.source_id}>
-                  {mushaf.name} · {mushaf.qirat_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="surah-navigation">
-              {t("quran.surahSelect")}
-            </label>
-            <select
-              id="surah-navigation"
-              value={selectedSurah}
-              onChange={(event) => {
-                const targetSurah = Number(event.target.value);
-                const targetAyahKey = `${targetSurah}:1`;
-                const targetPage = surahs.find((item) => item.number === targetSurah)?.first_page;
-                pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
-                pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
-                setSelectedMushafAyah(targetAyahKey);
-                if (targetPage) {
-                  setCurrentPage(targetPage);
-                  queueReadingPlace({
-                    pageNumber: targetPage,
-                    surahNumber: targetSurah,
-                    ayahNumber: 1,
-                  });
-                }
-                setSelectedSurah(targetSurah);
-              }}
-              disabled={surahs.length === 0}
-            >
-              {surahs.map((s) => (
-                <option key={s.id} value={s.number}>
-                  {s.number}. {surahName(s)} — {s.name_ar} ({t("quran.ayahsShort", { count: s.ayah_count })})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t("quran.mushafPage")}</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => turnMushafPage("previous")}
-                disabled={currentPage <= 1}
+        <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings">
+          <div className="form-row quran-primary-controls">
+            <div className="form-group">
+              <label className="form-label" htmlFor="quran-edition">{t("quran.edition")}</label>
+              <select
+                id="quran-edition"
+                value={selectedEdition}
+                onChange={(e) => setSelectedEdition(e.target.value)}
+                disabled={editions.length === 0}
               >
-                ◀ {t("common.back")}
-              </button>
-              <input
-                type="number"
-                min={1}
-                max={mushafPageCount}
-                value={currentPage}
-                onChange={(e) => {
-                  const nextPage = Math.min(
-                    mushafPageCount,
-                    Math.max(1, Number(e.target.value)),
-                  );
+                {editions.map((ed) => (
+                  <option key={ed.id} value={ed.code}>
+                    {editionName(ed)} ({ed.riwayah})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="mushaf-variant">
+                {t("quran.mushafVariant")}
+              </label>
+              <select
+                id="mushaf-variant"
+                value={selectedFoundationMushafId === null ? "image" : String(selectedFoundationMushafId)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const sourceId = value === "image" ? null : Number(value);
+                  setSelectedFoundationMushafId(sourceId);
+                  writeMushafVariantPreference(sourceId);
                   setSelectedMushafAyah(null);
-                  setCurrentPage(nextPage);
-                  queueReadingPlace({ pageNumber: nextPage });
                 }}
-                style={{ textAlign: "center", fontWeight: 700 }}
-              />
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => turnMushafPage("next")}
-                disabled={currentPage >= mushafPageCount}
               >
-                {t("common.next")} ▶
-              </button>
+                <option value="image">{t("quran.mushafVariantImage")}</option>
+                {foundationMushafs.map((mushaf) => (
+                  <option value={mushaf.source_id} key={mushaf.source_id}>
+                    {mushaf.name} · {mushaf.qirat_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="surah-navigation">
+                {t("quran.surahSelect")}
+              </label>
+              <select
+                id="surah-navigation"
+                value={selectedSurah}
+                onChange={(event) => {
+                  const targetSurah = Number(event.target.value);
+                  const targetAyahKey = `${targetSurah}:1`;
+                  const targetPage = surahs.find((item) => item.number === targetSurah)?.first_page;
+                  pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
+                  pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
+                  setSelectedMushafAyah(targetAyahKey);
+                  if (targetPage) {
+                    setCurrentPage(targetPage);
+                    queueReadingPlace({
+                      pageNumber: targetPage,
+                      surahNumber: targetSurah,
+                      ayahNumber: 1,
+                    });
+                  }
+                  setSelectedSurah(targetSurah);
+                }}
+                disabled={surahs.length === 0}
+              >
+                {surahs.map((s) => (
+                  <option key={s.id} value={s.number}>
+                    {s.number}. {surahName(s)} — {s.name_ar} ({t("quran.ayahsShort", { count: s.ayah_count })})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group quran-page-jump">
+              <label className="form-label" htmlFor="mushaf-page-jump">{t("quran.mushafPage")}</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => turnMushafPage("previous")}
+                  disabled={currentPage <= 1}
+                >
+                  ◀ {t("common.back")}
+                </button>
+                <input
+                  id="mushaf-page-jump"
+                  type="number"
+                  min={1}
+                  max={mushafPageCount}
+                  value={currentPage}
+                  onChange={(e) => {
+                    const nextPage = Math.min(
+                      mushafPageCount,
+                      Math.max(1, Number(e.target.value)),
+                    );
+                    setSelectedMushafAyah(null);
+                    setCurrentPage(nextPage);
+                    queueReadingPlace({ pageNumber: nextPage });
+                  }}
+                  style={{ textAlign: "center", fontWeight: 700 }}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => turnMushafPage("next")}
+                  disabled={currentPage >= mushafPageCount}
+                >
+                  {t("common.next")} ▶
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings">
           <div className="translation-settings" style={{ marginTop: 14 }}>
             <label className="translation-toggle" htmlFor="translation-enabled">
               <input
@@ -1894,6 +1903,13 @@ function QuranContent() {
             data-swipe-next="right"
             onPointerDown={handleMushafPointerDown}
             onPointerUp={handleMushafPointerUp}
+            onClickCapture={(event) => {
+              if (suppressMushafClick.current && event.detail > 0) {
+                suppressMushafClick.current = false;
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }}
             onPointerCancel={() => {
               swipeStart.current = null;
             }}

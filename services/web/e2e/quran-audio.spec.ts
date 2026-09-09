@@ -1546,7 +1546,8 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
   await page.goto("/quran?surah=6");
   await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
 
-  const reader = page.locator(".mushaf-reader-surface").filter({ visible: true });
+  const layout = page.locator(".quran-page-layout").filter({ visible: true });
+  const reader = layout.locator(".mushaf-reader-surface");
   const stage = reader.locator(".mushaf-page-container");
   const image = reader.locator(".mushaf-image");
   await expect(image).toHaveAttribute("data-page-number", "128");
@@ -1554,7 +1555,9 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
   await expect(page.locator(".mobile-navigation")).toBeHidden();
   await expect(reader).toHaveCSS("padding-left", "0px");
   await expect(reader).toHaveCSS("padding-right", "0px");
-  await expect(page.locator(".mushaf-reader-toolbar")).toBeVisible();
+  await expect(reader.locator(".mushaf-reader-toolbar")).toBeVisible();
+  await expect(reader.locator(".mushaf-reader-toolbar-button").filter({ visible: true })).toHaveCount(0);
+  await expect(reader.locator(".mushaf-page-navigation")).toBeHidden();
 
   const readerBox = await reader.boundingBox();
   expect(readerBox).not.toBeNull();
@@ -1562,7 +1565,7 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
   expect(readerBox!.width).toBeGreaterThanOrEqual(319);
   expect(await reader.evaluate((element) => getComputedStyle(element).order)).toBe("2");
   expect(
-    await page.locator(".quran-audio-surface").evaluate((element) => getComputedStyle(element).order),
+    await layout.locator(".quran-audio-surface").evaluate((element) => getComputedStyle(element).order),
   ).toBe("3");
 
   await stage.dispatchEvent("pointerdown", {
@@ -1580,7 +1583,7 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
     clientY: 365,
   });
   await expect(image).toHaveAttribute("data-page-number", "129");
-  await expect(page.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "next");
+  await expect(reader.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "next");
 
   await stage.dispatchEvent("pointerdown", {
     pointerId: 2,
@@ -1597,12 +1600,63 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
     clientY: 365,
   });
   await expect(image).toHaveAttribute("data-page-number", "128");
-  await expect(page.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "previous");
+  await expect(reader.locator(".mushaf-page-turn")).toHaveAttribute("data-page-turn", "previous");
   await page.getByRole("button", { name: /Текст/ }).click();
   await expect(page.locator(".mobile-navigation")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
+});
+
+test.describe("Mushaf touch gestures over ayahs", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  for (const variant of [
+    { value: "image", view: ".mushaf-image" },
+    { value: "5", view: ".qf-mushaf-view" },
+  ]) {
+    test(`swipes turn ${variant.value} pages while taps still select ayahs`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto("/ru/quran?surah=6");
+      const settings = page.locator(".quran-reader-settings").filter({ visible: true });
+      await settings.locator("summary").click();
+      await page.getByLabel("Вариант Мусхафа").selectOption(variant.value);
+      await settings.locator("summary").click();
+
+      const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+      const view = stage.locator(variant.view);
+      const ayah = stage.locator('[data-ayah-key="6:2"]').last();
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      const touch = await page.context().newCDPSession(page);
+      const swipeAyah = async (dx: number, dy = 0) => {
+        await ayah.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+        const box = (await ayah.boundingBox())!;
+        const x = box.x + box.width / 2;
+        const y = box.y + box.height / 2;
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart", touchPoints: [{ x, y }],
+        });
+        for (let step = 1; step <= 4; step += 1) {
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove", touchPoints: [{ x: x + dx * step / 4, y: y + dy * step / 4 }],
+          });
+        }
+        await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      };
+
+      await swipeAyah(72);
+      await expect(view).toHaveAttribute("data-page-number", "129");
+      await expect(stage.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+      await swipeAyah(-72);
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      await expect(stage.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+      await swipeAyah(8, 72);
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      await ayah.tap();
+      await expect(ayah).toHaveClass(/is-selected/);
+      await touch.detach();
+    });
+  }
 });
 
 test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ page }) => {

@@ -86,7 +86,7 @@ export const MESSAGES = {
   "nav.home": message("Главная", "Home", "الرئيسية", "Ana sayfa"),
   "nav.more": message("Ещё", "More", "المزيد", "Diğer"),
   "footer.aboutLinks": message("Об IQRO и полезные ссылки", "About IQRO and useful links", "عن إقرأ وروابط مفيدة", "IQRO hakkında ve faydalı bağlantılar"),
-  "quran.readerSettings": message("Перевод, тафсир и переход к аяту", "Translation, tafsir and verse navigation", "الترجمة والتفسير والانتقال إلى آية", "Meal, tefsir ve ayete git"),
+  "quran.readerSettings": message("Настройки чтения", "Reading settings", "إعدادات القراءة", "Okuma ayarları"),
   "nav.quran": message("Коран", "Quran", "القرآن", "Kur'an"),
   "nav.memorization": message("Заучивание", "Memorize", "الحفظ", "Ezber"),
   "nav.planner": message("План", "Planner", "الخطة", "Planlayıcı"),
