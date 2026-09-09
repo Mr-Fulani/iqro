@@ -111,8 +111,15 @@ class _TajweedBookPreviewScreenState extends State<TajweedBookPreviewScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(context.l10n.noQuranData),
+                          Text(
+                            context.l10n.networkError,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
                           TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.brown.shade800,
+                            ),
                             onPressed: () => setState(() {
                               _files.remove(sample.page);
                             }),
