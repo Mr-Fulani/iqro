@@ -225,10 +225,16 @@ test("home hero links Quran, audio, Dua and prayer with optimized landmark slide
   const carouselBottom = await hero.locator(".hero-carousel").evaluate(
     (element) => element.getBoundingClientRect().bottom,
   );
-  const eyebrowTop = await hero.locator(".hero-content .eyebrow").evaluate(
+  const contentTop = await hero.locator(".eyebrow").evaluate(
     (element) => element.getBoundingClientRect().top,
   );
-  expect(carouselBottom).toBeLessThanOrEqual(eyebrowTop);
+  expect(carouselBottom).toBeLessThanOrEqual(contentTop);
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText(
+    "Единая исламская платформа: Коран, аудио, Ду’а и время намаза",
+  );
+  await expect(hero.locator(".hero-content > p:not(.eyebrow)")).toBeVisible();
+  await expect(hero.getByTestId("hero-media")).toHaveCSS("opacity", "1");
+  expect((await hero.getByTestId("hero-slide-1").boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
 test("home prayer preview reuses the saved prayer location and profile", async ({ page }) => {

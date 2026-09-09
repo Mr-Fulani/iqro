@@ -1,0 +1,252 @@
+/* The reader fills the visual viewport without changing the current page.
+   Portrait contains the page; landscape keeps it wide and scrolls vertically. */
+.reader-panel-heading,
+.reader-source-note {
+  display: none;
+}
+
+.reader-panel-session,
+.reader-panel-notes {
+  display: contents;
+}
+
+body:has(.is-reader-immersive) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body:has(.is-reader-immersive) .app-container {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+
+body:has(.is-reader-immersive) .app-container > main {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body:has(.is-reader-immersive) .app-header,
+body:has(.is-reader-immersive) .app-footer,
+body:has(.is-reader-immersive) .mobile-navigation,
+body:has(.is-reader-immersive) .global-audio-player-dock {
+  display: none;
+}
+
+.quran-page-layout.is-reader-immersive {
+  --panel: #fffdf8;
+  --bg: #f7f4ec;
+  --primary: #0b5d4a;
+  --primary-subtle: #d9eee7;
+  --border: #dcd8ce;
+  --bg-subtle: #efeee8;
+  --text-primary: #17201d;
+  --text-secondary: #4b5b53;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  display: block;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.is-reader-immersive .mushaf-reader-surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: var(--panel);
+}
+
+.is-reader-immersive .mushaf-reader-toolbar,
+.is-reader-immersive .mushaf-page-navigation,
+.is-reader-immersive .qf-mushaf-meta,
+.is-reader-immersive .qf-mushaf-attribution,
+.is-reader-immersive .quran-page-jump .btn {
+  display: none;
+}
+
+.is-reader-immersive .mushaf-page-container {
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
+}
+
+.is-reader-immersive .mushaf-page-turn {
+  container-type: inline-size;
+  flex: 0 0 auto;
+  width: min(100cqw, calc(100cqh * var(--reader-page-ratio)));
+  max-width: 100%;
+}
+
+.is-reader-immersive .mushaf-image,
+.is-reader-immersive .qf-mushaf-sheet {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.is-reader-immersive .qf-mushaf-view { width: 100%; }
+
+/* Scale the existing 900px page typography along with its sheet, so shrinking
+   a portrait page never leaves viewport-sized glyphs overflowing its lines. */
+.is-reader-immersive .qf-mushaf-line { font-size: 4.2222cqw; }
+.is-reader-immersive .qf-mushaf-chapter-title { font-size: 3cqw; }
+.is-reader-immersive .qf-mushaf-bismillah { font-size: 3.5556cqw; }
+.is-reader-immersive .qf-mushaf-chapter-intro.is-compact .qf-mushaf-chapter-title { font-size: 2cqw; }
+.is-reader-immersive .qf-mushaf-chapter-intro.is-compact .qf-mushaf-bismillah { font-size: 2.3333cqw; }
+
+.is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-container {
+  align-items: flex-start;
+  padding-bottom: max(68px, env(safe-area-inset-bottom, 0px));
+}
+
+.is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-turn {
+  width: 100cqw;
+}
+
+.reader-actions {
+  position: absolute;
+  z-index: 210;
+  inset-inline-start: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  max-width: calc(100% - 16px);
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fffdf8ee;
+  color: #073e34;
+  box-shadow: 0 3px 20px #073e341a;
+}
+
+[dir="rtl"] .reader-actions { transform: translateX(50%); }
+
+.reader-actions.is-folded {
+  inset-inline-start: auto;
+  inset-inline-end: max(8px, env(safe-area-inset-right, 0px));
+  transform: none;
+}
+
+.reader-actions button,
+.reader-panel-heading button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.reader-actions button:hover,
+.reader-panel-heading button:hover { background: var(--primary-subtle); }
+.reader-actions button:focus-visible,
+.reader-panel-heading button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.reader-page-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  inset-inline: 0;
+  width: max-content;
+  margin-inline: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #fffdf8e6;
+  color: #4b5b53;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.is-reader-immersive .reader-panel { display: none; }
+.reader-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 220;
+  background: #17201d66;
+}
+
+.is-reader-immersive .reader-panel[data-reader-open="true"] {
+  position: fixed;
+  z-index: 230;
+  inset: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 720px;
+  margin: auto;
+  padding: 0 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--panel);
+  color: var(--text-primary);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.is-reader-immersive .reader-panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 60px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  color: #073e34;
+}
+
+.is-reader-immersive .quran-reader-settings { margin: 0; border: 0; }
+.is-reader-immersive .quran-reader-settings > summary { display: none; }
+.is-reader-immersive .reader-source-note { display: block; margin-top: 16px; font-size: 12px; }
+.is-reader-immersive .reader-panel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.is-reader-immersive .reader-panel select,
+.is-reader-immersive .reader-panel textarea { min-height: 44px; font-size: 16px; }
+.is-reader-immersive .reader-panel-session > .prayer-reading-session { margin: 0; padding: 0; border: 0; }
+.reader-launch { align-self: flex-start; }
+
+.reader-fullscreen-status {
+  position: absolute;
+  z-index: 215;
+  inset-inline: 12px;
+  bottom: 100px;
+  margin: 0 auto;
+  max-width: 420px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 14px;
+}

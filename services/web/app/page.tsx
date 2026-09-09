@@ -146,7 +146,7 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="home-page">
       {/* Hero Banner */}
       <section className="hero-card" data-testid="home-hero">
         <div
@@ -259,7 +259,7 @@ export default function HomePage() {
 
       {/* Account upgrade banner */}
       {!isActiveAccount && (
-        <section className="surface" style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)" }}>
+        <section className="surface home-account-card">
           <div className="surface-head">
             <div>
               <h3 className="surface-title">{t("home.upgradeTitle")}</h3>
@@ -326,7 +326,7 @@ export default function HomePage() {
       {todayPrayer && (todayPrayer.times || todayPrayer.prayer_times) && (() => {
         const pTimes = todayPrayer.times || todayPrayer.prayer_times;
         return (
-          <section className="surface" data-testid="home-prayer-schedule">
+          <section className="surface home-prayer-schedule" data-testid="home-prayer-schedule">
             <div className="surface-head">
               <div>
                 <p className="eyebrow">{t("home.todaySchedule")}</p>
@@ -396,7 +396,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+        <div className="home-surah-list">
           {featuredSurahs.length > 0 ? (
             featuredSurahs.map((surah) => (
               <Link
