@@ -2165,7 +2165,6 @@ test.describe("Landscape gestures through browser hit testing", () => {
   const android = devices["Pixel 7 landscape"];
   test.use({
     viewport: android.viewport,
-    screen: android.screen,
     deviceScaleFactor: android.deviceScaleFactor,
     userAgent: android.userAgent,
     isMobile: true,
