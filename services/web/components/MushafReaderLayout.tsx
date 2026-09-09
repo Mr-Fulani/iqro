@@ -104,6 +104,24 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   }, [immersive, landscape, page]);
 
   useEffect(() => {
+    const element = root.current;
+    const stage = element?.querySelector<HTMLElement>(".mushaf-page-container");
+    if (!immersive || !element || !stage) return;
+    // Observe the actual reader box after rotation/browser-bar changes, rather
+    // than retaining a width calculated against the previous viewport.
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      const sheetWidth = landscape ? width : Math.min(width, height * pageRatio);
+      element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
+    });
+    observer.observe(stage);
+    return () => {
+      observer.disconnect();
+      element.style.removeProperty("--reader-sheet-width");
+    };
+  }, [immersive, landscape, pageRatio]);
+
+  useEffect(() => {
     const behindPanel = root.current?.querySelectorAll<HTMLElement>(".mushaf-page-container, .reader-actions");
     behindPanel?.forEach((element) => { element.inert = immersive && panel !== null; });
     if (!panel && panelTrigger.current) {

@@ -1,5 +1,7 @@
-import { devices, expect, Page, test } from "@playwright/test";
+import { devices, expect, Page, test as base } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+
+const test = base.extend<{ nativeMedia: boolean }>({ nativeMedia: [false, { option: true }] });
 
 const reciter = {
   id: "00000000-0000-7000-8000-000000000159",
@@ -496,11 +498,11 @@ function paginated<T>(results: T[]) {
   return { next: null, previous: null, results };
 }
 
-async function installApiMocks(page: Page) {
+async function installApiMocks(page: Page, nativeMedia = false) {
   const testFont = await readFile(
     new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
   );
-  await page.addInitScript(() => {
+  await page.addInitScript((nativeMedia) => {
     const mediaSessionHandlers: Record<string, ((details?: { seekOffset?: number }) => void) | null> = {};
     Object.defineProperty(window, "__mediaSessionHandlers", {
       configurable: true,
@@ -529,6 +531,7 @@ async function installApiMocks(page: Page) {
         setPositionState() {},
       },
     });
+    if (nativeMedia) return;
     Object.defineProperty(HTMLMediaElement.prototype, "play", {
       configurable: true,
       value(this: HTMLMediaElement) {
@@ -548,7 +551,7 @@ async function installApiMocks(page: Page) {
         queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
       },
     });
-  });
+  }, nativeMedia);
 
   await page.route("https://audio.example.test/**", (route) =>
     route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
@@ -666,8 +669,140 @@ async function installApiMocks(page: Page) {
   });
 }
 
-test.beforeEach(async ({ page }) => {
-  await installApiMocks(page);
+test.beforeEach(async ({ page, nativeMedia }) => {
+  await installApiMocks(page, nativeMedia);
+});
+
+test("reading position synchronizes desktop fields and prepares the selected ayah without refetching", async ({ page }) => {
+  let timingRequests = 0;
+  page.on("request", (request) => { if (request.url().endsWith(`/recitations/${recitation.id}/surahs/6`)) timingRequests++; });
+  await page.goto("/ru/quran?surah=1&page=128");
+  const layout = page.locator(".quran-page-layout").filter({ visible: true });
+  const audio = layout.locator("audio");
+  await expect(layout.locator("#surah-navigation")).toHaveValue("6");
+  await layout.locator('[data-ayah-key="6:2"]').last().click();
+  await expect(layout.locator("#ayah-navigation")).toHaveValue("2");
+  await expect(layout.locator("#juz-navigation")).toHaveValue("7");
+  await expect(layout.locator("#hizb-navigation")).toHaveValue("13");
+  await expect(layout.locator(".segmented-audio-summary strong")).toHaveText("Аят 6:2");
+  await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
+  await expect(audio).toHaveJSProperty("currentTime", 1);
+  await expect(layout.locator('select[id^="range-start-"]')).toHaveValue("2");
+  await expect(layout.locator('select[id^="range-end-"]')).toHaveValue("2");
+  await layout.locator('[data-ayah-key="6:1"]').click();
+  await expect(audio).toHaveJSProperty("currentTime", 0);
+  await layout.locator('[data-ayah-key="6:2"]').last().click();
+  await expect(audio).toHaveJSProperty("currentTime", 1);
+  expect(timingRequests).toBe(1);
+  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+});
+
+test("reading position survives text and Mushaf switches without a selected ayah", async ({ page }) => {
+  await page.goto("/ru/quran?page=129");
+  const layout = page.locator(".quran-page-layout").filter({ visible: true });
+  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  await expect(layout.locator("#surah-navigation")).toHaveValue("6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.locator("#quran-ayah-6-2")).toBeInViewport();
+  await expect(layout.locator("#ayah-navigation")).toHaveValue("2");
+  await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
+  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  await expect(layout.locator('[data-ayah-key="6:2"]').last()).toHaveClass(/is-selected/);
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await layout.locator("#ayah-navigation").selectOption("1");
+  await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
+  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(layout.locator('[data-ayah-key="6:1"]')).toHaveClass(/is-selected/);
+});
+
+test("an interrupted old play promise cannot report an error over the new selection", async ({ page }) => {
+  await page.goto("/ru/quran?surah=6");
+  const layout = page.locator(".quran-page-layout").filter({ visible: true });
+  await layout.locator('[data-ayah-key="6:2"]').last().click();
+  await page.evaluate(() => {
+    let first = true;
+    Object.defineProperty(HTMLMediaElement.prototype, "play", { configurable: true, value(this: HTMLMediaElement) {
+      this.dispatchEvent(new Event("play"));
+      if (!first) return Promise.resolve();
+      first = false;
+      return new Promise<void>((_resolve, reject) => {
+        (window as unknown as { rejectOldPlay: () => void }).rejectOldPlay = () => reject(new DOMException("Interrupted by pause", "AbortError"));
+      });
+    } });
+  });
+  await layout.getByRole("button", { name: "▶ Аят 6:2", exact: true }).click();
+  await layout.locator('[data-ayah-key="6:1"]').click();
+  await layout.getByRole("button", { name: "▶ Аят 6:1", exact: true }).click();
+  await page.evaluate(() => (window as unknown as { rejectOldPlay: () => void }).rejectOldPlay());
+  await expect(layout.locator(".alert-error")).toHaveCount(0);
+  await expect(layout.locator(".segmented-audio-summary .status-chip")).toHaveClass(/ok/);
+  await expect(layout.locator("audio")).toHaveJSProperty("currentTime", 0);
+});
+
+test.describe("rotation recovery and native media", () => {
+  test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
+    deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true, nativeMedia: true });
+
+  test("rotation restores portrait sheet, glyphs and settings dimensions", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("iqro_quran_mushaf_variant_v1", "1"));
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const sheet = layout.locator(".qf-mushaf-sheet");
+    const line = sheet.locator(".qf-mushaf-line").first();
+    await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-font-status", "ready");
+    const before = await sheet.boundingBox();
+    const fontBefore = await line.evaluate((element) => getComputedStyle(element).fontSize);
+    const portrait = page.viewportSize()!;
+    for (let turn = 0; turn < 2; turn++) {
+      await page.setViewportSize({ width: portrait.height, height: portrait.width });
+      await expect(layout).toHaveAttribute("data-reader-orientation", "landscape");
+      await expect.poll(async () => (await sheet.boundingBox())!.width).toBeCloseTo(portrait.height, 0);
+      await page.setViewportSize(portrait);
+      await expect(layout).toHaveAttribute("data-reader-orientation", "portrait");
+      await expect.poll(async () => (await sheet.boundingBox())!.width).toBeCloseTo(before!.width, 0);
+      await expect(line).toHaveCSS("font-size", fontBefore);
+    }
+    await page.getByRole("button", { name: "Настройки чтения", exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(portrait.width);
+    await expect(page.locator(".mobile-navigation")).toBeVisible();
+    await expect(layout).toHaveCSS("text-size-adjust", "100%");
+  });
+
+  test("native media starts a prepared ayah on the first landscape tap and stays usable after rotation", async ({ page }) => {
+    // A real, decodable WAV exercises play/seek promises; only the catalogue is mocked.
+    const samples = 8_000 * 4;
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(8_000, 24); wav.writeUInt32LE(16_000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+    wav.write("data", 36); wav.writeUInt32LE(samples * 2, 40);
+    await page.route("https://audio.example.test/**", (route) => {
+      const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? "");
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2] ? Math.min(Number(range[2]), wav.length - 1) : wav.length - 1;
+      return route.fulfill({ status: range ? 206 : 200, contentType: "audio/wav",
+        headers: { "Accept-Ranges": "bytes", ...(range ? { "Content-Range": `bytes ${start}-${end}/${wav.length}` } : {}) },
+        body: wav.subarray(start, end + 1) });
+    });
+    await page.setViewportSize({ width: 839, height: 393 });
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const audio = layout.locator("audio");
+    const actions = page.getByRole("toolbar");
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).readyState)).toBeGreaterThanOrEqual(1);
+    await layout.locator('[data-ayah-key="6:2"]').first().tap();
+    await expect(audio).toHaveJSProperty("currentTime", 1);
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2", exact: true }).tap();
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(1.08);
+    await expect(audio).toHaveJSProperty("paused", false);
+    await page.setViewportSize({ width: 393, height: 839 });
+    await expect(layout).toHaveAttribute("data-reader-orientation", "portrait");
+    await expect(layout.locator(".alert-error")).toHaveCount(0);
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).paused)).toBe(true);
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2", exact: true }).tap();
+    await expect(audio).toHaveJSProperty("paused", false);
+    await expect(layout.locator(".alert-error")).toHaveCount(0);
+  });
 });
 
 test("reader shows a saved semantic translation in text and Mushaf modes", async ({ page }) => {
@@ -1880,21 +2015,21 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
   });
 
-  test("uses the selected ayah's surah even when the settings still show another surah", async ({ page }) => {
+  test("synchronizes a page deep link with the selected ayah and surah settings", async ({ page }) => {
     await page.goto("/ru/quran?surah=1&page=128");
     const layout = page.locator(".quran-page-layout").filter({ visible: true });
     const actions = page.getByRole("toolbar");
-    await expect(layout.locator("#surah-navigation")).toHaveValue("1");
+    await expect(layout.locator("#surah-navigation")).toHaveValue("6");
     await layout.locator('[data-ayah-key="6:2"]').last().click();
     await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
     await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
     await expect(layout.locator("audio")).toHaveJSProperty("currentTime", 1);
     await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "128");
-    await expect(layout.locator("#surah-navigation")).toHaveValue("1");
+    await expect(layout.locator("#surah-navigation")).toHaveValue("6");
   });
 
-  test("does not start a delayed ayah request after the reader moves to another page", async ({ page }) => {
+  test("a delayed timing preparation stays paused after the reader moves to another page", async ({ page }) => {
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });
     let requested = false;
@@ -1906,14 +2041,14 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await page.goto("/ru/quran?surah=1&page=128");
     const layout = page.locator(".quran-page-layout").filter({ visible: true });
     await layout.locator('[data-ayah-key="6:2"]').last().click();
-    await page.getByRole("toolbar").getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(page.getByRole("toolbar").getByRole("button", { name: "Воспроизвести аят 6:2" })).toBeDisabled();
     await expect.poll(() => requested).toBe(true);
     await turnPage(page);
     const response = page.waitForResponse(`**/api/v1/recitations/${recitation.id}/surahs/6`);
     release();
     await response;
     await expect(page.getByRole("toolbar").getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
-    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
   });
 
@@ -1945,13 +2080,14 @@ test.describe("Selected ayah controls in the mobile reader", () => {
   test("late media metadata cannot restart playback after page navigation", async ({ page }) => {
     await page.goto("/ru/quran?surah=1&page=128");
     const layout = page.locator(".quran-page-layout").filter({ visible: true });
-    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
     await page.evaluate(() => {
       Object.defineProperty(HTMLMediaElement.prototype, "load", { configurable: true, value() {} });
     });
+    await layout.locator("#mushaf-recitation").selectOption(alternateRecitation.id, { force: true });
     await layout.locator('[data-ayah-key="6:2"]').last().click();
     await page.getByRole("toolbar").getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
-    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
+    await expect(layout.locator("audio")).toHaveAttribute("src", alternateTracks[5].asset.url);
     await turnPage(page);
     await layout.locator("audio").dispatchEvent("loadedmetadata");
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");

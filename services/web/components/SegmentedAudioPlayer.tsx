@@ -141,6 +141,8 @@ export function SegmentedAudioPlayer({
   const segmentsRef = useRef<AyahAudioSegment[]>([]);
   const planRef = useRef<RuntimePlan | null>(null);
   const playWhenReadyRef = useRef(false);
+  const mediaReadyRef = useRef(false);
+  const playAttemptRef = useRef(0);
   const hasStartedRef = useRef(false);
   const boundaryTransitionRef = useRef(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -232,11 +234,15 @@ export function SegmentedAudioPlayer({
   const attemptPlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    void audio.play().catch(() => {
+    const attempt = ++playAttemptRef.current;
+    void audio.play().catch((reason: unknown) => {
+      // A newer selection, pause or load cancels the old promise normally.
+      if (attempt !== playAttemptRef.current || (reason instanceof DOMException && reason.name === "AbortError")) return;
       setIsPlaying(false);
       onPlayingChangeRef.current?.(false);
       setStatus({ key: "player.status.resumePrompt" });
-      setError(t("player.autoplayBlocked"));
+      setError(t(reason instanceof DOMException && reason.name === "NotAllowedError"
+        ? "player.autoplayBlocked" : "player.playbackFailed"));
     });
   }, [t]);
 
@@ -258,6 +264,7 @@ export function SegmentedAudioPlayer({
   }, [updateActiveSegment, updateMediaPosition]);
 
   const stopAtCurrentPosition = useCallback((nextStatus: StatusMessage) => {
+    playAttemptRef.current += 1;
     clearTransition();
     playWhenReadyRef.current = false;
     const audio = audioRef.current;
@@ -280,6 +287,8 @@ export function SegmentedAudioPlayer({
   }, [pauseOnNavigationKey, stopAtCurrentPosition]);
 
   const finishPlayback = useCallback((nextStatus: StatusMessage) => {
+    playAttemptRef.current += 1;
+    playWhenReadyRef.current = false;
     clearTransition();
     const audio = audioRef.current;
     const plan = planRef.current;
@@ -314,6 +323,9 @@ export function SegmentedAudioPlayer({
   useEffect(() => {
     clearTransition();
     const audio = audioRef.current;
+    playAttemptRef.current += 1;
+    playWhenReadyRef.current = false;
+    audio?.pause();
     if (!request) {
       requestRef.current = null;
       segmentsRef.current = [];
@@ -326,7 +338,7 @@ export function SegmentedAudioPlayer({
       setStatus({ key: "player.status.idle" });
       updateActiveSegment(null);
       if (audio) {
-        audio.pause();
+        mediaReadyRef.current = false;
         audio.removeAttribute("src");
         audio.load();
       }
@@ -341,8 +353,8 @@ export function SegmentedAudioPlayer({
     setActiveRequest(request);
     setActivePlan(nextPlan);
     hasStartedRef.current = false;
-    setRangeStartAyah(nextSegments[0]?.ayah_number ?? null);
-    setRangeEndAyah(nextSegments[nextSegments.length - 1]?.ayah_number ?? null);
+    setRangeStartAyah(request.startAyah ?? nextSegments[0]?.ayah_number ?? null);
+    setRangeEndAyah(request.endAyah ?? nextSegments[nextSegments.length - 1]?.ayah_number ?? null);
     setError(null);
     playWhenReadyRef.current = request.autoPlay !== false;
 
@@ -350,10 +362,12 @@ export function SegmentedAudioPlayer({
     audio.playbackRate = playbackRateRef.current;
     const sourceChanged = audio.getAttribute("src") !== request.track.asset.url;
     if (sourceChanged) {
+      mediaReadyRef.current = false;
       audio.src = request.track.asset.url;
       audio.load();
       return;
     }
+    if (!mediaReadyRef.current) return;
     startPlan(nextPlan, playWhenReadyRef.current);
     playWhenReadyRef.current = false;
   }, [clearTransition, request, startPlan, updateActiveSegment]);
@@ -463,7 +477,7 @@ export function SegmentedAudioPlayer({
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
     const plan = planRef.current;
-    if (!audio || !plan || boundaryTransitionRef.current) return;
+    if (!audio || !plan || audio.seeking || !hasStartedRef.current || boundaryTransitionRef.current) return;
     const currentMs = Math.round(audio.currentTime * 1000);
 
     if (plan.currentIndex < 0) {
@@ -507,6 +521,7 @@ export function SegmentedAudioPlayer({
     const audio = audioRef.current;
     const plan = planRef.current;
     if (!audio || !plan) return;
+    mediaReadyRef.current = true;
     audio.playbackRate = playbackRateRef.current;
     const shouldPlay = playWhenReadyRef.current;
     playWhenReadyRef.current = false;
@@ -532,6 +547,12 @@ export function SegmentedAudioPlayer({
     }
     if (!audio || !plan) return;
     clearTransition();
+    if (!mediaReadyRef.current) {
+      playWhenReadyRef.current = true;
+      setError(null);
+      attemptPlay();
+      return;
+    }
     const currentMs = audio.currentTime * 1000;
     if (currentMs >= plan.endMs - 40 || currentMs < plan.startMs - 40) {
       setPlanPosition(plan, plan.startIndex);
@@ -648,7 +669,10 @@ export function SegmentedAudioPlayer({
     updateMediaPosition,
   ]);
 
-  useEffect(() => () => clearTransition(), [clearTransition]);
+  useEffect(() => () => {
+    playAttemptRef.current += 1;
+    clearTransition();
+  }, [clearTransition]);
 
   const availableAyahs = useMemo(
     () => [...new Set((activeRequest?.segments || []).map((segment) => segment.ayah_number))],
@@ -750,6 +774,7 @@ export function SegmentedAudioPlayer({
             onPlayingChangeRef.current?.(true);
             setStatus({ key: "player.status.playing" });
             setError(null);
+            updateActiveSegment(segmentsRef.current[planRef.current?.currentIndex ?? -1] ?? null);
             if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
             handleTimeUpdate();
           }}

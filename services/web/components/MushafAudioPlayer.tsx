@@ -57,7 +57,7 @@ export function MushafAudioPlayer({
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
   const reader = useMushafReader();
-  const readerScopeKey = reader?.immersive ? `${readerPageKey}:${readerAyahKey ?? ""}` : undefined;
+  const readerScopeKey = readerPageKey ? `${reader?.immersive}:${readerPageKey}:${selectedAyahKey ?? ""}` : undefined;
   const [recitations, setRecitations] = useState<Recitation[]>([]);
   const [selectedRecitationId, setSelectedRecitationId] = useState("");
   const [preparedPlayback, setPreparedPlayback] = useState<SurahPlayback | null>(null);
@@ -69,6 +69,19 @@ export function MushafAudioPlayer({
   const requestIdRef = useRef(0);
   const handledAyahRequestRef = useRef<number | null>(null);
   const playbackGeneration = useRef(0);
+  // Only timing metadata is retained, for at most three surahs per voice.
+  const playbackCache = useMemo(() => ({ recitationId: selectedRecitationId, requests: new Map<number, Promise<SurahPlayback>>() }), [selectedRecitationId]);
+  const loadPlayback = useCallback((surah: number) => {
+    const cached = playbackCache.requests.get(surah);
+    if (cached) return cached;
+    const pending = api.getSurahPlayback(playbackCache.recitationId, surah).catch((reason) => {
+      playbackCache.requests.delete(surah);
+      throw reason;
+    });
+    playbackCache.requests.set(surah, pending);
+    if (playbackCache.requests.size > 3) playbackCache.requests.delete(playbackCache.requests.keys().next().value!);
+    return pending;
+  }, [playbackCache]);
 
   useEffect(() => {
     playbackGeneration.current += 1;
@@ -135,23 +148,10 @@ export function MushafAudioPlayer({
     setPreparedPlayback(null);
     setPlayerRequest(null);
     setError(null);
-    api
-      .getSurahPlayback(selectedRecitationId, selectedSurah)
+    loadPlayback(selectedSurah)
       .then((playback) => {
         if (cancelled) return;
         setPreparedPlayback(playback);
-        const recitation = recitations.find((item) => item.id === selectedRecitationId);
-        requestIdRef.current += 1;
-        setPlayerRequest({
-          requestId: requestIdRef.current,
-          track: playback.track,
-          segments: playback.segments || [],
-          kind: "surah",
-          title: t("common.surah", { surah: selectedSurah }),
-          artist: recitation ? recitationLabel(recitation) : t("audio.qfReciter"),
-          album: t("audio.mushafAlbum"),
-          autoPlay: false,
-        });
       })
       .catch((reason) => {
         if (!cancelled) setError(api.normalizeError(reason));
@@ -162,7 +162,34 @@ export function MushafAudioPlayer({
     return () => {
       cancelled = true;
     };
-  }, [recitationLabel, recitations, selectedRecitationId, selectedSurah, t]);
+  }, [loadPlayback, selectedRecitationId, selectedSurah]);
+
+  // Prepare the selected segment before the user presses play. The audio element
+  // can then start directly in that gesture, without another request or load().
+  useEffect(() => {
+    if (!preparedPlayback || preparedPlayback.track.surah_number !== selectedSurah
+      || preparedPlayback.track.recitation_id !== selectedRecitationId) return;
+    const ayah = selectedAyah?.surah === selectedSurah ? selectedAyah : null;
+    if (ayah && !preparedPlayback.segments?.some((segment) => segment.ayah_number === ayah.ayah)) {
+      setPlayerRequest(null);
+      setError(t("quran.readerAyahUnavailable"));
+      return;
+    }
+    setError(null);
+    requestIdRef.current += 1;
+    setPlayerRequest({
+      requestId: requestIdRef.current,
+      track: preparedPlayback.track,
+      segments: preparedPlayback.segments || [],
+      kind: ayah ? "ayah" : "surah",
+      startAyah: ayah?.ayah,
+      endAyah: ayah?.ayah,
+      title: ayah ? t("common.ayah", { ayah: `${ayah.surah}:${ayah.ayah}` }) : t("common.surah", { surah: selectedSurah }),
+      artist: selectedRecitation ? recitationLabel(selectedRecitation) : t("audio.qfReciter"),
+      album: t("audio.mushafAlbum"),
+      autoPlay: false,
+    });
+  }, [preparedPlayback, selectedAyah, selectedSurah, selectedRecitationId, selectedRecitation, recitationLabel, t]);
 
   const startPlayback = useCallback(async (
     kind: "surah" | "ayah",
@@ -175,10 +202,7 @@ export function MushafAudioPlayer({
     setAyahLoading(true);
     setError(null);
     try {
-      const playback = preparedPlayback?.track.surah_number === requestedSurah ? preparedPlayback : await api.getSurahPlayback(
-        selectedRecitationId,
-        requestedSurah,
-      );
+      const playback = preparedPlayback?.track.surah_number === requestedSurah ? preparedPlayback : await loadPlayback(requestedSurah);
       if (generation !== playbackGeneration.current) return;
       if (kind === "ayah" && !playback.segments?.some((segment) => segment.surah_number === requestedSurah && segment.ayah_number === requestedAyah!.ayah)) {
         setError(t("quran.readerAyahUnavailable"));
@@ -209,6 +233,7 @@ export function MushafAudioPlayer({
     }
   }, [
     preparedPlayback,
+    loadPlayback,
     recitationLabel,
     selectedAyah,
     selectedRecitation,

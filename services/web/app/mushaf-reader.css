@@ -1,5 +1,14 @@
 /* The reader fills the visual viewport without changing the current page.
    Portrait contains the page; landscape keeps it wide and scrolls vertically. */
+html:has(.quran-page-layout) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.quran-page-layout {
+  min-width: 0;
+}
+
 .reader-panel-heading,
 .reader-source-note {
   display: none;
@@ -113,7 +122,7 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 .is-reader-immersive .mushaf-page-transition {
   container-type: inline-size;
   flex: 0 0 auto;
-  width: min(100cqw, calc(100cqh * var(--reader-page-ratio)));
+  width: var(--reader-sheet-width, min(100cqw, calc(100cqh * var(--reader-page-ratio))));
   max-width: 100%;
 }
 
@@ -183,7 +192,7 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 }
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-transition {
-  width: 100cqw;
+  width: var(--reader-sheet-width, 100cqw);
 }
 
 .reader-actions {
