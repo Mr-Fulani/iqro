@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { devices, expect, Page, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const reciter = {
@@ -2159,4 +2159,128 @@ test.describe("Visible Mushaf page transitions", () => {
       });
     }
   }
+});
+
+test.describe("Landscape gestures through browser hit testing", () => {
+  const android = devices["Pixel 7 landscape"];
+  test.use({
+    viewport: android.viewport,
+    screen: android.screen,
+    deviceScaleFactor: android.deviceScaleFactor,
+    userAgent: android.userAgent,
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  for (const variant of ["image", "5"]) {
+    for (const input of ["mouse", "touch"]) {
+      test(`${input} drags across ${variant} ayahs turn both ways without selecting`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        await page.addInitScript((value) => localStorage.setItem("iqro_quran_mushaf_variant_v1", value), variant);
+        await page.goto("/ru/quran?surah=6&page=128");
+        const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+        const current = stage.locator(".mushaf-page-turn");
+        const view = current.locator(variant === "image" ? ".mushaf-image" : ".qf-mushaf-view");
+        await expect(view).toHaveAttribute("data-page-number", "128");
+        await page.getByRole("button", { name: "Свернуть меню читалки", exact: true }).click();
+        const touch = await page.context().newCDPSession(page);
+        const startOnAyah = async () => {
+          const ayah = current.locator('[data-ayah-key="6:2"]').last();
+          await ayah.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+          const box = (await ayah.boundingBox())!;
+          const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+          expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("[data-ayah-key]")?.getAttribute("data-ayah-key"), point)).toBe("6:2");
+          return point;
+        };
+        const drag = async (dx: number, dy: number, steps = 8, origin?: { x: number; y: number }) => {
+          const { x, y } = origin ?? await startOnAyah();
+          if (input === "mouse") {
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+          } else {
+            await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+          }
+          for (let step = 1; step <= steps; step += 1) {
+            const point = { x: x + dx * step / steps, y: y + dy * step / steps };
+            if (input === "mouse") await page.mouse.move(point.x, point.y);
+            else await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point] });
+            await page.waitForTimeout(20);
+          }
+          if (input === "mouse") await page.mouse.up();
+          else await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        };
+        for (const [dx, number] of [[120, 129], [-120, 128], [75, 129], [-75, 128]]) {
+          await drag(dx, 20);
+          await expect(view).toHaveAttribute("data-page-number", String(number));
+          await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+          await expect(stage.locator(".mushaf-page-outgoing")).toHaveCount(0);
+          expect(await page.evaluate(() => window.getSelection()?.toString())).toBe("");
+        }
+        // Keep the finger at the same screen position and reverse while the
+        // first animation is still moving. Do not move a locator into view.
+        const origin = await startOnAyah();
+        await drag(72, 0, 3, origin);
+        await expect(view).toHaveAttribute("data-page-number", "129");
+        await drag(-72, 0, 3, origin);
+        await expect(view).toHaveAttribute("data-page-number", "128");
+        await expect(stage.locator(".mushaf-page-outgoing")).toHaveCount(0);
+        await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+        // A slow movement too short to turn must not fall through into an ayah click.
+        await drag(20, 0, 16);
+        await expect(view).toHaveAttribute("data-page-number", "128");
+        await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+        if (input === "touch") {
+          const scrollBefore = await stage.evaluate((element) => element.scrollTop);
+          await drag(6, -80);
+          await expect.poll(() => stage.evaluate((element) => element.scrollTop)).toBeGreaterThan(scrollBefore);
+          await expect(view).toHaveAttribute("data-page-number", "128");
+          await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+        }
+        const point = await startOnAyah();
+        if (input === "mouse") await page.mouse.click(point.x, point.y);
+        else await page.touchscreen.tap(point.x, point.y);
+        await expect(current.locator('[data-ayah-key="6:2"].is-selected')).not.toHaveCount(0);
+        await touch.detach();
+      });
+    }
+  }
+
+  test("touch completion survives a cancelled pointer stream and suppresses compatibility clicks", async ({ page }) => {
+    await page.goto("/ru/quran?surah=6&page=128");
+    const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+    const view = stage.locator(".mushaf-page-turn .mushaf-image");
+    await expect(view).toHaveAttribute("data-page-number", "128");
+    const ayah = stage.locator('.mushaf-page-turn [data-ayah-key="6:2"]').last();
+    await ayah.evaluate((target) => {
+      // Event-order regression, separate from the native input tests above:
+      // mobile browsers may end the pointer stream before touchend arrives.
+      const point = (x: number) => ({ identifier: 42, target, clientX: x, clientY: 150 });
+      const emitTouch = (type: string, x: number, ended = false) => {
+        // WebKit exposes native Touch objects but no public Touch constructor.
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          touches: { value: ended ? [] : [point(x)] },
+          changedTouches: { value: [point(x)] },
+        });
+        target.dispatchEvent(event);
+      };
+      target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 42, pointerType: "touch", isPrimary: true, clientX: 200, clientY: 150 }));
+      emitTouch("touchstart", 200);
+      target.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerId: 42, pointerType: "touch", isPrimary: true }));
+      emitTouch("touchmove", 320);
+      emitTouch("touchend", 320, true);
+    });
+    await expect(view).toHaveAttribute("data-page-number", "129");
+    for (const detail of [0, 1, 0, 1]) {
+      await ayah.dispatchEvent("click", { detail });
+      await expect(stage.locator(".mushaf-page-turn [data-ayah-key].is-selected")).toHaveCount(0);
+    }
+    await ayah.focus();
+    await page.keyboard.press("Enter");
+    await expect(ayah).toHaveClass(/is-selected/);
+    await stage.press("ArrowLeft");
+    await expect(view).toHaveAttribute("data-page-number", "128");
+    await ayah.tap();
+    await expect(ayah).toHaveClass(/is-selected/);
+  });
 });

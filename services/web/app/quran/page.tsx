@@ -2,7 +2,6 @@
 
 import {
   Suspense,
-  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -16,6 +15,7 @@ import {
 } from "../../components/MushafAudioPlayer";
 import { useMushafPages } from "../../components/useMushafPages";
 import { MushafPageTurn } from "../../components/MushafPageTurn";
+import { MushafGestureSurface } from "../../components/MushafGestureSurface";
 import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
@@ -419,8 +419,6 @@ function QuranContent() {
   const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
   const previousPage = useRef(currentPage);
   const mushafReader = useRef<HTMLElement | null>(null);
-  const swipeStart = useRef<{ pointerId: number; x: number; y: number; time: number; horizontal: boolean } | null>(null);
-  const suppressMushafClick = useRef(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
   const [readingPlaceCandidate, setReadingPlaceCandidate] = useState<ReadingPlaceCandidate | null>(null);
@@ -1160,54 +1158,6 @@ function QuranContent() {
     queueReadingPlace({ pageNumber: nextPage });
   }, [currentPage, mushafPageCount, queueReadingPlace]);
 
-  const handleMushafPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    swipeStart.current = null;
-    delete event.currentTarget.dataset.dragging;
-    event.currentTarget.style.removeProperty("--reader-drag-x");
-    if (!event.isPrimary || event.button !== 0 || (window.visualViewport?.scale ?? 1) > 1.05) return;
-    suppressMushafClick.current = false;
-    const target = event.target as Element;
-    const touchAyah = event.pointerType !== "mouse" && target.closest("[data-ayah-key]");
-    if (target.closest("button, a, input, select, [role='button']") && !touchAyah) return;
-    swipeStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp, horizontal: false };
-  }, []);
-
-  const handleMushafPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const start = swipeStart.current;
-    if (!start || start.pointerId !== event.pointerId) return;
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
-    if (!start.horizontal) {
-      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
-        swipeStart.current = null;
-        return;
-      }
-      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-      start.horizontal = true;
-      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers have no capture. */ }
-    }
-    event.currentTarget.dataset.dragging = "true";
-    event.currentTarget.style.setProperty("--reader-drag-x", `${Math.max(-64, Math.min(64, dx * 0.45))}px`);
-  }, []);
-
-  const handleMushafPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const start = swipeStart.current;
-    delete event.currentTarget.dataset.dragging;
-    event.currentTarget.style.removeProperty("--reader-drag-x");
-    if (!start || start.pointerId !== event.pointerId) return;
-    swipeStart.current = null;
-    const deltaX = event.clientX - start.x;
-    const deltaY = event.clientY - start.y;
-    const threshold = Math.max(24, Math.min(40, event.currentTarget.clientWidth * 0.06));
-    const flick = Math.abs(deltaX) >= 16 && event.timeStamp - start.time <= 250;
-    if ((!flick && Math.abs(deltaX) < threshold) || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-    // A horizontal gesture over an ayah turns the page without selecting it.
-    suppressMushafClick.current = true;
-    // A Mushaf progresses right-to-left: dragging the page to the right opens
-    // the next page, while dragging it to the left returns to the previous one.
-    turnMushafPage(deltaX > 0 ? "next" : "previous");
-  }, [turnMushafPage]);
-
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
     if (!bookmarkStateReady || bookmarkBusyKeys.has(ayahKey)) return;
@@ -1892,35 +1842,9 @@ function QuranContent() {
               ›
             </button>
           </div>
-          <div
-            className="mushaf-page-container"
-            data-swipe-next="right"
-            onPointerDown={handleMushafPointerDown}
-            onPointerMove={handleMushafPointerMove}
-            onPointerUp={handleMushafPointerUp}
-            onClickCapture={(event) => {
-              if (suppressMushafClick.current && event.detail > 0) {
-                suppressMushafClick.current = false;
-                event.preventDefault();
-                event.stopPropagation();
-              }
-            }}
-            onPointerCancel={(event) => {
-              swipeStart.current = null;
-              delete event.currentTarget.dataset.dragging;
-              event.currentTarget.style.removeProperty("--reader-drag-x");
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowRight") {
-                event.preventDefault();
-                turnMushafPage("next");
-              } else if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                turnMushafPage("previous");
-              }
-            }}
-            tabIndex={0}
-            aria-label={t("quran.madaniPage", { page: currentPage })}
+          <MushafGestureSurface
+            onTurnPage={turnMushafPage}
+            label={t("quran.madaniPage", { page: currentPage })}
           >
             {selectedFoundationMushaf ? (
               foundationPageLoading ? (
@@ -2022,7 +1946,7 @@ function QuranContent() {
                 </div>
               </div>
             )}
-          </div>
+          </MushafGestureSurface>
 
           <div className="mushaf-page-navigation">
             <button

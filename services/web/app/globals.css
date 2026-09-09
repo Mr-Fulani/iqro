@@ -3033,8 +3033,7 @@ input:focus, select:focus, textarea:focus {
   transition: fill 140ms ease, stroke 140ms ease;
 }
 
-.mushaf-region:hover,
-.mushaf-region:focus {
+.mushaf-region:focus-visible {
   fill: rgba(245, 196, 66, 0.28);
   stroke: rgba(141, 98, 16, 0.68);
   outline: none;
@@ -3252,11 +3251,22 @@ input:focus, select:focus, textarea:focus {
   padding: 0 0.035em;
 }
 
-.qf-mushaf-ayah-fragment:hover,
 .qf-mushaf-ayah-fragment:focus-visible {
   outline: none;
   background: rgba(245, 196, 66, 0.25);
   box-shadow: 0 0 0 2px rgba(141, 98, 16, 0.32);
+}
+
+/* Touch must not leave a hover highlight behind while the reader is swiped. */
+@media (hover: hover) and (pointer: fine) {
+  .mushaf-region:hover:not(.is-selected):not(.is-playing) {
+    fill: rgba(245, 196, 66, 0.28);
+    stroke: rgba(141, 98, 16, 0.68);
+  }
+  .qf-mushaf-ayah-fragment:hover:not(.is-selected):not(.is-playing) {
+    background: rgba(245, 196, 66, 0.25);
+    box-shadow: 0 0 0 2px rgba(141, 98, 16, 0.32);
+  }
 }
 
 .qf-mushaf-ayah-fragment.is-selected {
