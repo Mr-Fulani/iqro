@@ -5,6 +5,7 @@
   display: none;
 }
 
+.reader-panel-body,
 .reader-panel-session,
 .reader-panel-notes {
   display: contents;
@@ -121,7 +122,7 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-container {
   align-items: flex-start;
-  padding-bottom: max(68px, env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
 }
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-turn {
@@ -131,27 +132,30 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 .reader-actions {
   position: absolute;
   z-index: 210;
-  inset-inline-start: 50%;
+  inset-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
   bottom: max(8px, env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
   display: flex;
-  gap: 2px;
-  max-width: calc(100% - 16px);
-  padding: 4px;
+  flex-direction: column;
+  width: min(380px, calc(100% - 16px));
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 4px 8px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fffdf8ee;
+  border-radius: 22px;
+  background: #fffdf8f5;
   color: #073e34;
   box-shadow: 0 3px 20px #073e341a;
 }
 
-[dir="rtl"] .reader-actions { transform: translateX(50%); }
-
-.reader-actions.is-folded {
-  inset-inline-start: auto;
-  inset-inline-end: max(8px, env(safe-area-inset-right, 0px));
-  transform: none;
-}
+.reader-action-buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0; }
+.reader-actions.is-folded { inset-inline-start: auto; width: auto; padding: 4px; border-radius: 50%; }
+.reader-audio-slot { min-width: 0; }
+.reader-selected-audio { display: flex; align-items: center; gap: 12px; padding: 4px 4px 8px; border-bottom: 1px solid var(--border); }
+.reader-selected-audio-copy { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.reader-selected-audio-copy strong { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.reader-selected-audio-copy span { font-size: 12px; line-height: 1.35; color: var(--text-secondary); overflow-wrap: anywhere; max-height: 3em; overflow-y: auto; }
+.reader-actions .reader-ayah-play { background: var(--primary); color: white; border-radius: 50%; }
+.reader-actions button:disabled { opacity: .45; cursor: default; }
 
 .reader-actions button,
 .reader-panel-heading button {
@@ -173,20 +177,8 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 .reader-actions button:focus-visible,
 .reader-panel-heading button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 
-.reader-page-label {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  inset-inline: 0;
-  width: max-content;
-  margin-inline: auto;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: #fffdf8e6;
-  color: #4b5b53;
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
+.reader-page-label { color: #4b5b53; font-size: 12px; white-space: nowrap; padding-inline: 4px; }
+.reader-panel { scroll-margin-top: 80px; }
 
 .is-reader-immersive .reader-panel { display: none; }
 .reader-panel-backdrop {
@@ -197,36 +189,51 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 }
 
 .is-reader-immersive .reader-panel[data-reader-open="true"] {
-  position: fixed;
+  position: absolute;
   z-index: 230;
-  inset: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
-  display: block;
-  width: auto;
-  height: auto;
-  max-width: 720px;
-  margin: auto;
-  padding: 0 16px 20px;
-  border: 1px solid var(--border);
-  border-radius: 22px;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 640px);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  max-height: 100%;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  border: 0;
+  border-radius: 0;
   background: var(--panel);
   color: var(--text-primary);
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  transform: none;
+  animation: none;
 }
 
 .is-reader-immersive .reader-panel-heading {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   min-height: 60px;
-  margin-bottom: 14px;
+  margin: 0;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   color: #073e34;
+}
+.is-reader-immersive .reader-panel-heading strong { min-width: 0; overflow-wrap: anywhere; }
+.is-reader-immersive .reader-panel[data-reader-open="true"] > .reader-panel-body {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  padding: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
 }
 
 .is-reader-immersive .quran-reader-settings { margin: 0; border: 0; }
@@ -235,14 +242,26 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 .is-reader-immersive .reader-panel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 .is-reader-immersive .reader-panel select,
 .is-reader-immersive .reader-panel textarea { min-height: 44px; font-size: 16px; }
-.is-reader-immersive .reader-panel-session > .prayer-reading-session { margin: 0; padding: 0; border: 0; }
-.reader-launch { align-self: flex-start; }
+.is-reader-immersive .reader-panel-session .prayer-reading-session { margin: 0; padding: 0; border: 0; }
+.reader-settings-navigation {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+}
+.reader-launch { flex: 1; }
+.reader-settings-navigation .btn { min-height: 44px; }
 
 .reader-fullscreen-status {
   position: absolute;
   z-index: 215;
   inset-inline: 12px;
-  bottom: 100px;
+  bottom: 132px;
   margin: 0 auto;
   max-width: 420px;
   padding: 12px;

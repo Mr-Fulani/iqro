@@ -1622,7 +1622,7 @@ test.describe("Mushaf touch gestures over ayahs", () => {
       await page.goto("/ru/quran?surah=6");
       await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
       await page.getByLabel("Вариант Мусхафа").selectOption(variant.value);
-      await page.getByRole("dialog").getByRole("button", { name: "Закрыть", exact: true }).click();
+      await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
 
       const stage = page.locator(".mushaf-page-container").filter({ visible: true });
       const view = stage.locator(variant.view);
@@ -1666,7 +1666,7 @@ test.describe("Mushaf touch gestures over ayahs", () => {
       const actions = page.getByRole("toolbar");
       await actions.getByRole("button", { name: "Настройки чтения", exact: true }).click();
       await page.getByLabel("Вариант Мусхафа").selectOption(variant.value);
-      await page.getByRole("dialog").getByRole("button", { name: "Закрыть", exact: true }).click();
+      await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
       const stage = layout.locator(".mushaf-page-container");
       const view = stage.locator(variant.view);
       const sheet = stage.locator(variant.value === "image" ? ".mushaf-image" : ".qf-mushaf-sheet");
@@ -1692,11 +1692,25 @@ test.describe("Mushaf touch gestures over ayahs", () => {
       await expect(view).toHaveAttribute("data-page-number", "128");
       await expect(ayah).toHaveClass(/is-selected/);
 
-      await actions.getByRole("button", { name: "Аудио", exact: true }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
+      const notes = actions.getByRole("button", { name: "Перевод и тафсир", exact: true });
+      await notes.click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      const panelBox = (await dialog.boundingBox())!;
+      expect(panelBox.y).toBe(0);
+      expect(panelBox.height).toBe(390);
+      expect(panelBox.x).toBeGreaterThanOrEqual(0);
+      expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(844);
+      const close = dialog.getByRole("button", { name: "Закрыть", exact: true });
+      await expect(close).toBeFocused();
+      const closeBox = await close.boundingBox();
+      await dialog.locator(".reader-panel-body").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+      expect(await close.boundingBox()).toEqual(closeBox);
+      await page.keyboard.press("Shift+Tab");
+      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
       await expect(stage).toHaveJSProperty("inert", true);
       await page.keyboard.press("Escape");
-      await expect(actions.getByRole("button", { name: "Аудио", exact: true })).toBeFocused();
+      await expect(notes).toBeFocused();
       await page.setViewportSize({ width: 390, height: 700 });
       await expect(layout).toHaveAttribute("data-reader-orientation", "portrait");
       await expect(stage).toHaveCSS("height", "700px");
@@ -1810,4 +1824,150 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await page.getByLabel("Хизб (1-60)").selectOption("13");
   await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
   await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
+});
+
+
+test.describe("Selected ayah controls in the mobile reader", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  async function turnPage(page: Page) {
+    const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+    await stage.dispatchEvent("pointerdown", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 70, clientY: 360 });
+    await stage.dispatchEvent("pointerup", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 250, clientY: 360 });
+    await expect(stage.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  }
+
+  test("plays only the selected ayah, pauses on selection and page changes, and retains audio settings", async ({ page }) => {
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const actions = page.getByRole("toolbar");
+    const audio = layout.locator(".mushaf-audio-now-playing audio");
+    await expect(actions.getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2", exact: true }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
+    await expect(audio).toHaveJSProperty("currentTime", 1);
+    await audio.evaluate((element) => { (element as HTMLAudioElement).currentTime = 1.4; });
+    await actions.getByRole("button", { name: "Пауза — аят 6:2" }).click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(audio).toHaveJSProperty("currentTime", 1.4);
+    await audio.evaluate((element) => { (element as HTMLAudioElement).currentTime = 1.98; element.dispatchEvent(new Event("timeupdate")); });
+    await expect(actions.getByRole("button", { name: "Воспроизвести аят 6:2" })).toBeVisible();
+    await expect(audio).toHaveJSProperty("currentTime", 2);
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await layout.locator('[data-ayah-key="6:1"]').click();
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
+    await expect(layout.locator(".is-playing[data-ayah-key]")).toHaveCount(0);
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:1" }).click();
+    await expect(audio).toHaveJSProperty("currentTime", 0);
+    await turnPage(page);
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
+    await expect(actions.getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await actions.getByRole("button", { name: "Настройки чтения", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
+    await layout.locator(".reader-settings-navigation").getByRole("button", { name: "Аудио", exact: true }).click();
+    const audioPanel = layout.locator(".reader-panel-audio");
+    await audioPanel.getByRole("button", { name: "Повтор, диапазон и таймер", exact: true }).click();
+    await audioPanel.getByLabel("Скорость").selectOption("1.5");
+    await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(audio).toHaveJSProperty("playbackRate", 1.5);
+    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  });
+
+  test("uses the selected ayah's surah even when the settings still show another surah", async ({ page }) => {
+    await page.goto("/ru/quran?surah=1&page=128");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const actions = page.getByRole("toolbar");
+    await expect(layout.locator("#surah-navigation")).toHaveValue("1");
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
+    await expect(layout.locator("audio")).toHaveJSProperty("currentTime", 1);
+    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+    await expect(layout.locator("#surah-navigation")).toHaveValue("1");
+  });
+
+  test("does not start a delayed ayah request after the reader moves to another page", async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let requested = false;
+    await page.route(`**/api/v1/recitations/${recitation.id}/surahs/6`, async (route) => {
+      requested = true;
+      await held;
+      await route.fallback();
+    });
+    await page.goto("/ru/quran?surah=1&page=128");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await page.getByRole("toolbar").getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect.poll(() => requested).toBe(true);
+    await turnPage(page);
+    const response = page.waitForResponse(`**/api/v1/recitations/${recitation.id}/surahs/6`);
+    release();
+    await response;
+    await expect(page.getByRole("toolbar").getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
+  });
+
+  test("system playback controls follow the selection even with the reader toolbar folded", async ({ page }) => {
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const actions = page.getByRole("toolbar");
+    const systemAction = (name: string) => page.evaluate((action) => {
+      const handlers = (window as unknown as { __mediaSessionHandlers: Record<string, (() => void) | null> }).__mediaSessionHandlers;
+      handlers[action]?.();
+    }, name);
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await turnPage(page);
+    await systemAction("play");
+    await systemAction("nexttrack");
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await layout.locator(".mushaf-page-container").click({ position: { x: 5, y: 5 } });
+    await expect(actions).toHaveClass(/is-folded/);
+    await systemAction("play");
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("playing");
+    await actions.getByRole("button", { name: "Меню читалки", exact: true }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  });
+
+  test("late media metadata cannot restart playback after page navigation", async ({ page }) => {
+    await page.goto("/ru/quran?surah=1&page=128");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
+    await page.evaluate(() => {
+      Object.defineProperty(HTMLMediaElement.prototype, "load", { configurable: true, value() {} });
+    });
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await page.getByRole("toolbar").getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
+    await turnPage(page);
+    await layout.locator("audio").dispatchEvent("loadedmetadata");
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
+    await expect(page.getByRole("toolbar").getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
+    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  });
+
+  test("missing ayah timings never fall back to playing a whole surah", async ({ page }) => {
+    await page.route(`**/api/v1/recitations/${recitation.id}/surahs/6`, (route) => route.fulfill({ json: { track: tracks[5], segments: [] } }));
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    const actions = page.getByRole("toolbar");
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
+    await expect(actions.getByText(/Не удалось воспроизвести аят/)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
+    await expect(actions.getByRole("button", { name: "Воспроизвести аят 6:2" })).toBeEnabled();
+  });
 });

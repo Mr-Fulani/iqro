@@ -5,6 +5,7 @@ import { api, Recitation, SurahPlayback } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant } from "../lib/reciter-catalog";
+import { useMushafReader } from "./MushafReaderLayout";
 import {
   loadReciterPreference,
   preferredRecitation,
@@ -26,6 +27,8 @@ type MushafAudioPlayerProps = {
   editionCode: string;
   selectedSurah: number;
   selectedAyahKey: string | null;
+  readerAyahKey?: string | null;
+  readerPageKey?: string;
   playAyahRequest?: AyahPlaybackTrigger | null;
   controlRequest?: AudioPlayerControlRequest | null;
   onActiveAyahChange: (ayahKey: string | null) => void;
@@ -44,6 +47,8 @@ export function MushafAudioPlayer({
   editionCode,
   selectedSurah,
   selectedAyahKey,
+  readerAyahKey = null,
+  readerPageKey,
   playAyahRequest,
   controlRequest,
   onActiveAyahChange,
@@ -51,15 +56,25 @@ export function MushafAudioPlayer({
   onSettingsChange,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
+  const reader = useMushafReader();
+  const readerScopeKey = reader?.immersive ? `${readerPageKey}:${readerAyahKey ?? ""}` : undefined;
   const [recitations, setRecitations] = useState<Recitation[]>([]);
   const [selectedRecitationId, setSelectedRecitationId] = useState("");
   const [preparedPlayback, setPreparedPlayback] = useState<SurahPlayback | null>(null);
   const [playerRequest, setPlayerRequest] = useState<AudioPlaybackRequest | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [playbackLoading, setPlaybackLoading] = useState(false);
+  const [ayahLoading, setAyahLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const handledAyahRequestRef = useRef<number | null>(null);
+  const playbackGeneration = useRef(0);
+
+  useEffect(() => {
+    playbackGeneration.current += 1;
+    setAyahLoading(false);
+    return () => { playbackGeneration.current += 1; };
+  }, [readerScopeKey, selectedRecitationId, selectedSurah]);
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
@@ -154,15 +169,22 @@ export function MushafAudioPlayer({
     requestedAyah = selectedAyah,
   ) => {
     if (!selectedRecitationId) return;
-    if (kind === "ayah" && (!requestedAyah || requestedAyah.surah !== selectedSurah)) return;
-    setPlaybackLoading(true);
+    if (kind === "ayah" && !requestedAyah) return;
+    const requestedSurah = kind === "ayah" ? requestedAyah!.surah : selectedSurah;
+    const generation = ++playbackGeneration.current;
+    setAyahLoading(true);
     setError(null);
     try {
-      const playback = preparedPlayback || await api.getSurahPlayback(
+      const playback = preparedPlayback?.track.surah_number === requestedSurah ? preparedPlayback : await api.getSurahPlayback(
         selectedRecitationId,
-        selectedSurah,
+        requestedSurah,
       );
-      setPreparedPlayback(playback);
+      if (generation !== playbackGeneration.current) return;
+      if (kind === "ayah" && !playback.segments?.some((segment) => segment.surah_number === requestedSurah && segment.ayah_number === requestedAyah!.ayah)) {
+        setError(t("quran.readerAyahUnavailable"));
+        return;
+      }
+      if (requestedSurah === selectedSurah) setPreparedPlayback(playback);
       requestIdRef.current += 1;
       setPlayerRequest({
         requestId: requestIdRef.current,
@@ -181,9 +203,9 @@ export function MushafAudioPlayer({
         autoPlay: true,
       });
     } catch (reason) {
-      setError(api.normalizeError(reason));
+      if (generation === playbackGeneration.current) setError(api.normalizeError(reason));
     } finally {
-      setPlaybackLoading(false);
+      if (generation === playbackGeneration.current) setAyahLoading(false);
     }
   }, [
     preparedPlayback,
@@ -242,15 +264,15 @@ export function MushafAudioPlayer({
           className="btn btn-primary"
           type="button"
           onClick={() => void startPlayback("surah")}
-          disabled={playbackLoading || !preparedPlayback}
+          disabled={playbackLoading || ayahLoading || !preparedPlayback}
         >
-          {playbackLoading ? t("common.loading") : `▶ ${t("common.surah", { surah: selectedSurah })}`}
+          {playbackLoading || ayahLoading ? t("common.loading") : `▶ ${t("common.surah", { surah: selectedSurah })}`}
         </button>
         <button
           className="btn btn-secondary"
           type="button"
           onClick={() => void startPlayback("ayah")}
-          disabled={playbackLoading || !preparedPlayback || !selectedAyah}
+          disabled={playbackLoading || ayahLoading || !preparedPlayback || !selectedAyah}
         >
           ▶ {selectedAyahKey ? t("common.ayah", { ayah: selectedAyahKey }) : t("mushafAudio.chooseAyah")}
         </button>
@@ -268,6 +290,16 @@ export function MushafAudioPlayer({
         onActiveAyahChange={onActiveAyahChange}
         onPlayingChange={onPlayingChange}
         onSettingsChange={onSettingsChange}
+        pauseOnNavigationKey={readerScopeKey}
+        readerControls={reader?.immersive ? {
+          container: reader.audioSlot,
+          ayahKey: readerAyahKey,
+          artist: selectedRecitation ? reciterName(selectedRecitation.reciter, locale) : "",
+          loading: catalogLoading || playbackLoading || ayahLoading,
+          available: Boolean(selectedRecitationId),
+          error,
+          onPlayAyah: () => void startPlayback("ayah", parseAyahKey(readerAyahKey)),
+        } : undefined}
       />
     </div>
   );

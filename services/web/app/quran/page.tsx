@@ -337,6 +337,7 @@ function QuranContent() {
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isImmersiveReader, setIsImmersiveReader] = useState(false);
   const [playAyahRequest, setPlayAyahRequest] = useState<AyahPlaybackTrigger | null>(null);
   const [playerControlRequest, setPlayerControlRequest] = useState<AudioPlayerControlRequest | null>(null);
   const [audioSettings, setAudioSettings] = useState<AudioPlaybackSettings>({
@@ -1026,6 +1027,7 @@ function QuranContent() {
 
   const handleActiveAyahChange = useCallback((ayahKey: string | null) => {
     setPlayingMushafAyah(ayahKey);
+    if (isImmersiveReader) return;
     if (!ayahKey) return;
     const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
     if (surahNumber !== selectedSurah) return;
@@ -1034,7 +1036,7 @@ function QuranContent() {
     if (viewMode === "mushaf" && nextPage) {
       setCurrentPage((page) => nextPage === page ? page : nextPage);
     }
-  }, [ayahs, selectedSurah, viewMode]);
+  }, [ayahs, isImmersiveReader, selectedSurah, viewMode]);
 
   const navigateToDivision = useCallback((division: QuranDivision) => {
     const targetSurah = division.start_ayah.surah;
@@ -1297,6 +1299,7 @@ function QuranContent() {
       pageRatio={selectedFoundationMushaf ? 900 / 1380 : (mushafPage?.image_width || 900) / (mushafPage?.image_height || 1400)}
       hasNotes={translationEnabled || tafsirEnabled}
       hasSession={prayerReadingConfig !== null}
+      onImmersiveChange={setIsImmersiveReader}
     >
       <MushafReaderPanel name="session" label={t("quran.readerSession")}>
         {prayerReadingConfig === null ? (
@@ -1709,6 +1712,11 @@ function QuranContent() {
           editionCode={selectedEdition}
           selectedSurah={selectedSurah}
           selectedAyahKey={selectedMushafAyah}
+          readerPageKey={`${selectedEdition}:${selectedFoundationMushafId ?? "image"}:${currentPage}`}
+          readerAyahKey={selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah)
+            && !mushafPageLoading && !foundationPageLoading
+            && (selectedFoundationMushafId !== null ? foundationMushafPage?.page_number === currentPage : mushafPage?.number === currentPage)
+            ? selectedMushafAyah : null}
           playAyahRequest={playAyahRequest}
           controlRequest={playerControlRequest}
           onActiveAyahChange={handleActiveAyahChange}
