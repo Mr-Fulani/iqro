@@ -106,6 +106,7 @@ test("reader settings stay outside immersive mode and preserve mounted controls"
   for (const field of fields) await expect(settings.locator(field)).toBeHidden();
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
   await expect(reader).not.toHaveClass(/is-reader-immersive/);
+  await expect(page.locator(".mobile-navigation")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   for (const field of fields) await expect(settings.locator(field)).toBeVisible();
   await settings.locator("#mushaf-variant").evaluate((element) => element.setAttribute("data-mounted-check", "same"));
@@ -114,6 +115,7 @@ test("reader settings stay outside immersive mode and preserve mounted controls"
   await expect(reader.locator(".reader-panel-audio")).toBeInViewport();
   await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
   await expect(reader).toHaveClass(/is-reader-immersive/);
+  await expect(page.locator(".mobile-navigation")).toBeHidden();
   await expect(settings.locator("#mushaf-variant")).toHaveAttribute("data-mounted-check", "same");
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
   for (const size of [{ width: 844, height: 390 }, { width: 390, height: 844 }, { width: 1280, height: 900 }]) {
@@ -134,6 +136,40 @@ test("reader settings stay outside immersive mode and preserve mounted controls"
   await expect(settings.locator("summary")).toBeHidden();
   await expect(page.locator(".mobile-navigation")).toBeHidden();
   await expect(page.locator(".app-menu")).toBeVisible();
+});
+
+test("leaving the reader restores usable bottom navigation without changing Mushaf mode", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/quran");
+  const reader = page.locator(".quran-page-layout").filter({ visible: true });
+  const navigation = page.locator(".mobile-navigation");
+  for (const exit of ["button", "escape", "settings"]) {
+    await expect(navigation).toBeHidden();
+    if (exit === "escape") {
+      await reader.locator(".mushaf-page-container").focus();
+      await page.keyboard.press("Escape");
+    } else {
+      await page.getByRole("toolbar").getByRole("button", {
+        name: exit === "button" ? "Выйти из читалки" : "Настройки чтения", exact: true,
+      }).click();
+    }
+    await expect(reader).toHaveClass(/is-mushaf-mode/);
+    await expect(reader).not.toHaveClass(/is-reader-immersive/);
+    await expect(navigation).toBeVisible();
+    const box = (await navigation.boundingBox())!;
+    expect(box.y + box.height).toBe(844);
+    expect(box.height).toBeGreaterThanOrEqual(72);
+    expect(await page.locator(".app-container").evaluate((element) => parseFloat(getComputedStyle(element).paddingBottom))).toBeGreaterThanOrEqual(88);
+    await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
+  }
+  await page.setViewportSize({ width: 667, height: 375 });
+  await page.getByRole("toolbar").getByRole("button", { name: "Выйти из читалки", exact: true }).click();
+  await expect(navigation).toBeVisible();
+  await navigation.locator(".mobile-more > summary").click();
+  await expect(page.getByTestId("mobile-language-switcher")).toBeVisible();
+  await navigation.getByRole("link", { name: "Главная", exact: true }).click();
+  await expect(page).toHaveURL("/ru");
+  await expect(navigation).toBeVisible();
 });
 
 test("mobile More fits landscape and the compact breakpoint does not alter desktop tokens", async ({ page }) => {

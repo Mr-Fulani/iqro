@@ -97,27 +97,60 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
   touch-action: pan-y pinch-zoom;
 }
 
-.is-reader-immersive .mushaf-page-turn {
+.mushaf-page-transition {
+  position: relative;
+  width: min(100%, 900px);
+}
+
+.is-reader-immersive .mushaf-page-transition {
   container-type: inline-size;
   flex: 0 0 auto;
   width: min(100cqw, calc(100cqh * var(--reader-page-ratio)));
   max-width: 100%;
+}
+
+.is-reader-immersive .mushaf-page-turn,
+.mushaf-page-outgoing {
+  container-type: inline-size;
+  width: 100%;
   transform-style: flat;
+  background: var(--panel);
   will-change: transform;
 }
 
-.is-reader-immersive .mushaf-page-turn.is-next { animation: reader-page-next 160ms ease-out; }
-.is-reader-immersive .mushaf-page-turn.is-previous { animation: reader-page-previous 160ms ease-out; }
+.is-reader-immersive .mushaf-page-turn.is-next,
+.is-reader-immersive .mushaf-page-turn.is-previous { animation: none; }
 .is-reader-immersive .mushaf-page-turn::after { display: none; }
+.mushaf-page-outgoing { position: absolute; inset: 0; pointer-events: none; }
+
+/* Quran pages advance to the right. Both sheets travel a full page width, with
+   a paper edge between them; text stays opaque and sharp throughout the turn. */
+.is-reader-immersive [data-turning] { --page-travel: 100%; }
+.is-reader-immersive [data-turning="previous"] { --page-travel: -100%; }
+.is-reader-immersive [data-turning] .mushaf-page-turn {
+  animation: reader-page-enter 320ms cubic-bezier(.22, .61, .36, 1) both;
+  box-shadow: 0 0 24px #37270f30;
+}
+.is-reader-immersive [data-turning] .mushaf-page-outgoing {
+  animation: reader-page-leave 320ms cubic-bezier(.22, .61, .36, 1) both;
+}
 .mushaf-page-container[data-dragging="true"] .mushaf-page-turn {
   animation: none;
   transform: translateX(var(--reader-drag-x, 0px));
 }
-@keyframes reader-page-next { from { transform: translateX(-16px); } to { transform: translateX(0); } }
-@keyframes reader-page-previous { from { transform: translateX(16px); } to { transform: translateX(0); } }
+.mushaf-page-container[data-dragging="true"] .mushaf-page-outgoing { visibility: hidden; }
+@keyframes reader-page-enter {
+  from { transform: translateX(calc(-1 * var(--page-travel))); }
+  to { transform: translateX(0); }
+}
+@keyframes reader-page-leave {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--page-travel)); }
+}
 @media (prefers-reduced-motion: reduce) {
   .is-reader-immersive .mushaf-page-turn.is-next,
   .is-reader-immersive .mushaf-page-turn.is-previous { animation: none; }
+  .mushaf-page-outgoing { display: none; }
 }
 
 .is-reader-immersive .mushaf-image,
@@ -141,7 +174,7 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
   padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
 }
 
-.is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-turn {
+.is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-transition {
   width: 100cqw;
 }
 

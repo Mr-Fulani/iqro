@@ -15,6 +15,7 @@ import {
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
 import { useMushafPages } from "../../components/useMushafPages";
+import { MushafPageTurn } from "../../components/MushafPageTurn";
 import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
@@ -1925,10 +1926,10 @@ function QuranContent() {
               foundationPageLoading ? (
                 <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
               ) : foundationMushafPage ? (
-                <div
-                  className={`mushaf-page-turn is-${pageTurnDirection}`}
-                  data-page-turn={pageTurnDirection}
-                  key={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
+                <MushafPageTurn
+                  direction={pageTurnDirection}
+                  pageId={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
+                  key={selectedFoundationMushaf.source_id}
                 >
                   <QuranFoundationMushafPageView
                     mushaf={selectedFoundationMushaf}
@@ -1938,15 +1939,14 @@ function QuranContent() {
                     playingAyahKey={playingMushafAyah}
                     onSelectAyah={handleSelectMushafAyah}
                   />
-                </div>
+                </MushafPageTurn>
               ) : null
             ) : mushafPageLoading ? (
               <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
             ) : mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
-              <div
-                className={`mushaf-page-turn is-${pageTurnDirection}`}
-                data-page-turn={pageTurnDirection}
-                key={`image-${mushafPage.number}`}
+              <MushafPageTurn
+                direction={pageTurnDirection}
+                pageId={`image-${mushafPage.number}`}
               >
                 <div
                   className="mushaf-page-frame"
@@ -2000,7 +2000,7 @@ function QuranContent() {
                     </div>
                   )}
                 </div>
-              </div>
+              </MushafPageTurn>
             ) : (
               <div style={{ textAlign: "center", padding: 40 }}>
                 <p className="eyebrow" style={{ marginBottom: 12 }}>
