@@ -102,6 +102,36 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @mushafBookPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed · book page sample'**
+  String get mushafBookPreview;
+
+  /// No description provided for @mushafBookPreviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Original EasyQuran images · pages 51–53'**
+  String get mushafBookPreviewHint;
+
+  /// No description provided for @mushafBookPreviewInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a separate EasyQuran visual sample, not QCF V4. Three complete pages from QuranHub/quran-pages-images are shown without reflow, recolouring or cropping their printed frame.\n\nSource: 645 × 1000 pixels — not HD. Fit width scales the entire page proportionally; scroll vertically when it exceeds the screen height. Pinch to zoom, double tap to reset. Tap once to hide or show controls.\n\nVerse selection and audio are not connected in this sample: they require a map for this exact edition. Your Mushaf, reading position and downloaded packages stay unchanged.'**
+  String get mushafBookPreviewInfo;
+
+  /// No description provided for @mushafFitWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit width'**
+  String get mushafFitWidth;
+
+  /// No description provided for @mushafFitPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole page'**
+  String get mushafFitPage;
+
   /// No description provided for @checkMushafUpdates.
   ///
   /// In en, this message translates to:

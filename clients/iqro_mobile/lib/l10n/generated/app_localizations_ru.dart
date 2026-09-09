@@ -9,6 +9,23 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get mushafBookPreview => 'Таджвид · проба книжной страницы';
+
+  @override
+  String get mushafBookPreviewHint =>
+      'Оригинальные изображения EasyQuran · страницы 51–53';
+
+  @override
+  String get mushafBookPreviewInfo =>
+      'Это отдельная визуальная проба EasyQuran, не QCF V4. Три полные страницы взяты из QuranHub/quran-pages-images без перевёрстки, перекрашивания и обрезки рамки.\n\nИсходник: 645 × 1000 пикселей — это не HD. В режиме «По ширине» страница увеличивается пропорционально; если не помещается по высоте, прокручивается вертикально. Увеличение — двумя пальцами, сброс — двойным тапом. Короткий тап скрывает или показывает меню.\n\nВыделение аятов и аудио в этой пробе не подключены: для них нужна карта именно этого издания. Ваш Мусхаф, место чтения и скачанные пакеты не меняются.';
+
+  @override
+  String get mushafFitWidth => 'По ширине';
+
+  @override
+  String get mushafFitPage => 'Вся страница';
+
+  @override
   String get checkMushafUpdates => 'Проверить обновления';
 
   @override
