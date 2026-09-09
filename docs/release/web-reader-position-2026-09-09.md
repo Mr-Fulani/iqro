@@ -57,3 +57,37 @@ WEB_IMAGE=quran-platform-web:staging-2798dc4
 Контейнер `quran-staging-web-1` получил статус `healthy`, `readiness` вернул `status=ok`, HTTP 200 на `/ru/quran`.
 Прежний образ `staging-8064be5` и исходники сохранены в `/opt/quran/releases/web-reader-position-20260909/` для отката.
 
+---
+
+## Выпуск 2 — сохранение позиции чтения (987a612)
+
+**Проблема:** При открытии `/quran` читалка всегда сбрасывалась на страницу 1 вместо
+возврата к последнему месту чтения.
+
+**Корень причины (3 бага):**
+1. `currentPage` инициализировался как `deepLinkPage || 1` — localStorage не читался.
+2. `selectedSurah` инициализировался как `deepLinkSurah` (всегда 1 без URL-параметра).
+3. `useEffect getAyahs` сбрасывал `currentPage` к `res[0].pages[0]` при первой загрузке издания.
+4. Серверный `getReadingPosition` вызывался только в режиме `after-prayer`, а не при обычном чтении.
+
+**Исправление:**
+- Новый модуль `services/web/lib/reading-position-storage.ts` — чистые localStorage-хелперы
+  с инжектируемым хранилищем для юнит-тестов.
+- `page.tsx`: флаг `hasExplicitDeepLink`; `initialLocalPosition` из localStorage при старте;
+  немедленная запись позиции в `writeLocalReadingPosition` до debounced API-вызова;
+  guard в `getAyahs` при наличии восстановленной позиции; новый `useEffect` для синхронизации
+  серверной позиции (применяется только если серверный `last_read_at` новее локального).
+- 4 юнит-теста и 3 Playwright E2E-теста добавлены.
+
+**Проверки:** `typecheck` ✅, `lint` ✅ (0 ошибок), `test:public-contracts` ✅ (9 тестов), `build` ✅.
+
+```text
+archive=/private/tmp/iqro-reader-position-source-987a612.tar.gz
+SHA256=7fea51e837543e854859c1ae07ea6467c6a9bad803ba7c655193558bdf99a358
+destination=root@162.55.35.8:/opt/quran/releases/web-reader-position-20260909/source-987a612.tar.gz
+WEB_IMAGE=quran-platform-web:staging-987a612
+.deployed-commit=987a6120894084f9328ee6919a71a4fdbd13dae7
+```
+
+Образ `quran-platform-web:staging-987a612` собран и развёрнут на staging.
+Контейнер `quran-staging-web-1` — статус `healthy`, `readiness` → `status=ok`, HTTP 200 на `/ru/quran`.
