@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:cache": "node --test cache/*.test.cjs",
-    "test:public-contracts": "node --test lib/mobile-association.test.ts lib/public-route-params.test.ts",
+    "test:public-contracts": "node --test lib/mobile-association.test.ts lib/public-route-params.test.ts lib/reading-position-storage.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:production": "PLAYWRIGHT_PRODUCTION=1 playwright test",
     "test:lighthouse": "node scripts/lighthouse-budget.mjs"

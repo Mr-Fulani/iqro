@@ -88,6 +88,11 @@ const DEFAULT_TAFSIR_BY_LOCALE: Record<string, number | null> = {
   tr: null,
 };
 
+import {
+  readLocalReadingPosition,
+  writeLocalReadingPosition,
+} from "../../lib/reading-position-storage";
+
 type TranslationPreference = {
   enabled: boolean;
   sourceId: number | null;
@@ -260,13 +265,20 @@ function divisionAtAyah(divisions: QuranDivision[], ayahKey: string | null): num
 
 function QuranContent() {
   const searchParams = useSearchParams();
-  const deepLinkSurah = positiveInteger(searchParams.get("surah")) || 1;
+  const rawSurahParam = positiveInteger(searchParams.get("surah"));
+  const deepLinkSurah = rawSurahParam || 1;
   const deepLinkAyah = positiveInteger(searchParams.get("ayah"));
   const deepLinkKey = deepLinkAyah === null ? null : `${deepLinkSurah}:${deepLinkAyah}`;
   const deepLinkPageCandidate = positiveInteger(searchParams.get("page"));
   const deepLinkPage = deepLinkPageCandidate !== null && deepLinkPageCandidate <= 604
     ? deepLinkPageCandidate
     : null;
+  const hasExplicitDeepLink = Boolean(rawSurahParam || deepLinkAyah || deepLinkPageCandidate);
+
+  const initialLocalPosition = useMemo(() => {
+    if (hasExplicitDeepLink) return null;
+    return readLocalReadingPosition("madani-hafs");
+  }, [hasExplicitDeepLink]);
 
   const prayerReadingConfig = useMemo<PrayerReadingSessionConfig | null>(() => {
     if (searchParams.get("mode") !== "after-prayer") return null;
@@ -310,7 +322,9 @@ function QuranContent() {
   const [editions, setEditions] = useState<QuranEdition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);
-  const [selectedSurah, setSelectedSurah] = useState<number>(deepLinkSurah);
+  const [selectedSurah, setSelectedSurah] = useState<number>(
+    rawSurahParam || initialLocalPosition?.surahNumber || 1,
+  );
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
   const [translationEditions, setTranslationEditions] = useState<QuranTranslationEdition[]>([]);
   const [selectedTranslationId, setSelectedTranslationId] = useState<number | null>(null);
@@ -336,11 +350,17 @@ function QuranContent() {
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(deepLinkPage || 1);
+  const [currentPage, setCurrentPage] = useState<number>(
+    deepLinkPage || initialLocalPosition?.pageNumber || 1,
+  );
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
-  const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
+  const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(
+    initialLocalPosition?.surahNumber && initialLocalPosition?.ayahNumber
+      ? `${initialLocalPosition.surahNumber}:${initialLocalPosition.ayahNumber}`
+      : null,
+  );
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isImmersiveReader, setIsImmersiveReader] = useState(false);
@@ -453,6 +473,7 @@ function QuranContent() {
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
 
   const queueReadingPlace = useCallback((candidate: Omit<ReadingPlaceCandidate, "editionCode" | "requestId">) => {
+    writeLocalReadingPosition(selectedEdition, candidate);
     readingPlaceRequestId.current += 1;
     setReadingPlaceCandidate({
       ...candidate,
@@ -838,7 +859,12 @@ function QuranContent() {
         if (pendingNavigationPage.current !== null) {
           setCurrentPage(pendingNavigationPage.current);
           pendingNavigationPage.current = null;
-        } else if (initializedAyahEdition.current !== selectedEdition && deepLinkPage === null && res[0]?.pages.length) {
+        } else if (
+          initializedAyahEdition.current !== selectedEdition
+          && deepLinkPage === null
+          && initialLocalPosition === null
+          && res[0]?.pages.length
+        ) {
           setCurrentPage(res[0].pages[0]);
         }
         initializedAyahEdition.current = selectedEdition;
@@ -849,7 +875,7 @@ function QuranContent() {
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
     return () => { cancelled = true; };
-  }, [deepLinkPage, selectedEdition, selectedSurah]);
+  }, [deepLinkPage, initialLocalPosition, selectedEdition, selectedSurah]);
 
   // Notification links include the first ayah of a review range. Wait until
   // that surah's ayahs are loaded, then open its Mushaf page and highlight it.
@@ -920,6 +946,60 @@ function QuranContent() {
         setPrayerReadingReady(true);
       });
   }, [authLoading, prayerReadingConfig, selectedEdition, selectedSurah, session]);
+
+  const handledInitialPositionSync = useRef(false);
+
+  // Restore saved server reading position for normal reading when opening the reader without deep links.
+  useEffect(() => {
+    if (
+      hasExplicitDeepLink
+      || prayerReadingConfig !== null
+      || handledInitialPositionSync.current
+      || authLoading
+      || !selectedEdition
+    ) {
+      return;
+    }
+    handledInitialPositionSync.current = true;
+    if (!session) return;
+
+    let cancelled = false;
+    api.getReadingPosition(selectedEdition)
+      .then((position) => {
+        if (cancelled || !position.page_number) return;
+        const positionSurah = position.ayah?.surah_number;
+        const positionAyah = position.ayah?.ayah_number;
+        const serverUpdatedAt = position.last_read_at ? new Date(position.last_read_at).getTime() : 0;
+        const local = readLocalReadingPosition(selectedEdition);
+        const localUpdatedAt = local?.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+
+        if (local && localUpdatedAt > serverUpdatedAt) {
+          return;
+        }
+
+        writeLocalReadingPosition(selectedEdition, {
+          pageNumber: position.page_number,
+          surahNumber: positionSurah,
+          ayahNumber: positionAyah,
+        });
+
+        setCurrentPage(position.page_number);
+        if (positionSurah && positionAyah) {
+          setSelectedMushafAyah(`${positionSurah}:${positionAyah}`);
+        }
+        if (positionSurah && positionSurah !== selectedSurah) {
+          pendingNavigationPage.current = position.page_number;
+          setSelectedSurah(positionSurah);
+        }
+      })
+      .catch(() => {
+        // Fall back to local position if server state is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, hasExplicitDeepLink, prayerReadingConfig, selectedEdition, selectedSurah, session]);
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
