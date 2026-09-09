@@ -10,7 +10,11 @@ const ReaderContext = createContext<{
   immersive: boolean;
   panel: Panel | null;
   setPanel: (panel: Panel | null) => void;
+  audioSlot: HTMLDivElement | null;
+  settingsExpanded: boolean;
 } | null>(null);
+
+export function useMushafReader() { return useContext(ReaderContext); }
 
 function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" }) {
   const paths: Record<typeof name, ReactNode> = {
@@ -27,13 +31,14 @@ function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | 
 }
 
 /** Viewport and overlays only. Reader data and all existing controls stay mounted. */
-export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, children }: {
+export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, children }: {
   active: boolean;
   page: number;
   count: number;
   pageRatio: number;
   hasNotes: boolean;
   hasSession: boolean;
+  onImmersiveChange?: (immersive: boolean) => void;
   children: ReactNode;
 }) {
   const { t, formatNumber } = useI18n();
@@ -47,7 +52,20 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState(false);
+  const [audioSlot, setAudioSlot] = useState<HTMLDivElement | null>(null);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [settingsTarget, setSettingsTarget] = useState<"settings" | "audio" | null>(null);
   const immersive = active && focused && (compact || fullscreen);
+
+  useEffect(() => { onImmersiveChange?.(immersive); }, [immersive, onImmersiveChange]);
+
+  useEffect(() => {
+    if (immersive || fullscreen || !settingsTarget) return;
+    const target = root.current?.querySelector<HTMLElement>(`.reader-panel-${settingsTarget}`);
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "start", behavior: "instant" });
+    setSettingsTarget(null);
+  }, [immersive, fullscreen, settingsTarget]);
 
   useEffect(() => {
     const mobile = window.matchMedia(MOBILE_READER_QUERY);
@@ -104,6 +122,11 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
     setPanel(null);
     if (document.fullscreenElement === root.current) void document.exitFullscreen().catch(() => {});
   };
+  const showSettings = (target: "settings" | "audio") => {
+    setSettingsExpanded(true);
+    setSettingsTarget(target);
+    leaveReader();
+  };
   const toggleFullscreen = async () => {
     setFullscreenError(false);
     try {
@@ -115,7 +138,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   };
 
   return (
-    <ReaderContext.Provider value={{ immersive, panel, setPanel }}>
+    <ReaderContext.Provider value={{ immersive, panel, setPanel, audioSlot, settingsExpanded }}>
       <div
         ref={root}
         className={`quran-page-layout${active ? " is-mushaf-mode" : ""}${immersive ? " is-reader-immersive" : ""}`}
@@ -134,7 +157,10 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
           }
         }}
       >
-        {active && compact && !immersive && <button className="btn btn-secondary reader-launch" onClick={() => setFocused(true)}>{t("quran.enterReader")}</button>}
+        {active && compact && !immersive && <div className="reader-settings-navigation">
+          <button className="btn btn-primary reader-launch" onClick={() => { setSettingsExpanded(false); setFocused(true); }}>{t("quran.enterReader")}</button>
+          <button className="btn btn-secondary" onClick={() => showSettings("audio")}>{t("nav.audio")}</button>
+        </div>}
         {children}
         {immersive && (
           <>
@@ -142,13 +168,15 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
             <div className={`reader-actions${controlsVisible ? "" : " is-folded"}`} role="toolbar" aria-label={t("quran.readerControls")}>
               {controlsVisible ? (
                 <>
+                  <div className="reader-audio-slot" ref={setAudioSlot} />
+                  <div className="reader-action-buttons">
                   <button type="button" onClick={leaveReader} aria-label={t("quran.exitReader")} title={t("quran.exitReader")}><ReaderIcon name="exit" /></button>
                   <span className="reader-page-label" dir="ltr" aria-label={t("quran.pageOf", { page, count })}>{formatNumber(page)} / {formatNumber(count)}</span>
-                  <button type="button" onClick={(event) => openPanel("settings", event.currentTarget)} aria-label={t("quran.readerSettings")} title={t("quran.readerSettings")}><ReaderIcon name="settings" /></button>
-                  <button type="button" onClick={(event) => openPanel("audio", event.currentTarget)} aria-label={t("nav.audio")} title={t("nav.audio")}><ReaderIcon name="audio" /></button>
+                  <button type="button" onClick={() => showSettings("settings")} aria-label={t("quran.readerSettings")} title={t("quran.readerSettings")}><ReaderIcon name="settings" /></button>
                   {hasNotes && <button type="button" onClick={(event) => openPanel("notes", event.currentTarget)} aria-label={t("quran.readerNotes")} title={t("quran.readerNotes")}><ReaderIcon name="notes" /></button>}
                   {hasSession && <button type="button" onClick={(event) => openPanel("session", event.currentTarget)} aria-label={t("quran.readerSession")} title={t("quran.readerSession")}><ReaderIcon name="session" /></button>}
                   {canFullscreen && <button type="button" onClick={() => void toggleFullscreen()} aria-label={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")} title={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")}><ReaderIcon name="expand" /></button>}
+                  </div>
                 </>
               ) : <button type="button" onClick={() => setControlsVisible(true)} aria-label={t("quran.readerControls")}><ReaderIcon name="menu" /></button>}
             </div>
@@ -185,6 +213,7 @@ export function MushafReaderPanel({ name, label, className = "", children }: {
       role={isOpen ? "dialog" : undefined}
       aria-modal={isOpen ? true : undefined}
       aria-label={label}
+      tabIndex={-1}
       onKeyDown={(event) => {
         if (!isOpen) return;
         if (event.key === "Escape") {
@@ -207,7 +236,7 @@ export function MushafReaderPanel({ name, label, className = "", children }: {
       }}
     >
       <div className="reader-panel-heading"><strong>{label}</strong><button ref={close} type="button" onClick={() => context?.setPanel(null)} aria-label={t("common.close")}><ReaderIcon name="close" /></button></div>
-      {children}
+      <div className="reader-panel-body">{children}</div>
     </section>
   );
 }
@@ -216,7 +245,7 @@ export function MushafReaderSettings({ children }: { children: ReactNode }) {
   const context = useContext(ReaderContext);
   const { t } = useI18n();
   return (
-    <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings" mediaQuery={context?.immersive ? "not all" : undefined}>
+    <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings" mediaQuery={context?.immersive || context?.settingsExpanded ? "not all" : undefined}>
       {children}
     </MobileDisclosure>
   );

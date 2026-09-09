@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AudioTrack, AyahAudioSegment } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey, TranslationVariables } from "../lib/i18n";
@@ -52,6 +53,15 @@ type SegmentedAudioPlayerProps = {
   controlRequest?: AudioPlayerControlRequest | null;
   pauseOnNavigationKey?: string;
   compact?: boolean;
+  readerControls?: {
+    container: HTMLElement | null;
+    ayahKey: string | null;
+    artist: string;
+    loading: boolean;
+    available: boolean;
+    error: string | null;
+    onPlayAyah: () => void;
+  };
 };
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -121,8 +131,11 @@ export function SegmentedAudioPlayer({
   controlRequest,
   pauseOnNavigationKey,
   compact = false,
+  readerControls,
 }: SegmentedAudioPlayerProps) {
   const { t, formatNumber } = useI18n();
+  const readerControlsRef = useRef(readerControls);
+  useEffect(() => { readerControlsRef.current = readerControls; }, [readerControls]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const requestRef = useRef<AudioPlaybackRequest | null>(null);
   const segmentsRef = useRef<AyahAudioSegment[]>([]);
@@ -246,6 +259,7 @@ export function SegmentedAudioPlayer({
 
   const stopAtCurrentPosition = useCallback((nextStatus: StatusMessage) => {
     clearTransition();
+    playWhenReadyRef.current = false;
     const audio = audioRef.current;
     pendingPauseStatusRef.current = nextStatus;
     if (audio) audio.pause();
@@ -261,6 +275,7 @@ export function SegmentedAudioPlayer({
     navigationKeyRef.current = pauseOnNavigationKey;
     if (requestRef.current) {
       stopAtCurrentPosition({ key: "player.status.pausedNavigation" });
+      onActiveAyahChangeRef.current?.(null);
     }
   }, [pauseOnNavigationKey, stopAtCurrentPosition]);
 
@@ -508,6 +523,13 @@ export function SegmentedAudioPlayer({
   const resumePlayback = useCallback(() => {
     const audio = audioRef.current;
     const plan = planRef.current;
+    const reader = readerControlsRef.current;
+    const segment = plan ? segmentsRef.current[plan.currentIndex] : undefined;
+    if (reader && (!reader.ayahKey || plan?.kind !== "ayah" || plan.startIndex !== plan.endIndex
+      || !segment || `${segment.surah_number}:${segment.ayah_number}` !== reader.ayahKey)) {
+      if (reader.ayahKey && reader.available && !reader.loading) reader.onPlayAyah();
+      return;
+    }
     if (!audio || !plan) return;
     clearTransition();
     const currentMs = audio.currentTime * 1000;
@@ -520,6 +542,10 @@ export function SegmentedAudioPlayer({
   }, [attemptPlay, clearTransition, setPlanPosition]);
 
   const moveToAdjacentAyah = useCallback((offset: -1 | 1) => {
+    if (readerControlsRef.current) {
+      resumePlayback();
+      return;
+    }
     const plan = planRef.current;
     if (!plan || plan.currentIndex < 0) return;
     const nextIndex = Math.min(
@@ -529,7 +555,7 @@ export function SegmentedAudioPlayer({
     clearTransition();
     setPlanPosition(plan, nextIndex);
     attemptPlay();
-  }, [attemptPlay, clearTransition, setPlanPosition]);
+  }, [attemptPlay, clearTransition, resumePlayback, setPlanPosition]);
 
   const seekBy = useCallback((seconds: number) => {
     const audio = audioRef.current;
@@ -663,9 +689,35 @@ export function SegmentedAudioPlayer({
       : activeRequest?.title || t("player.noAudio");
   const statusLabel = t(status.key, status.variables);
   const settingsActionLabel = settingsOpen ? t("player.hideSettings") : t("player.showSettings");
+  const readerAyahIsActive = Boolean(readerControls?.ayahKey && activePlan?.kind === "ayah"
+    && activePlan.startIndex === activePlan.endIndex && activeAyah
+    && `${activeAyah.surah_number}:${activeAyah.ayah_number}` === readerControls.ayahKey);
+  const readerIsPlaying = readerAyahIsActive && isPlaying;
 
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
+      {readerControls?.container && createPortal(
+        <div className="reader-selected-audio">
+          <div className="reader-selected-audio-copy" aria-live="polite">
+            <strong>{readerControls.ayahKey ? t("common.ayah", { ayah: readerControls.ayahKey }) : t("quran.readerSelectAyah")}</strong>
+            <span>{readerControls.loading ? t("common.loading") : readerControls.error || error
+              ? t("quran.readerAyahUnavailable") : readerAyahIsActive ? statusLabel : readerControls.artist}</span>
+          </div>
+          <button type="button" className="reader-ayah-play"
+            disabled={!readerControls.ayahKey || !readerControls.available || readerControls.loading}
+            aria-label={readerIsPlaying ? t("quran.readerPauseAyah", { ayah: readerControls.ayahKey! })
+              : readerControls.ayahKey ? t("quran.readerPlayAyah", { ayah: readerControls.ayahKey }) : t("quran.readerSelectAyah")}
+            onClick={() => {
+              if (!readerAyahIsActive) readerControls.onPlayAyah();
+              else if (isPlaying) stopAtCurrentPosition({ key: "player.status.paused" });
+              else resumePlayback();
+            }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              {readerIsPlaying ? <path d="M6 4h4v16H6zm8 0h4v16h-4z" /> : <path d="m7 3 15 9-15 9z" />}
+            </svg>
+          </button>
+        </div>, readerControls.container,
+      )}
       <div className="segmented-audio-summary">
         <div>
           <strong>{currentSelectionLabel}</strong>

@@ -97,48 +97,31 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
-test("reader disclosure keeps controls mounted and restores the desktop presentation", async ({ page }) => {
+test("reader settings stay outside immersive mode and preserve mounted controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/quran");
   const reader = page.locator(".quran-page-layout").filter({ visible: true });
   const settings = reader.locator(".quran-reader-settings");
-  const translation = settings.locator("#translation-enabled");
-  const readerFields = ["#quran-edition", "#mushaf-variant", "#surah-navigation", "#ayah-navigation", "#mushaf-page-jump"];
-  for (const field of readerFields) await expect(settings.locator(field)).toBeHidden();
-  await expect(translation).toBeHidden();
-  const openSettings = page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true });
-  await openSettings.click();
-  const dialog = page.getByRole("dialog", { name: "Настройки чтения", exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Закрыть", exact: true })).toBeFocused();
-  await page.keyboard.press("Shift+Tab");
-  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  await page.keyboard.press("Tab");
-  await expect(dialog.getByRole("button", { name: "Закрыть", exact: true })).toBeFocused();
-  await expect(reader.locator(".mushaf-page-container")).toHaveJSProperty("inert", true);
-  for (const field of readerFields) await expect(settings.locator(field)).toBeVisible();
-  await expect(page.locator(".quran-page-jump .btn").filter({ visible: true })).toHaveCount(0);
-  await settings.locator("#mushaf-variant").evaluate((select) => select.setAttribute("data-mounted-check", "same-variant"));
-  await expect(translation).toBeVisible();
-  await translation.evaluate((input) => input.setAttribute("data-mounted-check", "same-control"));
-  await page.keyboard.press("Escape");
-  await expect(translation).toBeHidden();
-  await expect(openSettings).toBeFocused();
-  await expect(reader.locator(".mushaf-page-container")).toHaveJSProperty("inert", false);
-  await openSettings.click();
-  await expect(translation).toHaveAttribute("data-mounted-check", "same-control");
-  await expect(settings.locator("#mushaf-variant")).toHaveAttribute("data-mounted-check", "same-variant");
-  await page.setViewportSize({ width: 844, height: 390 });
-  await expect(dialog).toBeVisible();
-  for (const field of readerFields) await expect(settings.locator(field)).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(dialog).toBeVisible();
-  for (const field of readerFields) await expect(settings.locator(field)).toBeVisible();
-  await page.setViewportSize({ width: 1280, height: 900 });
-  for (const field of readerFields) await expect(settings.locator(field)).toBeVisible();
-  await expect(page.locator(".quran-page-jump .btn").filter({ visible: true })).toHaveCount(2);
+  const fields = ["#quran-edition", "#mushaf-variant", "#surah-navigation", "#ayah-navigation", "#mushaf-page-jump", "#translation-enabled"];
+  for (const field of fields) await expect(settings.locator(field)).toBeHidden();
+  await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
+  await expect(reader).not.toHaveClass(/is-reader-immersive/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  for (const field of fields) await expect(settings.locator(field)).toBeVisible();
+  await settings.locator("#mushaf-variant").evaluate((element) => element.setAttribute("data-mounted-check", "same"));
+  await reader.locator(".reader-settings-navigation").getByRole("button", { name: "Аудио", exact: true }).click();
+  await expect(reader.locator(".reader-panel-audio")).toBeFocused();
+  await expect(reader.locator(".reader-panel-audio")).toBeInViewport();
+  await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
+  await expect(reader).toHaveClass(/is-reader-immersive/);
+  await expect(settings.locator("#mushaf-variant")).toHaveAttribute("data-mounted-check", "same");
+  await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
+  for (const size of [{ width: 844, height: 390 }, { width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    await page.setViewportSize(size);
+    for (const field of fields) await expect(settings.locator(field)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width);
+  }
   await expect(reader.locator(".mushaf-page-navigation")).toBeVisible();
-  await expect(translation).toBeVisible();
   await expect(settings.locator("summary")).toBeHidden();
   await expect(page.locator(".mobile-navigation")).toBeHidden();
   await expect(page.locator(".app-menu")).toBeVisible();
