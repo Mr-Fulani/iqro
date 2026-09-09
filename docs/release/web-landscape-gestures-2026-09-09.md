@@ -1,6 +1,10 @@
 # Исправление сенсорных свайпов Мусхафа, 9 сентября 2026
 
-## Готовая версия
+## Развёрнутая версия
+
+9 сентября 2026, 08:44 UTC: frontend версии `8064be5` развёрнут на
+`https://staging.iqro.forum`. Обновлён только web; идентификаторы остальных восьми
+контейнеров не изменились. Полные тестовые наборы при завершении деплоя не повторялись.
 
 Ветка `codex/web-landscape-gestures`:
 - `c1d2ba0e174920c7dc904d8d315c2c1b4f1fd5fe` — обработка сенсорных жестов и тесты;
@@ -25,21 +29,30 @@ Lint, сборка приложения, CSS integrity (2 чанка, 117 660 б
 ADB не обнаружил физических устройств. Точный пользовательский симптом на физическом
 Android не подтверждён локально; эмуляция не выдаётся за проверку на устройстве.
 
-## Материалы для frontend-only rollout
+## Frontend-only rollout
 
 ```text
 archive=/private/tmp/iqro-landscape-gestures/source-8064be5.tar.gz
 SHA256=3db377ad7d0304d72fe56ea76500b7488224bd78d6cea3951f34d3d76a55de31
-intended destination=root@162.55.35.8:/opt/quran/releases/web-landscape-gestures-20260909/source-8064be5.tar.gz
-intended WEB_IMAGE=quran-platform-web:staging-8064be5
-current WEB_IMAGE=quran-platform-web:staging-13b919e
-current .deployed-commit=13b919e685a93308a3620a054315afd8566315fd
+destination=root@162.55.35.8:/opt/quran/releases/web-landscape-gestures-20260909/source-8064be5.tar.gz
+WEB_IMAGE=quran-platform-web:staging-8064be5
+image digest=sha256:929538515a214a5bd7c6123fd815d617479c3db8a12c9880603122f3b9e56207
+web container=0446a1fef45ce5405ded77f032ec8043acdca347884d16dc629ccbfdbc4e2310
+.deployed-commit=8064be5ca96a96579bc8288e12797eccb8181ac2
+rollback WEB_IMAGE=quran-platform-web:staging-13b919e
+rollback revision=13b919e685a93308a3620a054315afd8566315fd
 ```
 
 Архив содержит только отслеживаемый Git каталог `services/web`; .env, ключей и
-credentials в составе нет. На сервер уже доставлен предварительный архив aac90ac,
-но сборка остановилась на поле screen тестового контекста. Поле удалено в 23051b6;
-приложение не менялось после прошедших сенсорных проверок. Старый web не переключался.
+credentials в составе нет. Пользователь явно разрешил передачу исправленного архива
+на этот staging-сервер. SHA256 на сервере совпал. Сборка runner-образа, TypeScript и
+встроенная проверка CSS integrity завершились успешно. Изолированная сборка вывела
+ожидаемые предупреждения ENOTFOUND backend для SSR каталога дуа.
+
+Переключение выполнено через существующий compose-путь `up --no-deps --no-build web`.
+Web получил статус healthy, проверка runtime budget прошла. Readiness API вернул
+`status=ok`, database/cache/throttling=true; `/ru/quran` и `/ar/quran` ответили HTTP 200.
+Исходники `services/web` и маркер развёрнутого коммита приведены к версии образа.
 
 Для этого frontend-only изменения новый дамп не создавался. Сохранённый backup
 `/backups/quran_staging_20260909T072937Z.dump` (SHA256
@@ -47,16 +60,15 @@ credentials в составе нет. На сервер уже доставле�
 и pg_restore --list. Снимок контейнеров и verification log сохранены в каталоге релиза.
 Все старые резервные копии и образы сохранены, операции очистки не выполнялись.
 
-## Текущее ограничение
+## Короткая проверка после деплоя и откат
 
-Автоматическая проверка разрешений дважды отклонила прямую SCP-передачу исправленного
-архива: требуется явное подтверждение конкретного destination и payload. Второй запрос
-ссылался на прежнее разрешение пользователя на commit/merge/deploy, историю деплоев,
-проверенный адрес и diff из одной удалённой строки теста; этого оказалось недостаточно.
-Обходные способы передачи не использовались. Нужна авторизация пользователя на указанный
-архив и staging-адрес, затем сборка нового web-образа и точечное переключение сервиса.
+Smoke на настоящих страницах staging без моков прошёл в Chrome с мобильным профилем
+Pixel 7 landscape: сенсорные свайпы 3 → 4 → 3, быстрый обратный жест во время анимации,
+отсутствие случайного выделения, вертикальная прокрутка и выделение отдельным tap.
+Ошибок JavaScript страницы не было. Это эмуляция сенсорного ввода, а не физический Android.
+Снимок: `/private/tmp/iqro-landscape-gestures/staging-android-after.png`.
 
-Подготовлены локальные скрипты rollout и smoke в `/private/tmp/iqro-landscape-gestures/`.
-Smoke проверяет настоящие страницы staging без моков через сенсорный ввод Android-профиля:
-3 → 4 → 3, вертикальную прокрутку и tap. Он ещё не запущен на новой версии, поскольку
-она не задеплоена. Localhost с исправленной логикой работает на `http://127.0.0.1:3101`.
+Старый образ сохранён. В каталоге релиза сохранены `previous-web-source.tar`,
+`previous-web-image.txt`, `previous-deployed-commit`, снимки контейнеров, логи сборки,
+rollout, runtime budget и readiness. Откат выполняется тем же web-only compose-путём
+с предыдущим образом и восстановлением сохранённых исходников/маркера.
