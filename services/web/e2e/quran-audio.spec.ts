@@ -672,6 +672,7 @@ test.beforeEach(async ({ page }) => {
 
 test("reader shows a saved semantic translation in text and Mushaf modes", async ({ page }) => {
   await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
 
   const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
   await expect(translationToggle).toBeChecked();
@@ -703,6 +704,7 @@ test("reader shows a saved semantic translation in text and Mushaf modes", async
 
 test("English reader keeps English translations and footnotes isolated", async ({ page }) => {
   await page.goto("/en/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Text", exact: true }).click();
 
   const translationSelect = page.getByLabel("Translation and author");
   await expect(translationSelect).toHaveValue("20");
@@ -921,9 +923,9 @@ test("persistent player actions adapt without overflow on mobile and tablet", as
   expect(Math.abs(compactDesktopSettingsBox!.y - compactDesktopAudioBox!.y)).toBeLessThan(12);
 });
 
-test("mushaf selects every fragment of an ayah and starts ayah playback", async ({ page }) => {
+test("reader defaults to Mushaf, selects every fragment and starts ayah playback", async ({ page }) => {
   await page.goto("/quran?surah=6");
-  await page.getByRole("button", { name: /Мусхаф/ }).click();
+  await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
 
   const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
   await expect(recitationSelect.locator("option")).toHaveCount(2);
@@ -1192,6 +1194,7 @@ test("Quran favorite uses an animated bookmark and toggles the saved ayah", asyn
 
   await page.goto("/quran?surah=6");
   const addFavorite = page.getByRole("button", { name: "Добавить в закладки" }).first();
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await expect(addFavorite.locator(".favorite-bookmark-icon")).toBeVisible();
   await expect(addFavorite).toHaveAttribute("aria-pressed", "false");
 
@@ -1296,6 +1299,7 @@ test("reading place is remembered automatically and retries a revision conflict"
 
 test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {
   await page.goto("/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
 
   const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
   await expect(recitationSelect).toBeVisible();
@@ -1537,20 +1541,20 @@ for (const viewport of [
   });
 }
 
-test("Mushaf opens as a full-width mobile reader with RTL swipe navigation", async ({ page }) => {
+test("Mushaf opens by default as a full-width mobile reader with RTL swipe navigation", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 760 });
   await page.goto("/quran?surah=6");
-  await page.getByRole("button", { name: /Мусхаф/ }).click();
+  await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
 
-  const reader = page.locator(".mushaf-reader-surface");
-  const stage = page.locator(".mushaf-page-container");
-  const image = page.locator(".mushaf-image");
+  const reader = page.locator(".mushaf-reader-surface").filter({ visible: true });
+  const stage = reader.locator(".mushaf-page-container");
+  const image = reader.locator(".mushaf-image");
+  await expect(image).toHaveAttribute("data-page-number", "128");
   await expect(reader).toBeInViewport();
   await expect(page.locator(".mobile-navigation")).toBeHidden();
   await expect(reader).toHaveCSS("padding-left", "0px");
   await expect(reader).toHaveCSS("padding-right", "0px");
   await expect(page.locator(".mushaf-reader-toolbar")).toBeVisible();
-  await expect(image).toHaveAttribute("data-page-number", "128");
 
   const readerBox = await reader.boundingBox();
   expect(readerBox).not.toBeNull();
@@ -1647,6 +1651,7 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await expect(page.getByLabel("Руб аль-хизб (1-240)").locator("option")).toHaveCount(241);
   await expect(page.getByLabel(/Аят суры/).locator("option")).toHaveCount(3);
 
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await page.getByLabel("Выбор суры (1–114)").selectOption("7");
   await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
   await expect(page.locator(".mushaf-image")).toHaveCount(0);

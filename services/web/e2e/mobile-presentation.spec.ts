@@ -18,10 +18,16 @@ for (const viewport of [
       await expect(page.locator("html")).toHaveAttribute("dir", viewport.direction);
       await expect(page.locator("main")).toBeVisible();
       const navigation = page.locator(".mobile-navigation");
-      await expect(navigation).toBeVisible();
       await expect(page.locator(".app-menu")).toBeHidden();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(viewport.width);
+      if (route === "/quran") {
+        await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
+        await expect(page.locator(".mushaf-reader-surface").filter({ visible: true })).toBeVisible();
+        await expect(navigation).toBeHidden();
+        continue;
+      }
+      await expect(navigation).toBeVisible();
       const bounds = await navigation.boundingBox();
       expect(bounds!.y + bounds!.height).toBeCloseTo(844, 0);
       for (const tab of await navigation.locator(".mobile-tab").all()) {
@@ -44,7 +50,17 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
 
   await navigation.getByRole("link", { name: "Коран", exact: true }).click();
   await expect(page).toHaveURL("/ru/quran");
+  await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
+  await expect(navigation).toBeHidden();
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(navigation).toBeVisible();
   await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/quran");
+
+  await navigation.getByRole("link", { name: "Главная", exact: true }).click();
+  await page.getByTestId("home-hero").getByRole("link", { name: "📖 Читать Коран" }).click();
+  await expect(page).toHaveURL("/ru/quran");
+  await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
 
   const more = navigation.locator("summary");
   await more.focus();

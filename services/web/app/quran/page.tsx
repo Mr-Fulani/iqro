@@ -380,11 +380,7 @@ function QuranContent() {
       .filter((ayah) => ayah.pages.includes(currentPage))
       .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
   }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
-  const [viewMode, setViewMode] = useState<"text" | "mushaf">(
-    deepLinkAyah === null && deepLinkPage === null && prayerReadingConfig === null
-      ? "text"
-      : "mushaf",
-  );
+  const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
   const requiredTranslationSurahs = useMemo(() => {
     if (viewMode === "text") return [selectedSurah];
     const pageSurahs = mushafVerseKeys.map((key) => Number(key.split(":")[0]));

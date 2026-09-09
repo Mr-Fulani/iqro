@@ -1,8 +1,7 @@
 /* Mobile presentation mirrors clients/iqro_mobile/lib/core/theme/iqro_theme.dart.
    Keep the desktop cascade and all Quran glyph/page geometry in globals.css.
    Components without a native equivalent retain their existing web controls. */
-.mobile-navigation,
-.mobile-home-title {
+.mobile-navigation {
   display: none;
 }
 
@@ -386,96 +385,22 @@
     overflow-wrap: anywhere;
   }
 
-  /* Home: restrained emerald reading hero, sand prayer card and quiet panels. */
+  /* Keep the original photographic hero, with accessible carousel controls. */
   .home-page {
     gap: 12px;
   }
 
   .hero-card {
-    min-height: 0;
-    padding: 22px;
-    background: var(--mobile-ink);
-    border-radius: 22px;
-    flex-direction: column;
-    align-items: stretch;
-    box-shadow: none;
-  }
-
-  .hero-media {
-    opacity: 0.12;
-    animation: none;
-  }
-
-  .hero-scrim,
-  [dir="rtl"] .hero-scrim {
-    background: linear-gradient(0deg, var(--mobile-ink), #073e3480);
+    font-family: var(--font-sans);
   }
 
   .hero-content {
-    width: 100%;
-    padding-top: 0;
-  }
-
-  .hero-content h1 {
-    margin: 8px 0;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 28px;
-    font-weight: 600;
-    line-height: 1.15;
-    text-shadow: none;
-  }
-
-  .desktop-home-title,
-  .hero-content > p:not(.eyebrow) {
-    display: none;
-  }
-
-  .mobile-home-title {
-    display: inline;
-  }
-
-  .hero-content p {
-    font-size: 14px;
-    line-height: 1.45;
-    color: #d9eee7;
-    text-shadow: none;
-  }
-
-  .hero-content .eyebrow {
-    font-size: 11px;
-  }
-
-  .hero-actions {
-    margin-top: 18px;
-  }
-
-  .hero-actions .btn {
-    min-height: 48px;
-    border-radius: 15px;
-    padding: 10px;
-    font-size: 14px;
-  }
-
-  .hero-primary-action {
-    background: var(--panel);
-    color: var(--primary-text);
-  }
-
-  .hero-secondary-action {
-    background: transparent;
-    border-color: #ffffff40;
+    /* Leave room for the 44px targets above the original title and copy. */
+    padding-top: 58px;
   }
 
   .hero-carousel {
-    position: static;
-    align-self: flex-end;
-    min-height: 44px;
-    margin-top: 8px;
-    padding: 0;
-    border: 0;
     gap: 0;
-    background: transparent;
-    backdrop-filter: none;
   }
 
   .hero-carousel-dots {
@@ -495,7 +420,6 @@
     width: 44px;
     height: 44px;
     font-size: 14px;
-    background: transparent;
   }
 
   .today-reading,
@@ -1005,10 +929,6 @@
 @media (max-width: 360px) {
   .header-actions .status-chip {
     max-width: 110px;
-  }
-
-  .hero-card {
-    padding: 18px;
   }
 
   .today-goal-form {

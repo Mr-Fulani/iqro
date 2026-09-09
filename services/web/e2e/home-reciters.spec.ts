@@ -222,13 +222,18 @@ test("home hero links Quran, audio, Dua and prayer with optimized landmark slide
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
-  const carouselTop = await hero.locator(".hero-carousel").evaluate(
-    (element) => element.getBoundingClientRect().top,
-  );
-  const actionsBottom = await hero.locator(".hero-actions").evaluate(
+  const carouselBottom = await hero.locator(".hero-carousel").evaluate(
     (element) => element.getBoundingClientRect().bottom,
   );
-  expect(carouselTop).toBeGreaterThanOrEqual(actionsBottom);
+  const contentTop = await hero.locator(".eyebrow").evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  expect(carouselBottom).toBeLessThanOrEqual(contentTop);
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText(
+    "Единая исламская платформа: Коран, аудио, Ду’а и время намаза",
+  );
+  await expect(hero.locator(".hero-content > p:not(.eyebrow)")).toBeVisible();
+  await expect(hero.getByTestId("hero-media")).toHaveCSS("opacity", "1");
   expect((await hero.getByTestId("hero-slide-1").boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 

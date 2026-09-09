@@ -162,10 +162,7 @@ export default function HomePage() {
           <p className="eyebrow" style={{ color: "#a7f3d0" }}>
             {t("home.eyebrow")}
           </p>
-          <h1>
-            <span className="desktop-home-title">{t("home.title")}</span>
-            <span className="mobile-home-title">{t("nav.quran")}</span>
-          </h1>
+          <h1>{t("home.title")}</h1>
           <p>{t("home.description")}</p>
           <div className="hero-actions">
             <Link href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg hero-primary-action">
