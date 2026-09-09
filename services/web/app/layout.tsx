@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./mobile.css";
+import "./mushaf-reader.css";
 import { AuthProvider } from "../lib/auth-context";
 import { I18nProvider } from "../lib/i18n-context";
 import { directionFor } from "../lib/i18n";
@@ -12,6 +13,12 @@ import { requestLocale } from "../lib/server-locale";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../lib/seo";
 import { serializeJsonLd } from "../lib/json-ld";
 import { getPublishedSocialProfilesOrEmpty } from "../lib/public-content";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();

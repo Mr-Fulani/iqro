@@ -21,7 +21,7 @@ import {
 } from "../../components/PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
-import { MobileDisclosure } from "../../components/MobileDisclosure";
+import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "../../components/MushafReaderLayout";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
@@ -1290,36 +1290,45 @@ function QuranContent() {
   };
 
   return (
-    <div className={`quran-page-layout${viewMode === "mushaf" ? " is-mushaf-mode" : ""}`}>
-      {prayerReadingConfig === null ? (
-        <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
-      ) : prayerReadingReady ? (
-        <>
-          {!prayerReadingFinished && (
-            <ReadingActivityTracker
+    <MushafReaderLayout
+      active={viewMode === "mushaf"}
+      page={currentPage}
+      count={mushafPageCount}
+      pageRatio={selectedFoundationMushaf ? 900 / 1380 : (mushafPage?.image_width || 900) / (mushafPage?.image_height || 1400)}
+      hasNotes={translationEnabled || tafsirEnabled}
+      hasSession={prayerReadingConfig !== null}
+    >
+      <MushafReaderPanel name="session" label={t("quran.readerSession")}>
+        {prayerReadingConfig === null ? (
+          <ReadingActivityTracker currentPage={currentPage} viewMode={viewMode} />
+        ) : prayerReadingReady ? (
+          <>
+            {!prayerReadingFinished && (
+              <ReadingActivityTracker
+                currentPage={currentPage}
+                viewMode={viewMode}
+                creditPageProgress={false}
+                timezoneName={prayerReadingConfig.timezoneName}
+                onActiveSecondsChange={setPrayerReadingActiveSeconds}
+              />
+            )}
+            <PrayerReadingSessionBar
+              config={prayerReadingConfig}
               currentPage={currentPage}
-              viewMode={viewMode}
-              creditPageProgress={false}
-              timezoneName={prayerReadingConfig.timezoneName}
-              onActiveSecondsChange={setPrayerReadingActiveSeconds}
+              edition={selectedEdition}
+              surah={selectedSurah}
+              activeSeconds={prayerReadingActiveSeconds}
+              onFinished={() => setPrayerReadingFinished(true)}
             />
-          )}
-          <PrayerReadingSessionBar
-            config={prayerReadingConfig}
-            currentPage={currentPage}
-            edition={selectedEdition}
-            surah={selectedSurah}
-            activeSeconds={prayerReadingActiveSeconds}
-            onFinished={() => setPrayerReadingFinished(true)}
-          />
-        </>
-      ) : (
-        <section className="surface prayer-reading-session" aria-live="polite">
-          {t("common.loading")}
-        </section>
-      )}
+          </>
+        ) : (
+          <section className="surface prayer-reading-session" aria-live="polite">
+            {t("common.loading")}
+          </section>
+        )}
+      </MushafReaderPanel>
       {/* Control Bar */}
-      <section className="surface quran-control-surface">
+      <MushafReaderPanel name="settings" label={t("quran.readerSettings")} className="surface quran-control-surface">
         <div className="surface-head" style={{ marginBottom: 16 }}>
           <div>
             <p className="eyebrow">{t("quran.eyebrow")}</p>
@@ -1365,7 +1374,7 @@ function QuranContent() {
           </div>
         )}
 
-        <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings">
+        <MushafReaderSettings>
           <div className="form-row quran-primary-controls">
             <div className="form-group">
               <label className="form-label" htmlFor="quran-edition">{t("quran.edition")}</label>
@@ -1686,10 +1695,16 @@ function QuranContent() {
               </select>
             </div>
           </div>
-        </MobileDisclosure>
-      </section>
+        </MushafReaderSettings>
+        {selectedFoundationMushaf && (
+          <p className="reader-source-note">
+            {selectedFoundationMushaf.source.attribution}{" "}
+            <a href={selectedFoundationMushaf.source.url} target="_blank" rel="noreferrer">{selectedFoundationMushaf.source.name}</a>
+          </p>
+        )}
+      </MushafReaderPanel>
 
-      <section className="surface quran-audio-surface" aria-label={t("audio.playerTitle")}>
+      <MushafReaderPanel name="audio" label={t("audio.playerTitle")} className="surface quran-audio-surface">
         <MushafAudioPlayer
           editionCode={selectedEdition}
           selectedSurah={selectedSurah}
@@ -1700,7 +1715,7 @@ function QuranContent() {
           onPlayingChange={setIsAudioPlaying}
           onSettingsChange={setAudioSettings}
         />
-      </section>
+      </MushafReaderPanel>
 
       {/* Content Area */}
       {viewMode === "text" ? (
@@ -2047,77 +2062,79 @@ function QuranContent() {
               {t("quran.nextPage", { page: currentPage + 1 })}
             </button>
           </div>
-          {translationEnabled && (
-            <aside
-              className="mushaf-translation-panel notranslate"
-              translate="no"
-              aria-label={t("quran.translationToggle")}
-            >
-              <div className="mushaf-translation-heading">
-                <div>
-                  <span className="eyebrow">{t("quran.translationToggle")}</span>
-                  <strong>{selectedTranslation?.name}</strong>
+          <MushafReaderPanel name="notes" label={t("quran.readerNotes")}>
+            {translationEnabled && (
+              <aside
+                className="mushaf-translation-panel notranslate"
+                translate="no"
+                aria-label={t("quran.translationToggle")}
+              >
+                <div className="mushaf-translation-heading">
+                  <div>
+                    <span className="eyebrow">{t("quran.translationToggle")}</span>
+                    <strong>{selectedTranslation?.name}</strong>
+                  </div>
+                  <span>{t("quran.translationPage", { page: currentPage })}</span>
                 </div>
-                <span>{t("quran.translationPage", { page: currentPage })}</span>
-              </div>
-              {translationLoading ? (
-                <p className="ayah-translation-status">{t("quran.translationLoading")}</p>
-              ) : mushafTranslations.length > 0 ? (
-                <div className="mushaf-translation-list">
-                  {mushafTranslations.map((translation) => (
-                    <article key={translation.verse_key}>
-                      <span>{translation.verse_key}</span>
-                      <div>
-                        <p>{translation.text}</p>
-                        <TranslationFootnotes footNotes={translation.foot_notes} />
-                      </div>
-                    </article>
-                  ))}
+                {translationLoading ? (
+                  <p className="ayah-translation-status">{t("quran.translationLoading")}</p>
+                ) : mushafTranslations.length > 0 ? (
+                  <div className="mushaf-translation-list">
+                    {mushafTranslations.map((translation) => (
+                      <article key={translation.verse_key}>
+                        <span>{translation.verse_key}</span>
+                        <div>
+                          <p>{translation.text}</p>
+                          <TranslationFootnotes footNotes={translation.foot_notes} />
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="ayah-translation-status">
+                    {t("quran.translationPageUnavailable")}
+                  </p>
+                )}
+              </aside>
+            )}
+            {tafsirEnabled && (
+              <aside
+                className="mushaf-translation-panel mushaf-tafsir-panel notranslate"
+                translate="no"
+                aria-label={t("quran.tafsirToggle")}
+              >
+                <div className="mushaf-translation-heading">
+                  <div>
+                    <span className="eyebrow">{t("quran.tafsirToggle")}</span>
+                    <strong>{selectedTafsir?.name}</strong>
+                  </div>
+                  {selectedMushafAyah && <span>{selectedMushafAyah}</span>}
                 </div>
-              ) : (
-                <p className="ayah-translation-status">
-                  {t("quran.translationPageUnavailable")}
-                </p>
-              )}
-            </aside>
-          )}
-          {tafsirEnabled && (
-            <aside
-              className="mushaf-translation-panel mushaf-tafsir-panel notranslate"
-              translate="no"
-              aria-label={t("quran.tafsirToggle")}
-            >
-              <div className="mushaf-translation-heading">
-                <div>
-                  <span className="eyebrow">{t("quran.tafsirToggle")}</span>
-                  <strong>{selectedTafsir?.name}</strong>
-                </div>
-                {selectedMushafAyah && <span>{selectedMushafAyah}</span>}
-              </div>
-              {tafsirLoading ? (
-                <p className="ayah-translation-status">{t("quran.tafsirLoading")}</p>
-              ) : !selectedMushafAyah ? (
-                <p className="ayah-translation-status">{t("quran.tafsirSelectAyah")}</p>
-              ) : selectedMushafTafsir ? (
-                <div className="ayah-tafsir-content">
-                  <span>
-                    {selectedMushafTafsir.group_verses_count > 1
-                      ? t("quran.tafsirRange", {
-                          from: selectedMushafTafsir.start_verse_key,
-                          to: selectedMushafTafsir.end_verse_key,
-                        })
-                      : t("quran.tafsirForAyah", { ayah: selectedMushafTafsir.verse_key })}
-                  </span>
-                  <p>{selectedMushafTafsir.text}</p>
-                </div>
-              ) : (
-                <p className="ayah-translation-status">{t("quran.tafsirAyahUnavailable")}</p>
-              )}
-            </aside>
-          )}
+                {tafsirLoading ? (
+                  <p className="ayah-translation-status">{t("quran.tafsirLoading")}</p>
+                ) : !selectedMushafAyah ? (
+                  <p className="ayah-translation-status">{t("quran.tafsirSelectAyah")}</p>
+                ) : selectedMushafTafsir ? (
+                  <div className="ayah-tafsir-content">
+                    <span>
+                      {selectedMushafTafsir.group_verses_count > 1
+                        ? t("quran.tafsirRange", {
+                            from: selectedMushafTafsir.start_verse_key,
+                            to: selectedMushafTafsir.end_verse_key,
+                          })
+                        : t("quran.tafsirForAyah", { ayah: selectedMushafTafsir.verse_key })}
+                    </span>
+                    <p>{selectedMushafTafsir.text}</p>
+                  </div>
+                ) : (
+                  <p className="ayah-translation-status">{t("quran.tafsirAyahUnavailable")}</p>
+                )}
+              </aside>
+            )}
+          </MushafReaderPanel>
         </section>
       )}
-    </div>
+    </MushafReaderLayout>
   );
 }
 
