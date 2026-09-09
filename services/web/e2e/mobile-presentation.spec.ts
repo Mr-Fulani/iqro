@@ -19,6 +19,7 @@ for (const viewport of [
       await expect(page.locator("main")).toBeVisible();
       const navigation = page.locator(".mobile-navigation");
       await expect(page.locator(".app-menu")).toBeHidden();
+      await expect(page.getByTestId("language-switcher")).toBeHidden();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(viewport.width);
       if (route === "/quran") {
@@ -77,10 +78,20 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(navigation.locator(".mobile-more-panel")).toBeHidden();
   await expect(more).toHaveClass(/is-active/);
 
-  await page.getByTestId("language-switcher").selectOption("ar");
+  await more.click();
+  const language = page.getByTestId("mobile-language-switcher");
+  await expect(language).toBeVisible();
+  await expect(language).toHaveValue("ru");
+  await language.selectOption("ar");
   await expect(page).toHaveURL("/ar/dua");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.reload();
   await navigation.locator("summary").click();
+  await expect(language).toHaveValue("ar");
   await expect(navigation.locator('.mobile-more-links [aria-current="page"]')).toHaveAttribute("href", "/ar/dua");
+  const languageBox = await language.boundingBox();
+  expect(languageBox!.height).toBeGreaterThanOrEqual(44);
+  expect(languageBox!.width).toBeLessThanOrEqual(105);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
@@ -118,6 +129,8 @@ test("mobile More fits landscape and the compact breakpoint does not alter deskt
     await page.setViewportSize({ width, height: 900 });
     await expect(page.locator(".mobile-navigation")).toBeHidden();
     await expect(page.locator(".app-menu")).toBeVisible();
+    await expect(page.getByTestId("language-switcher")).toBeVisible();
+    await expect(page.getByTestId("mobile-language-switcher")).toBeHidden();
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim())).toBe("#f8fafc");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }

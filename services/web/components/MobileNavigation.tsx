@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "dua" | "calendar" | "profile";
 
@@ -73,6 +74,7 @@ export function MobileNavigation() {
               </Link>
             ))}
           </div>
+          <LanguageSwitcher variant="menu" />
         </div>
       </details>
     </nav>

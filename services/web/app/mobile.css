@@ -112,19 +112,8 @@
     max-width: 100%;
   }
 
-  .language-switcher {
-    min-height: 44px;
-    padding: 0 6px;
-    border-radius: 14px;
-    background: var(--panel);
-  }
-
-  .language-switcher select {
-    min-width: 0;
-    max-width: 105px;
-    min-height: 44px;
-    padding-inline: 4px 0;
-    font-size: 16px;
+  .app-header .language-switcher {
+    display: none;
   }
 
   .header-actions .status-chip {
@@ -282,6 +271,24 @@
     transform: scaleX(-1);
   }
 
+  .language-switcher-menu {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) minmax(0, 105px);
+    gap: 10px;
+    min-height: 64px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 22px;
+    color: var(--text-primary);
+  }
+
+  .language-switcher-label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
   /* Shared native surfaces and a 44px minimum touch target (52px primary). */
   .surface,
   .kpi-card {
@@ -357,10 +364,14 @@
     line-height: 1.3;
   }
 
-  .language-switcher select {
+  .language-switcher-menu select {
+    width: 100%;
+    min-width: 0;
     min-height: 44px;
-    padding: 6px 0 6px 4px;
-    background: transparent;
+    padding: 6px;
+    border-radius: 12px;
+    background-color: var(--bg-subtle);
+    font-size: 16px;
   }
 
   .form-row {
