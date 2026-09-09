@@ -102,6 +102,22 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
   flex: 0 0 auto;
   width: min(100cqw, calc(100cqh * var(--reader-page-ratio)));
   max-width: 100%;
+  transform-style: flat;
+  will-change: transform;
+}
+
+.is-reader-immersive .mushaf-page-turn.is-next { animation: reader-page-next 160ms ease-out; }
+.is-reader-immersive .mushaf-page-turn.is-previous { animation: reader-page-previous 160ms ease-out; }
+.is-reader-immersive .mushaf-page-turn::after { display: none; }
+.mushaf-page-container[data-dragging="true"] .mushaf-page-turn {
+  animation: none;
+  transform: translateX(var(--reader-drag-x, 0px));
+}
+@keyframes reader-page-next { from { transform: translateX(-16px); } to { transform: translateX(0); } }
+@keyframes reader-page-previous { from { transform: translateX(16px); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .is-reader-immersive .mushaf-page-turn.is-next,
+  .is-reader-immersive .mushaf-page-turn.is-previous { animation: none; }
 }
 
 .is-reader-immersive .mushaf-image,
@@ -256,6 +272,22 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
 }
 .reader-launch { flex: 1; }
 .reader-settings-navigation .btn { min-height: 44px; }
+
+/* Reader breakpoints include phones rotated beyond the site's 768px layout. */
+.quran-page-layout[data-reader-compact="true"]:not(.is-reader-immersive) .quran-reader-settings > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding-block: 12px;
+  color: var(--primary);
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+.quran-reader-settings > summary::-webkit-details-marker { display: none; }
+.quran-reader-settings[open] > summary > span { transform: rotate(180deg); }
 
 .reader-fullscreen-status {
   position: absolute;

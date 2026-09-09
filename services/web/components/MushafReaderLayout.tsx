@@ -16,7 +16,7 @@ const ReaderContext = createContext<{
 
 export function useMushafReader() { return useContext(ReaderContext); }
 
-function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" }) {
+function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" }) {
   const paths: Record<typeof name, ReactNode> = {
     exit: <><path d="M10 4H4v16h6M8 12h13m-4-4 4 4-4 4" /></>,
     settings: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
@@ -25,6 +25,7 @@ function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | 
     expand: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
+    fold: <path d="m5 9 7 7 7-7" />,
     session: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   };
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
@@ -144,6 +145,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
         className={`quran-page-layout${active ? " is-mushaf-mode" : ""}${immersive ? " is-reader-immersive" : ""}`}
         style={{ "--reader-page-ratio": pageRatio } as CSSProperties}
         data-reader-orientation={landscape ? "landscape" : "portrait"}
+        data-reader-compact={compact}
         onClick={(event) => {
           const target = event.target as Element;
           if (immersive && !panel && target.closest(".mushaf-page-container") && !target.closest("button, a, input, select, [role='button']")) {
@@ -176,6 +178,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
                   {hasNotes && <button type="button" onClick={(event) => openPanel("notes", event.currentTarget)} aria-label={t("quran.readerNotes")} title={t("quran.readerNotes")}><ReaderIcon name="notes" /></button>}
                   {hasSession && <button type="button" onClick={(event) => openPanel("session", event.currentTarget)} aria-label={t("quran.readerSession")} title={t("quran.readerSession")}><ReaderIcon name="session" /></button>}
                   {canFullscreen && <button type="button" onClick={() => void toggleFullscreen()} aria-label={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")} title={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")}><ReaderIcon name="expand" /></button>}
+                  <button type="button" onClick={() => setControlsVisible(false)} aria-label={t("quran.readerHideControls")} title={t("quran.readerHideControls")}><ReaderIcon name="fold" /></button>
                   </div>
                 </>
               ) : <button type="button" onClick={() => setControlsVisible(true)} aria-label={t("quran.readerControls")}><ReaderIcon name="menu" /></button>}
@@ -245,7 +248,7 @@ export function MushafReaderSettings({ children }: { children: ReactNode }) {
   const context = useContext(ReaderContext);
   const { t } = useI18n();
   return (
-    <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings" mediaQuery={context?.immersive || context?.settingsExpanded ? "not all" : undefined}>
+    <MobileDisclosure title={t("quran.readerSettings")} className="quran-reader-settings" mediaQuery={context?.immersive ? "not all" : MOBILE_READER_QUERY} expanded={context?.settingsExpanded}>
       {children}
     </MobileDisclosure>
   );

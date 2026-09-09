@@ -88,6 +88,7 @@ export const MESSAGES = {
   "footer.aboutLinks": message("Об IQRO и полезные ссылки", "About IQRO and useful links", "عن إقرأ وروابط مفيدة", "IQRO hakkında ve faydalı bağlantılar"),
   "quran.readerSettings": message("Настройки чтения", "Reading settings", "إعدادات القراءة", "Okuma ayarları"),
   "quran.readerSelectAyah": message("Выберите аят на странице", "Select an ayah on the page", "اختر آية من الصفحة", "Sayfadan bir ayet seçin"),
+  "quran.readerHideControls": message("Свернуть меню читалки", "Hide reader controls", "إخفاء أدوات القراءة", "Okuyucu menüsünü gizle"),
   "quran.readerPlayAyah": message("Воспроизвести аят {ayah}", "Play ayah {ayah}", "تشغيل الآية {ayah}", "{ayah} ayetini oynat"),
   "quran.readerPauseAyah": message("Пауза — аят {ayah}", "Pause ayah {ayah}", "إيقاف الآية {ayah} مؤقتًا", "{ayah} ayetini duraklat"),
   "quran.readerAyahUnavailable": message("Не удалось воспроизвести аят. Повторите попытку или проверьте настройки аудио.", "Unable to play this ayah. Retry or check the audio settings.", "تعذر تشغيل الآية. حاول مجددًا أو راجع إعدادات الصوت.", "Ayet oynatılamadı. Tekrar deneyin veya ses ayarlarını kontrol edin."),
