@@ -587,14 +587,6 @@
     gap: 12px;
   }
 
-  body:has(.quran-page-layout.is-mushaf-mode) {
-    --mobile-nav-space: env(safe-area-inset-bottom, 0px);
-  }
-
-  body:has(.quran-page-layout.is-mushaf-mode) .mobile-navigation {
-    display: none;
-  }
-
   .quran-control-surface > .surface-head {
     gap: 16px;
   }

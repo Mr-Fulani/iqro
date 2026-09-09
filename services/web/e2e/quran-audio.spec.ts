@@ -1548,7 +1548,7 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
   await expect(layout).toHaveClass(/is-reader-immersive/);
   const reader = layout.locator(".mushaf-reader-surface");
   const stage = reader.locator(".mushaf-page-container");
-  const image = reader.locator(".mushaf-image");
+  const image = reader.locator(".mushaf-page-turn .mushaf-image");
   await expect(image).toHaveAttribute("data-page-number", "128");
   await expect(reader).toBeInViewport();
   await expect(page.locator(".mobile-navigation")).toBeHidden();
@@ -1834,7 +1834,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     const stage = page.locator(".mushaf-page-container").filter({ visible: true });
     await stage.dispatchEvent("pointerdown", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 70, clientY: 360 });
     await stage.dispatchEvent("pointerup", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 250, clientY: 360 });
-    await expect(stage.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(stage.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
   }
 
   test("plays only the selected ayah, pauses on selection and page changes, and retains audio settings", async ({ page }) => {
@@ -1867,7 +1867,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await layout.locator('[data-ayah-key="6:2"]').last().click();
     await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
-    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
     await actions.getByRole("button", { name: "Настройки чтения", exact: true }).click();
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
     await layout.locator(".reader-settings-navigation").getByRole("button", { name: "Аудио", exact: true }).click();
@@ -1877,7 +1877,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
     await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
     await expect(audio).toHaveJSProperty("playbackRate", 1.5);
-    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
   });
 
   test("uses the selected ayah's surah even when the settings still show another surah", async ({ page }) => {
@@ -1890,7 +1890,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
     await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
     await expect(layout.locator("audio")).toHaveJSProperty("currentTime", 1);
-    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "128");
     await expect(layout.locator("#surah-navigation")).toHaveValue("1");
   });
 
@@ -1939,7 +1939,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("playing");
     await actions.getByRole("button", { name: "Меню читалки", exact: true }).click();
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
-    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
   });
 
   test("late media metadata cannot restart playback after page navigation", async ({ page }) => {
@@ -1956,7 +1956,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await layout.locator("audio").dispatchEvent("loadedmetadata");
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
     await expect(page.getByRole("toolbar").getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
-    await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
   });
 
   test("missing ayah timings never fall back to playing a whole surah", async ({ page }) => {
@@ -1999,7 +1999,7 @@ test.describe("Mushaf preloading and responsive gestures", () => {
       await page.goto("/ru/quran?surah=6&page=128");
       const layout = page.locator(".quran-page-layout").filter({ visible: true });
       const stage = layout.locator(".mushaf-page-container");
-      const view = stage.locator(variant === "image" ? ".mushaf-image" : ".qf-mushaf-view");
+      const view = stage.locator(variant === "image" ? ".mushaf-page-turn .mushaf-image" : ".mushaf-page-turn .qf-mushaf-view");
       await expect(view).toHaveAttribute("data-page-number", "128");
       await expect.poll(() => [...pageRequests.keys()].sort((a, b) => a - b)).toEqual([126, 127, 128, 129, 130]);
       if (variant === "image") {
@@ -2060,7 +2060,7 @@ test.describe("Mushaf preloading and responsive gestures", () => {
     await page.setViewportSize({ width: 844, height: 390 });
     const layout = page.locator(".quran-page-layout").filter({ visible: true });
     const stage = layout.locator(".mushaf-page-container");
-    const view = stage.locator(".mushaf-image");
+    const view = stage.locator(".mushaf-page-turn .mushaf-image");
     const touch = await page.context().newCDPSession(page);
     const region = stage.locator('[data-ayah-key="6:2"]').last();
     await region.scrollIntoViewIfNeeded();
@@ -2084,4 +2084,79 @@ test.describe("Mushaf preloading and responsive gestures", () => {
     await expect(view).toHaveAttribute("data-page-number", "129");
     await touch.detach();
   });
+});
+
+test.describe("Visible Mushaf page transitions", () => {
+  test.use({ hasTouch: true });
+
+  for (const variant of ["image", "1", "5"]) {
+    for (const landscape of [false, true]) {
+      test(`${variant} slides both sheets in ${landscape ? "landscape" : "portrait"} and accepts an interrupted reverse swipe`, async ({ page }, testInfo) => {
+        await page.setViewportSize(landscape ? { width: 844, height: 390 } : { width: 390, height: 844 });
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        await page.addInitScript((value) => localStorage.setItem("iqro_quran_mushaf_variant_v1", value), variant);
+        const prefetched = page.waitForResponse((response) => response.url().includes(variant === "image"
+          ? "/madani-hafs/pages/129" : `/foundation/mushafs/${variant}/pages/129`));
+        await page.goto("/ru/quran?surah=6&page=128");
+        await prefetched;
+        const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+        const current = stage.locator(".mushaf-page-turn");
+        const outgoing = stage.locator(".mushaf-page-outgoing");
+        const viewSelector = variant === "image" ? ".mushaf-image" : ".qf-mushaf-view";
+        await expect(current.locator(viewSelector)).toHaveAttribute("data-page-number", "128");
+        await expect(current).toHaveCSS("animation-name", "none");
+        if (variant !== "image") {
+          await expect.poll(() => page.evaluate((id) => [...document.fonts].some((font) =>
+            font.status === "loaded" && font.family === (id === "1" ? "qf-mushaf-1-page-129" : "qf-mushaf-5")), variant)).toBe(true);
+        }
+
+        // Pause the CSS timeline at a visible point before taking measurements.
+        await page.addStyleTag({ content: ".mushaf-page-transition[data-turning] > * { animation-play-state: paused !important; }" });
+        const swipe = async (dx: number) => {
+          await stage.dispatchEvent("pointerdown", { pointerId: 31, pointerType: "touch", isPrimary: true, clientX: 180, clientY: 160 });
+          await stage.dispatchEvent("pointerup", { pointerId: 31, pointerType: "touch", isPrimary: true, clientX: 180 + dx, clientY: 160 });
+        };
+        await swipe(48);
+        await expect(current.locator(viewSelector)).toHaveAttribute("data-page-number", "129");
+        await expect(outgoing.locator(viewSelector)).toHaveAttribute("data-page-number", "128");
+        await expect(outgoing).toHaveJSProperty("inert", true);
+        await expect(outgoing).toHaveAttribute("aria-hidden", "true");
+        const measure = async () => stage.evaluate((element) => {
+          const live = element.querySelector<HTMLElement>(".mushaf-page-turn")!;
+          const old = element.querySelector<HTMLElement>(".mushaf-page-outgoing")!;
+          for (const sheet of [live, old]) for (const animation of sheet.getAnimations()) animation.currentTime = 100;
+          return {
+            liveX: new DOMMatrix(getComputedStyle(live).transform).m41,
+            oldX: new DOMMatrix(getComputedStyle(old).transform).m41,
+            width: live.getBoundingClientRect().width,
+          };
+        });
+        const next = await measure();
+        expect(next.liveX).toBeLessThan(-next.width * .1);
+        expect(next.oldX).toBeGreaterThan(next.width * .1);
+        expect(next.oldX - next.liveX).toBeCloseTo(next.width, 0);
+        // Do not wait for this transition: a reverse swipe must replace it now.
+        await swipe(-48);
+        await expect(current.locator(viewSelector)).toHaveAttribute("data-page-number", "128");
+        await expect(outgoing.locator(viewSelector)).toHaveAttribute("data-page-number", "129");
+        const previous = await measure();
+        expect(previous.liveX).toBeGreaterThan(previous.width * .1);
+        expect(previous.oldX).toBeLessThan(-previous.width * .1);
+        if (variant === "5") await page.screenshot({ path: testInfo.outputPath("page-turn-midpoint.png") });
+        await current.evaluate((element) => { for (const animation of element.getAnimations()) animation.finish(); });
+        await expect(outgoing).toHaveCount(0);
+        await expect(current).toHaveCSS("transform", "none");
+        await current.locator('[data-ayah-key="6:2"]').last().tap();
+        await expect(current.locator('[data-ayah-key="6:2"].is-selected')).not.toHaveCount(0);
+        await expect(current).toHaveCSS("animation-name", "none");
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(landscape ? 844 : 390);
+
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await swipe(48);
+        await expect(current.locator(viewSelector)).toHaveAttribute("data-page-number", "129");
+        await expect(outgoing).toHaveCount(0);
+        await expect(current).toHaveCSS("animation-name", "none");
+      });
+    }
+  }
 });
