@@ -121,6 +121,15 @@ test("reader settings stay outside immersive mode and preserve mounted controls"
     for (const field of fields) await expect(settings.locator(field)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width);
   }
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(settings).toHaveJSProperty("open", false);
+  await settings.locator("summary").click();
+  await expect(settings).toHaveJSProperty("open", true);
+  await settings.locator("summary").click();
+  await expect(settings).toHaveJSProperty("open", false);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(settings).toHaveJSProperty("open", true);
+  for (const field of fields) await expect(settings.locator(field)).toBeVisible();
   await expect(reader.locator(".mushaf-page-navigation")).toBeVisible();
   await expect(settings.locator("summary")).toBeHidden();
   await expect(page.locator(".mobile-navigation")).toBeHidden();

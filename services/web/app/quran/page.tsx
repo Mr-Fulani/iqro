@@ -14,6 +14,7 @@ import {
   MushafAudioPlayer,
   type AyahPlaybackTrigger,
 } from "../../components/MushafAudioPlayer";
+import { useMushafPages } from "../../components/useMushafPages";
 import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
@@ -38,7 +39,6 @@ import {
   QuranDivision,
   QuranEdition,
   QuranFoundationMushaf,
-  QuranFoundationMushafPage,
   QuranTranslationEdition,
   type QuranTafsirEdition,
   RubElHizb,
@@ -328,12 +328,9 @@ function QuranContent() {
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(deepLinkPage || 1);
-  const [mushafPage, setMushafPage] = useState<MushafPage | null>(null);
-  const [mushafPageLoading, setMushafPageLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
-  const [foundationMushafPage, setFoundationMushafPage] = useState<QuranFoundationMushafPage | null>(null);
-  const [foundationPageLoading, setFoundationPageLoading] = useState(false);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -357,6 +354,12 @@ function QuranContent() {
     [foundationMushafs, selectedFoundationMushafId],
   );
   const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
+  const { imagePage: mushafPage, foundationPage: foundationMushafPage, loading: pageLoading, error: pageError } = useMushafPages(
+    selectedEdition, selectedFoundationMushaf, currentPage,
+    viewMode === "mushaf" && (selectedFoundationMushafId === null || selectedFoundationMushaf !== null),
+  );
+  const mushafPageLoading = pageLoading && selectedFoundationMushafId === null;
+  const foundationPageLoading = pageLoading && selectedFoundationMushafId !== null;
   const selectedTranslation = useMemo(
     () =>
       translationEditions.find((edition) => edition.source_id === selectedTranslationId) || null,
@@ -381,7 +384,6 @@ function QuranContent() {
       .filter((ayah) => ayah.pages.includes(currentPage))
       .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
   }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
-  const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
   const requiredTranslationSurahs = useMemo(() => {
     if (viewMode === "text") return [selectedSurah];
     const pageSurahs = mushafVerseKeys.map((key) => Number(key.split(":")[0]));
@@ -416,7 +418,7 @@ function QuranContent() {
   const [pageTurnDirection, setPageTurnDirection] = useState<"next" | "previous">("next");
   const previousPage = useRef(currentPage);
   const mushafReader = useRef<HTMLElement | null>(null);
-  const swipeStart = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const swipeStart = useRef<{ pointerId: number; x: number; y: number; time: number; horizontal: boolean } | null>(null);
   const suppressMushafClick = useRef(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: "ok" | "err" } | null>(null);
@@ -950,66 +952,10 @@ function QuranContent() {
   ]);
 
   useEffect(() => {
-    if (
-      viewMode !== "mushaf" ||
-      !selectedEdition ||
-      !currentPage ||
-      selectedFoundationMushafId !== null
-    ) {
-      setMushafPage(null);
-      setMushafPageLoading(false);
-      return;
+    if (pageError && selectedFoundationMushafId !== null) {
+      setFeedbackMessage({ text: api.normalizeError(pageError), type: "err" });
     }
-    let cancelled = false;
-    setMushafPageLoading(true);
-    api
-      .getPage(selectedEdition, currentPage)
-      .then((pageData) => {
-        if (cancelled) return;
-        setMushafPage(pageData);
-        setMushafPageLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setMushafPage(null);
-        setMushafPageLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedEdition, currentPage, selectedFoundationMushafId, viewMode]);
-
-  useEffect(() => {
-    if (
-      viewMode !== "mushaf" ||
-      selectedFoundationMushafId === null ||
-      !selectedFoundationMushaf ||
-      !currentPage
-    ) {
-      setFoundationMushafPage(null);
-      setFoundationPageLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setFoundationMushafPage(null);
-    setFoundationPageLoading(true);
-    api
-      .getQuranFoundationMushafPage(selectedFoundationMushafId, currentPage)
-      .then((pageData) => {
-        if (cancelled) return;
-        setFoundationMushafPage(pageData);
-        setFoundationPageLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setFoundationMushafPage(null);
-        setFoundationPageLoading(false);
-        setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentPage, selectedFoundationMushaf, selectedFoundationMushafId, viewMode]);
+  }, [pageError, selectedFoundationMushafId]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
   const editionName = (edition: QuranEdition) =>
@@ -1214,22 +1160,46 @@ function QuranContent() {
   }, [currentPage, mushafPageCount, queueReadingPlace]);
 
   const handleMushafPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!event.isPrimary || event.button !== 0) return;
     swipeStart.current = null;
+    delete event.currentTarget.dataset.dragging;
+    event.currentTarget.style.removeProperty("--reader-drag-x");
+    if (!event.isPrimary || event.button !== 0 || (window.visualViewport?.scale ?? 1) > 1.05) return;
     suppressMushafClick.current = false;
     const target = event.target as Element;
     const touchAyah = event.pointerType !== "mouse" && target.closest("[data-ayah-key]");
     if (target.closest("button, a, input, select, [role='button']") && !touchAyah) return;
-    swipeStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    swipeStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp, horizontal: false };
+  }, []);
+
+  const handleMushafPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = swipeStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (!start.horizontal) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+        swipeStart.current = null;
+        return;
+      }
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      start.horizontal = true;
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers have no capture. */ }
+    }
+    event.currentTarget.dataset.dragging = "true";
+    event.currentTarget.style.setProperty("--reader-drag-x", `${Math.max(-64, Math.min(64, dx * 0.45))}px`);
   }, []);
 
   const handleMushafPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
+    delete event.currentTarget.dataset.dragging;
+    event.currentTarget.style.removeProperty("--reader-drag-x");
     if (!start || start.pointerId !== event.pointerId) return;
     swipeStart.current = null;
     const deltaX = event.clientX - start.x;
     const deltaY = event.clientY - start.y;
-    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+    const threshold = Math.max(24, Math.min(40, event.currentTarget.clientWidth * 0.06));
+    const flick = Math.abs(deltaX) >= 16 && event.timeStamp - start.time <= 250;
+    if ((!flick && Math.abs(deltaX) < threshold) || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
     // A horizontal gesture over an ayah turns the page without selecting it.
     suppressMushafClick.current = true;
     // A Mushaf progresses right-to-left: dragging the page to the right opens
@@ -1925,6 +1895,7 @@ function QuranContent() {
             className="mushaf-page-container"
             data-swipe-next="right"
             onPointerDown={handleMushafPointerDown}
+            onPointerMove={handleMushafPointerMove}
             onPointerUp={handleMushafPointerUp}
             onClickCapture={(event) => {
               if (suppressMushafClick.current && event.detail > 0) {
@@ -1933,8 +1904,10 @@ function QuranContent() {
                 event.stopPropagation();
               }
             }}
-            onPointerCancel={() => {
+            onPointerCancel={(event) => {
               swipeStart.current = null;
+              delete event.currentTarget.dataset.dragging;
+              event.currentTarget.style.removeProperty("--reader-drag-x");
             }}
             onKeyDown={(event) => {
               if (event.key === "ArrowRight") {

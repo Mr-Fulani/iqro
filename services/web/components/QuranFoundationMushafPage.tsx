@@ -8,7 +8,7 @@ import type {
   Surah,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
-import { isAllowedQuranFontUrl } from "../lib/quran-font";
+import { isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 
 type FontState = "loading" | "ready" | "error";
 type SurahIdentity = Pick<Surah, "number" | "name_ar">;
@@ -188,10 +188,8 @@ export function QuranFoundationMushafPageView({
   const { t } = useI18n();
   const lineCount = Math.min(30, Math.max(1, mushaf.lines_per_page));
   const pageFontUrl = page.rendering.available ? page.rendering.font_url : undefined;
-  const fontFamily = page.rendering.available && page.rendering.mode === "page-font"
-    ? `qf-mushaf-${mushaf.source_id}-page-${page.page_number}`
-    : `qf-mushaf-${mushaf.source_id}`;
-  const [fontState, setFontState] = useState<FontState>("loading");
+  const fontFamily = quranFontFamily(mushaf.source_id, page);
+  const [fontState, setFontState] = useState<FontState>(() => isQuranFontReady(fontFamily, pageFontUrl) ? "ready" : "loading");
   const lines = useMemo(() => wordsByLine(page.words, lineCount), [lineCount, page.words]);
   const verseKeys = useMemo(() => verseKeyById(page), [page]);
   const intros = useMemo(
@@ -200,22 +198,12 @@ export function QuranFoundationMushafPageView({
   );
 
   useEffect(() => {
-    setFontState("loading");
-    if (!isAllowedQuranFontUrl(pageFontUrl)) {
-      setFontState("error");
-      return;
-    }
-
     let cancelled = false;
-    let loadedFont: FontFace | null = null;
-    const fontFace = new FontFace(fontFamily, `url("${pageFontUrl}") format("woff2")`);
-    fontFace.display = "block";
-    void fontFace
-      .load()
-      .then((font) => {
+    setFontState(isQuranFontReady(fontFamily, pageFontUrl) ? "ready" : "loading");
+    const loaded = loadQuranFont(fontFamily, pageFontUrl);
+    const release = retainQuranFont(fontFamily, pageFontUrl);
+    void loaded.then(() => {
         if (cancelled) return;
-        loadedFont = font;
-        document.fonts.add(font);
         setFontState("ready");
       })
       .catch(() => {
@@ -224,7 +212,7 @@ export function QuranFoundationMushafPageView({
 
     return () => {
       cancelled = true;
-      if (loadedFont) document.fonts.delete(loadedFont);
+      release();
     };
   }, [fontFamily, pageFontUrl]);
 

@@ -1,3 +1,51 @@
+import type { QuranFoundationMushafPage } from "./api";
+
+type CachedFont = { face: FontFace; promise: Promise<FontFace>; users: number };
+const fonts = new Map<string, CachedFont>();
+
+export function quranFontFamily(mushafId: number, page: QuranFoundationMushafPage): string {
+  return page.rendering.available && page.rendering.mode === "page-font"
+    ? `qf-mushaf-${mushafId}-page-${page.page_number}` : `qf-mushaf-${mushafId}`;
+}
+
+function trimFonts() {
+  for (const [key, entry] of fonts) {
+    if (fonts.size <= 10) break;
+    if (entry.users || entry.face.status === "loading") continue;
+    document.fonts.delete(entry.face);
+    fonts.delete(key);
+  }
+}
+
+export function isQuranFontReady(family: string, url: string | undefined): boolean {
+  return fonts.get(`${family}:${url}`)?.face.status === "loaded";
+}
+
+export function loadQuranFont(family: string, url: string | undefined): Promise<FontFace> {
+  if (!isAllowedQuranFontUrl(url)) return Promise.reject(new Error("Unsupported Quran font URL"));
+  const key = `${family}:${url}`;
+  const cached = fonts.get(key);
+  if (cached) {
+    fonts.delete(key);
+    fonts.set(key, cached);
+    return cached.promise;
+  }
+  const face = new FontFace(family, `url("${url}") format("woff2")`, { display: "block" });
+  const entry: CachedFont = { face, users: 0, promise: face.load().then((font) => {
+    document.fonts.add(font);
+    trimFonts();
+    return font;
+  }).catch((error: unknown) => { fonts.delete(key); throw error; }) };
+  fonts.set(key, entry);
+  return entry.promise;
+}
+
+export function retainQuranFont(family: string, url: string | undefined): () => void {
+  const entry = fonts.get(`${family}:${url}`);
+  if (entry) entry.users += 1;
+  return () => { if (entry) entry.users -= 1; trimFonts(); };
+}
+
 export function isAllowedQuranFontUrl(value: string | undefined): value is string {
   if (!value) return false;
   try {

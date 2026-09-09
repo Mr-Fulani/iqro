@@ -1971,3 +1971,117 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect(actions.getByRole("button", { name: "Воспроизвести аят 6:2" })).toBeEnabled();
   });
 });
+
+test.describe("Mushaf preloading and responsive gestures", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  for (const variant of ["image", "1", "5"]) {
+    test(`${variant} preloads two pages in both directions and turns without another page request`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem("iqro_quran_mushaf_variant_v1", value), variant);
+      const pageRequests = new Map<number, number>();
+      const imageRequests: number[] = [];
+      const pattern = variant === "image"
+        ? "**/api/v1/quran/editions/madani-hafs/pages/*"
+        : `**/api/v1/quran/foundation/mushafs/${variant}/pages/*`;
+      await page.route(pattern, async (route) => {
+        const number = Number(new URL(route.request().url()).pathname.split("/").at(-1));
+        pageRequests.set(number, (pageRequests.get(number) || 0) + 1);
+        if (variant !== "image") return route.fallback();
+        await route.fulfill({ json: {
+          ...page128, number,
+          assets: [{ ...page128.assets[0], url: new URL(`/reader-page-${number}.svg`, route.request().url()).toString() }],
+        } });
+      });
+      await page.route("**/reader-page-*.svg", async (route) => {
+        imageRequests.push(Number(/reader-page-(\d+)/.exec(route.request().url())![1]));
+        await route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1400"><rect width="900" height="1400" fill="white"/></svg>' });
+      });
+      await page.goto("/ru/quran?surah=6&page=128");
+      const layout = page.locator(".quran-page-layout").filter({ visible: true });
+      const stage = layout.locator(".mushaf-page-container");
+      const view = stage.locator(variant === "image" ? ".mushaf-image" : ".qf-mushaf-view");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      await expect.poll(() => [...pageRequests.keys()].sort((a, b) => a - b)).toEqual([126, 127, 128, 129, 130]);
+      if (variant === "image") {
+        await expect.poll(() => [...new Set(imageRequests)].sort((a, b) => a - b)).toEqual([126, 127, 128, 129, 130]);
+      } else {
+        await expect.poll(() => page.evaluate((id) => [...document.fonts].filter((face) => face.status === "loaded" && face.family.startsWith(`qf-mushaf-${id}`)).length, variant)).toBe(variant === "1" ? 5 : 1);
+      }
+      // A second HTTP request for a warm page would fail rather than mask a cache miss.
+      await page.route(pattern, async (route) => {
+        const number = Number(new URL(route.request().url()).pathname.split("/").at(-1));
+        if (number >= 128 && number <= 130) {
+          pageRequests.set(number, (pageRequests.get(number) || 0) + 1);
+          return route.fulfill({ status: 503, json: { detail: "Warm navigation must not fetch again" } });
+        }
+        await route.fallback();
+      });
+      for (const number of [129, 130, 129, 128]) {
+        const current = Number(await view.getAttribute("data-page-number"));
+        const dx = number > current ? 32 : -32;
+        await stage.dispatchEvent("pointerdown", { pointerId: 91, pointerType: "touch", isPrimary: true, clientX: 180, clientY: 300 });
+        await stage.dispatchEvent("pointerup", { pointerId: 91, pointerType: "touch", isPrimary: true, clientX: 180 + dx, clientY: 300 });
+        await expect(view).toHaveAttribute("data-page-number", String(number));
+        if (variant !== "image") await expect(view).toHaveAttribute("data-font-status", "ready");
+        else await expect(view).toHaveJSProperty("complete", true);
+        await expect(stage.locator(".qf-mushaf-page-loading, .qf-mushaf-font-loading")).toHaveCount(0);
+        expect(pageRequests.get(number)).toBe(1);
+      }
+    });
+  }
+
+  test("landscape settings can collapse and reader controls have an explicit hide action", async ({ page }) => {
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
+    const settings = layout.locator(".quran-reader-settings");
+    await settings.locator("summary").click();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(settings.locator("summary")).toBeVisible();
+    await expect(settings).toHaveJSProperty("open", false);
+    await expect(settings.locator("#mushaf-variant")).toBeHidden();
+    await settings.locator("summary").click();
+    await expect(settings.locator("#mushaf-variant")).toBeVisible();
+    await settings.locator("summary").click();
+    await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
+    const actions = page.getByRole("toolbar");
+    await actions.getByRole("button", { name: "Свернуть меню читалки", exact: true }).click();
+    await expect(actions.getByRole("button")).toHaveCount(1);
+    await expect(settings).toBeHidden();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(actions.getByRole("button")).toHaveCount(1);
+    await actions.getByRole("button", { name: "Меню читалки", exact: true }).click();
+    await expect(actions.getByRole("button", { name: "Настройки чтения", exact: true })).toBeVisible();
+  });
+
+  test("short touch flicks respond in landscape while vertical and two-finger gestures do not turn pages", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/ru/quran?surah=6&page=128");
+    await page.setViewportSize({ width: 844, height: 390 });
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const stage = layout.locator(".mushaf-page-container");
+    const view = stage.locator(".mushaf-image");
+    const touch = await page.context().newCDPSession(page);
+    const region = stage.locator('[data-ayah-key="6:2"]').last();
+    await region.scrollIntoViewIfNeeded();
+    const box = (await region.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = Math.min(180, box.y + box.height / 2);
+    await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x + 24, y }] });
+    await expect(stage).toHaveAttribute("data-dragging", "true");
+    await expect(view).toHaveAttribute("data-page-number", "128");
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(view).toHaveAttribute("data-page-number", "129");
+    await expect(stage.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+    await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 300, y: 150 }] });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 306, y: 70 }] });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(view).toHaveAttribute("data-page-number", "129");
+    await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 250, y: 100, id: 1 }, { x: 350, y: 100, id: 2 }] });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 310, y: 100, id: 1 }, { x: 410, y: 100, id: 2 }] });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(view).toHaveAttribute("data-page-number", "129");
+    await touch.detach();
+  });
+});
