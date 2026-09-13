@@ -11,6 +11,7 @@ import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
 import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
+import 'foundation_mushaf_page.dart';
 
 typedef MushafPageLayout = ({
   double width,
@@ -204,7 +205,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         child: IqroAsyncError(
           title: context.l10n.noQuranData,
           message: context.l10n.networkError,
-          onRetry: () => ref.invalidate(mushafPageProvider(widget.page)),
+          onRetry: () {
+            ref.invalidate(mushafRenditionsProvider);
+            ref.invalidate(mushafPageProvider(widget.page));
+          },
         ),
       ),
       data: _buildPage,
@@ -219,7 +223,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         .where((s) => s.number == surahNumber)
         .firstOrNull;
     final juz = widget.divisions
-        .where((d) => widget.page >= d.startPage && widget.page <= d.endPage)
+        .where((d) => d.containsAyah(pageData.ayahReferences.firstOrNull))
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
     return ColoredBox(
@@ -315,6 +319,45 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           ),
         );
         final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+        if (pageData.foundation != null) {
+          return ClipRect(
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              constrained: false,
+              alignment: layout.fillsLandscapeWidth
+                  ? Alignment.topCenter
+                  : Alignment.center,
+              minScale: 1,
+              maxScale: 3,
+              panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
+              panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
+                  ? PanAxis.vertical
+                  : PanAxis.free,
+              onInteractionEnd: (_) {
+                final scale = _transformationController.value
+                    .getMaxScaleOnAxis();
+                setState(() => _scale = scale);
+                widget.onScale(scale);
+              },
+              child: SizedBox(
+                width: layout.width,
+                height: layout.height,
+                child: FoundationMushafPageContent(
+                  key: ValueKey(
+                    '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+                  ),
+                  page: pageData.foundation!,
+                  selected: widget.selectedAyah,
+                  playing: widget.playingAyah,
+                  onSelect: widget.onSelectAyah,
+                  onOpen: widget.onOpenAyah,
+                  onBackgroundTap: widget.onBackgroundTap,
+                  surahs: widget.surahs,
+                ),
+              ),
+            ),
+          );
+        }
         final asset = pageData.bestAssetFor(
           layout.fillsLandscapeWidth ? layout.width : _viewportSize.width,
           devicePixelRatio,

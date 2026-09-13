@@ -2453,6 +2453,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.'**
   String get readerHapticsHint;
+
+  /// No description provided for @mushafPageCaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.'**
+  String get mushafPageCaching;
 }
 
 class _AppLocalizationsDelegate

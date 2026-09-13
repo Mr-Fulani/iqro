@@ -191,7 +191,7 @@ def data(*, web_only=False, refresh=False, build=True):
     for snapshot in status["missing_dua"]:
         manage("import_dua_catalog", f"src/quran_backend/modules/dua/data/{snapshot}", "--publish")
     if not checks["mushaf"] or refresh:
-        manage("sync_quran_foundation_mushafs", "--source-id", "5")
+        manage("sync_quran_foundation_mushafs", "--force")
     # Import constants without loading Django or requiring host backend packages.
     if not checks["canonical"]:
         source = json.loads((ROOT / "services/backend/docs/quran-sources.lock.json").read_bytes())["corpus"]
@@ -208,23 +208,8 @@ def data(*, web_only=False, refresh=False, build=True):
     if not checks["audio"]:
         manage("sync_quran_foundation_audio", "--reciter-id", "159", "--all-surahs",
                "--content-version", "local-dev-v1", "--publish", "--resume")
-    # A source refresh can invalidate a previously published image package.
-    current = data_status(web_only=web_only)
-    if not web_only and not current["checks"]["mobile"]:
-        snapshot = manage("export_qf_mushaf_source", "--mushaf", "5", capture_output=True).stdout
-        directory = prepare_source(snapshot)
-        relative = str(directory.relative_to(WORK / "mushaf"))
-        rendered = render_directory(directory)
-        if build:
-            compose("--profile", "tools", "build", "mushaf-tools")
-        print("Preparing 604 pages for mobile. Repeated runs verify and reuse existing files.", flush=True)
-        compose("--profile", "tools", "run", "--no-deps", "-T", "mushaf-tools",
-                "python", "kfgqpc.py", "--source-dir", f"/data/{relative}/source",
-                "--workers", "2",
-                "--source-lock", f"/data/{relative}/source/lock.json",
-                "--output-dir", f"/data/{relative}/{rendered.name}")
-        manifest = "/app/" + str((rendered / "manifest.json").relative_to(ROOT))
-        manage("publish_mushaf_rendition", manifest)
+    # Both clients render official fonts/word images directly. The optional
+    # offline raster publishing tools do not belong in first-run setup.
     manage("dev_data_status", *([] if web_only else ["--require-mobile"]))
 
 
@@ -245,7 +230,7 @@ def doctor():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("init", "up", "data", "doctor"))
-    parser.add_argument("--web-only", action="store_true", help="Skip mobile page rendering")
+    parser.add_argument("--web-only", action="store_true", help="Compatibility flag: both clients use the same source data")
     parser.add_argument("--extras", action="store_true", help="Compatibility flag: translations/Tafsirs are always included")
     parser.add_argument("--refresh", action="store_true", help="Refresh QF Mushaf, translations and Tafsirs; normal startup only fills missing data")
     parser.add_argument("--no-build", action="store_true", help="Reuse existing local images (they must already be built)")

@@ -1116,7 +1116,7 @@ export const MESSAGES = {
   "quran.mushafUnavailable": message("Мусхафы ещё не загружены", "Mushafs have not been loaded yet", "لم يتم تحميل المصاحف بعد", "Mushaflar henüz yüklenmedi"),
   "quran.mushafLines": message("строк", "lines", "سطرًا", "satır"),
   "quran.mushafFontLoading": message("Загрузка официального шрифта Мусхафа…", "Loading the official Mushaf font…", "جارٍ تحميل خط المصحف الرسمي…", "Resmî Mushaf yazı tipi yükleniyor…"),
-  "quran.mushafFontError": message("Официальный шрифт этого Мусхафа не загрузился. Попробуйте обновить страницу.", "The official font for this Mushaf could not be loaded. Try refreshing the page.", "تعذر تحميل الخط الرسمي لهذا المصحف. حاول تحديث الصفحة.", "Bu Mushafın resmî yazı tipi yüklenemedi. Sayfayı yenilemeyi deneyin."),
+  "quran.mushafFontError": message("Не удалось загрузить шрифт или изображения слов этого Мусхафа. Проверьте соединение и повторите попытку.", "Could not load this Mushaf’s font or word images. Check your connection and try again.", "تعذر تحميل خط المصحف أو صور كلماته. تحقق من الاتصال وحاول مجددًا.", "Mushafın yazı tipi veya kelime görselleri yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."),
   "quran.qfPageLoading": message("Загрузка страницы выбранного Мусхафа…", "Loading the selected Mushaf page…", "جارٍ تحميل صفحة المصحف المحدد…", "Seçilen Mushaf sayfası yükleniyor…"),
   "quran.qfPageAria": message("{name}, страница {page}", "{name}, page {page}", "{name}، الصفحة {page}", "{name}, sayfa {page}"),
   "quran.surahSelect": message("Выбор суры (1–114)", "Choose surah (1–114)", "اختيار السورة (1–114)", "Sure seçimi (1–114)"),

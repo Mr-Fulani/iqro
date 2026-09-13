@@ -36,12 +36,14 @@ class MushafScreen extends ConsumerStatefulWidget {
     required this.initialPage,
     required this.surah,
     required this.ayah,
+    this.initialPageIsPhysical = false,
     super.key,
   });
 
   final int initialPage;
   final int surah;
   final int ayah;
+  final bool initialPageIsPhysical;
 
   @override
   ConsumerState<MushafScreen> createState() => _MushafScreenState();
@@ -49,7 +51,11 @@ class MushafScreen extends ConsumerStatefulWidget {
 
 class _MushafScreenState extends ConsumerState<MushafScreen>
     with WidgetsBindingObserver {
-  late final PageController _pageController;
+  late PageController _pageController;
+  bool _resolvingInitialPage = false;
+  bool _initialPageError = false;
+  int _initialNavigationGeneration = 0;
+  int get _pageCount => ref.read(selectedMushafPageCountProvider);
   final _zoomControllers = <int, NativeMushafPageController>{};
   var _currentPage = 1;
   var _controlsVisible = false;
@@ -95,7 +101,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       },
     );
     WidgetsBinding.instance.addObserver(this);
-    _currentPage = widget.initialPage.clamp(1, 604);
+    _currentPage = widget.initialPage.clamp(1, _pageCount);
     _initialAccountScope = _database.accountScope.current;
     _accountKey = _initialAccountScope == null
         ? null
@@ -112,21 +118,57 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     );
     _pageReference = _selectedAyah;
     _pageController = PageController(initialPage: _currentPage - 1);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!_initialPageHandled) {
-        _initialPageHandled = true;
-        _queuePagePositionSave(
-          _currentPage,
-          preferredReference: _selectedAyah,
-          accountScope: _initialAccountScope,
-        );
-      }
-      _prefetchAdjacentPages(_currentPage);
-    });
+    _resolvingInitialPage =
+        ref.read(selectedMushafIdentityProvider).isFoundation &&
+        !widget.initialPageIsPhysical;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialPage());
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
+  }
+
+  Future<void> _openInitialPage() async {
+    final generation = ++_initialNavigationGeneration;
+    if (_initialPageError) {
+      setState(() {
+        _initialPageError = false;
+        _resolvingInitialPage = true;
+      });
+    }
+    if (_resolvingInitialPage) {
+      try {
+        final reference = _selectedAyah ?? _pageReference;
+        final resolved = await ref
+            .read(selectedMushafRepositoryProvider)
+            .pageForAyah(
+              reference?.surah ?? widget.surah,
+              reference?.ayah ?? widget.ayah,
+              fallback: _currentPage,
+            );
+        if (!mounted || generation != _initialNavigationGeneration) return;
+        _currentPage = resolved.clamp(1, _pageCount);
+        _pageController.dispose();
+        _pageController = PageController(initialPage: _currentPage - 1);
+      } on Object {
+        if (!mounted || generation != _initialNavigationGeneration) return;
+        setState(() {
+          _initialPageError = true;
+          _resolvingInitialPage = false;
+        });
+        return;
+      }
+      setState(() => _resolvingInitialPage = false);
+    }
+    if (!mounted) return;
+    if (!_initialPageHandled) {
+      _initialPageHandled = true;
+      _queuePagePositionSave(
+        _currentPage,
+        preferredReference: _selectedAyah,
+        accountScope: _initialAccountScope,
+      );
+    }
+    _prefetchAdjacentPages(_currentPage);
   }
 
   @override
@@ -157,6 +199,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(selectedMushafPageCountProvider);
+    ref.listen(selectedMushafIdentityProvider, (previous, next) {
+      if (previous == next || !next.isFoundation) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _resolvingInitialPage = true);
+        unawaited(_openInitialPage());
+      });
+    });
     final activeAccount = ref.watch(activeAccountScopeKeyProvider);
     if (_accountKey != activeAccount) {
       _accountKey = activeAccount;
@@ -173,6 +224,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       });
       return const Scaffold(body: IqroLoading());
     }
+    if (_resolvingInitialPage) return const Scaffold(body: IqroLoading());
+    if (_initialPageError) {
+      return Scaffold(
+        body: IqroAsyncError(
+          title: context.l10n.noQuranData,
+          message: context.l10n.networkError,
+          onRetry: _openInitialPage,
+        ),
+      );
+    }
     final divisions =
         ref.watch(quranJuzProvider).valueOrNull ?? const <QuranDivision>[];
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
@@ -185,7 +246,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         ? '${context.l10n.surah} ${reference?.surah ?? widget.surah}'
         : '${surah.number}. ${surah.nameFor(locale)}';
     final currentJuz = divisions
-        .where((d) => _currentPage >= d.startPage && _currentPage <= d.endPage)
+        .where((d) => d.containsAyah(reference))
         .firstOrNull
         ?.number;
     final player = ref.watch(
@@ -229,7 +290,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 physics: _zoom > 1.01
                     ? const NeverScrollableScrollPhysics()
                     : const PageScrollPhysics(parent: ClampingScrollPhysics()),
-                itemCount: 604,
+                itemCount: ref.watch(selectedMushafPageCountProvider),
                 onPageChanged: _onPageChanged,
                 itemBuilder: (context, index) {
                   final page = index + 1;
@@ -430,6 +491,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                           const SizedBox(width: 8),
                           Expanded(
                             child: MushafPageScrubber(
+                              pagesCount: _pageCount,
                               page: _currentPage,
                               juz: currentJuz,
                               onJump: _scrubToPage,
@@ -602,7 +664,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     if (scope == null || !_isCurrentAccount(scope) || page == _currentPage) {
       return;
     }
-    _dotTargetPage = page.clamp(1, 604);
+    _dotTargetPage = page.clamp(1, _pageCount);
     _pageTransitionScope = scope;
     _zoomControllers[_currentPage]?.setZoom(1);
     _pageController.jumpToPage(_dotTargetPage! - 1);
@@ -744,7 +806,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final repository = ref.read(selectedMushafRepositoryProvider);
     for (final candidate in <int>[page - 1, page + 1]) {
-      if (candidate < 1 || candidate > 604) continue;
+      if (candidate < 1 || candidate > _pageCount) continue;
       final pageFuture = ref.read(mushafPageProvider(candidate).future);
       unawaited(() async {
         try {
@@ -793,6 +855,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           initialSurah: reference?.surah ?? widget.surah,
           initialAyah: reference?.ayah ?? widget.ayah,
           initialPage: _currentPage,
+          pagesCount: _pageCount,
         ),
       );
       if (selection == null || !_isCurrentAccount(scope)) return;
@@ -816,6 +879,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           surah: selection.surah,
           ayah: selection.ayah,
         );
+      }
+      if (!_isCurrentAccount(scope)) return;
+      if (targetReference != null) {
+        page = await ref
+            .read(selectedMushafRepositoryProvider)
+            .pageForAyah(
+              targetReference.surah,
+              targetReference.ayah,
+              fallback: page,
+            );
       }
       if (!_isCurrentAccount(scope)) return;
       await _jumpToPage(page, targetReference, accountScope: scope);
@@ -845,7 +918,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     required AccountScopeSnapshot accountScope,
   }) async {
     if (!_isCurrentAccount(accountScope)) return;
-    final page = requestedPage.clamp(1, 604);
+    final page = requestedPage.clamp(1, _pageCount);
     _zoomControllers[_currentPage]?.setZoom(1);
     _pageTransitionScope = accountScope;
     if ((page - _currentPage).abs() <= 3) {
@@ -914,10 +987,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       }
       final preferredIsOnPage =
           preferredReference != null &&
-          (resolvedPage.regions.isEmpty ||
-              resolvedPage.regions.any(
-                (region) => region.ayah == preferredReference,
-              ));
+          (resolvedPage.ayahReferences.isEmpty ||
+              resolvedPage.ayahReferences.contains(preferredReference));
       final reference = preferredIsOnPage
           ? (surah: preferredReference.surah, ayah: preferredReference.ayah)
           : resolvedPage.firstAyahReference;
@@ -929,30 +1000,38 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             ayah: reference.ayah,
           );
           if (_selectedAyah != null &&
-              resolvedPage.regions.isNotEmpty &&
-              !resolvedPage.regions.any(
-                (region) => region.ayah == _selectedAyah,
-              )) {
+              resolvedPage.ayahReferences.isNotEmpty &&
+              !resolvedPage.ayahReferences.contains(_selectedAyah)) {
             _selectedAyah = null;
           }
         });
       }
+      var canonicalPage = page;
+      if (resolvedPage.foundation != null && reference != null) {
+        final ayahs = await repository.ayahs(reference.surah);
+        canonicalPage = ayahs
+            .firstWhere((ayah) => ayah.number == reference.ayah)
+            .pages
+            .first;
+        if (!_isCurrentPositionRequest(scope, request, page)) return;
+      }
       await repository.savePosition(
         surah: reference?.surah ?? current.surah,
         ayah: reference?.ayah ?? current.ayah,
-        page: page,
+        page: canonicalPage,
         accountScope: scope,
       );
       if (mounted) {
         _readingSession?.observe(
           surah: reference?.surah ?? current.surah,
           ayah: reference?.ayah ?? current.ayah,
-          page: page,
+          page: canonicalPage,
         );
       }
     } on AccountScopeChanged {
       return;
     } on Object {
+      if (ref.read(selectedMushafIdentityProvider).isFoundation) return;
       if (!_isCurrentPositionRequest(scope, request, page)) {
         return;
       }

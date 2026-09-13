@@ -12,6 +12,7 @@ from quran_backend.modules.quran.api import (
     QuranFoundationMushafListView,
     QuranFoundationMushafOfflineManifestView,
     QuranFoundationMushafPageDetailView,
+    QuranFoundationMushafPageIndexView,
     RetiredPageArtworkView,
     RubElHizbListView,
     SurahDetailView,
@@ -69,6 +70,11 @@ urlpatterns = [
         "foundation/mushafs",
         QuranFoundationMushafListView.as_view(),
         name="quran-foundation-mushaf-list",
+    ),
+    path(
+        "foundation/mushafs/<int:mushaf>/page-index",
+        QuranFoundationMushafPageIndexView.as_view(),
+        name="quran-foundation-mushaf-page-index",
     ),
     path(
         "foundation/mushafs/<int:mushaf>/pages/<int:page>",

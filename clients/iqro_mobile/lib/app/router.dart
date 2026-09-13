@@ -64,6 +64,8 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/mushaf',
         builder: (context, state) => MushafScreen(
+          initialPageIsPhysical:
+              state.uri.queryParameters['layout'] == 'physical',
           initialPage:
               int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1,
           surah: int.tryParse(state.uri.queryParameters['surah'] ?? '') ?? 1,

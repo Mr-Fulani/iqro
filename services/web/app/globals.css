@@ -3127,6 +3127,26 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.25;
 }
 
+.qf-mushaf-line-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: max-content;
+  font-size: 56px;
+  line-height: 1.5;
+  transform: scale(var(--qf-line-scale, 1));
+  transform-origin: center;
+}
+
+.qf-mushaf-word img {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  max-width: none;
+  vertical-align: middle;
+}
+
 .qf-mushaf-chapter-intro {
   z-index: 1;
   display: grid;
@@ -3197,7 +3217,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .qf-mushaf-word {
-  display: inline-flex;
+  display: inline-block;
   align-items: center;
   justify-content: center;
   min-width: 0;

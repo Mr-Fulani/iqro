@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'mushaf_paper.dart';
+import 'foundation_mushaf_page.dart';
 import 'mushaf_raster.dart';
 import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
@@ -82,6 +83,7 @@ class MushafAyahExcerpt extends ConsumerStatefulWidget {
 class _MushafAyahExcerptState extends ConsumerState<MushafAyahExcerpt> {
   String? _key;
   Future<List<MushafExcerptPage>>? _pages;
+  Future<List<MushafPageData>>? _foundationPages;
 
   @override
   void didChangeDependencies() {
@@ -100,10 +102,31 @@ class _MushafAyahExcerptState extends ConsumerState<MushafAyahExcerpt> {
         MediaQuery.sizeOf(context).width *
         MediaQuery.devicePixelRatioOf(context);
     final repository = ref.read(selectedMushafRepositoryProvider);
+    final identity = ref.read(selectedMushafIdentityProvider);
     final key =
-        '${ref.read(selectedMushafIdentityProvider).code}:${widget.ayah.id}:${widget.page}:$width';
+        '${identity.code}:${identity.isFoundation ? repository.foundationVersion : ''}:${widget.ayah.id}:${widget.page}:$width';
     if (_key == key) return;
     _key = key;
+    if (identity.isFoundation) {
+      _foundationPages = () async {
+        final key = '${widget.ayah.surahNumber}:${widget.ayah.number}';
+        final numbers = (await repository.foundationPageIndex())[key];
+        if (numbers == null || numbers.isEmpty) {
+          throw const FormatException('Missing verse pages');
+        }
+        final pages = await Future.wait(numbers.map(repository.mushafPage));
+        if (pages.any(
+          (page) =>
+              page.foundation == null ||
+              !page.ayahReferences.any((ref) => ref.key == key),
+        )) {
+          throw const FormatException('Incomplete verse coverage');
+        }
+        return pages;
+      }();
+      return;
+    }
+    _foundationPages = null;
     _pages = loadMushafExcerpt(
       repository: repository,
       ayah: widget.ayah,
@@ -124,44 +147,96 @@ class _MushafAyahExcerptState extends ConsumerState<MushafAyahExcerpt> {
   );
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<MushafExcerptPage>>(
-    future: _pages,
-    builder: (context, snapshot) {
-      if (snapshot.hasError) return _fallback();
-      if (!snapshot.hasData) {
-        return const SizedBox(height: 120, child: IqroLoading());
-      }
-      return Semantics(
-        label: widget.ayah.textUthmani,
-        textDirection: TextDirection.rtl,
-        child: ExcludeSemantics(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            decoration: BoxDecoration(
+  Widget build(BuildContext context) {
+    ref.watch(selectedMushafRepositoryProvider);
+    _load();
+    if (_foundationPages != null) {
+      final reference = QuranAyahReference(
+        id: widget.ayah.id,
+        surah: widget.ayah.surahNumber,
+        ayah: widget.ayah.number,
+      );
+      return FutureBuilder<List<MushafPageData>>(
+        future: _foundationPages,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return IqroAsyncError(
+              title: context.l10n.noQuranData,
+              message: context.l10n.networkError,
+              onRetry: () => setState(() {
+                _key = null;
+                _load();
+              }),
+            );
+          }
+          if (snapshot.connectionState != ConnectionState.done ||
+              !snapshot.hasData) {
+            return const SizedBox(height: 120, child: IqroLoading());
+          }
+          return Semantics(
+            label: widget.ayah.textUthmani,
+            textDirection: TextDirection.rtl,
+            child: ColoredBox(
               color: mushafPaperColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFC7BBA7)),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) => Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  for (final item in snapshot.data!)
-                    _MushafExcerptImage(
-                      key: ValueKey('${item.file.path}:${widget.ayah.id}'),
-                      item: item,
-                      width: constraints.maxWidth,
-                      fallback: _fallback(),
+              child: Column(
+                children: [
+                  for (final page in snapshot.data!)
+                    FoundationMushafPageContent(
+                      key: ValueKey('${page.number}:${page.contentVersion}'),
+                      page: page.foundation!,
+                      selected: reference,
+                      playing: null,
+                      excerpt: true,
+                      onSelect: (_) {},
+                      onOpen: (_) {},
+                      onBackgroundTap: () {},
                     ),
                 ],
               ),
             ),
-          ),
-        ),
+          );
+        },
       );
-    },
-  );
+    }
+    return FutureBuilder<List<MushafExcerptPage>>(
+      future: _pages,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return _fallback();
+        if (!snapshot.hasData) {
+          return const SizedBox(height: 120, child: IqroLoading());
+        }
+        return Semantics(
+          label: widget.ayah.textUthmani,
+          textDirection: TextDirection.rtl,
+          child: ExcludeSemantics(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+              decoration: BoxDecoration(
+                color: mushafPaperColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFC7BBA7)),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    for (final item in snapshot.data!)
+                      _MushafExcerptImage(
+                        key: ValueKey('${item.file.path}:${widget.ayah.id}'),
+                        item: item,
+                        width: constraints.maxWidth,
+                        fallback: _fallback(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _MushafExcerptImage extends StatefulWidget {

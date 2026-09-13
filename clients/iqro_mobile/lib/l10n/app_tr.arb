@@ -405,5 +405,6 @@
   "saturdayShort": "Cmt",
   "sundayShort": "Paz",
   "readerHaptics": "Sayfa çevirme titreşimi",
-  "readerHapticsHint": "Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır."
+  "readerHapticsHint": "Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır.",
+  "mushafPageCaching": "Sayfalar okudukça yüklenir. Açılan sayfalar ve yazı tipleri cihazda saklanır ve çevrimdışı kullanılabilir."
 }

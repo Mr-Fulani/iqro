@@ -387,6 +387,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         isScrollControlled: true,
         useSafeArea: true,
         builder: (context) => QuranQuickJumpSheet(
+          pagesCount: ref.read(selectedMushafPageCountProvider),
           surahs: catalog?.surahs ?? const <Surah>[],
           juz: juz ?? const <QuranDivision>[],
           hizb: hizb ?? const <QuranDivision>[],
@@ -410,7 +411,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       }
       if (!context.mounted) return;
       context.push(
-        '/mushaf?page=$page&surah=${selection.surah}&ayah=${selection.ayah}',
+        '/mushaf?page=$page&surah=${selection.surah}&ayah=${selection.ayah}${selection.mode == QuranQuickJumpMode.page ? '&layout=physical' : ''}',
       );
     } on Object {
       if (!context.mounted) return;
@@ -463,6 +464,18 @@ class _OfflineMushafCardState extends ConsumerState<OfflineMushafCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(selectedMushafIdentityProvider).isFoundation) {
+      return IqroCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.offline_pin_outlined),
+            const SizedBox(width: 12),
+            Expanded(child: Text(context.l10n.mushafPageCaching)),
+          ],
+        ),
+      );
+    }
     final state = ref.watch(mushafDownloadProvider);
     final downloading = state.status == MushafDownloadStatus.downloading;
     final ready = state.status == MushafDownloadStatus.ready;

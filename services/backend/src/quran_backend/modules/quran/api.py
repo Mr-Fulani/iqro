@@ -30,6 +30,7 @@ from quran_backend.modules.quran.models import (
     Surah,
 )
 from quran_backend.modules.quran.quran_foundation_native import active_native_publication
+from quran_backend.modules.quran.quran_foundation_rendering import verse_keys_from_mapping
 from quran_backend.modules.quran.selectors import (
     public_quran_foundation_mushaf_pages,
     public_quran_foundation_mushafs,
@@ -182,6 +183,30 @@ class QuranFoundationMushafPageDetailView(
         return public_quran_foundation_mushaf_pages(
             settings.QURAN_QF_ENV,
             self.kwargs["mushaf"],
+        )
+
+
+@extend_schema(tags=["quran"])
+class QuranFoundationMushafPageIndexView(PublicQuranViewMixin, APIView):
+    """Translate canonical verse references into this layout's physical pages."""
+
+    @extend_schema(responses=dict)
+    def get(self, request: Request, mushaf: int) -> Response:  # noqa: ARG002
+        source = get_object_or_404(
+            public_quran_foundation_mushafs(settings.QURAN_QF_ENV),
+            source_id=mushaf,
+        )
+        verse_pages: dict[str, list[int]] = {}
+        for number, mapping in source.cached_pages.values_list("page_number", "verse_mapping"):
+            for key in verse_keys_from_mapping(mapping):
+                verse_pages.setdefault(key, []).append(number)
+        return Response(
+            {
+                "mushaf_id": source.source_id,
+                "pages_count": source.pages_count,
+                "source_checksum_sha256": source.source_checksum_sha256,
+                "verse_pages": verse_pages,
+            }
         )
 
 

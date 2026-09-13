@@ -1283,4 +1283,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır.';
+
+  @override
+  String get mushafPageCaching =>
+      'Sayfalar okudukça yüklenir. Açılan sayfalar ve yazı tipleri cihazda saklanır ve çevrimdışı kullanılabilir.';
 }

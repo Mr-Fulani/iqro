@@ -1274,4 +1274,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'اهتزاز قصير عند تغيير صفحة المصحف. يجب أيضاً تفعيل اهتزاز اللمس في إعدادات أندرويد.';
+
+  @override
+  String get mushafPageCaching =>
+      'تُحمّل الصفحات أثناء القراءة. تُحفظ الصفحات المفتوحة وخطوطها على الجهاز لتبقى متاحة دون اتصال.';
 }

@@ -1284,4 +1284,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.';
+
+  @override
+  String get mushafPageCaching =>
+      'Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.';
 }

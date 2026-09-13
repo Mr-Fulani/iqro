@@ -11,15 +11,20 @@ export function useMushafPages(mushaf: QuranFoundationMushaf | null, page: numbe
   const sourceId = mushaf?.source_id ?? null;
   const pageCount = mushaf?.pages_count ?? 604;
   const sourceRevision = mushaf
-    ? `${mushaf.sync_sequence}:${mushaf.source_checksum_sha256}`
+    ? mushaf.source_checksum_sha256
     : null;
   const cache = useMemo(() => new MushafPageCache<ReaderPage>(
     async (pageNumber) => {
       if (sourceId === null || sourceRevision === null) throw new Error("No published Mushaf selected");
-      return api.getQuranFoundationMushafPage(sourceId, pageNumber);
+      const data = await api.getQuranFoundationMushafPage(sourceId, pageNumber);
+      if (data.mushaf_id !== sourceId || data.page_number !== pageNumber ||
+          data.source_checksum_sha256 !== sourceRevision) {
+        throw new Error("Mushaf source version changed. Reload the catalog.");
+      }
+      return data;
     },
     async (data) => {
-      if (sourceId !== null && data.rendering.available) {
+      if (sourceId !== null && data.rendering.available && data.rendering.mode !== "word-images") {
         await loadQuranFont(quranFontFamily(sourceId, data), data.rendering.font_url);
       }
     },

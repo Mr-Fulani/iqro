@@ -422,6 +422,13 @@ export type QuranFoundationMushafRendering =
       font_url: string;
     }
   | {
+      available: true;
+      mode: "word-images";
+      image_base_url: string;
+      image_version: string;
+      font_url?: undefined;
+    }
+  | {
       available: false;
       mode: string;
       reason: string;
@@ -462,6 +469,9 @@ export type QuranFoundationMushafWord = {
   text: string;
   css_class: string;
   css_style: string;
+  verse_key?: string | null;
+  image_url?: string;
+  text_runs?: { text: string; rule?: string; color?: string }[];
 };
 
 export type QuranFoundationMushafPage = {
@@ -470,6 +480,10 @@ export type QuranFoundationMushafPage = {
   font_name: string;
   rendering: QuranFoundationMushafRendering;
   page_number: number;
+  pages_count?: number;
+  lines_per_page?: number;
+  source_checksum_sha256?: string;
+  verse_keys?: string[];
   verse_mapping: Record<string, string>;
   first_verse_id: number | null;
   last_verse_id: number | null;
@@ -1686,6 +1700,13 @@ export class ApiClient {
 
   public async getQuranFoundationMushafs(): Promise<QuranFoundationMushaf[]> {
     return this.request<QuranFoundationMushaf[]>("/api/v1/quran/foundation/mushafs");
+  }
+
+  public async getQuranFoundationMushafIndex(mushafId: number): Promise<{
+    mushaf_id: number; pages_count: number; source_checksum_sha256: string;
+    verse_pages: Record<string, number[]>;
+  }> {
+    return this.request(`/api/v1/quran/foundation/mushafs/${mushafId}/page-index`);
   }
 
   public async getQuranFoundationMushafPage(

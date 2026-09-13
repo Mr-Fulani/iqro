@@ -22,6 +22,8 @@ from quran_backend.modules.quran.quran_foundation_native import (
 )
 from quran_backend.modules.quran.quran_foundation_rendering import (
     quran_foundation_rendering,
+    renderable_words,
+    verse_keys_from_mapping,
 )
 
 
@@ -190,6 +192,13 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
     rendering = serializers.SerializerMethodField()
     native_rendering = serializers.SerializerMethodField()
     native_assets = serializers.SerializerMethodField()
+    words = serializers.SerializerMethodField()
+    verse_keys = serializers.SerializerMethodField()
+    pages_count = serializers.IntegerField(source="mushaf.pages_count", read_only=True)
+    lines_per_page = serializers.IntegerField(source="mushaf.lines_per_page", read_only=True)
+    source_checksum_sha256 = serializers.CharField(
+        source="mushaf.source_checksum_sha256", read_only=True
+    )
 
     class Meta:
         model = QuranFoundationMushafPage
@@ -201,6 +210,10 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "native_rendering",
             "native_assets",
             "page_number",
+            "pages_count",
+            "lines_per_page",
+            "source_checksum_sha256",
+            "verse_keys",
             "verse_mapping",
             "first_verse_id",
             "last_verse_id",
@@ -209,6 +222,12 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "verses_count",
             "words",
         )
+
+    def get_words(self, obj: QuranFoundationMushafPage) -> list[dict[str, Any]]:
+        return renderable_words(obj.mushaf.source_id, obj.words, obj.verse_mapping)
+
+    def get_verse_keys(self, obj: QuranFoundationMushafPage) -> list[str]:
+        return verse_keys_from_mapping(obj.verse_mapping)
 
     def get_rendering(self, obj: QuranFoundationMushafPage) -> dict[str, Any]:
         return quran_foundation_rendering(

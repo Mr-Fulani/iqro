@@ -1287,4 +1287,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
+
+  @override
+  String get mushafPageCaching =>
+      'Страницы загружаются по мере чтения. Открытые страницы и их шрифты сохраняются на устройстве и доступны без интернета.';
 }

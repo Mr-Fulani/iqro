@@ -21,8 +21,139 @@ from quran_backend.modules.quran.quran_foundation_rendering import (
     quran_foundation_rendering,
 )
 from quran_backend.modules.quran.quran_foundation_sync import (
+    _attach_verse_references,
+    _replace_snapshot,
     sync_quran_foundation_mushafs,
 )
+
+
+@pytest.mark.django_db
+def test_sequence_only_refresh_preserves_content_identity() -> None:
+    sync_quran_foundation_mushafs(client=FakeMushafClient())
+    before = QuranFoundationMushaf.objects.get().source_checksum_sha256
+    snapshot = _snapshot()
+    snapshot["sync_sequence"] = 999
+    sync_quran_foundation_mushafs(client=FakeMushafClient(snapshot=snapshot), force=True)
+    assert QuranFoundationMushaf.objects.get().source_checksum_sha256 == before
+
+
+@pytest.mark.django_db
+def test_late_snapshot_failure_rolls_back_the_entire_catalog() -> None:
+    sync_quran_foundation_mushafs(client=FakeMushafClient())
+    original = QuranFoundationMushaf.objects.get().source_checksum_sha256
+
+    class BrokenCatalog(FakeMushafClient):
+        def get_mushaf_snapshot(self, resource_id: int) -> dict[str, Any]:
+            if resource_id == 2:
+                raise QuranFoundationError("Late download failure")
+            snapshot = _snapshot()
+            snapshot["records"][0]["name"] = "Should roll back"
+            return snapshot
+
+    client = BrokenCatalog(
+        mutations=(
+            _create_mutation(),
+            {**_create_mutation(), "resource_id": 2},
+        )
+    )
+    with pytest.raises(QuranFoundationError, match="Late download"):
+        sync_quran_foundation_mushafs(client=client, force=True)
+    assert QuranFoundationMushaf.objects.count() == 1
+    assert QuranFoundationMushaf.objects.get().source_checksum_sha256 == original
+    assert QuranFoundationMushafSyncState.objects.get().sync_token == "checkpoint-1"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("complete", [True, False])
+def test_nastaleeq_14_corrects_only_the_verified_610_page_metadata_defect(complete: bool) -> None:
+    snapshot = _snapshot()
+    snapshot["resource_id"] = 14
+    metadata = {**snapshot["records"][0], "id": 14, "pages_count": 604}
+    records = [metadata]
+    verse_id = 1
+    for number in range(1, 611 if complete else 610):
+        mapping: dict[str, list[int]] = {}
+        for position in range(1, (11 if number <= 136 else 10) + 1):
+            chapter, offset = divmod(verse_id - 1, 55)
+            mapping.setdefault(str(chapter + 1), []).append(offset + 1)
+            records.append(
+                {**_word(verse_id, page=number, position=position, text="نَصّ"), "verse_id": verse_id}
+            )
+            verse_id += 1
+        records.append(
+            {
+                **_snapshot()["records"][1],
+                "id": number,
+                "page_number": number,
+                "verse_mapping": {
+                    key: f"{min(values)}-{max(values)}" for key, values in mapping.items()
+                },
+                "last_verse_id": verse_id - 1,
+            }
+        )
+    snapshot["records"] = records
+    if complete:
+        _replace_snapshot(
+            environment="production", resource_id=14, snapshot=snapshot, current=datetime.now(UTC)
+        )
+        assert QuranFoundationMushaf.objects.get().pages_count == 610
+        assert QuranFoundationMushafPage.objects.count() == 610
+    else:
+        with pytest.raises(QuranFoundationError, match="incomplete pages"):
+            _replace_snapshot(
+                environment="production",
+                resource_id=14,
+                snapshot=snapshot,
+                current=datetime.now(UTC),
+            )
+
+
+def test_split_boundary_verses_are_recovered_from_global_word_references() -> None:
+    # Small words, full 6236-ID corpus: the second page omits its leading
+    # partial verse in metadata, as nine pages of QF 15 do in production.
+    mapping = {str(chapter): f"1-{55 if chapter < 114 else 21}" for chapter in range(1, 115)}
+    pages = {1: {"verse_mapping": mapping}, 2: {"verse_mapping": {"114": "21-21"}}}
+    words = {
+        1: [{"verse_id": n} for n in range(1, 6237)],
+        2: [{"verse_id": 6235}, {"verse_id": 6236}],
+    }
+    _attach_verse_references({"qirat": {"name": "Hafs"}, "mapping_mode": "reference"}, pages, words)
+    assert pages[2]["verse_mapping"] == {"114": "20-21"}
+    assert pages[2]["verses_count"] == 2
+    assert [word["verse_key"] for word in words[2]] == ["114:20", "114:21"]
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_page_index_includes_both_fragments_of_a_split_verse(api_client: APIClient) -> None:
+    sync_quran_foundation_mushafs(client=FakeMushafClient())
+    QuranFoundationMushafPage.objects.filter(page_number=2).update(
+        verse_mapping={"1": "2-2", "2": "1-1"}
+    )
+    response = api_client.get("/api/v1/quran/foundation/mushafs/1/page-index")
+    assert response.status_code == 200
+    assert response.json()["verse_pages"] == {"1:1": [1], "1:2": [1, 2], "2:1": [2]}
+    assert (
+        response.json()["source_checksum_sha256"]
+        == QuranFoundationMushaf.objects.get().source_checksum_sha256
+    )
+
+
+@pytest.mark.django_db
+def test_word_outside_declared_lines_is_rejected_before_publication() -> None:
+    snapshot = _snapshot()
+    snapshot["records"][-1]["line_number"] = 16
+    with pytest.raises(QuranFoundationError, match="line count"):
+        sync_quran_foundation_mushafs(client=FakeMushafClient(snapshot=snapshot))
+    assert not QuranFoundationMushaf.objects.exists()
+
+
+def test_full_size_hafs_snapshot_cannot_skip_reference_validation() -> None:
+    pages = {number: {"verse_mapping": {"1": "1-7"}} for number in range(1, 605)}
+    with pytest.raises(QuranFoundationError, match="Incomplete Hafs verse mapping"):
+        _attach_verse_references(
+            {"qirat": {"name": "Hafs"}, "mapping_mode": "reference"}, pages, {}
+        )
 
 
 class FakeMushafClient:
@@ -278,6 +409,8 @@ def test_public_mushaf_catalog_and_page_api(api_client: APIClient) -> None:
     )
     assert catalog.json()[0]["rendering"] == {
         "available": True,
+        "version": 2,
+        "native_font_url_template": "https://verses.quran.foundation/fonts/quran/hafs/v2/ttf/p{page}.ttf",
         "mode": "page-font",
         "font_format": "woff2",
         "font_url_template": (
@@ -295,7 +428,7 @@ def test_public_mushaf_catalog_and_page_api(api_client: APIClient) -> None:
     [
         (1, True, "page-font"),
         (5, True, "unicode-font"),
-        (11, False, "word-images"),
+        (11, True, "word-images"),
         (19, True, "page-font"),
     ],
 )

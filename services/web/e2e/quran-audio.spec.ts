@@ -374,6 +374,7 @@ const foundationMushafs = [
   },
 ].map((mushaf) => ({
   ...mushaf,
+  rendering: { ...mushaf.rendering, version: 2 },
   description: `${mushaf.name} fixture`,
   qirat_name: "Hafs",
   pages_count: 604,
@@ -404,6 +405,9 @@ function foundationPage(sourceId: number, pageNumber: number) {
     font_name: mushaf.default_font_name,
     rendering: { ...mushaf.rendering, font_url: fontUrl },
     page_number: pageNumber,
+    pages_count: 604,
+    lines_per_page: 15,
+    source_checksum_sha256: mushaf.source_checksum_sha256,
     verse_mapping: { "6": pageNumber === 129 ? "2" : "1-2" },
     first_verse_id: pageNumber === 129 ? 2 : 1,
     last_verse_id: 2,
@@ -579,6 +583,19 @@ async function installApiMocks(page: Page, nativeMedia = false) {
       await route.fulfill({ json: [edition] });
     } else if (path === "/api/v1/quran/foundation/mushafs") {
       await route.fulfill({ json: foundationMushafs });
+    } else if (/^\/api\/v1\/quran\/foundation\/mushafs\/\d+\/page-index$/.test(path)) {
+      await route.fulfill({ json: {
+        mushaf_id: Number(path.split("/")[6]), pages_count: 604,
+        source_checksum_sha256: "c".repeat(64),
+        verse_pages: { "1:1": [1], "6:1": [128], "6:2": [128, 129], "7:1": [151] },
+      } });
+    } else if (/^\/api\/v1\/quran\/editions\/madani-hafs\/ayahs\/\d+\/\d+$/.test(path)) {
+      const surahNumber = Number(path.split("/")[7]);
+      const ayahNumber = Number(path.split("/")[8]);
+      await route.fulfill({ json: { ...ayahs[Math.min(ayahNumber - 1, ayahs.length - 1)],
+        surah_number: surahNumber, number: ayahNumber,
+        pages: [surahNumber === 1 ? 1 : surahNumber === 7 ? 151 : 128],
+      } });
     } else if (/^\/api\/v1\/quran\/foundation\/mushafs\/\d+\/pages\/\d+$/.test(path)) {
       const parts = path.split("/");
       const sourceId = Number(parts[6]);
@@ -2342,4 +2359,14 @@ test.describe("Landscape gestures through browser hit testing", () => {
     await ayah.tap();
     await expect(ayah).toHaveClass(/is-selected/);
   });
+});
+
+test("explicit page jump cancels the pending verse after changing layout", async ({ page }) => {
+  await page.goto("/ru/quran?surah=6&page=128");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="5"]')).toBeVisible();
+  await page.locator('[data-ayah-key="6:2"]').last().click();
+  await page.locator("#mushaf-variant").selectOption("1");
+  await page.locator("#mushaf-page-jump").fill("1");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="1"]')).toHaveAttribute("data-page-number", "1");
+  await expect(page.locator("#mushaf-page-jump")).toHaveValue("1");
 });

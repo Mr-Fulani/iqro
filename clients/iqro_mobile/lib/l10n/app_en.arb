@@ -406,5 +406,6 @@
   "saturdayShort": "Sat",
   "sundayShort": "Sun",
   "readerHaptics": "Page-turn vibration",
-  "readerHapticsHint": "A short pulse when the Mushaf page changes. Android touch feedback must also be enabled."
+  "readerHapticsHint": "A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.",
+  "mushafPageCaching": "Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline."
 }

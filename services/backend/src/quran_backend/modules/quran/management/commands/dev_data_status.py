@@ -13,6 +13,10 @@ from quran_backend.modules.audio.selectors import public_recitations
 from quran_backend.modules.dua.models import DuaCollection, DuaPublicationStatus
 from quran_backend.modules.quran.models import Ayah, PublicationStatus, QuranEdition
 from quran_backend.modules.quran.publication import _validate_complete_version
+from quran_backend.modules.quran.quran_foundation_rendering import (
+    SUPPORTED_MUSHAF_IDS,
+    quran_foundation_rendering,
+)
 from quran_backend.modules.quran.rendition_api import visible_releases
 from quran_backend.modules.quran.selectors import public_quran_foundation_mushafs
 from quran_backend.modules.tafsirs.selectors import published_tafsir_editions
@@ -69,14 +73,21 @@ def mobile_status() -> str:
 
 def collect_status(*, require_mobile: bool) -> dict[str, Any]:
     errors = {"canonical": canonical_status()}
-    source = public_quran_foundation_mushafs(settings.QURAN_QF_ENV).filter(source_id=5).first()
+    sources = list(public_quran_foundation_mushafs(settings.QURAN_QF_ENV))
+    missing_mushafs = set(SUPPORTED_MUSHAF_IDS) - {source.source_id for source in sources}
+    for source in sources:
+        numbers = list(source.cached_pages.values_list("page_number", flat=True))
+        if (
+            numbers != list(range(1, source.pages_count + 1))
+            or source.cached_pages.filter(words=[]).exists()
+            or source.cached_pages.filter(words__0__verse_key__isnull=True).exists()
+            or not quran_foundation_rendering(source.source_id)["available"]
+        ):
+            missing_mushafs.add(source.source_id)
     errors["mushaf"] = (
-        ""
-        if source is not None
-        and source.pages_count == 604
-        and list(source.cached_pages.values_list("page_number", flat=True)) == list(range(1, 605))
-        and not source.cached_pages.filter(words=[]).exists()
-        else "QF source 5 missing/incomplete"
+        "QF Mushafs missing/incomplete: " + ", ".join(map(str, sorted(missing_mushafs)))
+        if missing_mushafs
+        else ""
     )
     missing_dua = []
     for slug, minimum, snapshot in DUA_CATALOGS:
@@ -125,12 +136,16 @@ def collect_status(*, require_mobile: bool) -> dict[str, Any]:
         else "Complete streaming audio and ayah timings missing"
     )
     if require_mobile:
-        errors["mobile"] = mobile_status()
+        # Native clients consume the same positioned words and official fonts.
+        # Pre-rendered raster bundles are optional, not a fresh-clone prerequisite.
+        errors["mobile"] = errors["mushaf"]
     return {
         "ready": not any(errors.values()),
         "checks": {name: not error for name, error in errors.items()},
         "errors": {name: error for name, error in errors.items() if error},
         "missing_dua": missing_dua,
+        "missing_mushafs": sorted(missing_mushafs),
+        "mushaf_count": len(sources),
         "configured_translations": list(settings.QURAN_QF_TRANSLATION_RESOURCE_IDS),
         "configured_tafsirs": list(settings.QURAN_QF_TAFSIR_RESOURCE_IDS),
         "missing_translations": missing_translations,

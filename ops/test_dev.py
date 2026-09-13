@@ -98,7 +98,7 @@ class LocalWorkspaceTests(unittest.TestCase):
              patch.object(dev, "compose") as compose, patch.object(dev, "download") as download:
             dev.data(refresh=True)
         self.assertEqual([call.args for call in manage.call_args_list], [
-            ("sync_quran_foundation_mushafs", "--source-id", "5"),
+            ("sync_quran_foundation_mushafs", "--force"),
             *[("sync_quran_foundation_translations", "--resource-id", str(n)) for n in (20, 45, 77)],
             *[("sync_quran_foundation_tafsirs", "--resource-id", str(n)) for n in (16, 169, 170)],
             ("dev_data_status", "--require-mobile"),
@@ -234,44 +234,34 @@ class LocalWorkspaceTests(unittest.TestCase):
             self.assertEqual((directory / "source/snapshot.json").read_bytes(), raw)
             self.assertNotIn("staging", str(dev.render_directory(directory)))
 
-    def test_failed_render_never_publishes_a_partial_mobile_catalog(self):
+    def test_failed_source_sync_prevents_claiming_mobile_readiness(self):
         calls = []
-        directory = dev.WORK / "mushaf" / "verified-source"
         def manage(*args, **kwargs):
             calls.append(args)
-            return Mock(stdout=b"source snapshot")
-        def compose(*args, **kwargs):
-            if "run" in args:
-                raise dev.subprocess.CalledProcessError(1, ["renderer"])
+            if args[0] == "sync_quran_foundation_mushafs":
+                raise dev.subprocess.CalledProcessError(1, ["source sync"])
+            return Mock(stdout=b"")
         with patch.object(dev, "require_credentials"), patch.object(dev, "download"), \
              patch.object(dev, "data_status", return_value=missing_status()), \
              patch.object(dev, "manage", side_effect=manage), \
-             patch.object(dev, "prepare_source", return_value=directory), \
-             patch.object(dev, "compose", side_effect=compose), \
              self.assertRaises(dev.subprocess.CalledProcessError):
             dev.data()
-        self.assertNotIn("publish_mushaf_rendition", [args[0] for args in calls])
         self.assertNotIn("dev_data_status", [args[0] for args in calls])
 
-    def test_full_setup_publishes_only_after_render_and_requires_mobile_readiness(self):
+    def test_mobile_first_launch_uses_source_data_without_private_raster_artifacts(self):
         calls = []
-        directory = dev.WORK / "mushaf" / "verified-source"
         def manage(*args, **kwargs):
             calls.append(args)
-            return Mock(stdout=b"source snapshot")
-        def compose(*args, **kwargs):
-            calls.append(args)
+            return Mock(stdout=b"")
         with patch.object(dev, "require_credentials"), patch.object(dev, "download"), \
              patch.object(dev, "data_status", return_value=missing_status()), \
              patch.object(dev, "manage", side_effect=manage), \
-             patch.object(dev, "prepare_source", return_value=directory), \
-             patch.object(dev, "compose", side_effect=compose):
+             patch.object(dev, "compose") as compose, \
+             patch.object(dev, "prepare_source", side_effect=AssertionError("private raster")):
             dev.data()
-        rendered = next(index for index, args in enumerate(calls) if "run" in args)
-        published = next(index for index, args in enumerate(calls) if args[0] == "publish_mushaf_rendition")
-        self.assertLess(rendered, published)
+        compose.assert_not_called()
+        self.assertIn(("sync_quran_foundation_mushafs", "--force"), calls)
         self.assertEqual(calls[-1], ("dev_data_status", "--require-mobile"))
-        self.assertTrue(calls[published][1].startswith("/app/.dev/mushaf/verified-source/rendered-"))
 
     def test_unverified_download_is_not_written(self):
         with tempfile.TemporaryDirectory() as temporary:

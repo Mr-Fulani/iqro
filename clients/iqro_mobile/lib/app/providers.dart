@@ -412,7 +412,26 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
 final selectedMushafRepositoryProvider = Provider<QuranRepository>((ref) {
   final identity = ref.watch(selectedMushafIdentityProvider);
   final repository = ref.watch(quranRepositoryProvider);
-  return repository.forMushaf(identity);
+  final version =
+      ref
+          .watch(availableMushafRenditionsProvider)
+          .where((edition) => edition.identity == identity)
+          .firstOrNull
+          ?.sourceChecksum ??
+      '';
+  final selected = repository.forMushaf(identity);
+  return identity.isFoundation
+      ? selected.withFoundationVersion(version)
+      : selected;
+});
+final selectedMushafPageCountProvider = Provider<int>((ref) {
+  final identity = ref.watch(selectedMushafIdentityProvider);
+  return ref
+          .watch(availableMushafRenditionsProvider)
+          .where((edition) => edition.identity == identity)
+          .firstOrNull
+          ?.pagesCount ??
+      604;
 });
 final selectedMushafOfflineRepositoryProvider =
     Provider<MushafOfflineRepository>((ref) {
