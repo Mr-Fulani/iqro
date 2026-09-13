@@ -1,10 +1,28 @@
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
+import tempfile
 import unittest
 
 import kfgqpc as k
 import prepare as p
+
+
+class ParallelRasterContractTests(unittest.TestCase):
+    def test_independent_pages_are_deterministic_without_source_credentials(self):
+        from test_prepare import fixture
+        pages = [fixture(), fixture()]
+        pages[0]["page"], pages[1]["page"] = 1, 2
+        with tempfile.TemporaryDirectory() as temporary:
+            serial, parallel = Path(temporary) / "serial", Path(temporary) / "parallel"
+            serial.mkdir()
+            parallel.mkdir()
+            expected = [k.render_bundle(page, n, serial) for n, page in enumerate(pages, 1)]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(k.render_bundle, page, n, parallel)
+                           for n, page in enumerate(pages, 1)]
+                self.assertEqual([f.result() for f in futures], expected)
 
 
 @unittest.skipUnless(os.environ.get("IQRO_KFGQPC_SOURCE_DIR"), "Pinned KFGQPC source required")
@@ -12,7 +30,8 @@ class KfgqpcSourceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.root = Path(os.environ["IQRO_KFGQPC_SOURCE_DIR"])
-        cls.data, cls.lock = k.load_source(cls.root)
+        source_lock = os.environ.get("IQRO_KFGQPC_SOURCE_LOCK")
+        cls.data, cls.lock = k.load_source(cls.root, Path(source_lock) if source_lock else None)
         cls.refs = k.audit(cls.data)
         cls.font = p.SourceFont(cls.root / k.FONT, "KFGQPC HAFS Uthmanic Script")
 
@@ -24,6 +43,25 @@ class KfgqpcSourceTests(unittest.TestCase):
         self.assertEqual(len(self.refs), 6236)
         self.assertEqual(self.refs[188], (2, 181))
         self.assertEqual(p.digest(self.root / k.FONT), self.lock["font_sha256"])
+
+    def test_parallel_pages_match_serial_bytes_and_resume_checks_integrity(self):
+        pages = [k.compose(self.data, self.data["pages"][n - 1], self.font, self.refs, self.lock)
+                 for n in (1, 2)]
+        with tempfile.TemporaryDirectory() as temporary:
+            serial, parallel = Path(temporary) / "serial", Path(temporary) / "parallel"
+            serial.mkdir()
+            parallel.mkdir()
+            expected = [k.render_bundle(page, n, serial) for n, page in enumerate(pages, 1)]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(k.render_bundle, page, n, parallel)
+                           for n, page in enumerate(pages, 1)]
+                actual = [future.result() for future in futures]
+            self.assertEqual(actual, expected)
+            self.assertEqual(k.render_bundle(pages[0], 1, parallel), expected[0])
+            asset = parallel / actual[0]["assets"][0]["path"]
+            asset.write_bytes(b"corrupted test asset")
+            with self.assertRaisesRegex(ValueError, "Resume integrity"):
+                k.render_bundle(pages[0], 1, parallel)
 
     def test_missing_word_rejected(self):
         data = copy.deepcopy(self.data)

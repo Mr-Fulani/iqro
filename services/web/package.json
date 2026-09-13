@@ -14,13 +14,14 @@
     "typecheck": "tsc --noEmit",
     "test:cache": "node --test cache/*.test.cjs",
     "test:public-contracts": "node --test lib/mobile-association.test.ts lib/public-route-params.test.ts lib/reading-position-storage.test.ts",
+    "test:mushaf": "node --test lib/mushaf-page-cache.test.ts lib/quran-font.test.ts lib/reading-position-storage.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:production": "PLAYWRIGHT_PRODUCTION=1 playwright test",
     "test:lighthouse": "node scripts/lighthouse-budget.mjs"
   },
   "dependencies": {
     "@redis/client": "6.2.1",
-    "next": "16.3.2",
+    "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -31,7 +32,7 @@
     "@types/react-dom": "19.2.4",
     "chrome-launcher": "1.2.1",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.2",
+    "eslint-config-next": "16.3.3",
     "lighthouse": "13.4.1",
     "typescript": "5.7.3"
   }

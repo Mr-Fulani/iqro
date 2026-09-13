@@ -9,16 +9,6 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get mushafBookPreview => 'Tajweed · book page sample';
-
-  @override
-  String get mushafBookPreviewHint => 'Original EasyQuran images · pages 51–53';
-
-  @override
-  String get mushafBookPreviewInfo =>
-      'This is a separate EasyQuran visual sample, not QCF V4. Three complete pages from QuranHub/quran-pages-images are shown without reflow, recolouring or cropping their printed frame.\n\nSource: 645 × 1000 pixels — not HD. Fit width scales the entire page proportionally; scroll vertically when it exceeds the screen height. Pinch to zoom, double tap to reset. Tap once to hide or show controls.\n\nVerse selection and audio are not connected in this sample: they require a map for this exact edition. Your Mushaf, reading position and downloaded packages stay unchanged.';
-
-  @override
   String get mushafFitWidth => 'Fit width';
 
   @override
@@ -283,10 +273,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseMushaf => 'Choose Mushaf';
 
   @override
-  String get mushafScanName => 'Madani Mushaf';
-
-  @override
-  String get mushafScanDescription => 'Original pages · Hafs';
+  String get mushafCatalogEmpty => 'Mushafs have not been loaded yet';
 
   @override
   String get mushafPreviewDescription => 'Hafs · IQRO layout · preview';
@@ -1297,4 +1284,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.';
+
+  @override
+  String get mushafPageCaching =>
+      'Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.';
 }

@@ -10,7 +10,7 @@ from quran_backend.modules.quran.rendition_publication import publish_rendition
 
 class Command(BaseCommand):
     help = (
-        "Validate all 604 pages and connect a staging-only visual Mushaf, "
+        "Validate all 604 pages and connect a local or preview visual Mushaf, "
         "preserving canonical/audio data."
     )
 
@@ -32,6 +32,6 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 "604 pages verified; no writes"
                 if release is None
-                else f"Staging rendition connected: {release}",
+                else f"Mushaf rendition connected: {release}",
             )
         )

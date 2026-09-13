@@ -13,6 +13,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
+            "--source-id",
+            type=int,
+            action="append",
+            dest="resource_ids",
+            help="Import only these Mushaf IDs with a separate checkpoint; repeat for several.",
+        )
+        parser.add_argument(
             "--force",
             action="store_true",
             help="Discard the saved checkpoint and bootstrap the complete catalog again.",
@@ -20,7 +27,10 @@ class Command(BaseCommand):
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
         try:
-            result = sync_quran_foundation_mushafs(force=options["force"])
+            result = sync_quran_foundation_mushafs(
+                force=options["force"],
+                resource_ids=tuple(options["resource_ids"]) if options["resource_ids"] else None,
+            )
         except QuranFoundationError as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write(

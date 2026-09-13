@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 
 void main() {
@@ -18,7 +18,7 @@ void main() {
       final checksumFile = await File('$root/manifest.sha256').readAsString();
       expect(checksumFile, '${sha256.convert(manifestBytes)}  manifest.json\n');
       final manifest = jsonDecode(utf8.decode(manifestBytes)) as Map;
-      expect(manifest['publication_scope'], 'staging');
+      expect(manifest['publication_scope'], anyOf('staging', 'local'));
       expect(
         manifest['edition'],
         anyOf('qcf-v2-hafs', 'kfgqpc-hafs', 'qcf-v4-tajweed-hafs'),
@@ -38,7 +38,7 @@ void main() {
           'edition_code': manifest['edition'],
         });
         for (final size in [const Size(360, 720), const Size(800, 1280)]) {
-          final layout = MushafScanLayout.page(
+          final layout = MushafRasterLayout.page(
             page: page,
             size: size,
             portrait: size.width == 360,

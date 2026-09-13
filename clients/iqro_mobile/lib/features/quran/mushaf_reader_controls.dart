@@ -60,12 +60,14 @@ class MushafPageScrubber extends StatefulWidget {
     required this.juz,
     required this.onJump,
     required this.onCatalog,
+    this.pagesCount = 604,
     super.key,
   });
   final int page;
   final int? juz;
   final ValueChanged<int> onJump;
   final VoidCallback onCatalog;
+  final int pagesCount;
 
   @override
   State<MushafPageScrubber> createState() => _MushafPageScrubberState();
@@ -74,14 +76,17 @@ class MushafPageScrubber extends StatefulWidget {
 class _MushafPageScrubberState extends State<MushafPageScrubber> {
   int? _dragWindowStart;
   int? _lastRequestedPage;
+  int get _slots => widget.pagesCount.clamp(1, 7);
 
-  int get _windowStart => _dragWindowStart ?? (widget.page - 3).clamp(1, 598);
+  int get _windowStart =>
+      _dragWindowStart ??
+      (widget.page - 3).clamp(1, widget.pagesCount - _slots + 1);
 
   void _selectAt(double x, double width) {
     if (width <= 0) return;
-    final slot = (x / width * 7).floor().clamp(0, 6);
+    final slot = (x / width * _slots).floor().clamp(0, _slots - 1);
     // The Mushaf always progresses right-to-left, independent of UI language.
-    final page = _windowStart + 6 - slot;
+    final page = _windowStart + _slots - 1 - slot;
     if (page == (_lastRequestedPage ?? widget.page)) return;
     _lastRequestedPage = page;
     widget.onJump(page);
@@ -165,7 +170,7 @@ class _MushafPageScrubberState extends State<MushafPageScrubber> {
                         children: [
                           for (
                             var page = _windowStart;
-                            page < _windowStart + 7;
+                            page < _windowStart + _slots;
                             page++
                           )
                             Expanded(

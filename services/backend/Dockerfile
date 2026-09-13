@@ -43,6 +43,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 RUN apk add --no-cache \
         ca-certificates \
+        'libcrypto3>=3.5.8-r0' \
+        'libssl3>=3.5.8-r0' \
         gdbm \
         libbz2 \
         libffi \
@@ -66,17 +68,6 @@ RUN rm -rf \
         /usr/local/lib/python3.14/site-packages/pip \
         /usr/local/lib/python3.14/site-packages/pip-*.dist-info
 WORKDIR /app
-
-FROM runtime-foundation AS asset-tooling
-
-RUN apk add --no-cache \
-        libwebp-tools \
-        poppler-utils
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --from=builder --chown=app:app /app/src /app/src
-COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
-COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
-USER app
 
 FROM runtime-foundation AS runtime-files
 

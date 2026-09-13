@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from quran_backend.modules.quran.models import (
     Ayah,
+    AyahPageMapping,
     AyahPageRegion,
     Hizb,
     Juz,
@@ -116,6 +117,12 @@ def quran_dataset(db: None) -> dict[str, Any]:
         y=Decimal("0.3"),
         width=Decimal("0.8"),
         height=Decimal("0.1"),
+    )
+    AyahPageMapping.objects.bulk_create(
+        [
+            AyahPageMapping(page=page, ayah=first_ayah),
+            AyahPageMapping(page=page, ayah=second_ayah),
+        ]
     )
     Juz.objects.create(
         edition_version=version,

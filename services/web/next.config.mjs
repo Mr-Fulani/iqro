@@ -13,7 +13,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
+  "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation https://static-cdn.tarteel.ai",
   `img-src 'self' blob: data: https:${isDevelopment ? " http:" : ""}`,
   `media-src 'self' blob: https:${isDevelopment ? " http:" : ""}`,
   `connect-src 'self' https:${isDevelopment ? " http: ws: wss:" : ""}`,
@@ -39,6 +39,11 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  ...(process.env.IQRO_E2E === "1" ? { devIndicators: false } : {}),
+  allowedDevOrigins: [
+    "127.0.0.1", "10.0.2.2",
+    ...(process.env.LOCAL_WEB_ALLOWED_ORIGINS || "").split(",").map((host) => host.trim()).filter(Boolean),
+  ],
   output: "standalone",
   cacheHandler: require.resolve("./cache/incremental-cache-handler.cjs"),
   cacheHandlers: {

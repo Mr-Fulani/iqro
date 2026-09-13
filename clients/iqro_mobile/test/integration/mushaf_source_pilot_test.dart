@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 
 void main() {
@@ -40,7 +40,7 @@ void main() {
             720,
           ), // Same source coordinates after returning to portrait.
         ]) {
-          final layout = MushafScanLayout.page(
+          final layout = MushafRasterLayout.page(
             page: page,
             size: size,
             portrait: size.width == 360,

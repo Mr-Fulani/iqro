@@ -247,8 +247,10 @@ class MushafAsset {
   bool get isUsable {
     final uri = Uri.tryParse(url);
     return uri != null &&
-        uri.scheme == 'https' &&
-        uri.host.isNotEmpty &&
+        ((uri.scheme == 'https' && uri.host.isNotEmpty) ||
+            (!uri.hasScheme &&
+                !uri.hasAuthority &&
+                uri.path.startsWith('/media/'))) &&
         uri.path.toLowerCase().endsWith('.webp') &&
         width > 0 &&
         height != null &&
@@ -268,12 +270,13 @@ class MushafPageData {
     required this.imageHeight,
     required this.assets,
     required this.regions,
-    this.editionCode = 'madani-hafs',
+    this.editionCode = 'kfgqpc-hafs',
+    this.foundation,
   });
 
   factory MushafPageData.fromJson(Map<String, Object?> json) {
     return MushafPageData(
-      editionCode: json['edition_code']?.toString() ?? 'madani-hafs',
+      editionCode: json['edition_code']?.toString() ?? 'kfgqpc-hafs',
       number: (json['number'] as num?)?.toInt() ?? 1,
       contentVersion: json['content_version']?.toString() ?? 'unknown',
       checksumSha256: json['checksum_sha256']?.toString() ?? '',
@@ -309,6 +312,57 @@ class MushafPageData {
   final int imageHeight;
   final List<MushafAsset> assets;
   final List<MushafAyahRegion> regions;
+  final FoundationMushafPage? foundation;
+
+  factory MushafPageData.fromFoundation(Map<String, Object?> json) {
+    final page = FoundationMushafPage.fromJson(json, fromCache: false);
+    if (page.sourceId < 1 ||
+        page.pageNumber < 1 ||
+        page.pageNumber > page.pagesCount ||
+        page.pagesCount > 1000 ||
+        page.linesPerPage < 1 ||
+        page.linesPerPage > 30 ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(page.sourceChecksum) ||
+        page.words.isEmpty ||
+        page.rendering['available'] != true ||
+        page.rendering['version'] != 2 ||
+        page.words.any((word) {
+          final parts = (word['verse_key']?.toString() ?? '').split(':');
+          final surah = parts.length == 2 ? int.tryParse(parts[0]) : null;
+          final ayah = parts.length == 2 ? int.tryParse(parts[1]) : null;
+          final line = word['line_number'];
+          return surah == null ||
+              surah < 1 ||
+              surah > 114 ||
+              ayah == null ||
+              ayah < 1 ||
+              ayah > 286 ||
+              line is! int ||
+              line < 1 ||
+              line > page.linesPerPage;
+        })) {
+      throw const FormatException('Incomplete Foundation Mushaf page');
+    }
+    return MushafPageData(
+      number: page.pageNumber,
+      editionCode: 'qf-${page.sourceId}',
+      contentVersion: page.sourceChecksum,
+      checksumSha256: page.sourceChecksum,
+      imageWidth: 900,
+      imageHeight: 1380,
+      assets: const [],
+      regions: const [],
+      foundation: page,
+    );
+  }
+
+  List<QuranAyahReference> get ayahReferences =>
+      foundation?.ayahReferences ??
+      (regions.toList()
+            ..sort((a, b) => a.readingOrder.compareTo(b.readingOrder)))
+          .map((region) => region.ayah)
+          .toSet()
+          .toList();
 
   int get maximumAssetWidth => assets.fold<int>(
     0,
@@ -323,6 +377,7 @@ class MushafPageData {
       maximumAssetWidth < logicalWidth * devicePixelRatio;
 
   ({int surah, int ayah})? get firstAyahReference {
+    if (foundation != null) return foundation!.firstAyahReference;
     if (regions.isEmpty) return null;
     final ordered = List<MushafAyahRegion>.of(regions)
       ..sort((a, b) => a.readingOrder.compareTo(b.readingOrder));
@@ -544,8 +599,8 @@ class MushafVariant {
 
   String get preferenceValue => '$sourceId';
 
-  // Browser font contracts cannot guarantee a pixel-stable native page or an
-  // accurate ayah hit map. Readiness is unlocked by native backend assets.
+  // Legacy version-1 browser cache model. Native selection now validates the
+  // version-2 contract through NativeMushafEdition.fromFoundation instead.
   bool get supportedOnMobile => false;
 
   Uri? fontUriForPage(int page) {
@@ -568,7 +623,7 @@ class MushafVariant {
 }
 
 class FoundationMushafPage {
-  const FoundationMushafPage({required this.value, required this.fromCache});
+  FoundationMushafPage({required this.value, required this.fromCache});
 
   factory FoundationMushafPage.fromJson(
     Map<String, Object?> json, {
@@ -579,6 +634,35 @@ class FoundationMushafPage {
 
   final Map<String, Object?> value;
   final bool fromCache;
+  int get sourceId => (value['mushaf_id'] as num?)?.toInt() ?? 0;
+  int get pagesCount => (value['pages_count'] as num?)?.toInt() ?? 0;
+  int get linesPerPage => (value['lines_per_page'] as num?)?.toInt() ?? 15;
+  String get sourceChecksum =>
+      value['source_checksum_sha256']?.toString() ?? '';
+  late final Map<String, Object?> rendering = jsonMap(value['rendering']);
+  late final List<Map<String, Object?>> words =
+      (value['words'] as List? ?? [])
+          .whereType<Map>()
+          .map((word) => Map<String, Object?>.from(word))
+          .toList()
+        ..sort(
+          (a, b) => (a['position_in_page'] as num).compareTo(
+            b['position_in_page'] as num,
+          ),
+        );
+  late final List<QuranAyahReference> ayahReferences = words
+      .map((word) => word['verse_key']?.toString())
+      .whereType<String>()
+      .toSet()
+      .map((key) {
+        final parts = key.split(':');
+        return QuranAyahReference(
+          id: '',
+          surah: int.parse(parts[0]),
+          ayah: int.parse(parts[1]),
+        );
+      })
+      .toList();
 
   int get pageNumber => (value['page_number'] as num?)?.toInt() ?? 1;
 
@@ -661,6 +745,13 @@ class QuranDivision {
   final int endPage;
   final int? hizbNumber;
   final int? quarterNumber;
+
+  bool containsAyah(QuranAyahReference? reference) {
+    if (reference == null) return false;
+    final key = reference.surah * 1000 + reference.ayah;
+    return key >= startAyah.surah * 1000 + startAyah.ayah &&
+        key <= endAyah.surah * 1000 + endAyah.ayah;
+  }
 }
 
 class QuranCatalog {

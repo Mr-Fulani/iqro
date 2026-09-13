@@ -171,7 +171,14 @@ def test_ayah_audio_rejects_unapproved_urls(url: str) -> None:
         client.normalize_ayah_audio_url(url)
 
 
-def test_mushaf_catalog_sync_uses_wildcard_filter_and_checkpoint(monkeypatch: Any) -> None:
+@pytest.mark.parametrize(
+    ("ids", "resource_filter"), [(None, "mushafs:*"), ((5, 1, 5), "mushafs:1,5")]
+)
+def test_mushaf_catalog_sync_uses_wildcard_filter_and_checkpoint(
+    monkeypatch: Any,
+    ids: tuple[int, ...] | None,
+    resource_filter: str,
+) -> None:
     client = QuranFoundationClient(
         client_id="test-client",
         client_secret="test-secret",
@@ -201,14 +208,14 @@ def test_mushaf_catalog_sync_uses_wildcard_filter_and_checkpoint(monkeypatch: An
 
     monkeypatch.setattr(client, "_get_json", fake_get_json)
 
-    result = client.sync_mushaf_catalog()
+    result = client.sync_mushaf_catalog(resource_ids=ids)
 
     assert result.next_sync_token == "mushaf-checkpoint"
     assert result.mutations[0]["resource_id"] == 1
     assert calls == [
         (
             "/content/api/v4/resources/sync",
-            {"resources": "mushafs:*", "per_page": "100", "bootstrap": "true"},
+            {"resources": resource_filter, "per_page": "100", "bootstrap": "true"},
         )
     ]
 

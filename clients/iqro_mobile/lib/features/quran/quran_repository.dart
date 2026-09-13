@@ -10,6 +10,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/network/public_asset_uri.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -159,13 +161,26 @@ class QuranRepository {
     required ApiClient api,
     required LocalDatabase database,
     Uuid? uuid,
-    this.mushaf = MushafIdentity.canonical,
+    this.mushaf = MushafIdentity.primary,
+    this.foundationVersion = '',
   }) : _api = api,
        _database = database,
        _uuid = uuid ?? const Uuid();
 
   static const edition = 'madani-hafs';
   final MushafIdentity mushaf;
+  final String foundationVersion;
+
+  QuranRepository withFoundationVersion(String version) =>
+      !mushaf.isFoundation || version == foundationVersion
+      ? this
+      : QuranRepository(
+          api: _api,
+          database: _database,
+          uuid: _uuid,
+          mushaf: mushaf,
+          foundationVersion: version,
+        );
 
   QuranRepository forMushaf(MushafIdentity identity) => identity == mushaf
       ? this
@@ -185,7 +200,17 @@ class QuranRepository {
       return _parseRenditions(cached!.value);
     }
     try {
-      final payload = await _api.get('/quran/mushaf-renditions', public: true);
+      Object? foundation;
+      try {
+        foundation = await _api.get('/quran/foundation/mushafs', public: true);
+      } on ApiException catch (error) {
+        if (error.statusCode != 404) rethrow;
+      }
+      final legacy = await _api.get('/quran/mushaf-renditions', public: true);
+      final payload = <Object?>[
+        if (foundation is List) ...foundation,
+        if (legacy is List) ...legacy,
+      ];
       await _database.writeCache(
         key,
         payload,
@@ -207,14 +232,31 @@ class QuranRepository {
     return _parseRenditions(cached?.value);
   }
 
-  static List<NativeMushafEdition> _parseRenditions(Object? payload) =>
-      payload is List
-      ? payload
-            .whereType<Map>()
-            .map((e) => NativeMushafEdition.parse(Map<String, Object?>.from(e)))
-            .whereType<NativeMushafEdition>()
-            .toList(growable: false)
-      : const [];
+  static List<NativeMushafEdition> _parseRenditions(Object? payload) {
+    if (payload is! List) return const [];
+    final editions = payload
+        .whereType<Map>()
+        .map((e) {
+          final json = Map<String, Object?>.from(e);
+          return json.containsKey('source_id')
+              ? NativeMushafEdition.fromFoundation(json)
+              : NativeMushafEdition.parse(json);
+        })
+        .whereType<NativeMushafEdition>()
+        .toList();
+    // Raster copies remain a fallback for older backends/offline catalogs.
+    // Avoid duplicate choices when the direct source is available.
+    for (final entry in const {
+      5: 'kfgqpc-hafs',
+      1: 'qcf-v2-hafs',
+      19: 'qcf-v4-tajweed-hafs',
+    }.entries) {
+      if (editions.any((e) => e.identity.foundationId == entry.key)) {
+        editions.removeWhere((e) => e.identity.code == entry.value);
+      }
+    }
+    return editions;
+  }
 
   final ApiClient _api;
   final LocalDatabase _database;
@@ -227,6 +269,7 @@ class QuranRepository {
       MushafAssetVerificationCache();
   final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
   final Map<String, List<QuranAyahTafsir>> _tafsirMemory = {};
+  static final _foundationAssetRequests = <String, Future<File>>{};
 
   Future<QuranCatalog> surahs({bool forceRefresh = false}) async {
     const key = 'quran:$edition:surahs';
@@ -428,10 +471,17 @@ class QuranRepository {
     int page, {
     bool forceRefresh = false,
   }) async {
-    final key = mushaf.pageCacheKey(page);
+    final key =
+        '${mushaf.pageCacheKey(page)}${foundationVersion.isEmpty ? '' : ':$foundationVersion'}';
     final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return _parseMushafPage(cached!.value, page);
+    MushafPageData? previous;
+    if (cached != null) {
+      try {
+        previous = _parseMushafPage(cached.value, page);
+      } on Object {
+        // Retry the API when cached metadata is corrupt or belongs to another version.
+      }
+      if (!forceRefresh && cached.isFresh && previous != null) return previous;
     }
     try {
       final payload = await _api.get(
@@ -446,17 +496,168 @@ class QuranRepository {
       );
       return parsed;
     } on Object {
-      if (cached != null) return _parseMushafPage(cached.value, page);
+      if (previous != null) return previous;
       rethrow;
     }
   }
 
   MushafPageData _parseMushafPage(Object? payload, int number) {
-    final parsed = MushafPageData.fromJson(jsonMap(payload));
+    final parsed = mushaf.isFoundation
+        ? MushafPageData.fromFoundation(jsonMap(payload))
+        : MushafPageData.fromJson(jsonMap(payload));
     if (parsed.number != number || parsed.editionCode != mushaf.code) {
       throw const FormatException('Mushaf page identity mismatch');
     }
+    if (mushaf.isFoundation &&
+        foundationVersion.isNotEmpty &&
+        parsed.contentVersion != foundationVersion) {
+      throw const FormatException('Mushaf source version changed');
+    }
     return parsed;
+  }
+
+  Future<Map<String, List<int>>> foundationPageIndex() async {
+    if (!mushaf.isFoundation) return const {};
+    final key = '${mushaf.contentKey}:page-index:$foundationVersion';
+    final cached = await _database.readCache(key);
+    Map<String, List<int>>? previous;
+    if (cached != null) {
+      try {
+        previous = _parseFoundationIndex(cached.value);
+      } on Object {
+        // Invalid cached metadata cannot authorize a navigation.
+      }
+      if (cached.isFresh && previous != null) return previous;
+    }
+    try {
+      final payload = await _api.get(
+        '${mushaf.apiPath}/page-index',
+        public: true,
+      );
+      final parsed = _parseFoundationIndex(payload);
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: const Duration(hours: 1),
+      );
+      return parsed;
+    } on Object {
+      if (previous == null) rethrow;
+      return previous;
+    }
+  }
+
+  Map<String, List<int>> _parseFoundationIndex(Object? payload) {
+    final value = jsonMap(payload);
+    if (value['mushaf_id'] != mushaf.foundationId) {
+      throw const FormatException('Mushaf index identity mismatch');
+    }
+    if (foundationVersion.isNotEmpty &&
+        value['source_checksum_sha256'] != foundationVersion) {
+      throw const FormatException('Mushaf index version changed');
+    }
+    final count = value['pages_count'];
+    if (count is! int || count < 1 || count > 1000) {
+      throw const FormatException('Invalid Mushaf page count');
+    }
+    return jsonMap(value['verse_pages']).map((key, value) {
+      if (value is! List ||
+          value.isEmpty ||
+          value.any((page) => page is! int || page < 1 || page > count)) {
+        throw const FormatException('Invalid Mushaf verse pages');
+      }
+      return MapEntry(key, value.cast<int>());
+    });
+  }
+
+  Future<int> pageForAyah(int surah, int ayah, {required int fallback}) async {
+    if (!mushaf.isFoundation) return fallback;
+    final pages = (await foundationPageIndex())['$surah:$ayah'];
+    if (pages == null || pages.isEmpty) {
+      throw const FormatException('Missing Mushaf verse mapping');
+    }
+    return pages.first;
+  }
+
+  Future<File> foundationAsset(Uri uri, String version) {
+    final key = '${_api.dio.options.baseUrl}:$uri:$version';
+    return _foundationAssetRequests.putIfAbsent(key, () async {
+      try {
+        return await _loadFoundationAsset(uri, version);
+      } finally {
+        _foundationAssetRequests.remove(key);
+      }
+    });
+  }
+
+  Future<File> _loadFoundationAsset(Uri uri, String version) async {
+    final allowedFont =
+        uri.scheme == 'https' &&
+        uri.userInfo.isEmpty &&
+        !uri.hasPort &&
+        !uri.hasQuery &&
+        !uri.hasFragment &&
+        ((uri.host == 'verses.quran.foundation' &&
+                uri.path.startsWith('/fonts/quran/') &&
+                uri.path.endsWith('.ttf')) ||
+            (uri.host == 'static-cdn.tarteel.ai' &&
+                uri.path ==
+                    '/qul/fonts/nastaleeq/KFGQPCNastaleeq-Regular.ttf'));
+    final allowedImage =
+        uri.origin == 'https://static.qurancdn.com' &&
+        uri.userInfo.isEmpty &&
+        !uri.hasFragment &&
+        uri.query == 'v=1' &&
+        RegExp(
+          r'^/images/w/(?:(?:qa-color|rq-color|qa-black)/[1-9]\d*/[1-9]\d*/[1-9]\d*|common/[1-9]\d*)\.png$',
+        ).hasMatch(uri.path);
+    if (!allowedFont && !allowedImage) {
+      throw const FormatException('Unapproved Quran asset');
+    }
+    final key =
+        'foundation-asset:${sha256.convert(utf8.encode('$uri:$version'))}';
+    final cached = await _database.readCache(key);
+    if (cached != null) {
+      final value = jsonMap(cached.value);
+      final file = File(value['path'] as String);
+      try {
+        if (await file.length() == value['bytes'] &&
+            (await sha256.bind(file.openRead()).first).toString() ==
+                value['sha256']) {
+          return file;
+        }
+      } on FileSystemException {
+        // A missing or damaged file is downloaded again.
+      }
+    }
+    final bytes = await _api.getPublicBytes(
+      uri,
+      allowedHosts: const {
+        'verses.quran.foundation',
+        'static-cdn.tarteel.ai',
+        'static.qurancdn.com',
+      },
+      maxBytes: 8 * 1024 * 1024,
+    );
+    final checksum = sha256.convert(bytes).toString();
+    final root = await getApplicationSupportDirectory();
+    final file = File(
+      p.join(
+        root.path,
+        'foundation_assets',
+        '$checksum${p.extension(uri.path)}',
+      ),
+    );
+    await file.parent.create(recursive: true);
+    final temporary = File('${file.path}.${_uuid.v4()}.partial');
+    await temporary.writeAsBytes(bytes, flush: true);
+    await temporary.rename(file.path);
+    await _database.writeCache(key, {
+      'path': file.path,
+      'sha256': checksum,
+      'bytes': bytes.length,
+    }, maxAge: const Duration(days: 30));
+    return file;
   }
 
   Future<bool> refreshMushafPageResolution(
@@ -589,10 +790,11 @@ class QuranRepository {
     MushafAsset asset, {
     required String expectedChecksum,
   }) async {
-    final uri = Uri.tryParse(asset.url);
-    if (uri == null ||
-        uri.scheme != 'https' ||
-        !uri.path.toLowerCase().endsWith('.webp')) {
+    final uri = resolvePublicAssetUri(
+      asset.url,
+      Uri.parse(_api.dio.options.baseUrl),
+    );
+    if (!uri.path.toLowerCase().endsWith('.webp')) {
       throw const FormatException('Mushaf page URL is invalid');
     }
     final bytes = await _api.getPublicBytes(

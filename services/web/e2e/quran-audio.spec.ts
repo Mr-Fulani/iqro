@@ -337,64 +337,6 @@ const rubElHizb = divisions(240).map((division) => ({
   quarter_number: ((division.number - 1) % 4) + 1,
 }));
 
-const page128 = {
-  id: "00000000-0000-7000-8300-000000000128",
-  edition_code: "madani-hafs",
-  content_version: "1.0.0",
-  number: 128,
-  image_width: 900,
-  image_height: 1400,
-  checksum_sha256: "b".repeat(64),
-  assets: [
-    {
-      url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='1400'/%3E",
-      width: 900,
-      height: 1400,
-      format: "webp",
-      bytes: 100,
-    },
-  ],
-  regions: [
-    {
-      id: "region-6-1",
-      ayah: { id: ayahs[0].id, surah: 6, number: 1 },
-      reading_order: 1,
-      polygon: [[0.1, 0.1], [0.9, 0.1], [0.9, 0.25], [0.1, 0.25]],
-      x: 0.1,
-      y: 0.1,
-      width: 0.8,
-      height: 0.15,
-    },
-    {
-      id: "region-6-2-a",
-      ayah: { id: ayahs[1].id, surah: 6, number: 2 },
-      reading_order: 2,
-      polygon: [[0.1, 0.3], [0.9, 0.3], [0.9, 0.45], [0.1, 0.45]],
-      x: 0.1,
-      y: 0.3,
-      width: 0.8,
-      height: 0.15,
-    },
-    {
-      id: "region-6-2-b",
-      ayah: { id: ayahs[1].id, surah: 6, number: 2 },
-      reading_order: 3,
-      polygon: [[0.1, 0.46], [0.6, 0.46], [0.6, 0.55], [0.1, 0.55]],
-      x: 0.1,
-      y: 0.46,
-      width: 0.5,
-      height: 0.09,
-    },
-  ],
-};
-
-const page129 = {
-  ...page128,
-  id: "00000000-0000-7000-8300-000000000129",
-  number: 129,
-  regions: page128.regions.filter((region) => region.ayah.number === 2),
-};
-
 const foundationMushafs = [
   {
     source_id: 1,
@@ -432,6 +374,7 @@ const foundationMushafs = [
   },
 ].map((mushaf) => ({
   ...mushaf,
+  rendering: { ...mushaf.rendering, version: 2 },
   description: `${mushaf.name} fixture`,
   qirat_name: "Hafs",
   pages_count: 604,
@@ -462,12 +405,15 @@ function foundationPage(sourceId: number, pageNumber: number) {
     font_name: mushaf.default_font_name,
     rendering: { ...mushaf.rendering, font_url: fontUrl },
     page_number: pageNumber,
-    verse_mapping: { "6": "1-2" },
-    first_verse_id: 1,
+    pages_count: 604,
+    lines_per_page: 15,
+    source_checksum_sha256: mushaf.source_checksum_sha256,
+    verse_mapping: { "6": pageNumber === 129 ? "2" : "1-2" },
+    first_verse_id: pageNumber === 129 ? 2 : 1,
     last_verse_id: 2,
     first_word_id: 1,
     last_word_id: 6,
-    verses_count: 2,
+    verses_count: pageNumber === 129 ? 1 : 2,
     words: [
       [1, 1, 3, 1, isUnicode ? "ٱلْحَمْدُ" : "ﱁ", "word"],
       [2, 1, 3, 2, isUnicode ? "لِلَّهِ" : "ﱂ", "end"],
@@ -476,7 +422,8 @@ function foundationPage(sourceId: number, pageNumber: number) {
       [4, 2, 4, 4, isUnicode ? "ٱلَّذِى" : "ﱄ", "word"],
       [5, 2, 4, 1, isUnicode ? "خَلَقَكُم" : "ﱅ", "word"],
       [6, 2, 4, 2, isUnicode ? "٢" : "ﱆ", "end"],
-    ].map(([id, verseId, lineNumber, positionInLine, text, charType]) => ({
+    ].filter((word) => pageNumber !== 129 || word[1] === 2)
+    .map(([id, verseId, lineNumber, positionInLine, text, charType]) => ({
       id,
       word_id: id,
       verse_id: verseId,
@@ -636,6 +583,19 @@ async function installApiMocks(page: Page, nativeMedia = false) {
       await route.fulfill({ json: [edition] });
     } else if (path === "/api/v1/quran/foundation/mushafs") {
       await route.fulfill({ json: foundationMushafs });
+    } else if (/^\/api\/v1\/quran\/foundation\/mushafs\/\d+\/page-index$/.test(path)) {
+      await route.fulfill({ json: {
+        mushaf_id: Number(path.split("/")[6]), pages_count: 604,
+        source_checksum_sha256: "c".repeat(64),
+        verse_pages: { "1:1": [1], "6:1": [128], "6:2": [128, 129], "7:1": [151] },
+      } });
+    } else if (/^\/api\/v1\/quran\/editions\/madani-hafs\/ayahs\/\d+\/\d+$/.test(path)) {
+      const surahNumber = Number(path.split("/")[7]);
+      const ayahNumber = Number(path.split("/")[8]);
+      await route.fulfill({ json: { ...ayahs[Math.min(ayahNumber - 1, ayahs.length - 1)],
+        surah_number: surahNumber, number: ayahNumber,
+        pages: [surahNumber === 1 ? 1 : surahNumber === 7 ? 151 : 128],
+      } });
     } else if (/^\/api\/v1\/quran\/foundation\/mushafs\/\d+\/pages\/\d+$/.test(path)) {
       const parts = path.split("/");
       const sourceId = Number(parts[6]);
@@ -655,10 +615,6 @@ async function installApiMocks(page: Page, nativeMedia = false) {
       await route.fulfill({ json: hizb });
     } else if (path === "/api/v1/quran/editions/madani-hafs/rub-el-hizb") {
       await route.fulfill({ json: rubElHizb });
-    } else if (path === "/api/v1/quran/editions/madani-hafs/pages/128") {
-      await route.fulfill({ json: page128 });
-    } else if (path === "/api/v1/quran/editions/madani-hafs/pages/129") {
-      await route.fulfill({ json: page129 });
     } else {
       await route.fulfill({
         status: 404,
@@ -671,6 +627,58 @@ async function installApiMocks(page: Page, nativeMedia = false) {
 
 test.beforeEach(async ({ page, nativeMedia }) => {
   await installApiMocks(page, nativeMedia);
+});
+
+test("retired visual preference selects source 5 without requesting old artwork", async ({ page }) => {
+  const retiredRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/quran\/editions\/[^/]+\/pages\//.test(request.url())) retiredRequests.push(request.url());
+  });
+  await page.addInitScript(() => localStorage.setItem("iqro_quran_mushaf_variant_v1", "image"));
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("5");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator('.mushaf-image, option[value="image"]')).toHaveCount(0);
+  expect(retiredRequests).toEqual([]);
+});
+
+test("empty source catalog explains missing data and keeps canonical text accessible", async ({ page }) => {
+  await page.route("**/api/v1/quran/foundation/mushafs", (route) => route.fulfill({json: []}));
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.getByRole("status").filter({hasText: "Мусхафы ещё не загружены"})).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view, .mushaf-image")).toHaveCount(0);
+  await page.getByRole("button", {name: "📜 Текст", exact: true}).click();
+  await expect(page.locator(".ayah-card")).toHaveCount(2);
+});
+
+test("canonical text stays accessible while the source page is still loading", async ({ page }) => {
+  let releasePage!: () => void;
+  const pendingPage = new Promise<void>((resolve) => { releasePage = resolve; });
+  const pageUrl = "**/api/v1/quran/foundation/mushafs/5/pages/128";
+  await page.route(pageUrl, async (route) => {
+    await pendingPage;
+    await route.fallback();
+  });
+  try {
+    await page.goto("/ru/quran?surah=6");
+    await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("5");
+    const loadingMessage = page.getByText("Загрузка страницы выбранного Мусхафа…", { exact: true });
+    // The outgoing initial page can still contain the unavailable-state element.
+    // Assert the requested loading state rather than their shared styling class.
+    await expect(loadingMessage).toHaveCount(1);
+    await expect(loadingMessage).toBeVisible();
+    const textMode = page.getByRole("button", { name: "📜 Текст", exact: true });
+    await expect(textMode).toBeEnabled();
+    await textMode.click();
+    await expect(page.locator(".ayah-card")).toHaveCount(2);
+    const response = page.waitForResponse((item) => item.url().endsWith("/foundation/mushafs/5/pages/128"));
+    releasePage();
+    await response;
+    await expect(page.locator(".ayah-card")).toHaveCount(2);
+    await expect(page.locator(".qf-mushaf-view")).toHaveCount(0);
+  } finally {
+    releasePage();
+  }
 });
 
 test("reading position synchronizes desktop fields and prepares the selected ayah without refetching", async ({ page }) => {
@@ -694,24 +702,24 @@ test("reading position synchronizes desktop fields and prepares the selected aya
   await layout.locator('[data-ayah-key="6:2"]').last().click();
   await expect(audio).toHaveJSProperty("currentTime", 1);
   expect(timingRequests).toBe(1);
-  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
 });
 
 test("reading position survives text and Mushaf switches without a selected ayah", async ({ page }) => {
   await page.goto("/ru/quran?page=129");
   const layout = page.locator(".quran-page-layout").filter({ visible: true });
-  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   await expect(layout.locator("#surah-navigation")).toHaveValue("6");
   await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await expect(page.locator("#quran-ayah-6-2")).toBeInViewport();
   await expect(layout.locator("#ayah-navigation")).toHaveValue("2");
   await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
-  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
+  await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   await expect(layout.locator('[data-ayah-key="6:2"]').last()).toHaveClass(/is-selected/);
   await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await layout.locator("#ayah-navigation").selectOption("1");
   await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
-  await expect(layout.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
   await expect(layout.locator('[data-ayah-key="6:1"]')).toHaveClass(/is-selected/);
 });
 
@@ -1073,7 +1081,7 @@ test("reader defaults to Mushaf, selects every fragment and starts ayah playback
 
   await page.getByRole("button", { name: "▶ Аят 6:2", exact: true }).click();
 
-  await expect(page.getByText("Звучит аят 6:2", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-ayah-key="6:2"].is-playing')).toHaveCount(2);
   await expect(ayahRegions.first()).toHaveClass(/is-playing/);
   await expect(ayahRegions.nth(1)).toHaveClass(/is-playing/);
   await expect(page.locator(".mushaf-audio-now-playing audio[src]")).toHaveAttribute(
@@ -1088,7 +1096,7 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
   await page.goto("/quran?surah=6&ayah=2");
 
   await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
   const linkedAyah = page.getByRole("button", { name: "Аят 6:2", exact: true });
   await expect(linkedAyah).toHaveCount(2);
   await expect(linkedAyah.first()).toHaveClass(/is-selected/);
@@ -1099,7 +1107,30 @@ test("legacy Quran bookmark deep link opens its saved Mushaf page", async ({ pag
   await page.goto("/quran?page=128");
 
   await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+});
+
+test("displayed source page saves canonical position before server debounce and restores it", async ({ page }) => {
+  const storageKey = "iqro_quran_reading_position_v1:madani-hafs";
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/151", (route) =>
+    route.fulfill({ json: { ...foundationPage(5, 151), verse_mapping: { "7": "1" },
+      words: foundationPage(5, 151).words.filter((word) => word.verse_id === 1) } }),
+  );
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  const pageJump = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
+  await pageJump.fill("151");
+  await pageJump.press("Enter");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), storageKey))
+    .toMatchObject({ pageNumber: 151, surahNumber: 7, ayahNumber: 1 });
+  await page.clock.resume();
+  await page.goto("/ru");
+  await page.goto("/ru/quran");
+  await expect(pageJump).toHaveValue("151");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
 });
 
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
@@ -1177,7 +1208,7 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
 
   const guided = page.getByTestId("prayer-reading-session");
   await expect(guided.getByRole("heading", { name: "После намаза Фаджр" })).toBeVisible();
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
   await expect(guided.getByLabel("Фактически прочитано — страниц")).toHaveValue("1");
   await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("0:00");
   await page.clock.runFor(60_000);
@@ -1214,9 +1245,8 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
   await page.getByRole("button", { name: /Мусхаф/ }).click();
 
   const variant = page.getByLabel("Вариант Мусхафа");
-  await expect(variant.locator("option")).toHaveCount(4);
+  await expect(variant.locator("option")).toHaveCount(3);
   await expect(variant.locator("option")).toHaveText([
-    "Скан страницы · Мединский Hafs",
     "QCF V2 · Hafs",
     "KFGQPC HAFS · Hafs",
     "QCF V4 Tajweed · Hafs",
@@ -1258,11 +1288,11 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
     "128",
   );
 
-  await restoredVariant.selectOption("image");
+  await restoredVariant.selectOption("5");
   await page.reload();
-  await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("image");
+  await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("5");
   await page.getByRole("button", { name: /Мусхаф/ }).click();
-  await expect(page.locator(".mushaf-image")).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view")).toBeVisible();
 });
 
 test("Quran favorite uses an animated bookmark and toggles the saved ayah", async ({ page }) => {
@@ -1621,49 +1651,15 @@ for (const viewport of [
   { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1440, height: 1000 },
 ]) {
-  test(`mushaf overlay remains registered and selectable on ${viewport.name}`, async ({ page }) => {
+  test(`source page remains visible and ayahs selectable on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/ru/quran?surah=6");
 
-    const mushafFrame = page
-      .locator(".mushaf-page-frame")
-      .filter({ visible: true })
-      .last();
-    const image = mushafFrame.locator(".mushaf-image");
-    const overlay = mushafFrame.locator(".mushaf-regions");
-    await expect(image).toBeVisible();
-    await expect(overlay).toBeVisible();
-    await page.locator(".mushaf-page-turn").evaluate((element) =>
-      Promise.all(element.getAnimations().map((animation) => animation.finished)),
-    );
-    const boxes = await mushafFrame.evaluate((frame) => {
-      const imageElement = frame.querySelector<HTMLElement>(".mushaf-image");
-      const overlayElement = frame.querySelector<HTMLElement>(".mushaf-regions");
-      if (!imageElement || !overlayElement) return null;
-      const imageRect = imageElement.getBoundingClientRect();
-      const overlayRect = overlayElement.getBoundingClientRect();
-      return {
-        imageBox: {
-          x: imageRect.x,
-          y: imageRect.y,
-          width: imageRect.width,
-          height: imageRect.height,
-        },
-        overlayBox: {
-          x: overlayRect.x,
-          y: overlayRect.y,
-          width: overlayRect.width,
-          height: overlayRect.height,
-        },
-      };
-    });
-    expect(boxes).not.toBeNull();
-    const { imageBox, overlayBox } = boxes!;
-    expect(Math.abs(imageBox!.x - overlayBox!.x)).toBeLessThan(1);
-    expect(Math.abs(imageBox!.y - overlayBox!.y)).toBeLessThan(1);
-    expect(Math.abs(imageBox!.width - overlayBox!.width)).toBeLessThan(1);
-    expect(Math.abs(imageBox!.height - overlayBox!.height)).toBeLessThan(1);
-
+    const sheet = page.locator(".qf-mushaf-sheet").filter({ visible: true }).last();
+    await expect(sheet).toBeVisible();
+    const box = await sheet.boundingBox();
+    expect(box?.width).toBeGreaterThan(0);
+    expect(box!.width).toBeLessThanOrEqual(viewport.width);
     const fragments = page.getByRole("button", { name: "Аят 6:2", exact: true });
     await expect(fragments).toHaveCount(2);
     await fragments.last().click();
@@ -1683,7 +1679,7 @@ test("Mushaf opens by default as a full-width mobile reader with RTL swipe navig
   await expect(layout).toHaveClass(/is-reader-immersive/);
   const reader = layout.locator(".mushaf-reader-surface");
   const stage = reader.locator(".mushaf-page-container");
-  const image = reader.locator(".mushaf-page-turn .mushaf-image");
+  const image = reader.locator(".mushaf-page-turn .qf-mushaf-view");
   await expect(image).toHaveAttribute("data-page-number", "128");
   await expect(reader).toBeInViewport();
   await expect(page.locator(".mobile-navigation")).toBeHidden();
@@ -1749,7 +1745,6 @@ test.describe("Mushaf touch gestures over ayahs", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
   for (const variant of [
-    { value: "image", view: ".mushaf-image" },
     { value: "5", view: ".qf-mushaf-view" },
   ]) {
     test(`swipes turn ${variant.value} pages while taps still select ayahs`, async ({ page }) => {
@@ -1804,7 +1799,7 @@ test.describe("Mushaf touch gestures over ayahs", () => {
       await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
       const stage = layout.locator(".mushaf-page-container");
       const view = stage.locator(variant.view);
-      const sheet = stage.locator(variant.value === "image" ? ".mushaf-image" : ".qf-mushaf-sheet");
+      const sheet = stage.locator(".qf-mushaf-sheet");
       const ayah = stage.locator('[data-ayah-key="6:2"]').last();
       await expect(view).toHaveAttribute("data-page-number", "128");
       await ayah.tap();
@@ -1895,19 +1890,9 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await page.route("**/api/v1/quran/editions/madani-hafs/surahs/7/ayahs", (route) =>
     route.fulfill({ json: [nextSurahAyah] }),
   );
-  await page.route("**/api/v1/quran/editions/madani-hafs/pages/151", (route) =>
-    route.fulfill({
-      json: {
-        ...page128,
-        id: "00000000-0000-7000-8300-000000000151",
-        number: 151,
-        regions: [{
-          ...page128.regions[0],
-          id: "region-7-1",
-          ayah: { id: nextSurahAyah.id, surah: 7, number: 1 },
-        }],
-      },
-    }),
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/151", (route) =>
+    route.fulfill({json: {...foundationPage(5, 151), verse_mapping: {"7": "1"},
+      words: foundationPage(5, 151).words.filter((word) => word.verse_id === 1)}}),
   );
   await page.goto("/quran?surah=6");
 
@@ -1919,7 +1904,7 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await page.getByLabel("Выбор суры (1–114)").selectOption("7");
   await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
-  await expect(page.locator(".mushaf-image")).toHaveCount(0);
+  await expect(page.locator(".qf-mushaf-view")).toHaveCount(0);
   await expect(page.locator("#quran-ayah-7-1")).toHaveClass(/is-navigation-target/);
   await expect(page.locator("#quran-ayah-7-1 .quran-arabic-text")).toContainText("المص");
 
@@ -1927,7 +1912,7 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await expect(page.getByLabel(/Аят суры/).locator("option")).toHaveCount(3);
   await page.getByLabel(/Аят суры/).selectOption("2");
   await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
-  await expect(page.locator(".mushaf-image")).toHaveCount(0);
+  await expect(page.locator(".qf-mushaf-view")).toHaveCount(0);
   await expect(page.locator("#quran-ayah-6-2")).toHaveClass(/is-navigation-target/);
   await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text")).toContainText(
     "هُوَ ٱلَّذِى خَلَقَكُم",
@@ -1940,25 +1925,25 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await page.getByRole("button", { name: /Мусхаф/ }).click();
   await page.getByLabel("Выбор суры (1–114)").selectOption("7");
   await expect(page.getByRole("button", { name: /Мусхаф/ })).toHaveClass(/btn-primary/);
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "151");
-  await expect(page.getByText("Выбран аят 7:1", { exact: true })).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
   const selectedMushafAyah = page.getByRole("button", { name: "Аят 7:1", exact: true });
   await expect(selectedMushafAyah).toHaveClass(/is-selected/);
+  await expect(selectedMushafAyah).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => selectedMushafAyah.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return rect.top < window.innerHeight && rect.bottom > 0;
   })).toBe(true);
 
   await page.getByLabel("Выбор суры (1–114)").selectOption("6");
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
-  await expect(page.getByText("Выбран аят 6:1", { exact: true })).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator('[data-ayah-key="6:1"].is-selected')).toHaveCount(1);
   await page.getByLabel(/Аят суры/).selectOption("2");
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "128");
-  await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await expect(page.locator('[data-ayah-key="6:2"].is-selected')).toHaveCount(2);
 
   await page.getByLabel("Хизб (1-60)").selectOption("13");
-  await expect(page.locator(".mushaf-image")).toHaveAttribute("data-page-number", "129");
-  await expect(page.getByText("Выбран аят 6:2", { exact: true })).toBeVisible();
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
+  await expect(page.locator('[data-ayah-key="6:2"].is-selected')).toHaveCount(2);
 });
 
 
@@ -1969,7 +1954,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     const stage = page.locator(".mushaf-page-container").filter({ visible: true });
     await stage.dispatchEvent("pointerdown", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 70, clientY: 360 });
     await stage.dispatchEvent("pointerup", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: 250, clientY: 360 });
-    await expect(stage.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(stage.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   }
 
   test("plays only the selected ayah, pauses on selection and page changes, and retains audio settings", async ({ page }) => {
@@ -2002,7 +1987,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await layout.locator('[data-ayah-key="6:2"]').last().click();
     await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
-    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
     await actions.getByRole("button", { name: "Настройки чтения", exact: true }).click();
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("paused");
     await layout.locator(".reader-settings-navigation").getByRole("button", { name: "Аудио", exact: true }).click();
@@ -2012,7 +1997,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await page.getByRole("button", { name: "Открыть читалку", exact: true }).click();
     await actions.getByRole("button", { name: "Воспроизвести аят 6:2" }).click();
     await expect(audio).toHaveJSProperty("playbackRate", 1.5);
-    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   });
 
   test("synchronizes a page deep link with the selected ayah and surah settings", async ({ page }) => {
@@ -2025,7 +2010,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
     await expect(layout.locator("audio")).toHaveAttribute("src", tracks[5].asset.url);
     await expect(layout.locator("audio")).toHaveJSProperty("currentTime", 1);
-    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "128");
+    await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
     await expect(layout.locator("#surah-navigation")).toHaveValue("6");
   });
 
@@ -2074,7 +2059,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe("playing");
     await actions.getByRole("button", { name: "Меню читалки", exact: true }).click();
     await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
-    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   });
 
   test("late media metadata cannot restart playback after page navigation", async ({ page }) => {
@@ -2092,7 +2077,7 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await layout.locator("audio").dispatchEvent("loadedmetadata");
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).not.toBe("playing");
     await expect(page.getByRole("toolbar").getByRole("button", { name: "Выберите аят на странице" })).toBeDisabled();
-    await expect(layout.locator(".mushaf-page-turn .mushaf-image")).toHaveAttribute("data-page-number", "129");
+    await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   });
 
   test("missing ayah timings never fall back to playing a whole surah", async ({ page }) => {
@@ -2111,38 +2096,23 @@ test.describe("Selected ayah controls in the mobile reader", () => {
 test.describe("Mushaf preloading and responsive gestures", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
-  for (const variant of ["image", "1", "5"]) {
+  for (const variant of ["1", "5"]) {
     test(`${variant} preloads two pages in both directions and turns without another page request`, async ({ page }) => {
       await page.addInitScript((value) => localStorage.setItem("iqro_quran_mushaf_variant_v1", value), variant);
       const pageRequests = new Map<number, number>();
-      const imageRequests: number[] = [];
-      const pattern = variant === "image"
-        ? "**/api/v1/quran/editions/madani-hafs/pages/*"
-        : `**/api/v1/quran/foundation/mushafs/${variant}/pages/*`;
+      const pattern = `**/api/v1/quran/foundation/mushafs/${variant}/pages/*`;
       await page.route(pattern, async (route) => {
         const number = Number(new URL(route.request().url()).pathname.split("/").at(-1));
         pageRequests.set(number, (pageRequests.get(number) || 0) + 1);
-        if (variant !== "image") return route.fallback();
-        await route.fulfill({ json: {
-          ...page128, number,
-          assets: [{ ...page128.assets[0], url: new URL(`/reader-page-${number}.svg`, route.request().url()).toString() }],
-        } });
-      });
-      await page.route("**/reader-page-*.svg", async (route) => {
-        imageRequests.push(Number(/reader-page-(\d+)/.exec(route.request().url())![1]));
-        await route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1400"><rect width="900" height="1400" fill="white"/></svg>' });
+        return route.fallback();
       });
       await page.goto("/ru/quran?surah=6&page=128");
       const layout = page.locator(".quran-page-layout").filter({ visible: true });
       const stage = layout.locator(".mushaf-page-container");
-      const view = stage.locator(variant === "image" ? ".mushaf-page-turn .mushaf-image" : ".mushaf-page-turn .qf-mushaf-view");
+      const view = stage.locator(".mushaf-page-turn .qf-mushaf-view");
       await expect(view).toHaveAttribute("data-page-number", "128");
       await expect.poll(() => [...pageRequests.keys()].sort((a, b) => a - b)).toEqual([126, 127, 128, 129, 130]);
-      if (variant === "image") {
-        await expect.poll(() => [...new Set(imageRequests)].sort((a, b) => a - b)).toEqual([126, 127, 128, 129, 130]);
-      } else {
         await expect.poll(() => page.evaluate((id) => [...document.fonts].filter((face) => face.status === "loaded" && face.family.startsWith(`qf-mushaf-${id}`)).length, variant)).toBe(variant === "1" ? 5 : 1);
-      }
       // A second HTTP request for a warm page would fail rather than mask a cache miss.
       await page.route(pattern, async (route) => {
         const number = Number(new URL(route.request().url()).pathname.split("/").at(-1));
@@ -2158,8 +2128,7 @@ test.describe("Mushaf preloading and responsive gestures", () => {
         await stage.dispatchEvent("pointerdown", { pointerId: 91, pointerType: "touch", isPrimary: true, clientX: 180, clientY: 300 });
         await stage.dispatchEvent("pointerup", { pointerId: 91, pointerType: "touch", isPrimary: true, clientX: 180 + dx, clientY: 300 });
         await expect(view).toHaveAttribute("data-page-number", String(number));
-        if (variant !== "image") await expect(view).toHaveAttribute("data-font-status", "ready");
-        else await expect(view).toHaveJSProperty("complete", true);
+        await expect(view).toHaveAttribute("data-font-status", "ready");
         await expect(stage.locator(".qf-mushaf-page-loading, .qf-mushaf-font-loading")).toHaveCount(0);
         expect(pageRequests.get(number)).toBe(1);
       }
@@ -2196,7 +2165,7 @@ test.describe("Mushaf preloading and responsive gestures", () => {
     await page.setViewportSize({ width: 844, height: 390 });
     const layout = page.locator(".quran-page-layout").filter({ visible: true });
     const stage = layout.locator(".mushaf-page-container");
-    const view = stage.locator(".mushaf-page-turn .mushaf-image");
+    const view = stage.locator(".mushaf-page-turn .qf-mushaf-view");
     const touch = await page.context().newCDPSession(page);
     const region = stage.locator('[data-ayah-key="6:2"]').last();
     await region.scrollIntoViewIfNeeded();
@@ -2225,23 +2194,22 @@ test.describe("Mushaf preloading and responsive gestures", () => {
 test.describe("Visible Mushaf page transitions", () => {
   test.use({ hasTouch: true });
 
-  for (const variant of ["image", "1", "5"]) {
+  for (const variant of ["1", "5"]) {
     for (const landscape of [false, true]) {
       test(`${variant} slides both sheets in ${landscape ? "landscape" : "portrait"} and accepts an interrupted reverse swipe`, async ({ page }, testInfo) => {
         await page.setViewportSize(landscape ? { width: 844, height: 390 } : { width: 390, height: 844 });
         await page.emulateMedia({ reducedMotion: "no-preference" });
         await page.addInitScript((value) => localStorage.setItem("iqro_quran_mushaf_variant_v1", value), variant);
-        const prefetched = page.waitForResponse((response) => response.url().includes(variant === "image"
-          ? "/madani-hafs/pages/129" : `/foundation/mushafs/${variant}/pages/129`));
+        const prefetched = page.waitForResponse((response) => response.url().includes(`/foundation/mushafs/${variant}/pages/129`));
         await page.goto("/ru/quran?surah=6&page=128");
         await prefetched;
         const stage = page.locator(".mushaf-page-container").filter({ visible: true });
         const current = stage.locator(".mushaf-page-turn");
         const outgoing = stage.locator(".mushaf-page-outgoing");
-        const viewSelector = variant === "image" ? ".mushaf-image" : ".qf-mushaf-view";
+        const viewSelector = ".qf-mushaf-view";
         await expect(current.locator(viewSelector)).toHaveAttribute("data-page-number", "128");
         await expect(current).toHaveCSS("animation-name", "none");
-        if (variant !== "image") {
+        {
           await expect.poll(() => page.evaluate((id) => [...document.fonts].some((font) =>
             font.status === "loaded" && font.family === (id === "1" ? "qf-mushaf-1-page-129" : "qf-mushaf-5")), variant)).toBe(true);
         }
@@ -2307,7 +2275,7 @@ test.describe("Landscape gestures through browser hit testing", () => {
     hasTouch: true,
   });
 
-  for (const variant of ["image", "5"]) {
+  for (const variant of ["5"]) {
     for (const input of ["mouse", "touch"]) {
       test(`${input} drags across ${variant} ayahs turn both ways without selecting`, async ({ page }) => {
         await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -2315,7 +2283,7 @@ test.describe("Landscape gestures through browser hit testing", () => {
         await page.goto("/ru/quran?surah=6&page=128");
         const stage = page.locator(".mushaf-page-container").filter({ visible: true });
         const current = stage.locator(".mushaf-page-turn");
-        const view = current.locator(variant === "image" ? ".mushaf-image" : ".qf-mushaf-view");
+        const view = current.locator(".qf-mushaf-view");
         await expect(view).toHaveAttribute("data-page-number", "128");
         await page.getByRole("button", { name: "Свернуть меню читалки", exact: true }).click();
         const touch = await page.context().newCDPSession(page);
@@ -2370,6 +2338,13 @@ test.describe("Landscape gestures through browser hit testing", () => {
           await expect.poll(() => stage.evaluate((element) => element.scrollTop)).toBeGreaterThan(scrollBefore);
           await expect(view).toHaveAttribute("data-page-number", "128");
           await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+          // A tap during inertial scrolling stops the scroll instead of selecting.
+          // Wait for the viewport to settle before testing a fresh ayah tap.
+          await expect.poll(async () => {
+            const top = await stage.evaluate((element) => element.scrollTop);
+            await page.waitForTimeout(150);
+            return stage.evaluate((element, previous) => element.scrollTop === previous, top);
+          }).toBe(true);
         }
         const point = await startOnAyah();
         if (input === "mouse") await page.mouse.click(point.x, point.y);
@@ -2383,7 +2358,7 @@ test.describe("Landscape gestures through browser hit testing", () => {
   test("touch completion survives a cancelled pointer stream and suppresses compatibility clicks", async ({ page }) => {
     await page.goto("/ru/quran?surah=6&page=128");
     const stage = page.locator(".mushaf-page-container").filter({ visible: true });
-    const view = stage.locator(".mushaf-page-turn .mushaf-image");
+    const view = stage.locator(".mushaf-page-turn .qf-mushaf-view");
     await expect(view).toHaveAttribute("data-page-number", "128");
     const ayah = stage.locator('.mushaf-page-turn [data-ayah-key="6:2"]').last();
     await ayah.evaluate((target) => {
@@ -2418,4 +2393,14 @@ test.describe("Landscape gestures through browser hit testing", () => {
     await ayah.tap();
     await expect(ayah).toHaveClass(/is-selected/);
   });
+});
+
+test("explicit page jump cancels the pending verse after changing layout", async ({ page }) => {
+  await page.goto("/ru/quran?surah=6&page=128");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="5"]')).toBeVisible();
+  await page.locator('[data-ayah-key="6:2"]').last().click();
+  await page.locator("#mushaf-variant").selectOption("1");
+  await page.locator("#mushaf-page-jump").fill("1");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="1"]')).toHaveAttribute("data-page-number", "1");
+  await expect(page.locator("#mushaf-page-jump")).toHaveValue("1");
 });

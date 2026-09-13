@@ -98,7 +98,8 @@ class TypographyTests(unittest.TestCase):
 class KfgqpcTypographyTests(unittest.TestCase):
     def test_content_build_rejects_typography_regressions(self):
         root = Path(os.environ["IQRO_KFGQPC_SOURCE_DIR"])
-        data, lock = k.load_source(root)
+        source_lock = os.environ.get("IQRO_KFGQPC_SOURCE_LOCK")
+        data, lock = k.load_source(root, Path(source_lock) if source_lock else None)
         font = p.SourceFont(root / k.FONT, "KFGQPC HAFS Uthmanic Script")
         try:
             page = k.compose(data, data["pages"][2], font, k.audit(data), lock)
@@ -113,7 +114,8 @@ class KfgqpcTypographyTests(unittest.TestCase):
 
     def test_source_pages_have_stable_baselines_and_bounded_spaces(self):
         root = Path(os.environ["IQRO_KFGQPC_SOURCE_DIR"])
-        data, lock = k.load_source(root)
+        source_lock = os.environ.get("IQRO_KFGQPC_SOURCE_LOCK")
+        data, lock = k.load_source(root, Path(source_lock) if source_lock else None)
         refs = k.audit(data)
         font = p.SourceFont(root / k.FONT, "KFGQPC HAFS Uthmanic Script")
         pages = range(1, 605) if os.environ.get("IQRO_MUSHAF_TYPOGRAPHY_FULL") else (1, 2, 3, 50, 77, 255, 604)

@@ -6,6 +6,46 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/mushaf_offline_repository.dart';
 
 void main() {
+  test(
+    'local manifest keeps its checksum across emulator and computer origins',
+    () {
+      final fixture = _manifestFixture();
+      final pages = (fixture['pages']! as List).cast<Map<String, Object?>>();
+      for (final page in pages) {
+        final asset = page['asset']! as Map<String, Object?>;
+        asset['url'] = '/media/quran/page-${page['number']}.webp';
+      }
+      final provisional = OfflineMushafManifest(
+        packageId: fixture['package_id']! as String,
+        version: fixture['version']! as String,
+        packageChecksum: '',
+        sourceChecksum: 'a' * 64,
+        width: 1024,
+        totalBytes: fixture['total_bytes']! as int,
+        pages: pages.map(_offlinePageFromFixture).toList(),
+        raw: fixture,
+      );
+      fixture['package_checksum_sha256'] = provisional.computedChecksum;
+      final emulator = OfflineMushafManifest.fromJson(
+        fixture,
+        localApiBase: Uri.parse('http://10.0.2.2:8000/api/v1'),
+      );
+      final computer = OfflineMushafManifest.fromJson(
+        fixture,
+        localApiBase: Uri.parse('http://127.0.0.1:8000/api/v1'),
+      );
+      expect(
+        emulator.pages.first.url.toString(),
+        'http://10.0.2.2:8000/media/quran/page-1.webp',
+      );
+      expect(computer.pages.first.url.host, '127.0.0.1');
+      expect(emulator.computedChecksum, computer.computedChecksum);
+      expect(
+        () => OfflineMushafManifest.fromJson(fixture),
+        throwsFormatException,
+      );
+    },
+  );
   test('native offline package is bound to its own visual edition', () {
     final fixture = _manifestFixture();
     fixture['mushaf'] = {'edition_code': 'qcf-v2-hafs'};
@@ -50,7 +90,7 @@ void main() {
 
     final manifest = OfflineMushafManifest.fromJson(fixture);
 
-    expect(manifest.packageId, 'quran-edition-madani-hafs-1.0.0-w1024');
+    expect(manifest.packageId, 'mushaf-rendition-kfgqpc-hafs-1.0.0-w1024');
     expect(manifest.pages.map((page) => page.number), <int>[1, 2]);
     expect(manifest.computedChecksum, manifest.packageChecksum);
 
@@ -114,7 +154,7 @@ void main() {
 Map<String, Object?> _manifestFixture() {
   final pages = <Map<String, Object?>>[_pageFixture(1), _pageFixture(2)];
   final provisional = OfflineMushafManifest(
-    packageId: 'quran-edition-madani-hafs-1.0.0-w1024',
+    packageId: 'mushaf-rendition-kfgqpc-hafs-1.0.0-w1024',
     version: '1.0.0',
     packageChecksum: '0' * 64,
     sourceChecksum: 'a' * 64,
@@ -138,7 +178,7 @@ Map<String, Object?> _manifestFixture() {
       'checksum_sha256': provisional.sourceChecksum,
     },
     'rights': const <String, Object?>{'offline_download': true},
-    'mushaf': const <String, Object?>{'edition_code': 'madani-hafs'},
+    'mushaf': const <String, Object?>{'edition_code': 'kfgqpc-hafs'},
     'width': provisional.width,
     'page_count': pages.length,
     'total_bytes': provisional.totalBytes,

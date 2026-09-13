@@ -7,10 +7,8 @@ from rest_framework import serializers
 
 from quran_backend.modules.quran.models import (
     Ayah,
-    AyahPageRegion,
     Hizb,
     Juz,
-    MushafPage,
     QuranEdition,
     QuranEditionVersion,
     QuranFoundationMushaf,
@@ -24,6 +22,8 @@ from quran_backend.modules.quran.quran_foundation_native import (
 )
 from quran_backend.modules.quran.quran_foundation_rendering import (
     quran_foundation_rendering,
+    renderable_words,
+    verse_keys_from_mapping,
 )
 
 
@@ -106,7 +106,7 @@ class AyahSerializer(serializers.ModelSerializer[Ayah]):
 
     def get_pages(self, obj: Ayah) -> list[int]:
         return list(
-            obj.page_regions.order_by("page__number")
+            obj.page_mappings.order_by("page__number")
             .values_list("page__number", flat=True)
             .distinct()
         )
@@ -120,43 +120,30 @@ class AyahReferenceSerializer(serializers.ModelSerializer[Ayah]):
         fields = ("id", "surah", "number")
 
 
-class AyahPageRegionSerializer(serializers.ModelSerializer[AyahPageRegion]):
-    ayah = AyahReferenceSerializer(read_only=True)
+class MushafRegionSerializer(serializers.Serializer[Any]):
+    id = serializers.CharField()
+    ayah = AyahReferenceSerializer()
+    reading_order = serializers.IntegerField()
+    polygon = serializers.ListField(child=serializers.ListField(child=serializers.FloatField()))
+    x = serializers.CharField()
+    y = serializers.CharField()
+    width = serializers.CharField()
+    height = serializers.CharField()
 
-    class Meta:
-        model = AyahPageRegion
-        fields = ("id", "ayah", "reading_order", "polygon", "x", "y", "width", "height")
 
+class MushafPageSerializer(serializers.Serializer[Any]):
+    """Visual rendition contract, independent of legacy canonical image fields."""
 
-class MushafPageSerializer(serializers.ModelSerializer[MushafPage]):
-    edition_code = serializers.CharField(source="edition_version.edition.code", read_only=True)
-    content_version = serializers.CharField(source="edition_version.version", read_only=True)
-    assets = serializers.SerializerMethodField()
-    regions = AyahPageRegionSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = MushafPage
-        fields = (
-            "id",
-            "edition_code",
-            "content_version",
-            "number",
-            "image_width",
-            "image_height",
-            "checksum_sha256",
-            "assets",
-            "regions",
-        )
-
-    def get_assets(self, obj: MushafPage) -> list[dict[str, Any]]:
-        base_url = settings.PUBLIC_MEDIA_BASE_URL.rstrip("/")
-        assets: list[dict[str, Any]] = []
-        for variant in obj.asset_variants:
-            public_variant = dict(variant)
-            public_variant["url"] = f"{base_url}/{str(variant['path']).lstrip('/')}"
-            public_variant.pop("path", None)
-            assets.append(public_variant)
-        return assets
+    id = serializers.UUIDField()
+    edition_code = serializers.CharField()
+    canonical_edition_code = serializers.CharField()
+    content_version = serializers.CharField()
+    number = serializers.IntegerField()
+    image_width = serializers.IntegerField()
+    image_height = serializers.IntegerField()
+    checksum_sha256 = serializers.CharField()
+    assets = serializers.ListField(child=serializers.DictField())
+    regions = MushafRegionSerializer(many=True)
 
 
 class QuranFoundationMushafSerializer(serializers.ModelSerializer[QuranFoundationMushaf]):
@@ -205,6 +192,13 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
     rendering = serializers.SerializerMethodField()
     native_rendering = serializers.SerializerMethodField()
     native_assets = serializers.SerializerMethodField()
+    words = serializers.SerializerMethodField()
+    verse_keys = serializers.SerializerMethodField()
+    pages_count = serializers.IntegerField(source="mushaf.pages_count", read_only=True)
+    lines_per_page = serializers.IntegerField(source="mushaf.lines_per_page", read_only=True)
+    source_checksum_sha256 = serializers.CharField(
+        source="mushaf.source_checksum_sha256", read_only=True
+    )
 
     class Meta:
         model = QuranFoundationMushafPage
@@ -216,6 +210,10 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "native_rendering",
             "native_assets",
             "page_number",
+            "pages_count",
+            "lines_per_page",
+            "source_checksum_sha256",
+            "verse_keys",
             "verse_mapping",
             "first_verse_id",
             "last_verse_id",
@@ -224,6 +222,12 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "verses_count",
             "words",
         )
+
+    def get_words(self, obj: QuranFoundationMushafPage) -> list[dict[str, Any]]:
+        return renderable_words(obj.mushaf.source_id, obj.words, obj.verse_mapping)
+
+    def get_verse_keys(self, obj: QuranFoundationMushafPage) -> list[str]:
+        return verse_keys_from_mapping(obj.verse_mapping)
 
     def get_rendering(self, obj: QuranFoundationMushafPage) -> dict[str, Any]:
         return quran_foundation_rendering(

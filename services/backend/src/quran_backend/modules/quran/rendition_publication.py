@@ -15,6 +15,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from quran_backend.modules.core.local_media import LocalMediaUploader
 from quran_backend.modules.core.object_storage import (
     ImmutableObjectSpec,
     ObjectUploader,
@@ -22,7 +23,7 @@ from quran_backend.modules.core.object_storage import (
 )
 from quran_backend.modules.quran.models import (
     Ayah,
-    AyahPageRegion,
+    AyahPageMapping,
     MushafRendition,
     MushafRenditionPage,
     MushafRenditionRelease,
@@ -80,6 +81,21 @@ def source_identity(manifest: dict[str, Any]) -> tuple[str, str, dict[str, Any]]
 
 
 def validate_source(manifest: dict[str, Any]) -> bool:
+    if manifest.get("publication_scope") == "local":
+        source = manifest.get("source", {})
+        return bool(
+            settings.DEBUG
+            and getattr(settings, "LOCAL_DEVELOPMENT", False)
+            and manifest.get("edition") == "kfgqpc-hafs"
+            and isinstance(source, dict)
+            and source.get("kind") == "quran-foundation"
+            and source.get("source_id") == 5
+            and source.get("font_sha256") == KFGQPC_FONT_SHA
+            and all(
+                re.fullmatch(r"[a-f0-9]{64}", str(source.get(key, "")))
+                for key in ("source_checksum_sha256", "snapshot_sha256")
+            )
+        )
     if manifest.get("edition") == "qcf-v2-hafs":
         return manifest.get("source_commit") == SOURCE_COMMIT
     source = manifest.get("source", {})
@@ -192,7 +208,7 @@ class PreparedRendition:
 def load_manifest(manifest_path: Path) -> tuple[dict[str, Any], str]:
     require(
         getattr(settings, "MUSHAF_STAGING_PREVIEWS", False),
-        "This command only enables staging previews; production publication is forbidden",
+        "This command enables local/preview pages only; production publication is forbidden",
     )
     require(not manifest_path.is_symlink() and manifest_path.is_file(), "Missing bundle manifest")
     root = manifest_path.parent.resolve()
@@ -207,7 +223,7 @@ def load_manifest(manifest_path: Path) -> tuple[dict[str, Any], str]:
     require(
         manifest.get("schema_version") == 1
         and manifest.get("status") == "prepared"
-        and manifest.get("publication_scope") == "staging"
+        and manifest.get("publication_scope") in {"staging", "local"}
         and validate_source(manifest)
         and manifest.get("canonical_edition") == "madani-hafs"
         and manifest.get("page_count") == 604
@@ -244,7 +260,7 @@ def prepare_rendition(manifest_path: Path) -> PreparedRendition:
     }
     require(len(references) == 6236, "Canonical Hafs corpus is incomplete")
     expected_mapping: dict[int, set[tuple[int, int]]] = {}
-    for page, surah, ayah in AyahPageRegion.objects.filter(
+    for page, surah, ayah in AyahPageMapping.objects.filter(
         page__edition_version=canonical
     ).values_list(
         "page__number",
@@ -377,7 +393,11 @@ def publish_rendition(
     manifest, checksum, canonical = bundle.manifest, bundle.checksum, bundle.canonical
     version = manifest["version"]
     prepared = bundle.pages
-    actual_uploader = uploader or configured_object_uploader()
+    actual_uploader = uploader or (
+        LocalMediaUploader()
+        if getattr(settings, "LOCAL_DEVELOPMENT", False)
+        else configured_object_uploader()
+    )
     # No public pointers until every immutable object has been uploaded/verified.
     upload_files(bundle.uploads, actual_uploader, workers=upload_workers)
     with transaction.atomic():

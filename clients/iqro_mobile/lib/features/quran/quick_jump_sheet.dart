@@ -29,6 +29,7 @@ class QuranQuickJumpSheet extends StatefulWidget {
     this.initialSurah = 1,
     this.initialAyah = 1,
     this.initialPage = 1,
+    this.pagesCount = 604,
     super.key,
   });
 
@@ -40,6 +41,7 @@ class QuranQuickJumpSheet extends StatefulWidget {
   final int initialSurah;
   final int initialAyah;
   final int initialPage;
+  final int pagesCount;
 
   @override
   State<QuranQuickJumpSheet> createState() => _QuranQuickJumpSheetState();
@@ -51,15 +53,20 @@ class _QuranQuickJumpSheetState extends State<QuranQuickJumpSheet> {
       : QuranQuickJumpMode.page;
   late var _surah = widget.initialSurah.clamp(1, 114);
   late var _ayah = widget.initialAyah.clamp(1, 286);
-  late var _number = widget.initialPage.clamp(1, 604);
+  late var _number = widget.initialPage.clamp(1, widget.pagesCount);
   late var _juz = _initialDivision(widget.juz);
   late var _hizb = _initialDivision(widget.hizb);
   late var _rubElHizb = _initialDivision(widget.rubElHizb);
 
   int _initialDivision(List<QuranDivision> divisions) {
     for (final division in divisions) {
-      if (widget.initialPage >= division.startPage &&
-          widget.initialPage <= division.endPage) {
+      if (division.containsAyah(
+        QuranAyahReference(
+          id: '',
+          surah: widget.initialSurah,
+          ayah: widget.initialAyah,
+        ),
+      )) {
         return division.number;
       }
     }
@@ -267,7 +274,7 @@ class _QuranQuickJumpSheetState extends State<QuranQuickJumpSheet> {
         mode: _mode,
         surah: 1,
         ayah: 1,
-        page: _number.clamp(1, 604),
+        page: _number.clamp(1, widget.pagesCount),
       );
     }
     if (_mode != QuranQuickJumpMode.ayah) {

@@ -24,6 +24,18 @@ permissions:
   contents: read
 
 jobs:
+  mushaf-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned local renderer
+        run: docker build -t iqro-mushaf-tools:ci ops/mushaf-glyph-pilot
+      - name: Renderer contracts and lossless raster verification
+        run: |
+          docker run iqro-mushaf-tools:ci python -m unittest test_prepare test_typography test_build_full test_kfgqpc
+          docker run iqro-mushaf-tools:ci node --test raster.test.cjs
+
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -60,6 +72,8 @@ jobs:
       QURAN_TEST_DATABASE: postgresql
     steps:
       - uses: actions/checkout@v4
+      - name: Install recovery encryption tool
+        run: sudo apt-get update && sudo apt-get install -y age
       - name: Operations tooling
         run: |
           sh -n ops/postgres/backup.sh
@@ -69,7 +83,12 @@ jobs:
           sh -n ops/systemd/install.sh
           python -m ops.staging.test_config
           python -m unittest \
+            ops.test_dev \
             ops.postgres.test_offsite \
+            ops.postgres.test_backup \
+            ops.recovery.test_snapshot \
+            ops.recovery.test_retention \
+            ops.monitoring.test_backup_status \
             ops.monitoring.test_heartbeat \
             ops.systemd.test_units \
             ops.load.test_smoke \

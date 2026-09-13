@@ -111,7 +111,7 @@ List<Rect> findMushafCrops(
 }
 
 /// Hit-map rectangles are not glyph bounds. Only a genuinely blank raster
-/// row may separate scan bands; even a single dark diacritic prevents a cut.
+/// row may separate raster bands; even a single dark diacritic prevents a cut.
 /// Runs outside the UI isolate. The result retains no pixel buffer.
 List<double> verifyMushafWhitespace(MushafWhitespaceRequest request) =>
     findMushafWhitespace(

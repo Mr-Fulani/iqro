@@ -9,16 +9,6 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get mushafBookPreview => 'التجويد · معاينة صفحة المصحف';
-
-  @override
-  String get mushafBookPreviewHint => 'صور EasyQuran الأصلية · الصفحات 51–53';
-
-  @override
-  String get mushafBookPreviewInfo =>
-      'هذه معاينة بصرية مستقلة من EasyQuran وليست QCF V4. تُعرض ثلاث صفحات كاملة من QuranHub/quran-pages-images دون إعادة تنسيق النص أو تغيير الألوان أو قص الإطار المطبوع.\n\nدقة المصدر 645 × 1000 بكسل، وليست عالية الدقة. وضع ملاءمة العرض يكبّر الصفحة كاملة مع الحفاظ على تناسبها، ويمكن تمريرها عموديًا إذا تجاوزت ارتفاع الشاشة. استخدم إصبعين للتكبير، وانقر مرتين لإعادة الحجم. نقرة واحدة تُظهر أدوات التحكم أو تخفيها.\n\nتحديد الآيات والصوت غير متاحين في هذه المعاينة؛ فهما يحتاجان إلى خريطة هذه الطبعة تحديدًا. لا تتغير نسخة المصحف المختارة أو موضع القراءة أو الحزم المحمّلة.';
-
-  @override
   String get mushafFitWidth => 'ملاءمة العرض';
 
   @override
@@ -283,10 +273,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get chooseMushaf => 'اختر المصحف';
 
   @override
-  String get mushafScanName => 'مصحف المدينة';
-
-  @override
-  String get mushafScanDescription => 'صفحات أصلية · حفص';
+  String get mushafCatalogEmpty => 'لم يتم تحميل المصاحف بعد';
 
   @override
   String get mushafPreviewDescription => 'حفص · تنسيق IQRO · نسخة تجريبية';
@@ -1287,4 +1274,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'اهتزاز قصير عند تغيير صفحة المصحف. يجب أيضاً تفعيل اهتزاز اللمس في إعدادات أندرويد.';
+
+  @override
+  String get mushafPageCaching =>
+      'تُحمّل الصفحات أثناء القراءة. تُحفظ الصفحات المفتوحة وخطوطها على الجهاز لتبقى متاحة دون اتصال.';
 }

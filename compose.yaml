@@ -10,6 +10,8 @@ x-backend-environment: &backend-environment
   REDIS_URL: redis://redis:6379/0
 
 x-backend-service: &backend-service
+  image: "${COMPOSE_PROJECT_NAME:-quran}-backend:local"
+  user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
   build:
     context: ./services/backend
   env_file:
@@ -63,10 +65,11 @@ services:
     <<: *backend-service
     command: ["uvicorn", "quran_backend.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
-      - "8000:8000"
+      - "${LOCAL_API_PORT:-8000}:8000"
     volumes:
       - ./services/backend/src:/app/src
       - ./services/backend/media:/app/media
+      - ./.dev:/app/.dev:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=2)"]
       interval: 10s
@@ -81,7 +84,7 @@ services:
 
   worker:
     <<: *backend-service
-    command: ["celery", "-A", "quran_backend", "worker", "--loglevel=INFO"]
+    command: ["celery", "-A", "quran_backend", "worker", "--loglevel=INFO", "--concurrency=2"]
     volumes:
       - ./services/backend/src:/app/src
     depends_on:
@@ -109,8 +112,9 @@ services:
     environment:
       BACKEND_INTERNAL_URL: http://backend:8000
       NEXT_PUBLIC_API_BASE_URL: ""
+      LOCAL_WEB_ALLOWED_ORIGINS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,10.0.2.2}
     ports:
-      - "3000:3000"
+      - "${LOCAL_WEB_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -128,13 +132,21 @@ services:
       - /app/node_modules
       - /app/.next
 
+  mushaf-tools:
+    profiles: ["tools"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    build:
+      context: ./ops/mushaf-glyph-pilot
+    volumes:
+      - ./.dev/mushaf:/data
+
   db-backup:
     image: postgres:17-alpine
     profiles: ["ops"]
     environment:
       <<: *postgres-ops-environment
       BACKUP_DIR: /backups
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-0}
       BACKUP_MIN_FREE_MB: ${BACKUP_MIN_FREE_MB:-1024}
     entrypoint: ["/ops/backup.sh"]
     volumes:

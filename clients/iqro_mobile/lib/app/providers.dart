@@ -384,35 +384,60 @@ final cachedMushafRenditionsProvider =
     FutureProvider<List<NativeMushafEdition>>((ref) {
       return ref.watch(quranRepositoryProvider).cachedMushafRenditions();
     });
+final availableMushafRenditionsProvider = Provider<List<NativeMushafEdition>>((
+  ref,
+) {
+  final currentCatalog = ref.watch(mushafRenditionsProvider);
+  final catalog = currentCatalog.hasValue
+      ? currentCatalog.valueOrNull!
+      : ref.watch(cachedMushafRenditionsProvider).valueOrNull ??
+            const <NativeMushafEdition>[];
+  final isProduction = ref.watch(appConfigProvider).isProduction;
+  return catalog
+      .where((edition) => edition.availableIn(isProduction: isProduction))
+      .toList();
+});
 final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   final preference = ref.watch(
     appPreferencesProvider.select((p) => p.mushafVariant),
   );
   final identity = MushafIdentity.fromPreference(preference);
-  if (identity.isCanonical) return identity;
-  // Only a published production catalog can authorize a non-default edition.
-  // The repository persists that catalog for a cold offline restart. A saved
-  // staging preference alone must never authorize a preview in production.
-  if (ref.watch(appConfigProvider).isProduction) {
-    final currentCatalog = ref.watch(mushafRenditionsProvider);
-    final catalog = currentCatalog.hasValue
-        ? currentCatalog.valueOrNull!
-        : ref.watch(cachedMushafRenditionsProvider).valueOrNull ??
-              const <NativeMushafEdition>[];
-    return productionMushafIdentity(identity, catalog);
-  }
-  return identity;
+  final catalog = ref.watch(availableMushafRenditionsProvider);
+  return availableMushafIdentity(
+    identity,
+    catalog,
+    isProduction: ref.watch(appConfigProvider).isProduction,
+  );
 });
 final selectedMushafRepositoryProvider = Provider<QuranRepository>((ref) {
   final identity = ref.watch(selectedMushafIdentityProvider);
   final repository = ref.watch(quranRepositoryProvider);
-  return identity.isCanonical ? repository : repository.forMushaf(identity);
+  final version =
+      ref
+          .watch(availableMushafRenditionsProvider)
+          .where((edition) => edition.identity == identity)
+          .firstOrNull
+          ?.sourceChecksum ??
+      '';
+  final selected = repository.forMushaf(identity);
+  return identity.isFoundation
+      ? selected.withFoundationVersion(version)
+      : selected;
+});
+final selectedMushafPageCountProvider = Provider<int>((ref) {
+  final identity = ref.watch(selectedMushafIdentityProvider);
+  return ref
+          .watch(availableMushafRenditionsProvider)
+          .where((edition) => edition.identity == identity)
+          .firstOrNull
+          ?.pagesCount ??
+      604;
 });
 final selectedMushafOfflineRepositoryProvider =
     Provider<MushafOfflineRepository>((ref) {
       final identity = ref.watch(selectedMushafIdentityProvider);
       final repository = ref.watch(mushafOfflineRepositoryProvider);
-      return identity.isCanonical ? repository : repository.forMushaf(identity);
+      return repository.forMushaf(identity);
     });
 final mushafPageProvider = FutureProvider.autoDispose
     .family<MushafPageData, int>((ref, page) {
@@ -484,7 +509,7 @@ final mushafDownloadsByEditionProvider =
     >((ref, identity) {
       final repository = ref.watch(mushafOfflineRepositoryProvider);
       final controller = MushafDownloadController(
-        identity.isCanonical ? repository : repository.forMushaf(identity),
+        repository.forMushaf(identity),
       );
       controller.refInvalidateMushafPage = (page) {
         if (ref.read(selectedMushafIdentityProvider) == identity) {

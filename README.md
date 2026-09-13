@@ -18,7 +18,7 @@
 - Telegram Mini App будет использовать общий API и типизированные web/domain пакеты, но
   отдельные Telegram auth/deployment adapters.
 
-Текущий срез содержит публичный каталог Корана, 604 интерактивные страницы Мусхафа,
+Текущий срез содержит публичный каталог Корана, 13 интерактивных макетов Мусхафа Quran.Foundation,
 каталог чтецов, version-pinned аудиотреки и таймкоды аятов, автоматическое обновление
 Quran.Foundation, безопасную гостевую авторизацию, позицию чтения, закладки, offline-sync,
 время намаза, заучивание, полный локализованный каталог «Хисн аль-Муслим» из 267 карточек
@@ -26,26 +26,56 @@ Quran.Foundation, безопасную гостевую авторизацию, 
 На web доступны воспроизведение целой суры и поаятное воспроизведение непосредственно в
 Мусхафе.
 
-## Быстрый старт Flutter-клиента
+## Первый запуск разработчика
 
-Инструкция по запуску на Android, сборке тестового APK и архитектуре находится в
-[`clients/iqro_mobile/README.md`](clients/iqro_mobile/README.md).
+Каждый разработчик запускает собственные backend, PostgreSQL и Redis. Общего тестового
+сервера нет. Миграции создают структуру БД и встроенные каталоги ду’а/намаза;
+Коран, страницы, переводы, тафсиры и аудио автоматически подготавливает команда запуска.
 
-## Быстрый старт backend
-
-Требуются Docker Compose либо Python 3.14, PostgreSQL и Redis.
+Нужны Git, Python 3 для управляющего скрипта и запущенный Docker с Compose v2.
+Python 3.14, Node.js и инструменты формирования страниц устанавливаются внутри образов.
+Для мобильного клиента дополнительно нужны Flutter и Android SDK либо Xcode.
+Для iOS нужны также Ruby 3.2+ и Bundler 4.0.3; CocoaPods закреплён в `Gemfile.lock`.
 
 ```bash
-cp services/backend/.env.example services/backend/.env
-docker compose -f services/backend/compose.yaml up --build
+git clone <URL-репозитория>
+cd quran
+make dev-init
+# Заполните QF_CLIENT_ID, QF_CLIENT_SECRET и QF_ENV в services/backend/.env
+make up
 ```
 
-После запуска:
+Открыть сайт: http://localhost:3000. API: http://localhost:8000/api/v1,
+Swagger: http://localhost:8000/api/docs. Изменения исходников подхватываются автоматически.
 
-- liveness: `http://localhost:8000/api/v1/health/live`;
-- readiness: `http://localhost:8000/api/v1/health/ready`;
-- OpenAPI: `http://localhost:8000/api/schema`;
-- Swagger UI: `http://localhost:8000/api/docs`.
+`make up` автоматически загружает каталог ду’а из репозитория и все 13 макетов Quran.Foundation
+(7 752 страницы) для web и Flutter, проверяет закреплённый корпус Корана.
+Оба клиента отображают слова официальными шрифтами или изображениями слов источника;
+генерация мобильных WebP и чужая папка `media/` для запуска не нужны.
+Все переводы и тафсиры, перечисленные в `.env`, а также потоковое аудио одного чтеца
+со всеми 114 сурами и таймкодами загружаются автоматически.
+Повторный запуск проверяет БД/медиа и загружает только недостающее; готовые данные
+читаются из локального API. При первом открытии страницы клиенту нужен доступ к CDN
+шрифтов/изображений; Flutter сохраняет открытые страницы и ресурсы для повторного
+чтения без сети. После ошибки достаточно повторить `make up`.
+Ключи API остаются только в backend; файла `.env` самого по себе недостаточно.
+
+```bash
+# Мобильное приложение (сначала автоматически подготовит backend и данные):
+make mobile-run
+# Android Emulator: API выбирается автоматически как http://10.0.2.2:8000
+# iOS Simulator: http://127.0.0.1:8000; использует закреплённый CocoaPods:
+make mobile-ios-run
+
+# Для web достаточно той же команды; набор данных общий для обоих клиентов:
+make up
+```
+
+Список макетов и устройство отображения: [Мусхафы Quran.Foundation](docs/quran-foundation-mushafs.md).
+Подробности, установка инструментов, физический телефон, аудио и устранение ошибок:
+[локальная разработка](docs/local-development.md).
+Работа с ветками, миграциями и проверками: [CONTRIBUTING.md](CONTRIBUTING.md).
+Архитектура мобильного клиента: [mobile README](clients/iqro_mobile/README.md).
 
 Production-наблюдаемость, резервные копии PostgreSQL, restore drill, безопасный нагрузочный
 smoke и staged read-only capacity harness описаны в
@@ -54,7 +84,7 @@ Production Compose без hot reload и bind-mount исходников опис
 [руководстве по production-запуску](docs/production.md).
 Текущее состояние offsite backup, внешнего heartbeat, GitHub CI и оставшиеся внешние gates
 зафиксированы в [release hardening record](docs/release/release-hardening-2026-08-29.md).
-Создание первой публичной тестовой среды от пустого VPS до DNS/TLS/R2 описано в
+Архивный регламент создания отдельной тестовой среды от VPS до DNS/TLS/R2 описан в
 [пошаговом staging runbook](docs/staging.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
 [P0/MVP gap audit](docs/mvp-gap-audit.md).
@@ -67,7 +97,7 @@ Production Compose без hot reload и bind-mount исходников опис
 ## Полный локальный стек
 
 ```bash
-docker compose up --build
+make dev-up
 ```
 
 Web доступен на `http://localhost:3000`. Корневой Compose использует development-target

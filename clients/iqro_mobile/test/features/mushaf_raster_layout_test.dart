@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 
 void main() {
   test('portrait preserves the complete page, spacing and hit geometry', () {
     final page = _page(122);
-    final layout = MushafScanLayout.page(
+    final layout = MushafRasterLayout.page(
       page: page,
       size: const Size(360, 700),
       portrait: true,
@@ -40,7 +40,7 @@ void main() {
 
   test('ornamental pages and landscape stay intact', () {
     expect(
-      MushafScanLayout.page(
+      MushafRasterLayout.page(
         page: _page(1),
         size: const Size(360, 700),
         portrait: true,
@@ -48,7 +48,7 @@ void main() {
       hasLength(1),
     );
     expect(
-      MushafScanLayout.page(
+      MushafRasterLayout.page(
         page: _page(122),
         size: const Size(800, 1226.67),
         portrait: false,
@@ -61,7 +61,7 @@ void main() {
     final layouts = [
       for (final number in [1, 2, 3, 50, 604])
         for (final x in [0.0, .024, .025, .05])
-          MushafScanLayout.page(
+          MushafRasterLayout.page(
             page: _page(number, x: x),
             size: const Size(360, 700),
             portrait: true,
@@ -80,7 +80,7 @@ void main() {
         Size(800, 1000),
       ]) {
         final page = _page(122, edition: edition);
-        final layout = MushafScanLayout.page(
+        final layout = MushafRasterLayout.page(
           page: page,
           size: size,
           portrait: true,
@@ -102,12 +102,12 @@ void main() {
 
   test('extra screen height moves the page, never separates its lines', () {
     final page = _page(50);
-    final short = MushafScanLayout.page(
+    final short = MushafRasterLayout.page(
       page: page,
       size: const Size(360, 700),
       portrait: true,
     );
-    final tall = MushafScanLayout.page(
+    final tall = MushafRasterLayout.page(
       page: page,
       size: const Size(360, 900),
       portrait: true,
@@ -129,7 +129,7 @@ void main() {
   test(
     'landscape fills width and preserves the complete page for scrolling',
     () {
-      final layout = MushafScanLayout.page(
+      final layout = MushafRasterLayout.page(
         page: _page(122),
         size: const Size(800, 400),
         portrait: false,
@@ -144,7 +144,7 @@ void main() {
   );
 
   test('highlight polygon uses the same page transform as ink', () {
-    final layout = MushafScanLayout.page(
+    final layout = MushafRasterLayout.page(
       page: _page(3),
       size: const Size(360, 900),
       portrait: true,

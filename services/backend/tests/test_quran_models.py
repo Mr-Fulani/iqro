@@ -2,11 +2,23 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from django.core.exceptions import ValidationError
 
-from quran_backend.modules.quran.models import AyahPageRegion, MushafPage
+from quran_backend.modules.quran.models import AyahPageMapping, AyahPageRegion, MushafPage
+
+
+@pytest.mark.django_db
+def test_logical_page_mapping_cannot_cross_canonical_versions(
+    quran_dataset: dict[str, Any],
+) -> None:
+    mapping = AyahPageMapping(page=quran_dataset["page"], ayah=quran_dataset["first_ayah"])
+    mapping.clean()
+    mapping.page.edition_version_id = uuid4()
+    with pytest.raises(ValidationError, match="same Quran edition"):
+        mapping.clean()
 
 
 @pytest.mark.django_db

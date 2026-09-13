@@ -40,13 +40,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         : ref.watch(readingPositionProvider(accountScopeKey)).valueOrNull;
     final locale = Localizations.localeOf(context).languageCode;
     final identity = ref.watch(selectedMushafIdentityProvider);
-    final rendition = identity.isCanonical
-        ? null
-        : ref
-              .watch(mushafRenditionsProvider)
-              .valueOrNull
-              ?.where((item) => item.identity == identity)
-              .firstOrNull;
+    final rendition = ref
+        .watch(availableMushafRenditionsProvider)
+        .where((item) => item.identity == identity)
+        .firstOrNull;
     final positionSurah = catalog.valueOrNull?.surahs
         .where((surah) => surah.number == (position?.surah ?? 1))
         .firstOrNull;
@@ -113,17 +110,13 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              identity.isCanonical
-                                  ? context.l10n.mushafScanName
-                                  : rendition?.nameFor(locale) ??
-                                        'QCF V2 · IQRO',
+                              rendition?.nameFor(locale) ??
+                                  context.l10n.mushafCatalogEmpty,
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              identity.isCanonical
-                                  ? context.l10n.mushafScanDescription
-                                  : context.l10n.mushafPreviewDescription,
+                              context.l10n.mushafPublishedDescription,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -313,12 +306,6 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                RadioListTile<String>(
-                  value: defaultMushafVariant,
-                  title: Text(context.l10n.mushafScanName),
-                  subtitle: Text(context.l10n.mushafScanDescription),
-                  secondary: const Icon(Icons.image_outlined),
-                ),
                 ...catalog.when(
                   loading: () => <Widget>[
                     const Padding(
@@ -338,6 +325,14 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                     ),
                   ],
                   data: (editions) => <Widget>[
+                    if (!editions.any(
+                      (edition) => edition.availableIn(
+                        isProduction: sheetRef
+                            .read(appConfigProvider)
+                            .isProduction,
+                      ),
+                    ))
+                      ListTile(title: Text(context.l10n.mushafCatalogEmpty)),
                     for (final edition in editions)
                       if (edition.availableIn(
                         isProduction: sheetRef
@@ -392,6 +387,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         isScrollControlled: true,
         useSafeArea: true,
         builder: (context) => QuranQuickJumpSheet(
+          pagesCount: ref.read(selectedMushafPageCountProvider),
           surahs: catalog?.surahs ?? const <Surah>[],
           juz: juz ?? const <QuranDivision>[],
           hizb: hizb ?? const <QuranDivision>[],
@@ -415,7 +411,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       }
       if (!context.mounted) return;
       context.push(
-        '/mushaf?page=$page&surah=${selection.surah}&ayah=${selection.ayah}',
+        '/mushaf?page=$page&surah=${selection.surah}&ayah=${selection.ayah}${selection.mode == QuranQuickJumpMode.page ? '&layout=physical' : ''}',
       );
     } on Object {
       if (!context.mounted) return;
@@ -468,6 +464,18 @@ class _OfflineMushafCardState extends ConsumerState<OfflineMushafCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(selectedMushafIdentityProvider).isFoundation) {
+      return IqroCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.offline_pin_outlined),
+            const SizedBox(width: 12),
+            Expanded(child: Text(context.l10n.mushafPageCaching)),
+          ],
+        ),
+      );
+    }
     final state = ref.watch(mushafDownloadProvider);
     final downloading = state.status == MushafDownloadStatus.downloading;
     final ready = state.status == MushafDownloadStatus.ready;

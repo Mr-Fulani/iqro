@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -219,7 +219,7 @@ Offset _pagePoint(WidgetTester tester, double x, double y) {
   final box = tester.renderObject<RenderBox>(surface);
   final portrait =
       tester.view.physicalSize.height >= tester.view.physicalSize.width;
-  final layout = MushafScanLayout.page(
+  final layout = MushafRasterLayout.page(
     page: _page,
     size: box.size,
     portrait: portrait,

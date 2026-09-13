@@ -1,5 +1,9 @@
 # Quran.Foundation production content sync
 
+Для компьютера нового разработчика используйте [локальный запуск](../../../docs/local-development.md):
+`make dev-up` и `make dev-data`. Общего тестового API для разработки нет.
+Ниже описан операторский импорт; исторические количества относятся к указанным датам.
+
 Iqro использует один confidential backend client. Web, mobile и Telegram Mini App не получают
 `QF_CLIENT_SECRET` и не обращаются к Quran.Foundation напрямую.
 
@@ -47,9 +51,13 @@ python manage.py sync_quran_foundation_mushafs --force
 python manage.py sync_quran_foundation_mushafs
 ```
 
-`--force` нужен только для первого bootstrap или явного восстановления. Обычная команда
+Без checkpoint первый bootstrap выполняется автоматически. `--force` нужен для явного восстановления. Обычная команда
 использует сохранённый token и получает только изменения. `RESOURCE_DELETE` удаляет локальную
 копию; create/invalidate/row mutation заменяют только затронутый snapshot.
+
+`--source-id 5` ограничивает синхронизацию основным KFGQPC. Параметр можно повторять;
+каждый набор выбранных IDs хранит независимый checkpoint. Этот режим используется
+в локальном `dev-data`, чтобы неполный посторонний макет источника не отменял загрузку.
 
 Production environment:
 
@@ -74,8 +82,10 @@ Celery Beat выполняет incremental sync ежедневно. Это ук�
 страниц не опубликован или source checksum изменился, status равен `not_ready`, а список assets
 пуст. HTTP request никогда не запускает renderer.
 
-Web reader показывает отдельный переключатель визуального варианта Мусхафа: локальный page scan,
-QCF V2 (`1`), KFGQPC Hafs (`5`) и цветной QCF V4 Tajweed (`19`). Это не четыре разных риваята:
+Web reader показывает только доступные варианты из источника:
+QCF V2 (`1`), KFGQPC Hafs (`5`) и цветной QCF V4 Tajweed (`19`). По умолчанию выбирается
+KFGQPC, если он загружен. При пустом каталоге отображается сообщение об отсутствии данных.
+Это варианты одного риваята:
 все доступные production resources сейчас относятся к Hafs и отличаются способом рендеринга.
 ID `11` не попадает в пользовательский список, пока `rendering.available=false`. Слова остаются
 интерактивными: выбор или воспроизведение аята подсвечивает все его фрагменты на странице.

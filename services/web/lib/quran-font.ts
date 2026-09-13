@@ -30,7 +30,8 @@ export function loadQuranFont(family: string, url: string | undefined): Promise<
     fonts.set(key, cached);
     return cached.promise;
   }
-  const face = new FontFace(family, `url("${url}") format("woff2")`, { display: "block" });
+  const format = url.endsWith(".ttf") ? "truetype" : "woff2";
+  const face = new FontFace(family, `url("${url}") format("${format}")`, { display: "block" });
   const entry: CachedFont = { face, users: 0, promise: face.load().then((font) => {
     document.fonts.add(font);
     trimFonts();
@@ -52,16 +53,27 @@ export function isAllowedQuranFontUrl(value: string | undefined): value is strin
     const url = new URL(value);
     return (
       url.protocol === "https:" &&
-      url.hostname === "verses.quran.foundation" &&
       url.port === "" &&
       url.username === "" &&
       url.password === "" &&
       url.search === "" &&
       url.hash === "" &&
-      url.pathname.startsWith("/fonts/quran/") &&
-      url.pathname.endsWith(".woff2")
+      ((url.hostname === "verses.quran.foundation" &&
+        url.pathname.startsWith("/fonts/quran/") && url.pathname.endsWith(".woff2")) ||
+       (url.hostname === "static-cdn.tarteel.ai" &&
+        url.pathname === "/qul/fonts/nastaleeq/KFGQPCNastaleeq-Regular.ttf"))
     );
   } catch {
     return false;
   }
+}
+
+export function isAllowedQuranWordImageUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === "https://static.qurancdn.com" && !url.username && !url.password &&
+      url.search === "?v=1" && !url.hash &&
+      /^\/images\/w\/(?:(?:qa-color|rq-color|qa-black)\/[1-9]\d*\/[1-9]\d*\/[1-9]\d*|common\/[1-9]\d*)\.png$/.test(url.pathname);
+  } catch { return false; }
 }

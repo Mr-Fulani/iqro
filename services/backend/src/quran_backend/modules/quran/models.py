@@ -206,16 +206,22 @@ class Ayah(BaseModel):
 
 
 class MushafPage(BaseModel):
+    """Canonical page identity, including references from existing reading history.
+
+    Legacy image fields remain for reversible upgrades. New imports contain no
+    artwork; visual pages belong to MushafRenditionPage.
+    """
+
     edition_version = models.ForeignKey(
         QuranEditionVersion,
         on_delete=models.PROTECT,
         related_name="pages",
     )
     number = models.PositiveSmallIntegerField()
-    image_width = models.PositiveIntegerField()
-    image_height = models.PositiveIntegerField()
-    checksum_sha256 = models.CharField(max_length=64)
-    asset_variants = models.JSONField(default=list)
+    image_width = models.PositiveIntegerField(default=1)
+    image_height = models.PositiveIntegerField(default=1)
+    checksum_sha256 = models.CharField(max_length=64, blank=True)
+    asset_variants = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "quran_mushaf_page"
@@ -237,8 +243,8 @@ class MushafPage(BaseModel):
 
     def clean(self) -> None:
         super().clean()
-        if not isinstance(self.asset_variants, list) or not self.asset_variants:
-            raise ValidationError({"asset_variants": "At least one asset variant is required."})
+        if not isinstance(self.asset_variants, list):
+            raise ValidationError({"asset_variants": "Asset variants must be a list."})
         for variant in self.asset_variants:
             self._validate_asset_variant(variant)
 
@@ -252,6 +258,24 @@ class MushafPage(BaseModel):
             raise ValidationError({"asset_variants": "Asset paths must be safe relative paths."})
         if int(variant["width"]) <= 0 or int(variant["height"]) <= 0 or int(variant["bytes"]) <= 0:
             raise ValidationError({"asset_variants": "Asset dimensions and size must be positive."})
+
+
+class AyahPageMapping(BaseModel):
+    """Text navigation independent of artwork and pixel coordinates."""
+
+    page = models.ForeignKey(MushafPage, on_delete=models.CASCADE, related_name="ayah_mappings")
+    ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="page_mappings")
+
+    class Meta:
+        db_table = "quran_ayah_page_mapping"
+        constraints = [
+            models.UniqueConstraint(fields=["page", "ayah"], name="quran_page_ayah_unique"),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.page.edition_version_id != self.ayah.surah.edition_version_id:
+            raise ValidationError("Page and ayah must belong to the same Quran edition.")
 
 
 class AyahPageRegion(BaseModel):

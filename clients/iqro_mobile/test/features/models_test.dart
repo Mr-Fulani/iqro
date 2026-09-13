@@ -436,7 +436,7 @@ void main() {
     expect(tafsir.covers(2, 6), isFalse);
   });
 
-  test('browser font Mushafs remain hidden until native assets exist', () {
+  test('legacy version-1 browser metadata never enables native selection', () {
     final unicode = MushafVariant.fromJson(<String, Object?>{
       'source_id': 5,
       'name': 'KFGQPC HAFS',

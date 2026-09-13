@@ -15,7 +15,8 @@ class AppConfig {
         defaultValue: 'https://iqro.forum',
       ),
       environment: const String.fromEnvironment('APP_ENV'),
-      releaseMode: kReleaseMode,
+      releaseMode: kReleaseMode || kProfileMode,
+      androidEmulator: defaultTargetPlatform == TargetPlatform.android,
     );
   }
 
@@ -24,17 +25,25 @@ class AppConfig {
     required String fallbackDownloadUrl,
     required String environment,
     required bool releaseMode,
+    bool androidEmulator = false,
   }) {
     var resolvedEnvironment = environment.trim().toLowerCase();
     if (resolvedEnvironment.isEmpty) {
       if (releaseMode) {
         throw StateError('APP_ENV is required for release builds');
       }
-      resolvedEnvironment = 'staging';
+      resolvedEnvironment = 'local';
     }
-    if (resolvedEnvironment != 'staging' &&
+    if (resolvedEnvironment != 'local' &&
+        resolvedEnvironment != 'staging' &&
         resolvedEnvironment != 'production') {
-      throw const FormatException('APP_ENV must be staging or production');
+      throw const FormatException(
+        'APP_ENV must be local, staging or production',
+      );
+    }
+    final local = resolvedEnvironment == 'local';
+    if (local && releaseMode) {
+      throw const FormatException('Local API is allowed only in debug builds');
     }
 
     var resolvedApiBaseUrl = apiBaseUrl.trim();
@@ -42,13 +51,16 @@ class AppConfig {
       if (releaseMode) {
         throw StateError('API_BASE_URL is required for release builds');
       }
-      resolvedApiBaseUrl = 'https://staging.iqro.forum';
+      resolvedApiBaseUrl = local
+          ? 'http://${androidEmulator ? '10.0.2.2' : '127.0.0.1'}:8000'
+          : 'https://staging.iqro.forum';
     }
     final apiOrigin = Uri.tryParse(resolvedApiBaseUrl);
     if (apiOrigin == null ||
-        apiOrigin.scheme != 'https' ||
+        !(apiOrigin.scheme == 'https' ||
+            (local && apiOrigin.scheme == 'http')) ||
         apiOrigin.host.isEmpty ||
-        apiOrigin.hasPort ||
+        (!local && apiOrigin.hasPort) ||
         apiOrigin.userInfo.isNotEmpty ||
         (apiOrigin.path.isNotEmpty && apiOrigin.path != '/') ||
         apiOrigin.hasQuery ||
@@ -60,7 +72,9 @@ class AppConfig {
     final expectedHost = resolvedEnvironment == 'production'
         ? 'iqro.forum'
         : 'staging.iqro.forum';
-    if (apiOrigin.host != expectedHost) {
+    if (local
+        ? !isLocalDevelopmentHost(apiOrigin.host)
+        : apiOrigin.host != expectedHost) {
       throw FormatException(
         'API_BASE_URL host must match the $resolvedEnvironment environment',
       );
@@ -78,7 +92,7 @@ class AppConfig {
       );
     }
     return AppConfig(
-      apiBaseUrl: 'https://${apiOrigin.host}',
+      apiBaseUrl: apiOrigin.origin,
       fallbackDownloadUrl: downloadUrl.toString(),
       environment: resolvedEnvironment,
     );
@@ -96,4 +110,22 @@ class AppConfig {
 
   String get apiV1 => '$apiBaseUrl/api/v1';
   bool get isProduction => environment == 'production';
+  bool get isLocal => environment == 'local';
+}
+
+bool isLocalDevelopmentHost(String host) {
+  if (host == 'localhost' ||
+      host == '::1' ||
+      host == '[::1]' ||
+      host.endsWith('.local')) {
+    return true;
+  }
+  final parts = host.split('.').map(int.tryParse).toList();
+  if (parts.length != 4 || parts.any((p) => p == null || p < 0 || p > 255)) {
+    return false;
+  }
+  return parts[0] == 127 ||
+      parts[0] == 10 ||
+      (parts[0] == 192 && parts[1] == 168) ||
+      (parts[0] == 172 && parts[1]! >= 16 && parts[1]! <= 31);
 }

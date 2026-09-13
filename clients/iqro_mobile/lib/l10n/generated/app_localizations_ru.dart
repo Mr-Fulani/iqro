@@ -9,17 +9,6 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
-  String get mushafBookPreview => 'Таджвид · проба книжной страницы';
-
-  @override
-  String get mushafBookPreviewHint =>
-      'Оригинальные изображения EasyQuran · страницы 51–53';
-
-  @override
-  String get mushafBookPreviewInfo =>
-      'Это отдельная визуальная проба EasyQuran, не QCF V4. Три полные страницы взяты из QuranHub/quran-pages-images без перевёрстки, перекрашивания и обрезки рамки.\n\nИсходник: 645 × 1000 пикселей — это не HD. В режиме «По ширине» страница увеличивается пропорционально; если не помещается по высоте, прокручивается вертикально. Увеличение — двумя пальцами, сброс — двойным тапом. Короткий тап скрывает или показывает меню.\n\nВыделение аятов и аудио в этой пробе не подключены: для них нужна карта именно этого издания. Ваш Мусхаф, место чтения и скачанные пакеты не меняются.';
-
-  @override
   String get mushafFitWidth => 'По ширине';
 
   @override
@@ -284,10 +273,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chooseMushaf => 'Выберите Мусхаф';
 
   @override
-  String get mushafScanName => 'Мадинский Мусхаф';
-
-  @override
-  String get mushafScanDescription => 'Оригинальные страницы · Хафс';
+  String get mushafCatalogEmpty => 'Мусхафы ещё не загружены';
 
   @override
   String get mushafPreviewDescription =>
@@ -1301,4 +1287,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
+
+  @override
+  String get mushafPageCaching =>
+      'Страницы загружаются по мере чтения. Открытые страницы и их шрифты сохраняются на устройстве и доступны без интернета.';
 }

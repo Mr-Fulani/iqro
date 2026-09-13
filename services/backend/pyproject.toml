@@ -50,6 +50,8 @@ addopts = [
     "--strict-config",
     "--strict-markers",
     "--cov=quran_backend",
+    # Subprocesses started from src/ must inherit the same branch-coverage config.
+    "--cov-config=pyproject.toml",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=xml",
     "--cov-fail-under=80",

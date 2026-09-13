@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   QuranFoundationMushaf,
   QuranFoundationMushafPage,
@@ -8,7 +8,7 @@ import type {
   Surah,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
-import { isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
+import { isAllowedQuranWordImageUrl, isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 
 type FontState = "loading" | "ready" | "error";
 type SurahIdentity = Pick<Surah, "number" | "name_ar">;
@@ -29,7 +29,6 @@ type ChapterIntro = {
 };
 
 const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
-const OPENING_PAGE_ROW_OFFSET = -4;
 
 type QuranFoundationMushafPageProps = {
   mushaf: QuranFoundationMushaf;
@@ -57,6 +56,9 @@ function verseKeysFromMapping(mapping: Record<string, string>): string[] {
 }
 
 function verseKeyById(page: QuranFoundationMushafPage): Map<number, string> {
+  if (page.words.every((word) => word.verse_key)) {
+    return new Map(page.words.map((word) => [word.verse_id!, word.verse_key!]));
+  }
   const verseIds: number[] = [];
   const seen = new Set<number>();
   for (const word of [...page.words].sort(
@@ -109,13 +111,13 @@ function fragmentsForLine(
   return fragments;
 }
 
-function displayLineNumber(pageNumber: number, sourceLineNumber: number): number {
+function displayLineNumber(pageNumber: number, sourceLineNumber: number, firstLine: number): number {
   // Quran.Foundation preserves the printed source line numbers on the opening
   // spread: Al-Fatihah starts at 9 and Al-Baqarah at 10. On a responsive single
   // page these compact blocks should remain vertically centred, not inherit the
   // eight or nine empty source rows that separate the facing printed pages.
   if (pageNumber === 1 || pageNumber === 2) {
-    return sourceLineNumber + OPENING_PAGE_ROW_OFFSET;
+    return sourceLineNumber - Math.floor((firstLine - 1) / 2);
   }
   return sourceLineNumber;
 }
@@ -187,10 +189,15 @@ export function QuranFoundationMushafPageView({
 }: QuranFoundationMushafPageProps) {
   const { t } = useI18n();
   const lineCount = Math.min(30, Math.max(1, mushaf.lines_per_page));
+  const imageMode = page.rendering.available && page.rendering.mode === "word-images";
   const pageFontUrl = page.rendering.available ? page.rendering.font_url : undefined;
   const fontFamily = quranFontFamily(mushaf.source_id, page);
   const [fontState, setFontState] = useState<FontState>(() => isQuranFontReady(fontFamily, pageFontUrl) ? "ready" : "loading");
   const lines = useMemo(() => wordsByLine(page.words, lineCount), [lineCount, page.words]);
+  const firstLine = Math.min(...page.words.map((word) => word.line_number));
+  const displayLine = (line: number) => displayLineNumber(page.page_number, line, firstLine);
+  const sheet = useRef<HTMLDivElement>(null);
+  const [retry, setRetry] = useState(0);
   const verseKeys = useMemo(() => verseKeyById(page), [page]);
   const intros = useMemo(
     () => chapterIntros(page, lines, verseKeys, surahs),
@@ -199,6 +206,19 @@ export function QuranFoundationMushafPageView({
 
   useEffect(() => {
     let cancelled = false;
+    if (imageMode) {
+      setFontState("loading");
+      const images = page.words.map((word) => new Promise<void>((resolve, reject) => {
+        if (!isAllowedQuranWordImageUrl(word.image_url)) { reject(new Error("Invalid word image")); return; }
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Word image unavailable"));
+        img.src = word.image_url;
+      }));
+      void Promise.all(images).then(() => { if (!cancelled) setFontState("ready"); })
+        .catch(() => { if (!cancelled) setFontState("error"); });
+      return () => { cancelled = true; };
+    }
     setFontState(isQuranFontReady(fontFamily, pageFontUrl) ? "ready" : "loading");
     const loaded = loadQuranFont(fontFamily, pageFontUrl);
     const release = retainQuranFont(fontFamily, pageFontUrl);
@@ -214,7 +234,28 @@ export function QuranFoundationMushafPageView({
       cancelled = true;
       release();
     };
-  }, [fontFamily, pageFontUrl]);
+  }, [fontFamily, pageFontUrl, imageMode, page.words, retry]);
+
+  useLayoutEffect(() => {
+    const element = sheet.current;
+    if (!element || fontState !== "ready") return;
+    const fit = () => {
+      let scale = 1;
+      for (const line of element.querySelectorAll<HTMLElement>(".qf-mushaf-line")) {
+        const content = line.firstElementChild as HTMLElement | null;
+        if (!content || !content.scrollWidth) continue;
+        scale = Math.min(scale, line.clientWidth / content.scrollWidth, line.clientHeight / content.offsetHeight);
+      }
+      element.style.setProperty("--qf-line-scale", String(scale));
+      element.dataset.layoutReady = "true";
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    for (const content of element.querySelectorAll(".qf-mushaf-line-content")) observer.observe(content);
+    element.addEventListener("load", fit, true);
+    return () => { observer.disconnect(); element.removeEventListener("load", fit, true); };
+  }, [fontState, page, imageMode]);
 
   return (
     <div
@@ -232,9 +273,13 @@ export function QuranFoundationMushafPageView({
       </div>
 
       {fontState === "error" ? (
-        <div className="alert alert-error">{t("quran.mushafFontError")}</div>
+        <div className="alert alert-error" role="alert">
+          {t("quran.mushafFontError")}
+          <button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>{t("errorPage.retry")}</button>
+        </div>
       ) : (
         <div
+          ref={sheet}
           className={`qf-mushaf-sheet${fontState === "loading" ? " is-font-loading" : ""}`}
           style={{ gridTemplateRows: `repeat(${lineCount}, minmax(0, 1fr))` }}
           dir="rtl"
@@ -254,7 +299,7 @@ export function QuranFoundationMushafPageView({
                 intro.showBismillah ? "has-bismillah" : "",
               ].filter(Boolean).join(" ")}
               style={{
-                gridRow: `${displayLineNumber(page.page_number, intro.firstLine)} / ${displayLineNumber(page.page_number, intro.endLine)}`,
+                gridRow: `${displayLine(intro.firstLine)} / ${displayLine(intro.endLine)}`,
               }}
               key={intro.surah.number}
               data-surah-number={intro.surah.number}
@@ -276,10 +321,11 @@ export function QuranFoundationMushafPageView({
               <div
                 className="qf-mushaf-line"
                 data-line-number={sourceLineNumber}
-                data-display-line-number={displayLineNumber(page.page_number, sourceLineNumber)}
-                style={{ gridRow: displayLineNumber(page.page_number, sourceLineNumber) }}
+                data-display-line-number={displayLine(sourceLineNumber)}
+                style={{ gridRow: displayLine(sourceLineNumber) }}
                 key={sourceLineNumber}
               >
+              <div className="qf-mushaf-line-content">
               {fragmentsForLine(line, verseKeys).map((fragment) => {
                 const { ayahKey } = fragment;
                 const fragmentClassName = [
@@ -291,10 +337,17 @@ export function QuranFoundationMushafPageView({
                 const content = fragment.words.map((word) => (
                   <span
                     className={`qf-mushaf-word${word.char_type_name === "end" ? " is-ayah-end" : ""}`}
+                    style={word.css_class?.split(/\s+/).includes("bidi-override") ? { unicodeBidi: "bidi-override" } : undefined}
                     key={word.id}
                     data-position-in-page={word.position_in_page}
                   >
-                    {word.text}
+                    {imageMode && isAllowedQuranWordImageUrl(word.image_url) ? (
+                      // Provider word images have intrinsic metrics, including the smaller verse markers.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={word.image_url} alt="" draggable={false} />
+                    ) : word.text_runs ? word.text_runs.map((run, index) => (
+                      <span key={index} style={run.color ? { color: run.color } : undefined}>{run.text}</span>
+                    )) : word.text}
                   </span>
                 ));
                 if (!ayahKey) {
@@ -312,6 +365,7 @@ export function QuranFoundationMushafPageView({
                     key={fragment.key}
                     onClick={() => onSelectAyah(ayahKey)}
                     aria-label={t("common.ayah", { ayah: ayahKey })}
+                    aria-pressed={selectedAyahKey === ayahKey}
                     title={t("common.ayah", { ayah: ayahKey })}
                     data-ayah-key={ayahKey}
                   >
@@ -319,6 +373,7 @@ export function QuranFoundationMushafPageView({
                   </button>
                 );
               })}
+              </div>
               </div>
             );
           })}

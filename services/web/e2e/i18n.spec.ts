@@ -144,7 +144,8 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
+  // Hidden streamed route HTML may still contain another copy of this tag.
+  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
   await expect(page.getByRole("heading", { level: 2, name: "Темы" })).toBeVisible();
   await expect(page.locator(".dua-category-list")).toHaveCSS("display", "grid");
   await expect(page.locator(".dua-category-chip")).toHaveCount(1);

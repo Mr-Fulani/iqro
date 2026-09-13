@@ -148,6 +148,24 @@ def test_rendition_uses_canonical_ayahs_and_stable_offline_checksum(
 
 @pytest.mark.django_db
 @override_settings(MUSHAF_STAGING_PREVIEWS=True)
+def test_local_media_urls_are_portable_between_computer_and_emulator(
+    api_client: APIClient, rendition: MushafRenditionRelease
+) -> None:
+    url = reverse("quran:rendition-offline", kwargs={"code": "qcf-v2-hafs"})
+    with override_settings(
+        DEBUG=True,
+        LOCAL_DEVELOPMENT=True,
+        ALLOWED_HOSTS=["localhost", "10.0.2.2"],
+    ):
+        laptop = api_client.get(url, HTTP_HOST="localhost:8000").json()
+        emulator = api_client.get(url, HTTP_HOST="10.0.2.2:8000").json()
+    assert laptop["pages"][0]["asset"]["url"] == "/media/quran/rendition/page-001.webp"
+    assert emulator["pages"][0]["asset"] == laptop["pages"][0]["asset"]
+    assert emulator["package_checksum_sha256"] == laptop["package_checksum_sha256"]
+
+
+@pytest.mark.django_db
+@override_settings(MUSHAF_STAGING_PREVIEWS=True)
 @pytest.mark.parametrize(
     "change", ["unpublished", "canonical_draft", "canonical_removed", "inactive"]
 )
@@ -481,7 +499,7 @@ def test_qf_change_during_upload_prevents_activation(
     assert not MushafRenditionRelease.objects.exists()
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_export_source_is_public_content_only_and_rejects_partial_snapshot(
     quran_dataset: dict[str, Any],
 ) -> None:

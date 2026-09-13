@@ -9,8 +9,9 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
-import 'mushaf_scan_layout.dart';
+import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
+import 'foundation_mushaf_page.dart';
 
 typedef MushafPageLayout = ({
   double width,
@@ -204,7 +205,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         child: IqroAsyncError(
           title: context.l10n.noQuranData,
           message: context.l10n.networkError,
-          onRetry: () => ref.invalidate(mushafPageProvider(widget.page)),
+          onRetry: () {
+            ref.invalidate(mushafRenditionsProvider);
+            ref.invalidate(mushafPageProvider(widget.page));
+          },
         ),
       ),
       data: _buildPage,
@@ -219,15 +223,11 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         .where((s) => s.number == surahNumber)
         .firstOrNull;
     final juz = widget.divisions
-        .where((d) => widget.page >= d.startPage && widget.page <= d.endPage)
+        .where((d) => d.containsAyah(pageData.ayahReferences.firstOrNull))
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
     return ColoredBox(
-      // Madani's published PDF raster has white paper. Keep the letterbox
-      // neutral without tinting the source image or its printed ink.
-      color: pageData.editionCode == 'madani-hafs'
-          ? Colors.white
-          : mushafPaperColor,
+      color: mushafPaperColor,
       child: Column(
         children: <Widget>[
           if (portrait)
@@ -258,10 +258,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
               ),
             ),
           Expanded(
-            // Header/footer appear only in portrait. Preserve the scan subtree
+            // Header/footer appear only in portrait. Preserve the raster subtree
             // when its sibling index changes, including its decoded frame.
-            key: const ValueKey('native-mushaf-scan'),
-            child: _buildScan(pageData),
+            key: const ValueKey('native-mushaf-raster'),
+            child: _buildRaster(pageData),
           ),
           if (portrait)
             Padding(
@@ -307,7 +307,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     );
   }
 
-  Widget _buildScan(MushafPageData pageData) {
+  Widget _buildRaster(MushafPageData pageData) {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -319,6 +319,45 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           ),
         );
         final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+        if (pageData.foundation != null) {
+          return ClipRect(
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              constrained: false,
+              alignment: layout.fillsLandscapeWidth
+                  ? Alignment.topCenter
+                  : Alignment.center,
+              minScale: 1,
+              maxScale: 3,
+              panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
+              panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
+                  ? PanAxis.vertical
+                  : PanAxis.free,
+              onInteractionEnd: (_) {
+                final scale = _transformationController.value
+                    .getMaxScaleOnAxis();
+                setState(() => _scale = scale);
+                widget.onScale(scale);
+              },
+              child: SizedBox(
+                width: layout.width,
+                height: layout.height,
+                child: FoundationMushafPageContent(
+                  key: ValueKey(
+                    '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+                  ),
+                  page: pageData.foundation!,
+                  selected: widget.selectedAyah,
+                  playing: widget.playingAyah,
+                  onSelect: widget.onSelectAyah,
+                  onOpen: widget.onOpenAyah,
+                  onBackgroundTap: widget.onBackgroundTap,
+                  surahs: widget.surahs,
+                ),
+              ),
+            ),
+          );
+        }
         final asset = pageData.bestAssetFor(
           layout.fillsLandscapeWidth ? layout.width : _viewportSize.width,
           devicePixelRatio,
@@ -342,7 +381,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         _loadAsset(pageData, asset);
         final rasterIdentity =
             '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}';
-        final scanLayout = MushafScanLayout.page(
+        final rasterLayout = MushafRasterLayout.page(
           page: pageData,
           size: layout.fillsLandscapeWidth
               ? Size(layout.width, layout.height)
@@ -380,12 +419,12 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                   0,
                 ),
                 child: SizedBox(
-                  width: scanLayout.size.width,
-                  height: scanLayout.size.height,
+                  width: rasterLayout.size.width,
+                  height: rasterLayout.size.height,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapUp: (details) {
-                      final point = scanLayout.sourcePointAt(
+                      final point = rasterLayout.sourcePointAt(
                         details.localPosition,
                       );
                       final ayah = point == null
@@ -398,7 +437,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       }
                     },
                     onLongPressStart: (details) {
-                      final point = scanLayout.sourcePointAt(
+                      final point = rasterLayout.sourcePointAt(
                         details.localPosition,
                       );
                       final ayah = point == null
@@ -426,9 +465,9 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                     file: file,
                                     continuityKey: rasterIdentity,
                                     builder: (image) => CustomPaint(
-                                      painter: MushafScanPainter(
+                                      painter: MushafRasterPainter(
                                         image: image,
-                                        layout: scanLayout,
+                                        layout: rasterLayout,
                                       ),
                                     ),
                                     fallback: IqroAsyncError(
@@ -456,7 +495,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                               regions: pageData.regions,
                               selectedAyah: widget.selectedAyah,
                               playingAyah: widget.playingAyah,
-                              layout: scanLayout,
+                              layout: rasterLayout,
                             ),
                           ),
                         ),
@@ -484,7 +523,7 @@ class _AyahRegionPainter extends CustomPainter {
   final List<MushafAyahRegion> regions;
   final QuranAyahReference? selectedAyah;
   final QuranAyahReference? playingAyah;
-  final MushafScanLayout layout;
+  final MushafRasterLayout layout;
 
   @override
   void paint(Canvas canvas, Size size) {

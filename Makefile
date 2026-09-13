@@ -1,4 +1,35 @@
+.DEFAULT_GOAL := up
+
 BACKEND_DIR := services/backend
+DEV_DATA_ARGS ?=
+DEV_UP_ARGS ?=
+MOBILE_ARGS ?=
+
+.PHONY: dev-init dev-up dev-data dev-doctor mobile-run mobile-ios-run mobile-ios-deps
+dev-init:
+	python3 ops/dev.py init
+
+dev-up:
+	python3 ops/dev.py up $(DEV_UP_ARGS)
+
+dev-data:
+	python3 ops/dev.py data $(DEV_DATA_ARGS)
+
+dev-doctor:
+	python3 ops/dev.py doctor
+
+mobile-run: dev-up
+	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
+	cd clients/iqro_mobile && flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
+
+mobile-ios-deps:
+	cd clients/iqro_mobile && bundle config set --local path vendor/bundle
+	cd clients/iqro_mobile && BUNDLE_FROZEN=true bundle install
+	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
+
+mobile-ios-run: dev-up mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
+
 WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 API_REPLICAS ?= 1
@@ -15,23 +46,22 @@ STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING
 .PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run mobile-check mobile-android-staging mobile-android-profile-staging mobile-android-production mobile-ios-config-check mobile-ios-staging mobile-ios-production production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
 
 # Запуск с сохранением данных базы данных
-up:
-	docker compose up --build
+up: dev-up
 
 # Остановка с сохранением данных базы данных
 down:
-	docker compose down --remove-orphans
+	docker compose --env-file services/backend/.env stop
 
 # Перезапуск с сохранением данных базы данных
 restart:
-	docker compose down --remove-orphans && docker compose up --build
+	docker compose --env-file services/backend/.env restart
 
 # Полный сброс (с удалением томов базы данных и Redis)
 reset-all:
 	docker compose down -v --remove-orphans && docker compose up --build
 
 backend-install:
-	cd $(BACKEND_DIR) && uv sync --all-groups
+	cd $(BACKEND_DIR) && uv sync --frozen --all-groups
 
 backend-check:
 	cd $(BACKEND_DIR) && uv run ruff check .
@@ -44,7 +74,6 @@ backend-test:
 	cd $(BACKEND_DIR) && uv run pytest
 
 backend-migrations:
-	cd $(BACKEND_DIR) && uv run python manage.py makemigrations
 	cd $(BACKEND_DIR) && uv run python manage.py migrate
 
 backend-run:
@@ -54,7 +83,7 @@ backend-up:
 	docker compose -f $(BACKEND_DIR)/compose.yaml up --build
 
 web-install:
-	cd $(WEB_DIR) && npm install
+	cd $(WEB_DIR) && npm ci
 
 web-dev:
 	cd $(WEB_DIR) && npm run dev
@@ -82,17 +111,17 @@ mobile-android-profile-staging:
 mobile-android-production:
 	cd clients/iqro_mobile && flutter build appbundle --release --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
-mobile-ios-config-check:
-	ruby -c clients/iqro_mobile/ios/Podfile
-	plutil -lint clients/iqro_mobile/ios/Runner/Info.plist clients/iqro_mobile/ios/Flutter/AppFrameworkInfo.plist
+mobile-ios-config-check: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec ruby -c ios/Podfile
+	plutil -lint clients/iqro_mobile/ios/Runner/Info.plist clients/iqro_mobile/ios/Runner/Info-Debug.plist clients/iqro_mobile/ios/Flutter/AppFrameworkInfo.plist
 	for file in clients/iqro_mobile/ios/Runner/*.lproj/InfoPlist.strings; do plutil -lint "$$file"; done
-	cd clients/iqro_mobile/ios && pod install --deployment
+	cd clients/iqro_mobile/ios && bundle exec pod install --deployment
 
-mobile-ios-staging:
-	cd clients/iqro_mobile && flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://staging.iqro.forum --dart-define=APP_ENV=staging --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+mobile-ios-staging: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://staging.iqro.forum --dart-define=APP_ENV=staging --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
-mobile-ios-production:
-	cd clients/iqro_mobile && flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+mobile-ios-production: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
 production-config:
 	$(PRODUCTION_COMPOSE) config --quiet
@@ -139,8 +168,9 @@ production-backup-offsite-verify:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
 
 production-backup-offsite-restore-check:
-	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
-	BACKUP_FILE=/backups/offsite_restore.dump $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+	@restore_file="/backups/offsite_restore_$$(date -u +%Y%m%dT%H%M%SZ)_$$$$.dump"; \
+	OFFSITE_RESTORE_FILE="$$restore_file" $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download && \
+	BACKUP_FILE="$$restore_file" $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 production-restore-check:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
@@ -217,8 +247,9 @@ staging-backup-offsite-verify: staging-runtime-postgres-image staging-backup-off
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
 
 staging-backup-offsite-restore-check: staging-runtime-postgres-image staging-backup-offsite-preflight
-	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
-	BACKUP_FILE=/backups/offsite_restore.dump $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+	@restore_file="/backups/offsite_restore_$$(date -u +%Y%m%dT%H%M%SZ)_$$$$.dump"; \
+	OFFSITE_RESTORE_FILE="$$restore_file" $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download && \
+	BACKUP_FILE="$$restore_file" $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-restore-check: staging-runtime-postgres-image
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
@@ -325,6 +356,7 @@ release-ops-check:
 	sh -n ops/systemd/install.sh
 	python3 -m ops.staging.test_config
 	python3 -m unittest \
+		ops.test_dev \
 		ops.postgres.test_offsite \
 		ops.monitoring.test_heartbeat \
 		ops.systemd.test_units \
@@ -354,3 +386,31 @@ release-check: release-ops-check backend-check backend-test release-web-check
 
 systemd-install:
 	sudo sh ops/systemd/install.sh "$(CURDIR)/ops/systemd"
+
+# Host tools reuse the backend locked Python environment; no app services are started.
+RECOVERY_PYTHON ?= services/backend/.venv/bin/python
+RECOVERY_ARGS ?=
+
+.PHONY: recovery-backup recovery-restore recovery-list recovery-release recovery-test
+recovery-backup:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot backup $(RECOVERY_ARGS)
+
+recovery-restore:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot restore $(RECOVERY_ARGS)
+
+recovery-list:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot list
+
+recovery-release:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot release $(RECOVERY_ARGS)
+
+recovery-test:
+	@command -v age >/dev/null && command -v age-keygen >/dev/null || (printf '%s\n' 'age and age-keygen are required for recovery tests.' >&2; exit 1)
+	$(RECOVERY_PYTHON) -m unittest ops.recovery.test_snapshot ops.recovery.test_retention ops.postgres.test_backup ops.postgres.test_offsite ops.monitoring.test_backup_status ops.monitoring.test_heartbeat ops.systemd.test_units
+
+.PHONY: recovery-retention-plan recovery-retention-apply
+recovery-retention-plan:
+	$(RECOVERY_PYTHON) -m ops.recovery.retention plan $(RECOVERY_ARGS)
+
+recovery-retention-apply:
+	$(RECOVERY_PYTHON) -m ops.recovery.retention apply $(RECOVERY_ARGS)

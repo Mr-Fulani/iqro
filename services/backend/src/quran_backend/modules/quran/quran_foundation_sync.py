@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -20,6 +21,10 @@ from quran_backend.modules.quran.models import (
     QuranFoundationMushaf,
     QuranFoundationMushafPage,
     QuranFoundationMushafSyncState,
+)
+from quran_backend.modules.quran.quran_foundation_rendering import (
+    renderable_words,
+    verse_keys_from_mapping,
 )
 
 MUSHAF_RESOURCES_FILTER = "mushafs:*"
@@ -40,6 +45,7 @@ class QuranFoundationMushafSource(Protocol):
         self,
         *,
         sync_token: str = "",
+        resource_ids: tuple[int, ...] | None = None,
     ) -> QuranFoundationMushafSyncResult: ...
 
     def get_mushaf_snapshot(self, resource_id: int) -> dict[str, Any]: ...
@@ -60,12 +66,22 @@ def sync_quran_foundation_mushafs(
     client: QuranFoundationMushafSource | None = None,
     force: bool = False,
     now: datetime | None = None,
+    resource_ids: tuple[int, ...] | None = None,
 ) -> MushafCatalogSyncSummary:
+    if resource_ids is not None and (
+        not resource_ids or any(type(value) is not int or value <= 0 for value in resource_ids)
+    ):
+        raise QuranFoundationError("Mushaf resource IDs must be positive.")
+    resources_filter = (
+        MUSHAF_RESOURCES_FILTER
+        if resource_ids is None
+        else ("mushafs:" + ",".join(map(str, sorted(set(resource_ids)))))
+    )
     sync_client = client or QuranFoundationClient.from_environment()
     current = now or timezone.now()
     state, _ = QuranFoundationMushafSyncState.objects.get_or_create(
         environment=sync_client.environment.name,
-        resources_filter=MUSHAF_RESOURCES_FILTER,
+        resources_filter=resources_filter,
     )
     state.last_attempt_at = current
     state.save(update_fields=["last_attempt_at", "updated_at"])
@@ -73,18 +89,25 @@ def sync_quran_foundation_mushafs(
     try:
         result = sync_client.sync_mushaf_catalog(
             sync_token="" if force else state.sync_token,
+            **({"resource_ids": resource_ids} if resource_ids is not None else {}),
         )
         reload_ids, deleted_ids = _catalog_actions(result.mutations)
-        snapshots = {
-            resource_id: sync_client.get_mushaf_snapshot(resource_id)
+        if resource_ids is not None and not (reload_ids | deleted_ids) <= set(resource_ids):
+            raise QuranFoundationError("Quran.Foundation returned an unrequested Mushaf.")
+        # Fetch inside the transaction one resource at a time. A full catalogue
+        # contains over a million words; retaining every snapshot exhausts local
+        # Docker memory. The catalogue and checkpoint still commit atomically.
+        snapshots = (
+            (resource_id, sync_client.get_mushaf_snapshot(resource_id))
             for resource_id in sorted(reload_ids)
-        }
+        )
         resources, pages, words = _apply_catalog(
             environment=sync_client.environment.name,
             snapshots=snapshots,
             deleted_ids=deleted_ids,
             result=result,
             current=current,
+            resources_filter=resources_filter,
         )
     except QuranFoundationError:
         state.consecutive_failures += 1
@@ -102,7 +125,7 @@ def sync_quran_foundation_mushafs(
         pages=pages,
         words=words,
         removed=len(deleted_ids),
-        changed=bool(snapshots or deleted_ids),
+        changed=bool(reload_ids or deleted_ids),
         sync_sequence=result.sync_until_sequence,
     )
 
@@ -125,13 +148,14 @@ def _catalog_actions(
 
 
 @transaction.atomic
-def _apply_catalog(
+def _apply_catalog(  # noqa: PLR0913
     *,
     environment: str,
-    snapshots: dict[int, dict[str, Any]],
+    snapshots: Iterable[tuple[int, dict[str, Any]]],
     deleted_ids: set[int],
     result: QuranFoundationMushafSyncResult,
     current: datetime,
+    resources_filter: str = MUSHAF_RESOURCES_FILTER,
 ) -> tuple[int, int, int]:
     QuranFoundationMushaf.objects.filter(
         environment=environment,
@@ -140,7 +164,7 @@ def _apply_catalog(
 
     page_count = 0
     word_count = 0
-    for resource_id, snapshot in snapshots.items():
+    for resource_id, snapshot in snapshots:
         pages, words = _replace_snapshot(
             environment=environment,
             resource_id=resource_id,
@@ -152,7 +176,7 @@ def _apply_catalog(
 
     state = QuranFoundationMushafSyncState.objects.select_for_update().get(
         environment=environment,
-        resources_filter=MUSHAF_RESOURCES_FILTER,
+        resources_filter=resources_filter,
     )
     state.sync_token = result.next_sync_token
     state.last_sync_sequence = result.sync_until_sequence
@@ -205,14 +229,30 @@ def _replace_snapshot(  # noqa: PLR0912
         if page_number in pages_by_number:
             raise QuranFoundationError("Quran.Foundation returned a duplicate Mushaf page.")
         pages_by_number[page_number] = row
+    # QF snapshot 14 declares 604 pages but supplies the complete 610-page
+    # Nastaleeq layout. Accept this known metadata defect only when every page
+    # and the final Quran verse are present; never accept a truncated snapshot.
+    if (
+        resource_id == 14
+        and pages_count == 604
+        and set(pages_by_number) == set(range(1, 611))
+        and pages_by_number[610].get("last_verse_id") == 6236
+    ):
+        pages_count = 610
     if set(pages_by_number) != set(range(1, pages_count + 1)):
-        raise QuranFoundationError("Quran.Foundation Mushaf snapshot has incomplete pages.")
+        raise QuranFoundationError(
+            f"Quran.Foundation Mushaf {resource_id} has incomplete pages: "
+            f"expected {pages_count}, received {len(pages_by_number)}."
+        )
 
     words_by_page: defaultdict[int, list[dict[str, Any]]] = defaultdict(list)
+    lines_per_page = _positive_int(metadata.get("lines_per_page"), "Mushaf lines per page")
     for row in records:
         if not isinstance(row, dict) or row.get("record_type") != "mushaf_word":
             continue
         word = _normalize_word(row)
+        if int(word["line_number"]) > lines_per_page:
+            raise QuranFoundationError("Quran.Foundation word exceeds the page's line count.")
         page_number = int(word["page_number"])
         if page_number not in pages_by_number:
             raise QuranFoundationError("Quran.Foundation word references an unknown page.")
@@ -221,6 +261,12 @@ def _replace_snapshot(  # noqa: PLR0912
         raise QuranFoundationError("Quran.Foundation Mushaf snapshot has pages without words.")
     for words in words_by_page.values():
         words.sort(key=lambda row: (int(row["position_in_page"]), int(row["id"])))
+    _attach_verse_references(metadata, pages_by_number, words_by_page)
+    try:
+        for page_number, words in words_by_page.items():
+            renderable_words(resource_id, words, pages_by_number[page_number]["verse_mapping"])
+    except (ValueError, KeyError) as exc:
+        raise QuranFoundationError("Invalid Mushaf rendering data.") from exc
 
     qirat = metadata.get("qirat")
     if not isinstance(qirat, dict):
@@ -228,7 +274,7 @@ def _replace_snapshot(  # noqa: PLR0912
     qirat_name = _required_string(qirat.get("name"), "Mushaf qira'ah")
     checksum = hashlib.sha256(
         json.dumps(
-            snapshot,
+            {key: value for key, value in snapshot.items() if key != "sync_sequence"},
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -285,6 +331,58 @@ def _replace_snapshot(  # noqa: PLR0912
         )
     QuranFoundationMushafPage.objects.bulk_create(cached_pages, batch_size=100)
     return len(cached_pages), sum(len(words) for words in words_by_page.values())
+
+
+def _attach_verse_references(
+    metadata: dict[str, Any],
+    pages: dict[int, dict[str, Any]],
+    words_by_page: dict[int, list[dict[str, Any]]],
+) -> None:
+    """Resolve verse IDs before rendering, including split verses in Nastaleeq.
+
+    QF 15 omits partial boundary verses from nine page mappings. Its positioned
+    words still carry the correct global verse IDs. Derive the complete Hafs
+    reference index from the whole snapshot, and require all 6236 verse IDs
+    before repairing these mappings. Never zip a partial mapping onto words.
+    """
+    if (
+        metadata.get("qirat", {}).get("name") != "Hafs"
+        or metadata.get("mapping_mode") != "reference"
+    ):
+        return
+    counts: dict[int, int] = {}
+    for page in pages.values():
+        for key in verse_keys_from_mapping(page["verse_mapping"]):
+            chapter, verse = map(int, key.split(":"))
+            counts[chapter] = max(counts.get(chapter, 0), verse)
+    if set(counts) != set(range(1, 115)) or sum(counts.values()) != 6236:
+        if len(pages) >= 500:
+            raise QuranFoundationError("Incomplete Hafs verse mapping in Mushaf snapshot.")
+        return  # Small test fixtures and future non-Hafs corpora are not repaired.
+    ids = {word["verse_id"] for words in words_by_page.values() for word in words}
+    if ids != set(range(1, 6237)):
+        raise QuranFoundationError("Incomplete Hafs verse coverage in Mushaf words.")
+    references = [
+        f"{chapter}:{verse}" for chapter in range(1, 115) for verse in range(1, counts[chapter] + 1)
+    ]
+    for number, words in words_by_page.items():
+        chapter_verses: dict[str, list[int]] = {}
+        for word in words:
+            word["verse_key"] = references[word["verse_id"] - 1]
+            chapter_key, verse_text = word["verse_key"].split(":")
+            values = chapter_verses.setdefault(chapter_key, [])
+            if int(verse_text) not in values:
+                values.append(int(verse_text))
+        mapping = {}
+        for chapter_key, values in chapter_verses.items():
+            if sorted(values) != list(range(min(values), max(values) + 1)):
+                raise QuranFoundationError("Noncontiguous verse positions in Mushaf page.")
+            mapping[chapter_key] = f"{min(values)}-{max(values)}"
+        pages[number] = {
+            **pages[number],
+            "verse_mapping": mapping,
+            "verses_count": sum(map(len, chapter_verses.values())),
+        }
 
 
 def _normalize_word(row: dict[str, Any]) -> dict[str, Any]:

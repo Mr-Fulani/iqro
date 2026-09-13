@@ -1,35 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { api, type MushafPage, type QuranFoundationMushaf, type QuranFoundationMushafPage } from "../lib/api";
+import { api, type QuranFoundationMushaf, type QuranFoundationMushafPage } from "../lib/api";
 import { MushafPageCache } from "../lib/mushaf-page-cache";
 import { loadQuranFont, quranFontFamily } from "../lib/quran-font";
 
-type ReaderPage = { image: MushafPage; foundation?: never } | { foundation: QuranFoundationMushafPage; image?: never };
+type ReaderPage = QuranFoundationMushafPage;
 
-export function useMushafPages(edition: string, mushaf: QuranFoundationMushaf | null, page: number, enabled: boolean) {
+export function useMushafPages(mushaf: QuranFoundationMushaf | null, page: number, enabled: boolean) {
+  const sourceId = mushaf?.source_id ?? null;
+  const pageCount = mushaf?.pages_count ?? 604;
+  const sourceRevision = mushaf
+    ? mushaf.source_checksum_sha256
+    : null;
   const cache = useMemo(() => new MushafPageCache<ReaderPage>(
-    async (pageNumber) => mushaf
-      ? { foundation: await api.getQuranFoundationMushafPage(mushaf.source_id, pageNumber) }
-      : { image: await api.getPage(edition, pageNumber) },
+    async (pageNumber) => {
+      if (sourceId === null || sourceRevision === null) throw new Error("No published Mushaf selected");
+      const data = await api.getQuranFoundationMushafPage(sourceId, pageNumber);
+      if (data.mushaf_id !== sourceId || data.page_number !== pageNumber ||
+          data.source_checksum_sha256 !== sourceRevision) {
+        throw new Error("Mushaf source version changed. Reload the catalog.");
+      }
+      return data;
+    },
     async (data) => {
-      if (data.foundation && mushaf) {
-        const rendering = data.foundation.rendering;
-        if (rendering.available) {
-          await loadQuranFont(quranFontFamily(mushaf.source_id, data.foundation), rendering.font_url).catch(() => {});
-        }
-      } else if (data.image?.assets[0]) {
-        const image = new Image();
-        image.src = data.image.assets[0].url;
-        // Keep decoded pixels alongside JSON for immediate image rendering.
-        await image.decode().catch(() => {});
-        preparedImages.set(data.image, image);
+      if (sourceId !== null && data.rendering.available && data.rendering.mode !== "word-images") {
+        await loadQuranFont(quranFontFamily(sourceId, data), data.rendering.font_url);
       }
     },
-    mushaf?.pages_count || 604,
-  ), [edition, mushaf]);
+    pageCount,
+  ), [sourceId, sourceRevision, pageCount]);
   const [settled, setSettled] = useState<{ cache: typeof cache; page: number; data?: ReaderPage; error?: unknown } | null>(null);
-  const active = enabled && Boolean(edition);
+  const active = enabled && mushaf !== null;
   const result = settled?.cache === cache && settled.page === page ? settled : null;
   // A warm page is available in the very render that changes the page number.
   const data = active ? cache.peek(page) ?? result?.data : undefined;
@@ -49,12 +51,8 @@ export function useMushafPages(edition: string, mushaf: QuranFoundationMushaf | 
   }, [active, cache, page]);
 
   return {
-    imagePage: data?.image ?? null,
-    foundationPage: data?.foundation ?? null,
+    foundationPage: data ?? null,
     loading: active && !data && !result?.error,
     error: result?.error,
   };
 }
-
-// Weak keys let the bounded page cache release decoded images as pages leave it.
-const preparedImages = new WeakMap<MushafPage, HTMLImageElement>();
