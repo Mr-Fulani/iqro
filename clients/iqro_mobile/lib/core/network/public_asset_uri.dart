@@ -7,7 +7,9 @@ bool isApprovedPublicAssetUri(
   Uri? localApiBase,
 }) {
   if (uri.userInfo.isNotEmpty || uri.hasFragment) return false;
-  if (uri.scheme == 'https' && !uri.hasPort && allowedHosts.contains(uri.host)) {
+  if (uri.scheme == 'https' &&
+      !uri.hasPort &&
+      allowedHosts.contains(uri.host)) {
     return true;
   }
   return localApiBase != null &&

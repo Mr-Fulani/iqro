@@ -522,6 +522,17 @@ function QuranContent() {
     });
   }, [selectedEdition, viewMode, selectedFoundationMushafId]);
 
+  // Save a displayed page locally as soon as its canonical verse is known.
+  // Authentication and the debounced server write must not delay navigation safety.
+  useEffect(() => {
+    if (viewMode !== "mushaf" || canonicalPage === null || !currentAyahKey
+      || readingPlaceCandidate?.pageNumber !== currentPage
+      || readingPlaceCandidate.editionCode !== selectedEdition
+      || readingPlaceCandidate.sourceId !== selectedFoundationMushafId) return;
+    const [surahNumber, ayahNumber] = currentAyahKey.split(":").map(Number);
+    writeLocalReadingPosition(selectedEdition, { pageNumber: canonicalPage, surahNumber, ayahNumber });
+  }, [canonicalPage, currentAyahKey, currentPage, readingPlaceCandidate, selectedEdition, selectedFoundationMushafId, viewMode]);
+
   useEffect(() => {
     if (authLoading || readingPlaceCandidate === null) return;
     const candidate = { ...readingPlaceCandidate };
@@ -1424,7 +1435,7 @@ function QuranContent() {
             )}
             <PrayerReadingSessionBar
               config={prayerReadingConfig}
-              currentPage={canonicalPage ?? 1}
+              currentPage={canonicalPage}
               edition={selectedEdition}
               surah={selectedSurah}
               activeSeconds={prayerReadingActiveSeconds}

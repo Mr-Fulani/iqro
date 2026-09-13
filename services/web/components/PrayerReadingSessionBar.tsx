@@ -20,7 +20,7 @@ export type PrayerReadingSessionConfig = {
 
 type PrayerReadingSessionBarProps = {
   config: PrayerReadingSessionConfig;
-  currentPage: number;
+  currentPage: number | null;
   edition: string;
   surah: number;
   activeSeconds: number;
@@ -66,6 +66,7 @@ export function PrayerReadingSessionBar({
   }, [activeSeconds, formatNumber]);
 
   useEffect(() => {
+    if (currentPage === null) return;
     visitedPages.current.add(currentPage);
     if (!userEditedAmount.current) {
       setActualPages(boundedPages(config.creditedPages + visitedPages.current.size));
@@ -98,7 +99,7 @@ export function PrayerReadingSessionBar({
             pages,
           });
       try {
-        await api.saveReadingPosition(edition, {
+        if (currentPage !== null) await api.saveReadingPosition(edition, {
           page_number: currentPage,
           surah_number: surah,
           ayah_number: 1,

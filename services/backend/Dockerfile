@@ -43,6 +43,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 RUN apk add --no-cache \
         ca-certificates \
+        'libcrypto3>=3.5.8-r0' \
+        'libssl3>=3.5.8-r0' \
         gdbm \
         libbz2 \
         libffi \

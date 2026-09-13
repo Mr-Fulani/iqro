@@ -1106,6 +1106,29 @@ test("legacy Quran bookmark deep link opens its saved Mushaf page", async ({ pag
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
 });
 
+test("displayed source page saves canonical position before server debounce and restores it", async ({ page }) => {
+  const storageKey = "iqro_quran_reading_position_v1:madani-hafs";
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/151", (route) =>
+    route.fulfill({ json: { ...foundationPage(5, 151), verse_mapping: { "7": "1" },
+      words: foundationPage(5, 151).words.filter((word) => word.verse_id === 1) } }),
+  );
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  const pageJump = page.locator("#mushaf-page-jump");
+  await pageJump.fill("151");
+  await pageJump.press("Enter");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), storageKey))
+    .toMatchObject({ pageNumber: 151, surahNumber: 7, ayahNumber: 1 });
+  await page.clock.resume();
+  await page.goto("/ru");
+  await page.goto("/ru/quran");
+  await expect(pageJump).toHaveValue("151");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
+});
+
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
   let checkInPayload: Record<string, unknown> | null = null;
   const automaticSessionPayloads: Record<string, unknown>[] = [];
@@ -2311,6 +2334,13 @@ test.describe("Landscape gestures through browser hit testing", () => {
           await expect.poll(() => stage.evaluate((element) => element.scrollTop)).toBeGreaterThan(scrollBefore);
           await expect(view).toHaveAttribute("data-page-number", "128");
           await expect(current.locator("[data-ayah-key].is-selected")).toHaveCount(0);
+          // A tap during inertial scrolling stops the scroll instead of selecting.
+          // Wait for the viewport to settle before testing a fresh ayah tap.
+          await expect.poll(async () => {
+            const top = await stage.evaluate((element) => element.scrollTop);
+            await page.waitForTimeout(150);
+            return stage.evaluate((element, previous) => element.scrollTop === previous, top);
+          }).toBe(true);
         }
         const point = await startOnAyah();
         if (input === "mouse") await page.mouse.click(point.x, point.y);

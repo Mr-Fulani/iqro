@@ -17,7 +17,10 @@ from django.utils import timezone
 
 from quran_backend.modules.dua.models import DuaCollection
 from quran_backend.modules.quran import corpus_import
-from quran_backend.modules.quran.management.commands.dev_data_status import canonical_status
+from quran_backend.modules.quran.management.commands.dev_data_status import (
+    canonical_status,
+    collect_status,
+)
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageMapping,
@@ -46,8 +49,11 @@ def test_readiness_distinguishes_missing_corpus_dua_and_mobile(
         call_command("import_dua_catalog", path, "--publish")
     with pytest.raises(CommandError, match="Translations missing"):
         call_command("dev_data_status")
-    with pytest.raises(CommandError, match="Mobile pages missing"):
+    with pytest.raises(CommandError, match="QF Mushafs missing/incomplete"):
         call_command("dev_data_status", "--require-mobile")
+    report = collect_status(require_mobile=True)
+    assert report["checks"]["mobile"] is False
+    assert report["errors"]["mobile"] == report["errors"]["mushaf"]
     with override_settings(DEBUG=False), pytest.raises(CommandError, match="local development"):
         call_command("dev_data_status")
 
