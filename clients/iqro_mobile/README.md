@@ -93,13 +93,25 @@ debug-подпись: CI или локальный защищённый конт
 
 ## iPhone и iPad
 
-Требуются полный Xcode 26+, CocoaPods и Apple Developer signing только для установки
-на физическое устройство или публикации. Проверить общую конфигурацию и собрать
-локальный debug target можно так:
+Требуются полный Xcode 26+, Ruby 3.2+ (в CI — 4.0.1) и Bundler 4.0.3.
+CocoaPods 1.17.0 и его зависимости закреплены в `Gemfile.lock`; команды `make mobile-ios-*`
+устанавливают их в `vendor/bundle` и запускают через `bundle exec`.
+Apple Developer signing нужен только для установки на физическое устройство или публикации.
+Если используется Homebrew Ruby, сначала добавьте его в `PATH`:
+
+```bash
+brew install ruby
+export PATH="$(brew --prefix ruby)/bin:$PATH"
+gem install bundler -v 4.0.3
+# Из корня репозитория: backend и данные также готовятся автоматически.
+make mobile-ios-run
+```
+
+Проверить конфигурацию и собрать локальный debug target отдельно:
 
 ```bash
 make mobile-ios-config-check
-cd clients/iqro_mobile && flutter build ios --debug --no-codesign --dart-define=APP_ENV=local
+cd clients/iqro_mobile && bundle exec flutter build ios --debug --no-codesign --dart-define=APP_ENV=local
 ```
 
 iOS target имеет bundle ID `forum.iqro.app`, поддерживает iOS/iPadOS 14+, UIScene,

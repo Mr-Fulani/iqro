@@ -35,6 +35,7 @@ Quran.Foundation, безопасную гостевую авторизацию, 
 Нужны Git, Python 3 для управляющего скрипта и запущенный Docker с Compose v2.
 Python 3.14, Node.js и инструменты формирования страниц устанавливаются внутри образов.
 Для мобильного клиента дополнительно нужны Flutter и Android SDK либо Xcode.
+Для iOS нужны также Ruby 3.2+ и Bundler 4.0.3; CocoaPods закреплён в `Gemfile.lock`.
 
 ```bash
 git clone <URL-репозитория>
@@ -63,7 +64,8 @@ Swagger: http://localhost:8000/api/docs. Изменения исходников
 # Мобильное приложение (сначала автоматически подготовит backend и данные):
 make mobile-run
 # Android Emulator: API выбирается автоматически как http://10.0.2.2:8000
-# iOS Simulator: http://127.0.0.1:8000
+# iOS Simulator: http://127.0.0.1:8000; использует закреплённый CocoaPods:
+make mobile-ios-run
 
 # Для web достаточно той же команды; набор данных общий для обоих клиентов:
 make up

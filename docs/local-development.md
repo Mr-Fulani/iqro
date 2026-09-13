@@ -17,7 +17,10 @@ Host Python 3 используется только управляющим ск�
 Для запуска backend вне Docker также нужны доступные PostgreSQL/Redis и переменные
 окружения процесса: Django самостоятельно `.env` не загружает.
 
-Mobile: Flutter 3.41.4, Android SDK либо Xcode и CocoaPods. Выполните `flutter doctor`.
+Mobile: Flutter 3.41.4, Android SDK либо полный Xcode 26+.
+Для iOS также нужны Ruby 3.2+ и Bundler 4.0.3; CocoaPods и его зависимости
+устанавливаются из `clients/iqro_mobile/Gemfile.lock`. Настройка Ruby:
+[инструкция iOS](../clients/iqro_mobile/README.md#iphone-и-ipad). Выполните `flutter doctor`.
 Для web вне Docker нужна версия Node.js из `services/web/package.json`, затем `npm ci`.
 
 ## Первый запуск
@@ -26,8 +29,10 @@ Mobile: Flutter 3.41.4, Android SDK либо Xcode и CocoaPods. Выполни�
 make dev-init
 # В services/backend/.env указать QF_CLIENT_ID, QF_CLIENT_SECRET, QF_ENV
 make up
-# Либо сразу мобильное приложение (backend подготовится автоматически):
+# Либо сразу Android-приложение (backend подготовится автоматически):
 make mobile-run
+# iPhone/iPad: тот же backend, CocoaPods запускается через Bundler:
+make mobile-ios-run
 ```
 
 `QF_ENV=prelive` или `production` должен соответствовать выданным ключам **провайдера**.
@@ -39,7 +44,7 @@ make mobile-run
 API, автоматически подготавливает недостающие данные и только после успешной
 проверки запускает web и фоновые задачи. Сайт при первом запуске получает готовую БД.
 `make up` и `make` без аргументов выполняют `make dev-up`;
-`make mobile-run` сначала выполняет тот же запуск.
+`make mobile-run` и `make mobile-ios-run` сначала выполняют тот же запуск.
 При наличии старой БД и неприменённых миграций создаёт
 дамп в `.dev/backups/` и проверяет его через `pg_restore --list`; при ошибке останавливается.
 Проверка структуры архива не заменяет полноценную пробу восстановления production-бэкапа.

@@ -5,7 +5,7 @@ DEV_DATA_ARGS ?=
 DEV_UP_ARGS ?=
 MOBILE_ARGS ?=
 
-.PHONY: dev-init dev-up dev-data dev-doctor mobile-run
+.PHONY: dev-init dev-up dev-data dev-doctor mobile-run mobile-ios-run mobile-ios-deps
 dev-init:
 	python3 ops/dev.py init
 
@@ -21,6 +21,14 @@ dev-doctor:
 mobile-run: dev-up
 	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
 	cd clients/iqro_mobile && flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
+
+mobile-ios-deps:
+	cd clients/iqro_mobile && bundle config set --local path vendor/bundle
+	cd clients/iqro_mobile && BUNDLE_FROZEN=true bundle install
+	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
+
+mobile-ios-run: dev-up mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
 
 WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
@@ -103,17 +111,17 @@ mobile-android-profile-staging:
 mobile-android-production:
 	cd clients/iqro_mobile && flutter build appbundle --release --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
-mobile-ios-config-check:
-	ruby -c clients/iqro_mobile/ios/Podfile
+mobile-ios-config-check: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec ruby -c ios/Podfile
 	plutil -lint clients/iqro_mobile/ios/Runner/Info.plist clients/iqro_mobile/ios/Runner/Info-Debug.plist clients/iqro_mobile/ios/Flutter/AppFrameworkInfo.plist
 	for file in clients/iqro_mobile/ios/Runner/*.lproj/InfoPlist.strings; do plutil -lint "$$file"; done
-	cd clients/iqro_mobile/ios && pod install --deployment
+	cd clients/iqro_mobile/ios && bundle exec pod install --deployment
 
-mobile-ios-staging:
-	cd clients/iqro_mobile && flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://staging.iqro.forum --dart-define=APP_ENV=staging --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+mobile-ios-staging: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://staging.iqro.forum --dart-define=APP_ENV=staging --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
-mobile-ios-production:
-	cd clients/iqro_mobile && flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+mobile-ios-production: mobile-ios-deps
+	cd clients/iqro_mobile && bundle exec flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
 
 production-config:
 	$(PRODUCTION_COMPOSE) config --quiet

@@ -84,10 +84,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select App Store-compatible Xcode
         run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Set up locked CocoaPods toolchain
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: "4.0.1"
+          working-directory: clients/iqro_mobile
+          bundler-cache: true
       - name: Show Apple toolchain
         run: |
           xcodebuild -version
-          pod --version
+          bundle exec pod --version
       - name: Set up pinned Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
@@ -107,10 +113,10 @@ jobs:
           done
       - name: Verify locked CocoaPods dependencies
         working-directory: clients/iqro_mobile/ios
-        run: pod install --deployment
+        run: bundle exec pod install --deployment
       - name: iPhone and iPad production release compile
         run: >-
-          flutter build ios
+          bundle exec flutter build ios
           --release
           --no-codesign
           --dart-define=API_BASE_URL=https://iqro.forum
@@ -131,7 +137,7 @@ jobs:
           echo "device_id=$device_id" >> "$GITHUB_OUTPUT"
       - name: Run native iOS configuration tests
         run: >-
-          xcodebuild test
+          bundle exec xcodebuild test
           -workspace ios/Runner.xcworkspace
           -scheme Runner
           -configuration Debug
