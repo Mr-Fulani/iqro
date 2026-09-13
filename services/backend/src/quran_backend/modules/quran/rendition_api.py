@@ -58,7 +58,11 @@ def visible_releases() -> QuerySet[MushafRenditionRelease]:
 
 
 def page_payload(page: MushafRenditionPage, release: MushafRenditionRelease) -> dict[str, Any]:
-    base = settings.PUBLIC_MEDIA_BASE_URL.rstrip("/")
+    base = (
+        "/media"
+        if getattr(settings, "LOCAL_DEVELOPMENT", False)
+        else settings.PUBLIC_MEDIA_BASE_URL.rstrip("/")
+    )
     assets = [{**asset, "url": f"{base}/{asset['path']}"} for asset in page.assets]
     for asset in assets:
         asset.pop("path")

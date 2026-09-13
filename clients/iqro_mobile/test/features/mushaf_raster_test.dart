@@ -13,8 +13,8 @@ import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
-  for (final edition in ['qcf-v4-tajweed-hafs', 'madani-hafs']) {
-    testWidgets('rotation preserves the $edition scan and its decoded frame', (
+  for (final edition in ['qcf-v4-tajweed-hafs', 'kfgqpc-hafs']) {
+    testWidgets('rotation preserves the $edition page and its decoded frame', (
       tester,
     ) async {
       tester.view.devicePixelRatio = 1;
@@ -72,10 +72,7 @@ void main() {
             )
             .first,
       );
-      expect(
-        paper.color,
-        edition == 'madani-hafs' ? Colors.white : mushafPaperColor,
-      );
+      expect(paper.color, mushafPaperColor);
 
       tester.view.physicalSize = const Size(1200, 600);
       await tester.pump();
@@ -206,7 +203,7 @@ class _PendingRaster {
 int? _paintedWidth(WidgetTester tester) => tester
     .widgetList<CustomPaint>(find.byType(CustomPaint))
     .map((widget) => widget.painter)
-    .whereType<MushafScanPainter>()
+    .whereType<MushafRasterPainter>()
     .firstOrNull
     ?.image
     .width;

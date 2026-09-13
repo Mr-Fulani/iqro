@@ -240,9 +240,15 @@ class QuranFoundationClient:
         self,
         *,
         sync_token: str = "",
+        resource_ids: tuple[int, ...] | None = None,
     ) -> QuranFoundationMushafSyncResult:
+        if resource_ids is not None and (
+            not resource_ids or any(type(value) is not int or value <= 0 for value in resource_ids)
+        ):
+            raise QuranFoundationError("Mushaf resource IDs must be positive.")
+        resources = "*" if resource_ids is None else ",".join(map(str, sorted(set(resource_ids))))
         query = {
-            "resources": "mushafs:*",
+            "resources": f"mushafs:{resources}",
             "per_page": "100",
         }
         if sync_token:
@@ -258,6 +264,10 @@ class QuranFoundationClient:
             page_sequence, page_mutations, has_more, next_page_url, next_token = (
                 self._parse_mushaf_sync_page(payload)
             )
+            if resource_ids is not None and any(
+                row["resource_id"] not in resource_ids for row in page_mutations
+            ):
+                raise QuranFoundationError("Quran.Foundation returned an unrequested Mushaf.")
             if sync_until_sequence and page_sequence != sync_until_sequence:
                 raise QuranFoundationError("Quran.Foundation changed sequence during sync paging.")
             sync_until_sequence = page_sequence

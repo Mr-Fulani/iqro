@@ -406,37 +406,6 @@ export type QuranReaderPreference = {
   updated_at: string | null;
 };
 
-export type PageAssetVariant = {
-  url: string;
-  width: number;
-  height: number;
-  format: "webp" | "jpeg" | string;
-  bytes: number;
-};
-
-export type AyahPageRegion = {
-  id: string;
-  ayah: { id: string; surah: number; number: number };
-  reading_order: number;
-  polygon: [number, number][];
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-export type MushafPage = {
-  id: string;
-  edition_code: string;
-  content_version: string;
-  number: number;
-  image_width: number;
-  image_height: number;
-  checksum_sha256: string;
-  assets: PageAssetVariant[];
-  regions: AyahPageRegion[];
-};
-
 export type QuranFoundationMushafRendering =
   | {
       available: true;
@@ -1713,10 +1682,6 @@ export class ApiClient {
       `/api/v1/me/quran-reader-preferences/${locale}`,
       { method: "PUT", body: JSON.stringify(data) },
     );
-  }
-
-  public async getPage(edition: string, pageNumber: number): Promise<MushafPage> {
-    return this.request<MushafPage>(`/api/v1/quran/editions/${edition}/pages/${pageNumber}`);
   }
 
   public async getQuranFoundationMushafs(): Promise<QuranFoundationMushaf[]> {

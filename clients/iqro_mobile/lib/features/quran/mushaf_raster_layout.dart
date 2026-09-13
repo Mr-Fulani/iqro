@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 
 import 'quran_models.dart';
 
-typedef MushafScanBand = ({Rect source, Rect destination});
+typedef MushafRasterBand = ({Rect source, Rect destination});
 
 /// Fits a complete page with one uniform transform, including its whitespace.
 /// Screen height and hit-map granularity must never change the typesetting.
-class MushafScanLayout {
-  const MushafScanLayout({required this.size, required this.bands});
+class MushafRasterLayout {
+  const MushafRasterLayout({required this.size, required this.bands});
 
-  factory MushafScanLayout.page({
+  factory MushafRasterLayout.page({
     required MushafPageData page,
     required Size size,
     required bool portrait,
@@ -23,9 +23,9 @@ class MushafScanLayout {
     final imageHeight = page.imageHeight * scale;
     final imageWidth = sourceWidth * scale;
     final spare = math.max(0.0, size.height - imageHeight);
-    return MushafScanLayout(
+    return MushafRasterLayout(
       size: size,
-      bands: <MushafScanBand>[
+      bands: <MushafRasterBand>[
         (
           source: const Rect.fromLTWH(0, 0, 1, 1),
           destination: Rect.fromLTWH(
@@ -40,7 +40,7 @@ class MushafScanLayout {
   }
 
   final Size size;
-  final List<MushafScanBand> bands;
+  final List<MushafRasterBand> bands;
 
   Offset? sourcePointAt(Offset point) {
     for (final band in bands) {

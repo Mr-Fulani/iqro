@@ -36,7 +36,6 @@ import {
   type AyahTafsir,
   Hizb,
   Juz,
-  MushafPage,
   QuranDivision,
   QuranEdition,
   QuranFoundationMushaf,
@@ -137,7 +136,7 @@ function readerPreferenceKey(locale: string): string {
 function readMushafVariantPreference(): number | null {
   try {
     const stored = window.localStorage.getItem(MUSHAF_VARIANT_PREFERENCE_KEY);
-    if (!stored || stored === "image") return null;
+    if (!stored) return null;
     const sourceId = Number(stored);
     return Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null;
   } catch {
@@ -149,7 +148,7 @@ function writeMushafVariantPreference(sourceId: number | null): void {
   try {
     window.localStorage.setItem(
       MUSHAF_VARIANT_PREFERENCE_KEY,
-      sourceId === null ? "image" : String(sourceId),
+      sourceId === null ? "auto" : String(sourceId),
     );
   } catch {
     // Reading remains available when browser storage is blocked.
@@ -275,10 +274,10 @@ function QuranContent() {
     : null;
   const hasExplicitDeepLink = Boolean(rawSurahParam || deepLinkAyah || deepLinkPageCandidate);
 
-  const initialLocalPosition = useMemo(() => {
-    if (hasExplicitDeepLink) return null;
-    return readLocalReadingPosition("madani-hafs");
-  }, [hasExplicitDeepLink]);
+  // Server and first browser render must agree. Restore browser state after hydration.
+  const [initialLocalPosition, setInitialLocalPosition] =
+    useState<ReturnType<typeof readLocalReadingPosition>>(null);
+  const [localPositionReady, setLocalPositionReady] = useState(false);
 
   const prayerReadingConfig = useMemo<PrayerReadingSessionConfig | null>(() => {
     if (searchParams.get("mode") !== "after-prayer") return null;
@@ -323,7 +322,7 @@ function QuranContent() {
   const [selectedEdition, setSelectedEdition] = useState<string>("madani-hafs");
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<number>(
-    rawSurahParam || initialLocalPosition?.surahNumber || 1,
+    rawSurahParam || 1,
   );
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
   const [translationEditions, setTranslationEditions] = useState<QuranTranslationEdition[]>([]);
@@ -351,16 +350,12 @@ function QuranContent() {
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(
-    deepLinkPage || initialLocalPosition?.pageNumber || 1,
+    deepLinkPage || 1,
   );
   const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
-  const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(
-    initialLocalPosition?.surahNumber && initialLocalPosition?.ayahNumber
-      ? `${initialLocalPosition.surahNumber}:${initialLocalPosition.ayahNumber}`
-      : null,
-  );
+  const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isImmersiveReader, setIsImmersiveReader] = useState(false);
@@ -385,12 +380,11 @@ function QuranContent() {
     [foundationMushafs, selectedFoundationMushafId],
   );
   const mushafPageCount = selectedFoundationMushaf?.pages_count || 604;
-  const { imagePage: mushafPage, foundationPage: foundationMushafPage, loading: pageLoading, error: pageError } = useMushafPages(
-    selectedEdition, selectedFoundationMushaf, currentPage,
-    viewMode === "mushaf" && (selectedFoundationMushafId === null || selectedFoundationMushaf !== null),
+  const { foundationPage: foundationMushafPage, loading: pageLoading, error: pageError } = useMushafPages(
+    selectedFoundationMushaf, currentPage,
+    viewMode === "mushaf" && localPositionReady,
   );
-  const mushafPageLoading = pageLoading && selectedFoundationMushafId === null;
-  const foundationPageLoading = pageLoading && selectedFoundationMushafId !== null;
+  const foundationPageLoading = pageLoading;
   const selectedTranslation = useMemo(
     () =>
       translationEditions.find((edition) => edition.source_id === selectedTranslationId) || null,
@@ -402,19 +396,10 @@ function QuranContent() {
   );
   const mushafVerseKeys = useMemo(() => {
     if (foundationMushafPage) return expandVerseMapping(foundationMushafPage.verse_mapping);
-    if (mushafPage) {
-      return [
-        ...new Set(
-          mushafPage.regions.map(
-            (region) => `${region.ayah.surah}:${region.ayah.number}`,
-          ),
-        ),
-      ];
-    }
     return ayahs
       .filter((ayah) => ayah.pages.includes(currentPage))
       .map((ayah) => `${ayah.surah_number}:${ayah.number}`);
-  }, [ayahs, currentPage, foundationMushafPage, mushafPage]);
+  }, [ayahs, currentPage, foundationMushafPage]);
   const currentAyahKey = viewMode === "mushaf"
     ? (selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) ? selectedMushafAyah : mushafVerseKeys[0] ?? null)
     : selectedMushafAyah?.startsWith(`${selectedSurah}:`) ? selectedMushafAyah : `${selectedSurah}:1`;
@@ -526,6 +511,21 @@ function QuranContent() {
 
     return () => window.clearTimeout(timeout);
   }, [authLoading, loginGuest, readingPlaceCandidate]);
+
+  useEffect(() => {
+    const local = hasExplicitDeepLink || prayerReadingConfig
+      ? null : readLocalReadingPosition(selectedEdition);
+    setInitialLocalPosition(local);
+    if (local) {
+      pendingNavigationPage.current = local.pageNumber;
+      setCurrentPage(local.pageNumber);
+      if (local.surahNumber) setSelectedSurah(local.surahNumber);
+      if (local.surahNumber && local.ayahNumber) {
+        setSelectedMushafAyah(`${local.surahNumber}:${local.ayahNumber}`);
+      }
+    }
+    setLocalPositionReady(true);
+  }, [hasExplicitDeepLink, prayerReadingConfig, selectedEdition]);
 
   // Load Editions
   useEffect(() => {
@@ -777,7 +777,7 @@ function QuranContent() {
         const resolvedSourceId = preferredSourceId !== null
           && renderable.some((mushaf) => mushaf.source_id === preferredSourceId)
           ? preferredSourceId
-          : null;
+          : renderable.find((mushaf) => mushaf.source_id === 5)?.source_id ?? renderable[0]?.source_id ?? null;
         setSelectedFoundationMushafId(resolvedSourceId);
         if (preferredSourceId !== null && resolvedSourceId === null) {
           writeMushafVariantPreference(null);
@@ -847,7 +847,7 @@ function QuranContent() {
 
   // Load Ayahs when surah changes
   useEffect(() => {
-    if (!selectedEdition || !selectedSurah) return;
+    if (!selectedEdition || !selectedSurah || !localPositionReady) return;
     let cancelled = false;
     setLoading(true);
     api
@@ -875,7 +875,7 @@ function QuranContent() {
         setFeedbackMessage({ text: api.normalizeError(err), type: "err" });
       });
     return () => { cancelled = true; };
-  }, [deepLinkPage, initialLocalPosition, selectedEdition, selectedSurah]);
+  }, [deepLinkPage, initialLocalPosition, localPositionReady, selectedEdition, selectedSurah]);
 
   // Notification links include the first ayah of a review range. Wait until
   // that surah's ayahs are loaded, then open its Mushaf page and highlight it.
@@ -954,6 +954,7 @@ function QuranContent() {
     if (
       hasExplicitDeepLink
       || prayerReadingConfig !== null
+      || !localPositionReady
       || handledInitialPositionSync.current
       || authLoading
       || !selectedEdition
@@ -999,7 +1000,7 @@ function QuranContent() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, hasExplicitDeepLink, prayerReadingConfig, selectedEdition, selectedSurah, session]);
+  }, [authLoading, hasExplicitDeepLink, localPositionReady, prayerReadingConfig, selectedEdition, selectedSurah, session]);
 
   // Load Mushaf page when page changes and in mushaf mode
   useEffect(() => {
@@ -1028,7 +1029,6 @@ function QuranContent() {
       viewMode !== "mushaf"
       || !ayahKey
       || ayahKey !== selectedMushafAyah
-      || mushafPageLoading
       || foundationPageLoading
     ) {
       return;
@@ -1048,8 +1048,6 @@ function QuranContent() {
   }, [
     foundationMushafPage,
     foundationPageLoading,
-    mushafPage,
-    mushafPageLoading,
     selectedMushafAyah,
     viewMode,
   ]);
@@ -1065,14 +1063,6 @@ function QuranContent() {
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
     locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
-  const mushafRegions = useMemo(() => {
-    const unique = new Map<string, MushafPage["regions"][number]>();
-    for (const region of mushafPage?.regions || []) {
-      const key = `${region.ayah.surah}:${region.ayah.number}:${JSON.stringify(region.polygon)}`;
-      if (!unique.has(key)) unique.set(key, region);
-    }
-    return [...unique.values()];
-  }, [mushafPage]);
 
   const handleActiveAyahChange = useCallback((ayahKey: string | null) => {
     setPlayingMushafAyah(ayahKey);
@@ -1326,7 +1316,7 @@ function QuranContent() {
       active={viewMode === "mushaf"}
       page={currentPage}
       count={mushafPageCount}
-      pageRatio={selectedFoundationMushaf ? 900 / 1380 : (mushafPage?.image_width || 900) / (mushafPage?.image_height || 1400)}
+      pageRatio={900 / 1380}
       hasNotes={translationEnabled || tafsirEnabled}
       hasSession={prayerReadingConfig !== null}
       onImmersiveChange={setIsImmersiveReader}
@@ -1382,7 +1372,7 @@ function QuranContent() {
           <div className="quran-mode-switch">
             <button
               className={`btn ${viewMode === "text" ? "btn-primary" : "btn-secondary"}`}
-              disabled={viewMode === "mushaf" && pageLoading}
+              disabled={!localPositionReady}
               onClick={() => {
                 const target = currentAyahKey;
                 pendingTextAyah.current = target;
@@ -1440,16 +1430,17 @@ function QuranContent() {
               </label>
               <select
                 id="mushaf-variant"
-                value={selectedFoundationMushafId === null ? "image" : String(selectedFoundationMushafId)}
+                value={selectedFoundationMushafId === null ? "" : String(selectedFoundationMushafId)}
+                disabled={foundationMushafs.length === 0}
                 onChange={(event) => {
                   const value = event.target.value;
-                  const sourceId = value === "image" ? null : Number(value);
+                  const sourceId = Number(value);
                   setSelectedFoundationMushafId(sourceId);
                   writeMushafVariantPreference(sourceId);
                   setSelectedMushafAyah(null);
                 }}
               >
-                <option value="image">{t("quran.mushafVariantImage")}</option>
+                {foundationMushafs.length === 0 && <option value="">{t("quran.mushafUnavailable")}</option>}
                 {foundationMushafs.map((mushaf) => (
                   <option value={mushaf.source_id} key={mushaf.source_id}>
                     {mushaf.name} · {mushaf.qirat_name}
@@ -1752,10 +1743,10 @@ function QuranContent() {
           editionCode={selectedEdition}
           selectedSurah={selectedSurah}
           selectedAyahKey={selectedMushafAyah}
-          readerPageKey={viewMode === "mushaf" ? `${selectedEdition}:${selectedFoundationMushafId ?? "image"}:${currentPage}` : undefined}
+          readerPageKey={viewMode === "mushaf" ? `${selectedEdition}:${selectedFoundationMushafId ?? "unavailable"}:${currentPage}` : undefined}
           readerAyahKey={selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah)
-            && !mushafPageLoading && !foundationPageLoading
-            && (selectedFoundationMushafId !== null ? foundationMushafPage?.page_number === currentPage : mushafPage?.number === currentPage)
+            && !foundationPageLoading
+            && foundationMushafPage?.page_number === currentPage
             ? selectedMushafAyah : null}
           playAyahRequest={playAyahRequest}
           controlRequest={playerControlRequest}
@@ -1984,86 +1975,8 @@ function QuranContent() {
                   />
                 </MushafPageTurn>
               ) : null
-            ) : mushafPageLoading ? (
-              <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
-            ) : mushafPage && mushafPage.assets && mushafPage.assets.length > 0 ? (
-              <MushafPageTurn
-                direction={pageTurnDirection}
-                pageId={`image-${mushafPage.number}`}
-              >
-                <div
-                  className="mushaf-page-frame"
-                  style={{ aspectRatio: `${mushafPage.image_width} / ${mushafPage.image_height}` }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={mushafPage.assets[0].url}
-                    alt={t("quran.mushafAlt", { page: mushafPage.number })}
-                    className="mushaf-image"
-                    data-page-number={mushafPage.number}
-                    width={mushafPage.image_width}
-                    height={mushafPage.image_height}
-                  />
-                  <svg
-                    className="mushaf-regions"
-                    viewBox="0 0 1 1"
-                    preserveAspectRatio="none"
-                    aria-label={t("quran.regionsAria", { page: mushafPage.number })}
-                    data-page-number={mushafPage.number}
-                  >
-                    {mushafRegions.map((region) => {
-                      const key = `${region.ayah.surah}:${region.ayah.number}`;
-                      return (
-                        <polygon
-                          key={region.id}
-                          points={region.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
-                          className={`mushaf-region${selectedMushafAyah === key ? " is-selected" : ""}${playingMushafAyah === key ? " is-playing" : ""}`}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={t("common.ayah", { ayah: key })}
-                          data-ayah-key={key}
-                          onClick={() => handleSelectMushafAyah(key)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              handleSelectMushafAyah(key);
-                            }
-                          }}
-                        >
-                          <title>{t("common.ayah", { ayah: key })}</title>
-                        </polygon>
-                      );
-                    })}
-                  </svg>
-                  {selectedMushafAyah && (
-                    <div className="mushaf-selection-label">
-                      {playingMushafAyah === selectedMushafAyah
-                        ? t("quran.playingAyah", { ayah: selectedMushafAyah })
-                        : t("quran.selectedAyah", { ayah: selectedMushafAyah })}
-                    </div>
-                  )}
-                </div>
-              </MushafPageTurn>
             ) : (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                <p className="eyebrow" style={{ marginBottom: 12 }}>
-                  {t("quran.madaniPage", { page: currentPage })}
-                </p>
-                <div
-                  style={{
-                    maxWidth: 540,
-                    margin: "0 auto",
-                    padding: 32,
-                    background: "#fff",
-                    borderRadius: 12,
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <p className="quran-arabic-text" style={{ fontSize: 24, textAlign: "center" }}>
-                    {ayahs.slice(0, 5).map((a) => a.text_uthmani).join(" ۝ ")}
-                  </p>
-                </div>
-              </div>
+              <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
             )}
           </MushafGestureSurface>
 

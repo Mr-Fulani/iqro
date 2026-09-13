@@ -929,7 +929,7 @@ def _ayah_for_active_edition(
 
 
 def _validate_page_ayah(page: MushafPage | None, ayah: Ayah | None) -> None:
-    if page and ayah and not ayah.page_regions.filter(page=page).exists():
+    if page and ayah and not ayah.page_mappings.filter(page=page).exists():
         raise ValidationError("The selected ayah is not located on the selected page.")
 
 

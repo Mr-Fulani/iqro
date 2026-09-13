@@ -76,7 +76,7 @@ def _validate_complete_version(version: QuranEditionVersion) -> None:
     actual_ayahs = Ayah.objects.filter(surah__edition_version=version).count()
     covered_ayahs = (
         Ayah.objects.filter(
-            surah__edition_version=version, page_regions__page__edition_version=version
+            surah__edition_version=version, page_mappings__page__edition_version=version
         )
         .distinct()
         .count()
@@ -120,7 +120,7 @@ def _validate_complete_version(version: QuranEditionVersion) -> None:
         raise QuranPublicationError("Published Rub el Hizb metadata must cover every ayah.")
     if actual_ayahs <= 0 or covered_ayahs != actual_ayahs:
         raise QuranPublicationError(
-            f"Ayah region coverage mismatch: expected {actual_ayahs}, got {covered_ayahs}."
+            f"Ayah page coverage mismatch: expected {actual_ayahs}, got {covered_ayahs}."
         )
     if not version.manifests.exists():
         raise QuranPublicationError("The version has no verified source manifest.")

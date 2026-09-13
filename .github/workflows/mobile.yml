@@ -101,7 +101,7 @@ jobs:
       - name: Validate Apple configuration
         run: |
           ruby -c ios/Podfile
-          plutil -lint ios/Runner/Info.plist ios/Flutter/AppFrameworkInfo.plist
+          plutil -lint ios/Runner/Info.plist ios/Runner/Info-Debug.plist ios/Flutter/AppFrameworkInfo.plist
           for file in ios/Runner/*.lproj/InfoPlist.strings; do
             plutil -lint "$file"
           done

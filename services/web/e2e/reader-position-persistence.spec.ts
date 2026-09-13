@@ -31,9 +31,12 @@ test("turning mushaf page saves position to localStorage immediately and restore
   await expect(restoredInput).toHaveValue("7");
 });
 
-test("pre-stored local reading position opens immediately without flashing page 1", async ({
+test("saved position restores after hydration without hydration errors", async ({
   page,
 }) => {
+  const hydrationErrors: string[] = [];
+  page.on("console", (message) => { if (/hydration|hydrated|server rendered/i.test(message.text())) hydrationErrors.push(message.text()); });
+  page.on("pageerror", (error) => hydrationErrors.push(error.message));
   // Pre-seed local storage with page 18
   await page.addInitScript(
     ({ key }) => {
@@ -53,6 +56,7 @@ test("pre-stored local reading position opens immediately without flashing page 
   await page.goto("/ru/quran");
   const pageJumpInput = page.locator("#mushaf-page-jump");
   await expect(pageJumpInput).toHaveValue("18");
+  expect(hydrationErrors).toEqual([]);
 });
 
 test("explicit query parameter page takes priority over saved local position", async ({

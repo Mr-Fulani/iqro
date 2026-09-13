@@ -4,7 +4,8 @@ Uses the unmodified, checksum-pinned QPC Unicode words/font. The composition is
 IQRO's, not a claim of official print facsimile. No network or publication here.
 """
 import argparse
-from collections import defaultdict
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 from pathlib import Path
@@ -17,8 +18,12 @@ VERSION = "iqro-kfgqpc-3"
 FONT = "UthmanicHafs1Ver18.woff2"
 
 
-def load_source(root):
-    lock = json.loads(Path(__file__).with_name("kfgqpc.source.lock.json").read_text())
+def load_source(root, source_lock=None):
+    pinned = json.loads(Path(__file__).with_name("kfgqpc.source.lock.json").read_text())
+    lock = json.loads(source_lock.read_text()) if source_lock else pinned
+    p.require(lock["font_sha256"] == pinned["font_sha256"] and
+              lock["font_url"] == pinned["font_url"], "Unsupported source font")
+    p.require(not source_lock or lock["publication_scope"] == "local", "Dynamic source is local-only")
     p.require(p.digest(root / "snapshot.json") == lock["snapshot_sha256"], "Snapshot checksum differs")
     p.require(p.digest(root / FONT) == lock["font_sha256"], "Font checksum differs")
     data = json.loads((root / "snapshot.json").read_bytes())
@@ -163,15 +168,43 @@ def compose(data, page, font, references, lock):
     return result
 
 
+def render_bundle(page, number, output):
+    stem = f"page-{number:03d}"
+    vector = p.svg(page).encode()
+    receipt = output / f"{stem}.bundle.json"
+    if receipt.exists():
+        entry = json.loads(receipt.read_bytes())
+        p.require(entry["source_svg_sha256"] == hashlib.sha256(vector).hexdigest(), "Resume rendering differs")
+        for spec in [entry["geometry"], *entry["assets"]]:
+            p.require(Path(spec["path"]).name == spec["path"], "Unsafe resume file")
+            file = output / spec["path"]
+            p.require(not file.is_symlink() and file.stat().st_size == spec["bytes"] and p.digest(file) == spec["sha256"],
+                      "Resume integrity check failed")
+    else:
+        raster = subprocess.run(["node", str(Path(__file__).with_name("render_page.cjs")), str(output), stem],
+                                input=vector, capture_output=True, check=True, timeout=120)
+        geometry = p.canonical(p.mobile_geometry(page))
+        name = f"{stem}.mobile.json"
+        write_once(output / name, geometry)
+        entry = {"page": number, "source_svg_sha256": hashlib.sha256(vector).hexdigest(),
+                 "geometry": {"path": name, "bytes": len(geometry), "sha256": hashlib.sha256(geometry).hexdigest()},
+                 "assets": json.loads(raster.stdout)}
+        write_once(receipt, p.canonical(entry))
+    return entry
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--pages", help="Comma-separated page sample; cannot produce a publishable manifest")
     parser.add_argument("--audit-only", action="store_true")
+    parser.add_argument("--workers", type=int, choices=(1, 2, 3, 4), default=1,
+                        help="Bounded parallel raster jobs; output bytes are independent of this value")
+    parser.add_argument("--source-lock", type=Path, help="Checksum lock exported by local dev-data")
     args = parser.parse_args()
     runtime = p.verify_runtime()
-    data, lock = load_source(args.source_dir)
+    data, lock = load_source(args.source_dir, args.source_lock)
     references = audit(data)
     selected = list(map(int, args.pages.split(","))) if args.pages else list(range(1, 605))
     p.require(selected == sorted(set(selected)) and all(1 <= n <= 604 for n in selected), "Invalid page selection")
@@ -184,40 +217,30 @@ def main():
     write_once(args.output_dir / "build-identity.json", p.canonical(identity))
     font = p.SourceFont(args.source_dir / FONT, "KFGQPC HAFS Uthmanic Script")
     entries = []
+    pending = deque()
+    executor = ThreadPoolExecutor(max_workers=args.workers)
     try:
         for number in selected:
             page = compose(data, data["pages"][number - 1], font, references, lock)
             if args.audit_only:
                 continue
-            stem = f"page-{number:03d}"
-            vector = p.svg(page).encode()
-            receipt = args.output_dir / f"{stem}.bundle.json"
-            if receipt.exists():
-                entry = json.loads(receipt.read_bytes())
-                p.require(entry["source_svg_sha256"] == hashlib.sha256(vector).hexdigest(), "Resume rendering differs")
-                for spec in [entry["geometry"], *entry["assets"]]:
-                    p.require(Path(spec["path"]).name == spec["path"], "Unsafe resume file")
-                    file = args.output_dir / spec["path"]
-                    p.require(not file.is_symlink() and file.stat().st_size == spec["bytes"] and p.digest(file) == spec["sha256"],
-                              "Resume integrity check failed")
-            else:
-                raster = subprocess.run(["node", str(Path(__file__).with_name("render_page.cjs")), str(args.output_dir), stem],
-                                        input=vector, capture_output=True, check=True, timeout=120)
-                geometry = p.canonical(p.mobile_geometry(page))
-                name = f"{stem}.mobile.json"
-                write_once(args.output_dir / name, geometry)
-                entry = {"page": number, "source_svg_sha256": hashlib.sha256(vector).hexdigest(),
-                         "geometry": {"path": name, "bytes": len(geometry), "sha256": hashlib.sha256(geometry).hexdigest()},
-                         "assets": json.loads(raster.stdout)}
-                write_once(receipt, p.canonical(entry))
+            pending.append(executor.submit(render_bundle, page, number, args.output_dir))
+            if len(pending) >= args.workers:
+                entries.append(pending.popleft().result())
+                print(f"KFGQPC pages: {len(entries)}/{len(selected)}", flush=True)
+        while pending:
+            entry = pending.popleft().result()
             entries.append(entry)
             print(f"KFGQPC pages: {len(entries)}/{len(selected)}", flush=True)
     finally:
+        executor.shutdown(wait=True, cancel_futures=True)
         font.close()
-    load_source(args.source_dir)
+    load_source(args.source_dir, args.source_lock)
     if not args.pages and not args.audit_only:
-        manifest = {**identity, "status": "prepared", "publication_scope": "staging", "canonical_edition": "madani-hafs",
-                    "version": "kfgqpc-iqro-20260908-v3", "page_count": 604, "pages": entries}
+        version = (f"local-kfgqpc-{hashlib.sha256(p.canonical(identity)).hexdigest()[:20]}"
+                   if args.source_lock else "kfgqpc-iqro-20260908-v3")
+        manifest = {**identity, "status": "prepared", "publication_scope": lock["publication_scope"], "canonical_edition": "madani-hafs",
+                    "version": version, "page_count": 604, "pages": entries}
         raw = p.canonical(manifest)
         write_once(args.output_dir / "manifest.json", raw)
         write_once(args.output_dir / "manifest.sha256", f"{hashlib.sha256(raw).hexdigest()}  manifest.json\n".encode())

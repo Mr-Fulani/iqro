@@ -40,6 +40,7 @@ class QuranFoundationMushafSource(Protocol):
         self,
         *,
         sync_token: str = "",
+        resource_ids: tuple[int, ...] | None = None,
     ) -> QuranFoundationMushafSyncResult: ...
 
     def get_mushaf_snapshot(self, resource_id: int) -> dict[str, Any]: ...
@@ -60,12 +61,22 @@ def sync_quran_foundation_mushafs(
     client: QuranFoundationMushafSource | None = None,
     force: bool = False,
     now: datetime | None = None,
+    resource_ids: tuple[int, ...] | None = None,
 ) -> MushafCatalogSyncSummary:
+    if resource_ids is not None and (
+        not resource_ids or any(type(value) is not int or value <= 0 for value in resource_ids)
+    ):
+        raise QuranFoundationError("Mushaf resource IDs must be positive.")
+    resources_filter = (
+        MUSHAF_RESOURCES_FILTER
+        if resource_ids is None
+        else ("mushafs:" + ",".join(map(str, sorted(set(resource_ids)))))
+    )
     sync_client = client or QuranFoundationClient.from_environment()
     current = now or timezone.now()
     state, _ = QuranFoundationMushafSyncState.objects.get_or_create(
         environment=sync_client.environment.name,
-        resources_filter=MUSHAF_RESOURCES_FILTER,
+        resources_filter=resources_filter,
     )
     state.last_attempt_at = current
     state.save(update_fields=["last_attempt_at", "updated_at"])
@@ -73,8 +84,11 @@ def sync_quran_foundation_mushafs(
     try:
         result = sync_client.sync_mushaf_catalog(
             sync_token="" if force else state.sync_token,
+            **({"resource_ids": resource_ids} if resource_ids is not None else {}),
         )
         reload_ids, deleted_ids = _catalog_actions(result.mutations)
+        if resource_ids is not None and not (reload_ids | deleted_ids) <= set(resource_ids):
+            raise QuranFoundationError("Quran.Foundation returned an unrequested Mushaf.")
         snapshots = {
             resource_id: sync_client.get_mushaf_snapshot(resource_id)
             for resource_id in sorted(reload_ids)
@@ -85,6 +99,7 @@ def sync_quran_foundation_mushafs(
             deleted_ids=deleted_ids,
             result=result,
             current=current,
+            resources_filter=resources_filter,
         )
     except QuranFoundationError:
         state.consecutive_failures += 1
@@ -125,13 +140,14 @@ def _catalog_actions(
 
 
 @transaction.atomic
-def _apply_catalog(
+def _apply_catalog(  # noqa: PLR0913
     *,
     environment: str,
     snapshots: dict[int, dict[str, Any]],
     deleted_ids: set[int],
     result: QuranFoundationMushafSyncResult,
     current: datetime,
+    resources_filter: str = MUSHAF_RESOURCES_FILTER,
 ) -> tuple[int, int, int]:
     QuranFoundationMushaf.objects.filter(
         environment=environment,
@@ -152,7 +168,7 @@ def _apply_catalog(
 
     state = QuranFoundationMushafSyncState.objects.select_for_update().get(
         environment=environment,
-        resources_filter=MUSHAF_RESOURCES_FILTER,
+        resources_filter=resources_filter,
     )
     state.sync_token = result.next_sync_token
     state.last_sync_sequence = result.sync_until_sequence
@@ -206,7 +222,10 @@ def _replace_snapshot(  # noqa: PLR0912
             raise QuranFoundationError("Quran.Foundation returned a duplicate Mushaf page.")
         pages_by_number[page_number] = row
     if set(pages_by_number) != set(range(1, pages_count + 1)):
-        raise QuranFoundationError("Quran.Foundation Mushaf snapshot has incomplete pages.")
+        raise QuranFoundationError(
+            f"Quran.Foundation Mushaf {resource_id} has incomplete pages: "
+            f"expected {pages_count}, received {len(pages_by_number)}."
+        )
 
     words_by_page: defaultdict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in records:

@@ -170,7 +170,6 @@ body:has(.is-reader-immersive) .global-audio-player-dock {
   .mushaf-page-outgoing { display: none; }
 }
 
-.is-reader-immersive .mushaf-image,
 .is-reader-immersive .qf-mushaf-sheet {
   border-radius: 0;
   box-shadow: none;

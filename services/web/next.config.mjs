@@ -39,6 +39,11 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  ...(process.env.IQRO_E2E === "1" ? { devIndicators: false } : {}),
+  allowedDevOrigins: [
+    "127.0.0.1", "10.0.2.2",
+    ...(process.env.LOCAL_WEB_ALLOWED_ORIGINS || "").split(",").map((host) => host.trim()).filter(Boolean),
+  ],
   output: "standalone",
   cacheHandler: require.resolve("./cache/incremental-cache-handler.cjs"),
   cacheHandlers: {

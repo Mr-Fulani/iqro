@@ -271,4 +271,4 @@ class PreferencesStore {
   }
 }
 
-const defaultMushafVariant = 'scan';
+const defaultMushafVariant = 'auto';

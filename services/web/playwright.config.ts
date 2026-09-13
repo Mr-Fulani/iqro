@@ -50,6 +50,7 @@ export default defineConfig({
             : "npm run dev -- --hostname 127.0.0.1 --port 3100",
           url: baseURL,
           env: {
+            IQRO_E2E: "1",
             SITE_URL: baseURL,
             BACKEND_INTERNAL_URL: mockPublicApiUrl,
             HOSTNAME: "127.0.0.1",

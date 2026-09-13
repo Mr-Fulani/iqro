@@ -1,4 +1,24 @@
 BACKEND_DIR := services/backend
+DEV_DATA_ARGS ?=
+MOBILE_ARGS ?=
+
+.PHONY: dev-init dev-up dev-data dev-doctor mobile-run
+dev-init:
+	python3 ops/dev.py init
+
+dev-up:
+	python3 ops/dev.py up
+
+dev-data:
+	python3 ops/dev.py data $(DEV_DATA_ARGS)
+
+dev-doctor:
+	python3 ops/dev.py doctor
+
+mobile-run:
+	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
+	cd clients/iqro_mobile && flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
+
 WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 API_REPLICAS ?= 1
@@ -15,23 +35,22 @@ STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING
 .PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run mobile-check mobile-android-staging mobile-android-profile-staging mobile-android-production mobile-ios-config-check mobile-ios-staging mobile-ios-production production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
 
 # Запуск с сохранением данных базы данных
-up:
-	docker compose up --build
+up: dev-up
 
 # Остановка с сохранением данных базы данных
 down:
-	docker compose down --remove-orphans
+	docker compose --env-file services/backend/.env stop
 
 # Перезапуск с сохранением данных базы данных
 restart:
-	docker compose down --remove-orphans && docker compose up --build
+	docker compose --env-file services/backend/.env restart
 
 # Полный сброс (с удалением томов базы данных и Redis)
 reset-all:
 	docker compose down -v --remove-orphans && docker compose up --build
 
 backend-install:
-	cd $(BACKEND_DIR) && uv sync --all-groups
+	cd $(BACKEND_DIR) && uv sync --frozen --all-groups
 
 backend-check:
 	cd $(BACKEND_DIR) && uv run ruff check .
@@ -44,7 +63,6 @@ backend-test:
 	cd $(BACKEND_DIR) && uv run pytest
 
 backend-migrations:
-	cd $(BACKEND_DIR) && uv run python manage.py makemigrations
 	cd $(BACKEND_DIR) && uv run python manage.py migrate
 
 backend-run:
@@ -54,7 +72,7 @@ backend-up:
 	docker compose -f $(BACKEND_DIR)/compose.yaml up --build
 
 web-install:
-	cd $(WEB_DIR) && npm install
+	cd $(WEB_DIR) && npm ci
 
 web-dev:
 	cd $(WEB_DIR) && npm run dev
@@ -84,7 +102,7 @@ mobile-android-production:
 
 mobile-ios-config-check:
 	ruby -c clients/iqro_mobile/ios/Podfile
-	plutil -lint clients/iqro_mobile/ios/Runner/Info.plist clients/iqro_mobile/ios/Flutter/AppFrameworkInfo.plist
+	plutil -lint clients/iqro_mobile/ios/Runner/Info.plist clients/iqro_mobile/ios/Runner/Info-Debug.plist clients/iqro_mobile/ios/Flutter/AppFrameworkInfo.plist
 	for file in clients/iqro_mobile/ios/Runner/*.lproj/InfoPlist.strings; do plutil -lint "$$file"; done
 	cd clients/iqro_mobile/ios && pod install --deployment
 
@@ -325,6 +343,7 @@ release-ops-check:
 	sh -n ops/systemd/install.sh
 	python3 -m ops.staging.test_config
 	python3 -m unittest \
+		ops.test_dev \
 		ops.postgres.test_offsite \
 		ops.monitoring.test_heartbeat \
 		ops.systemd.test_units \

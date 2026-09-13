@@ -1,26 +1,21 @@
 /// Visual identity is deliberately separate from canonical Quran/audio identity.
 class MushafIdentity {
   const MushafIdentity._(this.code);
-  static const canonical = MushafIdentity._('madani-hafs');
+  static const primary = MushafIdentity._('kfgqpc-hafs');
 
   factory MushafIdentity.fromPreference(String value) {
     if (!RegExp(r'^native:[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value) ||
         value.length > 71) {
-      return canonical;
+      return primary;
     }
     return MushafIdentity._(value.substring(7));
   }
 
   final String code;
-  bool get isCanonical => code == canonical.code;
-  String get preference => isCanonical ? 'scan' : 'native:$code';
-  String get contentKey =>
-      isCanonical ? 'quran-edition:$code' : 'mushaf-rendition:$code';
-  String pageCacheKey(int page) => isCanonical
-      ? 'quran:$code:page:$page'
-      : 'mushaf-rendition:$code:page:$page';
-  String get apiPath =>
-      isCanonical ? '/quran/editions/$code' : '/quran/mushaf-renditions/$code';
+  String get preference => 'native:$code';
+  String get contentKey => 'mushaf-rendition:$code';
+  String pageCacheKey(int page) => 'mushaf-rendition:$code:page:$page';
+  String get apiPath => '/quran/mushaf-renditions/$code';
 
   @override
   bool operator ==(Object other) =>
@@ -42,7 +37,7 @@ class NativeMushafEdition {
   static NativeMushafEdition? parse(Map<String, Object?> json) {
     final code = json['code']?.toString() ?? '';
     final identity = MushafIdentity.fromPreference('native:$code');
-    if (identity.isCanonical ||
+    if (code == 'madani-hafs' ||
         identity.code != code ||
         json['available'] != true ||
         json['canonical_edition'] != 'madani-hafs' ||
@@ -75,15 +70,18 @@ class NativeMushafEdition {
       !isProduction || !stagingOnly;
 }
 
-MushafIdentity productionMushafIdentity(
+MushafIdentity availableMushafIdentity(
   MushafIdentity requested,
-  Iterable<NativeMushafEdition> catalog,
-) =>
-    requested.isCanonical ||
-        catalog.any(
-          (edition) =>
-              edition.identity == requested &&
-              edition.availableIn(isProduction: true),
-        )
-    ? requested
-    : MushafIdentity.canonical;
+  Iterable<NativeMushafEdition> catalog, {
+  required bool isProduction,
+}) {
+  final available = catalog
+      .where((edition) => edition.availableIn(isProduction: isProduction))
+      .toList();
+  for (final identity in [requested, MushafIdentity.primary]) {
+    if (available.any((edition) => edition.identity == identity)) {
+      return identity;
+    }
+  }
+  return available.firstOrNull?.identity ?? MushafIdentity.primary;
+}

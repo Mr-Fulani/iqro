@@ -24,10 +24,10 @@ void main() {
   test(
     'visual keys never replace canonical Quran, audio or downloaded package keys',
     () {
-      expect(MushafIdentity.canonical.contentKey, 'quran-edition:madani-hafs');
+      expect(MushafIdentity.primary.contentKey, 'mushaf-rendition:kfgqpc-hafs');
       expect(
-        MushafIdentity.canonical.pageCacheKey(3),
-        'quran:madani-hafs:page:3',
+        MushafIdentity.primary.pageCacheKey(3),
+        'mushaf-rendition:kfgqpc-hafs:page:3',
       );
       expect(native.contentKey, 'mushaf-rendition:qcf-v2-hafs');
       expect(native.pageCacheKey(3), 'mushaf-rendition:qcf-v2-hafs:page:3');
@@ -94,7 +94,7 @@ void main() {
       );
       expect(
         container.read(selectedMushafIdentityProvider),
-        env == 'staging' ? native : MushafIdentity.canonical,
+        MushafIdentity.primary,
       );
       container.dispose();
     }
@@ -114,16 +114,19 @@ void main() {
         stagingOnly: true,
       );
       expect(
-        productionMushafIdentity(ready.identity, [ready, preview]),
+        availableMushafIdentity(ready.identity, [
+          ready,
+          preview,
+        ], isProduction: true),
         ready.identity,
       );
       expect(
-        productionMushafIdentity(native, [ready, preview]),
-        MushafIdentity.canonical,
+        availableMushafIdentity(native, [ready, preview], isProduction: true),
+        MushafIdentity.primary,
       );
       expect(
-        productionMushafIdentity(ready.identity, []),
-        MushafIdentity.canonical,
+        availableMushafIdentity(ready.identity, [], isProduction: true),
+        MushafIdentity.primary,
       );
       expect(ready.availableIn(isProduction: true), isTrue);
       expect(preview.availableIn(isProduction: true), isFalse);
@@ -138,17 +141,17 @@ void main() {
       final api = _Api();
       final old = QuranRepository(api: api, database: cache);
       final next = old.forMushaf(native);
-      expect((await old.mushafPage(3)).editionCode, 'madani-hafs');
+      expect((await old.mushafPage(3)).editionCode, 'kfgqpc-hafs');
       expect((await next.mushafPage(3)).editionCode, native.code);
       expect(
         cache.entries.keys,
         containsAll([
-          MushafIdentity.canonical.pageCacheKey(3),
+          MushafIdentity.primary.pageCacheKey(3),
           native.pageCacheKey(3),
         ]),
       );
       api.offline = true;
-      expect((await old.mushafPage(3)).editionCode, 'madani-hafs');
+      expect((await old.mushafPage(3)).editionCode, 'kfgqpc-hafs');
       expect((await next.mushafPage(3)).editionCode, native.code);
       api.offline = false;
       api.wrongEdition = true;
@@ -195,7 +198,7 @@ void main() {
       await container.read(mushafRenditionsProvider.future);
       expect(
         container.read(selectedMushafIdentityProvider),
-        MushafIdentity.canonical,
+        MushafIdentity.primary,
       );
     },
   );
@@ -266,7 +269,7 @@ void main() {
       addTearDown(container.dispose);
       final original = container.read(selectedMushafDownloadControllerProvider);
       final job = original.download();
-      container.read(choice.notifier).state = MushafIdentity.canonical;
+      container.read(choice.notifier).state = MushafIdentity.primary;
       expect(
         container.read(selectedMushafDownloadControllerProvider),
         isNot(same(original)),
@@ -343,7 +346,7 @@ class _Api implements ApiClient {
     final native = path.contains('mushaf-renditions') && !wrongEdition;
     return {
       'number': int.parse(path.split('/').last),
-      'edition_code': native ? 'qcf-v2-hafs' : 'madani-hafs',
+      'edition_code': native ? path.split('/')[3] : 'wrong-edition',
       'content_version': 'v1',
       'image_width': 1000,
       'image_height': 1600,

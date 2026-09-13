@@ -1,10 +1,9 @@
-"""Opt-in real bundle validation against a read-only staging page-map snapshot."""
+"""Opt-in real bundle validation against a read-only canonical page-map snapshot."""
 
 from __future__ import annotations
 
 import json
 import os
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -14,7 +13,7 @@ from django.test import override_settings
 
 from quran_backend.modules.quran.models import (
     Ayah,
-    AyahPageRegion,
+    AyahPageMapping,
     MushafPage,
     MushafRenditionPage,
     MushafRenditionRelease,
@@ -85,34 +84,36 @@ def test_full_bundle_publication_preserves_canonical_ids(quran_dataset: dict[str
         ]
     )
     pages = dict(MushafPage.objects.values_list("number", "id"))
-    AyahPageRegion.objects.bulk_create(
+    AyahPageMapping.objects.bulk_create(
         [
-            AyahPageRegion(
+            AyahPageMapping(
                 page_id=pages[n],
                 ayah_id=ayahs[(s, a)],
-                reading_order=index + 10,
-                x=Decimal("0.1"),
-                y=Decimal("0.1"),
-                width=Decimal("0.8"),
-                height=Decimal("0.1"),
-                polygon=[[0.1, 0.1], [0.9, 0.1], [0.9, 0.2]],
             )
-            for index, (n, s, a) in enumerate(mapping)
-        ]
+            for n, s, a in mapping
+        ],
+        ignore_conflicts=True,
     )
     uploader = Mock()
     manifest = Path(BUNDLE) / "manifest.json"
-    edition = json.loads(manifest.read_bytes())["edition"]
+    payload = json.loads(manifest.read_bytes())
+    edition = payload["edition"]
     if edition in {"kfgqpc-hafs", "qcf-v4-tajweed-hafs"}:
         source = create_qf_source()
+        if payload.get("publication_scope") == "local":
+            source.source_checksum_sha256 = payload["source"]["source_checksum_sha256"]
+            source.save()
         if edition == "qcf-v4-tajweed-hafs":
             source.source_id = 19
             source.source_checksum_sha256 = TAJWEED_SOURCE_SHA
             source.save()
-    assert publish_rendition(manifest, uploader=uploader, validate_only=True) is None
+    local = payload.get("publication_scope") == "local"
+    with override_settings(DEBUG=local, LOCAL_DEVELOPMENT=local):
+        assert publish_rendition(manifest, uploader=uploader, validate_only=True) is None
     uploader.upload_path.assert_not_called()
     assert not MushafRenditionRelease.objects.exists()
-    release = publish_rendition(manifest, uploader=uploader)
+    with override_settings(DEBUG=local, LOCAL_DEVELOPMENT=local):
+        release = publish_rendition(manifest, uploader=uploader)
     assert release is not None
     assert release.canonical_version_id == version.pk
     assert MushafRenditionPage.objects.filter(release=release).count() == 604

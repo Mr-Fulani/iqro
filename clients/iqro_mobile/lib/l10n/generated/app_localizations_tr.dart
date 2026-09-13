@@ -9,17 +9,6 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
-  String get mushafBookPreview => 'Tecvit · kitap sayfası örneği';
-
-  @override
-  String get mushafBookPreviewHint =>
-      'Özgün EasyQuran görselleri · sayfa 51–53';
-
-  @override
-  String get mushafBookPreviewInfo =>
-      'Bu, QCF V4 değil, ayrı bir EasyQuran görsel denemesidir. QuranHub/quran-pages-images kaynağından üç tam sayfa; metin yeniden dizilmeden, renkleri değiştirilmeden ve basılı çerçevesi kesilmeden gösterilir.\n\nKaynak 645 × 1000 pikseldir; HD değildir. Genişliğe sığdır modu tüm sayfayı orantılı büyütür; sayfa ekran yüksekliğini aşarsa dikey kaydırılabilir. İki parmakla yakınlaştırın, çift dokunarak sıfırlayın. Tek dokunuş kontrolleri gösterir veya gizler.\n\nBu örnekte ayet seçimi ve ses bağlı değildir; bunlar tam olarak bu baskıya ait bir harita gerektirir. Seçili mushafınız, okuma konumunuz ve indirilen paketleriniz değişmez.';
-
-  @override
   String get mushafFitWidth => 'Genişliğe sığdır';
 
   @override
@@ -284,10 +273,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get chooseMushaf => 'Mushaf seçin';
 
   @override
-  String get mushafScanName => 'Medine Mushafı';
-
-  @override
-  String get mushafScanDescription => 'Orijinal sayfalar · Hafs';
+  String get mushafCatalogEmpty => 'Mushaflar henüz yüklenmedi';
 
   @override
   String get mushafPreviewDescription => 'Hafs · IQRO düzeni · ön izleme';

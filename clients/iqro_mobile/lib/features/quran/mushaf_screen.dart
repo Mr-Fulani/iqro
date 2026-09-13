@@ -23,7 +23,6 @@ import 'mushaf_reader_controls.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
-import 'tajweed_book_preview_source.dart';
 
 typedef _PendingPositionSave = ({
   int page,
@@ -231,7 +230,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     ? const NeverScrollableScrollPhysics()
                     : const PageScrollPhysics(parent: ClampingScrollPhysics()),
                 itemCount: 604,
-                onPageChanged: _onScanPageChanged,
+                onPageChanged: _onPageChanged,
                 itemBuilder: (context, index) {
                   final page = index + 1;
                   return NativeMushafPage(
@@ -689,16 +688,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     context.l10n.tapAyahForDetails,
                     textAlign: TextAlign.center,
                   ),
-                  if (canShowTajweedBookPreview(ref.read(appConfigProvider)))
-                    ListTile(
-                      leading: const Icon(Icons.auto_stories_outlined),
-                      title: Text(context.l10n.mushafBookPreview),
-                      subtitle: Text(context.l10n.mushafBookPreviewHint),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        context.push('/mushaf/tajweed-book-preview');
-                      },
-                    ),
                 ],
               ),
             ),
@@ -708,7 +697,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     );
   }
 
-  void _onScanPageChanged(int index) {
+  void _onPageChanged(int index) {
     final page = index + 1;
     if (!_initialPageHandled && page == _currentPage) {
       _initialPageHandled = true;

@@ -15,8 +15,6 @@ import '../features/prayer/prayer_screen.dart';
 import '../features/prayer/prayer_calendar_screen.dart';
 import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
-import '../features/quran/tajweed_book_preview_screen.dart';
-import '../features/quran/tajweed_book_preview_source.dart';
 import '../features/reminders/reminders_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/offline_storage_screen.dart';
@@ -76,11 +74,6 @@ GoRouter createRouter({required bool onboardingComplete}) {
         path: '/player',
         builder: (context, state) => const PlayerScreen(),
       ),
-      if (tajweedBookPreviewEnabled)
-        GoRoute(
-          path: '/mushaf/tajweed-book-preview',
-          builder: (context, state) => const TajweedBookPreviewRoute(),
-        ),
       GoRoute(
         path: '/after-prayer',
         builder: (context, state) => const AfterPrayerScreen(),

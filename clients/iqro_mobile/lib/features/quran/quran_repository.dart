@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/public_asset_uri.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -159,7 +160,7 @@ class QuranRepository {
     required ApiClient api,
     required LocalDatabase database,
     Uuid? uuid,
-    this.mushaf = MushafIdentity.canonical,
+    this.mushaf = MushafIdentity.primary,
   }) : _api = api,
        _database = database,
        _uuid = uuid ?? const Uuid();
@@ -589,10 +590,11 @@ class QuranRepository {
     MushafAsset asset, {
     required String expectedChecksum,
   }) async {
-    final uri = Uri.tryParse(asset.url);
-    if (uri == null ||
-        uri.scheme != 'https' ||
-        !uri.path.toLowerCase().endsWith('.webp')) {
+    final uri = resolvePublicAssetUri(
+      asset.url,
+      Uri.parse(_api.dio.options.baseUrl),
+    );
+    if (!uri.path.toLowerCase().endsWith('.webp')) {
       throw const FormatException('Mushaf page URL is invalid');
     }
     final bytes = await _api.getPublicBytes(

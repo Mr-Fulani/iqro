@@ -7,6 +7,7 @@ import '../auth/account_scope.dart';
 import '../auth/auth_repository.dart';
 import '../config/app_config.dart';
 import 'api_exception.dart';
+import 'public_asset_uri.dart';
 
 class ApiClient {
   ApiClient({
@@ -18,6 +19,7 @@ class ApiClient {
        dio = Dio(
          BaseOptions(
            baseUrl: config.apiV1,
+           extra: <String, Object?>{'localDevelopment': config.isLocal},
            connectTimeout: const Duration(seconds: 12),
            receiveTimeout: const Duration(seconds: 25),
            sendTimeout: const Duration(seconds: 12),
@@ -117,7 +119,13 @@ class ApiClient {
     required Set<String> allowedHosts,
     int maxBytes = 8 * 1024 * 1024,
   }) async {
-    if (uri.scheme != 'https' || !allowedHosts.contains(uri.host)) {
+    if (!isApprovedPublicAssetUri(
+      uri,
+      allowedHosts: allowedHosts,
+      localApiBase: dio.options.extra['localDevelopment'] == true
+          ? Uri.parse(dio.options.baseUrl)
+          : null,
+    )) {
       throw ArgumentError.value(uri, 'uri', 'Unapproved public asset origin');
     }
     try {
@@ -148,7 +156,13 @@ class ApiClient {
     int maxBytes = 8 * 1024 * 1024,
     void Function(int received, int total)? onProgress,
   }) async {
-    if (uri.scheme != 'https' || !allowedHosts.contains(uri.host)) {
+    if (!isApprovedPublicAssetUri(
+      uri,
+      allowedHosts: allowedHosts,
+      localApiBase: dio.options.extra['localDevelopment'] == true
+          ? Uri.parse(dio.options.baseUrl)
+          : null,
+    )) {
       throw ArgumentError.value(uri, 'uri', 'Unapproved public asset origin');
     }
     if (expectedBytes <= 0 || expectedBytes > maxBytes) {

@@ -24,6 +24,18 @@ permissions:
   contents: read
 
 jobs:
+  mushaf-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned local renderer
+        run: docker build -t iqro-mushaf-tools:ci ops/mushaf-glyph-pilot
+      - name: Renderer contracts and lossless raster verification
+        run: |
+          docker run iqro-mushaf-tools:ci python -m unittest test_prepare test_typography test_build_full test_kfgqpc
+          docker run iqro-mushaf-tools:ci node --test raster.test.cjs
+
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -69,6 +81,7 @@ jobs:
           sh -n ops/systemd/install.sh
           python -m ops.staging.test_config
           python -m unittest \
+            ops.test_dev \
             ops.postgres.test_offsite \
             ops.monitoring.test_heartbeat \
             ops.systemd.test_units \

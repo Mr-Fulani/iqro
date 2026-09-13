@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_whitespace.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_whitespace.dart';
 
 void main() {
   test('excerpt crop snaps away from diacritics on all four sides', () {

@@ -247,8 +247,10 @@ class MushafAsset {
   bool get isUsable {
     final uri = Uri.tryParse(url);
     return uri != null &&
-        uri.scheme == 'https' &&
-        uri.host.isNotEmpty &&
+        ((uri.scheme == 'https' && uri.host.isNotEmpty) ||
+            (!uri.hasScheme &&
+                !uri.hasAuthority &&
+                uri.path.startsWith('/media/'))) &&
         uri.path.toLowerCase().endsWith('.webp') &&
         width > 0 &&
         height != null &&
@@ -268,12 +270,12 @@ class MushafPageData {
     required this.imageHeight,
     required this.assets,
     required this.regions,
-    this.editionCode = 'madani-hafs',
+    this.editionCode = 'kfgqpc-hafs',
   });
 
   factory MushafPageData.fromJson(Map<String, Object?> json) {
     return MushafPageData(
-      editionCode: json['edition_code']?.toString() ?? 'madani-hafs',
+      editionCode: json['edition_code']?.toString() ?? 'kfgqpc-hafs',
       number: (json['number'] as num?)?.toInt() ?? 1,
       contentVersion: json['content_version']?.toString() ?? 'unknown',
       checksumSha256: json['checksum_sha256']?.toString() ?? '',

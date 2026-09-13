@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 
 void main() {
-  test('debug configuration safely defaults to staging', () {
+  test('debug configuration safely defaults to local', () {
     final config = AppConfig.validate(
       apiBaseUrl: '',
       fallbackDownloadUrl: 'https://iqro.forum',
@@ -10,9 +10,9 @@ void main() {
       releaseMode: false,
     );
 
-    expect(config.environment, 'staging');
-    expect(config.apiBaseUrl, 'https://staging.iqro.forum');
-    expect(config.apiV1, 'https://staging.iqro.forum/api/v1');
+    expect(config.environment, 'local');
+    expect(config.apiBaseUrl, 'http://127.0.0.1:8000');
+    expect(config.apiV1, 'http://127.0.0.1:8000/api/v1');
   });
 
   test(

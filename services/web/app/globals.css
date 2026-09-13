@@ -3003,53 +3003,6 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-.mushaf-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.mushaf-page-frame {
-  position: relative;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.mushaf-regions {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.mushaf-region {
-  fill: transparent;
-  stroke: transparent;
-  stroke-width: 0.0025;
-  vector-effect: non-scaling-stroke;
-  cursor: pointer;
-  transition: fill 140ms ease, stroke 140ms ease;
-}
-
-.mushaf-region:focus-visible {
-  fill: rgba(245, 196, 66, 0.28);
-  stroke: rgba(141, 98, 16, 0.68);
-  outline: none;
-}
-
-.mushaf-region.is-selected {
-  fill: rgba(20, 145, 104, 0.3);
-  stroke: rgba(8, 94, 68, 0.9);
-}
-
-.mushaf-region.is-playing {
-  fill: rgba(20, 145, 104, 0.46);
-  stroke: rgba(4, 75, 52, 1);
-  stroke-width: 0.0035;
-}
-
 .mushaf-audio-panel {
   display: flex;
   flex-direction: column;
@@ -3259,10 +3212,6 @@ input:focus, select:focus, textarea:focus {
 
 /* Touch must not leave a hover highlight behind while the reader is swiped. */
 @media (hover: hover) and (pointer: fine) {
-  .mushaf-region:hover:not(.is-selected):not(.is-playing) {
-    fill: rgba(245, 196, 66, 0.28);
-    stroke: rgba(141, 98, 16, 0.68);
-  }
   .qf-mushaf-ayah-fragment:hover:not(.is-selected):not(.is-playing) {
     background: rgba(245, 196, 66, 0.25);
     box-shadow: 0 0 0 2px rgba(141, 98, 16, 0.32);

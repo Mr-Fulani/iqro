@@ -312,6 +312,7 @@ export function QuranFoundationMushafPageView({
                     key={fragment.key}
                     onClick={() => onSelectAyah(ayahKey)}
                     aria-label={t("common.ayah", { ayah: ayahKey })}
+                    aria-pressed={selectedAyahKey === ayahKey}
                     title={t("common.ayah", { ayah: ayahKey })}
                     data-ayah-key={ayahKey}
                   >

@@ -12,6 +12,7 @@ from django.db import transaction
 
 from quran_backend.modules.quran.models import (
     Ayah,
+    AyahPageMapping,
     AyahPageRegion,
     Hizb,
     Juz,
@@ -283,6 +284,13 @@ def _create_pages(
                 raise QuranDatasetError(f"Invalid region on page {page.number}: {details}") from exc
             regions.append(region)
     AyahPageRegion.objects.bulk_create(regions, batch_size=1_000)
+    AyahPageMapping.objects.bulk_create(
+        [
+            AyahPageMapping(page_id=page_id, ayah_id=ayah_id)
+            for page_id, ayah_id in {(region.page_id, region.ayah_id) for region in regions}
+        ],
+        batch_size=1_000,
+    )
 
 
 def _create_juz(

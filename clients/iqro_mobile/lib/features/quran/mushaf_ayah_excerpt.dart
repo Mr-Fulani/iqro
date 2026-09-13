@@ -9,7 +9,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
-import 'mushaf_scan_layout.dart';
+import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 
@@ -53,14 +53,14 @@ Future<List<MushafExcerptPage>> loadMushafExcerpt({
               r.x + r.width > 1 ||
               r.y + r.height > 1,
         )) {
-      throw const FormatException('Incomplete ayah scan coverage');
+      throw const FormatException('Incomplete ayah image coverage');
     }
     if (result.isNotEmpty &&
         result.first.page.contentVersion != page.contentVersion) {
       throw const FormatException('Mixed Mushaf versions');
     }
     final asset = page.bestAssetFor(pixelWidth, 1);
-    if (asset == null) throw const FormatException('Missing Mushaf scan');
+    if (asset == null) throw const FormatException('Missing Mushaf artwork');
     result.add((
       page: page,
       file: await repository.cachedMushafPageAsset(page, asset),
@@ -210,7 +210,7 @@ class _MushafExcerptImageState extends State<_MushafExcerptImage> {
                 final width = widget.width * crop.width;
                 final height =
                     widget.width * crop.height * image.height / image.width;
-                final layout = MushafScanLayout(
+                final layout = MushafRasterLayout(
                   size: Size(width, height),
                   bands: [
                     (
@@ -226,7 +226,7 @@ class _MushafExcerptImageState extends State<_MushafExcerptImage> {
                     height: height,
                     child: RepaintBoundary(
                       child: CustomPaint(
-                        painter: MushafScanPainter(
+                        painter: MushafRasterPainter(
                           image: image,
                           layout: layout,
                         ),
@@ -243,7 +243,7 @@ class _MushafExcerptImageState extends State<_MushafExcerptImage> {
 }
 
 /// Overlapping line diacritics cannot safely be separated into standalone
-/// strips. Show the untouched scan in a scrollable viewport instead; the
+/// strips. Show the untouched image in a scrollable viewport instead; the
 /// selected ayah stays highlighted and every surrounding pixel remains intact.
 class _MushafContextExcerpt extends StatefulWidget {
   const _MushafContextExcerpt({
@@ -292,7 +292,7 @@ class _MushafContextExcerptState extends State<_MushafContextExcerpt> {
 
   @override
   Widget build(BuildContext context) {
-    final layout = MushafScanLayout(
+    final layout = MushafRasterLayout(
       size: Size(widget.width, _height),
       bands: [
         (
@@ -323,7 +323,7 @@ class _MushafContextExcerptState extends State<_MushafContextExcerpt> {
                 height: _height,
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    painter: MushafScanPainter(
+                    painter: MushafRasterPainter(
                       image: widget.image,
                       layout: layout,
                     ),
@@ -344,7 +344,7 @@ class _MushafContextExcerptState extends State<_MushafContextExcerpt> {
 
 class _ExcerptHighlight extends CustomPainter {
   const _ExcerptHighlight(this.layout, this.regions);
-  final MushafScanLayout layout;
+  final MushafRasterLayout layout;
   final List<MushafAyahRegion> regions;
 
   @override

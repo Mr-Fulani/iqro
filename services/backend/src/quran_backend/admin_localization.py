@@ -27,6 +27,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "quran.MushafRenditionRelease": ("версия оформления Мусхафа", "версии оформления Мусхафа"),
     "quran.MushafRenditionPage": ("страница оформления Мусхафа", "страницы оформлений Мусхафа"),
     "quran.AyahPageRegion": ("область аята", "области аятов на страницах"),
+    "quran.AyahPageMapping": ("связь аята со страницей", "связи аятов со страницами"),
     "quran.Juz": ("джуз", "джузы"),
     "quran.Hizb": ("хизб", "хизбы"),
     "quran.RubElHizb": ("руб аль-хизб", "рубы аль-хизб"),

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from django.conf import settings
@@ -23,7 +22,6 @@ from quran_backend.modules.quran.models import (
     Ayah,
     Hizb,
     Juz,
-    MushafPage,
     QuranEdition,
     QuranFoundationMushaf,
     QuranFoundationMushafPage,
@@ -39,7 +37,6 @@ from quran_backend.modules.quran.selectors import (
     published_editions,
     published_hizb,
     published_juz,
-    published_pages,
     published_rub_el_hizb,
     published_surahs,
 )
@@ -47,7 +44,6 @@ from quran_backend.modules.quran.serializers import (
     AyahSerializer,
     HizbSerializer,
     JuzSerializer,
-    MushafPageSerializer,
     OfflineMushafManifestQuerySerializer,
     OfflineMushafManifestSerializer,
     QuranEditionSerializer,
@@ -141,187 +137,18 @@ class AyahDetailView(PublicQuranViewMixin, generics.RetrieveAPIView[Ayah]):
         return published_ayahs(self.kwargs["edition"], self.kwargs["surah"])
 
 
-@extend_schema(
-    tags=["quran"],
-    parameters=[
-        OpenApiParameter("edition", str, OpenApiParameter.PATH),
-        OpenApiParameter("page", int, OpenApiParameter.PATH),
-    ],
-)
-class MushafPageDetailView(PublicQuranViewMixin, generics.RetrieveAPIView[MushafPage]):
-    serializer_class = MushafPageSerializer
-    lookup_field = "number"
-    lookup_url_kwarg = "page"
+@extend_schema(exclude=True)
+class RetiredPageArtworkView(PublicQuranViewMixin, APIView):
+    """Old app versions get an explicit migration response, never missing artwork."""
 
-    def get_queryset(self) -> QuerySet[MushafPage]:
-        return published_pages(self.kwargs["edition"])
-
-
-def _canonical_offline_asset(
-    variants: object,
-    *,
-    width: int,
-) -> dict[str, Any] | None:
-    if not isinstance(variants, list):
-        return None
-    for raw_variant in variants:
-        if not isinstance(raw_variant, Mapping) or raw_variant.get("width") != width:
-            continue
-        relative_path = str(raw_variant.get("path", "")).strip("/")
-        checksum = str(raw_variant.get("sha256", ""))
-        height = raw_variant.get("height")
-        size_bytes = raw_variant.get("bytes")
-        if (
-            raw_variant.get("format") != "webp"
-            or not relative_path
-            or "\\" in relative_path
-            or ".." in relative_path.split("/")
-            or not isinstance(height, int)
-            or height <= 0
-            or not isinstance(size_bytes, int)
-            or size_bytes <= 0
-            or len(checksum) != 64
-            or checksum != checksum.lower()
-            or any(character not in "0123456789abcdef" for character in checksum)
-        ):
-            return None
-        return {
-            "relative_path": relative_path,
-            "height": height,
-            "bytes": size_bytes,
-            "sha256": checksum,
-        }
-    return None
-
-
-@extend_schema(tags=["offline"])
-class QuranEditionMushafOfflineManifestView(PublicQuranViewMixin, APIView):
-    @extend_schema(
-        parameters=[
-            OpenApiParameter("edition", str, OpenApiParameter.PATH),
-            OfflineMushafManifestQuerySerializer,
-        ],
-        responses=OfflineMushafManifestSerializer,
-    )
-    def get(self, request: Request, edition: str) -> Response:
-        query = OfflineMushafManifestQuerySerializer(data=request.query_params)
-        query.is_valid(raise_exception=True)
-        source = get_object_or_404(published_editions(), code=edition)
-        version = source.active_version
-        if version is None:
-            raise NotFound("A published offline Mushaf package is not available.")
-        pages = list(published_pages(edition))
-        if len(pages) != version.page_count or {page.number for page in pages} != set(
-            range(1, version.page_count + 1)
-        ):
-            raise NotFound("A complete offline Mushaf package is not available.")
-
-        widths_by_page = [
+    def get(self, _request: Request, **_kwargs: Any) -> Response:
+        return Response(
             {
-                int(variant["width"])
-                for variant in page.asset_variants
-                if isinstance(variant, Mapping)
-                and isinstance(variant.get("width"), int)
-                and _canonical_offline_asset(page.asset_variants, width=int(variant["width"]))
-                is not None
-            }
-            for page in pages
-        ]
-        available_widths = sorted(set.intersection(*widths_by_page))
-        requested_width = query.validated_data.get("width")
-        width = (
-            requested_width
-            if requested_width is not None
-            else (max(available_widths) if available_widths else 0)
+                "code": "mushaf_endpoint_retired",
+                "detail": "Use /api/v1/quran/mushaf-renditions for page artwork.",
+            },
+            status=410,
         )
-        if width not in available_widths:
-            raise NotFound("The requested offline Mushaf width is not published.")
-
-        selected_assets = [
-            _canonical_offline_asset(page.asset_variants, width=width) for page in pages
-        ]
-        if any(asset is None for asset in selected_assets):
-            raise NotFound("The offline Mushaf package failed its integrity check.")
-        verified_assets = [asset for asset in selected_assets if asset is not None]
-        package_id = f"quran-edition-{source.code}-{version.version}-w{width}"
-        page_payloads: list[dict[str, Any]] = []
-        checksum_pages: list[dict[str, Any]] = []
-        for page, asset in zip(pages, verified_assets, strict=True):
-            public_asset = {
-                "url": f"{settings.PUBLIC_MEDIA_BASE_URL.rstrip('/')}/{asset['relative_path']}",
-                "file_name": f"page-{page.number:03d}-{width}.webp",
-                "content_type": "image/webp",
-                "width": width,
-                "height": asset["height"],
-                "bytes": asset["bytes"],
-                "sha256": asset["sha256"],
-            }
-            metadata = dict(MushafPageSerializer(page).data)
-            metadata["assets"] = [public_asset]
-            page_payloads.append(
-                {
-                    "number": page.number,
-                    "metadata_url": request.build_absolute_uri(
-                        reverse(
-                            "quran:page-detail",
-                            kwargs={"edition": source.code, "page": page.number},
-                        )
-                    ),
-                    "asset": public_asset,
-                    "metadata": metadata,
-                }
-            )
-            checksum_metadata = dict(metadata)
-            checksum_metadata["assets"] = [
-                {key: value for key, value in public_asset.items() if key != "url"}
-            ]
-            checksum_pages.append(
-                {
-                    "number": page.number,
-                    "metadata": checksum_metadata,
-                }
-            )
-        checksum_payload = {
-            "schema_version": OFFLINE_PACKAGE_SCHEMA_VERSION,
-            "package_type": "mushaf_pages",
-            "package_id": package_id,
-            "version": version.version,
-            "source_checksum_sha256": version.checksum_sha256,
-            "pages": checksum_pages,
-        }
-        payload = {
-            "schema_version": OFFLINE_PACKAGE_SCHEMA_VERSION,
-            "package_type": "mushaf_pages",
-            "package_id": package_id,
-            "version": version.version,
-            "package_checksum_sha256": offline_package_checksum(checksum_payload),
-            "publication_checksum_sha256": version.checksum_sha256,
-            "published_at": version.published_at,
-            "source": {
-                "name": source.source_name,
-                "url": source.source_url,
-                "checksum_sha256": version.checksum_sha256,
-            },
-            "rights": {
-                "offline_download": True,
-                "attribution_required": True,
-                "attribution": f"{source.source_name}. {source.license_name}.",
-                "license_name": source.license_name,
-                "license_url": source.license_url,
-            },
-            "mushaf": {
-                "source_id": None,
-                "edition_code": source.code,
-                "name": source.name_en,
-                "qirat_name": source.riwayah,
-                "lines_per_page": None,
-            },
-            "width": width,
-            "page_count": len(page_payloads),
-            "total_bytes": sum(int(asset["bytes"]) for asset in verified_assets),
-            "pages": page_payloads,
-        }
-        return Response(OfflineMushafManifestSerializer(payload).data)
 
 
 @extend_schema(tags=["quran"])

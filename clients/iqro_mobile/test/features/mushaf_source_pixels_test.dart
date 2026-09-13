@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 
 void main() {
   testWidgets('book paper, Tajweed colours and all four edges stay unchanged', (
@@ -22,9 +22,9 @@ void main() {
       final sourcePicture = sourceRecorder.endRecording();
       final source = await sourcePicture.toImage(16, 16);
       final targetRecorder = ui.PictureRecorder();
-      MushafScanPainter(
+      MushafRasterPainter(
         image: source,
-        layout: const MushafScanLayout(
+        layout: const MushafRasterLayout(
           size: Size(16, 16),
           bands: [
             (

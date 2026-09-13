@@ -4,7 +4,7 @@ from django.contrib import admin
 
 from quran_backend.modules.quran.models import (
     Ayah,
-    AyahPageRegion,
+    AyahPageMapping,
     Hizb,
     Juz,
     MushafPage,
@@ -84,13 +84,14 @@ class AyahAdmin(CanonicalReadOnlyAdmin):
 
 @admin.register(MushafPage)
 class MushafPageAdmin(CanonicalReadOnlyAdmin):
-    list_display = ("edition_version", "number", "image_width", "image_height")
+    list_display = ("edition_version", "number")
+    fields = ("id", "edition_version", "number", "created_at", "updated_at")
     list_filter = ("edition_version",)
 
 
-@admin.register(AyahPageRegion)
-class AyahPageRegionAdmin(CanonicalReadOnlyAdmin):
-    list_display = ("page", "ayah", "reading_order")
+@admin.register(AyahPageMapping)
+class AyahPageMappingAdmin(CanonicalReadOnlyAdmin):
+    list_display = ("page", "ayah")
     list_filter = ("page__edition_version",)
 
 

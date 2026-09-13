@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/iqro_widgets.dart';
-import 'mushaf_scan_layout.dart';
-import 'mushaf_scan_whitespace.dart';
+import 'mushaf_raster_layout.dart';
+import 'mushaf_raster_whitespace.dart';
 
 /// Uses Flutter's shared FileImage cache: excerpts reuse the decoded page.
 class MushafRaster extends StatefulWidget {
@@ -154,14 +154,14 @@ class _MushafRasterState extends State<MushafRaster> {
   }
 }
 
-class MushafScanPainter extends CustomPainter {
-  const MushafScanPainter({
+class MushafRasterPainter extends CustomPainter {
+  const MushafRasterPainter({
     required this.image,
     required this.layout,
     this.clip,
   });
   final ui.Image image;
-  final MushafScanLayout layout;
+  final MushafRasterLayout layout;
   final Path? clip;
 
   @override
@@ -184,7 +184,7 @@ class MushafScanPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant MushafScanPainter oldDelegate) =>
+  bool shouldRepaint(covariant MushafRasterPainter oldDelegate) =>
       image != oldDelegate.image ||
       layout != oldDelegate.layout ||
       clip != oldDelegate.clip;

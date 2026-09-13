@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -110,65 +109,17 @@ def test_ayah_pages_do_not_repeat_for_multiline_regions(
 
 
 @pytest.mark.django_db
-def test_page_returns_public_assets_and_regions(
+@pytest.mark.parametrize("suffix", ["pages/1", "offline-manifest"])
+def test_retired_page_endpoints_never_expose_legacy_artwork(
     api_client: APIClient,
     quran_dataset: dict[str, Any],
+    suffix: str,
 ) -> None:
-    response = api_client.get(
-        reverse("quran:page-detail", kwargs={"edition": "madani-hafs", "page": 1})
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["assets"][0]["url"].endswith("/media/quran/madani-hafs/1.0.0/pages/001.webp")
-    assert "path" not in payload["assets"][0]
-    assert payload["regions"][0]["ayah"] == {
-        "id": str(quran_dataset["first_ayah"].id),
-        "surah": 1,
-        "number": 1,
-    }
-
-
-@pytest.mark.django_db
-@override_settings(PUBLIC_MEDIA_BASE_URL="https://media.example.test")
-def test_canonical_mushaf_offline_manifest_is_complete_and_integrity_bound(
-    api_client: APIClient,
-    quran_dataset: dict[str, Any],
-) -> None:
-    version = quran_dataset["version"]
-    version.page_count = 1
-    version.save(update_fields=["page_count", "updated_at"])
-    url = reverse(
-        "quran:edition-offline-manifest",
-        kwargs={"edition": quran_dataset["edition"].code},
-    )
-
-    response = api_client.get(url, {"width": 1024})
-
-    assert response.status_code == 200
-    manifest = response.json()
-    assert manifest["package_id"] == "quran-edition-madani-hafs-1.0.0-w1024"
-    assert manifest["publication_checksum_sha256"] == "a" * 64
-    assert manifest["mushaf"]["edition_code"] == "madani-hafs"
-    assert manifest["mushaf"]["source_id"] is None
-    assert manifest["page_count"] == 1
-    assert manifest["total_bytes"] == 100_000
-    assert manifest["pages"][0]["asset"] == {
-        "url": "https://media.example.test/quran/madani-hafs/1.0.0/pages/001.webp",
-        "file_name": "page-001-1024.webp",
-        "content_type": "image/webp",
-        "width": 1024,
-        "height": 1536,
-        "bytes": 100_000,
-        "sha256": "b" * 64,
-    }
-    assert manifest["pages"][0]["metadata"]["number"] == 1
-    assert manifest["pages"][0]["metadata"]["assets"] == [manifest["pages"][0]["asset"]]
-    assert len(manifest["pages"][0]["metadata"]["regions"]) == 2
-    assert "path" not in str(manifest)
-
-    unavailable = api_client.get(url, {"width": 640})
-    assert unavailable.status_code == 404
+    response = api_client.get(f"/api/v1/quran/editions/madani-hafs/{suffix}")
+    assert response.status_code == 410
+    assert response.json()["code"] == "mushaf_endpoint_retired"
+    assert "assets" not in response.json()
+    assert "regions" not in response.json()
 
 
 @pytest.mark.django_db

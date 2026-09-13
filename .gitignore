@@ -34,3 +34,4 @@ tmp/
 
 # Licensed/source media is kept outside Git and verified by checksum at import time.
 /quran-hafs-mushaf.pdf
+.dev/

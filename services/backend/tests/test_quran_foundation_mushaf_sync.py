@@ -44,7 +44,9 @@ class FakeMushafClient:
         self,
         *,
         sync_token: str = "",
+        resource_ids: tuple[int, ...] | None = None,
     ) -> QuranFoundationMushafSyncResult:
+        assert resource_ids is None or resource_ids == (1,)
         assert sync_token == self.expected_token
         return QuranFoundationMushafSyncResult(
             next_sync_token="checkpoint-2" if sync_token else "checkpoint-1",
@@ -56,6 +58,31 @@ class FakeMushafClient:
         assert resource_id == 1
         self.snapshot_requests.append(resource_id)
         return self.snapshot
+
+
+@pytest.mark.django_db
+def test_scoped_mushaf_import_uses_its_own_checkpoint() -> None:
+    scoped = FakeMushafClient()
+    sync_quran_foundation_mushafs(client=scoped, resource_ids=(1,))
+    assert scoped.snapshot_requests == [1]
+    state = QuranFoundationMushafSyncState.objects.get(resources_filter="mushafs:1")
+    assert state.sync_token == "checkpoint-1"
+    assert not QuranFoundationMushafSyncState.objects.filter(resources_filter="mushafs:*").exists()
+    incremental = FakeMushafClient(expected_token="checkpoint-1", mutations=())
+    sync_quran_foundation_mushafs(client=incremental, resource_ids=(1,))
+    assert not incremental.snapshot_requests
+    # The full catalog still starts with an independent bootstrap.
+    sync_quran_foundation_mushafs(client=FakeMushafClient())
+    assert QuranFoundationMushafSyncState.objects.count() == 2
+
+
+@pytest.mark.django_db
+def test_scoped_mushaf_import_rejects_unrequested_mutations() -> None:
+    client = FakeMushafClient(mutations=({**_create_mutation(), "resource_id": 99},))
+    with pytest.raises(QuranFoundationError, match="unrequested"):
+        sync_quran_foundation_mushafs(client=client, resource_ids=(1,))
+    assert not QuranFoundationMushaf.objects.exists()
+    assert QuranFoundationMushafSyncState.objects.get().sync_token == ""
 
 
 def _create_mutation() -> dict[str, Any]:

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/network/public_asset_uri.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_package_items.dart';
 import '../../core/storage/offline_package_queries.dart';
@@ -16,7 +17,7 @@ import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
 import 'mushaf_edition.dart';
 
-const _mushafEdition = 'madani-hafs';
+const _mushafEdition = 'kfgqpc-hafs';
 const _approvedMushafAssetHosts = <String>{
   'media.staging.iqro.forum',
   'media.iqro.forum',
@@ -88,6 +89,7 @@ class OfflineMushafManifest {
   factory OfflineMushafManifest.fromJson(
     Map<String, Object?> json, {
     String expectedEdition = _mushafEdition,
+    Uri? localApiBase,
   }) {
     final rights = jsonMap(json['rights']);
     final identity = jsonMap(json['mushaf']);
@@ -121,6 +123,7 @@ class OfflineMushafManifest {
             Map<String, Object?>.from(item),
             width,
             expectedEdition,
+            localApiBase,
           ),
         )
         .toList(growable: false);
@@ -188,11 +191,15 @@ class OfflineMushafManifest {
     Map<String, Object?> json,
     int width,
     String expectedEdition,
+    Uri? localApiBase,
   ) {
     final number = (json['number'] as num?)?.toInt() ?? 0;
     final asset = jsonMap(json['asset']);
     final metadata = jsonMap(json['metadata']);
-    final url = Uri.tryParse(asset['url']?.toString() ?? '');
+    final rawUrl = asset['url']?.toString() ?? '';
+    final url = localApiBase == null
+        ? Uri.tryParse(rawUrl)
+        : localApiBase.resolve(rawUrl);
     final fileName = asset['file_name']?.toString() ?? '';
     final assetWidth = (asset['width'] as num?)?.toInt() ?? 0;
     final height = (asset['height'] as num?)?.toInt() ?? 0;
@@ -200,8 +207,11 @@ class OfflineMushafManifest {
     final checksum = asset['sha256']?.toString() ?? '';
     if (number <= 0 ||
         url == null ||
-        url.scheme != 'https' ||
-        !_approvedMushafAssetHosts.contains(url.host) ||
+        !isApprovedPublicAssetUri(
+          url,
+          allowedHosts: _approvedMushafAssetHosts,
+          localApiBase: localApiBase,
+        ) ||
         !url.path.toLowerCase().endsWith('.webp') ||
         !RegExp(r'^page-\d{3,4}-\d+\.webp$').hasMatch(fileName) ||
         asset['content_type'] != 'image/webp' ||
@@ -218,7 +228,7 @@ class OfflineMushafManifest {
     if (pageData.number != number ||
         pageData.editionCode != expectedEdition ||
         metadataAsset == null ||
-        metadataAsset.url != url.toString() ||
+        metadataAsset.url != rawUrl ||
         metadataAsset.width != width ||
         metadataAsset.height != height ||
         metadataAsset.bytes != bytes ||
@@ -247,7 +257,7 @@ class MushafOfflineRepository {
     required ApiClient api,
     required LocalDatabase database,
     MushafDirectoryProvider? supportDirectory,
-    this.mushaf = MushafIdentity.canonical,
+    this.mushaf = MushafIdentity.primary,
   }) : _api = api,
        _database = database,
        _supportDirectory = supportDirectory ?? getApplicationSupportDirectory;
@@ -395,6 +405,9 @@ class MushafOfflineRepository {
     final manifest = OfflineMushafManifest.fromJson(
       jsonMap(payload),
       expectedEdition: mushaf.code,
+      localApiBase: _api.dio.options.extra['localDevelopment'] == true
+          ? Uri.parse(_api.dio.options.baseUrl)
+          : null,
     );
     if (manifest.pages.length != expectedPageCount) {
       throw const FormatException('The Mushaf package is not complete');

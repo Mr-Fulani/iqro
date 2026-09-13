@@ -26,26 +26,49 @@ Quran.Foundation, безопасную гостевую авторизацию, 
 На web доступны воспроизведение целой суры и поаятное воспроизведение непосредственно в
 Мусхафе.
 
-## Быстрый старт Flutter-клиента
+## Первый запуск разработчика
 
-Инструкция по запуску на Android, сборке тестового APK и архитектуре находится в
-[`clients/iqro_mobile/README.md`](clients/iqro_mobile/README.md).
+Каждый разработчик запускает собственные backend, PostgreSQL и Redis. Общего тестового
+сервера нет. Миграции создают структуру БД и встроенные каталоги ду’а/намаза;
+Коран и страницы из внешних источников загружаются отдельной командой.
 
-## Быстрый старт backend
-
-Требуются Docker Compose либо Python 3.14, PostgreSQL и Redis.
+Нужны Git, Python 3 для управляющего скрипта и запущенный Docker с Compose v2.
+Python 3.14, Node.js и инструменты формирования страниц устанавливаются внутри образов.
+Для мобильного клиента дополнительно нужны Flutter и Android SDK либо Xcode.
 
 ```bash
-cp services/backend/.env.example services/backend/.env
-docker compose -f services/backend/compose.yaml up --build
+git clone <URL-репозитория>
+cd quran
+make dev-init
+# Заполните QF_CLIENT_ID, QF_CLIENT_SECRET и QF_ENV в services/backend/.env
+make dev-up
+make dev-data
+make dev-doctor
 ```
 
-После запуска:
+Открыть сайт: http://localhost:3000. API: http://localhost:8000/api/v1,
+Swagger: http://localhost:8000/api/docs. Изменения исходников подхватываются автоматически.
 
-- liveness: `http://localhost:8000/api/v1/health/live`;
-- readiness: `http://localhost:8000/api/v1/health/ready`;
-- OpenAPI: `http://localhost:8000/api/schema`;
-- Swagger UI: `http://localhost:8000/api/docs`.
+`dev-data` загружает каталог ду’а из репозитория, Мусхафы из Quran.Foundation,
+проверяет закреплённый корпус Корана и создаёт 604 страницы KFGQPC для мобильного клиента.
+Для перевода и тафсира: `make dev-data DEV_DATA_ARGS=--extras`.
+Повторный запуск сохраняет существующие данные и использует проверенные результаты.
+Ключи API остаются только в backend; файла `.env` самого по себе недостаточно.
+
+```bash
+# Мобильное приложение после подготовки backend:
+make mobile-run
+# Android Emulator: API выбирается автоматически как http://10.0.2.2:8000
+# iOS Simulator: http://127.0.0.1:8000
+
+# Если работаете только над web и хотите пропустить создание мобильных страниц:
+make dev-data DEV_DATA_ARGS=--web-only
+```
+
+Подробности, установка инструментов, физический телефон, аудио и устранение ошибок:
+[локальная разработка](docs/local-development.md).
+Работа с ветками, миграциями и проверками: [CONTRIBUTING.md](CONTRIBUTING.md).
+Архитектура мобильного клиента: [mobile README](clients/iqro_mobile/README.md).
 
 Production-наблюдаемость, резервные копии PostgreSQL, restore drill, безопасный нагрузочный
 smoke и staged read-only capacity harness описаны в
@@ -54,7 +77,7 @@ Production Compose без hot reload и bind-mount исходников опис
 [руководстве по production-запуску](docs/production.md).
 Текущее состояние offsite backup, внешнего heartbeat, GitHub CI и оставшиеся внешние gates
 зафиксированы в [release hardening record](docs/release/release-hardening-2026-08-29.md).
-Создание первой публичной тестовой среды от пустого VPS до DNS/TLS/R2 описано в
+Архивный регламент создания отдельной тестовой среды от VPS до DNS/TLS/R2 описан в
 [пошаговом staging runbook](docs/staging.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
 [P0/MVP gap audit](docs/mvp-gap-audit.md).
@@ -67,7 +90,7 @@ Production Compose без hot reload и bind-mount исходников опис
 ## Полный локальный стек
 
 ```bash
-docker compose up --build
+make dev-up
 ```
 
 Web доступен на `http://localhost:3000`. Корневой Compose использует development-target

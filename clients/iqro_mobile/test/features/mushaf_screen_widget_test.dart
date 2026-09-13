@@ -15,7 +15,8 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
-import 'package:iqro_mobile/features/quran/mushaf_scan_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
+import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/mushaf_screen.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
@@ -121,7 +122,7 @@ Future<void> _tapAyah(WidgetTester tester, double y) async {
       )
       .first;
   final box = tester.renderObject<RenderBox>(detector);
-  final layout = MushafScanLayout.page(
+  final layout = MushafRasterLayout.page(
     page: _page(122),
     size: box.size,
     portrait: true,
@@ -222,6 +223,8 @@ class _Quran implements QuranRepository {
   final AccountScope scope;
   final saved = <int>[];
   final pendingImage = Completer<File>();
+  @override
+  QuranRepository forMushaf(MushafIdentity identity) => this;
   @override
   Future<AccountScopeSnapshot> captureAccount() => scope.capture();
   @override

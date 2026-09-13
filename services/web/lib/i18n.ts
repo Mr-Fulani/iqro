@@ -1113,7 +1113,7 @@ export const MESSAGES = {
     "Ayarlar bu cihaza kaydedildi, ancak hesap eşitlemesi geçici olarak kullanılamıyor.",
   ),
   "quran.mushafVariant": message("Вариант Мусхафа", "Mushaf variant", "نسخة المصحف", "Mushaf görünümü"),
-  "quran.mushafVariantImage": message("Скан страницы · Мединский Hafs", "Page scan · Madani Hafs", "صورة الصفحة · مصحف المدينة حفص", "Sayfa taraması · Medine Hafs"),
+  "quran.mushafUnavailable": message("Мусхафы ещё не загружены", "Mushafs have not been loaded yet", "لم يتم تحميل المصاحف بعد", "Mushaflar henüz yüklenmedi"),
   "quran.mushafLines": message("строк", "lines", "سطرًا", "satır"),
   "quran.mushafFontLoading": message("Загрузка официального шрифта Мусхафа…", "Loading the official Mushaf font…", "جارٍ تحميل خط المصحف الرسمي…", "Resmî Mushaf yazı tipi yükleniyor…"),
   "quran.mushafFontError": message("Официальный шрифт этого Мусхафа не загрузился. Попробуйте обновить страницу.", "The official font for this Mushaf could not be loaded. Try refreshing the page.", "تعذر تحميل الخط الرسمي لهذا المصحف. حاول تحديث الصفحة.", "Bu Mushafın resmî yazı tipi yüklenemedi. Sayfayı yenilemeyi deneyin."),
