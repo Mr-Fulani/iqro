@@ -662,7 +662,11 @@ test("canonical text stays accessible while the source page is still loading", a
   try {
     await page.goto("/ru/quran?surah=6");
     await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("5");
-    await expect(page.locator(".qf-mushaf-page-loading")).toBeVisible();
+    const loadingMessage = page.getByText("Загрузка страницы выбранного Мусхафа…", { exact: true });
+    // The outgoing initial page can still contain the unavailable-state element.
+    // Assert the requested loading state rather than their shared styling class.
+    await expect(loadingMessage).toHaveCount(1);
+    await expect(loadingMessage).toBeVisible();
     const textMode = page.getByRole("button", { name: "📜 Текст", exact: true });
     await expect(textMode).toBeEnabled();
     await textMode.click();
