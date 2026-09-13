@@ -1120,7 +1120,7 @@ test("displayed source page saves canonical position before server debounce and 
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
   await page.clock.install();
   await page.clock.pauseAt(new Date());
-  const pageJump = page.locator("#mushaf-page-jump");
+  const pageJump = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
   await pageJump.fill("151");
   await pageJump.press("Enter");
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");

@@ -25,7 +25,9 @@ test("saved position restores after hydration without hydration errors", async (
   );
 
   await page.goto("/ru/quran");
-  const pageJumpInput = page.locator("#mushaf-page-jump");
+  // Streaming can temporarily retain a hidden copy of the reader. Assert the
+  // accessible control, not both the live input and the hidden server HTML.
+  const pageJumpInput = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
   await expect(pageJumpInput).toHaveValue("18");
   expect(hydrationErrors).toEqual([]);
 });
@@ -51,6 +53,6 @@ test("explicit query parameter page takes priority over saved local position", a
 
   // Open with ?page=5
   await page.goto("/ru/quran?page=5");
-  const pageJumpInput = page.locator("#mushaf-page-jump");
+  const pageJumpInput = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
   await expect(pageJumpInput).toHaveValue("5");
 });
