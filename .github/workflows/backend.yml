@@ -72,6 +72,8 @@ jobs:
       QURAN_TEST_DATABASE: postgresql
     steps:
       - uses: actions/checkout@v4
+      - name: Install recovery encryption tool
+        run: sudo apt-get update && sudo apt-get install -y age
       - name: Operations tooling
         run: |
           sh -n ops/postgres/backup.sh
@@ -83,6 +85,10 @@ jobs:
           python -m unittest \
             ops.test_dev \
             ops.postgres.test_offsite \
+            ops.postgres.test_backup \
+            ops.recovery.test_snapshot \
+            ops.recovery.test_retention \
+            ops.monitoring.test_backup_status \
             ops.monitoring.test_heartbeat \
             ops.systemd.test_units \
             ops.load.test_smoke \

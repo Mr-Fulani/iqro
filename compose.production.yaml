@@ -325,7 +325,7 @@ services:
       PGUSER: ${DATABASE_USER:?Set DATABASE_USER in the production env file}
       PGPASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in the production env file}
       BACKUP_DIR: /backups
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-0}
       BACKUP_MIN_FREE_MB: ${BACKUP_MIN_FREE_MB:-1024}
     entrypoint: ["/bin/sh", "/ops/backup.sh"]
     volumes:
@@ -349,8 +349,10 @@ services:
     user: "0:0"
     profiles: ["ops"]
     restart: "no"
-    entrypoint: ["python", "/ops/offsite.py", "upload"]
+    working_dir: /workspace
+    entrypoint: ["python", "-m", "ops.postgres.offsite", "upload"]
     environment:
+      BACKUP_STATUS_FILE: /backup-status/postgres.json
       BACKUP_DIR: /backups
       BACKUP_ENVIRONMENT: ${BACKUP_ENVIRONMENT:-production}
       BACKUP_OBJECT_STORAGE_ENDPOINT_URL: ${BACKUP_OBJECT_STORAGE_ENDPOINT_URL:-}
@@ -362,8 +364,9 @@ services:
       BACKUP_OBJECT_STORAGE_PREFIX: ${BACKUP_OBJECT_STORAGE_PREFIX:-quran-platform/postgres}
       BACKUP_OBJECT_STORAGE_RETENTION_DAYS: ${BACKUP_OBJECT_STORAGE_RETENTION_DAYS:-30}
     volumes:
-      - ./ops/postgres:/ops:ro
+      - ./ops:/workspace/ops:ro
       - ${QURAN_BACKUP_DIR:-./backups}:/backups:ro
+      - ${QURAN_BACKUP_STATUS_DIR:-./backups/status}:/backup-status
     tmpfs:
       - /tmp:size=32m,mode=1777
     cpus: 0.25
@@ -374,7 +377,7 @@ services:
   db-backup-offsite-verify:
     extends:
       service: db-backup-offsite
-    entrypoint: ["python", "/ops/offsite.py", "verify"]
+    entrypoint: ["python", "-m", "ops.postgres.offsite", "verify"]
 
   db-backup-offsite-download:
     extends:
@@ -383,13 +386,13 @@ services:
     read_only: true
     entrypoint:
       - python
-      - /ops/offsite.py
+      - -m
+      - ops.postgres.offsite
       - download
       - --output
-      - /backups/offsite_restore.dump
-      - --replace
+      - ${OFFSITE_RESTORE_FILE:-/backups/offsite_restore.dump}
     volumes:
-      - ./ops/postgres:/ops:ro
+      - ./ops:/workspace/ops:ro
       - ${QURAN_BACKUP_DIR:-./backups}:/backups
 
   db-backup-verify:

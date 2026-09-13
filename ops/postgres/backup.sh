@@ -7,7 +7,7 @@ set -eu
 : "${PGDATABASE:?PGDATABASE is required}"
 
 backup_dir=${BACKUP_DIR:-/backups}
-retention_days=${BACKUP_RETENTION_DAYS:-14}
+retention_days=${BACKUP_RETENTION_DAYS:-0}
 minimum_free_mb=${BACKUP_MIN_FREE_MB:-1024}
 
 case "$backup_dir" in
@@ -39,15 +39,29 @@ if [ "$available_kb" -lt "$required_kb" ]; then
     exit 1
 fi
 
+# Serialize manual and scheduled invocations that share this backup directory.
+lock_dir="${backup_dir}/.backup.lock"
+if ! mkdir "$lock_dir" 2>/dev/null; then
+    echo "Another backup holds the directory lock; refusing concurrent writes." >&2
+    exit 1
+fi
+partial_file=
+cleanup_partial() {
+    if [ -n "$partial_file" ]; then
+        rm -f "$partial_file"
+    fi
+    rmdir "$lock_dir" 2>/dev/null || true
+}
+trap cleanup_partial EXIT HUP INT TERM
+
 safe_database=$(printf '%s' "$PGDATABASE" | tr -c 'A-Za-z0-9_-' '_')
 timestamp=$(date -u '+%Y%m%dT%H%M%SZ')
 backup_file="${backup_dir}/${safe_database}_${timestamp}.dump"
+if [ -e "$backup_file" ] || [ -e "${backup_file}.partial" ] || [ -e "${backup_file}.sha256" ]; then
+    echo "Backup filename already exists; refusing to overwrite it." >&2
+    exit 1
+fi
 partial_file="${backup_file}.partial"
-
-cleanup_partial() {
-    rm -f "$partial_file"
-}
-trap cleanup_partial EXIT HUP INT TERM
 
 pg_dump \
     --dbname="$PGDATABASE" \
@@ -64,13 +78,10 @@ backup_name=$(basename "$backup_file")
     cd "$backup_dir"
     sha256sum "$backup_name" >"${backup_name}.sha256"
 )
+rmdir "$lock_dir"
 trap - EXIT HUP INT TERM
 
-if [ "$retention_days" -gt 0 ]; then
-    find "$backup_dir" -maxdepth 1 -type f \
-        \( -name "${safe_database}_*.dump" -o -name "${safe_database}_*.dump.sha256" \) \
-        -mtime "+${retention_days}" -delete
-fi
+# Retention is never executed by a backup job. Cleanup requires separate approval.
 
 echo "PostgreSQL backup created and archive structure verified."
 echo "BACKUP_FILE=${backup_file}"

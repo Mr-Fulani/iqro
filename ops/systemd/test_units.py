@@ -24,6 +24,19 @@ class SystemdUnitTests(unittest.TestCase):
         self.assertIn("OnUnitActiveSec=5m", timer)
         self.assertIn("Persistent=true", timer)
 
+    def test_both_backup_jobs_use_existing_failure_monitor(self) -> None:
+        for service_name, component in (
+            ("quran-backup@.service", "postgres"),
+            ("quran-recovery@.service", "recovery"),
+        ):
+            service = (ROOT / service_name).read_text()
+            self.assertIn("EnvironmentFile=-/etc/iqro/%i-heartbeat.env", service)
+            self.assertIn(f"ops.monitoring.heartbeat --job-result {component}", service)
+            self.assertIn("/usr/bin/flock", service)
+        timer = (ROOT / "quran-recovery@.timer").read_text()
+        self.assertIn("Persistent=true", timer)
+        self.assertIn("quran-recovery@.service", (ROOT / "install.sh").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

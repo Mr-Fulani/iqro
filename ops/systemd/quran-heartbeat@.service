@@ -10,7 +10,7 @@ Type=oneshot
 WorkingDirectory=/opt/quran
 EnvironmentFile=/etc/iqro/%i-heartbeat.env
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart=/usr/bin/python3 /opt/quran/ops/monitoring/heartbeat.py
+ExecStart=/usr/bin/python3 -m ops.monitoring.heartbeat
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true

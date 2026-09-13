@@ -1,0 +1,13 @@
+{
+  "repository": "/opt/iqro-source.git",
+  "output_dir": "/opt/quran/backups/recovery",
+  "age_recipients": ["replace-with-age-public-recipient"],
+  "release_manifest": null,
+  "config_files": {
+    "production.env": "/opt/quran/services/backend/.env.production",
+    "heartbeat.env": "/etc/iqro/production-heartbeat.env",
+    "recovery.json": "/etc/iqro/production-recovery.json"
+  },
+  "media_max_bytes": 53687091200,
+  "media_max_objects": 100000
+}

@@ -17,6 +17,8 @@ esac
 for unit in \
     quran-backup@.service \
     quran-backup@.timer \
+    quran-recovery@.service \
+    quran-recovery@.timer \
     quran-heartbeat@.service \
     quran-heartbeat@.timer
 do

@@ -18,6 +18,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--site-url", required=True)
     parser.add_argument("--backup-dir", type=Path, required=True)
+    parser.add_argument("--backup-status-dir", type=Path, required=True)
+    parser.add_argument(
+        "--environment", choices=("production", "staging"), required=True
+    )
     return parser
 
 
@@ -40,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
         "UPTIME_HEARTBEAT_URL": success_url.strip(),
         "UPTIME_HEARTBEAT_FAILURE_URL": failure_url.strip(),
         "UPTIME_BACKUP_DIR": str(args.backup_dir.resolve()),
+        "UPTIME_BACKUP_STATUS_DIR": str(args.backup_status_dir.resolve()),
+        "UPTIME_BACKUP_ENVIRONMENT": args.environment,
         "UPTIME_BACKUP_MAX_AGE_SECONDS": "93600",
         "UPTIME_REQUEST_TIMEOUT_SECONDS": "10",
     }

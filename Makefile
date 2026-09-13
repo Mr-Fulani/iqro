@@ -160,8 +160,9 @@ production-backup-offsite-verify:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
 
 production-backup-offsite-restore-check:
-	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
-	BACKUP_FILE=/backups/offsite_restore.dump $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+	@restore_file="/backups/offsite_restore_$$(date -u +%Y%m%dT%H%M%SZ)_$$$$.dump"; \
+	OFFSITE_RESTORE_FILE="$$restore_file" $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download && \
+	BACKUP_FILE="$$restore_file" $(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 production-restore-check:
 	$(PRODUCTION_COMPOSE) --profile ops run --rm --no-deps db-restore-check
@@ -238,8 +239,9 @@ staging-backup-offsite-verify: staging-runtime-postgres-image staging-backup-off
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-verify
 
 staging-backup-offsite-restore-check: staging-runtime-postgres-image staging-backup-offsite-preflight
-	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download
-	BACKUP_FILE=/backups/offsite_restore.dump $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
+	@restore_file="/backups/offsite_restore_$$(date -u +%Y%m%dT%H%M%SZ)_$$$$.dump"; \
+	OFFSITE_RESTORE_FILE="$$restore_file" $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-backup-offsite-download && \
+	BACKUP_FILE="$$restore_file" $(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
 
 staging-restore-check: staging-runtime-postgres-image
 	$(STAGING_OPS_COMPOSE) --profile ops run --rm --no-deps db-restore-check
@@ -376,3 +378,31 @@ release-check: release-ops-check backend-check backend-test release-web-check
 
 systemd-install:
 	sudo sh ops/systemd/install.sh "$(CURDIR)/ops/systemd"
+
+# Host tools reuse the backend locked Python environment; no app services are started.
+RECOVERY_PYTHON ?= services/backend/.venv/bin/python
+RECOVERY_ARGS ?=
+
+.PHONY: recovery-backup recovery-restore recovery-list recovery-release recovery-test
+recovery-backup:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot backup $(RECOVERY_ARGS)
+
+recovery-restore:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot restore $(RECOVERY_ARGS)
+
+recovery-list:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot list
+
+recovery-release:
+	$(RECOVERY_PYTHON) -m ops.recovery.snapshot release $(RECOVERY_ARGS)
+
+recovery-test:
+	@command -v age >/dev/null && command -v age-keygen >/dev/null || (printf '%s\n' 'age and age-keygen are required for recovery tests.' >&2; exit 1)
+	$(RECOVERY_PYTHON) -m unittest ops.recovery.test_snapshot ops.recovery.test_retention ops.postgres.test_backup ops.postgres.test_offsite ops.monitoring.test_backup_status ops.monitoring.test_heartbeat ops.systemd.test_units
+
+.PHONY: recovery-retention-plan recovery-retention-apply
+recovery-retention-plan:
+	$(RECOVERY_PYTHON) -m ops.recovery.retention plan $(RECOVERY_ARGS)
+
+recovery-retention-apply:
+	$(RECOVERY_PYTHON) -m ops.recovery.retention apply $(RECOVERY_ARGS)

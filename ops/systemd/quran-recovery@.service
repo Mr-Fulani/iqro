@@ -1,0 +1,20 @@
+[Unit]
+Description=IQRO %i independent code, media and encrypted configuration backup
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/iqro/%i-recovery.json
+ConditionPathExists=/etc/iqro/%i-recovery.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/quran
+EnvironmentFile=/etc/iqro/%i-recovery.env
+EnvironmentFile=-/etc/iqro/%i-heartbeat.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/flock -n /run/lock/iqro-%i-recovery.lock /opt/quran/services/backend/.venv/bin/python -m ops.recovery.scheduled --config /etc/iqro/%i-recovery.json
+ExecStopPost=-/usr/bin/python3 -m ops.monitoring.heartbeat --job-result recovery
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+TimeoutStartSec=6h

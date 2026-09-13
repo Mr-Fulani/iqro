@@ -9,6 +9,11 @@ bucket описаны в пошаговом [staging runbook](staging.md). Эт�
 
 ## Offsite PostgreSQL backup
 
+Текущий статус инфраструктуры и полный состав восстановления описаны в
+[архитектуре backup/recovery](backup-recovery-architecture.md). Приведённые ниже
+backup-команды сохраняют все прежние копии и не запускают retention-очистку.
+Готовые команды и настройка нового сервера: [backup/recovery runbook](backup-recovery.md).
+
 Локальный dump на application host не является disaster-recovery копией. Offsite pipeline
 использует отдельный private S3-compatible bucket и отдельный scoped token. Публичный media
 bucket, его custom domain и media credential переиспользовать запрещено.
@@ -29,9 +34,10 @@ make production-backup-offsite-verify
 make production-backup-offsite-restore-check
 ```
 
-Retention удаляет только распознанные timestamp dump/checksum objects внутри точного
-environment prefix. Активный manifest target всегда сохраняется. Bucket lifecycle/versioning
-можно добавить как дополнительную provider-защиту, но он не заменяет команды download/restore.
+Upload не запускает удаление. Для хранения трёх локальных и семи ежедневных плюс
+четырёх еженедельных remote-копий добавлен общий retention plan/apply с проверкой
+ссылок на общие объекты. [Порядок согласования и применения](backup-recovery.md#предварительный-расчёт).
+Наличие retention-параметров не включает очистку или provider lifecycle.
 
 Systemd templates в `ops/systemd/` запускают backup ежедневно с persistent timer и `flock`.
 Они устанавливаются, но не включаются до успешного ручного offsite restore-check.
@@ -40,7 +46,9 @@ Systemd templates в `ops/systemd/` запускают backup ежедневно
 
 На budget host постоянный monitoring stack не помещается вместе с приложением. Скрипт
 `ops/monitoring/heartbeat.py` каждые пять минут проверяет public site, readiness JSON и свежесть
-локального backup, затем вызывает secret success URL внешнего dead-man monitor. Если весь host
+локального backup и receipts успешного offsite PostgreSQL/recovery backup, затем вызывает
+secret success URL внешнего dead-man monitor. Новый configure требует общий status directory;
+старые конфигурации без него нужно обновить перед production. Если весь host
 или сеть исчезают, внешний сервис видит пропуск heartbeat. Failure URL позволяет отдельно
 зафиксировать локально обнаруженную ошибку.
 
@@ -544,8 +552,8 @@ uvx --from pip-audit==2.10.1 pip-audit \
 
 Скрипт создаёт custom-format dump, записывает SHA-256, проверяет, что `pg_restore` читает
 архив, и только после этого публикует файл атомарным rename. Перед запуском он требует не
-менее `BACKUP_MIN_FREE_MB` свободного места (по умолчанию 1024 MiB). Файлы старше
-`BACKUP_RETENTION_DAYS` (по умолчанию 14) удаляются только после успешного нового backup.
+менее `BACKUP_MIN_FREE_MB` свободного места (по умолчанию 1024 MiB). Старые файлы
+не удаляются; `BACKUP_RETENTION_DAYS` сохранён для совместимости и не запускает очистку.
 Custom format выбран в соответствии с официальным
 [руководством PostgreSQL 17](https://www.postgresql.org/docs/17/backup-dump.html): он
 сжимается и восстанавливается через `pg_restore`.

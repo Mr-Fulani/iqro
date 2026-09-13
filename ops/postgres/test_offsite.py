@@ -17,7 +17,6 @@ from ops.postgres.offsite import (
     latest_backup,
     load_settings,
     main,
-    prune,
     upload_latest,
     verify_latest,
 )
@@ -157,7 +156,7 @@ class OffsiteBackupTests(unittest.TestCase):
             self.assertEqual(latest_backup(directory), latest)
             first.unlink()
 
-    def test_upload_verify_download_and_bounded_prune(self) -> None:
+    def test_upload_verify_download_preserves_old_backups(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             backup = write_backup(directory, "quran_20260829T010000Z.dump", b"database")
@@ -179,7 +178,7 @@ class OffsiteBackupTests(unittest.TestCase):
             manifest = upload_latest(config, store)
             self.assertEqual(manifest["filename"], backup.name)
             self.assertIn(config.latest_manifest_key, store.objects)
-            self.assertEqual(store.deleted, [old_key])
+            self.assertEqual(store.deleted, [])
 
             verified = verify_latest(config, store)
             self.assertEqual(
@@ -210,20 +209,6 @@ class OffsiteBackupTests(unittest.TestCase):
                 OffsiteBackupError, "outside the backup prefix"
             ):
                 verify_latest(config, store)
-
-    def test_prune_fails_when_object_storage_reports_partial_errors(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            config = settings(Path(temporary_directory))
-            store = FakeStore()
-            store.listed = [
-                {
-                    "Key": f"{config.root_prefix}/quran_20260701T010000Z.dump",
-                    "LastModified": datetime.now(tz=UTC) - timedelta(days=60),
-                }
-            ]
-            store.delete_errors = [{"Code": "AccessDenied"}]
-            with self.assertRaisesRegex(OffsiteBackupError, "failed to prune"):
-                prune(config, store, preserve=set())
 
 
 if __name__ == "__main__":

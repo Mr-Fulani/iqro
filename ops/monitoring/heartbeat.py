@@ -13,6 +13,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from ops.monitoring.backup_status import check_status, write_status
+
 
 class HeartbeatError(RuntimeError):
     pass
@@ -26,6 +28,8 @@ class Settings:
     timeout_seconds: float
     backup_dir: Path
     backup_max_age_seconds: int
+    backup_status_dir: Path | None = None
+    backup_environment: str = "production"
 
 
 def _https_url(value: str, label: str, *, allow_secret_path: bool) -> str:
@@ -102,6 +106,12 @@ def load_settings(values: Mapping[str, str] | None = None) -> Settings:
         timeout_seconds=timeout_seconds,
         backup_dir=backup_dir,
         backup_max_age_seconds=backup_max_age_seconds,
+        backup_status_dir=(
+            Path(source["UPTIME_BACKUP_STATUS_DIR"]).resolve()
+            if source.get("UPTIME_BACKUP_STATUS_DIR")
+            else None
+        ),
+        backup_environment=source.get("UPTIME_BACKUP_ENVIRONMENT", "production"),
     )
 
 
@@ -174,19 +184,49 @@ def run(settings: Settings) -> None:
         settings.backup_dir,
         max_age_seconds=settings.backup_max_age_seconds,
     )
+    if settings.backup_status_dir:
+        for component in ("postgres", "recovery"):
+            try:
+                check_status(
+                    settings.backup_status_dir / f"{component}.json",
+                    component=component,
+                    environment=settings.backup_environment,
+                    max_age_seconds=settings.backup_max_age_seconds,
+                )
+            except ValueError as exc:
+                raise HeartbeatError(str(exc)) from exc
     ping(settings.success_url, timeout=settings.timeout_seconds)
 
 
 def _parser() -> argparse.ArgumentParser:
-    return argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Verify public endpoints and backup freshness, then ping a dead-man monitor."
     )
+    parser.add_argument(
+        "--job-result",
+        choices=("postgres", "recovery"),
+        help="Systemd ExecStopPost: report failed jobs through the existing monitor.",
+    )
+    return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    _parser().parse_args(argv)
+    args = _parser().parse_args(argv)
+    if args.job_result and os.environ.get("SERVICE_RESULT") == "success":
+        return 0
     try:
         settings = load_settings()
+        if args.job_result:
+            if settings.backup_status_dir:
+                write_status(
+                    settings.backup_status_dir / f"{args.job_result}.json",
+                    component=args.job_result,
+                    environment=settings.backup_environment,
+                    state="failed",
+                )
+            if settings.failure_url:
+                ping(settings.failure_url, timeout=settings.timeout_seconds)
+            return 1
         run(settings)
     except HeartbeatError as exc:
         try:

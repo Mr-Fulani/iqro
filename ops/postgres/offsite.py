@@ -9,10 +9,16 @@ import sys
 import tempfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 from urllib.parse import urlsplit
+
+from ops.monitoring.backup_status import (
+    backup_attempt,
+    write_status,
+    write_upload_receipt,
+)
 
 BACKUP_NAME = re.compile(r"^[A-Za-z0-9_-]+_(?P<timestamp>\d{8}T\d{6}Z)\.dump$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -303,14 +309,17 @@ def _verify_head(
         )
 
 
-def upload_latest(
-    settings: Settings, store: ObjectStore, *, keep_existing: bool = False
+def upload_verified_file(
+    settings: Settings,
+    store: ObjectStore,
+    path: Path,
+    key: str,
+    *,
+    content_type: str = "application/octet-stream",
 ) -> dict[str, Any]:
-    backup = latest_backup(settings.backup_dir)
-    checksum = expected_checksum(backup)
-    size = backup.stat().st_size
-    key = _object_key(settings, backup)
-    checksum_key = f"{key}.sha256"
+    """Shared immutable transfer for PostgreSQL and recovery artifacts; never prunes."""
+    checksum = file_sha256(path)
+    size = path.stat().st_size
     metadata = {
         "sha256": checksum,
         "environment": settings.environment,
@@ -319,10 +328,10 @@ def upload_latest(
     existing = _existing_head(settings, store, key)
     if existing is None:
         store.upload_file(
-            str(backup),
+            str(path),
             settings.bucket,
             key,
-            ExtraArgs={"ContentType": "application/octet-stream", "Metadata": metadata},
+            ExtraArgs={"ContentType": content_type, "Metadata": metadata},
         )
     elif (
         int(existing.get("ContentLength", -1)) != size
@@ -331,6 +340,62 @@ def upload_latest(
         raise OffsiteBackupError(
             "immutable offsite backup key already contains different data"
         )
+    _verify_head(settings, store, key=key, expected_size=size, checksum=checksum)
+    return {"object_key": key, "size": size, "sha256": checksum}
+
+
+def download_verified_file(
+    settings: Settings,
+    store: ObjectStore,
+    record: Mapping[str, Any],
+    output: Path,
+    *,
+    replace: bool = False,
+) -> None:
+    """Restore into a new file only; never expose a partial download as complete."""
+    if (output.exists() or output.is_symlink()) and not replace:
+        raise OffsiteBackupError("recovery output already exists")
+    output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    response = store.get_object(Bucket=settings.bucket, Key=record["object_key"])
+    body = response.get("Body")
+    if body is None or not hasattr(body, "read"):
+        raise OffsiteBackupError("offsite object has no readable body")
+    fd, name = tempfile.mkstemp(dir=output.parent, prefix=".download-")
+    temporary = Path(name)
+    try:
+        digest = hashlib.sha256()
+        size = 0
+        with os.fdopen(fd, "wb") as stream:
+            for chunk in _iter_remote_body(body):
+                size += len(chunk)
+                if size > record["size"]:
+                    raise OffsiteBackupError("offsite object exceeds expected size")
+                stream.write(chunk)
+                digest.update(chunk)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if size != record["size"] or digest.hexdigest() != record["sha256"]:
+            raise OffsiteBackupError("offsite object checksum does not match")
+        if replace:
+            os.replace(temporary, output)
+        else:
+            os.link(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
+        if hasattr(body, "close"):
+            body.close()
+
+
+def upload_latest(
+    settings: Settings, store: ObjectStore, *, keep_existing: bool = True
+) -> dict[str, Any]:
+    backup = latest_backup(settings.backup_dir)
+    checksum = expected_checksum(backup)
+    size = backup.stat().st_size
+    key = _object_key(settings, backup)
+    checksum_key = f"{key}.sha256"
+    upload_verified_file(settings, store, backup, key)
+    metadata = {"sha256": checksum, "environment": settings.environment}
     checksum_body = f"{checksum}  {backup.name}\n".encode("ascii")
     store.put_object(
         Bucket=settings.bucket,
@@ -367,10 +432,7 @@ def upload_latest(
         CacheControl="no-store",
         Metadata={"sha256": checksum, "environment": settings.environment},
     )
-    if not keep_existing:
-        prune(
-            settings, store, preserve={key, checksum_key, settings.latest_manifest_key}
-        )
+    # Kept for compatibility with previous callers; upload never prunes.
     return manifest
 
 
@@ -412,83 +474,18 @@ def download_latest(
     if output.suffix != ".dump" or output.resolve() == Path("/"):
         raise OffsiteBackupError("download output must be a dedicated .dump file")
     output.parent.mkdir(parents=True, exist_ok=True)
-    if output.exists() and not replace:
+    if (
+        output.exists() or output.with_name(f"{output.name}.sha256").exists()
+    ) and not replace:
         raise OffsiteBackupError(
             "download output already exists; pass --replace explicitly"
         )
-    response = store.get_object(Bucket=settings.bucket, Key=str(manifest["object_key"]))
-    body = response.get("Body")
-    if body is None or not hasattr(body, "read"):
-        raise OffsiteBackupError("offsite backup response has no readable body")
-    digest = hashlib.sha256()
-    downloaded_size = 0
-    descriptor, temporary_name = tempfile.mkstemp(
-        dir=output.parent, prefix=f".{output.name}.", suffix=".partial"
-    )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            for chunk in _iter_remote_body(body):
-                stream.write(chunk)
-                digest.update(chunk)
-                downloaded_size += len(chunk)
-            stream.flush()
-            os.fsync(stream.fileno())
-        expected_size = int(manifest["size"])
-        checksum = str(manifest["sha256"])
-        if downloaded_size != expected_size or digest.hexdigest() != checksum:
-            raise OffsiteBackupError(
-                "downloaded offsite backup checksum does not match"
-            )
-        os.chmod(temporary, 0o600)
-        os.replace(temporary, output)
-        output.with_name(f"{output.name}.sha256").write_text(
-            f"{checksum}  {output.name}\n", encoding="ascii"
-        )
-        os.chmod(output.with_name(f"{output.name}.sha256"), 0o600)
-    finally:
-        temporary.unlink(missing_ok=True)
+    download_verified_file(settings, store, manifest, output, replace=replace)
+    checksum = str(manifest["sha256"])
+    checksum_path = output.with_name(f"{output.name}.sha256")
+    checksum_path.write_text(f"{checksum}  {output.name}\n", encoding="ascii")
+    os.chmod(checksum_path, 0o600)
     return manifest
-
-
-def prune(settings: Settings, store: ObjectStore, *, preserve: set[str]) -> int:
-    cutoff = datetime.now(tz=UTC) - timedelta(days=settings.retention_days)
-    paginator = store.get_paginator("list_objects_v2")
-    delete_keys: list[str] = []
-    for page in paginator.paginate(
-        Bucket=settings.bucket, Prefix=f"{settings.root_prefix}/"
-    ):
-        for item in page.get("Contents", []):
-            key = item.get("Key")
-            last_modified = item.get("LastModified")
-            if (
-                not isinstance(key, str)
-                or key in preserve
-                or not isinstance(last_modified, datetime)
-            ):
-                continue
-            name = PurePosixPath(key).name
-            backup_name = name.removesuffix(".sha256")
-            if not BACKUP_NAME.fullmatch(backup_name):
-                continue
-            normalized_modified = (
-                last_modified.replace(tzinfo=UTC)
-                if last_modified.tzinfo is None
-                else last_modified.astimezone(UTC)
-            )
-            if normalized_modified < cutoff:
-                delete_keys.append(key)
-    for index in range(0, len(delete_keys), 1000):
-        response = store.delete_objects(
-            Bucket=settings.bucket,
-            Delete={
-                "Objects": [{"Key": key} for key in delete_keys[index : index + 1000]]
-            },
-        )
-        errors = response.get("Errors", [])
-        if isinstance(errors, list) and errors:
-            raise OffsiteBackupError("object storage failed to prune expired backups")
-    return len(delete_keys)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -500,7 +497,7 @@ def _parser() -> argparse.ArgumentParser:
     upload.add_argument(
         "--keep-existing",
         action="store_true",
-        help="Skip retention pruning and preserve all previous offsite backups.",
+        help="Compatibility flag: uploads now always preserve previous backups.",
     )
     subparsers.add_parser("verify")
     download = subparsers.add_parser("download")
@@ -511,11 +508,43 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    status_file = (
+        os.environ.get("BACKUP_STATUS_FILE") if args.command == "upload" else None
+    )
+    succeeded = False
     try:
         settings = load_settings()
         store = object_store(settings)
         if args.command == "upload":
-            manifest = upload_latest(settings, store, keep_existing=args.keep_existing)
+            status_dir = (
+                Path(status_file).parent
+                if status_file
+                else settings.backup_dir / "status"
+            )
+            attempt_status = (
+                Path(status_file) if status_file else status_dir / "postgres.json"
+            )
+            with backup_attempt(
+                attempt_status, component="postgres", environment=settings.environment
+            ):
+                manifest = upload_latest(
+                    settings, store, keep_existing=args.keep_existing
+                )
+                write_upload_receipt(status_dir, manifest)
+                if status_file:
+                    match = BACKUP_NAME.fullmatch(manifest["filename"])
+                    assert match is not None
+                    source_time = datetime.strptime(
+                        match["timestamp"], "%Y%m%dT%H%M%SZ"
+                    ).replace(tzinfo=UTC)
+                    write_status(
+                        Path(status_file),
+                        component="postgres",
+                        environment=settings.environment,
+                        state="success",
+                        source_time=source_time.isoformat(),
+                    )
+            succeeded = True
             print(
                 "Offsite PostgreSQL backup uploaded and HEAD/checksum verified: "
                 f"{manifest['filename']}"
@@ -542,6 +571,14 @@ def main(argv: list[str] | None = None) -> int:
             print("ERROR: object storage request failed", file=sys.stderr)
             return 1
         raise
+    finally:
+        if status_file and not succeeded:
+            write_status(
+                Path(status_file),
+                component="postgres",
+                environment=os.environ.get("BACKUP_ENVIRONMENT", "production"),
+                state="failed",
+            )
     return 0
 
 

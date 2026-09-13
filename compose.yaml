@@ -146,7 +146,7 @@ services:
     environment:
       <<: *postgres-ops-environment
       BACKUP_DIR: /backups
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-0}
       BACKUP_MIN_FREE_MB: ${BACKUP_MIN_FREE_MB:-1024}
     entrypoint: ["/ops/backup.sh"]
     volumes:
