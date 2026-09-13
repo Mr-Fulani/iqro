@@ -8,7 +8,135 @@ from unittest.mock import patch, Mock
 from ops import dev
 
 
+def missing_status():
+    return {
+        "ready": False,
+        "checks": dict.fromkeys(("canonical", "mushaf", "dua", "translations", "tafsirs", "audio", "mobile"), False),
+        "missing_dua": ["hisn_al_muslim_full_v1.json", "supplications_from_quran_jmapps_v1.json"],
+        "configured_translations": [20, 45, 77], "missing_translations": [20, 45, 77],
+        "configured_tafsirs": [16, 169, 170], "missing_tafsirs": [16, 169, 170],
+    }
+
+
+def ready_status():
+    result = missing_status()
+    result["ready"] = True
+    result["checks"] = dict.fromkeys(result["checks"], True)
+    for key in ("missing_dua", "missing_translations", "missing_tafsirs"):
+        result[key] = []
+    return result
+
+
 class LocalWorkspaceTests(unittest.TestCase):
+    def test_up_prepares_data_after_services_and_never_reports_success_on_failure(self):
+        calls = []
+        with patch.object(dev, "init"), patch.object(dev, "backup_before_migration"), \
+             patch.object(dev, "compose", side_effect=lambda *args: calls.append(args)), \
+             patch.object(dev, "data", side_effect=lambda **kw: calls.append(("data", kw))), \
+             patch("builtins.print") as output:
+            dev.up()
+        self.assertEqual(calls[-2], ("data", {"web_only": False, "build": True}))
+        self.assertIn("backend", calls[-3])
+        self.assertEqual(calls[-1], ("up", "--detach", "--wait", "web", "worker", "beat"))
+        self.assertTrue(any("are ready" in str(call) for call in output.call_args_list))
+        with patch.object(dev, "init"), patch.object(dev, "backup_before_migration"), \
+             patch.object(dev, "compose"), \
+             patch.object(dev, "data", side_effect=ValueError("source unavailable")), \
+             patch("builtins.print") as output, self.assertRaises(ValueError):
+            dev.up()
+        self.assertFalse(any("are ready" in str(call) for call in output.call_args_list))
+
+    def test_ready_workspace_starts_without_credentials_downloads_or_rendering(self):
+        with patch.object(dev, "data_status", return_value=ready_status()), \
+             patch.object(dev, "require_credentials") as credentials, \
+             patch.object(dev, "manage") as manage, patch.object(dev, "compose") as compose:
+            dev.data()
+        credentials.assert_not_called()
+        manage.assert_not_called()
+        compose.assert_not_called()
+
+    def test_prebuilt_images_still_require_data_and_gate_web_start(self):
+        with patch.object(dev, "init"), patch.object(dev, "backup_before_migration"), \
+             patch.object(dev, "compose") as compose, patch.object(dev, "data") as data:
+            dev.up(build=False)
+        self.assertFalse(any(call.args[0] == "build" for call in compose.call_args_list))
+        data.assert_called_once_with(web_only=False, build=False)
+        with patch.object(dev, "init"), patch.object(dev, "backup_before_migration"), \
+             patch.object(dev, "compose") as compose, \
+             patch.object(dev, "data", side_effect=ValueError("missing credentials")), \
+             self.assertRaises(ValueError):
+            dev.up(build=False)
+        self.assertFalse(any("web" in call.args for call in compose.call_args_list))
+
+    def test_missing_credentials_prevent_imports_and_rendering(self):
+        with patch.object(dev, "data_status", return_value=missing_status()), \
+             patch.object(dev, "require_credentials", side_effect=ValueError("QF_CLIENT_SECRET")), \
+             patch.object(dev, "manage") as manage, patch.object(dev, "compose") as compose, \
+             self.assertRaisesRegex(ValueError, "QF_CLIENT_SECRET"):
+            dev.data()
+        manage.assert_not_called()
+        compose.assert_not_called()
+
+    def test_missing_one_translation_preserves_existing_corpus_sources_and_media(self):
+        status = ready_status()
+        status.update(ready=False, missing_translations=[45])
+        status["checks"]["translations"] = False
+        with patch.object(dev, "data_status", side_effect=[status, ready_status()]), \
+             patch.object(dev, "require_credentials"), patch.object(dev, "manage") as manage, \
+             patch.object(dev, "compose") as compose, patch.object(dev, "download") as download:
+            dev.data()
+        self.assertEqual([call.args for call in manage.call_args_list], [
+            ("sync_quran_foundation_translations", "--resource-id", "45"),
+            ("dev_data_status", "--require-mobile"),
+        ])
+        compose.assert_not_called()
+        download.assert_not_called()
+
+    def test_explicit_refresh_checks_all_configured_resources_and_preserves_corpus(self):
+        with patch.object(dev, "data_status", return_value=ready_status()), \
+             patch.object(dev, "require_credentials"), patch.object(dev, "manage") as manage, \
+             patch.object(dev, "compose") as compose, patch.object(dev, "download") as download:
+            dev.data(refresh=True)
+        self.assertEqual([call.args for call in manage.call_args_list], [
+            ("sync_quran_foundation_mushafs", "--source-id", "5"),
+            *[("sync_quran_foundation_translations", "--resource-id", str(n)) for n in (20, 45, 77)],
+            *[("sync_quran_foundation_tafsirs", "--resource-id", str(n)) for n in (16, 169, 170)],
+            ("dev_data_status", "--require-mobile"),
+        ])
+        compose.assert_not_called()
+        download.assert_not_called()
+
+    def test_retry_after_provider_failure_only_fetches_missing_resource(self):
+        state = ready_status()
+        state.update(ready=False, missing_translations=[20, 45])
+        state["checks"]["translations"] = False
+        imported = []
+        def manage(*args, **kwargs):
+            if args[0] == "sync_quran_foundation_translations":
+                imported.append(int(args[-1]))
+                if args[-1] == "45":
+                    raise dev.subprocess.CalledProcessError(1, ["sync"])
+        with patch.object(dev, "data_status", return_value=state), \
+             patch.object(dev, "require_credentials"), patch.object(dev, "manage", side_effect=manage), \
+             self.assertRaises(dev.subprocess.CalledProcessError):
+            dev.data()
+        self.assertEqual(imported, [20, 45])
+        state["missing_translations"] = [45]
+        with patch.object(dev, "data_status", side_effect=[state, ready_status()]), \
+             patch.object(dev, "require_credentials"), patch.object(dev, "manage") as resumed:
+            dev.data()
+        self.assertEqual(resumed.call_args_list[0].args, ("sync_quran_foundation_translations", "--resource-id", "45"))
+        self.assertEqual(len(resumed.call_args_list), 2)
+
+    def test_setup_lock_blocks_concurrent_import_and_releases_after_failure(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(dev, "WORK", Path(temporary)):
+            with self.assertRaisesRegex(ValueError, "interrupted"), dev.setup_lock():
+                with self.assertRaisesRegex(ValueError, "already running"), dev.setup_lock():
+                    self.fail("A second setup acquired the same lock")
+                raise ValueError("interrupted")
+            with dev.setup_lock():
+                self.assertTrue((dev.WORK / "setup.lock").exists())
+
     def test_failed_backup_verification_prevents_service_start(self):
         with tempfile.TemporaryDirectory() as temporary, \
              patch.object(dev, "WORK", Path(temporary)), patch.object(dev, "init"), \
@@ -82,11 +210,14 @@ class LocalWorkspaceTests(unittest.TestCase):
             calls.append(args)
             return Mock(stdout=b"")
         with patch.object(dev, "require_credentials"), patch.object(dev, "download"), \
+             patch.object(dev, "data_status", return_value=missing_status()), \
              patch.object(dev, "manage", side_effect=manage), patch.object(dev, "compose") as compose:
-            dev.data(web_only=True, extras=True)
+            dev.data(web_only=True)
         self.assertEqual([args[0] for args in calls], [
             "import_dua_catalog", "import_dua_catalog", "sync_quran_foundation_mushafs", "import_quran_corpus",
-            "sync_quran_foundation_translations", "sync_quran_foundation_tafsirs", "dev_data_status",
+            *["sync_quran_foundation_translations"] * 3,
+            *["sync_quran_foundation_tafsirs"] * 3,
+            "sync_quran_foundation_audio", "dev_data_status",
         ])
         compose.assert_not_called()
 
@@ -113,6 +244,7 @@ class LocalWorkspaceTests(unittest.TestCase):
             if "run" in args:
                 raise dev.subprocess.CalledProcessError(1, ["renderer"])
         with patch.object(dev, "require_credentials"), patch.object(dev, "download"), \
+             patch.object(dev, "data_status", return_value=missing_status()), \
              patch.object(dev, "manage", side_effect=manage), \
              patch.object(dev, "prepare_source", return_value=directory), \
              patch.object(dev, "compose", side_effect=compose), \
@@ -130,6 +262,7 @@ class LocalWorkspaceTests(unittest.TestCase):
         def compose(*args, **kwargs):
             calls.append(args)
         with patch.object(dev, "require_credentials"), patch.object(dev, "download"), \
+             patch.object(dev, "data_status", return_value=missing_status()), \
              patch.object(dev, "manage", side_effect=manage), \
              patch.object(dev, "prepare_source", return_value=directory), \
              patch.object(dev, "compose", side_effect=compose):

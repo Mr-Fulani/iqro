@@ -1,5 +1,8 @@
+.DEFAULT_GOAL := up
+
 BACKEND_DIR := services/backend
 DEV_DATA_ARGS ?=
+DEV_UP_ARGS ?=
 MOBILE_ARGS ?=
 
 .PHONY: dev-init dev-up dev-data dev-doctor mobile-run
@@ -7,7 +10,7 @@ dev-init:
 	python3 ops/dev.py init
 
 dev-up:
-	python3 ops/dev.py up
+	python3 ops/dev.py up $(DEV_UP_ARGS)
 
 dev-data:
 	python3 ops/dev.py data $(DEV_DATA_ARGS)
@@ -15,7 +18,7 @@ dev-data:
 dev-doctor:
 	python3 ops/dev.py doctor
 
-mobile-run:
+mobile-run: dev-up
 	cd clients/iqro_mobile && flutter pub get --enforce-lockfile
 	cd clients/iqro_mobile && flutter run --dart-define=APP_ENV=local $(MOBILE_ARGS)
 

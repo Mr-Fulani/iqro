@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from quran_backend.modules.dua.models import DuaCollection
 from quran_backend.modules.quran import corpus_import
+from quran_backend.modules.quran.management.commands.dev_data_status import canonical_status
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageMapping,
@@ -43,7 +44,8 @@ def test_readiness_distinguishes_missing_corpus_dua_and_mobile(
     for snapshot in ("hisn_al_muslim_full_v1.json", "supplications_from_quran_jmapps_v1.json"):
         path = Path(__file__).resolve().parents[1] / "src/quran_backend/modules/dua/data" / snapshot
         call_command("import_dua_catalog", path, "--publish")
-    call_command("dev_data_status")
+    with pytest.raises(CommandError, match="Translations missing"):
+        call_command("dev_data_status")
     with pytest.raises(CommandError, match="Mobile pages missing"):
         call_command("dev_data_status", "--require-mobile")
     with override_settings(DEBUG=False), pytest.raises(CommandError, match="local development"):
@@ -137,6 +139,24 @@ def test_corpus_import_is_complete_without_images_and_repeat_preserves_ids(
     assert corpus_import.import_canonical_corpus(path).pk == version.pk
     assert list(version.pages.values_list("number", "id")) == pages
     assert list(Ayah.objects.values_list("id", "text_uthmani")) == ayahs
+
+
+@pytest.mark.django_db
+def test_bootstrap_readiness_preserves_a_published_legacy_corpus(
+    corpus: tuple[Path, QuranFoundationMushaf],
+) -> None:
+    version = corpus_import.import_canonical_corpus(corpus[0])
+    # Represent the older published corpus: its schema did not include these divisions.
+    version.rub_el_hizb.all().delete()
+    version.hizb.all().delete()
+    type(version).objects.filter(pk=version.pk).update(hizb_count=0, rub_el_hizb_count=0)
+    Ayah.objects.filter(surah__edition_version=version).update(
+        hizb_number=None, rub_el_hizb_number=None
+    )
+    before = list(Ayah.objects.order_by("pk").values_list("pk", "text_uthmani"))
+    assert canonical_status() == ""
+    assert list(Ayah.objects.order_by("pk").values_list("pk", "text_uthmani")) == before
+    assert QuranEdition.objects.get(code="madani-hafs").active_version_id == version.pk
 
 
 @pytest.mark.django_db

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import json
 import os
@@ -72,12 +74,29 @@ def init():
 
 def require_credentials():
     # Check presence without displaying secret values or sourcing shell code.
-    values = dict(line.split("=", 1) for line in ENV_FILE.read_text().splitlines()
-                  if "=" in line and not line.lstrip().startswith("#"))
+    values = {key.strip(): value.strip()
+              for line in ENV_FILE.read_text().splitlines()
+              if "=" in line and not line.lstrip().startswith("#")
+              for key, value in [line.split("=", 1)]}
     missing = [key for key in ("QF_CLIENT_ID", "QF_CLIENT_SECRET")
                if not values.get(key, "").strip().strip("\"'")]
     if missing:
         raise ValueError("Fill services/backend/.env: " + ", ".join(missing))
+
+
+@contextmanager
+def setup_lock():
+    """Serialize startup/imports in one checkout; keep the lock file for reuse."""
+    WORK.mkdir(parents=True, exist_ok=True)
+    with (WORK / "setup.lock").open("a") as stream:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("Local setup is already running in this checkout") from None
+        try:
+            yield
+        finally:
+            fcntl.flock(stream, fcntl.LOCK_UN)
 
 
 def backup_before_migration():
@@ -103,17 +122,20 @@ def backup_before_migration():
     print(f"Verified backup before pending migrations: {path.relative_to(ROOT)}")
 
 
-def up():
+def up(*, web_only=False, build=True):
     init()
     (ROOT / "services/backend/media").mkdir(parents=True, exist_ok=True)
     WORK.mkdir(parents=True, exist_ok=True)
-    compose("build", "backend", "web")
+    if build:
+        compose("build", "backend", "web")
     compose("up", "--detach", "--wait", "postgres", "redis")
     backup_before_migration()
-    compose("up", "--detach", "--wait", "backend", "web", "worker", "beat")
+    compose("up", "--detach", "--wait", "backend")
+    data(web_only=web_only, build=build)
+    compose("up", "--detach", "--wait", "web", "worker", "beat")
     print(f"Web: http://localhost:{os.environ.get('LOCAL_WEB_PORT', '3000')} · "
           f"API: http://localhost:{os.environ.get('LOCAL_API_PORT', '8000')}/api/v1")
-    print("First setup: make dev-data")
+    print("Local application and data are ready.")
 
 
 def download(url: str, checksum: str, target: Path, *, max_bytes: int):
@@ -151,23 +173,50 @@ def render_directory(directory: Path) -> Path:
     return directory / f"rendered-{identity}"
 
 
-def data(*, web_only=False, extras=False):
+def data_status(*, web_only=False):
+    return json.loads(manage("dev_data_status", "--json",
+                             *([] if web_only else ["--require-mobile"]),
+                             capture_output=True).stdout)
+
+
+def data(*, web_only=False, refresh=False, build=True):
+    status = data_status(web_only=web_only)
+    if status["ready"] and not refresh:
+        print("All local data already available; no downloads or rendering needed.", flush=True)
+        return
     require_credentials()
-    for snapshot in ("hisn_al_muslim_full_v1.json", "supplications_from_quran_jmapps_v1.json"):
+    checks = status["checks"]
+    print("Preparing local content: " + ", ".join(k for k, ready in checks.items() if not ready),
+          flush=True)
+    for snapshot in status["missing_dua"]:
         manage("import_dua_catalog", f"src/quran_backend/modules/dua/data/{snapshot}", "--publish")
-    manage("sync_quran_foundation_mushafs", "--source-id", "5")
+    if not checks["mushaf"] or refresh:
+        manage("sync_quran_foundation_mushafs", "--source-id", "5")
     # Import constants without loading Django or requiring host backend packages.
-    source = json.loads((ROOT / "services/backend/docs/quran-sources.lock.json").read_bytes())["corpus"]
-    corpus = WORK / "sources" / f'{source["quran_json_sha256"]}.json'
-    download(f'https://raw.githubusercontent.com/mjmirza/quran-dataset/{source["commit"]}/data/quran.json',
-             source["quran_json_sha256"], corpus, max_bytes=32 * 1024 * 1024)
-    manage("import_quran_corpus", "/app/" + str(corpus.relative_to(ROOT)))
-    if not web_only:
+    if not checks["canonical"]:
+        source = json.loads((ROOT / "services/backend/docs/quran-sources.lock.json").read_bytes())["corpus"]
+        corpus = WORK / "sources" / f'{source["quran_json_sha256"]}.json'
+        download(f'https://raw.githubusercontent.com/mjmirza/quran-dataset/{source["commit"]}/data/quran.json',
+                 source["quran_json_sha256"], corpus, max_bytes=32 * 1024 * 1024)
+        manage("import_quran_corpus", "/app/" + str(corpus.relative_to(ROOT)))
+    # Each resource has an independent checkpoint. A later failure keeps completed imports.
+    for kind in ("translations", "tafsirs"):
+        ids = status[f"configured_{kind}"] if refresh else status[f"missing_{kind}"]
+        for resource_id in ids:
+            print(f"Preparing {kind}: {resource_id}", flush=True)
+            manage(f"sync_quran_foundation_{kind}", "--resource-id", str(resource_id))
+    if not checks["audio"]:
+        manage("sync_quran_foundation_audio", "--reciter-id", "159", "--all-surahs",
+               "--content-version", "local-dev-v1", "--publish", "--resume")
+    # A source refresh can invalidate a previously published image package.
+    current = data_status(web_only=web_only)
+    if not web_only and not current["checks"]["mobile"]:
         snapshot = manage("export_qf_mushaf_source", "--mushaf", "5", capture_output=True).stdout
         directory = prepare_source(snapshot)
         relative = str(directory.relative_to(WORK / "mushaf"))
         rendered = render_directory(directory)
-        compose("--profile", "tools", "build", "mushaf-tools")
+        if build:
+            compose("--profile", "tools", "build", "mushaf-tools")
         print("Preparing 604 pages for mobile. Repeated runs verify and reuse existing files.", flush=True)
         compose("--profile", "tools", "run", "--no-deps", "-T", "mushaf-tools",
                 "python", "kfgqpc.py", "--source-dir", f"/data/{relative}/source",
@@ -176,9 +225,6 @@ def data(*, web_only=False, extras=False):
                 "--output-dir", f"/data/{relative}/{rendered.name}")
         manifest = "/app/" + str((rendered / "manifest.json").relative_to(ROOT))
         manage("publish_mushaf_rendition", manifest)
-    if extras:
-        manage("sync_quran_foundation_translations")
-        manage("sync_quran_foundation_tafsirs")
     manage("dev_data_status", *([] if web_only else ["--require-mobile"]))
 
 
@@ -191,7 +237,6 @@ def doctor():
     print(f"backend .env: {'present' if ENV_FILE.is_file() else 'missing (make dev-init)'}")
     if failed or not ENV_FILE.is_file():
         raise ValueError("Install prerequisites and run make dev-init")
-    require_credentials()
     compose("config", "--quiet")
     manage("migrate", "--check")
     manage("dev_data_status", "--require-mobile")
@@ -201,11 +246,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("init", "up", "data", "doctor"))
     parser.add_argument("--web-only", action="store_true", help="Skip mobile page rendering")
-    parser.add_argument("--extras", action="store_true", help="Also sync configured translations/Tafsirs")
+    parser.add_argument("--extras", action="store_true", help="Compatibility flag: translations/Tafsirs are always included")
+    parser.add_argument("--refresh", action="store_true", help="Refresh QF Mushaf, translations and Tafsirs; normal startup only fills missing data")
+    parser.add_argument("--no-build", action="store_true", help="Reuse existing local images (they must already be built)")
     args = parser.parse_args()
+    if args.refresh and args.command != "data":
+        parser.error("--refresh is supported by the data command only")
     try:
-        if args.command == "data":
-            data(web_only=args.web_only, extras=args.extras)
+        if args.command in ("up", "data"):
+            with setup_lock():
+                if args.command == "up":
+                    up(web_only=args.web_only, build=not args.no_build)
+                else:
+                    data(web_only=args.web_only, refresh=args.refresh, build=not args.no_build)
         else:
             {"init": init, "up": up, "doctor": doctor}[args.command]()
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:

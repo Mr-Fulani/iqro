@@ -12,9 +12,7 @@ Backend использует Python 3.14, Django 6.1, Django REST Framework, Pos
 ```bash
 make dev-init
 # Заполнить services/backend/.env ключами Quran.Foundation
-make dev-up
-make dev-data
-make dev-doctor
+make up
 ```
 
 Смотрите [полную инструкцию](../../docs/local-development.md).
@@ -94,7 +92,9 @@ optimistic concurrency, минимизированные tombstones, retention �
 
 Web рисует страницы официальными шрифтами QF. Mobile использует проверенные WebP
 и области аятов из `MushafRenditionRelease`: это результат формирования страниц
-из слов/шрифтов источника. `make dev-data` выполняет все шаги подготовки и публикации.
+из слов/шрифтов источника. `make up` автоматически выполняет недостающие шаги подготовки
+и публикации, включая переводы, тафсиры и потоковое аудио. Готовый опубликованный
+канонический корпус сохраняется; импорт в него повторно не запускается.
 
 Локальные изображения публикуются в `MEDIA_ROOT` через отдельный uploader с проверкой
 SHA-256 и запретом перезаписи. Этот режим разрешён только при local settings и DEBUG.
