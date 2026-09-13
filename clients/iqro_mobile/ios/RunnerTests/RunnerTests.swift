@@ -2,6 +2,19 @@ import Foundation
 import XCTest
 
 final class RunnerTests: XCTestCase {
+  func testEmbeddedPrayerWidgetHasMatchingAppVersions() throws {
+    let pluginsURL = try XCTUnwrap(Bundle.main.builtInPlugInsURL)
+    let widgetURL = pluginsURL.appendingPathComponent("PrayerTimesHomeWidget.appex")
+    let widget = try XCTUnwrap(Bundle(url: widgetURL))
+
+    for key in ["CFBundleVersion", "CFBundleShortVersionString"] {
+      let appVersion = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: key) as? String)
+      let widgetVersion = try XCTUnwrap(widget.object(forInfoDictionaryKey: key) as? String)
+      XCTAssertFalse(appVersion.isEmpty, "The app must declare \(key)")
+      XCTAssertEqual(widgetVersion, appVersion, "The widget must share the app's \(key)")
+    }
+  }
+
   func testInfoPlistAdvertisesBackgroundCapabilities() throws {
     let sourceRoot = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
