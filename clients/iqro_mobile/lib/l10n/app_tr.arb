@@ -1,4 +1,10 @@
 {
+  "homePrayerIn": "{time} sonra",
+  "homeSavedHint": "Kaydedilen ayetler ve dualar",
+  "homeDownloads": "İndirilenler",
+  "bookmarks": "Yer işaretleri",
+  "emptyBookmarks": "Henüz yer işareti yok. Mushaftaki yer işareti simgesine dokunarak bir ayeti kaydedin.",
+  "bookmarksLoadError": "Yer işaretleri yüklenemedi",
   "mushafFitWidth": "Genişliğe sığdır",
   "mushafFitPage": "Tam sayfa",
   "checkMushafUpdates": "Güncellemeleri denetle",
@@ -213,6 +219,7 @@
   "prayerWidget": "Namaz vakitleri widget'ı",
   "prayerWidgetHint": "Sıradaki namaz ve beş vakit ana ekranınızda, internet olmadan da görünür",
   "addPrayerWidget": "Widget ekle",
+  "homeWidgetAlreadyAdded": "Widget zaten eklenmiş. Verileri güncellendi.",
   "prayerWidgetPinRequested": "IQRO widget'ı için ana ekranınızda bir yer seçin",
   "prayerWidgetManualAndroid": "Ana ekranda boş bir alana dokunup basılı tutun, Widget'ları açın ve IQRO'yu seçin.",
   "prayerWidgetManualIos": "Ana ekrana dokunup basılı tutun, + düğmesine dokunun, IQRO'yu bulun ve widget'ı ekleyin.",

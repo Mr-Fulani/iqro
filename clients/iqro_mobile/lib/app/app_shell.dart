@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/design_system/iqro_lazy_indexed_stack.dart';
 import '../core/design_system/iqro_widgets.dart';
@@ -12,8 +13,9 @@ import '../features/quran/quran_screen.dart';
 import 'providers.dart';
 
 class AppShell extends ConsumerStatefulWidget {
-  const AppShell({this.initialIndex = 0, super.key});
+  const AppShell({this.initialIndex = 0, this.child, super.key});
   final int initialIndex;
+  final Widget? child;
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
@@ -36,17 +38,19 @@ class _AppShellState extends ConsumerState<AppShell> {
       audioControllerProvider.select((value) => value.active),
     );
     return Scaffold(
-      extendBody: true,
-      body: IqroLazyIndexedStack(
-        index: _index,
-        builders: <WidgetBuilder>[
-          (_) => const HomeScreen(),
-          (_) => const QuranScreen(),
-          (_) => const PlanScreen(),
-          (_) => const AudioScreen(),
-          (_) => const MoreScreen(),
-        ],
-      ),
+      extendBody: widget.child == null,
+      body:
+          widget.child ??
+          IqroLazyIndexedStack(
+            index: _index,
+            builders: <WidgetBuilder>[
+              (_) => const HomeScreen(),
+              (_) => const QuranScreen(),
+              (_) => const PlanScreen(),
+              (_) => const AudioScreen(),
+              (_) => const MoreScreen(),
+            ],
+          ),
       bottomNavigationBar: Material(
         color: Colors.transparent,
         child: Column(
@@ -58,7 +62,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 context,
               ).colorScheme.surface.withValues(alpha: .96),
               selectedIndex: _index,
-              onDestinationSelected: (value) => setState(() => _index = value),
+              onDestinationSelected: (value) => context.go('/app?tab=$value'),
               destinations: <NavigationDestination>[
                 NavigationDestination(
                   icon: const Icon(Icons.home_outlined),

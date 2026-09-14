@@ -59,14 +59,12 @@ class MushafPageScrubber extends StatefulWidget {
     required this.page,
     required this.juz,
     required this.onJump,
-    required this.onCatalog,
     this.pagesCount = 604,
     super.key,
   });
   final int page;
   final int? juz;
   final ValueChanged<int> onJump;
-  final VoidCallback onCatalog;
   final int pagesCount;
 
   @override
@@ -101,15 +99,10 @@ class _MushafPageScrubberState extends State<MushafPageScrubber> {
   Widget build(BuildContext context) => MushafControlSurface(
     child: Row(
       children: <Widget>[
-        IconButton(
-          onPressed: widget.onCatalog,
-          tooltip: context.l10n.quickJump,
-          icon: const Icon(Icons.format_list_bulleted_rounded),
-          color: mushafAccentColor,
-        ),
         Expanded(
           child: Padding(
             padding: const EdgeInsetsDirectional.only(
+              start: 12,
               top: 6,
               end: 12,
               bottom: 2,

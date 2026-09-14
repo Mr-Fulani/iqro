@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../core/auth/account_scope.dart';
+import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/widgets/prayer_times.home_widget.dart';
 import 'prayer_places.dart';
@@ -16,6 +15,8 @@ const prayerWidgetVisibleDays = 8;
 class PrayerWidgetStaticData {
   const PrayerWidgetStaticData({
     required this.title,
+    required this.locale,
+    required this.sunriseLabel,
     required this.fajrLabel,
     required this.dhuhrLabel,
     required this.asrLabel,
@@ -24,6 +25,8 @@ class PrayerWidgetStaticData {
   });
 
   final String title;
+  final String locale;
+  final String sunriseLabel;
   final String fajrLabel;
   final String dhuhrLabel;
   final String asrLabel;
@@ -36,6 +39,12 @@ class PrayerWidgetTimelineEntry {
     required this.dateLocation,
     required this.nextLabel,
     required this.nextPrayer,
+    this.nextName = '',
+    this.nextHour = '—',
+    this.nextMinute = '—',
+    this.nextEpoch = '',
+    this.period = 'day',
+    this.sunriseTime = '—',
     required this.fajrTime,
     required this.dhuhrTime,
     required this.asrTime,
@@ -46,6 +55,12 @@ class PrayerWidgetTimelineEntry {
   final String dateLocation;
   final String nextLabel;
   final String nextPrayer;
+  final String nextName;
+  final String nextHour;
+  final String nextMinute;
+  final String nextEpoch;
+  final String period;
+  final String sunriseTime;
   final String fajrTime;
   final String dhuhrTime;
   final String asrTime;
@@ -59,7 +74,7 @@ abstract interface class PrayerWidgetGateway {
     required Map<DateTime, PrayerWidgetTimelineEntry> timeline,
   });
 
-  Future<bool> requestPin();
+  Future<HomeWidgetPinResult> requestPin();
 }
 
 class HomePrayerWidgetGateway implements PrayerWidgetGateway {
@@ -72,6 +87,8 @@ class HomePrayerWidgetGateway implements PrayerWidgetGateway {
   }) async {
     await PrayerTimesHomeWidget.saveData(
       title: labels.title,
+      locale: labels.locale,
+      sunriseLabel: labels.sunriseLabel,
       fajrLabel: labels.fajrLabel,
       dhuhrLabel: labels.dhuhrLabel,
       asrLabel: labels.asrLabel,
@@ -83,6 +100,12 @@ class HomePrayerWidgetGateway implements PrayerWidgetGateway {
             dateLocation: item.value.dateLocation,
             nextLabel: item.value.nextLabel,
             nextPrayer: item.value.nextPrayer,
+            nextName: item.value.nextName,
+            nextHour: item.value.nextHour,
+            nextMinute: item.value.nextMinute,
+            nextEpoch: item.value.nextEpoch,
+            period: item.value.period,
+            sunriseTime: item.value.sunriseTime,
             fajrTime: item.value.fajrTime,
             dhuhrTime: item.value.dhuhrTime,
             asrTime: item.value.asrTime,
@@ -95,16 +118,8 @@ class HomePrayerWidgetGateway implements PrayerWidgetGateway {
   }
 
   @override
-  Future<bool> requestPin() async {
-    if (!Platform.isAndroid ||
-        await HomeWidget.isRequestPinWidgetSupported() != true) {
-      return false;
-    }
-    await HomeWidget.requestPinWidget(
-      androidName: 'PrayerTimesHomeWidgetReceiver',
-    );
-    return true;
-  }
+  Future<HomeWidgetPinResult> requestPin() =>
+      homeWidgetPinning.request('PrayerTimesHomeWidgetReceiver');
 }
 
 class PrayerWidgetUpdateResult {
@@ -164,7 +179,7 @@ class PrayerWidgetService {
     );
   }
 
-  Future<bool> requestPin() => _gateway.requestPin();
+  Future<HomeWidgetPinResult> requestPin() => _gateway.requestPin();
 
   Future<void> _enqueueWrite(
     AccountScopeSnapshot scope, {
@@ -196,7 +211,10 @@ class PrayerWidgetCopy {
   });
 
   factory PrayerWidgetCopy.forLocale(String locale) {
-    final normalized = switch (locale.toLowerCase()) {
+    final normalized = switch (locale
+        .toLowerCase()
+        .split(RegExp('[-_]'))
+        .first) {
       'ar' => 'ar',
       'tr' => 'tr',
       'ru' => 'ru',
@@ -205,11 +223,13 @@ class PrayerWidgetCopy {
     return switch (normalized) {
       'ru' => const PrayerWidgetCopy(
         locale: 'ru',
-        nextPrayer: 'Следующая молитва',
+        nextPrayer: 'через',
         currentLocation: 'Текущее местоположение',
         locationRequired: 'Откройте IQRO и выберите местоположение',
         staticData: PrayerWidgetStaticData(
           title: 'IQRO',
+          locale: 'ru',
+          sunriseLabel: 'Восход',
           fajrLabel: 'Фаджр',
           dhuhrLabel: 'Зухр',
           asrLabel: 'Аср',
@@ -219,11 +239,13 @@ class PrayerWidgetCopy {
       ),
       'ar' => const PrayerWidgetCopy(
         locale: 'ar',
-        nextPrayer: 'الصلاة القادمة',
+        nextPrayer: 'بعد',
         currentLocation: 'الموقع الحالي',
         locationRequired: 'افتح IQRO واختر موقعك',
         staticData: PrayerWidgetStaticData(
           title: 'IQRO',
+          locale: 'ar',
+          sunriseLabel: 'الشروق',
           fajrLabel: 'الفجر',
           dhuhrLabel: 'الظهر',
           asrLabel: 'العصر',
@@ -233,11 +255,13 @@ class PrayerWidgetCopy {
       ),
       'tr' => const PrayerWidgetCopy(
         locale: 'tr',
-        nextPrayer: 'Sıradaki namaz',
+        nextPrayer: 'Kalan süre',
         currentLocation: 'Mevcut konum',
         locationRequired: 'IQRO\'yu açın ve konumunuzu seçin',
         staticData: PrayerWidgetStaticData(
           title: 'IQRO',
+          locale: 'tr',
+          sunriseLabel: 'Güneş',
           fajrLabel: 'İmsak',
           dhuhrLabel: 'Öğle',
           asrLabel: 'İkindi',
@@ -247,11 +271,13 @@ class PrayerWidgetCopy {
       ),
       _ => const PrayerWidgetCopy(
         locale: 'en',
-        nextPrayer: 'Next prayer',
+        nextPrayer: 'in',
         currentLocation: 'Current location',
         locationRequired: 'Open IQRO and choose your location',
         staticData: PrayerWidgetStaticData(
           title: 'IQRO',
+          locale: 'en',
+          sunriseLabel: 'Sunrise',
           fajrLabel: 'Fajr',
           dhuhrLabel: 'Dhuhr',
           asrLabel: 'Asr',
@@ -298,7 +324,11 @@ Map<DateTime, PrayerWidgetTimelineEntry> buildPrayerWidgetTimeline({
     };
   }
   final timeline = <DateTime, PrayerWidgetTimelineEntry>{};
-  for (var index = 0; index < prayerWidgetVisibleDays; index++) {
+  for (
+    var index = 0;
+    index < prayerWidgetVisibleDays && index + 1 < schedules.length;
+    index++
+  ) {
     final schedule = schedules[index];
     final nextDay = schedules[index + 1];
     final zone = tz.getLocation(schedule.timezone);
@@ -342,10 +372,22 @@ PrayerWidgetTimelineEntry _timelineEntry({
 }) {
   final date = DateFormat.MMMEd(copy.locale).format(schedule.date);
   final nextTime = _formatPrayerTime(nextSchedule, nextCode, copy.locale);
+  final nextInstant = _prayerInstant(
+    nextSchedule,
+    nextCode,
+    tz.getLocation(nextSchedule.timezone),
+  );
+  final nextParts = nextTime.split(':');
   return PrayerWidgetTimelineEntry(
     dateLocation: '$date · $locationName',
     nextLabel: copy.nextPrayer,
     nextPrayer: '${copy.prayerName(nextCode)} $nextTime',
+    nextName: copy.prayerName(nextCode),
+    nextHour: nextParts.first,
+    nextMinute: nextParts.length == 2 ? nextParts.last : '—',
+    nextEpoch: nextInstant?.millisecondsSinceEpoch.toString() ?? '',
+    period: nextCode == 'isha' ? 'night' : 'day',
+    sunriseTime: _formatPrayerTime(schedule, 'sunrise', copy.locale),
     fajrTime: _formatPrayerTime(schedule, 'fajr', copy.locale),
     dhuhrTime: _formatPrayerTime(schedule, 'dhuhr', copy.locale),
     asrTime: _formatPrayerTime(schedule, 'asr', copy.locale),

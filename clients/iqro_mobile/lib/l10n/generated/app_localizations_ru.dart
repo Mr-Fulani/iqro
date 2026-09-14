@@ -9,6 +9,27 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String homePrayerIn(String time) {
+    return 'Через $time';
+  }
+
+  @override
+  String get homeSavedHint => 'Сохранённые аяты и ду’а';
+
+  @override
+  String get homeDownloads => 'Загрузки';
+
+  @override
+  String get bookmarks => 'Закладки';
+
+  @override
+  String get emptyBookmarks =>
+      'Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.';
+
+  @override
+  String get bookmarksLoadError => 'Не удалось загрузить закладки';
+
+  @override
   String get mushafFitWidth => 'По ширине';
 
   @override
@@ -685,6 +706,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get addPrayerWidget => 'Добавить виджет';
+
+  @override
+  String get homeWidgetAlreadyAdded => 'Виджет уже добавлен. Данные обновлены.';
 
   @override
   String get prayerWidgetPinRequested =>

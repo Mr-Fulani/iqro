@@ -324,9 +324,9 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             child: InteractiveViewer(
               transformationController: _transformationController,
               constrained: false,
-              alignment: layout.fillsLandscapeWidth
-                  ? Alignment.topCenter
-                  : Alignment.center,
+              // Zoom matrices use viewport coordinates. Center the page inside
+              // that viewport, not around the Transform's alignment origin.
+              alignment: Alignment.topLeft,
               minScale: 1,
               maxScale: 3,
               panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
@@ -340,19 +340,32 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                 widget.onScale(scale);
               },
               child: SizedBox(
-                width: layout.width,
-                height: layout.height,
-                child: FoundationMushafPageContent(
-                  key: ValueKey(
-                    '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+                width: _viewportSize.width,
+                height: math.max(_viewportSize.height, layout.height),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onBackgroundTap,
+                  child: Align(
+                    alignment: layout.fillsLandscapeWidth
+                        ? Alignment.topCenter
+                        : Alignment.center,
+                    child: SizedBox(
+                      width: layout.width,
+                      height: layout.height,
+                      child: FoundationMushafPageContent(
+                        key: ValueKey(
+                          '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+                        ),
+                        page: pageData.foundation!,
+                        selected: widget.selectedAyah,
+                        playing: widget.playingAyah,
+                        onSelect: widget.onSelectAyah,
+                        onOpen: widget.onOpenAyah,
+                        onBackgroundTap: widget.onBackgroundTap,
+                        surahs: widget.surahs,
+                      ),
+                    ),
                   ),
-                  page: pageData.foundation!,
-                  selected: widget.selectedAyah,
-                  playing: widget.playingAyah,
-                  onSelect: widget.onSelectAyah,
-                  onOpen: widget.onOpenAyah,
-                  onBackgroundTap: widget.onBackgroundTap,
-                  surahs: widget.surahs,
                 ),
               ),
             ),

@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-14T00:13:49.977127+00:00",
+  "title": "Design System: IQRO mobile",
+  "extensions": {
+    "colorMeta": {
+      "light-primary": {
+        "role": "primary",
+        "displayName": "Light Primary"
+      },
+      "light-on-primary": {
+        "role": "primary",
+        "displayName": "Light On Primary"
+      },
+      "light-primary-container": {
+        "role": "primary",
+        "displayName": "Light Primary Container"
+      },
+      "light-on-primary-container": {
+        "role": "primary",
+        "displayName": "Light On Primary Container"
+      },
+      "light-secondary": {
+        "role": "secondary",
+        "displayName": "Light Secondary"
+      },
+      "light-on-secondary": {
+        "role": "secondary",
+        "displayName": "Light On Secondary"
+      },
+      "light-background": {
+        "role": "neutral",
+        "displayName": "Light Background"
+      },
+      "light-surface": {
+        "role": "neutral",
+        "displayName": "Light Surface"
+      },
+      "light-on-surface": {
+        "role": "neutral",
+        "displayName": "Light On Surface"
+      },
+      "light-error": {
+        "role": "neutral",
+        "displayName": "Light Error"
+      },
+      "light-outline": {
+        "role": "neutral",
+        "displayName": "Light Outline"
+      },
+      "light-outline-variant": {
+        "role": "neutral",
+        "displayName": "Light Outline Variant"
+      },
+      "light-ink": {
+        "role": "primary",
+        "displayName": "Light Ink"
+      },
+      "light-ink-soft": {
+        "role": "primary",
+        "displayName": "Light Ink Soft"
+      },
+      "light-sand": {
+        "role": "secondary",
+        "displayName": "Light Sand"
+      },
+      "light-lavender": {
+        "role": "secondary",
+        "displayName": "Light Lavender"
+      },
+      "light-gold": {
+        "role": "secondary",
+        "displayName": "Light Gold"
+      },
+      "light-panel-soft": {
+        "role": "neutral",
+        "displayName": "Light Panel Soft"
+      },
+      "light-line": {
+        "role": "neutral",
+        "displayName": "Light Line"
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "Dark Primary"
+      },
+      "dark-on-primary": {
+        "role": "primary",
+        "displayName": "Dark On Primary"
+      },
+      "dark-primary-container": {
+        "role": "primary",
+        "displayName": "Dark Primary Container"
+      },
+      "dark-on-primary-container": {
+        "role": "primary",
+        "displayName": "Dark On Primary Container"
+      },
+      "dark-secondary": {
+        "role": "secondary",
+        "displayName": "Dark Secondary"
+      },
+      "dark-on-secondary": {
+        "role": "secondary",
+        "displayName": "Dark On Secondary"
+      },
+      "dark-background": {
+        "role": "neutral",
+        "displayName": "Dark Background"
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Dark Surface"
+      },
+      "dark-on-surface": {
+        "role": "neutral",
+        "displayName": "Dark On Surface"
+      },
+      "dark-error": {
+        "role": "neutral",
+        "displayName": "Dark Error"
+      },
+      "dark-outline": {
+        "role": "neutral",
+        "displayName": "Dark Outline"
+      },
+      "dark-outline-variant": {
+        "role": "neutral",
+        "displayName": "Dark Outline Variant"
+      },
+      "dark-ink": {
+        "role": "primary",
+        "displayName": "Dark Ink"
+      },
+      "dark-ink-soft": {
+        "role": "primary",
+        "displayName": "Dark Ink Soft"
+      },
+      "dark-sand": {
+        "role": "secondary",
+        "displayName": "Dark Sand"
+      },
+      "dark-lavender": {
+        "role": "secondary",
+        "displayName": "Dark Lavender"
+      },
+      "dark-gold": {
+        "role": "secondary",
+        "displayName": "Dark Gold"
+      },
+      "dark-panel-soft": {
+        "role": "neutral",
+        "displayName": "Dark Panel Soft"
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Dark Line"
+      }
+    },
+    "typographyMeta": {
+      "display-small": {
+        "displayName": "Display small",
+        "purpose": "Incumbent shared serif display role; compact Home reading uses titleLarge."
+      },
+      "headline-medium": {
+        "displayName": "Headline medium",
+        "purpose": "Section heading; explicitly uses platform serif."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "action-grid-single-column-below",
+        "value": "300 logical px of available width; also when scaled 16-point text exceeds 22"
+      },
+      {
+        "name": "action-grid-three-columns-from",
+        "value": "720 logical px of available width, unless large-text fallback applies"
+      },
+      {
+        "name": "home-summary-stack-below",
+        "value": "280 logical px of inner width; also when scaled 16-point text exceeds 20"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Filled button",
+      "kind": "button",
+      "refersTo": "filled-button-light",
+      "description": "Light native FilledButton translation. Preview hover/focus simulates feedback; Flutter Material supplies actual interaction states.",
+      "html": "<button class=\"ds-control ds-filled\">Read</button>",
+      "css": ".ds-filled { background:#0B5D4A; color:#FFFFFF; border:0; border-radius:16px; min-width:48px; min-height:52px; padding:0 24px; font:700 14px sans-serif; cursor:pointer; }.ds-control:hover { filter:brightness(.97); } .ds-control:focus-visible { outline:2px solid #0B5D4A; outline-offset:3px; } .ds-control:active { filter:brightness(.92); } .ds-control:disabled { opacity:.38; }"
+    },
+    {
+      "name": "Outlined button",
+      "kind": "button",
+      "refersTo": "outlined-button",
+      "description": "Light OutlinedButton translation with the existing line border. Horizontal padding is a preview approximation of Material defaults.",
+      "html": "<button class=\"ds-control ds-outline\">Retry</button>",
+      "css": ".ds-outline { background:transparent; color:#0B5D4A; border:1px solid #DCD8CE; border-radius:16px; min-width:48px; min-height:52px; padding:0 24px; font:700 14px sans-serif; cursor:pointer; }.ds-control:hover { filter:brightness(.97); } .ds-control:focus-visible { outline:2px solid #0B5D4A; outline-offset:3px; } .ds-control:active { filter:brightness(.92); } .ds-control:disabled { opacity:.38; }"
+    },
+    {
+      "name": "Input field",
+      "kind": "input",
+      "refersTo": "field-light",
+      "description": "Themed filled input; label and browser focus rendering illustrate native Material behavior.",
+      "html": "<label class=\"ds-field-label\">Search<input class=\"ds-control ds-field\" placeholder=\"Search Quran\" /></label>",
+      "css": ".ds-field-label { display:grid; gap:6px; font:14px sans-serif; color:#17201D; } .ds-field { background:#FFFDF8; color:#17201D; padding:16px; border:1px solid #DCD8CE; border-radius:16px; font:16px sans-serif; }.ds-control:hover { filter:brightness(.97); } .ds-control:focus-visible { outline:2px solid #0B5D4A; outline-offset:3px; } .ds-control:active { filter:brightness(.92); } .ds-control:disabled { opacity:.38; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-light",
+      "description": "IqroCard default inset, surface and border. This example is informational and does not simulate a tap action.",
+      "html": "<article class=\"ds-card\"><strong class=\"ds-title\">Reading</strong><p class=\"ds-copy\">Continue your daily reading.</p></article>",
+      "css": ".ds-card { background:#FFFDF8; color:#17201D; padding:16px; border:1px solid #DCD8CE; border-radius:22px; } .ds-title { font:700 17px sans-serif; } .ds-copy { font:14px/1.45 sans-serif; margin:8px 0 0; }"
+    },
+    {
+      "name": "Bottom navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Five-destination native navigation translated for the panel. The repeated outline glyph is a schematic placeholder, not a replacement icon asset.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><button class=\"ds-nav-item ds-current\" aria-current=\"page\"><span class=\"ds-nav-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v11h-6v-7H9v7H3z\"/></svg></span>Home</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v11h-6v-7H9v7H3z\"/></svg></span>Quran</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v11h-6v-7H9v7H3z\"/></svg></span>Plan</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v11h-6v-7H9v7H3z\"/></svg></span>Audio</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v11h-6v-7H9v7H3z\"/></svg></span>More</button></nav>",
+      "css": ".ds-nav { display:flex; height:72px; background:#FFFDF8; } .ds-nav-item { flex:1; display:grid; justify-items:center; gap:4px; align-content:center; border:0; background:transparent; color:#17201D; font:700 11px sans-serif; cursor:pointer; } .ds-nav-icon { display:grid; place-items:center; width:48px; height:30px; border-radius:20px; } .ds-current .ds-nav-icon { background:#D9EEE7; color:#063E33; } .ds-nav-item:hover .ds-nav-icon { background:#EFEEE8; } .ds-nav-item:focus-visible { outline:2px solid #0B5D4A; outline-offset:-2px; } .ds-nav-item:active { opacity:.7; }"
+    },
+    {
+      "name": "Status banner",
+      "kind": "custom",
+      "refersTo": "card-light",
+      "description": "IqroStatusBanner: borderless primary container with icon and flexible text.",
+      "html": "<section class=\"ds-banner\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 10v7M12 6v1\"/></svg><div><strong class=\"ds-banner-title\">Reading status</strong><p class=\"ds-banner-copy\">Your current reading information appears here.</p></div></section>",
+      "css": ".ds-banner { display:flex; gap:12px; background:#D9EEE7; color:#063E33; padding:16px; border-radius:22px; } .ds-banner svg { flex-shrink:0; } .ds-banner-title { font:600 14px sans-serif; } .ds-banner-copy { margin:3px 0 0; font:12px/1.4 sans-serif; }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "description": "Native Material Chip is not customized. This static preview is schematic; its metrics are not IQRO tokens.",
+      "html": "<span class=\"ds-chip\">Soon</span>",
+      "css": ".ds-chip { display:inline-block; padding:6px 8px; border:1px solid #CBC8BE; border-radius:8px; background:#FFFDF8; color:#17201D; font:14px sans-serif; }"
+    },
+    {
+      "name": "Home prayer card",
+      "kind": "custom",
+      "description": "Dark native prayer-card translation. Static values demonstrate hierarchy only; production uses real schedule data. Browser feedback is illustrative.",
+      "html": "<button class=\"ds-home-card ds-prayer\"><span class=\"ds-home-meta\">Next prayer</span><strong class=\"ds-home-title\">Fajr</strong><span class=\"ds-home-time\">05:07</span><span class=\"ds-home-meta\">Prayer schedule and reminders</span></button>",
+      "css": ".ds-home-card { width:100%; text-align:start; padding:16px; border-radius:22px; cursor:pointer; } .ds-home-title { font:700 22px/1.25 sans-serif; margin:5px 0; } .ds-home-meta { font:14px/1.45 sans-serif; margin:0; }.ds-prayer { background:#0A2B24; color:#FFFFFF; border:1px solid #17483D; } .ds-prayer strong { display:block; } .ds-home-time { display:block; color:#E2B665; font:700 32px sans-serif; font-variant-numeric:tabular-nums; margin:8px 0; } .ds-home-card:focus-visible { outline:2px solid #91D7C3; outline-offset:3px; } .ds-home-card:hover { filter:brightness(1.04); } .ds-home-card:active { filter:brightness(.96); }"
+    },
+    {
+      "name": "Home reading card",
+      "kind": "custom",
+      "refersTo": "card-dark",
+      "description": "Compact reading surface with titleLarge hierarchy; warm white dark-mode action. Example metadata is illustrative.",
+      "html": "<section class=\"ds-reading\"><p class=\"ds-reading-meta\">Continue reading</p><h3 class=\"ds-reading-title\">Al-Baqarah</h3><p class=\"ds-reading-meta\">Ayah 124 · Page 19</p><button class=\"ds-reading-action\">Read</button></section>",
+      "css": ".ds-reading { padding:16px; border:1px solid #30443D; border-radius:22px; background:#10221D; color:#F2F2EA; } .ds-reading-title { font:700 22px/1.25 sans-serif; margin:4px 0 5px; } .ds-reading-meta { font:14px/1.45 sans-serif; margin:0; } .ds-reading-action { margin-top:12px; min-height:52px; min-width:48px; padding:0 24px; border:0; border-radius:16px; background:#FFFCF5; color:#0A2B24; font:700 14px sans-serif; cursor:pointer; } .ds-reading-action:hover { filter:brightness(.97); } .ds-reading-action:focus-visible { outline:2px solid #91D7C3; outline-offset:3px; } .ds-reading-action:active { filter:brightness(.92); }"
+    },
+    {
+      "name": "Home plan card",
+      "kind": "custom",
+      "refersTo": "card-dark",
+      "description": "Compact daily goal with natural-height text and progress; sample values are illustrative, not account data.",
+      "html": "<button class=\"ds-home-card ds-plan\"><strong class=\"ds-plan-title\">Daily goal</strong><p class=\"ds-home-meta\">3 / 10 pages</p><span class=\"ds-plan-track\" role=\"img\" aria-label=\"Daily goal, 30 percent\"><span></span></span></button>",
+      "css": ".ds-home-card { width:100%; text-align:start; padding:16px; border-radius:22px; cursor:pointer; } .ds-home-title { font:700 22px/1.25 sans-serif; margin:5px 0; } .ds-home-meta { font:14px/1.45 sans-serif; margin:0; }.ds-plan { border:1px solid #30443D; background:#10221D; color:#F2F2EA; } .ds-plan-title { display:block; font:600 14px sans-serif; margin-bottom:6px; } .ds-plan-track { display:block; margin-top:10px; height:6px; border-radius:4px; overflow:hidden; background:#30443D; } .ds-plan-track span { display:block; width:30%; height:100%; background:#91D7C3; } .ds-home-card:focus-visible { outline:2px solid #91D7C3; outline-offset:3px; } .ds-home-card:hover { filter:brightness(1.04); } .ds-home-card:active { filter:brightness(.96); }"
+    }
+  ],
+  "narrative": {
+    "overview": "IQRO's confirmed visual identity is emerald and gold. Warm neutral surfaces, deep green reading panels, and serif headings give the existing application a quiet, readable character. Rounded native controls and clear iconography support daily use.\n\nThis document records the incumbent Flutter system, rather than proposing another identity. The sources of truth are `lib/core/theme/iqro_theme.dart` and `lib/core/design_system/iqro_widgets.dart`. The implemented Home and More composition also follows `lib/features/home/home_dashboard_cards.dart`, `lib/features/home/home_screen.dart`, `lib/core/design_system/iqro_action_grid.dart`, and `lib/features/more/more_screen.dart`. Current native phone screenshots in `.impeccable/review/` cover Home and More in both themes, including larger text. The incumbent core theme remains unchanged. No separate creative metaphor has been confirmed. This is documentation of the current implementation; final visual acceptance remains pending and is not implied by the screenshot record.",
+    "keyCharacteristics": [
+      "Emerald and gold identity in both light and dark themes.",
+      "Serif display and section headings paired with native Material text.",
+      "Tonal surfaces, fine borders, and limited resting elevation.",
+      "Native Flutter controls with directional layout and scalable text."
+    ],
+    "rules": [
+      {
+        "name": "The Theme Pairing Rule",
+        "body": "Resolve colors from the active `ColorScheme` or `context.iqroColors`; keep each foreground paired with its intended surface.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve the IQRO emerald and gold identity in both themes.",
+      "Do reuse the existing theme roles and native widgets before introducing local visual overrides.",
+      "Do let translated labels wrap and containers grow with native text scaling.",
+      "Do preserve directional layout, native feedback, and bottom clearance for the player and navigation."
+    ],
+    "donts": [
+      "Don't apply the card radius globally to buttons, fields, sheets, or dialogs.",
+      "Don't infer a custom body font, global shadow scale, or tablet breakpoint that the implementation does not define.",
+      "Don't encode one Home composition as a system-wide rule for every screen.",
+      "Don't restore fixed-height action-grid rows that clip translated tool titles or large text."
+    ]
+  }
+}

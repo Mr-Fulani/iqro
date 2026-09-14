@@ -9,6 +9,27 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String homePrayerIn(String time) {
+    return 'بعد $time';
+  }
+
+  @override
+  String get homeSavedHint => 'الآيات والأدعية المحفوظة';
+
+  @override
+  String get homeDownloads => 'التنزيلات';
+
+  @override
+  String get bookmarks => 'العلامات المرجعية';
+
+  @override
+  String get emptyBookmarks =>
+      'لا توجد علامات مرجعية بعد. احفظ آية باستخدام رمز العلامة المرجعية في المصحف.';
+
+  @override
+  String get bookmarksLoadError => 'تعذر تحميل العلامات المرجعية';
+
+  @override
   String get mushafFitWidth => 'ملاءمة العرض';
 
   @override
@@ -677,6 +698,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get addPrayerWidget => 'إضافة الويدجت';
+
+  @override
+  String get homeWidgetAlreadyAdded =>
+      'تمت إضافة الأداة بالفعل. تم تحديث بياناتها.';
 
   @override
   String get prayerWidgetPinRequested =>

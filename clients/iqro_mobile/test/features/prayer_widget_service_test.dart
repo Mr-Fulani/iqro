@@ -43,7 +43,49 @@ void main() {
     final afterIsha = _entryAt(timeline, schedules.first.timesUtc['isha']!);
     expect(afterIsha.nextPrayer, 'Fajr 05:00');
     expect(afterIsha.fajrTime, '05:00');
+    expect(afterIsha.sunriseTime, '06:36');
+    expect(afterIsha.nextName, 'Fajr');
+    expect(afterIsha.nextHour, '05');
+    expect(afterIsha.nextMinute, '00');
+    expect(
+      afterIsha.nextEpoch,
+      schedules[1].timesUtc['fajr']!.millisecondsSinceEpoch.toString(),
+    );
+    expect(
+      afterFajr.nextEpoch,
+      schedules.first.timesUtc['dhuhr']!.millisecondsSinceEpoch.toString(),
+    );
   });
+
+  test(
+    'partial horizon keeps valid days without indexing beyond available data',
+    () {
+      final zone = tz.getLocation('Europe/Istanbul');
+      final schedules = [
+        _schedule(DateTime(2026, 9, 13), zone),
+        _schedule(DateTime(2026, 9, 14), zone),
+      ];
+      final timeline = buildPrayerWidgetTimeline(
+        schedules: schedules,
+        locationName: 'İstanbul',
+        copy: PrayerWidgetCopy.forLocale('tr'),
+        now: DateTime.utc(2026, 9, 13),
+      );
+      expect(timeline, hasLength(6));
+      expect(timeline.values.first.nextLabel, 'Kalan süre');
+      final beforeIsha = _entryAt(
+        timeline,
+        schedules.first.timesUtc['maghrib']!,
+      );
+      expect(beforeIsha.period, 'night');
+      expect(beforeIsha.nextName, 'Yatsı');
+      // Sunrise belongs in the timetable, but is not a sixth obligatory prayer.
+      expect(
+        timeline.values.any((entry) => entry.nextName == 'Güneş'),
+        isFalse,
+      );
+    },
+  );
 
   test('returns a privacy-safe placeholder instead of stale account data', () {
     final now = DateTime.utc(2026, 8, 9, 12);
@@ -59,6 +101,8 @@ void main() {
     final entry = timeline.values.single;
     expect(entry.dateLocation, contains('IQRO'));
     expect(entry.nextPrayer, isEmpty);
+    expect(entry.nextEpoch, isEmpty);
+    expect(entry.sunriseTime, '—');
     expect(entry.fajrTime, '—');
   });
 
@@ -68,6 +112,16 @@ void main() {
     expect(PrayerWidgetCopy.forLocale('ar').staticData.fajrLabel, 'الفجر');
     expect(PrayerWidgetCopy.forLocale('tr').staticData.fajrLabel, 'İmsak');
     expect(PrayerWidgetCopy.forLocale('de').locale, 'en');
+    expect(PrayerWidgetCopy.forLocale('ar-SA').staticData.locale, 'ar');
+    expect(
+      PrayerWidgetCopy.forLocale('tr_TR').staticData.sunriseLabel,
+      'Güneş',
+    );
+    expect(
+      PrayerWidgetCopy.forLocale('ru-RU').staticData.sunriseLabel,
+      'Восход',
+    );
+    expect(PrayerWidgetCopy.forLocale('ar').staticData.sunriseLabel, 'الشروق');
   });
 }
 
@@ -81,6 +135,7 @@ PrayerWidgetTimelineEntry _entryAt(
 PrayerSchedule _schedule(DateTime date, tz.Location zone) {
   const wallClock = <String, (int, int)>{
     'fajr': (5, 0),
+    'sunrise': (6, 36),
     'dhuhr': (12, 30),
     'asr': (16, 15),
     'maghrib': (19, 20),

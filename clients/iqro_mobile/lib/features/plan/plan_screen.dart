@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
+import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'plan_repository.dart';
@@ -30,6 +31,15 @@ class PlanScreen extends ConsumerWidget {
       appBar: IqroTopBar(
         title: context.l10n.dailyPlan,
         subtitle: context.l10n.today,
+        actions: [
+          IconButton(
+            tooltip: context.l10n.addPrayerWidget,
+            icon: const Icon(Icons.widgets_outlined),
+            onPressed: canMutate && plan.asData != null
+                ? () => _addHomeWidget(context, ref, plan.asData!.value, scope)
+                : null,
+          ),
+        ],
       ),
       body: plan.when(
         loading: () => const IqroLoading(),
@@ -198,6 +208,53 @@ class PlanScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _addHomeWidget(
+    BuildContext context,
+    WidgetRef ref,
+    DailyPlan plan,
+    AccountScopeSnapshot scope,
+  ) async {
+    final service = ref.read(planWidgetServiceProvider);
+    try {
+      await service.update(
+        plan: plan,
+        locale: Localizations.localeOf(context).languageCode,
+        accountScope: scope,
+      );
+      if (!context.mounted) return;
+      final pinned = await service.requestPin();
+      if (!context.mounted) return;
+      if (pinned != HomeWidgetPinResult.unsupported) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              pinned == HomeWidgetPinResult.alreadyInstalled
+                  ? context.l10n.homeWidgetAlreadyAdded
+                  : context.l10n.prayerWidgetPinRequested,
+            ),
+          ),
+        );
+      } else {
+        await showModalBottomSheet<void>(
+          context: context,
+          useSafeArea: true,
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              Theme.of(context).platform == TargetPlatform.iOS
+                  ? context.l10n.prayerWidgetManualIos
+                  : context.l10n.prayerWidgetManualAndroid,
+            ),
+          ),
+        );
+      }
+    } on AccountScopeChanged {
+      // The next account publishes its own snapshot.
+    } on Object {
+      if (context.mounted) _showError(context);
+    }
   }
 
   Future<void> _editGoal(

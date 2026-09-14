@@ -53,6 +53,8 @@
                     android:scheme="iqro"
                     android:host="open"
                     android:pathPrefix="/prayer" />
+                <data android:scheme="iqro" android:host="open" android:pathPrefix="/plan" />
+                <data android:scheme="iqro" android:host="open" android:pathPrefix="/after-prayer" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -151,6 +153,10 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/prayer_times_home_widget" />
+        </receiver>
+        <receiver android:name="forum.iqro.app.ReadingPlanHomeWidgetReceiver" android:label="@string/home_widget_reading_plan_label" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/reading_plan_home_widget" />
         </receiver>
         <receiver
             android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"

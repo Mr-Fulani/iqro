@@ -19,6 +19,7 @@ import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
 import 'mushaf_paper.dart';
+import 'mushaf_bookmarks_sheet.dart';
 import 'mushaf_reader_controls.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
@@ -185,6 +186,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _readingSession?.resume();
+      ref.invalidate(ayahBookmarkProvider);
     } else {
       _readingSession?.pause();
     }
@@ -238,6 +240,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         ref.watch(quranJuzProvider).valueOrNull ?? const <QuranDivision>[];
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final reference = _selectedAyah ?? _pageReference;
+    final bookmarkState = reference == null || activeAccount == null
+        ? null
+        : ref.watch(
+            ayahBookmarkProvider((
+              account: activeAccount,
+              surah: reference.surah,
+              ayah: reference.ayah,
+            )),
+          );
     final surah = catalog?.surahs
         .where((s) => s.number == reference?.surah)
         .firstOrNull;
@@ -392,11 +403,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             IconButton(
+                              key: const ValueKey('mushaf-bookmark'),
                               tooltip: context.l10n.favorites,
-                              onPressed: reference == null
+                              onPressed:
+                                  reference == null ||
+                                      activeAccount == null ||
+                                      _bookmarkLoading
                                   ? null
                                   : _bookmarkSelected,
                               color: mushafAccentColor,
+                              isSelected: bookmarkState?.valueOrNull ?? false,
+                              selectedIcon: const Icon(Icons.bookmark_rounded),
                               icon: const Icon(Icons.bookmark_border_rounded),
                             ),
                             IconButton(
@@ -495,7 +512,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                               page: _currentPage,
                               juz: currentJuz,
                               onJump: _scrubToPage,
-                              onCatalog: () => _showQuickJump(),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -629,7 +645,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         !_isCurrentAccount(scope)) {
       return;
     }
-    _bookmarkLoading = true;
+    setState(() => _bookmarkLoading = true);
     try {
       final saved = await _quranRepository.toggleBookmark(
         reference.surah,
@@ -638,6 +654,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         accountScope: scope,
       );
       if (_isCurrentAccount(scope) && mounted) {
+        ref.invalidate(
+          ayahBookmarkProvider((
+            account: accountScopeKey(scope),
+            surah: reference.surah,
+            ayah: reference.ayah,
+          )),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -655,7 +678,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
       }
     } finally {
-      _bookmarkLoading = false;
+      if (mounted) setState(() => _bookmarkLoading = false);
     }
   }
 
@@ -719,6 +742,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     ],
                   ),
                   ListTile(
+                    leading: const Icon(Icons.bookmarks_rounded),
+                    title: Text(context.l10n.bookmarks),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      unawaited(_showBookmarks());
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.headphones_rounded),
                     title: Text(context.l10n.nowPlaying),
                     onTap: () {
@@ -757,6 +789,61 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _showBookmarks() async {
+    final scope = _database.accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final selection = await showModalBottomSheet<QuranAyahReference>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => MushafBookmarksSheet(
+        load: () async {
+          final rows = await _quranRepository.bookmarks(accountScope: scope);
+          if (!_isCurrentAccount(scope)) throw const AccountScopeChanged();
+          return rows
+              .map(
+                (row) => QuranAyahReference(
+                  id: '',
+                  surah: row['surah']! as int,
+                  ayah: row['ayah']! as int,
+                ),
+              )
+              .toSet()
+              .toList();
+        },
+        surahs: ref.read(quranCatalogProvider).valueOrNull?.surahs ?? const [],
+      ),
+    );
+    if (selection == null || !_isCurrentAccount(scope)) return;
+    try {
+      var page = await ref
+          .read(selectedMushafRepositoryProvider)
+          .pageForAyah(selection.surah, selection.ayah, fallback: 0);
+      if (!_isCurrentAccount(scope)) return;
+      if (page == 0) {
+        final ayahs = await _quranRepository.ayahs(selection.surah);
+        if (!_isCurrentAccount(scope)) return;
+        page =
+            ayahs
+                .where((ayah) => ayah.number == selection.ayah)
+                .firstOrNull
+                ?.pages
+                .firstOrNull ??
+            0;
+      }
+      if (page < 1) throw const FormatException('Missing bookmark page');
+      await _jumpToPage(page, selection, accountScope: scope);
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (!mounted || !_isCurrentAccount(scope)) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    }
   }
 
   void _onPageChanged(int index) {
@@ -1090,6 +1177,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       );
     } finally {
       _detailsOpen = false;
+      if (mounted && _isCurrentAccount(scope)) {
+        ref.invalidate(
+          ayahBookmarkProvider((
+            account: accountScopeKey(scope),
+            surah: reference.surah,
+            ayah: reference.ayah,
+          )),
+        );
+      }
       if (_isCurrentAccount(scope)) {
         await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       }

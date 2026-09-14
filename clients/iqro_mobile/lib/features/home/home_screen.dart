@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
@@ -9,17 +8,17 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
-import '../audio/reciter_portraits.dart';
-import '../audio/premium_reciter_portrait.dart';
 import '../calendar/hijri_calendar_service.dart';
 import '../calendar/calendar_catalog.dart';
 import '../dua/dua_repository.dart';
 import '../memorization/memorization_repository.dart';
 import '../prayer/prayer_repository.dart';
-import '../plan/plan_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
-import 'home_hijri_card.dart';
+import 'home_dashboard_cards.dart';
+import '../../core/design_system/iqro_action_grid.dart';
+import '../calendar/hijri_calendar_screen.dart' show hijriDateLabel;
+export 'home_dashboard_cards.dart' show HomeContinueReadingCard;
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -65,22 +64,25 @@ class HomeScreen extends ConsumerWidget {
     final target = plan?.target ?? preferences.dailyTarget.toDouble();
     final planMetric =
         plan?.metric ?? readingMetricForDailyUnit(preferences.dailyUnit);
-    final remaining = (target - achieved).clamp(0, target);
-    final goalAchieved = achieved.clamp(0, target);
     final planLoading = planState.isLoading && plan == null;
     final prayerPages =
         plan?.prayerPages.values.fold<int>(0, (sum, item) => sum + item) ?? 0;
     final reciter = player.reciter;
-    final reciters = reciter == null
-        ? null
-        : ref.watch(recitersProvider).valueOrNull;
-    final reciterPortrait = reciter == null
-        ? null
-        : resolveReciterPortraitUrl(
-            reciter,
-            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
-            reciters: reciters,
-          );
+    final hijri = const HijriCalendarService().now(
+      clock,
+      adjustment: preferences.hijriAdjustment,
+      maghribUtc: DateUtils.isSameDay(prayerState.valueOrNull?.date, clock)
+          ? prayerState.valueOrNull?.timesUtc['maghrib']
+          : null,
+    );
+    final calendar = ref.watch(calendarCatalogProvider).valueOrNull;
+    final calendarEvents = hijri == null
+        ? ''
+        : calendar
+                  ?.forDate(hijri)
+                  .map((event) => event.title(locale))
+                  .join(' · ') ??
+              '';
     return Scaffold(
       appBar: IqroTopBar(
         title: 'IQRO',
@@ -103,15 +105,12 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            HomeHijriCard(
-              catalog: ref.watch(calendarCatalogProvider).valueOrNull,
+            HomePrayerCard(
+              schedule: prayerState.valueOrNull,
+              loading: prayerState.isLoading && prayerState.valueOrNull == null,
               clock: clock,
-              adjustment: preferences.hijriAdjustment,
-              maghribUtc:
-                  DateUtils.isSameDay(prayerState.valueOrNull?.date, clock)
-                  ? prayerState.valueOrNull?.timesUtc['maghrib']
-                  : null,
-              onTap: () => context.push('/calendar'),
+              onTap: () => context.push('/prayer'),
+              onReminders: () => context.push('/reminders'),
             ),
             const SizedBox(height: 12),
             HomeContinueReadingCard(
@@ -120,8 +119,14 @@ class HomeScreen extends ConsumerWidget {
                   : currentSurahName,
               ayah: position?.ayah,
               page: position?.page,
+              error: positionState.hasError && position == null,
+              onBookmarks: () => context.push('/favorites'),
               onTap: position == null
-                  ? null
+                  ? positionState.hasError && accountScopeKey != null
+                        ? () => ref.invalidate(
+                            readingPositionProvider(accountScopeKey),
+                          )
+                        : null
                   : () {
                       if (readerMode == ReaderMode.mushaf) {
                         context.push(
@@ -136,187 +141,116 @@ class HomeScreen extends ConsumerWidget {
                     },
             ),
             const SizedBox(height: 12),
-            _PrayerStrip(
-              schedule: prayerState.valueOrNull,
-              loading: prayerState.isLoading,
-              onTap: () => context.push('/prayer'),
-            ),
-            const SizedBox(height: 28),
-            IqroSectionHeader(
-              eyebrow: context.l10n.yourRhythm,
-              title: context.l10n.today,
-              action: TextButton(
-                onPressed: () => context.push('/app?tab=2'),
-                child: Text(context.l10n.openPlan),
-              ),
+            HomePlanCard(
+              achieved: achieved,
+              target: target,
+              metric: planMetric,
+              loading: planLoading,
+              error: planState.hasError && plan == null,
+              onTap: () => context.go('/app?tab=2'),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                SizedBox(
-                  width: 84,
-                  height: 84,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      CircularProgressIndicator(
-                        value: planLoading
-                            ? null
-                            : target == 0
-                            ? 0
-                            : goalAchieved / target,
-                        strokeWidth: 7,
-                        backgroundColor: context.iqroColors.line,
-                        strokeCap: StrokeCap.round,
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            planLoading ? '—' : _formatGoalAmount(goalAchieved),
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            '/ ${_formatGoalAmount(target)}',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+            IqroActionGrid(
+              children: [
+                HomeFeatureCard(
+                  icon: Icons.schedule_outlined,
+                  title: context.l10n.afterPrayer,
+                  subtitle: planLoading
+                      ? context.l10n.loading
+                      : planState.hasError && plan == null
+                      ? context.l10n.openPlan
+                      : '$prayerPages ${context.l10n.pages}',
+                  onTap: () => context.push('/after-prayer'),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        !planLoading && target > 0 && achieved >= target
-                            ? context.l10n.completed
-                            : context.l10n.calmPace,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        planLoading
-                            ? context.l10n.loading
-                            : target > 0 && achieved >= target
-                            ? '${_formatGoalAmount(achieved)} '
-                                  '${_goalMetricLabel(context, planMetric)}'
-                            : '${_formatGoalAmount(remaining)} '
-                                  '${_goalMetricLabel(context, planMetric)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
+                HomeFeatureCard(
+                  icon: Icons.school_outlined,
+                  title: context.l10n.memorization,
+                  subtitle: _memorizationTitle(
+                    context,
+                    memorizationState,
+                    memorization,
+                    memorizationSurah,
+                    locale,
                   ),
+                  onTap: () => context.push('/memorization'),
                 ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _FeaturePanel(
-                    color: context.iqroColors.sand,
-                    icon: Icons.schedule_outlined,
-                    eyebrow: context.l10n.afterPrayer,
-                    title: planLoading
-                        ? context.l10n.loading
-                        : '$prayerPages ${context.l10n.pages}',
-                    onTap: () => context.push('/after-prayer'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _FeaturePanel(
-                    color: context.iqroColors.ink,
-                    foreground: Colors.white,
-                    icon: Icons.repeat,
-                    eyebrow: context.l10n.memorization,
-                    title: _memorizationTitle(
-                      context,
-                      memorizationState,
-                      memorization,
-                      memorizationSurah,
-                      locale,
-                    ),
-                    onTap: () => context.push('/memorization'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            IqroCard(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-              child: Column(
-                children: <Widget>[
-                  ListTile(
-                    minTileHeight: 64,
-                    contentPadding: EdgeInsets.zero,
-                    leading: _ReciterAvatar(
-                      url: reciterPortrait,
-                      initials: reciter?.initials ?? 'IQ',
-                    ),
-                    title: Text(
-                      reciter == null
-                          ? context.l10n.allReciters
-                          : context.l10n.recentReciter,
-                    ),
-                    subtitle: Text(
-                      reciter?.nameFor(locale) ?? context.l10n.audioTitle,
-                    ),
-                    trailing: player.track != null
-                        ? IconButton(
-                            tooltip: player.playing
-                                ? context.l10n.pause
-                                : context.l10n.play,
-                            onPressed: player.buffering
-                                ? null
-                                : ref
-                                      .read(audioControllerProvider.notifier)
-                                      .toggle,
-                            icon: player.buffering
-                                ? const SizedBox.square(
-                                    dimension: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(
-                                    player.playing
-                                        ? Icons.pause_circle_filled
-                                        : Icons.play_circle_fill,
+                HomeFeatureCard(
+                  icon: Icons.headphones_outlined,
+                  title: context.l10n.navAudio,
+                  subtitle:
+                      reciter?.nameFor(locale) ?? context.l10n.allReciters,
+                  onTap: () => player.track != null
+                      ? context.push('/player')
+                      : context.go('/app?tab=3'),
+                  action: player.track == null
+                      ? null
+                      : IconButton.filledTonal(
+                          tooltip: player.playing
+                              ? context.l10n.pause
+                              : context.l10n.play,
+                          onPressed: player.buffering
+                              ? null
+                              : ref
+                                    .read(audioControllerProvider.notifier)
+                                    .toggle,
+                          icon: player.buffering
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
-                          )
-                        : const Icon(Icons.chevron_right),
-                    onTap: () => player.track != null
-                        ? context.push('/player')
-                        : context.push('/app?tab=3'),
+                                )
+                              : Icon(
+                                  player.playing
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                ),
+                        ),
+                ),
+                HomeFeatureCard(
+                  icon: Icons.nights_stay_outlined,
+                  title: context.l10n.dua,
+                  subtitle: _duaSubtitle(context, duaState, dailyDua),
+                  onTap: () => dailyDua == null
+                      ? context.push('/dua')
+                      : context.push(duaEntryRoute(dailyDua), extra: dailyDua),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            IqroCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Column(
+                children: [
+                  HomeUtilityRow(
+                    icon: Icons.bookmarks_outlined,
+                    title: context.l10n.favorites,
+                    subtitle: context.l10n.homeSavedHint,
+                    onTap: () => context.push('/favorites'),
                   ),
                   const Divider(height: 1),
-                  ListTile(
-                    minTileHeight: 64,
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: context.iqroColors.sand,
-                      child: Icon(
-                        Icons.auto_awesome_outlined,
-                        color: context.iqroColors.gold,
-                      ),
-                    ),
-                    title: Text(context.l10n.duaOfDay),
-                    subtitle: Text(
-                      _duaSubtitle(context, duaState, dailyDua),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => dailyDua == null
-                        ? context.push('/dua')
-                        : context.push(
-                            duaEntryRoute(dailyDua),
-                            extra: dailyDua,
-                          ),
+                  HomeUtilityRow(
+                    icon: Icons.calendar_month_outlined,
+                    title: context.l10n.hijriCalendar,
+                    subtitle: [
+                      if (hijri != null) hijriDateLabel(context, hijri),
+                      if (calendarEvents.isNotEmpty) calendarEvents,
+                    ].join(' · '),
+                    onTap: () => context.push('/calendar'),
+                  ),
+                  const Divider(height: 1),
+                  HomeUtilityRow(
+                    icon: Icons.notifications_none_rounded,
+                    title: context.l10n.reminders,
+                    subtitle: context.l10n.remindersSubtitle,
+                    onTap: () => context.push('/reminders'),
+                  ),
+                  const Divider(height: 1),
+                  HomeUtilityRow(
+                    icon: Icons.download_outlined,
+                    title: context.l10n.homeDownloads,
+                    subtitle: context.l10n.offlineStorageSettingsSubtitle,
+                    onTap: () => context.push('/settings/offline-storage'),
                   ),
                 ],
               ),
@@ -371,250 +305,3 @@ class HomeScreen extends ConsumerWidget {
         : entry.sourceLabel.trim();
   }
 }
-
-class HomeContinueReadingCard extends StatelessWidget {
-  const HomeContinueReadingCard({
-    super.key,
-    required this.surahName,
-    required this.ayah,
-    required this.page,
-    required this.onTap,
-  });
-  final String surahName;
-  final int? ayah;
-  final int? page;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: IqroCard(
-        color: context.iqroColors.ink,
-        borderColor: Colors.transparent,
-        padding: const EdgeInsets.all(22),
-        onTap: onTap,
-        child: Stack(
-          children: <Widget>[
-            const PositionedDirectional(
-              end: -20,
-              top: -40,
-              bottom: -40,
-              width: 160,
-              child: IgnorePointer(
-                child: CustomPaint(painter: _ReadingArchPainter()),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                IqroEyebrow(context.l10n.continueReading, light: true),
-                const SizedBox(height: 10),
-                Text(
-                  surahName,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.displaySmall?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  ayah == null || page == null
-                      ? context.l10n.loading
-                      : '${context.l10n.ayah} $ayah · ${context.l10n.page} $page',
-                  style: TextStyle(color: Colors.white.withValues(alpha: .76)),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFCF5),
-                    foregroundColor: context.iqroColors.ink,
-                  ),
-                  onPressed: onTap,
-                  icon: const Icon(Icons.menu_book_outlined),
-                  label: Text(context.l10n.read),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Quiet arch geometry echoes the existing mark, not a decorative image asset.
-class _ReadingArchPainter extends CustomPainter {
-  const _ReadingArchPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFC49647).withValues(alpha: .18)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (var i = 0; i < 4; i++) {
-      final inset = 5.0 + i * 13;
-      final path = Path()
-        ..moveTo(inset, size.height)
-        ..lineTo(inset, size.height * .42)
-        ..quadraticBezierTo(inset, size.height * .2, size.width / 2, inset)
-        ..quadraticBezierTo(
-          size.width - inset,
-          size.height * .2,
-          size.width - inset,
-          size.height * .42,
-        )
-        ..lineTo(size.width - inset, size.height);
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ReadingArchPainter oldDelegate) => false;
-}
-
-class _PrayerStrip extends StatelessWidget {
-  const _PrayerStrip({
-    required this.schedule,
-    required this.loading,
-    required this.onTap,
-  });
-  final PrayerSchedule? schedule;
-  final bool loading;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final next = nextPrayerOccurrence(schedule, DateTime.now());
-    return IqroCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: context.iqroColors.sand,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.mosque_outlined, color: context.iqroColors.gold),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  next == null && !loading
-                      ? context.l10n.prayer
-                      : context.l10n.nextPrayer,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  loading
-                      ? context.l10n.loading
-                      : next == null
-                      ? context.l10n.prayerUnavailable
-                      : _prayerName(context, next.code),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ],
-            ),
-          ),
-          if (!loading && next != null)
-            Text(
-              DateFormat.Hm().format(next.time),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
-    );
-  }
-
-  String _prayerName(BuildContext context, String code) => switch (code) {
-    'fajr' => context.l10n.fajr,
-    'dhuhr' => context.l10n.dhuhr,
-    'asr' => context.l10n.asr,
-    'maghrib' => context.l10n.maghrib,
-    _ => context.l10n.isha,
-  };
-}
-
-class _FeaturePanel extends StatelessWidget {
-  const _FeaturePanel({
-    required this.color,
-    required this.icon,
-    required this.eyebrow,
-    required this.title,
-    required this.onTap,
-    this.foreground,
-  });
-  final Color color;
-  final Color? foreground;
-  final IconData icon;
-  final String eyebrow;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = foreground ?? Theme.of(context).colorScheme.onSurface;
-    return IqroCard(
-      color: color,
-      borderColor: Colors.transparent,
-      onTap: onTap,
-      child: SizedBox(
-        height: 112,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(icon, color: textColor),
-            const Spacer(),
-            Text(
-              eyebrow,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textColor.withValues(alpha: .72),
-              ),
-            ),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: textColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReciterAvatar extends StatelessWidget {
-  const _ReciterAvatar({required this.url, required this.initials});
-  final String? url;
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) {
-    return PremiumReciterPortrait(url: url, initials: initials, size: 44);
-  }
-}
-
-String _goalMetricLabel(BuildContext context, ReadingGoalMetric metric) =>
-    switch (metric) {
-      ReadingGoalMetric.minutes => context.l10n.minutes,
-      ReadingGoalMetric.pages => context.l10n.pages,
-      ReadingGoalMetric.ayahs => context.l10n.ayahs,
-    };
-
-String _formatGoalAmount(num value) => value == value.roundToDouble()
-    ? value.toInt().toString()
-    : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');

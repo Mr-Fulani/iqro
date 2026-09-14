@@ -22,6 +22,7 @@ import '../features/audio/audio_repository.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
+import '../features/plan/plan_widget_service.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/quran_models.dart';
@@ -64,6 +65,9 @@ final audioPlaybackSyncProvider = Provider<AudioPlaybackSyncService>(
 );
 final planRepositoryProvider = Provider<PlanRepository>(
   (ref) => _missing('PlanRepository'),
+);
+final planWidgetServiceProvider = Provider<PlanWidgetService>(
+  (ref) => PlanWidgetService(database: ref.watch(localDatabaseProvider)),
 );
 final planUpdatesProvider = StreamProvider<int>(
   (ref) => ref.watch(planRepositoryProvider).updates,
@@ -358,6 +362,24 @@ final activeAccountScopeKeyProvider = Provider<AccountScopeKey?>((ref) {
 final quranCatalogProvider = FutureProvider<QuranCatalog>((ref) {
   return ref.watch(quranRepositoryProvider).surahs();
 });
+typedef AyahBookmarkKey = ({AccountScopeKey account, int surah, int ayah});
+
+final ayahBookmarkProvider = FutureProvider.autoDispose
+    .family<bool, AyahBookmarkKey>((ref, key) async {
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (scope == null || accountScopeKey(scope) != key.account) {
+        throw const AccountScopeChanged();
+      }
+      final bookmarked = await ref
+          .watch(quranRepositoryProvider)
+          .isBookmarked(key.surah, key.ayah, accountScope: scope);
+      if (!database.accountScope.isCurrent(scope)) {
+        throw const AccountScopeChanged();
+      }
+      return bookmarked;
+    });
+
 final readingPositionProvider = FutureProvider.autoDispose
     .family<ReadingPosition, AccountScopeKey>((ref, key) {
       final database = ref.watch(localDatabaseProvider);

@@ -9,6 +9,27 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String homePrayerIn(String time) {
+    return 'In $time';
+  }
+
+  @override
+  String get homeSavedHint => 'Saved ayahs and duas';
+
+  @override
+  String get homeDownloads => 'Downloads';
+
+  @override
+  String get bookmarks => 'Bookmarks';
+
+  @override
+  String get emptyBookmarks =>
+      'No bookmarks yet. Save an ayah using the bookmark icon in the reader.';
+
+  @override
+  String get bookmarksLoadError => 'Could not load bookmarks';
+
+  @override
   String get mushafFitWidth => 'Fit width';
 
   @override
@@ -681,6 +702,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addPrayerWidget => 'Add widget';
+
+  @override
+  String get homeWidgetAlreadyAdded =>
+      'Widget already added. Its data has been updated.';
 
   @override
   String get prayerWidgetPinRequested =>

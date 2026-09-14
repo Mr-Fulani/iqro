@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+ <string name="home_widget_reading_plan_label">خطة القراءة</string>
+ <string name="home_widget_reading_plan_description">الهدف اليومي والقراءة بعد الصلاة</string>
+ <string name="home_widget_reading_plan_open">افتح الخطة</string>
+</resources>

@@ -5,10 +5,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import validate_slug
 
+from quran_backend.modules.core.local_media import LocalMediaUploader
 from quran_backend.modules.core.object_storage import (
     ImmutableObjectSpec,
     ObjectUploader,
@@ -62,7 +64,16 @@ def upload_reciter_portrait(
         checksum = digest.hexdigest()
         object_key = f"audio/reciter-portraits/{reciter_code}/{checksum[:20]}.{extension}"
         temporary.flush()
-        actual_uploader = uploader or configured_object_uploader()
+        actual_uploader = uploader or (
+            LocalMediaUploader()
+            if (
+                settings.DEBUG
+                and getattr(settings, "LOCAL_DEVELOPMENT", False)
+                and not settings.MEDIA_OBJECT_STORAGE_ENABLED
+                and not settings.MEDIA_OBJECT_STORAGE_REQUIRED
+            )
+            else configured_object_uploader()
+        )
         stored = actual_uploader.upload_path(
             Path(temporary.name),
             ImmutableObjectSpec(

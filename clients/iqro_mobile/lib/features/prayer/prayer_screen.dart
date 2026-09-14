@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
+import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -870,9 +871,15 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       }
       final requested = await service.requestPin();
       if (!mounted) return;
-      if (requested) {
+      if (requested != HomeWidgetPinResult.unsupported) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.prayerWidgetPinRequested)),
+          SnackBar(
+            content: Text(
+              requested == HomeWidgetPinResult.alreadyInstalled
+                  ? context.l10n.homeWidgetAlreadyAdded
+                  : context.l10n.prayerWidgetPinRequested,
+            ),
+          ),
         );
         return;
       }

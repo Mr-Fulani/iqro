@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/design_system/iqro_action_grid.dart';
 import '../../core/theme/iqro_theme.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -24,47 +25,7 @@ class MoreScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            GridView.count(
-              padding: EdgeInsets.zero,
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.15,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: <Widget>[
-                _ToolCard(
-                  icon: Icons.calendar_month_outlined,
-                  title: context.l10n.hijriCalendar,
-                  color: context.iqroColors.sand,
-                  onTap: () => context.push('/calendar'),
-                ),
-                _ToolCard(
-                  icon: Icons.mosque_outlined,
-                  title: context.l10n.prayer,
-                  color: context.iqroColors.sand,
-                  onTap: () => context.push('/prayer'),
-                ),
-                _ToolCard(
-                  icon: Icons.repeat,
-                  title: context.l10n.memorization,
-                  color: context.iqroColors.lavender,
-                  onTap: () => context.push('/memorization'),
-                ),
-                _ToolCard(
-                  icon: Icons.auto_awesome_outlined,
-                  title: context.l10n.dua,
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  onTap: () => context.push('/dua'),
-                ),
-                _ToolCard(
-                  icon: Icons.bookmarks_outlined,
-                  title: context.l10n.favorites,
-                  color: context.iqroColors.panelSoft,
-                  onTap: () => context.push('/favorites'),
-                ),
-              ],
-            ),
+            const MoreToolsGrid(),
             const SizedBox(height: 24),
             IqroSectionHeader(title: context.l10n.account),
             const SizedBox(height: 10),
@@ -140,6 +101,46 @@ class MoreScreen extends ConsumerWidget {
   }
 }
 
+class MoreToolsGrid extends StatelessWidget {
+  const MoreToolsGrid({super.key});
+
+  @override
+  Widget build(BuildContext context) => IqroActionGrid(
+    children: <Widget>[
+      _ToolCard(
+        icon: Icons.calendar_month_outlined,
+        title: context.l10n.hijriCalendar,
+        color: context.iqroColors.sand,
+        onTap: () => context.push('/calendar'),
+      ),
+      _ToolCard(
+        icon: Icons.mosque_outlined,
+        title: context.l10n.prayer,
+        color: context.iqroColors.sand,
+        onTap: () => context.push('/prayer'),
+      ),
+      _ToolCard(
+        icon: Icons.repeat,
+        title: context.l10n.memorization,
+        color: context.iqroColors.lavender,
+        onTap: () => context.push('/memorization'),
+      ),
+      _ToolCard(
+        icon: Icons.auto_awesome_outlined,
+        title: context.l10n.dua,
+        color: Theme.of(context).colorScheme.primaryContainer,
+        onTap: () => context.push('/dua'),
+      ),
+      _ToolCard(
+        icon: Icons.bookmarks_outlined,
+        title: context.l10n.favorites,
+        color: context.iqroColors.panelSoft,
+        onTap: () => context.push('/favorites'),
+      ),
+    ],
+  );
+}
+
 class _ToolCard extends StatelessWidget {
   const _ToolCard({
     required this.icon,
@@ -172,7 +173,7 @@ class _ToolCard extends StatelessWidget {
             ),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary),
           ),
-          const Spacer(),
+          const SizedBox(height: 20),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           const Icon(Icons.arrow_forward, size: 18),

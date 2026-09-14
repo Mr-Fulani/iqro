@@ -9,6 +9,27 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String homePrayerIn(String time) {
+    return '$time sonra';
+  }
+
+  @override
+  String get homeSavedHint => 'Kaydedilen ayetler ve dualar';
+
+  @override
+  String get homeDownloads => 'İndirilenler';
+
+  @override
+  String get bookmarks => 'Yer işaretleri';
+
+  @override
+  String get emptyBookmarks =>
+      'Henüz yer işareti yok. Mushaftaki yer işareti simgesine dokunarak bir ayeti kaydedin.';
+
+  @override
+  String get bookmarksLoadError => 'Yer işaretleri yüklenemedi';
+
+  @override
   String get mushafFitWidth => 'Genişliğe sığdır';
 
   @override
@@ -682,6 +703,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get addPrayerWidget => 'Widget ekle';
+
+  @override
+  String get homeWidgetAlreadyAdded =>
+      'Widget zaten eklenmiş. Verileri güncellendi.';
 
   @override
   String get prayerWidgetPinRequested =>

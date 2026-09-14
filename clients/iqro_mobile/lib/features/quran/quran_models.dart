@@ -640,6 +640,15 @@ class FoundationMushafPage {
   String get sourceChecksum =>
       value['source_checksum_sha256']?.toString() ?? '';
   late final Map<String, Object?> rendering = jsonMap(value['rendering']);
+  late final Map<String, Object?> layout = value['layout'] == null
+      ? const {}
+      : jsonMap(value['layout']);
+  bool get hasQulLayout => layout['version'] == 1;
+  late final List<Map<String, Object?>> layoutLines =
+      (layout['lines'] as List? ?? [])
+          .whereType<Map>()
+          .map((line) => Map<String, Object?>.from(line))
+          .toList();
   late final List<Map<String, Object?>> words =
       (value['words'] as List? ?? [])
           .whereType<Map>()

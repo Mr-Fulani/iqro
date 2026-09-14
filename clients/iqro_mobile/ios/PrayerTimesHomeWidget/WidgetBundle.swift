@@ -7,5 +7,6 @@ import SwiftUI
 struct PrayerTimesHomeWidgetBundle: WidgetBundle {
   var body: some Widget {
     PrayerTimesHomeWidget()
+    ReadingPlanHomeWidget()
   }
 }

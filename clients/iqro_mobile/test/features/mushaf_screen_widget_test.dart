@@ -9,6 +9,7 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
+import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/core/platform/reader_haptics.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
@@ -25,6 +26,125 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets(
+    'reader menu opens bookmarks and jumps to the mapped Mushaf page',
+    (tester) async {
+      final harness = await _pump(tester, bookmarks: {'5:84'});
+      await _tapAyah(tester, .35);
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Закладки'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const ValueKey('bookmark-5-84')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('bookmark-5-84')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      expect(harness.quran.mappedAyah, (5, 84));
+      expect(find.text('Страница 123'), findsOneWidget);
+      expect(find.text('Аят 5:84'), findsOneWidget);
+      expect(harness.quran.saved.last, 84);
+      expect(find.text('Закладки'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('empty bookmarks explain how to save an ayah', (tester) async {
+    await _pump(tester);
+    await _tapAyah(tester, .35);
+    await tester.tap(find.byIcon(Icons.more_horiz));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Закладки'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.textContaining('Пока нет закладок.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bookmark list can retry a failed local read', (tester) async {
+    final harness = await _pump(tester, bookmarks: {'5:85'});
+    harness.quran.failBookmarkRead = true;
+    await _tapAyah(tester, .35);
+    await tester.tap(find.byIcon(Icons.more_horiz));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Закладки'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Не удалось загрузить закладки'), findsOneWidget);
+    harness.quran.failBookmarkRead = false;
+    await tester.tap(find.byIcon(Icons.refresh_rounded));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('bookmark-5-85')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bookmark icon follows saved ayahs, addition and removal', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, bookmarks: {'5:84'});
+    final button = find.byKey(const ValueKey('mushaf-bookmark'));
+    expect(tester.widget<IconButton>(button).isSelected, true);
+    await _tapAyah(tester, .35);
+    expect(tester.widget<IconButton>(button).isSelected, false);
+    await tester.tap(button);
+    await tester.pump();
+    await tester.pump();
+    expect(harness.quran.bookmarked, contains('5:85'));
+    expect(tester.widget<IconButton>(button).isSelected, true);
+    expect(
+      find.descendant(
+        of: button,
+        matching: find.byIcon(Icons.bookmark_rounded),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(button);
+    await tester.pump();
+    await tester.pump();
+    expect(harness.quran.bookmarked, isNot(contains('5:85')));
+    expect(tester.widget<IconButton>(button).isSelected, false);
+    await _tapAyah(tester, .15);
+    expect(tester.widget<IconButton>(button).isSelected, true);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('late bookmark save does not mark another selected ayah', (
+    tester,
+  ) async {
+    final harness = await _pump(tester);
+    final button = find.byKey(const ValueKey('mushaf-bookmark'));
+    await _tapAyah(tester, .35);
+    harness.quran.pendingBookmark = Completer<void>();
+    await tester.tap(button);
+    await tester.pump();
+    expect(tester.widget<IconButton>(button).onPressed, isNull);
+    await _tapAyah(tester, .15);
+    harness.quran.pendingBookmark!.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Аят 5:84'), findsOneWidget);
+    expect(tester.widget<IconButton>(button).isSelected, false);
+    await _tapAyah(tester, .35);
+    expect(tester.widget<IconButton>(button).isSelected, true);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed bookmark removal keeps the filled icon', (tester) async {
+    final harness = await _pump(tester, bookmarks: {'5:85'});
+    final button = find.byKey(const ValueKey('mushaf-bookmark'));
+    await _tapAyah(tester, .35);
+    harness.quran.failBookmark = true;
+    await tester.tap(button);
+    await tester.pump();
+    expect(tester.widget<IconButton>(button).isSelected, true);
+    expect(tester.widget<IconButton>(button).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'page dots keep controls visible and vibrate once per actual page change',
     (tester) async {
@@ -133,8 +253,9 @@ Future<void> _tapAyah(WidgetTester tester, double y) async {
 }
 
 Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
-  WidgetTester tester,
-) async {
+  WidgetTester tester, {
+  Set<String> bookmarks = const {},
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -143,7 +264,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   final store = PreferencesStore(await SharedPreferences.getInstance());
   final database = _Database();
   final plan = _Plan();
-  final quran = _Quran(database.accountScope);
+  final quran = _Quran(database.accountScope)..bookmarked.addAll(bookmarks);
   final audio = _AudioRepository();
   final controller = _Audio();
   await tester.pumpWidget(
@@ -175,6 +296,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         recitersProvider.overrideWith((ref) async => <Reciter>[_reciter]),
       ],
       child: MaterialApp(
+        theme: IqroTheme.dark(),
         locale: const Locale('ru'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -222,6 +344,52 @@ class _Quran implements QuranRepository {
   _Quran(this.scope);
   final AccountScope scope;
   final saved = <int>[];
+  final bookmarked = <String>{};
+  Completer<void>? pendingBookmark;
+  bool failBookmark = false;
+  bool failBookmarkRead = false;
+  (int, int)? mappedAyah;
+  @override
+  Future<int> pageForAyah(int surah, int ayah, {required int fallback}) async {
+    mappedAyah = (surah, ayah);
+    return 123;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> bookmarks({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (failBookmarkRead) throw StateError('read failed');
+    return bookmarked.map((key) {
+      final parts = key.split(':');
+      return <String, Object?>{
+        'surah': int.parse(parts[0]),
+        'ayah': int.parse(parts[1]),
+      };
+    }).toList();
+  }
+
+  @override
+  Future<bool> isBookmarked(
+    int surah,
+    int ayah, {
+    AccountScopeSnapshot? accountScope,
+  }) async => bookmarked.contains('$surah:$ayah');
+  @override
+  Future<bool> toggleBookmark(
+    int surah,
+    int ayah, {
+    int? page,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (pendingBookmark != null) await pendingBookmark!.future;
+    if (failBookmark) throw StateError('write failed');
+    final key = '$surah:$ayah';
+    if (bookmarked.remove(key)) return false;
+    bookmarked.add(key);
+    return true;
+  }
+
   final pendingImage = Completer<File>();
   @override
   QuranRepository forMushaf(MushafIdentity identity) => this;

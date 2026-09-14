@@ -35,6 +35,60 @@ Map<String, Object?> page({int id = 7, String? version}) => {
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'QUL rows justify words, preserve centered rows and share text baselines',
+    () {
+      for (final width in [320.0, 500.0]) {
+        final source = FoundationMushafPage.fromJson({
+          ...page(),
+          'layout': {
+            'version': 1,
+            'lines': [
+              {'line_number': 15, 'line_type': 'ayah', 'is_centered': false},
+              {'line_number': 16, 'line_type': 'ayah', 'is_centered': true},
+            ],
+          },
+          'words': [
+            for (var line = 15; line <= 16; line++)
+              for (var index = 1; index <= 3; index++)
+                {
+                  'id': line * 3 + index,
+                  'verse_key': '114:6',
+                  'text': 'نَصّ',
+                  'line_number': line,
+                  'position_in_page': line * 3 + index,
+                },
+          ],
+        }, fromCache: false);
+        final layout = FoundationPageLayout(
+          source,
+          FoundationPageResources(),
+          Size(width, width * 1380 / 900),
+          const [],
+        );
+        addTearDown(layout.dispose);
+        final full = layout.words.take(3).toList();
+        final centered = layout.words.skip(3).toList();
+        expect(full.first.rect.right, closeTo(width * .94, .001));
+        expect(full.last.rect.left, closeTo(width * .06, .001));
+        expect(
+          centered.first.rect.right + centered.last.rect.left,
+          closeTo(width, .001),
+        );
+        expect(centered.last.rect.left, greaterThan(width * .06));
+        for (final word in full) {
+          expect(word.rect.width, closeTo(full.first.rect.width, .001));
+        }
+        final baselines = full
+            .map(
+              (word) =>
+                  word.rect.top + word.baseline * word.rect.width / word.width,
+            )
+            .toList();
+        expect(baselines.last, closeTo(baselines.first, .001));
+      }
+    },
+  );
   test('all 13 source identities retain their own page counts and version', () {
     for (final id in [1, 2, 4, 5, 6, 7, 10, 11, 12, 14, 15, 16, 19]) {
       final count = [6, 14].contains(id)
