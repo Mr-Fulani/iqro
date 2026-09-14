@@ -17,7 +17,9 @@ class PrayerTimesHomeWidget {
 
   static Future<void> saveData({
     String? title,
+    String? locale,
     String? fajrLabel,
+    String? sunriseLabel,
     String? dhuhrLabel,
     String? asrLabel,
     String? maghribLabel,
@@ -26,7 +28,9 @@ class PrayerTimesHomeWidget {
   }) {
     return Future.wait([
       if (title != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.title', title, appGroupId: _$appGroupId),
+      if (locale != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.locale', locale, appGroupId: _$appGroupId),
       if (fajrLabel != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.fajrLabel', fajrLabel, appGroupId: _$appGroupId),
+      if (sunriseLabel != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.sunriseLabel', sunriseLabel, appGroupId: _$appGroupId),
       if (dhuhrLabel != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.dhuhrLabel', dhuhrLabel, appGroupId: _$appGroupId),
       if (asrLabel != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.asrLabel', asrLabel, appGroupId: _$appGroupId),
       if (maghribLabel != null) HomeWidget.saveWidgetData<String>('${_$paramPrefix}.maghribLabel', maghribLabel, appGroupId: _$appGroupId),
@@ -74,7 +78,9 @@ class PrayerTimesHomeWidget {
 
   static Future<void> deleteData({
     bool title = false,
+    bool locale = false,
     bool fajrLabel = false,
+    bool sunriseLabel = false,
     bool dhuhrLabel = false,
     bool asrLabel = false,
     bool maghribLabel = false,
@@ -83,7 +89,9 @@ class PrayerTimesHomeWidget {
   }) {
     return Future.wait([
       if (title) HomeWidget.saveWidgetData('${_$paramPrefix}.title', null, appGroupId: _$appGroupId),
+      if (locale) HomeWidget.saveWidgetData('${_$paramPrefix}.locale', null, appGroupId: _$appGroupId),
       if (fajrLabel) HomeWidget.saveWidgetData('${_$paramPrefix}.fajrLabel', null, appGroupId: _$appGroupId),
+      if (sunriseLabel) HomeWidget.saveWidgetData('${_$paramPrefix}.sunriseLabel', null, appGroupId: _$appGroupId),
       if (dhuhrLabel) HomeWidget.saveWidgetData('${_$paramPrefix}.dhuhrLabel', null, appGroupId: _$appGroupId),
       if (asrLabel) HomeWidget.saveWidgetData('${_$paramPrefix}.asrLabel', null, appGroupId: _$appGroupId),
       if (maghribLabel) HomeWidget.saveWidgetData('${_$paramPrefix}.maghribLabel', null, appGroupId: _$appGroupId),
@@ -114,7 +122,7 @@ class PrayerTimesHomeWidget {
   /// milliseconds: sub-millisecond precision of the saved keys is not preserved.
   /// Keys are compared by instant, so a local [DateTime] and its `toUtc()` twin
   /// denote the same entry and only one of them survives a save.
-  static Future<({String? title, String? fajrLabel, String? dhuhrLabel, String? asrLabel, String? maghribLabel, String? ishaLabel, Map<DateTime, PrayerTimesTimedData>? timedData})> getData() async {
+  static Future<({String? title, String? locale, String? fajrLabel, String? sunriseLabel, String? dhuhrLabel, String? asrLabel, String? maghribLabel, String? ishaLabel, Map<DateTime, PrayerTimesTimedData>? timedData})> getData() async {
     final _timedDataPath = await HomeWidget.getWidgetData<String>('${_$paramPrefix}.timedData', appGroupId: _$appGroupId);
     Map<DateTime, PrayerTimesTimedData>? timedData;
     if (_timedDataPath != null) {
@@ -137,7 +145,9 @@ class PrayerTimesHomeWidget {
     }
     return (
       title: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.title', defaultValue: 'IQRO', appGroupId: _$appGroupId),
+      locale: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.locale', defaultValue: 'ru', appGroupId: _$appGroupId),
       fajrLabel: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.fajrLabel', appGroupId: _$appGroupId),
+      sunriseLabel: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.sunriseLabel', appGroupId: _$appGroupId),
       dhuhrLabel: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.dhuhrLabel', appGroupId: _$appGroupId),
       asrLabel: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.asrLabel', appGroupId: _$appGroupId),
       maghribLabel: await HomeWidget.getWidgetData<String>('${_$paramPrefix}.maghribLabel', appGroupId: _$appGroupId),
@@ -242,7 +252,13 @@ class PrayerTimesTimedData {
   final String? dateLocation;
   final String? nextLabel;
   final String? nextPrayer;
+  final String? nextName;
+  final String? nextHour;
+  final String? nextMinute;
+  final String? nextEpoch;
+  final String? period;
   final String? fajrTime;
+  final String? sunriseTime;
   final String? dhuhrTime;
   final String? asrTime;
   final String? maghribTime;
@@ -252,7 +268,13 @@ class PrayerTimesTimedData {
     this.dateLocation,
     this.nextLabel,
     this.nextPrayer,
+    this.nextName,
+    this.nextHour,
+    this.nextMinute,
+    this.nextEpoch,
+    this.period,
     this.fajrTime,
+    this.sunriseTime,
     this.dhuhrTime,
     this.asrTime,
     this.maghribTime,
@@ -265,7 +287,13 @@ class PrayerTimesTimedData {
       dateLocation: _readString(json['dateLocation']) ?? '',
       nextLabel: _readString(json['nextLabel']) ?? '',
       nextPrayer: _readString(json['nextPrayer']) ?? '',
+      nextName: _readString(json['nextName']) ?? '',
+      nextHour: _readString(json['nextHour']) ?? '—',
+      nextMinute: _readString(json['nextMinute']) ?? '—',
+      nextEpoch: _readString(json['nextEpoch']) ?? '',
+      period: _readString(json['period']) ?? 'day',
       fajrTime: _readString(json['fajrTime']) ?? '—',
+      sunriseTime: _readString(json['sunriseTime']) ?? '—',
       dhuhrTime: _readString(json['dhuhrTime']) ?? '—',
       asrTime: _readString(json['asrTime']) ?? '—',
       maghribTime: _readString(json['maghribTime']) ?? '—',
@@ -278,7 +306,13 @@ class PrayerTimesTimedData {
       if (dateLocation != null) 'dateLocation': dateLocation,
       if (nextLabel != null) 'nextLabel': nextLabel,
       if (nextPrayer != null) 'nextPrayer': nextPrayer,
+      if (nextName != null) 'nextName': nextName,
+      if (nextHour != null) 'nextHour': nextHour,
+      if (nextMinute != null) 'nextMinute': nextMinute,
+      if (nextEpoch != null) 'nextEpoch': nextEpoch,
+      if (period != null) 'period': period,
       if (fajrTime != null) 'fajrTime': fajrTime,
+      if (sunriseTime != null) 'sunriseTime': sunriseTime,
       if (dhuhrTime != null) 'dhuhrTime': dhuhrTime,
       if (asrTime != null) 'asrTime': asrTime,
       if (maghribTime != null) 'maghribTime': maghribTime,

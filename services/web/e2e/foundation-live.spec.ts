@@ -20,6 +20,22 @@ test("all 13 real layouts render and preserve verse navigation", async ({ page }
     const view = page.locator(`.qf-mushaf-view[data-mushaf-id="${source.source_id}"]`);
     await expect(view).toHaveAttribute("data-page-number", String(index.verse_pages["2:255"][0]), { timeout: 60_000 });
     await expect(view).toHaveAttribute("data-font-status", "ready", { timeout: 60_000 });
+    await expect(view.locator('.qf-mushaf-sheet')).toHaveAttribute('data-layout-source', /qul\.tarteel\.ai\/resources\/mushaf-layout\//);
+    // Wait for the reader's page-turn animation, then check actual word edges.
+    // Measuring transformed dimensions during that animation used to leave
+    // every row slightly narrower even after the animation completed.
+    await expect.poll(async () => view.evaluate((element) => {
+      const rows = [...element.querySelectorAll<HTMLElement>('.qf-mushaf-line[data-centered="false"]')];
+      return Math.max(0, ...rows.map((row) => {
+        const words = row.querySelectorAll('.qf-mushaf-word');
+        if (words.length < 2) return 0;
+        const bounds = row.getBoundingClientRect();
+        return Math.max(
+          Math.abs(words[0].getBoundingClientRect().right - bounds.right),
+          Math.abs(words[words.length - 1].getBoundingClientRect().left - bounds.left),
+        );
+      }));
+    }), { timeout: 10_000 }).toBeLessThan(1);
     await expect(view.locator('[data-ayah-key="2:255"].is-selected')).not.toHaveCount(0, { timeout: 60_000 });
     await expect(page.locator("#mushaf-page-jump")).toHaveAttribute("max", String(source.pages_count));
     const geometry = await view.evaluate((element) => {

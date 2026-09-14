@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+ <string name="home_widget_reading_plan_label">Reading plan</string>
+ <string name="home_widget_reading_plan_description">Daily goal and reading after prayers</string>
+ <string name="home_widget_reading_plan_open">Open plan</string>
+</resources>

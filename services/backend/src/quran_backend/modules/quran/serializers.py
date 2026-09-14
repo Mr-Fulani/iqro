@@ -16,6 +16,7 @@ from quran_backend.modules.quran.models import (
     RubElHizb,
     Surah,
 )
+from quran_backend.modules.quran.qul_layout import apply_qul_layout
 from quran_backend.modules.quran.quran_foundation_native import (
     native_page_assets,
     native_rendering_catalog,
@@ -193,6 +194,7 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
     native_rendering = serializers.SerializerMethodField()
     native_assets = serializers.SerializerMethodField()
     words = serializers.SerializerMethodField()
+    layout = serializers.SerializerMethodField()
     verse_keys = serializers.SerializerMethodField()
     pages_count = serializers.IntegerField(source="mushaf.pages_count", read_only=True)
     lines_per_page = serializers.IntegerField(source="mushaf.lines_per_page", read_only=True)
@@ -221,10 +223,15 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "last_word_id",
             "verses_count",
             "words",
+            "layout",
         )
 
     def get_words(self, obj: QuranFoundationMushafPage) -> list[dict[str, Any]]:
-        return renderable_words(obj.mushaf.source_id, obj.words, obj.verse_mapping)
+        words = renderable_words(obj.mushaf.source_id, obj.words, obj.verse_mapping)
+        return apply_qul_layout(obj.mushaf.source_id, obj.page_number, words)[0]
+
+    def get_layout(self, obj: QuranFoundationMushafPage) -> dict[str, Any] | None:
+        return apply_qul_layout(obj.mushaf.source_id, obj.page_number, obj.words)[1]
 
     def get_verse_keys(self, obj: QuranFoundationMushafPage) -> list[str]:
         return verse_keys_from_mapping(obj.verse_mapping)

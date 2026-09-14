@@ -18,83 +18,43 @@ import androidx.glance.text.Text
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import androidx.glance.layout.Column
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.Row
 import androidx.glance.text.TextStyle
-import androidx.glance.color.ColorProvider
-import androidx.compose.ui.unit.sp
-import androidx.glance.text.FontWeight
+import androidx.glance.layout.Row
 import androidx.glance.GlanceTheme
+import androidx.glance.color.ColorProvider
 import androidx.compose.ui.unit.dp
 import androidx.glance.layout.padding
+import androidx.glance.layout.Alignment
 import androidx.glance.action.clickable
 import android.net.Uri
 import es.antonborri.home_widget.actionStartActivity
-import com.ryanheise.audioservice.AudioServiceActivity
 
+// Installed by tool/generate_prayer_widget.dart. Edit the template in home_widget/native.
 class PrayerTimesHomeWidget : GlanceAppWidget() {
   override val stateDefinition = HomeWidgetGlanceStateDefinition()
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
-    provideContent { WidgetContent(context, currentState()) }
-  }
-
-  @Composable
-  private fun WidgetContent(context: Context, currentState: HomeWidgetGlanceState) {
-    val prefs = currentState.preferences
-    val widgetData = PrayerTimesData.fromPreferences(prefs)
-    GlanceTheme {
-            Box(modifier = GlanceModifier.background(ColorProvider(day = Color(0xFF073E34), night = Color(0xFF071A16))).padding(16.dp).fillMaxSize().clickable(onClick = actionStartActivity<AudioServiceActivity>(context, Uri.parse("iqro://open/prayer?homeWidget"))), contentAlignment = Alignment.Center) {
-                Column(modifier = GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.Start) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.title ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 13.sp, fontWeight = FontWeight.Bold))
-                            Text(text = widgetData.dateLocation ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                        }
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(text = widgetData.nextLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.nextPrayer ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFE2B665), night = Color(0xFFE2B665)), fontSize = 17.sp, fontWeight = FontWeight.Bold))
-                        }
-                    }
-                    Spacer(modifier = GlanceModifier.defaultWeight())
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.fajrLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.fajrTime ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                        }
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.dhuhrLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.dhuhrTime ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                        }
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.asrLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.asrTime ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                        }
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.maghribLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.maghribTime ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                        }
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = widgetData.ishaLabel ?: "", style = TextStyle(color = ColorProvider(day = Color(0xBFFFFFFF), night = Color(0xBFFFFFFF)), fontSize = 10.sp))
-                            Text(text = widgetData.ishaTime ?: "", style = TextStyle(color = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFFFFFFFF)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                        }
-                    }
-                }
-            }
+    provideContent {
+      val state = currentState<HomeWidgetGlanceState>()
+      val data = PrayerTimesData.fromPreferences(state.preferences)
+      Box(modifier = GlanceModifier.fillMaxSize().clickable(
+        onClick = actionStartActivity<MainActivity>(context,
+          Uri.parse("iqro://open/prayer?homeWidget"))
+      )) {
+        androidx.glance.appwidget.AndroidRemoteViews(
+          remoteViews = PrayerTimesWidgetViews.create(context, data),
+          modifier = GlanceModifier.fillMaxSize()
+        )
+      }
     }
-
   }
 }
 
 data class PrayerTimesData(
     val title: String? = null,
+    val locale: String? = null,
     val fajrLabel: String? = null,
+    val sunriseLabel: String? = null,
     val dhuhrLabel: String? = null,
     val asrLabel: String? = null,
     val maghribLabel: String? = null,
@@ -102,7 +62,13 @@ data class PrayerTimesData(
     val dateLocation: String? = null,
     val nextLabel: String? = null,
     val nextPrayer: String? = null,
+    val nextName: String? = null,
+    val nextHour: String? = null,
+    val nextMinute: String? = null,
+    val nextEpoch: String? = null,
+    val period: String? = null,
     val fajrTime: String? = null,
+    val sunriseTime: String? = null,
     val dhuhrTime: String? = null,
     val asrTime: String? = null,
     val maghribTime: String? = null,
@@ -115,7 +81,9 @@ data class PrayerTimesData(
             val timedValues = resolveTimedValues(prefs, now)
             return PrayerTimesData(
                 title = prefs.getString("${PREFERENCES_PREFIX}.title", "IQRO"),
+                locale = prefs.getString("${PREFERENCES_PREFIX}.locale", "ru"),
                 fajrLabel = prefs.getString("${PREFERENCES_PREFIX}.fajrLabel", null),
+                sunriseLabel = prefs.getString("${PREFERENCES_PREFIX}.sunriseLabel", null),
                 dhuhrLabel = prefs.getString("${PREFERENCES_PREFIX}.dhuhrLabel", null),
                 asrLabel = prefs.getString("${PREFERENCES_PREFIX}.asrLabel", null),
                 maghribLabel = prefs.getString("${PREFERENCES_PREFIX}.maghribLabel", null),
@@ -123,7 +91,13 @@ data class PrayerTimesData(
                 dateLocation = if (timedValues.has("dateLocation") && !timedValues.isNull("dateLocation")) timedValues.optString("dateLocation") else "",
                 nextLabel = if (timedValues.has("nextLabel") && !timedValues.isNull("nextLabel")) timedValues.optString("nextLabel") else "",
                 nextPrayer = if (timedValues.has("nextPrayer") && !timedValues.isNull("nextPrayer")) timedValues.optString("nextPrayer") else "",
+                nextName = if (timedValues.has("nextName") && !timedValues.isNull("nextName")) timedValues.optString("nextName") else "",
+                nextHour = if (timedValues.has("nextHour") && !timedValues.isNull("nextHour")) timedValues.optString("nextHour") else "—",
+                nextMinute = if (timedValues.has("nextMinute") && !timedValues.isNull("nextMinute")) timedValues.optString("nextMinute") else "—",
+                nextEpoch = if (timedValues.has("nextEpoch") && !timedValues.isNull("nextEpoch")) timedValues.optString("nextEpoch") else "",
+                period = if (timedValues.has("period") && !timedValues.isNull("period")) timedValues.optString("period") else "day",
                 fajrTime = if (timedValues.has("fajrTime") && !timedValues.isNull("fajrTime")) timedValues.optString("fajrTime") else "—",
+                sunriseTime = if (timedValues.has("sunriseTime") && !timedValues.isNull("sunriseTime")) timedValues.optString("sunriseTime") else "—",
                 dhuhrTime = if (timedValues.has("dhuhrTime") && !timedValues.isNull("dhuhrTime")) timedValues.optString("dhuhrTime") else "—",
                 asrTime = if (timedValues.has("asrTime") && !timedValues.isNull("asrTime")) timedValues.optString("asrTime") else "—",
                 maghribTime = if (timedValues.has("maghribTime") && !timedValues.isNull("maghribTime")) timedValues.optString("maghribTime") else "—",

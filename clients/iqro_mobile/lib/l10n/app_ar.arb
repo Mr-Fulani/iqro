@@ -1,4 +1,10 @@
 {
+  "homePrayerIn": "بعد {time}",
+  "homeSavedHint": "الآيات والأدعية المحفوظة",
+  "homeDownloads": "التنزيلات",
+  "bookmarks": "العلامات المرجعية",
+  "emptyBookmarks": "لا توجد علامات مرجعية بعد. احفظ آية باستخدام رمز العلامة المرجعية في المصحف.",
+  "bookmarksLoadError": "تعذر تحميل العلامات المرجعية",
   "mushafFitWidth": "ملاءمة العرض",
   "mushafFitPage": "الصفحة كاملة",
   "checkMushafUpdates": "التحقق من التحديثات",
@@ -213,6 +219,7 @@
   "prayerWidget": "ويدجت أوقات الصلاة",
   "prayerWidgetHint": "الصلاة القادمة والأوقات الخمسة على الشاشة الرئيسية، حتى بدون إنترنت",
   "addPrayerWidget": "إضافة الويدجت",
+  "homeWidgetAlreadyAdded": "تمت إضافة الأداة بالفعل. تم تحديث بياناتها.",
   "prayerWidgetPinRequested": "اختر موضع ويدجت IQRO على الشاشة الرئيسية",
   "prayerWidgetManualAndroid": "اضغط مطولاً على مساحة فارغة في الشاشة الرئيسية، ثم افتح الويدجت واختر IQRO.",
   "prayerWidgetManualIos": "اضغط مطولاً على الشاشة الرئيسية، ثم اضغط +، وابحث عن IQRO وأضف الويدجت.",

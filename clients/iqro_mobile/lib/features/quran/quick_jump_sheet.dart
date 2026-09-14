@@ -125,6 +125,7 @@ class _QuranQuickJumpSheetState extends State<QuranQuickJumpSheet> {
                   flex: 2,
                   child: DropdownButtonFormField<int>(
                     initialValue: _surah,
+                    isExpanded: true,
                     decoration: InputDecoration(labelText: context.l10n.surah),
                     items: widget.surahs
                         .map(
@@ -133,6 +134,8 @@ class _QuranQuickJumpSheetState extends State<QuranQuickJumpSheet> {
                             child: Text(
                               '${surah.number}. '
                               '${surah.nameFor(Localizations.localeOf(context).languageCode)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         )

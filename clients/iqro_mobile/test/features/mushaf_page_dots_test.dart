@@ -98,7 +98,6 @@ Future<void> _pump(
                   changes.add(value);
                   setState(() => page = value);
                 },
-                onCatalog: () {},
               ),
             ),
           ),

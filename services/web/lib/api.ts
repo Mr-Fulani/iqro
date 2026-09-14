@@ -479,6 +479,20 @@ export type QuranFoundationMushafPage = {
   qirat_name: string;
   font_name: string;
   rendering: QuranFoundationMushafRendering;
+  layout?: {
+    version: 1;
+    name: string;
+    source_url: string;
+    source_sha256: string;
+    decoration_font_url: string;
+    lines_per_page: number;
+    lines: {
+      line_number: number;
+      line_type: "ayah" | "surah_name" | "basmallah";
+      is_centered: boolean;
+      surah_number: number | null;
+    }[];
+  } | null;
   page_number: number;
   pages_count?: number;
   lines_per_page?: number;

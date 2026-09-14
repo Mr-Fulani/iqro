@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+ android:initialLayout="@layout/glance_default_loading_layout" android:minWidth="280dp" android:minHeight="140dp" android:minResizeWidth="280dp" android:minResizeHeight="140dp" android:targetCellWidth="4" android:targetCellHeight="2" android:updatePeriodMillis="21600000" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:description="@string/home_widget_reading_plan_description" />

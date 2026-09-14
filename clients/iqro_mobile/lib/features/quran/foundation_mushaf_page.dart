@@ -16,8 +16,13 @@ import 'quran_models.dart';
 final _fontLoads = <String, Future<void>>{};
 
 class FoundationPageResources {
-  FoundationPageResources({this.fontFamily, this.images = const {}});
+  FoundationPageResources({
+    this.fontFamily,
+    this.decorationFontFamily,
+    this.images = const {},
+  });
   final String? fontFamily;
+  final String? decorationFontFamily;
   final Map<int, ui.Image> images;
   void dispose() {
     for (final image in images.values) {
@@ -32,8 +37,8 @@ Future<FoundationPageResources> loadFoundationPageResources(
   FoundationMushafPage page,
   Future<File> Function(Uri uri, String version) asset,
 ) async {
-  if (page.rendering['mode'] != 'word-images') {
-    final uri = Uri.parse(page.rendering['native_font_url'] as String);
+  Future<String> loadFont(String url) async {
+    final uri = Uri.parse(url);
     final family =
         'qf-${sha256.convert(Uint8List.fromList('$uri:${page.sourceChecksum}'.codeUnits)).toString().substring(0, 20)}';
     final request = _fontLoads.putIfAbsent(family, () async {
@@ -48,7 +53,17 @@ Future<FoundationPageResources> loadFoundationPageResources(
       _fontLoads.remove(family);
       rethrow;
     }
-    return FoundationPageResources(fontFamily: family);
+    return family;
+  }
+
+  final decorationFamily = page.hasQulLayout
+      ? await loadFont(page.layout['native_decoration_font_url'] as String)
+      : null;
+  if (page.rendering['mode'] != 'word-images') {
+    return FoundationPageResources(
+      fontFamily: await loadFont(page.rendering['native_font_url'] as String),
+      decorationFontFamily: decorationFamily,
+    );
   }
   final images = <int, ui.Image>{};
   var next = 0;
@@ -71,7 +86,10 @@ Future<FoundationPageResources> loadFoundationPageResources(
 
   try {
     await Future.wait(List.generate(4, (_) => worker()));
-    return FoundationPageResources(images: images);
+    return FoundationPageResources(
+      images: images,
+      decorationFontFamily: decorationFamily,
+    );
   } on Object {
     for (final image in images.values) {
       image.dispose();
@@ -307,6 +325,9 @@ class _WordPaint {
   late Rect rect;
   double get width => painter?.width ?? image!.width.toDouble();
   double get height => painter?.height ?? image!.height.toDouble();
+  double get baseline =>
+      painter?.computeDistanceToActualBaseline(TextBaseline.alphabetic) ??
+      height / 2;
 }
 
 class FoundationPageLayout {
@@ -381,34 +402,89 @@ class FoundationPageLayout {
     final paddingX = size.width * .06;
     final paddingY = size.height * .035;
     final rowHeight = (size.height - 2 * paddingY) / page.linesPerPage;
+    final availableWidth = size.width - 2 * paddingX;
+    final roles = {
+      for (final row in page.layoutLines)
+        (row['line_number'] as num).toInt(): row,
+    };
     var scale = 1.0;
     const gap = 3.5;
     for (final line in lines.values) {
-      final width = line.fold(0.0, (sum, word) => sum + word.width + gap);
-      final height = line.map((word) => word.height).reduce(math.max);
+      final width =
+          line.fold(0.0, (sum, word) => sum + word.width) +
+          gap * (line.length - 1);
+      final ascent = line.map((word) => word.baseline).reduce(math.max);
+      final descent = line
+          .map((word) => word.height - word.baseline)
+          .reduce(math.max);
+      final height = page.hasQulLayout
+          ? ascent + descent
+          : line.map((word) => word.height).reduce(math.max);
       scale = math.min(
         scale,
-        math.min((size.width - 2 * paddingX) / width, rowHeight / height),
+        math.min(availableWidth / width, rowHeight / height),
       );
     }
     final firstLine = lines.keys.reduce(math.min);
-    final offset = page.pageNumber <= 2 ? -((firstLine - 1) ~/ 2) : 0;
+    final offset = page.pageNumber > 2
+        ? 0.0
+        : page.hasQulLayout
+        ? (page.linesPerPage - roles.keys.reduce(math.max)) / 2
+        : -((firstLine - 1) ~/ 2).toDouble();
     for (final entry in lines.entries) {
-      final width =
-          entry.value.fold(0.0, (sum, word) => sum + word.width + gap) * scale;
+      final line = entry.value;
+      final inkWidth = line.fold(0.0, (sum, word) => sum + word.width);
+      final centered =
+          !page.hasQulLayout || roles[entry.key]?['is_centered'] != false;
+      final lineGap = centered || line.length < 2
+          ? gap
+          : math.max(
+              gap,
+              (availableWidth / scale - inkWidth) / (line.length - 1),
+            );
+      final width = (inkWidth + lineGap * (line.length - 1)) * scale;
       var right = (size.width + width) / 2;
       final centerY = paddingY + (entry.key + offset - .5) * rowHeight;
-      for (final word in entry.value) {
+      final ascent = line.map((word) => word.baseline).reduce(math.max);
+      final descent = line
+          .map((word) => word.height - word.baseline)
+          .reduce(math.max);
+      final baseline = centerY + (ascent - descent) * scale / 2;
+      for (final word in line) {
         final width = word.width * scale;
         final height = word.height * scale;
         word.rect = Rect.fromLTWH(
           right - width,
-          centerY - height / 2,
+          page.hasQulLayout
+              ? baseline - word.baseline * scale
+              : centerY - height / 2,
           width,
           height,
         );
-        right -= width + gap * scale;
+        right -= width + lineGap * scale;
       }
+    }
+    if (page.hasQulLayout) {
+      for (final row in page.layoutLines) {
+        final kind = row['line_type'];
+        if (kind == 'ayah') continue;
+        final name = surahs
+            .where((s) => s.number == row['surah_number'])
+            .firstOrNull
+            ?.nameAr;
+        if (kind == 'surah_name' && name == null) continue;
+        _decoration(
+          kind == 'basmallah'
+              ? 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
+              : 'سُورَةُ $name',
+          (row['line_number'] as num).toDouble() + offset,
+          rowHeight,
+          paddingY,
+          size.width * (kind == 'basmallah' ? .045 : .038),
+          fontFamily: resources.decorationFontFamily,
+        );
+      }
+      return;
     }
     for (final reference in page.ayahReferences.where((r) => r.ayah == 1)) {
       final firstWord = page.words.firstWhere(
@@ -449,15 +525,20 @@ class FoundationPageLayout {
   final decorations = <(TextPainter, Offset)>[];
   void _decoration(
     String value,
-    int line,
+    double line,
     double height,
     double top,
-    double fontSize,
-  ) {
+    double fontSize, {
+    String? fontFamily,
+  }) {
     final text = TextPainter(
       text: TextSpan(
         text: value,
-        style: TextStyle(color: mushafInkColor, fontSize: fontSize),
+        style: TextStyle(
+          color: mushafInkColor,
+          fontSize: fontSize,
+          fontFamily: fontFamily,
+        ),
       ),
       textDirection: TextDirection.rtl,
     )..layout(maxWidth: size.width * .9);

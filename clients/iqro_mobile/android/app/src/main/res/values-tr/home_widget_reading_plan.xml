@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+ <string name="home_widget_reading_plan_label">Okuma planı</string>
+ <string name="home_widget_reading_plan_description">Günlük hedef ve namaz sonrası okuma</string>
+ <string name="home_widget_reading_plan_open">Planı aç</string>
+</resources>

@@ -1,4 +1,10 @@
 {
+  "homePrayerIn": "Через {time}",
+  "homeSavedHint": "Сохранённые аяты и ду’а",
+  "homeDownloads": "Загрузки",
+  "bookmarks": "Закладки",
+  "emptyBookmarks": "Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.",
+  "bookmarksLoadError": "Не удалось загрузить закладки",
   "mushafFitWidth": "По ширине",
   "mushafFitPage": "Вся страница",
   "checkMushafUpdates": "Проверить обновления",
@@ -213,6 +219,7 @@
   "prayerWidget": "Виджет времени намаза",
   "prayerWidgetHint": "Ближайшая молитва и пять времён на главном экране, даже без интернета",
   "addPrayerWidget": "Добавить виджет",
+  "homeWidgetAlreadyAdded": "Виджет уже добавлен. Данные обновлены.",
   "prayerWidgetPinRequested": "Выберите место для виджета IQRO на главном экране",
   "prayerWidgetManualAndroid": "Нажмите и удерживайте свободное место на главном экране, откройте «Виджеты» и выберите IQRO.",
   "prayerWidgetManualIos": "Нажмите и удерживайте главный экран, нажмите «+», найдите IQRO и добавьте виджет.",

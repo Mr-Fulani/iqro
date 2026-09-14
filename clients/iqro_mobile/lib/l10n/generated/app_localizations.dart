@@ -102,6 +102,42 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @homePrayerIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In {time}'**
+  String homePrayerIn(String time);
+
+  /// No description provided for @homeSavedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved ayahs and duas'**
+  String get homeSavedHint;
+
+  /// No description provided for @homeDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads'**
+  String get homeDownloads;
+
+  /// No description provided for @bookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks'**
+  String get bookmarks;
+
+  /// No description provided for @emptyBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookmarks yet. Save an ayah using the bookmark icon in the reader.'**
+  String get emptyBookmarks;
+
+  /// No description provided for @bookmarksLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load bookmarks'**
+  String get bookmarksLoadError;
+
   /// No description provided for @mushafFitWidth.
   ///
   /// In en, this message translates to:
@@ -1337,6 +1373,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add widget'**
   String get addPrayerWidget;
+
+  /// No description provided for @homeWidgetAlreadyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Widget already added. Its data has been updated.'**
+  String get homeWidgetAlreadyAdded;
 
   /// No description provided for @prayerWidgetPinRequested.
   ///

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/design_system/iqro_widgets.dart';
+import '../core/widgets/home_widget_routes.dart';
 import '../features/account/account_screen.dart';
 import '../features/calendar/hijri_calendar_screen.dart';
 import '../features/audio/player_screen.dart';
@@ -40,12 +41,16 @@ String? normalizeLocalizedDuaDeepLink(Uri uri) {
 GoRouter createRouter({required bool onboardingComplete}) {
   return GoRouter(
     initialLocation: onboardingComplete ? '/app' : '/onboarding',
-    redirect: (context, state) => normalizeLocalizedDuaDeepLink(state.uri),
+    // Flutter can deliver the same native URL independently of home_widget.
+    // Both entry points must resolve to the same canonical in-app route.
+    redirect: (context, state) =>
+        homeWidgetRoute(state.uri) ?? normalizeLocalizedDuaDeepLink(state.uri),
     routes: <RouteBase>[
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
+      GoRoute(path: '/plan', redirect: (context, state) => '/app?tab=2'),
       GoRoute(
         path: '/app',
         builder: (context, state) => AppShell(
@@ -78,11 +83,12 @@ GoRouter createRouter({required bool onboardingComplete}) {
       ),
       GoRoute(
         path: '/after-prayer',
-        builder: (context, state) => const AfterPrayerScreen(),
+        builder: (context, state) =>
+            const AppShell(initialIndex: 2, child: AfterPrayerScreen()),
       ),
       GoRoute(
         path: '/prayer',
-        builder: (context, state) => const PrayerScreen(),
+        builder: (context, state) => const AppShell(child: PrayerScreen()),
       ),
       GoRoute(
         path: '/prayer/calendar',

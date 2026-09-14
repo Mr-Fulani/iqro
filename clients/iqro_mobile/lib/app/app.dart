@@ -7,7 +7,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/background/background_maintenance_service.dart';
 import '../core/background/background_work.dart';
 import '../core/theme/iqro_theme.dart';
-import '../core/widgets/prayer_times.home_widget.dart';
+import '../core/widgets/home_widget_routes.dart';
+import '../features/plan/plan_repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'account_scoped_maintenance.dart';
 import 'providers.dart';
@@ -25,7 +26,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     onboardingComplete: ref.read(appPreferencesProvider).onboardingComplete,
   );
   StreamSubscription<String>? _notificationRoutes;
-  StreamSubscription<Uri>? _prayerWidgetRoutes;
+  StreamSubscription<String>? _widgetRoutes;
   final _maintenance = AccountScopedMaintenanceCoordinator();
   var _backgroundWorkRequested = false;
 
@@ -33,16 +34,17 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _clearPlanWidget();
     final notifications = ref.read(notificationGatewayProvider);
     _notificationRoutes = notifications.routeRequests.listen(_router.go);
-    _prayerWidgetRoutes = PrayerTimesHomeWidget.launchedFromWidget().listen(
-      (_) => _router.go('/prayer'),
+    _widgetRoutes = homeWidgetRoutes().listen(
+      _router.go,
       onError: (Object error, StackTrace stackTrace) {
         FlutterError.reportError(
           FlutterErrorDetails(
             exception: error,
             stack: stackTrace,
-            library: 'IQRO prayer widget routing',
+            library: 'IQRO home widget routing',
           ),
         );
       },
@@ -130,14 +132,17 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _requestMaintenance();
+    if (state == AppLifecycleState.resumed) {
+      _requestMaintenance();
+      unawaited(ref.read(planProvider.notifier).reload());
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notificationRoutes?.cancel();
-    _prayerWidgetRoutes?.cancel();
+    _widgetRoutes?.cancel();
     _router.dispose();
     super.dispose();
   }
@@ -151,7 +156,12 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       previous,
       next,
     ) {
+      if (next != previous) _clearPlanWidget();
       if (next != null && next != previous) _requestMaintenance();
+    });
+    ref.listen<AsyncValue<DailyPlan>>(planProvider, (_, next) {
+      final plan = next.asData?.value;
+      if (plan != null) _publishPlanWidget(plan);
     });
     ref.listen<String>(appPreferencesProvider.select((value) => value.locale), (
       previous,
@@ -160,6 +170,8 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       if (previous != null && previous != next) {
         unawaited(ref.read(reminderProvider.notifier).replan());
         _requestPrayerWidgetUpdate(next);
+        final plan = ref.read(planProvider).asData?.value;
+        if (plan != null) _publishPlanWidget(plan);
       }
     });
     return MaterialApp.router(
@@ -177,6 +189,42 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: _router,
+    );
+  }
+
+  void _clearPlanWidget() {
+    _reportPlanWidget(
+      ref
+          .read(planWidgetServiceProvider)
+          .clear(locale: ref.read(appPreferencesProvider).locale),
+    );
+  }
+
+  void _publishPlanWidget(DailyPlan plan) {
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null) return;
+    _reportPlanWidget(
+      ref
+          .read(planWidgetServiceProvider)
+          .update(
+            plan: plan,
+            locale: ref.read(appPreferencesProvider).locale,
+            accountScope: scope,
+          ),
+    );
+  }
+
+  void _reportPlanWidget(Future<void> update) {
+    unawaited(
+      update.catchError((Object error, StackTrace stack) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'IQRO plan widget',
+          ),
+        );
+      }),
     );
   }
 

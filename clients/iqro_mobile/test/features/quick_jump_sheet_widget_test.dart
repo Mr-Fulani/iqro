@@ -1,10 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quick_jump_sheet.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
+  for (final locale in ['ru', 'en', 'ar', 'tr']) {
+    testWidgets('$locale long surah names fit the narrow search field', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: IqroTheme.dark(),
+          locale: Locale(locale),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: QuranQuickJumpSheet(
+                surahs: [_surah, _longSurah],
+                juz: [_juz],
+                hizb: [_hizb],
+                rubElHizb: [_rub],
+                initialSurah: 18,
+                initialAyah: 1,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final picker = find.byType(DropdownButtonFormField<int>);
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      final name = '83. ${_longSurah.nameFor(locale)}';
+      await tester.tap(find.text(name).last);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<DropdownButtonFormField<int>>(picker).initialValue,
+        83,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('quick jump exposes hizb and rub al-hizb on a narrow screen', (
     tester,
   ) async {
@@ -142,4 +188,15 @@ const _rub = QuranDivision(
   endPage: 295,
   hizbNumber: 13,
   quarterNumber: 1,
+);
+
+const _longSurah = Surah(
+  id: 'surah-83',
+  number: 83,
+  nameAr: 'المطففين',
+  nameEn: 'Al-Mutaffifin',
+  nameRu: 'Аль-Мутаффифин',
+  ayahCount: 36,
+  revelationType: 'meccan',
+  firstPage: 587,
 );

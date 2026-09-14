@@ -3147,6 +3147,36 @@ input:focus, select:focus, textarea:focus {
   vertical-align: middle;
 }
 
+.qf-mushaf-sheet.has-qul-layout {
+  /* Same 6% side / 3.5% height inset as the native page canvas. */
+  padding: 5.366667% 6%;
+}
+
+.has-qul-layout .qf-mushaf-line-content,
+.has-qul-layout .qf-mushaf-ayah-fragment {
+  align-items: baseline;
+  column-gap: var(--qf-word-gap, 3.5px);
+  line-height: 1.6;
+}
+
+.has-qul-layout .qf-mushaf-word {
+  flex: none;
+  padding: 0;
+}
+
+.has-qul-layout .qf-mushaf-chapter-intro {
+  font-family: "qf-mushaf-headings", serif;
+}
+
+.has-qul-layout .qf-mushaf-chapter-title {
+  font-size: var(--qf-title-size);
+  font-weight: 400;
+}
+
+.has-qul-layout .qf-mushaf-bismillah {
+  font-size: var(--qf-basmala-size);
+}
+
 .qf-mushaf-chapter-intro {
   z-index: 1;
   display: grid;

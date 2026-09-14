@@ -1,0 +1,827 @@
+{
+  "tool": "comp-diff",
+  "version": 1,
+  "createdAt": "2026-09-14T00:12:50.355Z",
+  "label": "hero",
+  "comp": ".impeccable/mocks/home-a.png",
+  "build": ".impeccable/review/hero-repro.png",
+  "spec": ".impeccable/build/spec.json",
+  "compSize": "853x1844",
+  "buildSize": "1080x2340",
+  "align": "top",
+  "overall": 0.6427,
+  "verdict": "drift",
+  "scores": {
+    "overall": 0.6427,
+    "structure": 0.5099,
+    "color": 0.7012,
+    "colorIntersection": 0.4266,
+    "paletteMatch": 0.8491,
+    "detail": 0.5556,
+    "detailRaw": 0.6546,
+    "detailAdded": 0.1979,
+    "bands": 1
+  },
+  "palette": {
+    "comp": [
+      {
+        "hex": "#092520",
+        "coverage": 0.9359
+      },
+      {
+        "hex": "#f4f5f4",
+        "coverage": 0.0244
+      },
+      {
+        "hex": "#9edccc",
+        "coverage": 0.0122
+      },
+      {
+        "hex": "#254646",
+        "coverage": 0.0115
+      },
+      {
+        "hex": "#134b3b",
+        "coverage": 0.009
+      },
+      {
+        "hex": "#b2bebe",
+        "coverage": 0.007
+      }
+    ],
+    "build": [
+      {
+        "hex": "#11231b",
+        "coverage": 0.9091
+      },
+      {
+        "hex": "#f7f7f2",
+        "coverage": 0.0459
+      },
+      {
+        "hex": "#98d8c8",
+        "coverage": 0.016
+      },
+      {
+        "hex": "#0d4f43",
+        "coverage": 0.0114
+      },
+      {
+        "hex": "#344637",
+        "coverage": 0.0109
+      },
+      {
+        "hex": "#e8c070",
+        "coverage": 0.0068
+      }
+    ]
+  },
+  "regions": [
+    {
+      "id": "header",
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 0.1,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.7094,
+        "structure": 0.8154,
+        "color": 0.9509,
+        "colorIntersection": 0.9145,
+        "paletteMatch": 0.9706,
+        "detail": 0.4853,
+        "detailRaw": 0.553,
+        "detailAdded": 0.1354,
+        "bands": 0.4333
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 42,
+          "y": 26,
+          "w": 770,
+          "h": 149
+        },
+        "build": {
+          "x": 38,
+          "y": 9,
+          "w": 771,
+          "h": 161
+        }
+      }
+    },
+    {
+      "id": "prayer-icon",
+      "x": 0.0633,
+      "y": 0.1356,
+      "w": 0.1372,
+      "h": 0.0748,
+      "kind": "control",
+      "score": {
+        "overall": 0.4854,
+        "structure": 0.5788,
+        "color": 0.4862,
+        "colorIntersection": 0.1567,
+        "paletteMatch": 0.6636,
+        "detail": 0.2739,
+        "detailRaw": 0.3573,
+        "detailAdded": 0.1667,
+        "bands": 0.76
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 7,
+          "y": 6,
+          "w": 103,
+          "h": 122
+        },
+        "build": {
+          "x": 16,
+          "y": 69,
+          "w": 78,
+          "h": 65
+        }
+      }
+    },
+    {
+      "id": "prayer-name",
+      "x": 0.2286,
+      "y": 0.1584,
+      "w": 0.2181,
+      "h": 0.0358,
+      "kind": "text",
+      "score": {
+        "overall": 0.3697,
+        "structure": 0.4291,
+        "color": 0.5331,
+        "colorIntersection": 0.1685,
+        "paletteMatch": 0.7295,
+        "detail": 0.0388,
+        "detailRaw": 0.117,
+        "detailAdded": 0.1563,
+        "bands": 0.16
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 7,
+          "y": 9,
+          "w": 172,
+          "h": 47
+        },
+        "build": {
+          "x": 0,
+          "y": 10,
+          "w": 136,
+          "h": 56
+        }
+      }
+    },
+    {
+      "id": "prayer-countdown",
+      "x": 0.2497,
+      "y": 0.2619,
+      "w": 0.3025,
+      "h": 0.038,
+      "kind": "text",
+      "score": {
+        "overall": 0.3806,
+        "structure": 0.56,
+        "color": 0.4023,
+        "colorIntersection": 0.072,
+        "paletteMatch": 0.5801,
+        "detail": 0,
+        "detailRaw": 0.0466,
+        "detailAdded": 0.125,
+        "bands": 0
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 11,
+          "y": 10,
+          "w": 247,
+          "h": 60
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "prayer-time",
+      "x": 0.6495,
+      "y": 0.1291,
+      "w": 0.2814,
+      "h": 0.0456,
+      "kind": "text",
+      "score": {
+        "overall": 0.3212,
+        "structure": 0.2927,
+        "color": 0.5569,
+        "colorIntersection": 0.2736,
+        "paletteMatch": 0.7094,
+        "detail": 0.2377,
+        "detailRaw": 0.3054,
+        "detailAdded": 0.1354,
+        "bands": 0
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 9,
+          "y": 8,
+          "w": 225,
+          "h": 65
+        },
+        "build": {
+          "x": 0,
+          "y": 34,
+          "w": 168,
+          "h": 50
+        }
+      }
+    },
+    {
+      "id": "prayer-reminders",
+      "x": 0.6776,
+      "y": 0.2749,
+      "w": 0.2673,
+      "h": 0.0249,
+      "kind": "control",
+      "score": {
+        "overall": 0.2135,
+        "structure": 0.3031,
+        "color": 0.161,
+        "colorIntersection": 0.0084,
+        "paletteMatch": 0.2431,
+        "detail": 0.1038,
+        "detailRaw": 0.1142,
+        "detailAdded": 0.0208,
+        "bands": 0.7
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 228,
+          "h": 48
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "reading-icon",
+      "x": 0.0914,
+      "y": 0.2782,
+      "w": 0.109,
+      "h": 0.0423,
+      "kind": "control",
+      "score": {
+        "overall": 0.2834,
+        "structure": 0.4206,
+        "color": 0.2563,
+        "colorIntersection": 0.0518,
+        "paletteMatch": 0.3663,
+        "detail": 0.022,
+        "detailRaw": 0.022,
+        "detailAdded": 0,
+        "bands": 0
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 9,
+          "y": 8,
+          "w": 77,
+          "h": 61
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "reading-title",
+      "x": 0.2462,
+      "y": 0.2603,
+      "w": 0.3728,
+      "h": 0.0797,
+      "kind": "text",
+      "score": {
+        "overall": 0.3682,
+        "structure": 0.3977,
+        "color": 0.4516,
+        "colorIntersection": 0.0912,
+        "paletteMatch": 0.6457,
+        "detail": 0.1304,
+        "detailRaw": 0.2293,
+        "detailAdded": 0.1979,
+        "bands": 0.3682
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 12,
+          "y": 13,
+          "w": 295,
+          "h": 126
+        },
+        "build": {
+          "x": 0,
+          "y": 82,
+          "w": 227,
+          "h": 65
+        }
+      }
+    },
+    {
+      "id": "reading-action",
+      "x": 0.6999,
+      "y": 0.2749,
+      "w": 0.2392,
+      "h": 0.0521,
+      "kind": "control",
+      "score": {
+        "overall": 0.414,
+        "structure": 0.3774,
+        "color": 0.6705,
+        "colorIntersection": 0.3307,
+        "paletteMatch": 0.8535,
+        "detail": 0.0477,
+        "detailRaw": 0.0946,
+        "detailAdded": 0.0938,
+        "bands": 0.55
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 204,
+          "h": 96
+        },
+        "build": {
+          "x": 0,
+          "y": 61,
+          "w": 187,
+          "h": 35
+        }
+      }
+    },
+    {
+      "id": "reading-bookmarks",
+      "x": 0.6753,
+      "y": 0.2999,
+      "w": 0.2673,
+      "h": 0.0293,
+      "kind": "control",
+      "score": {
+        "overall": 0.4799,
+        "structure": 0.4823,
+        "color": 0.7422,
+        "colorIntersection": 0.5556,
+        "paletteMatch": 0.8427,
+        "detail": 0.0154,
+        "detailRaw": 0.0727,
+        "detailAdded": 0.1146,
+        "bands": 0.6
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 228,
+          "h": 54
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 228,
+          "h": 54
+        }
+      }
+    },
+    {
+      "id": "plan-icon",
+      "x": 0.0703,
+      "y": 0.4262,
+      "w": 0.0914,
+      "h": 0.0456,
+      "kind": "control",
+      "score": {
+        "overall": 0.3637,
+        "structure": 0.4735,
+        "color": 0.4148,
+        "colorIntersection": 0.0348,
+        "paletteMatch": 0.6194,
+        "detail": 0.0274,
+        "detailRaw": 0.0534,
+        "detailAdded": 0.0521,
+        "bands": 0
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 9,
+          "w": 64,
+          "h": 66
+        },
+        "build": {
+          "x": 21,
+          "y": 0,
+          "w": 30,
+          "h": 15
+        }
+      }
+    },
+    {
+      "id": "plan-text",
+      "x": 0.2005,
+      "y": 0.423,
+      "w": 0.7386,
+      "h": 0.0586,
+      "kind": "text",
+      "score": {
+        "overall": 0.4302,
+        "structure": 0.5707,
+        "color": 0.3463,
+        "colorIntersection": 0.0199,
+        "paletteMatch": 0.5221,
+        "detail": 0.022,
+        "detailRaw": 0.0428,
+        "detailAdded": 0.0417,
+        "bands": 0.55
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 9,
+          "w": 616,
+          "h": 92
+        },
+        "build": {
+          "x": 2,
+          "y": 0,
+          "w": 596,
+          "h": 16
+        }
+      }
+    },
+    {
+      "id": "plan-progress",
+      "x": 0.2005,
+      "y": 0.423,
+      "w": 0.7386,
+      "h": 0.0586,
+      "kind": "control",
+      "score": {
+        "overall": 0.3824,
+        "structure": 0.5707,
+        "color": 0.3463,
+        "colorIntersection": 0.0199,
+        "paletteMatch": 0.5221,
+        "detail": 0.022,
+        "detailRaw": 0.0428,
+        "detailAdded": 0.0417,
+        "bands": 0.55
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 9,
+          "w": 616,
+          "h": 92
+        },
+        "build": {
+          "x": 2,
+          "y": 0,
+          "w": 596,
+          "h": 16
+        }
+      }
+    },
+    {
+      "id": "after-prayer",
+      "x": 0.1688,
+      "y": 0.5195,
+      "w": 0.2251,
+      "h": 0.0423,
+      "kind": "control",
+      "score": {
+        "overall": 0.3213,
+        "structure": 0.3778,
+        "color": 0.4324,
+        "colorIntersection": 0.043,
+        "paletteMatch": 0.642,
+        "detail": 0,
+        "detailRaw": 0.128,
+        "detailAdded": 0.3229,
+        "bands": 0
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 10,
+          "y": 10,
+          "w": 173,
+          "h": 57
+        },
+        "build": {
+          "x": 26,
+          "y": 0,
+          "w": 166,
+          "h": 66
+        }
+      }
+    },
+    {
+      "id": "memorization",
+      "x": 0.6553,
+      "y": 0.5195,
+      "w": 0.1899,
+      "h": 0.0423,
+      "kind": "control",
+      "score": {
+        "overall": 0.3825,
+        "structure": 0.5843,
+        "color": 0.3415,
+        "colorIntersection": 0.0009,
+        "paletteMatch": 0.5248,
+        "detail": 0,
+        "detailRaw": 0,
+        "detailAdded": 0,
+        "bands": 0.4
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 10,
+          "w": 144,
+          "h": 57
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "audio",
+      "x": 0.3798,
+      "y": 0.5998,
+      "w": 0.0914,
+      "h": 0.0358,
+      "kind": "control",
+      "score": {
+        "overall": 0.3055,
+        "structure": 0.4764,
+        "color": 0.2366,
+        "colorIntersection": 0.0311,
+        "paletteMatch": 0.3473,
+        "detail": 0.0417,
+        "detailRaw": 0.0469,
+        "detailAdded": 0.0104,
+        "bands": 0.4
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 78,
+          "h": 66
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "dua",
+      "x": 0.6553,
+      "y": 0.5998,
+      "w": 0.1688,
+      "h": 0.0358,
+      "kind": "control",
+      "score": {
+        "overall": 0.4175,
+        "structure": 0.5593,
+        "color": 0.4736,
+        "colorIntersection": 0.1065,
+        "paletteMatch": 0.6713,
+        "detail": 0,
+        "detailRaw": 0.013,
+        "detailAdded": 0.0938,
+        "bands": 0.4667
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 4,
+          "w": 126,
+          "h": 56
+        },
+        "build": null
+      }
+    },
+    {
+      "id": "favorites",
+      "x": 0.1758,
+      "y": 0.7294,
+      "w": 0.2884,
+      "h": 0.0358,
+      "kind": "control",
+      "score": {
+        "overall": 0.349,
+        "structure": 0.3836,
+        "color": 0.5006,
+        "colorIntersection": 0.1106,
+        "paletteMatch": 0.7107,
+        "detail": 0.0056,
+        "detailRaw": 0.0993,
+        "detailAdded": 0.1875,
+        "bands": 0.26
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 7,
+          "w": 229,
+          "h": 53
+        },
+        "build": {
+          "x": 0,
+          "y": 46,
+          "w": 211,
+          "h": 20
+        }
+      }
+    },
+    {
+      "id": "calendar",
+      "x": 0.1758,
+      "y": 0.7294,
+      "w": 0.2884,
+      "h": 0.0358,
+      "kind": "control",
+      "score": {
+        "overall": 0.349,
+        "structure": 0.3836,
+        "color": 0.5006,
+        "colorIntersection": 0.1106,
+        "paletteMatch": 0.7107,
+        "detail": 0.0056,
+        "detailRaw": 0.0993,
+        "detailAdded": 0.1875,
+        "bands": 0.26
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 8,
+          "y": 7,
+          "w": 229,
+          "h": 53
+        },
+        "build": {
+          "x": 0,
+          "y": 46,
+          "w": 211,
+          "h": 20
+        }
+      }
+    },
+    {
+      "id": "reminders",
+      "x": 0.1758,
+      "y": 0.8389,
+      "w": 0.3236,
+      "h": 0.039,
+      "kind": "control",
+      "score": {
+        "overall": 0.3499,
+        "structure": 0.3639,
+        "color": 0.4621,
+        "colorIntersection": 0.1087,
+        "paletteMatch": 0.6524,
+        "detail": 0.1221,
+        "detailRaw": 0.2471,
+        "detailAdded": 0.25,
+        "bands": 0.5206
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 7,
+          "y": 9,
+          "w": 260,
+          "h": 54
+        },
+        "build": {
+          "x": 30,
+          "y": 26,
+          "w": 200,
+          "h": 33
+        }
+      }
+    },
+    {
+      "id": "downloads",
+      "x": 0.1758,
+      "y": 0.8389,
+      "w": 0.3236,
+      "h": 0.039,
+      "kind": "control",
+      "score": {
+        "overall": 0.3499,
+        "structure": 0.3639,
+        "color": 0.4621,
+        "colorIntersection": 0.1087,
+        "paletteMatch": 0.6524,
+        "detail": 0.1221,
+        "detailRaw": 0.2471,
+        "detailAdded": 0.25,
+        "bands": 0.5206
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 7,
+          "y": 9,
+          "w": 260,
+          "h": 54
+        },
+        "build": {
+          "x": 30,
+          "y": 26,
+          "w": 200,
+          "h": 33
+        }
+      }
+    },
+    {
+      "id": "navigation",
+      "x": 0,
+      "y": 0.9,
+      "w": 1,
+      "h": 0.1,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.6129,
+        "structure": 0.605,
+        "color": 0.5481,
+        "colorIntersection": 0.1818,
+        "paletteMatch": 0.7453,
+        "detail": 0.563,
+        "detailRaw": 0.7297,
+        "detailAdded": 0.3333,
+        "bands": 0.8222
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 48,
+          "y": 45,
+          "w": 743,
+          "h": 95
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 853,
+          "h": 184
+        }
+      }
+    }
+  ],
+  "files": {
+    "sideBySide": "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/side-by-side.png",
+    "heatmap": "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/heatmap.png",
+    "regionFiles": [
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/header.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/prayer-icon.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/prayer-name.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/prayer-countdown.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/prayer-time.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/prayer-reminders.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/reading-icon.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/reading-title.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/reading-action.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/reading-bookmarks.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/plan-icon.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/plan-text.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/plan-progress.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/after-prayer.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/memorization.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/audio.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/dua.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/favorites.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/calendar.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/reminders.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/downloads.png",
+      "/Users/user/Documents/ChatGPT/quran/clients/iqro_mobile/.impeccable/review/diff/hero/regions/navigation.png"
+    ]
+  }
+}
