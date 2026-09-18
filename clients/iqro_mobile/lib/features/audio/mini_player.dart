@@ -13,7 +13,10 @@ import 'reciter_portraits.dart';
 final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
-  const IqroMiniPlayer({super.key});
+  const IqroMiniPlayer({this.allowCollapse = true, super.key});
+
+  /// Mushaf has its own reader controls, so its inline player stays expanded.
+  final bool allowCollapse;
 
   @override
   ConsumerState<IqroMiniPlayer> createState() => _IqroMiniPlayerState();
@@ -48,7 +51,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
           );
     final controlsEnabled =
         player.track != null && !player.buffering && !_changingSurah;
-    final collapsed = ref.watch(miniPlayerCollapsedProvider);
+    final collapsed =
+        widget.allowCollapse && ref.watch(miniPlayerCollapsedProvider);
     void setCollapsed(bool value) {
       ref.read(miniPlayerCollapsedProvider.notifier).state = value;
     }
@@ -78,40 +82,48 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                   6,
                   0,
                 ),
-                leading: SizedBox(
-                  width: 96,
-                  child: Row(
-                    children: <Widget>[
-                      PremiumReciterPortrait(
+                leading: widget.allowCollapse
+                    ? SizedBox(
+                        width: 96,
+                        child: Row(
+                          children: <Widget>[
+                            PremiumReciterPortrait(
+                              url: portraitUrl,
+                              size: 44,
+                              initials: reciter?.initials,
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              key: const ValueKey('mini-player-collapse'),
+                              tooltip: MaterialLocalizations.of(
+                                context,
+                              ).expandedIconTapHint,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 44,
+                                height: 44,
+                              ),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: .12,
+                                ),
+                                foregroundColor: Colors.white,
+                                shape: const CircleBorder(),
+                              ),
+                              onPressed: () => setCollapsed(true),
+                              icon: const Icon(
+                                Icons.keyboard_double_arrow_down_rounded,
+                                size: 24,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : PremiumReciterPortrait(
                         url: portraitUrl,
                         size: 44,
                         initials: reciter?.initials,
                       ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        key: const ValueKey('mini-player-collapse'),
-                        tooltip: MaterialLocalizations.of(
-                          context,
-                        ).expandedIconTapHint,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 44,
-                          height: 44,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: .12),
-                          foregroundColor: Colors.white,
-                          shape: const CircleBorder(),
-                        ),
-                        onPressed: () => setCollapsed(true),
-                        icon: const Icon(
-                          Icons.keyboard_double_arrow_down_rounded,
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 title: Text(
                   player.track == null
                       ? context.l10n.audioTitle
@@ -145,6 +157,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                             : null,
                       ),
                       _MiniPlayerControl(
+                        controlKey: const ValueKey('mini-player-play-toggle'),
                         tooltip: player.playing
                             ? context.l10n.pause
                             : context.l10n.play,
@@ -270,6 +283,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
 
 class _MiniPlayerControl extends StatelessWidget {
   const _MiniPlayerControl({
+    this.controlKey,
     required this.tooltip,
     required this.icon,
     required this.onPressed,
@@ -277,6 +291,7 @@ class _MiniPlayerControl extends StatelessWidget {
     this.loading = false,
   });
 
+  final Key? controlKey;
   final String tooltip;
   final IconData icon;
   final VoidCallback? onPressed;
@@ -286,6 +301,7 @@ class _MiniPlayerControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
+      key: controlKey,
       tooltip: tooltip,
       onPressed: onPressed,
       padding: EdgeInsets.zero,

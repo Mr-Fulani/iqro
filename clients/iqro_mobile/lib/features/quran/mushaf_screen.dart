@@ -448,7 +448,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             children: <Widget>[
-                              const Expanded(child: IqroMiniPlayer()),
+                              const Expanded(
+                                child: IqroMiniPlayer(allowCollapse: false),
+                              ),
                               IconButton(
                                 tooltip: context.l10n.close,
                                 onPressed: () =>
