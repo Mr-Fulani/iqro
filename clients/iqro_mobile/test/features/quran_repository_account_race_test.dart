@@ -51,9 +51,9 @@ void main() {
         accountScope: accountScope,
       );
       const config = AppConfig(
-        apiBaseUrl: 'https://staging.iqro.forum',
+        apiBaseUrl: 'https://iqro.forum',
         fallbackDownloadUrl: 'https://iqro.forum',
-        environment: 'staging',
+        environment: 'production',
       );
       final auth = AuthRepository(config: config, accountScope: accountScope);
       final repository = QuranRepository(

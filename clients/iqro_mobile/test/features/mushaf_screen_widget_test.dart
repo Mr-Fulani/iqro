@@ -276,8 +276,8 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         ),
         appConfigProvider.overrideWithValue(
           const AppConfig(
-            apiBaseUrl: 'https://staging.iqro.forum',
-            environment: 'staging',
+            apiBaseUrl: 'https://iqro.forum',
+            environment: 'production',
             fallbackDownloadUrl: 'https://iqro.forum',
           ),
         ),

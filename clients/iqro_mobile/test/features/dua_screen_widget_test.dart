@@ -631,7 +631,7 @@ class _DelayedFavoriteDuaRepository extends DuaRepository {
 
 class _UnusedDuaRemote implements DuaRemoteGateway {
   @override
-  Uri get apiBaseUri => Uri.parse('https://staging.iqro.forum/api/v1');
+  Uri get apiBaseUri => Uri.parse('https://iqro.forum/api/v1');
 
   Never _unused() => throw UnsupportedError('Not used by this widget test');
 

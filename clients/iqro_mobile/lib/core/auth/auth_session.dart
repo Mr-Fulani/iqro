@@ -47,7 +47,9 @@ class AuthSession {
       userId: user['id']?.toString() ?? previous?.userId ?? '',
       userStatus: user['status']?.toString() ?? previous?.userStatus ?? 'guest',
       deviceId: device['id']?.toString() ?? previous?.deviceId ?? '',
-      email: user['email']?.toString() ?? previous?.email,
+      email: user.containsKey('email')
+          ? user['email']?.toString()
+          : previous?.email,
     );
   }
 

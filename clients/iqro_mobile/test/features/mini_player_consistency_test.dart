@@ -18,7 +18,7 @@ void main() {
       appShell,
       isNot(contains('if (playerActive) const IqroMiniPlayer()')),
     );
-    expect(mushaf, contains('IqroMiniPlayer()'));
+    expect(mushaf, contains('IqroMiniPlayer(allowCollapse: false)'));
     expect(mushaf, isNot(contains('_ReaderAudioPill')));
     expect(miniPlayer, isNot(contains('BackdropFilter')));
   });

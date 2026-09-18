@@ -156,8 +156,7 @@ void main() {
   testWidgets('portrait keeps admin URL and bounds decoded memory', (
     tester,
   ) async {
-    const url =
-        'https://staging.iqro.forum/media/reciters/admin-custom.webp?v=7';
+    const url = 'https://iqro.forum/media/reciters/admin-custom.webp?v=7';
     await tester.pumpWidget(
       const MaterialApp(
         home: Center(

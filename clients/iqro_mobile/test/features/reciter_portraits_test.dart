@@ -10,10 +10,7 @@ void main() {
     );
 
     expect(
-      resolveReciterPortraitUrl(
-        reciter,
-        apiBaseUrl: 'https://staging.iqro.forum',
-      ),
+      resolveReciterPortraitUrl(reciter, apiBaseUrl: 'https://iqro.forum'),
       'https://cdn.example.test/managed.webp',
     );
   });
@@ -22,11 +19,8 @@ void main() {
     final reciter = _reciter(slug: 'qf-2-abdul-baset-abdul-samad');
 
     expect(
-      resolveReciterPortraitUrl(
-        reciter,
-        apiBaseUrl: 'https://staging.iqro.forum',
-      ),
-      'https://staging.iqro.forum/reciters/abdul-baset-abdul-samad.webp',
+      resolveReciterPortraitUrl(reciter, apiBaseUrl: 'https://iqro.forum'),
+      'https://iqro.forum/reciters/abdul-baset-abdul-samad.webp',
     );
   });
 
@@ -34,7 +28,7 @@ void main() {
     expect(
       resolveReciterPortraitUrl(
         _reciter(slug: 'unknown'),
-        apiBaseUrl: 'https://staging.iqro.forum',
+        apiBaseUrl: 'https://iqro.forum',
       ),
       isNull,
     );
@@ -53,7 +47,7 @@ void main() {
     expect(
       resolveReciterPortraitUrl(
         mujawwad,
-        apiBaseUrl: 'https://staging.iqro.forum',
+        apiBaseUrl: 'https://iqro.forum',
         reciters: <Reciter>[mujawwad, murattal],
       ),
       'https://cdn.example.test/person.webp',
@@ -61,7 +55,7 @@ void main() {
     expect(
       reciterWithPersonPortrait(
         mujawwad,
-        apiBaseUrl: 'https://staging.iqro.forum',
+        apiBaseUrl: 'https://iqro.forum',
         reciters: <Reciter>[mujawwad, murattal],
       ),
       isA<Reciter>()

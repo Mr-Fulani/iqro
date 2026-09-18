@@ -190,7 +190,7 @@ Map<String, Object?> _pageFixture(int number) {
   final bytes = _webpBytes(number);
   final asset = <String, Object?>{
     'url':
-        'https://media.staging.iqro.forum/quran/page-${number.toString().padLeft(3, '0')}.webp',
+        'https://media.iqro.forum/quran/page-${number.toString().padLeft(3, '0')}.webp',
     'file_name': 'page-${number.toString().padLeft(3, '0')}-1024.webp',
     'content_type': 'image/webp',
     'width': 1024,
@@ -200,7 +200,7 @@ Map<String, Object?> _pageFixture(int number) {
   };
   return <String, Object?>{
     'number': number,
-    'metadata_url': 'https://staging.iqro.forum/api/v1/quran/pages/$number',
+    'metadata_url': 'https://iqro.forum/api/v1/quran/pages/$number',
     'asset': asset,
     'metadata': <String, Object?>{
       'number': number,

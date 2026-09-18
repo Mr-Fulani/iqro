@@ -328,7 +328,7 @@ class _Cache implements LocalDatabase {
 }
 
 class _Api implements ApiClient {
-  _Api({String origin = 'https://staging.iqro.forum/api/v1'})
+  _Api({String origin = 'https://iqro.forum/api/v1'})
     : dio = Dio(BaseOptions(baseUrl: origin));
   @override
   final Dio dio;

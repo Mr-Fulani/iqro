@@ -148,9 +148,9 @@ void main() {
 }
 
 const _config = AppConfig(
-  apiBaseUrl: 'https://staging.iqro.forum',
+  apiBaseUrl: 'https://iqro.forum',
   fallbackDownloadUrl: 'https://iqro.forum',
-  environment: 'staging',
+  environment: 'production',
 );
 
 AuthRepository _repository(

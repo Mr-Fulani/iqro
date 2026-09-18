@@ -206,7 +206,7 @@ Deployment/content publication в этом этапе не выполнялис�
   доставлен чистым `git archive` на staging после verified backup. Budget build/up,
   healthchecks, миграции calendar 0001/0002 и runtime limits прошли; оба системных
   таймера active. Секреты и volumes не заменялись. После сборки свободно около 1.5 GiB.
-- `https://staging.iqro.forum/ru/calendar`: живой календарь; проверены RU/EN/AR/TR,
+- В прежнем тестовом окружении проверен живой календарь RU/EN/AR/TR:
   текущий месяц, отметка белых дней, пояснение/источник. Общий API отдаёт 8 событий
   версии `f6ea92f74d97bb8b381ca3cc8851dc0167de547bff614209a622f7d9b461fb80`.
   `/admin/calendar/calendarevent/` доступен через штатную авторизацию. В browser QA

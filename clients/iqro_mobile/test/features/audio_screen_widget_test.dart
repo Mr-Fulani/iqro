@@ -108,9 +108,9 @@ Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
       overrides: <Override>[
         appConfigProvider.overrideWithValue(
           const AppConfig(
-            apiBaseUrl: 'https://staging.iqro.forum',
+            apiBaseUrl: 'https://iqro.forum',
             fallbackDownloadUrl: 'https://iqro.forum',
-            environment: 'staging',
+            environment: 'production',
           ),
         ),
         appPreferencesProvider.overrideWith((ref) => preferences),
