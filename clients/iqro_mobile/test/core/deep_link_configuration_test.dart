@@ -33,19 +33,18 @@ void main() {
     expect(manifest, contains('android:scheme="iqro"'));
     expect(manifest, contains('android:host="open"'));
     expect(manifest, contains('android:host="iqro.forum"'));
-    expect(manifest, contains('android:host="staging.iqro.forum"'));
     expect(manifest, contains('android:pathPrefix="/dua/"'));
     for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
       expect(manifest, contains('android:pathPrefix="/$locale/dua/"'));
     }
-    expect(RegExp(r'android:autoVerify="true"').allMatches(manifest).length, 2);
+    expect(RegExp(r'android:autoVerify="true"').allMatches(manifest).length, 1);
   });
 
   test('localized web Dua links normalize to cold mobile routes', () {
     for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
       expect(
         normalizeLocalizedDuaDeepLink(
-          Uri.parse('https://staging.iqro.forum/$locale/dua/hisn-al-muslim/7'),
+          Uri.parse('https://iqro.forum/$locale/dua/hisn-al-muslim/7'),
         ),
         '/dua/hisn-al-muslim/7',
       );
@@ -72,7 +71,7 @@ void main() {
     );
   });
 
-  test('iOS accepts the IQRO scheme and declares both associated domains', () {
+  test('iOS accepts the IQRO scheme and declares the production domain', () {
     final plist = File('ios/Runner/Info.plist').readAsStringSync();
     final entitlements = File(
       'ios/Runner/Runner.entitlements',
@@ -84,10 +83,6 @@ void main() {
     expect(plist, contains('<string>iqro</string>'));
     expect(plist, contains('<key>FlutterDeepLinkingEnabled</key>'));
     expect(entitlements, contains('<string>applinks:iqro.forum</string>'));
-    expect(
-      entitlements,
-      contains('<string>applinks:staging.iqro.forum</string>'),
-    );
     expect(
       RegExp(
         r'CODE_SIGN_ENTITLEMENTS = Runner/Runner\.entitlements;',

@@ -9,6 +9,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'mini_player.dart';
 import 'audio_models.dart';
 import 'audio_offline_repository.dart';
 import 'reciter_catalog.dart';
@@ -69,7 +70,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         ],
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: player.track != null),
+        padding: iqroRootTabPadding(
+          playerActive: player.track != null,
+          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

@@ -34,12 +34,8 @@ class AppConfig {
       }
       resolvedEnvironment = 'local';
     }
-    if (resolvedEnvironment != 'local' &&
-        resolvedEnvironment != 'staging' &&
-        resolvedEnvironment != 'production') {
-      throw const FormatException(
-        'APP_ENV must be local, staging or production',
-      );
+    if (resolvedEnvironment != 'local' && resolvedEnvironment != 'production') {
+      throw const FormatException('APP_ENV must be local or production');
     }
     final local = resolvedEnvironment == 'local';
     if (local && releaseMode) {
@@ -53,7 +49,7 @@ class AppConfig {
       }
       resolvedApiBaseUrl = local
           ? 'http://${androidEmulator ? '10.0.2.2' : '127.0.0.1'}:8000'
-          : 'https://staging.iqro.forum';
+          : 'https://iqro.forum';
     }
     final apiOrigin = Uri.tryParse(resolvedApiBaseUrl);
     if (apiOrigin == null ||
@@ -69,9 +65,7 @@ class AppConfig {
         'API_BASE_URL must be a clean HTTPS origin without a path',
       );
     }
-    final expectedHost = resolvedEnvironment == 'production'
-        ? 'iqro.forum'
-        : 'staging.iqro.forum';
+    const expectedHost = 'iqro.forum';
     if (local
         ? !isLocalDevelopmentHost(apiOrigin.host)
         : apiOrigin.host != expectedHost) {

@@ -1313,4 +1313,163 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mushafPageCaching =>
       'Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.';
+
+  @override
+  String get planCreditedToday => 'Credited today';
+
+  @override
+  String get planGoalLabel => 'Daily target';
+
+  @override
+  String get planEditGoal => 'Change target';
+
+  @override
+  String get planGoalReached => 'Daily target reached';
+
+  @override
+  String planRemainingAmount(String amount) {
+    return 'Left to reach your target: $amount';
+  }
+
+  @override
+  String planGoalAmount(String amount) {
+    return 'Target: $amount';
+  }
+
+  @override
+  String planCreditedAmount(String amount) {
+    return 'Credited: $amount';
+  }
+
+  @override
+  String get planManualEntry => 'Add reading manually';
+
+  @override
+  String get planManualHelp =>
+      'Add reading that has not already been counted. This increases today’s progress; it does not change your target.';
+
+  @override
+  String get planHowCounted => 'How progress is counted';
+
+  @override
+  String get planPagesHelp =>
+      'Turning to the next page in the reader adds a page automatically. Manual entries also count. Turning pages does not confirm that you have read them.';
+
+  @override
+  String get planMinutesHelp =>
+      'Active time in the reader is counted automatically. Minutes added manually also count.';
+
+  @override
+  String get planAyahsHelp =>
+      'Sequential progress through ayahs in the reader is counted automatically. Ayahs added manually also count.';
+
+  @override
+  String get planDailyHelp =>
+      'Progress is counted separately for each day. Changing your target does not reset it; previous days stay in your history.';
+
+  @override
+  String get planResetHelp =>
+      'Use − to undo pages marked after prayer. This screen cannot reset all of today’s progress.';
+
+  @override
+  String get planPrayerTitle => 'After-prayer reading';
+
+  @override
+  String get planPrayerSummary =>
+      'Pages you marked today. These are completed entries, not a target.';
+
+  @override
+  String get planEditPrayer => 'Edit today’s entries';
+
+  @override
+  String get planPrayerInstructions =>
+      'Mark pages read after each prayer. + adds one page, − removes one. Zero means no pages are marked.';
+
+  @override
+  String planRemovePage(String prayer) {
+    return 'Remove one page: $prayer';
+  }
+
+  @override
+  String planAddPage(String prayer) {
+    return 'Add one page: $prayer';
+  }
+
+  @override
+  String get planUnavailable =>
+      'The plan could not be updated. Saved progress is shown; changes will be available after a successful refresh.';
+
+  @override
+  String get planGoalHint =>
+      'Choose your daily target in minutes, pages or ayahs. This sets a target; it does not record completed reading.';
+
+  @override
+  String planBestStreak(String streak) {
+    return 'Best streak: $streak';
+  }
+
+  @override
+  String planActiveTime(String amount) {
+    return 'Active reading: $amount';
+  }
+
+  @override
+  String planPages(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString pages',
+      one: '$countString page',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planMinutes(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString minutes',
+      one: '$countString minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAyahs(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString ayahs',
+      one: '$countString ayah',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planStreak(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString days in a row',
+      one: '$countString day in a row',
+    );
+    return '$_temp0';
+  }
 }

@@ -16,6 +16,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
+        android:forceDarkAllowed="false"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false">
         <meta-data
@@ -79,31 +80,6 @@
                 <data
                     android:scheme="https"
                     android:host="iqro.forum"
-                    android:pathPrefix="/tr/dua/" />
-            </intent-filter>
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="staging.iqro.forum"
-                    android:pathPrefix="/dua/" />
-                <data
-                    android:scheme="https"
-                    android:host="staging.iqro.forum"
-                    android:pathPrefix="/ru/dua/" />
-                <data
-                    android:scheme="https"
-                    android:host="staging.iqro.forum"
-                    android:pathPrefix="/en/dua/" />
-                <data
-                    android:scheme="https"
-                    android:host="staging.iqro.forum"
-                    android:pathPrefix="/ar/dua/" />
-                <data
-                    android:scheme="https"
-                    android:host="staging.iqro.forum"
                     android:pathPrefix="/tr/dua/" />
             </intent-filter>
             <intent-filter>

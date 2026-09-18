@@ -5,7 +5,6 @@
 		<key>com.apple.developer.associated-domains</key>
 		<array>
 			<string>applinks:iqro.forum</string>
-			<string>applinks:staging.iqro.forum</string>
 		</array>
 		<key>com.apple.security.application-groups</key>
 		<array>

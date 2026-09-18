@@ -415,5 +415,115 @@
   "sundayShort": "Sun",
   "readerHaptics": "Page-turn vibration",
   "readerHapticsHint": "A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.",
-  "mushafPageCaching": "Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline."
+  "mushafPageCaching": "Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.",
+  "planCreditedToday": "Credited today",
+  "planGoalLabel": "Daily target",
+  "planEditGoal": "Change target",
+  "planGoalReached": "Daily target reached",
+  "planRemainingAmount": "Left to reach your target: {amount}",
+  "@planRemainingAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "planGoalAmount": "Target: {amount}",
+  "@planGoalAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "planCreditedAmount": "Credited: {amount}",
+  "@planCreditedAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "planManualEntry": "Add reading manually",
+  "planManualHelp": "Add reading that has not already been counted. This increases today’s progress; it does not change your target.",
+  "planHowCounted": "How progress is counted",
+  "planPagesHelp": "Turning to the next page in the reader adds a page automatically. Manual entries also count. Turning pages does not confirm that you have read them.",
+  "planMinutesHelp": "Active time in the reader is counted automatically. Minutes added manually also count.",
+  "planAyahsHelp": "Sequential progress through ayahs in the reader is counted automatically. Ayahs added manually also count.",
+  "planDailyHelp": "Progress is counted separately for each day. Changing your target does not reset it; previous days stay in your history.",
+  "planResetHelp": "Use − to undo pages marked after prayer. This screen cannot reset all of today’s progress.",
+  "planPrayerTitle": "After-prayer reading",
+  "planPrayerSummary": "Pages you marked today. These are completed entries, not a target.",
+  "planEditPrayer": "Edit today’s entries",
+  "planPrayerInstructions": "Mark pages read after each prayer. + adds one page, − removes one. Zero means no pages are marked.",
+  "planRemovePage": "Remove one page: {prayer}",
+  "@planRemovePage": {
+    "placeholders": {
+      "prayer": {
+        "type": "String"
+      }
+    }
+  },
+  "planAddPage": "Add one page: {prayer}",
+  "@planAddPage": {
+    "placeholders": {
+      "prayer": {
+        "type": "String"
+      }
+    }
+  },
+  "planUnavailable": "The plan could not be updated. Saved progress is shown; changes will be available after a successful refresh.",
+  "planGoalHint": "Choose your daily target in minutes, pages or ayahs. This sets a target; it does not record completed reading.",
+  "planBestStreak": "Best streak: {streak}",
+  "@planBestStreak": {
+    "placeholders": {
+      "streak": {
+        "type": "String"
+      }
+    }
+  },
+  "planActiveTime": "Active reading: {amount}",
+  "@planActiveTime": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "planPages": "{count, plural, one{{count} page} other{{count} pages}}",
+  "@planPages": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "planMinutes": "{count, plural, one{{count} minute} other{{count} minutes}}",
+  "@planMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "planAyahs": "{count, plural, one{{count} ayah} other{{count} ayahs}}",
+  "@planAyahs": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "planStreak": "{count, plural, one{{count} day in a row} other{{count} days in a row}}",
+  "@planStreak": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "decimalPattern"
+      }
+    }
+  }
 }

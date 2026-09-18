@@ -15,10 +15,7 @@ import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
 import 'audio_models.dart';
 
-const _approvedAudioAssetHosts = <String>{
-  'media.staging.iqro.forum',
-  'media.iqro.forum',
-};
+const _approvedAudioAssetHosts = <String>{'media.iqro.forum'};
 const _audioPackageType = 'surah_audio';
 const _audioEdition = 'madani-hafs';
 const _audioQualities = <String>{'default', 'economy', 'standard', 'high'};

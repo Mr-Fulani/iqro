@@ -39,21 +39,12 @@ void main() {
     },
   );
 
-  test('production and staging hosts cannot be mixed', () {
+  test('production configuration rejects non-production hosts', () {
     expect(
       () => AppConfig.validate(
-        apiBaseUrl: 'https://staging.iqro.forum',
+        apiBaseUrl: 'https://example.com',
         fallbackDownloadUrl: 'https://iqro.forum',
         environment: 'production',
-        releaseMode: true,
-      ),
-      throwsFormatException,
-    );
-    expect(
-      () => AppConfig.validate(
-        apiBaseUrl: 'https://iqro.forum',
-        fallbackDownloadUrl: 'https://iqro.forum',
-        environment: 'staging',
         releaseMode: true,
       ),
       throwsFormatException,
@@ -62,17 +53,17 @@ void main() {
 
   test('API config rejects cleartext, credentials, ports and paths', () {
     for (final origin in <String>[
-      'http://staging.iqro.forum',
-      'https://user:secret@staging.iqro.forum',
-      'https://staging.iqro.forum:8443',
-      'https://staging.iqro.forum/api',
-      'https://staging.iqro.forum?token=secret',
+      'http://iqro.forum',
+      'https://user:secret@iqro.forum',
+      'https://iqro.forum:8443',
+      'https://iqro.forum/api',
+      'https://iqro.forum?token=secret',
     ]) {
       expect(
         () => AppConfig.validate(
           apiBaseUrl: origin,
           fallbackDownloadUrl: 'https://iqro.forum',
-          environment: 'staging',
+          environment: 'production',
           releaseMode: false,
         ),
         throwsFormatException,

@@ -9,6 +9,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/mini_player.dart';
 import 'mushaf_offline_repository.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
@@ -65,7 +66,10 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       ),
       body: IqroPage(
         scrollable: false,
-        padding: iqroRootTabPadding(playerActive: playerActive),
+        padding: iqroRootTabPadding(
+          playerActive: playerActive,
+          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+        ),
         child: Column(
           children: <Widget>[
             IqroCard(

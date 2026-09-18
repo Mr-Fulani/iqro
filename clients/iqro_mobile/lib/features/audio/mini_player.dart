@@ -7,8 +7,10 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
-import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
+import 'reciter_portraits.dart';
+
+final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({super.key});
@@ -36,102 +38,146 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurah = player.track?.surah;
     final reciter = player.reciter;
-    final reciters = reciter == null
-        ? null
-        : ref.watch(recitersProvider).valueOrNull;
+    final catalog = ref.watch(recitersProvider).valueOrNull;
     final portraitUrl = reciter == null
         ? null
         : resolveReciterPortraitUrl(
             reciter,
-            apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
-            reciters: reciters,
+            apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+            reciters: catalog,
           );
     final controlsEnabled =
         player.track != null && !player.buffering && !_changingSurah;
+    final collapsed = ref.watch(miniPlayerCollapsedProvider);
+    void setCollapsed(bool value) {
+      ref.read(miniPlayerCollapsedProvider.notifier).state = value;
+    }
+
     return SafeArea(
       top: false,
       bottom: false,
       child: Padding(
         padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(17),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: const Color(0x52030F0C),
-              borderRadius: BorderRadius.circular(17),
-              border: Border.all(color: Colors.white.withValues(alpha: .16)),
-            ),
-            child: ListTile(
-              minTileHeight: 66,
-              contentPadding: const EdgeInsetsDirectional.fromSTEB(8, 0, 6, 0),
-              leading: _MiniPlayerPortrait(
-                portraitUrl: portraitUrl,
-                name: reciter?.nameFor(locale) ?? '',
+        child: _CollapsiblePlayer(
+          collapsed: collapsed,
+          onExpand: () => setCollapsed(false),
+          playing: player.playing,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0x52030F0C),
+                borderRadius: BorderRadius.circular(17),
+                border: Border.all(color: Colors.white.withValues(alpha: .16)),
               ),
-              title: Text(
-                player.track == null
-                    ? context.l10n.audioTitle
-                    : player.surahName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+              child: ListTile(
+                minTileHeight: 66,
+                contentPadding: const EdgeInsetsDirectional.fromSTEB(
+                  8,
+                  0,
+                  6,
+                  0,
+                ),
+                leading: SizedBox(
+                  width: 96,
+                  child: Row(
+                    children: <Widget>[
+                      PremiumReciterPortrait(
+                        url: portraitUrl,
+                        size: 44,
+                        initials: reciter?.initials,
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        key: const ValueKey('mini-player-collapse'),
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).expandedIconTapHint,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 44,
+                          height: 44,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: .12),
+                          foregroundColor: Colors.white,
+                          shape: const CircleBorder(),
+                        ),
+                        onPressed: () => setCollapsed(true),
+                        icon: const Icon(
+                          Icons.keyboard_double_arrow_down_rounded,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                title: Text(
+                  player.track == null
+                      ? context.l10n.audioTitle
+                      : player.surahName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(
+                  reciter?.nameFor(locale) ?? context.l10n.chooseReciter,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white.withValues(alpha: .68)),
+                ),
+                trailing: SizedBox(
+                  width: 144,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      _MiniPlayerControl(
+                        tooltip: context.l10n.previousSurah,
+                        icon: Icons.skip_previous_rounded,
+                        onPressed:
+                            controlsEnabled &&
+                                currentSurah != null &&
+                                currentSurah > 1
+                            ? () => _changeSurah(-1)
+                            : null,
+                      ),
+                      _MiniPlayerControl(
+                        tooltip: player.playing
+                            ? context.l10n.pause
+                            : context.l10n.play,
+                        icon: player.playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        emphasized: true,
+                        loading: player.buffering || _changingSurah,
+                        onPressed: player.track == null
+                            ? () => context.push('/app?tab=3')
+                            : controlsEnabled
+                            ? () => ref
+                                  .read(audioControllerProvider.notifier)
+                                  .toggle()
+                            : null,
+                      ),
+                      _MiniPlayerControl(
+                        tooltip: context.l10n.nextSurah,
+                        icon: Icons.skip_next_rounded,
+                        onPressed:
+                            controlsEnabled &&
+                                currentSurah != null &&
+                                currentSurah < 114
+                            ? () => _changeSurah(1)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+                onTap: () => context.push(
+                  player.track == null ? '/app?tab=3' : '/player',
                 ),
               ),
-              subtitle: Text(
-                reciter?.nameFor(locale) ?? context.l10n.chooseReciter,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.white.withValues(alpha: .68)),
-              ),
-              trailing: SizedBox(
-                width: 144,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    _MiniPlayerControl(
-                      tooltip: context.l10n.previousSurah,
-                      icon: Icons.skip_previous_rounded,
-                      onPressed:
-                          controlsEnabled &&
-                              currentSurah != null &&
-                              currentSurah > 1
-                          ? () => _changeSurah(-1)
-                          : null,
-                    ),
-                    _MiniPlayerControl(
-                      tooltip: player.playing
-                          ? context.l10n.pause
-                          : context.l10n.play,
-                      icon: player.playing
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      emphasized: true,
-                      loading: player.buffering || _changingSurah,
-                      onPressed: player.track == null
-                          ? () => context.push('/app?tab=3')
-                          : controlsEnabled
-                          ? () => ref
-                                .read(audioControllerProvider.notifier)
-                                .toggle()
-                          : null,
-                    ),
-                    _MiniPlayerControl(
-                      tooltip: context.l10n.nextSurah,
-                      icon: Icons.skip_next_rounded,
-                      onPressed:
-                          controlsEnabled &&
-                              currentSurah != null &&
-                              currentSurah < 114
-                          ? () => _changeSurah(1)
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-              onTap: () =>
-                  context.push(player.track == null ? '/app?tab=3' : '/player'),
             ),
           ),
         ),
@@ -222,22 +268,6 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
   }
 }
 
-class _MiniPlayerPortrait extends StatelessWidget {
-  const _MiniPlayerPortrait({required this.portraitUrl, required this.name});
-
-  final String? portraitUrl;
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      image: true,
-      label: name,
-      child: PremiumReciterPortrait(url: portraitUrl, size: 48),
-    );
-  }
-}
-
 class _MiniPlayerControl extends StatelessWidget {
   const _MiniPlayerControl({
     required this.tooltip,
@@ -277,6 +307,108 @@ class _MiniPlayerControl extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(icon, size: emphasized ? 25 : 23),
+    );
+  }
+}
+
+class _CollapsiblePlayer extends StatelessWidget {
+  const _CollapsiblePlayer({
+    required this.collapsed,
+    required this.onExpand,
+    required this.playing,
+    required this.child,
+  });
+
+  final bool collapsed;
+  final VoidCallback onExpand;
+  final bool playing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) => TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: collapsed ? 1 : 0),
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 420),
+        curve: Curves.easeInOutCubicEmphasized,
+        child: child,
+        builder: (context, progress, panel) {
+          final width = constraints.maxWidth;
+          return Align(
+            alignment: AlignmentDirectional.bottomEnd,
+            heightFactor: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(17 + 9 * progress),
+              child: SizedBox(
+                width: width + (60 - width) * progress,
+                height: 66 + (60 - 66) * progress,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ExcludeSemantics(
+                      excluding: collapsed,
+                      child: IgnorePointer(
+                        ignoring: collapsed,
+                        child: OverflowBox(
+                          alignment: AlignmentDirectional.bottomEnd,
+                          minWidth: width,
+                          maxWidth: width,
+                          minHeight: 66,
+                          maxHeight: 66,
+                          child: Opacity(
+                            opacity: (1 - progress).clamp(0.0, 1.0),
+                            child: panel,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ExcludeSemantics(
+                      excluding: !collapsed,
+                      child: IgnorePointer(
+                        ignoring: !collapsed,
+                        child: Opacity(
+                          opacity: ((progress - .2) / .8).clamp(0.0, 1.0),
+                          child: Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: SizedBox.square(
+                              dimension: 60,
+                              child: IconButton.filled(
+                                key: const ValueKey('mini-player-expand'),
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).collapsedIconTapHint,
+                                onPressed: onExpand,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  shape: const CircleBorder(),
+                                ),
+                                icon: Icon(
+                                  playing
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  size: playing ? 34 : 38,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

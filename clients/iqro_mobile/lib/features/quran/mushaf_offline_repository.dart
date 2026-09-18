@@ -18,10 +18,7 @@ import 'quran_models.dart';
 import 'mushaf_edition.dart';
 
 const _mushafEdition = 'kfgqpc-hafs';
-const _approvedMushafAssetHosts = <String>{
-  'media.staging.iqro.forum',
-  'media.iqro.forum',
-};
+const _approvedMushafAssetHosts = <String>{'media.iqro.forum'};
 
 enum MushafDownloadStatus { notDownloaded, downloading, ready, failed }
 

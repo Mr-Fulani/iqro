@@ -25,7 +25,9 @@ class AudioRepository {
   void clearPlaybackCache() => _playbackMemory.clear();
 
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async {
-    const key = 'audio:reciters';
+    // Bump the local catalog cache after portrait metadata was introduced.
+    // Existing devices otherwise retain a stale list for up to twelve hours.
+    const key = 'audio:reciters:v2';
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
       return parseReciters(cached!.value);
@@ -84,7 +86,8 @@ class AudioRepository {
     bool forceRefresh = false,
   }) async {
     final suffix = reciterId == null ? 'all' : 'reciter:$reciterId';
-    final key = 'audio:recitations:madani-hafs:$suffix';
+    // Keep recitation availability in sync with the refreshed reciter catalog.
+    final key = 'audio:recitations:v2:madani-hafs:$suffix';
     if (!forceRefresh) {
       final memory = _recitationMemory[key];
       if (memory != null) return memory;

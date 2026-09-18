@@ -7,8 +7,15 @@ extension LocalizationContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
-EdgeInsetsDirectional iqroRootTabPadding({required bool playerActive}) =>
-    EdgeInsetsDirectional.fromSTEB(16, 8, 16, playerActive ? 148 : 76);
+EdgeInsetsDirectional iqroRootTabPadding({
+  required bool playerActive,
+  bool playerCollapsed = false,
+}) => EdgeInsetsDirectional.fromSTEB(
+  16,
+  8,
+  16,
+  playerActive && !playerCollapsed ? 148 : 76,
+);
 
 class IqroPage extends StatelessWidget {
   const IqroPage({
