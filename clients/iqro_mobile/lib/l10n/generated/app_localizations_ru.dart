@@ -1315,4 +1315,171 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mushafPageCaching =>
       'Страницы загружаются по мере чтения. Открытые страницы и их шрифты сохраняются на устройстве и доступны без интернета.';
+
+  @override
+  String get planCreditedToday => 'Сегодня засчитано';
+
+  @override
+  String get planGoalLabel => 'Цель на день';
+
+  @override
+  String get planEditGoal => 'Изменить цель';
+
+  @override
+  String get planGoalReached => 'Дневная цель достигнута';
+
+  @override
+  String planRemainingAmount(String amount) {
+    return 'До цели осталось: $amount';
+  }
+
+  @override
+  String planGoalAmount(String amount) {
+    return 'Цель: $amount';
+  }
+
+  @override
+  String planCreditedAmount(String amount) {
+    return 'Засчитано: $amount';
+  }
+
+  @override
+  String get planManualEntry => 'Добавить прочитанное вручную';
+
+  @override
+  String get planManualHelp =>
+      'Добавьте чтение, которое ещё не было учтено. Это увеличит сегодняшний прогресс, а не дневную цель.';
+
+  @override
+  String get planHowCounted => 'Как считается прогресс';
+
+  @override
+  String get planPagesHelp =>
+      'При переходе на следующую страницу в читалке страница засчитывается автоматически. Ручные записи тоже учитываются. Перелистывание не подтверждает, что страница прочитана.';
+
+  @override
+  String get planMinutesHelp =>
+      'Активное время в читалке учитывается автоматически. Минуты, добавленные вручную, тоже входят в прогресс.';
+
+  @override
+  String get planAyahsHelp =>
+      'Последовательное продвижение по аятам в читалке учитывается автоматически. Аяты, добавленные вручную, тоже входят в прогресс.';
+
+  @override
+  String get planDailyHelp =>
+      'Прогресс считается отдельно за каждый день. Смена цели его не обнуляет; предыдущие дни остаются в истории.';
+
+  @override
+  String get planResetHelp =>
+      'Отметки после намаза можно уменьшить кнопкой «−». Обнуление всего прогресса за сегодня на этом экране пока недоступно.';
+
+  @override
+  String get planPrayerTitle => 'Чтение после намаза';
+
+  @override
+  String get planPrayerSummary =>
+      'Страницы, отмеченные вами за сегодня. Это выполненное чтение, а не цель.';
+
+  @override
+  String get planEditPrayer => 'Изменить отметки за сегодня';
+
+  @override
+  String get planPrayerInstructions =>
+      'Отмечайте страницы, прочитанные после каждого намаза. «+» добавляет одну страницу, «−» убирает одну. Ноль означает, что страницы не отмечены.';
+
+  @override
+  String planRemovePage(String prayer) {
+    return 'Убрать одну страницу: $prayer';
+  }
+
+  @override
+  String planAddPage(String prayer) {
+    return 'Добавить одну страницу: $prayer';
+  }
+
+  @override
+  String get planUnavailable =>
+      'Не удалось обновить план. Показан сохранённый прогресс; изменения станут доступны после успешного обновления.';
+
+  @override
+  String get planGoalHint =>
+      'Выберите дневную цель в минутах, страницах или аятах. Это настройка цели, а не запись прочитанного.';
+
+  @override
+  String planBestStreak(String streak) {
+    return 'Лучшая серия: $streak';
+  }
+
+  @override
+  String planActiveTime(String amount) {
+    return 'Активное чтение: $amount';
+  }
+
+  @override
+  String planPages(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString страницы',
+      many: '$countString страниц',
+      few: '$countString страницы',
+      one: '$countString страница',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planMinutes(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString минуты',
+      many: '$countString минут',
+      few: '$countString минуты',
+      one: '$countString минута',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAyahs(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString аята',
+      many: '$countString аятов',
+      few: '$countString аята',
+      one: '$countString аят',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planStreak(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString дня подряд',
+      many: '$countString дней подряд',
+      few: '$countString дня подряд',
+      one: '$countString день подряд',
+    );
+    return '$_temp0';
+  }
 }

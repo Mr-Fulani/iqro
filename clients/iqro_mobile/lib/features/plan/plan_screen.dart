@@ -8,6 +8,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/mini_player.dart';
 import 'plan_repository.dart';
 
 class PlanScreen extends ConsumerWidget {
@@ -50,100 +51,30 @@ class PlanScreen extends ConsumerWidget {
           },
         ),
         data: (value) {
-          final remaining = (value.target - value.achieved).clamp(
-            0.0,
-            value.target,
-          );
           return IqroPage(
-            padding: iqroRootTabPadding(playerActive: playerActive),
+            padding: iqroRootTabPadding(
+              playerActive: playerActive,
+              playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 if (value.fromCache) ...<Widget>[
                   IqroStatusBanner(
                     icon: Icons.cloud_off_outlined,
-                    title: context.l10n.offlineUsingCache,
+                    title: context.l10n.planUnavailable,
                     actionLabel: context.l10n.retry,
                     onAction: canMutate ? controller.reload : null,
                   ),
                   const SizedBox(height: 12),
                 ],
-                IqroCard(
-                  color: context.iqroColors.ink,
-                  borderColor: Colors.transparent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: IqroEyebrow(
-                              context.l10n.dailyGoal,
-                              light: true,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: context.l10n.dailyGoal,
-                            color: Colors.white,
-                            onPressed: !canMutate || value.fromCache
-                                ? null
-                                : () => _editGoal(
-                                    context,
-                                    ref,
-                                    controller,
-                                    scope,
-                                    value,
-                                  ),
-                            icon: const Icon(Icons.edit_outlined),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          Text(
-                            _formatAmount(value.achieved),
-                            style: Theme.of(context).textTheme.displaySmall
-                                ?.copyWith(color: Colors.white),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.only(
-                                start: 4,
-                                bottom: 4,
-                              ),
-                              child: Text(
-                                '/ ${_formatAmount(value.target)} '
-                                '${_metricLabel(context, value.metric)}',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: .7),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      LinearProgressIndicator(
-                        value: value.target == 0
-                            ? 0
-                            : (value.achieved / value.target).clamp(0.0, 1.0),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${context.l10n.remaining}: '
-                        '${_formatAmount(remaining)} '
-                        '${_metricLabel(context, value.metric)}',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: .72),
-                        ),
-                      ),
-                    ],
-                  ),
+                _DailyProgressCard(
+                  plan: value,
+                  onEdit: !canMutate || value.fromCache
+                      ? null
+                      : () => _editGoal(context, ref, controller, scope, value),
                 ),
+                _ProgressExplanation(metric: value.metric),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -158,15 +89,22 @@ class PlanScreen extends ConsumerWidget {
                             value.metric,
                           ),
                     icon: const Icon(Icons.add),
-                    label: Text(context.l10n.manualEntry),
+                    label: Text(context.l10n.planManualEntry),
                   ),
                 ),
                 const SizedBox(height: 24),
-                IqroSectionHeader(
-                  title: context.l10n.afterPrayerPlan,
-                  eyebrow: context.l10n.yourRhythm,
+                IqroSectionHeader(title: context.l10n.planPrayerTitle),
+                const SizedBox(height: 8),
+                Text(context.l10n.planPrayerSummary),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => context.push('/after-prayer'),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(context.l10n.planEditPrayer),
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 IqroCard(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -184,7 +122,7 @@ class PlanScreen extends ConsumerWidget {
                           ),
                           title: Text(_prayerName(context, entry.key)),
                           trailing: Text(
-                            '${entry.value} ${context.l10n.pages}',
+                            context.l10n.planPages(entry.value),
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                         ),
@@ -306,11 +244,11 @@ class PlanScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                context.l10n.manualEntry,
+                context.l10n.planManualEntry,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 4),
-              Text(_metricLabel(context, metric)),
+              Text(context.l10n.planManualHelp),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
@@ -318,7 +256,7 @@ class PlanScreen extends ConsumerWidget {
                 children: <Widget>[
                   for (final amount in _manualAmounts(metric))
                     ActionChip(
-                      label: Text('+$amount'),
+                      label: Text(_metricAmount(context, metric, amount)),
                       onPressed: () => Navigator.pop(context, amount),
                     ),
                 ],
@@ -352,6 +290,139 @@ class PlanScreen extends ConsumerWidget {
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
 }
+
+class _DailyProgressCard extends StatelessWidget {
+  const _DailyProgressCard({required this.plan, required this.onEdit});
+  final DailyPlan plan;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final reached = plan.target > 0 && plan.achieved >= plan.target;
+    final remaining = (plan.target - plan.achieved).clamp(0, plan.target);
+    return IqroCard(
+      color: context.iqroColors.ink,
+      borderColor: Colors.transparent,
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(color: Colors.white),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.planCreditedToday,
+              style: textTheme.titleMedium?.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _metricAmount(context, plan.metric, plan.achieved),
+              style: textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontFamily: textTheme.bodyLarge?.fontFamily,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Divider(color: Colors.white.withValues(alpha: .24)),
+            const SizedBox(height: 12),
+            Text(context.l10n.planGoalLabel),
+            const SizedBox(height: 4),
+            Text(
+              _metricAmount(context, plan.metric, plan.target),
+              style: textTheme.titleLarge?.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white.withValues(alpha: .5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 0,
+                  vertical: 12,
+                ),
+                minimumSize: const Size(48, 48),
+              ),
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              label: Text(context.l10n.planEditGoal),
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: plan.target <= 0
+                  ? 0
+                  : (plan.achieved / plan.target).clamp(0.0, 1.0),
+              minHeight: 6,
+              color: Colors.white,
+              backgroundColor: Colors.white.withValues(alpha: .22),
+              borderRadius: BorderRadius.circular(4),
+              semanticsLabel: context.l10n.planGoalLabel,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (reached) ...[
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    reached
+                        ? context.l10n.planGoalReached
+                        : context.l10n.planRemainingAmount(
+                            _metricAmount(context, plan.metric, remaining),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressExplanation extends StatelessWidget {
+  const _ProgressExplanation({required this.metric});
+  final ReadingGoalMetric metric;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: const EdgeInsets.only(bottom: 16),
+    shape: const Border(),
+    collapsedShape: const Border(),
+    title: Text(
+      context.l10n.planHowCounted,
+      style: Theme.of(context).textTheme.titleSmall,
+    ),
+    children: [
+      Text(switch (metric) {
+        ReadingGoalMetric.pages => context.l10n.planPagesHelp,
+        ReadingGoalMetric.minutes => context.l10n.planMinutesHelp,
+        ReadingGoalMetric.ayahs => context.l10n.planAyahsHelp,
+      }),
+      const SizedBox(height: 12),
+      Text(context.l10n.planDailyHelp),
+      const SizedBox(height: 12),
+      Text(context.l10n.planResetHelp),
+    ],
+  );
+}
+
+String _metricAmount(
+  BuildContext context,
+  ReadingGoalMetric metric,
+  num amount,
+) => switch (metric) {
+  ReadingGoalMetric.pages => context.l10n.planPages(amount),
+  ReadingGoalMetric.minutes => context.l10n.planMinutes(amount),
+  ReadingGoalMetric.ayahs => context.l10n.planAyahs(amount),
+};
 
 class _GoalDraft {
   const _GoalDraft(this.metric, this.target);
@@ -392,61 +463,65 @@ class _GoalEditorState extends State<_GoalEditor> {
           20,
           20 + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              context.l10n.dailyGoal,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                for (final metric in ReadingGoalMetric.values)
-                  ChoiceChip(
-                    label: Text(_metricLabel(context, metric)),
-                    selected: _metric == metric,
-                    onSelected: (_) => setState(() {
-                      _metric = metric;
-                      _error = null;
-                    }),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _target,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: context.l10n.dailyGoal,
-                suffixText: _metricLabel(context, _metric),
-                errorText: _error,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                context.l10n.planEditGoal,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              onSubmitted: (_) => _save(),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(context.l10n.cancel),
-                  ),
+              const SizedBox(height: 8),
+              Text(context.l10n.planGoalHint),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final metric in ReadingGoalMetric.values)
+                    ChoiceChip(
+                      label: Text(_metricLabel(context, metric)),
+                      selected: _metric == metric,
+                      onSelected: (_) => setState(() {
+                        _metric = metric;
+                        _error = null;
+                      }),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _target,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: context.l10n.dailyGoal,
+                  suffixText: _metricLabel(context, _metric),
+                  errorText: _error,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _save,
-                    child: Text(context.l10n.save),
+                onSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(context.l10n.cancel),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: Text(context.l10n.save),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -481,13 +556,10 @@ class _StreakCard extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              '${plan.streak} ${context.l10n.today.toLowerCase()}',
-              style: Theme.of(context).textTheme.titleMedium,
+              '${context.l10n.planStreak(plan.streak)}\n'
+              '${context.l10n.planBestStreak(context.l10n.planStreak(plan.longestStreak))}',
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-          ),
-          Text(
-            '★ ${plan.longestStreak}',
-            style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
       ),
@@ -517,40 +589,58 @@ class _HistoryCard extends StatelessWidget {
               ? '—'
               : DateFormat.MMMEd(locale).format(day.localDate!),
         ),
-        subtitle: day.automaticSeconds <= 0
-            ? null
-            : Text(
-                '${(day.automaticSeconds / 60).ceil()} ${context.l10n.minutes}',
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (metric != null) ...[
+              Text(
+                context.l10n.planCreditedAmount(
+                  _metricAmount(context, metric, day.achieved),
+                ),
               ),
-        trailing: metric == null
-            ? const Text('—')
-            : Text(
-                '${_formatAmount(day.achieved)} / '
-                '${_formatAmount(day.target)} '
-                '${_metricLabel(context, metric)}',
-                style: Theme.of(context).textTheme.titleSmall,
+              Text(
+                context.l10n.planGoalAmount(
+                  _metricAmount(context, metric, day.target),
+                ),
               ),
+            ],
+            if (day.automaticSeconds > 0)
+              Text(
+                context.l10n.planActiveTime(
+                  context.l10n.planMinutes((day.automaticSeconds / 60).floor()),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class AfterPrayerScreen extends ConsumerWidget {
+class AfterPrayerScreen extends ConsumerStatefulWidget {
   const AfterPrayerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AfterPrayerScreen> createState() => _AfterPrayerScreenState();
+}
+
+class _AfterPrayerScreenState extends ConsumerState<AfterPrayerScreen> {
+  String? _savingPrayer;
+
+  @override
+  Widget build(BuildContext context) {
     final plan = ref.watch(planProvider);
     final database = ref.watch(localDatabaseProvider);
     final accountKey = ref.watch(activeAccountScopeKeyProvider);
     final scope = database.accountScope.current;
     final controller = ref.read(planProvider.notifier);
     final canMutate =
+        _savingPrayer == null &&
         scope != null &&
         accountKey == accountScopeKey(scope) &&
         controller.isBoundTo(scope);
     return Scaffold(
-      appBar: IqroTopBar(title: context.l10n.afterPrayerPlan),
+      appBar: IqroTopBar(title: context.l10n.planPrayerTitle),
       body: plan.when(
         loading: () => const IqroLoading(),
         error: (error, stack) => IqroAsyncError(
@@ -560,73 +650,49 @@ class AfterPrayerScreen extends ConsumerWidget {
           },
         ),
         data: (value) => IqroPage(
+          padding: iqroRootTabPadding(
+            playerActive: ref.watch(
+              audioControllerProvider.select((state) => state.active),
+            ),
+            playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              Text(context.l10n.planPrayerInstructions),
+              const SizedBox(height: 16),
               if (value.fromCache) ...<Widget>[
                 IqroStatusBanner(
                   icon: Icons.cloud_off_outlined,
-                  title: context.l10n.offlineUsingCache,
+                  title: context.l10n.planUnavailable,
+                  actionLabel: context.l10n.retry,
+                  onAction: canMutate ? controller.reload : null,
                 ),
                 const SizedBox(height: 12),
               ],
               for (final entry in value.prayerPages.entries)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: IqroCard(
-                    child: Row(
-                      children: <Widget>[
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: context.iqroColors.sand,
-                            borderRadius: BorderRadius.circular(15),
+                  child: _PrayerCheckInRow(
+                    prayer: _prayerName(context, entry.key),
+                    pages: entry.value,
+                    saving: _savingPrayer == entry.key,
+                    onMinus: entry.value <= 0 || !canMutate || value.fromCache
+                        ? null
+                        : () => _setPrayerPages(
+                            context,
+                            controller,
+                            entry.key,
+                            entry.value - 1,
                           ),
-                          child: Icon(
-                            Icons.mosque_outlined,
-                            color: context.iqroColors.gold,
+                    onPlus: entry.value >= 604 || !canMutate || value.fromCache
+                        ? null
+                        : () => _setPrayerPages(
+                            context,
+                            controller,
+                            entry.key,
+                            entry.value + 1,
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            _prayerName(context, entry.key),
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed:
-                              entry.value <= 0 || !canMutate || value.fromCache
-                              ? null
-                              : () => _setPrayerPages(
-                                  context,
-                                  controller,
-                                  entry.key,
-                                  entry.value - 1,
-                                ),
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        SizedBox(
-                          width: 28,
-                          child: Text(
-                            '${entry.value}',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: !canMutate || value.fromCache
-                              ? null
-                              : () => _setPrayerPages(
-                                  context,
-                                  controller,
-                                  entry.key,
-                                  entry.value + 1,
-                                ),
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
             ],
@@ -642,6 +708,8 @@ class AfterPrayerScreen extends ConsumerWidget {
     String prayer,
     int pages,
   ) async {
+    if (_savingPrayer != null) return;
+    setState(() => _savingPrayer = prayer);
     try {
       await controller.setPrayerPages(prayer, pages);
     } on Object {
@@ -649,8 +717,100 @@ class AfterPrayerScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+    } finally {
+      if (mounted) setState(() => _savingPrayer = null);
     }
   }
+}
+
+class _PrayerCheckInRow extends StatelessWidget {
+  const _PrayerCheckInRow({
+    required this.prayer,
+    required this.pages,
+    required this.saving,
+    required this.onMinus,
+    required this.onPlus,
+  });
+  final String prayer;
+  final int pages;
+  final bool saving;
+  final VoidCallback? onMinus;
+  final VoidCallback? onPlus;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final stack =
+            constraints.maxWidth < 280 ||
+            MediaQuery.textScalerOf(context).scale(16) > 21;
+        final title = Row(
+          children: [
+            Icon(
+              Icons.mosque_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                prayer,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        );
+        final controls = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: context.l10n.planRemovePage(prayer),
+              onPressed: onMinus,
+              icon: const Icon(Icons.remove_circle_outline),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 40),
+              child: saving
+                  ? const Center(
+                      child: SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : Text(
+                      '$pages',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+            ),
+            IconButton(
+              tooltip: context.l10n.planAddPage(prayer),
+              onPressed: onPlus,
+              icon: const Icon(Icons.add_circle_outline),
+            ),
+          ],
+        );
+        return stack
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  title,
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: controls,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: title),
+                  const SizedBox(width: 8),
+                  controls,
+                ],
+              );
+      },
+    ),
+  );
 }
 
 String _prayerName(BuildContext context, String code) => switch (code) {

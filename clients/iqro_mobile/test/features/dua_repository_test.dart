@@ -424,16 +424,16 @@ void main() {
     remote.onEntries = (_) => _page(<Object?>[_entryPayload(1)]);
     expect((await repository.entries('ru')).single.sourceNumber, 1);
 
-    final productionRemote = _FakeDuaRemote(
-      apiBaseUri: Uri.parse('https://iqro.forum/api/v1'),
+    final previewRemote = _FakeDuaRemote(
+      apiBaseUri: Uri.parse('https://preview.example.invalid/api/v1'),
     )..onEntries = (_) => _page(<Object?>[_entryPayload(2)]);
-    final productionRepository = DuaRepository(
+    final previewRepository = DuaRepository(
       database: database,
-      remote: productionRemote,
+      remote: previewRemote,
     );
 
-    expect((await productionRepository.entries('ru')).single.sourceNumber, 2);
-    expect(productionRemote.entryCalls, hasLength(1));
+    expect((await previewRepository.entries('ru')).single.sourceNumber, 2);
+    expect(previewRemote.entryCalls, hasLength(1));
     expect(await sqlDatabase.query('cache_entries'), hasLength(2));
   });
 
@@ -471,11 +471,11 @@ void main() {
   test('never follows an untrusted pagination URL', () async {
     final invalidLinks = <String>[
       'https://evil.example/api/v1/dua/entries?cursor=stolen',
-      'https://staging.iqro.forum/api/v1/accounts?cursor=wrong-path',
-      'https://staging.iqro.forum/api/v1/dua/entries?cursor=one&cursor=two',
-      'https://staging.iqro.forum/api/v1/dua/entries?language=ru',
-      'https://user@staging.iqro.forum/api/v1/dua/entries?cursor=user-info',
-      'https://staging.iqro.forum/api/v1/dua/entries?cursor=fragment#bad',
+      'https://iqro.forum/api/v1/accounts?cursor=wrong-path',
+      'https://iqro.forum/api/v1/dua/entries?cursor=one&cursor=two',
+      'https://iqro.forum/api/v1/dua/entries?language=ru',
+      'https://user@iqro.forum/api/v1/dua/entries?cursor=user-info',
+      'https://iqro.forum/api/v1/dua/entries?cursor=fragment#bad',
     ];
 
     for (final (index, link) in invalidLinks.indexed) {
@@ -800,8 +800,7 @@ class _FavoriteWrite {
 
 class _FakeDuaRemote implements DuaRemoteGateway {
   _FakeDuaRemote({Uri? apiBaseUri})
-    : _apiBaseUri =
-          apiBaseUri ?? Uri.parse('https://staging.iqro.forum/api/v1');
+    : _apiBaseUri = apiBaseUri ?? Uri.parse('https://iqro.forum/api/v1');
 
   final Uri _apiBaseUri;
 
@@ -948,7 +947,7 @@ Map<String, Object?> _categoryPayload({
 };
 
 String _nextUrl(String cursor, {String category = 'test'}) =>
-    Uri.https('staging.iqro.forum', '/api/v1/dua/entries', <String, String>{
+    Uri.https('iqro.forum', '/api/v1/dua/entries', <String, String>{
       'language': 'ru',
       'category': category,
       'page_size': '100',

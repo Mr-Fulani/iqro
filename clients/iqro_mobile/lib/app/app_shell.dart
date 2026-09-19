@@ -38,25 +38,34 @@ class _AppShellState extends ConsumerState<AppShell> {
       audioControllerProvider.select((value) => value.active),
     );
     return Scaffold(
-      extendBody: widget.child == null,
-      body:
+      extendBody: true,
+      body: Stack(
+        children: <Widget>[
           widget.child ??
-          IqroLazyIndexedStack(
-            index: _index,
-            builders: <WidgetBuilder>[
-              (_) => const HomeScreen(),
-              (_) => const QuranScreen(),
-              (_) => const PlanScreen(),
-              (_) => const AudioScreen(),
-              (_) => const MoreScreen(),
-            ],
-          ),
+              IqroLazyIndexedStack(
+                index: _index,
+                builders: <WidgetBuilder>[
+                  (_) => const HomeScreen(),
+                  (_) => const QuranScreen(),
+                  (_) => const PlanScreen(),
+                  (_) => const AudioScreen(),
+                  (_) => const MoreScreen(),
+                ],
+              ),
+          if (playerActive)
+            const PositionedDirectional(
+              start: 0,
+              end: 0,
+              bottom: 72,
+              child: IqroMiniPlayer(),
+            ),
+        ],
+      ),
       bottomNavigationBar: Material(
         color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (playerActive) const IqroMiniPlayer(),
             NavigationBar(
               backgroundColor: Theme.of(
                 context,

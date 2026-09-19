@@ -70,12 +70,11 @@ HTTP разрешён только для local/debug и локальных ад
 растровые наборы сохраняют прежние проверки WebP и установку полного офлайн-пакета.
 [Каталог макетов и проверка](../../docs/quran-foundation-mushafs.md).
 
-## Тестовый APK
+## Локальный debug APK
 
 ```bash
 flutter build apk --debug \
-  --dart-define=API_BASE_URL=https://staging.iqro.forum \
-  --dart-define=APP_ENV=staging
+  --dart-define=APP_ENV=local
 
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
@@ -134,9 +133,6 @@ Workmanager пока намеренно не меняет аккаунтные �
 Отдельные flavors не нужны: один и тот же код компилируется с явной конфигурацией.
 
 ```bash
-# Тестовый сервер
-make mobile-android-staging
-
 # Production AAB; без keystore получится только неподписанный compile-check
 make mobile-android-production
 
@@ -144,20 +140,19 @@ make mobile-android-production
 make mobile-ios-production
 ```
 
-`APP_ENV=staging` принимает только `https://staging.iqro.forum`, а
-`APP_ENV=production` — только `https://iqro.forum`. Это исключает случайный релиз,
-направленный не в то окружение.
+`APP_ENV=production` принимает только `https://iqro.forum`. Debug-сборка использует
+локальный API; на Android-эмуляторе это `http://10.0.2.2:8000`, на iOS Simulator —
+`http://127.0.0.1:8000`.
 
 ## Проверки
 
 ```bash
 make mobile-check
-make mobile-android-staging
 ```
 
 Mobile CI закреплён на Flutter 3.41.4, проверяет lock-файлы, форматирование,
-сгенерированные локализации, анализ, тесты, staging APK, production AAB и production
-iPhone/iPad compile на Xcode 26.3. Gradle wrapper хранится в Git, а JAR и дистрибутив
+сгенерированные локализации, анализ и тесты. Production AAB и iPhone/iPad compile
+проверяются отдельными release-задачами. Gradle wrapper хранится в Git, а JAR и дистрибутив
 проверяются официальными SHA-256.
 
 ## Архитектура
@@ -273,8 +268,8 @@ FileImage использует общий кэш декодированной с
 profile APK собран и установлен на Redmi Note 7. На устройстве проверены выделение,
 плавающие панели, удержание для подробностей с исходным начертанием и обратный
 поворот landscape → portrait; автоповорот после проверки восстановлен.
-На том прогоне реальное воспроизведение не было подтверждено: публичный staging endpoint
-`/api/v1/recitations?quran_edition=madani-hafs&page_size=100` вернул пустой `results`.
+На том прогоне реальное воспроизведение не было подтверждено: прежнее тестовое окружение
+вернуло пустой `results` для каталога чтецов.
 
 Повторная проверка 2026-09-06 после коммита `09fe96f`: восстановлена привязка аудио
 к активному корпусу `1.0.3`, без удаления чтецов, портретов или старых релизов. API вернул
@@ -310,8 +305,8 @@ Flutter startup trace
 framework после неё. PSS составил около 138 МБ на Home, 181 МБ после десяти перелистываний
 Мусхафа и 168 МБ в развёрнутом плеере во время реального playback. Android MediaSession при
 этом оставался active/playing с корректными сурой, чтецом, позицией и скоростью; в сценарии не
-обнаружено Flutter fatal error, overflow или ANR. Воспроизводимый профильный APK собирается
-командой `make mobile-android-profile-staging`.
+обнаружено Flutter fatal error, overflow или ANR. Для воспроизводимой локальной проверки
+используется debug APK с `APP_ENV=local`.
 Корневая навигация также создаёт вкладки лениво: на старте строится только Home, а Quran,
 План, Audio и More впервые создаются при открытии. После первого посещения их состояние
 сохраняется, поэтому оптимизация не сбрасывает экран и одновременно не запускает невидимые

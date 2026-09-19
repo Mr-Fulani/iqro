@@ -12,9 +12,9 @@ import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/calendar/calendar_catalog.dart';
 
 const config = AppConfig(
-  apiBaseUrl: 'https://staging.iqro.forum',
+  apiBaseUrl: 'https://iqro.forum',
   fallbackDownloadUrl: 'https://iqro.forum',
-  environment: 'staging',
+  environment: 'production',
 );
 
 void main() {

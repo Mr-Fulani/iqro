@@ -1312,4 +1312,139 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get mushafPageCaching =>
       'Sayfalar okudukça yüklenir. Açılan sayfalar ve yazı tipleri cihazda saklanır ve çevrimdışı kullanılabilir.';
+
+  @override
+  String get planCreditedToday => 'Bugün kaydedilen';
+
+  @override
+  String get planGoalLabel => 'Günlük hedef';
+
+  @override
+  String get planEditGoal => 'Hedefi değiştir';
+
+  @override
+  String get planGoalReached => 'Günlük hedefe ulaşıldı';
+
+  @override
+  String planRemainingAmount(String amount) {
+    return 'Hedefe kalan: $amount';
+  }
+
+  @override
+  String planGoalAmount(String amount) {
+    return 'Hedef: $amount';
+  }
+
+  @override
+  String planCreditedAmount(String amount) {
+    return 'Kaydedilen: $amount';
+  }
+
+  @override
+  String get planManualEntry => 'Okumayı elle ekle';
+
+  @override
+  String get planManualHelp =>
+      'Henüz sayılmamış okumayı ekleyin. Bu, günlük hedefinizi değil bugünkü ilerlemenizi artırır.';
+
+  @override
+  String get planHowCounted => 'İlerleme nasıl hesaplanır';
+
+  @override
+  String get planPagesHelp =>
+      'Okuyucuda sonraki sayfaya geçmek otomatik olarak bir sayfa ekler. Elle girilen kayıtlar da sayılır. Sayfa çevirmek, sayfayı okuduğunuzu doğrulamaz.';
+
+  @override
+  String get planMinutesHelp =>
+      'Okuyucuda etkin geçirilen süre otomatik sayılır. Elle eklenen dakikalar da ilerlemeye dahildir.';
+
+  @override
+  String get planAyahsHelp =>
+      'Okuyucuda ayetler arasında sırayla ilerlemek otomatik sayılır. Elle eklenen ayetler de ilerlemeye dahildir.';
+
+  @override
+  String get planDailyHelp =>
+      'İlerleme her gün ayrı hesaplanır. Hedefi değiştirmek ilerlemeyi sıfırlamaz; önceki günler geçmişte kalır.';
+
+  @override
+  String get planResetHelp =>
+      'Namaz sonrası kayıtları − düğmesiyle azaltabilirsiniz. Bu ekranda bugünkü tüm ilerleme sıfırlanamaz.';
+
+  @override
+  String get planPrayerTitle => 'Namaz sonrası okuma';
+
+  @override
+  String get planPrayerSummary =>
+      'Bugün işaretlediğiniz sayfalar. Bunlar hedef değil, tamamlanan okuma kayıtlarıdır.';
+
+  @override
+  String get planEditPrayer => 'Bugünkü kayıtları düzenle';
+
+  @override
+  String get planPrayerInstructions =>
+      'Her namazdan sonra okuduğunuz sayfaları işaretleyin. + bir sayfa ekler, − bir sayfa çıkarır. Sıfır, kayıt olmadığını gösterir.';
+
+  @override
+  String planRemovePage(String prayer) {
+    return 'Bir sayfa çıkar: $prayer';
+  }
+
+  @override
+  String planAddPage(String prayer) {
+    return 'Bir sayfa ekle: $prayer';
+  }
+
+  @override
+  String get planUnavailable =>
+      'Plan güncellenemedi. Kayıtlı ilerleme gösteriliyor; başarılı güncellemeden sonra değişiklik yapabilirsiniz.';
+
+  @override
+  String get planGoalHint =>
+      'Günlük hedefinizi dakika, sayfa veya ayet olarak seçin. Bu, hedef belirler; tamamlanan okumayı kaydetmez.';
+
+  @override
+  String planBestStreak(String streak) {
+    return 'En uzun seri: $streak';
+  }
+
+  @override
+  String planActiveTime(String amount) {
+    return 'Etkin okuma: $amount';
+  }
+
+  @override
+  String planPages(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString sayfa';
+  }
+
+  @override
+  String planMinutes(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString dakika';
+  }
+
+  @override
+  String planAyahs(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString ayet';
+  }
+
+  @override
+  String planStreak(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Üst üste $countString gün';
+  }
 }

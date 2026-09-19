@@ -58,6 +58,28 @@ void main() {
         );
         expect(find.text(l10n.audioTitle), findsOneWidget);
         expect(find.text(l10n.chooseReciter), findsOneWidget);
+        final collapse = find.byKey(const ValueKey('mini-player-collapse'));
+        final expand = find.byKey(const ValueKey('mini-player-expand'));
+        final expandedWidth = tester.getSize(find.byType(ListTile)).width;
+        await tester.tap(collapse);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        expect(tester.takeException(), isNull);
+        await tester.pumpAndSettle();
+        expect(tester.getSize(expand), const Size(60, 60));
+        expect(expand.hitTestable(), findsOneWidget);
+        expect(collapse.hitTestable(), findsNothing);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(IqroMiniPlayer)),
+        );
+        expect(container.read(miniPlayerCollapsedProvider), isTrue);
+        expect(find.text('tab=3'), findsNothing);
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isFalse);
+        expect(tester.getSize(find.byType(ListTile)).width, expandedWidth);
+        expect(collapse.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
         await tester.tap(find.byTooltip(l10n.play));
         await tester.pumpAndSettle();
         expect(find.text('tab=3'), findsOneWidget);

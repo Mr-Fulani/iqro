@@ -12,8 +12,13 @@ void main() {
       'lib/features/audio/mini_player.dart',
     ).readAsString();
 
-    expect(appShell, contains('const IqroMiniPlayer()'));
-    expect(mushaf, contains('IqroMiniPlayer()'));
+    expect(appShell, contains('child: IqroMiniPlayer()'));
+    expect(appShell, contains('const PositionedDirectional('));
+    expect(
+      appShell,
+      isNot(contains('if (playerActive) const IqroMiniPlayer()')),
+    );
+    expect(mushaf, contains('IqroMiniPlayer(allowCollapse: false)'));
     expect(mushaf, isNot(contains('_ReaderAudioPill')));
     expect(miniPlayer, isNot(contains('BackdropFilter')));
   });

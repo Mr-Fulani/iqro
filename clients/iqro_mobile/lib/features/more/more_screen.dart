@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/mini_player.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -21,7 +22,10 @@ class MoreScreen extends ConsumerWidget {
         subtitle: context.l10n.moreTools,
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: playerActive),
+        padding: iqroRootTabPadding(
+          playerActive: playerActive,
+          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

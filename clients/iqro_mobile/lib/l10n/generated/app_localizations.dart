@@ -2501,6 +2501,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pages load as you read. Opened pages and their fonts are saved on this device and remain available offline.'**
   String get mushafPageCaching;
+
+  /// No description provided for @planCreditedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Credited today'**
+  String get planCreditedToday;
+
+  /// No description provided for @planGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily target'**
+  String get planGoalLabel;
+
+  /// No description provided for @planEditGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Change target'**
+  String get planEditGoal;
+
+  /// No description provided for @planGoalReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily target reached'**
+  String get planGoalReached;
+
+  /// No description provided for @planRemainingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Left to reach your target: {amount}'**
+  String planRemainingAmount(String amount);
+
+  /// No description provided for @planGoalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Target: {amount}'**
+  String planGoalAmount(String amount);
+
+  /// No description provided for @planCreditedAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Credited: {amount}'**
+  String planCreditedAmount(String amount);
+
+  /// No description provided for @planManualEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reading manually'**
+  String get planManualEntry;
+
+  /// No description provided for @planManualHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reading that has not already been counted. This increases today’s progress; it does not change your target.'**
+  String get planManualHelp;
+
+  /// No description provided for @planHowCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'How progress is counted'**
+  String get planHowCounted;
+
+  /// No description provided for @planPagesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning to the next page in the reader adds a page automatically. Manual entries also count. Turning pages does not confirm that you have read them.'**
+  String get planPagesHelp;
+
+  /// No description provided for @planMinutesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Active time in the reader is counted automatically. Minutes added manually also count.'**
+  String get planMinutesHelp;
+
+  /// No description provided for @planAyahsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sequential progress through ayahs in the reader is counted automatically. Ayahs added manually also count.'**
+  String get planAyahsHelp;
+
+  /// No description provided for @planDailyHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress is counted separately for each day. Changing your target does not reset it; previous days stay in your history.'**
+  String get planDailyHelp;
+
+  /// No description provided for @planResetHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Use − to undo pages marked after prayer. This screen cannot reset all of today’s progress.'**
+  String get planResetHelp;
+
+  /// No description provided for @planPrayerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After-prayer reading'**
+  String get planPrayerTitle;
+
+  /// No description provided for @planPrayerSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages you marked today. These are completed entries, not a target.'**
+  String get planPrayerSummary;
+
+  /// No description provided for @planEditPrayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit today’s entries'**
+  String get planEditPrayer;
+
+  /// No description provided for @planPrayerInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark pages read after each prayer. + adds one page, − removes one. Zero means no pages are marked.'**
+  String get planPrayerInstructions;
+
+  /// No description provided for @planRemovePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove one page: {prayer}'**
+  String planRemovePage(String prayer);
+
+  /// No description provided for @planAddPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add one page: {prayer}'**
+  String planAddPage(String prayer);
+
+  /// No description provided for @planUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The plan could not be updated. Saved progress is shown; changes will be available after a successful refresh.'**
+  String get planUnavailable;
+
+  /// No description provided for @planGoalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your daily target in minutes, pages or ayahs. This sets a target; it does not record completed reading.'**
+  String get planGoalHint;
+
+  /// No description provided for @planBestStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Best streak: {streak}'**
+  String planBestStreak(String streak);
+
+  /// No description provided for @planActiveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Active reading: {amount}'**
+  String planActiveTime(String amount);
+
+  /// No description provided for @planPages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} page} other{{count} pages}}'**
+  String planPages(num count);
+
+  /// No description provided for @planMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} minute} other{{count} minutes}}'**
+  String planMinutes(num count);
+
+  /// No description provided for @planAyahs.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} ayah} other{{count} ayahs}}'**
+  String planAyahs(num count);
+
+  /// No description provided for @planStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day in a row} other{{count} days in a row}}'**
+  String planStreak(num count);
 }
 
 class _AppLocalizationsDelegate

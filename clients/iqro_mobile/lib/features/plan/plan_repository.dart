@@ -103,6 +103,8 @@ class DailyPlan {
     this.prayerCheckIns = const <String, PrayerReadingCheckIn>{},
     this.prayerPlanRevision,
     this.prayerPlanPages,
+    this.prayerTimezoneName,
+    this.prayerLocalDate,
     this.fromCache = false,
   });
 
@@ -126,6 +128,8 @@ class DailyPlan {
        prayerCheckIns = const <String, PrayerReadingCheckIn>{},
        prayerPlanRevision = null,
        prayerPlanPages = null,
+       prayerTimezoneName = null,
+       prayerLocalDate = null,
        fromCache = false;
 
   factory DailyPlan.fromJson(Map<String, Object?> json) {
@@ -145,6 +149,8 @@ class DailyPlan {
       goalRevision: (json['goal_revision'] as num?)?.toInt() ?? 0,
       timezoneName: json['timezone_name']?.toString() ?? 'UTC',
       localDate: json['local_date']?.toString() ?? '',
+      prayerTimezoneName: json['prayer_timezone_name']?.toString(),
+      prayerLocalDate: json['prayer_local_date']?.toString(),
       fromCache: json['from_cache'] == true,
     );
   }
@@ -200,6 +206,8 @@ class DailyPlan {
       prayerCheckIns: checkIns,
       prayerPlanRevision: (rawPlan?['revision'] as num?)?.toInt(),
       prayerPlanPages: (rawPlan?['pages_per_prayer'] as num?)?.toInt(),
+      prayerTimezoneName: prayer['timezone_name']?.toString(),
+      prayerLocalDate: prayer['local_date']?.toString(),
     );
   }
 
@@ -216,6 +224,8 @@ class DailyPlan {
   final Map<String, PrayerReadingCheckIn> prayerCheckIns;
   final int? prayerPlanRevision;
   final int? prayerPlanPages;
+  final String? prayerTimezoneName;
+  final String? prayerLocalDate;
   final bool fromCache;
 
   DailyPlan copyWith({
@@ -247,6 +257,8 @@ class DailyPlan {
     prayerCheckIns: prayerCheckIns ?? this.prayerCheckIns,
     prayerPlanRevision: prayerPlanRevision ?? this.prayerPlanRevision,
     prayerPlanPages: prayerPlanPages ?? this.prayerPlanPages,
+    prayerTimezoneName: prayerTimezoneName,
+    prayerLocalDate: prayerLocalDate,
     fromCache: fromCache ?? this.fromCache,
   );
 
@@ -260,6 +272,8 @@ class DailyPlan {
     'goal_revision': goalRevision,
     'timezone_name': timezoneName,
     'local_date': localDate,
+    'prayer_timezone_name': prayerTimezoneName,
+    'prayer_local_date': prayerLocalDate,
     'from_cache': fromCache,
   };
 }
@@ -644,7 +658,10 @@ class PlanRepository {
     }
     final scope = accountScope ?? await _database.captureAccount();
     final remote = _remote;
-    final current = await load(accountScope: scope);
+    // Mutations need current revisions; an offline snapshot is read-only.
+    final current = remote == null
+        ? await _loadLocal(scope)
+        : await _loadRemote(scope);
     if (remote == null) {
       final values = Map<String, int>.of(current.prayerPages)..[prayer] = pages;
       final next = current.copyWith(
@@ -656,9 +673,10 @@ class PlanRepository {
       await _storeLocal(next, scope);
       return next;
     }
-    final timezoneName = current.timezoneName.isEmpty
+    final prayerTimezone = current.prayerTimezoneName ?? current.timezoneName;
+    final timezoneName = prayerTimezone.isEmpty
         ? await _safeTimezone()
-        : current.timezoneName;
+        : prayerTimezone;
     var plan = current;
     if (plan.prayerPlanRevision == null) {
       final defaultPages = plan.metric == ReadingGoalMetric.pages
@@ -690,8 +708,8 @@ class PlanRepository {
         'session_id': _uuid.v7(),
         'prayer': prayer,
         'pages': pages,
-        'local_date': plan.localDate,
-        'timezone_name': timezoneName,
+        'local_date': plan.prayerLocalDate ?? plan.localDate,
+        'timezone_name': plan.prayerTimezoneName ?? timezoneName,
         'client_updated_at': now.toIso8601String(),
       }, accountScope: scope);
     } else {

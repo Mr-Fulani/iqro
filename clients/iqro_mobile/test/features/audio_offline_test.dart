@@ -113,7 +113,7 @@ Map<String, Object?> _manifestFixture() {
     ];
     final asset = OfflineAudioAsset(
       url: Uri.parse(
-        'https://media.staging.iqro.forum/audio/surah-${surah.toString().padLeft(3, '0')}.mp3',
+        'https://media.iqro.forum/audio/surah-${surah.toString().padLeft(3, '0')}.mp3',
       ),
       fileName: 'surah-${surah.toString().padLeft(3, '0')}.mp3',
       contentType: 'audio/mpeg',

@@ -198,7 +198,7 @@ void main() {
       expect(harness.audio.requestedSurah, 5);
       expect(harness.quran.saved.last, 85);
       expect(find.byType(FloatingActionButton), findsNothing);
-      await tester.tap(find.byIcon(Icons.pause_rounded));
+      await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
       await tester.pump();
       expect(harness.controller.toggles, 1);
       expect(harness.controller.ranges, hasLength(1));
@@ -276,8 +276,8 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         ),
         appConfigProvider.overrideWithValue(
           const AppConfig(
-            apiBaseUrl: 'https://staging.iqro.forum',
-            environment: 'staging',
+            apiBaseUrl: 'https://iqro.forum',
+            environment: 'production',
             fallbackDownloadUrl: 'https://iqro.forum',
           ),
         ),

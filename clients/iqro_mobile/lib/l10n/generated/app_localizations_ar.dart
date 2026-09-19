@@ -1303,4 +1303,179 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get mushafPageCaching =>
       'تُحمّل الصفحات أثناء القراءة. تُحفظ الصفحات المفتوحة وخطوطها على الجهاز لتبقى متاحة دون اتصال.';
+
+  @override
+  String get planCreditedToday => 'المحتسب اليوم';
+
+  @override
+  String get planGoalLabel => 'الهدف اليومي';
+
+  @override
+  String get planEditGoal => 'تعديل الهدف';
+
+  @override
+  String get planGoalReached => 'تم بلوغ الهدف اليومي';
+
+  @override
+  String planRemainingAmount(String amount) {
+    return 'المتبقي لبلوغ الهدف: $amount';
+  }
+
+  @override
+  String planGoalAmount(String amount) {
+    return 'الهدف: $amount';
+  }
+
+  @override
+  String planCreditedAmount(String amount) {
+    return 'المحتسب: $amount';
+  }
+
+  @override
+  String get planManualEntry => 'إضافة قراءة يدوياً';
+
+  @override
+  String get planManualHelp =>
+      'أضف قراءة لم تُحتسب من قبل. يزيد ذلك تقدم اليوم ولا يغيّر هدفك.';
+
+  @override
+  String get planHowCounted => 'كيف يُحتسب التقدم';
+
+  @override
+  String get planPagesHelp =>
+      'يُحتسب الانتقال إلى الصفحة التالية في القارئ تلقائياً، وتُضاف الإدخالات اليدوية أيضاً. تقليب الصفحات لا يؤكد قراءتها.';
+
+  @override
+  String get planMinutesHelp =>
+      'يُحتسب الوقت النشط في القارئ تلقائياً، وتُضاف الدقائق المسجلة يدوياً أيضاً.';
+
+  @override
+  String get planAyahsHelp =>
+      'يُحتسب التقدم المتتابع بين الآيات في القارئ تلقائياً، وتُضاف الآيات المسجلة يدوياً أيضاً.';
+
+  @override
+  String get planDailyHelp =>
+      'يُحتسب التقدم لكل يوم على حدة. تغيير الهدف لا يصفر التقدم، وتبقى الأيام السابقة في السجل.';
+
+  @override
+  String get planResetHelp =>
+      'يمكن تقليل الصفحات المسجلة بعد الصلاة بزر −. لا يمكن تصفير تقدم اليوم بالكامل من هذه الشاشة.';
+
+  @override
+  String get planPrayerTitle => 'القراءة بعد الصلاة';
+
+  @override
+  String get planPrayerSummary =>
+      'الصفحات التي سجلتها اليوم. هذه قراءات مسجلة وليست هدفاً.';
+
+  @override
+  String get planEditPrayer => 'تعديل تسجيلات اليوم';
+
+  @override
+  String get planPrayerInstructions =>
+      'سجّل الصفحات المقروءة بعد كل صلاة. يضيف + صفحة واحدة ويزيل − صفحة واحدة. الصفر يعني عدم وجود صفحات مسجلة.';
+
+  @override
+  String planRemovePage(String prayer) {
+    return 'إزالة صفحة واحدة: $prayer';
+  }
+
+  @override
+  String planAddPage(String prayer) {
+    return 'إضافة صفحة واحدة: $prayer';
+  }
+
+  @override
+  String get planUnavailable =>
+      'تعذر تحديث الخطة. يُعرض التقدم المحفوظ، ويمكن التعديل بعد نجاح التحديث.';
+
+  @override
+  String get planGoalHint =>
+      'اختر هدفك اليومي بالدقائق أو الصفحات أو الآيات. هذا يحدد الهدف ولا يسجل قراءة مكتملة.';
+
+  @override
+  String planBestStreak(String streak) {
+    return 'أفضل سلسلة: $streak';
+  }
+
+  @override
+  String planActiveTime(String amount) {
+    return 'القراءة النشطة: $amount';
+  }
+
+  @override
+  String planPages(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString صفحة',
+      many: '$countString صفحة',
+      few: '$countString صفحات',
+      two: '$countString صفحتان',
+      one: '$countString صفحة',
+      zero: '$countString صفحة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planMinutes(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString دقيقة',
+      many: '$countString دقيقة',
+      few: '$countString دقائق',
+      two: '$countString دقيقتان',
+      one: '$countString دقيقة',
+      zero: '$countString دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAyahs(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString آية',
+      many: '$countString آية',
+      few: '$countString آيات',
+      two: '$countString آيتان',
+      one: '$countString آية',
+      zero: '$countString آية',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planStreak(num count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString يوم متتالٍ',
+      many: '$countString يوماً متتالياً',
+      few: '$countString أيام متتالية',
+      two: '$countString يومان متتاليان',
+      one: '$countString يوم متتالٍ',
+      zero: '$countString يوم متتالٍ',
+    );
+    return '$_temp0';
+  }
 }

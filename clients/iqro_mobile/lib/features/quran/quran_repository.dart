@@ -799,10 +799,7 @@ class QuranRepository {
     }
     final bytes = await _api.getPublicBytes(
       uri,
-      allowedHosts: const <String>{
-        'media.staging.iqro.forum',
-        'media.iqro.forum',
-      },
+      allowedHosts: const <String>{'media.iqro.forum'},
       maxBytes: 4 * 1024 * 1024,
     );
     if (!_validWebp(bytes) ||

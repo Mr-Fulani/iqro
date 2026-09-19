@@ -8,6 +8,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/mini_player.dart';
 import '../calendar/hijri_calendar_service.dart';
 import '../calendar/calendar_catalog.dart';
 import '../dua/dua_repository.dart';
@@ -101,7 +102,10 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: IqroPage(
-        padding: iqroRootTabPadding(playerActive: player.track != null),
+        padding: iqroRootTabPadding(
+          playerActive: player.track != null,
+          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

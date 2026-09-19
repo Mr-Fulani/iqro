@@ -1,9 +1,151 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
+import 'package:iqro_mobile/features/plan/plan_screen.dart';
+import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
+  testWidgets('prayer counter saves + and - and blocks overlapping taps', (
+    tester,
+  ) async {
+    final database = _FakeLocalDatabase();
+    final scope = await database.captureAccount();
+    final remote = _FakePlanRemote();
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localDatabaseProvider.overrideWithValue(database),
+          audioControllerProvider.overrideWith((ref) => _IdleAudio()),
+          activeAccountScopeKeyProvider.overrideWithValue(
+            accountScopeKey(scope),
+          ),
+          planProvider.overrideWith(
+            (ref) => PlanController(
+              repository,
+              database: database,
+              accountScope: scope,
+              preferredTarget: 6,
+              preferredMetric: ReadingGoalMetric.pages,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: IqroTheme.light(),
+          locale: const Locale('ru'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const AfterPrayerScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final plus = find
+        .widgetWithIcon(IconButton, Icons.add_circle_outline)
+        .first;
+    final minus = find
+        .widgetWithIcon(IconButton, Icons.remove_circle_outline)
+        .first;
+    remote.writeGate = Completer<void>();
+    await tester.tap(plus);
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(tester.widget<IconButton>(plus).onPressed, isNull);
+    await tester.tap(plus);
+    remote.writeGate!.complete();
+    await tester.pumpAndSettle();
+    expect(remote.checkInCreates, 1);
+    expect(remote.prayerCheckIn?['pages'], 1);
+    expect(find.text('1'), findsOneWidget);
+    await tester.tap(plus);
+    await tester.pumpAndSettle();
+    expect(remote.prayerCheckIn?['pages'], 2);
+    expect(find.text('2'), findsOneWidget);
+    await tester.tap(minus);
+    await tester.pumpAndSettle();
+    expect(remote.prayerCheckIn?['pages'], 1);
+    expect(find.text('1'), findsOneWidget);
+    await tester.tap(minus);
+    await tester.pumpAndSettle();
+    expect(remote.prayerCheckIn, isNull);
+    expect(tester.widget<IconButton>(minus).onPressed, isNull);
+    expect(find.text('0'), findsNWidgets(5));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AfterPrayerScreen)),
+    );
+    remote.offline = true;
+    await container.read(planProvider.notifier).reload();
+    await tester.pumpAndSettle();
+    expect(tester.widget<IconButton>(plus).onPressed, isNull);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(AfterPrayerScreen)),
+    );
+    expect(find.text(l10n.planUnavailable), findsOneWidget);
+    remote.offline = false;
+    await tester.tap(find.text(l10n.retry));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.planUnavailable), findsNothing);
+    expect(tester.widget<IconButton>(plus).onPressed, isNotNull);
+    await tester.tap(plus);
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  test(
+    'prayer check-in uses its own timezone and date across midnight',
+    () async {
+      final remote = _FakePlanRemote()
+        ..prayerTimezone = 'America/New_York'
+        ..prayerDate = '2026-08-28'
+        ..prayerPlan = {'revision': 1, 'pages_per_prayer': 2};
+      final repository = PlanRepository(
+        _FakeLocalDatabase(),
+        remote: remote,
+        timezoneLoader: () async => 'Europe/Istanbul',
+      );
+      final plan = await repository.setPrayerPages('fajr', 1);
+      expect(remote.savedPrayerCheckIn?['timezone_name'], 'America/New_York');
+      expect(remote.savedPrayerCheckIn?['local_date'], '2026-08-28');
+      expect(plan.localDate, '2026-08-29');
+      expect(plan.timezoneName, 'Europe/Istanbul');
+      final restored = DailyPlan.fromJson(
+        plan.copyWith(fromCache: true).toJson(),
+      );
+      expect(restored.prayerTimezoneName, 'America/New_York');
+      expect(restored.prayerLocalDate, '2026-08-28');
+    },
+  );
+
+  test(
+    'offline prayer changes do not mutate from a stale cached revision',
+    () async {
+      final remote = _FakePlanRemote();
+      final repository = PlanRepository(
+        _FakeLocalDatabase(),
+        remote: remote,
+        timezoneLoader: () async => 'UTC',
+      );
+      await repository.load();
+      remote.offline = true;
+      await expectLater(repository.setPrayerPages('fajr', 1), throwsStateError);
+      expect(remote.savedPrayerPlan, isNull);
+      expect(remote.savedPrayerCheckIn, isNull);
+    },
+  );
   test(
     'server dashboard is authoritative and has a private offline cache',
     () async {
@@ -329,6 +471,10 @@ class _FakePlanRemote implements PlanRemoteGateway {
   int achieved;
   int goalRevision = 1;
   bool offline = false;
+  String? prayerTimezone;
+  String prayerDate = '2026-08-29';
+  Completer<void>? writeGate;
+  int checkInCreates = 0;
   String? requestedTimezone;
   Map<String, Object?>? savedGoal;
   Map<String, Object?>? savedManual;
@@ -403,8 +549,8 @@ class _FakePlanRemote implements PlanRemoteGateway {
   }) async {
     _check(timezoneName);
     return <String, Object?>{
-      'local_date': '2026-08-29',
-      'timezone_name': timezoneName,
+      'local_date': prayerDate,
+      'timezone_name': prayerTimezone ?? timezoneName,
       'plan': prayerPlan,
       'check_ins': <Object?>[?prayerCheckIn],
     };
@@ -466,6 +612,11 @@ class _FakePlanRemote implements PlanRemoteGateway {
     Map<String, Object?> payload, {
     AccountScopeSnapshot? accountScope,
   }) async {
+    await writeGate?.future;
+    checkInCreates++;
+    if (prayerTimezone != null && payload['timezone_name'] != prayerTimezone) {
+      throw StateError('Timezone must match the active prayer reading plan.');
+    }
     savedPrayerCheckIn = payload;
     prayerCheckIn = <String, Object?>{
       'id': payload['id'],
@@ -483,6 +634,9 @@ class _FakePlanRemote implements PlanRemoteGateway {
     Map<String, Object?> payload, {
     AccountScopeSnapshot? accountScope,
   }) async {
+    if (payload['base_revision'] != prayerCheckIn?['revision']) {
+      throw StateError('Prayer check-in revision conflict');
+    }
     prayerCheckIn = <String, Object?>{
       'id': id,
       'prayer': prayerCheckIn?['prayer'],
@@ -499,6 +653,16 @@ class _FakePlanRemote implements PlanRemoteGateway {
     DateTime updatedAt, {
     AccountScopeSnapshot? accountScope,
   }) async {
+    if (revision != prayerCheckIn?['revision']) {
+      throw StateError('Prayer check-in revision conflict');
+    }
     prayerCheckIn = null;
   }
+}
+
+class _IdleAudio extends StateNotifier<IqroAudioState>
+    implements AudioController {
+  _IdleAudio() : super(const IqroAudioState());
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

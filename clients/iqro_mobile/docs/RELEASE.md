@@ -3,7 +3,7 @@
 ## Инварианты
 
 - Сборка всегда привязана к конкретному Git commit и версии `pubspec.yaml`.
-- Staging и production используют один код без flavors, но разные обязательные
+- Local debug и production используют один код без flavors, но разные обязательные
   compile-time значения.
 - Keystore, пароли и `android/key.properties` не хранятся в Git и не копируются на
   backend-сервер.
@@ -12,16 +12,17 @@
 - Перед публикацией обязательны `make mobile-check` и production release compile
   соответствующей платформы.
 
-## Staging APK
+## Local debug APK
 
 ```bash
 make mobile-check
-make mobile-android-staging
+cd clients/iqro_mobile
+flutter build apk --debug --dart-define=APP_ENV=local
 ```
 
 Результат: `clients/iqro_mobile/build/app/outputs/flutter-apk/app-debug.apk`.
 Debug APK предназначен только для ручной проверки на устройстве и обращается к
-`https://staging.iqro.forum`.
+локальному backend.
 
 ## Android signing
 

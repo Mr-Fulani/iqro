@@ -57,14 +57,12 @@ jobs:
         run: flutter analyze
       - name: Tests
         run: flutter test
-      - name: Android staging debug build
+      - name: Android local debug build
         run: >-
           flutter build apk
           --debug
           --target-platform android-arm64
-          --dart-define=API_BASE_URL=https://staging.iqro.forum
-          --dart-define=APP_ENV=staging
-          --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+          --dart-define=APP_ENV=local
       - name: Android production release compile
         run: >-
           flutter build appbundle
