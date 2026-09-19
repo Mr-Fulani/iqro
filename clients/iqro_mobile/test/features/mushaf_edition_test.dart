@@ -220,7 +220,7 @@ void main() {
   );
 
   test(
-    'expired production catalog is readable immediately and isolated from staging',
+    'expired production catalog is readable immediately and isolated by origin',
     () async {
       final cache = _Cache();
       cache.entries['mushaf-renditions:https://iqro.forum/api/v1'] =
@@ -248,8 +248,11 @@ void main() {
         (await prod.cachedMushafRenditions()).single.identity.code,
         'kfgqpc-hafs',
       );
-      final staging = QuranRepository(api: _Api(), database: cache);
-      expect(await staging.cachedMushafRenditions(), isEmpty);
+      final preview = QuranRepository(
+        api: _Api(origin: 'https://preview.example.invalid/api/v1'),
+        database: cache,
+      );
+      expect(await preview.cachedMushafRenditions(), isEmpty);
     },
   );
 

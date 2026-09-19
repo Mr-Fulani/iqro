@@ -424,16 +424,16 @@ void main() {
     remote.onEntries = (_) => _page(<Object?>[_entryPayload(1)]);
     expect((await repository.entries('ru')).single.sourceNumber, 1);
 
-    final productionRemote = _FakeDuaRemote(
-      apiBaseUri: Uri.parse('https://iqro.forum/api/v1'),
+    final previewRemote = _FakeDuaRemote(
+      apiBaseUri: Uri.parse('https://preview.example.invalid/api/v1'),
     )..onEntries = (_) => _page(<Object?>[_entryPayload(2)]);
-    final productionRepository = DuaRepository(
+    final previewRepository = DuaRepository(
       database: database,
-      remote: productionRemote,
+      remote: previewRemote,
     );
 
-    expect((await productionRepository.entries('ru')).single.sourceNumber, 2);
-    expect(productionRemote.entryCalls, hasLength(1));
+    expect((await previewRepository.entries('ru')).single.sourceNumber, 2);
+    expect(previewRemote.entryCalls, hasLength(1));
     expect(await sqlDatabase.query('cache_entries'), hasLength(2));
   });
 
