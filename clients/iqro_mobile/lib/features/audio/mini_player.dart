@@ -10,7 +10,7 @@ import '../../core/storage/local_database.dart';
 import 'premium_reciter_portrait.dart';
 import 'reciter_portraits.dart';
 
-final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => false);
+final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => true);
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({this.allowCollapse = true, super.key});
