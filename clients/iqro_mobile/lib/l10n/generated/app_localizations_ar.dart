@@ -946,6 +946,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get email => 'البريد الإلكتروني';
 
   @override
+  String get invalidEmail => 'تحقق من البريد الإلكتروني.';
+
+  @override
   String get verificationCode => 'رمز التحقق';
 
   @override
@@ -959,6 +962,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get devices => 'الأجهزة';
+
+  @override
+  String get currentDevice => 'هذا الجهاز';
+
+  @override
+  String get noDevices => 'لم يتم العثور على أجهزة.';
+
+  @override
+  String get signOutConfirmation => 'هل تريد تسجيل الخروج من هذا الجهاز؟';
 
   @override
   String get syncNow => 'مزامنة الآن';

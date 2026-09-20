@@ -1836,6 +1836,12 @@ abstract class AppLocalizations {
   /// **'Email'**
   String get email;
 
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the email format.'**
+  String get invalidEmail;
+
   /// No description provided for @verificationCode.
   ///
   /// In en, this message translates to:
@@ -1865,6 +1871,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Devices'**
   String get devices;
+
+  /// No description provided for @currentDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get currentDevice;
+
+  /// No description provided for @noDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices found.'**
+  String get noDevices;
+
+  /// No description provided for @signOutConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of this device?'**
+  String get signOutConfirmation;
 
   /// No description provided for @syncNow.
   ///

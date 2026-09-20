@@ -952,6 +952,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get email => 'Email';
 
   @override
+  String get invalidEmail => 'Check the email format.';
+
+  @override
   String get verificationCode => 'Verification code';
 
   @override
@@ -965,6 +968,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devices => 'Devices';
+
+  @override
+  String get currentDevice => 'This device';
+
+  @override
+  String get noDevices => 'No devices found.';
+
+  @override
+  String get signOutConfirmation => 'Sign out of this device?';
 
   @override
   String get syncNow => 'Sync now';

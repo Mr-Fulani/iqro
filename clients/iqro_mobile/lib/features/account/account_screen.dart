@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
@@ -58,9 +59,12 @@ class _AccountScreenBody extends ConsumerStatefulWidget {
 }
 
 class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
   EmailChallenge? _challenge;
+  String? _emailError;
   String? _message;
   var _working = false;
   var _requestGeneration = 0;
@@ -71,6 +75,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
     _emailController.clear();
     _codeController.clear();
     _challenge = null;
+    _emailError = null;
     _message = null;
     _emailController.dispose();
     _codeController.dispose();
@@ -82,6 +87,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
     final session = ref.watch(sessionProvider);
     final sync = ref.watch(syncProvider);
     final current = session.valueOrNull;
+    final verified = current?.isVerified == true;
     return Scaffold(
       appBar: IqroTopBar(title: context.l10n.personalProfile),
       body: IqroPage(
@@ -89,7 +95,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             IqroCard(
-              color: current?.isVerified == true
+              color: verified
                   ? Theme.of(context).colorScheme.primaryContainer
                   : context.iqroColors.lavender,
               borderColor: Colors.transparent,
@@ -100,9 +106,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     child: Icon(
-                      current?.isVerified == true
-                          ? Icons.person
-                          : Icons.shield_outlined,
+                      verified ? Icons.person : Icons.shield_outlined,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -111,12 +115,14 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          current?.email ?? context.l10n.readingAsGuest,
+                          verified
+                              ? current!.email!
+                              : context.l10n.readingAsGuest,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          current?.isVerified == true
+                          verified
                               ? context.l10n.personalProfile
                               : context.l10n.guestSyncHint,
                           style: Theme.of(context).textTheme.bodySmall,
@@ -128,7 +134,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
               ),
             ),
             const SizedBox(height: 16),
-            if (current?.isVerified != true)
+            if (!verified)
               _signInCard(context)
             else
               _verifiedActions(context, current!),
@@ -206,14 +212,29 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
               decoration: InputDecoration(
                 labelText: context.l10n.email,
                 prefixIcon: const Icon(Icons.email_outlined),
+                errorText: _emailError,
               ),
+              onChanged: (_) {
+                if (_emailError != null && _isScreenCurrent()) {
+                  setState(() => _emailError = null);
+                }
+              },
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: _working ? null : _sendCode,
-                child: Text(context.l10n.sendCode),
+                child: _working
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      )
+                    : Text(context.l10n.sendCode),
               ),
             ),
           ] else ...<Widget>[
@@ -235,7 +256,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
                   onPressed: _working
                       ? null
                       : () {
-                          if (_isCurrent()) {
+                          if (_isScreenCurrent()) {
                             setState(() => _challenge = null);
                           }
                         },
@@ -265,12 +286,13 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
             icon: Icons.devices_outlined,
             title: context.l10n.devices,
             subtitle: context.l10n.syncHint,
+            onTap: () => context.push('/devices'),
           ),
           const Divider(height: 1),
           IqroListTile(
             icon: Icons.logout,
             title: context.l10n.signOut,
-            onTap: _signOut,
+            onTap: _confirmSignOut,
           ),
         ],
       ),
@@ -278,28 +300,50 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
   }
 
   Future<void> _sendCode() async {
-    if (_working || !_isCurrent() || !_emailController.text.contains('@')) {
+    if (_working || !_isScreenCurrent()) {
       return;
     }
+    final email = _emailController.text.trim().toLowerCase();
+    if (!_isValidEmail(email)) {
+      setState(() {
+        _emailError = context.l10n.invalidEmail;
+        _message = null;
+      });
+      return;
+    }
+    if (_emailController.text != email) {
+      _emailController.value = TextEditingValue(
+        text: email,
+        selection: TextSelection.collapsed(offset: email.length),
+      );
+    }
     final request = ++_requestGeneration;
-    final email = _emailController.text;
     setState(() {
       _working = true;
+      _emailError = null;
       _message = null;
     });
     try {
       final challenge = await widget.controller.startEmail(email);
-      if (mounted && _isCurrent(request)) {
+      if (mounted && _isScreenCurrent(request)) {
         setState(() => _challenge = challenge);
       }
     } on AccountScopeChanged {
       // The account screen is replaced by its scope key on session changes.
     } on ApiException catch (error) {
-      if (mounted && _isCurrent(request)) {
-        setState(() => _message = error.message);
+      if (mounted && _isScreenCurrent(request)) {
+        setState(() {
+          if (error.statusCode == 400) {
+            _emailError = context.l10n.invalidEmail;
+          } else {
+            _message = error.isOffline
+                ? context.l10n.networkError
+                : error.message;
+          }
+        });
       }
     } finally {
-      if (mounted && _isCurrent(request)) {
+      if (mounted && _isScreenCurrent(request)) {
         setState(() => _working = false);
       }
     }
@@ -308,7 +352,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
   Future<void> _verify() async {
     final challenge = _challenge;
     if (_working ||
-        !_isCurrent() ||
+        !_isScreenCurrent() ||
         challenge == null ||
         _codeController.text.length != 6) {
       return;
@@ -321,24 +365,24 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
     });
     try {
       await widget.controller.verify(challenge, code);
-      if (!mounted || !_isCurrent(request)) return;
+      if (!mounted || !_isScreenCurrent(request)) return;
       final error = ref.read(sessionProvider).error;
       if (error is ApiException) throw error;
     } on AccountScopeChanged {
       // The account screen is replaced by its scope key on session changes.
     } on ApiException catch (error) {
-      if (mounted && _isCurrent(request)) {
+      if (mounted && _isScreenCurrent(request)) {
         setState(() => _message = error.message);
       }
     } finally {
-      if (mounted && _isCurrent(request)) {
+      if (mounted && _isScreenCurrent(request)) {
         setState(() => _working = false);
       }
     }
   }
 
   Future<void> _sync() async {
-    if (!_isCurrent()) return;
+    if (!_isAccountCurrent()) return;
     final request = ++_requestGeneration;
     final controller = ref.read(syncProvider.notifier);
     late final SyncReport report;
@@ -348,14 +392,14 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       return;
     } on Object catch (error) {
       if (mounted &&
-          _isCurrent(request) &&
+          _isAccountCurrent(request) &&
           identical(controller, ref.read(syncProvider.notifier))) {
         setState(() => _message = error.toString());
       }
       return;
     }
     if (!mounted ||
-        !_isCurrent(request) ||
+        !_isAccountCurrent(request) ||
         !identical(controller, ref.read(syncProvider.notifier))) {
       return;
     }
@@ -371,7 +415,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
   }
 
   Future<void> _signOut() async {
-    if (_working || !_isCurrent()) return;
+    if (_working || !_isAccountCurrent()) return;
     ++_requestGeneration;
     setState(() {
       _working = true;
@@ -385,13 +429,43 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
     }
   }
 
-  bool _isCurrent([int? request]) {
+  Future<void> _confirmSignOut() async {
+    if (_working || !_isAccountCurrent()) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.signOut),
+        content: Text(context.l10n.signOutConfirmation),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.signOut),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted && _isAccountCurrent()) {
+      await _signOut();
+    }
+  }
+
+  bool _isScreenCurrent([int? request]) {
     if (!mounted) return false;
     if (request != null && request != _requestGeneration) return false;
-    final scope = widget.accountScope;
-    if (scope == null || !widget.database.accountScope.isCurrent(scope)) {
-      return false;
-    }
     return identical(widget.controller, ref.read(sessionProvider.notifier));
+  }
+
+  bool _isAccountCurrent([int? request]) {
+    if (!_isScreenCurrent(request)) return false;
+    final scope = widget.accountScope;
+    return scope != null && widget.database.accountScope.isCurrent(scope);
+  }
+
+  bool _isValidEmail(String email) {
+    return email.length <= 254 && _emailPattern.hasMatch(email);
   }
 }

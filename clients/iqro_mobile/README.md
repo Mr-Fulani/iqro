@@ -72,9 +72,14 @@ HTTP разрешён только для local/debug и локальных ад
 
 ## Локальный debug APK
 
+Для физического Android-телефона по USB сначала настройте обратный порт:
+
 ```bash
+adb reverse tcp:8000 tcp:8000
+
 flutter build apk --debug \
-  --dart-define=APP_ENV=local
+  --dart-define=APP_ENV=local \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8000
 
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
 ```

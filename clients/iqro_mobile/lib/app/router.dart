@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/design_system/iqro_widgets.dart';
 import '../core/widgets/home_widget_routes.dart';
 import '../features/account/account_screen.dart';
+import '../features/account/devices_screen.dart';
 import '../features/calendar/hijri_calendar_screen.dart';
 import '../features/audio/player_screen.dart';
 import '../features/dua/dua_repository.dart';
@@ -145,6 +146,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/account',
         builder: (context, state) => const AccountScreen(),
+      ),
+      GoRoute(
+        path: '/devices',
+        builder: (context, state) => const DevicesScreen(),
       ),
       GoRoute(
         path: '/settings',

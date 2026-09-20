@@ -12,6 +12,7 @@ class AuthSession {
   });
 
   factory AuthSession.fromJson(Map<String, Object?> json) {
+    final userStatus = json['user_status']?.toString() ?? 'guest';
     return AuthSession(
       accessToken: json['access_token']! as String,
       refreshToken: json['refresh_token']! as String,
@@ -19,9 +20,9 @@ class AuthSession {
       refreshExpiresAt: DateTime.parse(json['refresh_expires_at']! as String),
       bootstrapGeneration: (json['bootstrap_generation'] as num?)?.toInt() ?? 0,
       userId: json['user_id']?.toString() ?? '',
-      userStatus: json['user_status']?.toString() ?? 'guest',
+      userStatus: userStatus,
       deviceId: json['device_id']?.toString() ?? '',
-      email: json['email']?.toString(),
+      email: userStatus == 'guest' ? null : json['email']?.toString(),
     );
   }
 
@@ -35,6 +36,8 @@ class AuthSession {
     final device = json['device'] is Map
         ? Map<String, Object?>.from(json['device']! as Map)
         : const <String, Object?>{};
+    final userStatus =
+        user['status']?.toString() ?? previous?.userStatus ?? 'guest';
     return AuthSession(
       accessToken: json['access_token']! as String,
       refreshToken: json['refresh_token']! as String,
@@ -45,9 +48,11 @@ class AuthSession {
           previous?.bootstrapGeneration ??
           0,
       userId: user['id']?.toString() ?? previous?.userId ?? '',
-      userStatus: user['status']?.toString() ?? previous?.userStatus ?? 'guest',
+      userStatus: userStatus,
       deviceId: device['id']?.toString() ?? previous?.deviceId ?? '',
-      email: user.containsKey('email')
+      email: userStatus == 'guest'
+          ? null
+          : user.containsKey('email')
           ? user['email']?.toString()
           : previous?.email,
     );

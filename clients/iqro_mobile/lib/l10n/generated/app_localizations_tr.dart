@@ -952,6 +952,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get email => 'E-posta';
 
   @override
+  String get invalidEmail => 'E-posta biçimini kontrol edin.';
+
+  @override
   String get verificationCode => 'Doğrulama kodu';
 
   @override
@@ -965,6 +968,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get devices => 'Cihazlar';
+
+  @override
+  String get currentDevice => 'Bu cihaz';
+
+  @override
+  String get noDevices => 'Cihaz bulunamadı.';
+
+  @override
+  String get signOutConfirmation => 'Bu cihazdan çıkış yapılsın mı?';
 
   @override
   String get syncNow => 'Şimdi eşitle';

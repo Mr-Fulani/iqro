@@ -17,7 +17,10 @@
 ```bash
 make mobile-check
 cd clients/iqro_mobile
-flutter build apk --debug --dart-define=APP_ENV=local
+adb reverse tcp:8000 tcp:8000
+flutter build apk --debug \
+  --dart-define=APP_ENV=local \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8000
 ```
 
 Результат: `clients/iqro_mobile/build/app/outputs/flutter-apk/app-debug.apk`.

@@ -48,6 +48,10 @@ void main() {
   ) async {
     final harness = await _pumpAudioScreen(tester);
 
+    expect(
+      find.text('Для этой записи право на офлайн-загрузку не предоставлено.'),
+      findsNothing,
+    );
     final murattal = tester.widget<ChoiceChip>(
       find.widgetWithText(ChoiceChip, 'Мурратталь'),
     );

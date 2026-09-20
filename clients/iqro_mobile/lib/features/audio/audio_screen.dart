@@ -122,11 +122,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ),
             ),
             const SizedBox(height: 26),
-            IqroSectionHeader(
-              title: context.l10n.chooseReciter,
-              eyebrow: context.l10n.allReciters,
-            ),
-            const SizedBox(height: 12),
             reciters.when(
               loading: () => const IqroLoading(),
               error: (error, stack) => IqroAsyncError(
@@ -212,6 +207,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        Text(
+          context.l10n.recitationStyle,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
         _RecitationStyleFilter(
           styles: styles,
           selected: selectedStyle,
@@ -224,10 +224,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
             });
           },
         ),
-        if (selectedRecitation != null) ...<Widget>[
+        if (selectedRecitation?.offlineDownloadAllowed == true) ...<Widget>[
           const SizedBox(height: 12),
-          _OfflineAudioCard(recitation: selectedRecitation),
+          _OfflineAudioCard(recitation: selectedRecitation!),
         ],
+        const SizedBox(height: 22),
+        Text(
+          context.l10n.allReciters,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -448,23 +453,6 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (!recitation.offlineDownloadAllowed) {
-      return IqroCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.cloud_off_outlined),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                context.l10n.audioOfflineUnavailable,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
     final state = ref.watch(audioDownloadProvider(recitation.id));
     final downloading = state.status == AudioDownloadStatus.downloading;
     final ready = state.status == AudioDownloadStatus.ready;
@@ -519,22 +507,22 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            failed
-                ? context.l10n.audioDownloadFailed
-                : context.l10n.offlineAudioDescription,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          if (failed) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioDownloadFailed,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           if (downloading) ...<Widget>[
             const SizedBox(height: 10),
             LinearProgressIndicator(
               value: state.totalBytes > 0 ? state.progress : null,
             ),
-          ],
-          if (progressLabel != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+            if (progressLabel != null) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+            ],
           ],
         ],
       ),

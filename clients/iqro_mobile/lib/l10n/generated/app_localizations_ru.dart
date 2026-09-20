@@ -955,6 +955,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get email => 'Электронная почта';
 
   @override
+  String get invalidEmail => 'Проверьте формат email.';
+
+  @override
   String get verificationCode => 'Код подтверждения';
 
   @override
@@ -968,6 +971,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get devices => 'Устройства';
+
+  @override
+  String get currentDevice => 'Это устройство';
+
+  @override
+  String get noDevices => 'Устройства не найдены.';
+
+  @override
+  String get signOutConfirmation => 'Выйти из аккаунта на этом устройстве?';
 
   @override
   String get syncNow => 'Синхронизировать';
