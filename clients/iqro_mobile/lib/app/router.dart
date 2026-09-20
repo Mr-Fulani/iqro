@@ -9,6 +9,8 @@ import '../features/calendar/hijri_calendar_screen.dart';
 import '../features/audio/player_screen.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_screen.dart';
+import '../features/feedback/feedback_models.dart';
+import '../features/feedback/feedback_screen.dart';
 import '../features/favorites/favorites_screen.dart';
 import '../features/memorization/memorization_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -150,6 +152,19 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/devices',
         builder: (context, state) => const DevicesScreen(),
+      ),
+      GoRoute(
+        path: '/feedback',
+        builder: (context, state) => const FeedbackScreen(),
+      ),
+      GoRoute(
+        path: '/feedback/:publicId',
+        builder: (context, state) => FeedbackTicketScreen(
+          publicId: state.pathParameters['publicId'] ?? '',
+          initialTicket: state.extra is FeedbackTicket
+              ? state.extra as FeedbackTicket
+              : null,
+        ),
       ),
       GoRoute(
         path: '/settings',

@@ -1884,6 +1884,282 @@ abstract class AppLocalizations {
   /// **'No devices found.'**
   String get noDevices;
 
+  /// No description provided for @feedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback and religious audit'**
+  String get feedbackTitle;
+
+  /// No description provided for @feedbackAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an issue with text, audio, prayer times or the app.'**
+  String get feedbackAccountHint;
+
+  /// No description provided for @feedbackSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to send a request'**
+  String get feedbackSignInRequired;
+
+  /// No description provided for @feedbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Report inaccuracies in text, timings, or prayer calculations to the religious editorial team.'**
+  String get feedbackDescription;
+
+  /// No description provided for @feedbackCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create request'**
+  String get feedbackCreate;
+
+  /// No description provided for @feedbackCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Request category'**
+  String get feedbackCategory;
+
+  /// No description provided for @feedbackSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get feedbackSubject;
+
+  /// No description provided for @feedbackSubjectPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Brief description'**
+  String get feedbackSubjectPlaceholder;
+
+  /// No description provided for @feedbackMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get feedbackMessage;
+
+  /// No description provided for @feedbackMessagePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed description of the question or issue…'**
+  String get feedbackMessagePlaceholder;
+
+  /// No description provided for @feedbackSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get feedbackSend;
+
+  /// No description provided for @feedbackNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No active requests.'**
+  String get feedbackNone;
+
+  /// No description provided for @feedbackTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'Request {id}'**
+  String feedbackTicket(String id);
+
+  /// No description provided for @feedbackTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Team: {team}'**
+  String feedbackTeam(String team);
+
+  /// No description provided for @feedbackNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet.'**
+  String get feedbackNoMessages;
+
+  /// No description provided for @feedbackAddMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a message'**
+  String get feedbackAddMessage;
+
+  /// No description provided for @feedbackReplyPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reply to editorial or support'**
+  String get feedbackReplyPlaceholder;
+
+  /// No description provided for @feedbackSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get feedbackSendMessage;
+
+  /// No description provided for @feedbackReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen'**
+  String get feedbackReopen;
+
+  /// No description provided for @feedbackCloseTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'Close request'**
+  String get feedbackCloseTicket;
+
+  /// No description provided for @feedbackCloseConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Close this request? You can reopen it later.'**
+  String get feedbackCloseConfirmation;
+
+  /// No description provided for @feedbackNoFurtherActions.
+  ///
+  /// In en, this message translates to:
+  /// **'No more messages can be sent for this request.'**
+  String get feedbackNoFurtherActions;
+
+  /// No description provided for @feedbackRequiredFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a subject and message.'**
+  String get feedbackRequiredFields;
+
+  /// No description provided for @feedbackRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Try again later.'**
+  String get feedbackRateLimited;
+
+  /// No description provided for @feedbackActionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete this request action. Try again later.'**
+  String get feedbackActionError;
+
+  /// No description provided for @feedbackCategoryReligious.
+  ///
+  /// In en, this message translates to:
+  /// **'Religious content'**
+  String get feedbackCategoryReligious;
+
+  /// No description provided for @feedbackCategoryLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Mushaf page or layout'**
+  String get feedbackCategoryLayout;
+
+  /// No description provided for @feedbackCategoryAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio, timing or reciter'**
+  String get feedbackCategoryAudio;
+
+  /// No description provided for @feedbackCategoryAdvertisement.
+  ///
+  /// In en, this message translates to:
+  /// **'Advertisement'**
+  String get feedbackCategoryAdvertisement;
+
+  /// No description provided for @feedbackCategoryTechnical.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical problem'**
+  String get feedbackCategoryTechnical;
+
+  /// No description provided for @feedbackCategoryAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account or synchronization'**
+  String get feedbackCategoryAccount;
+
+  /// No description provided for @feedbackCategoryDonation.
+  ///
+  /// In en, this message translates to:
+  /// **'Donation or external link'**
+  String get feedbackCategoryDonation;
+
+  /// No description provided for @feedbackCategoryAccessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility or localization'**
+  String get feedbackCategoryAccessibility;
+
+  /// No description provided for @feedbackCategoryGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General suggestion'**
+  String get feedbackCategoryGeneral;
+
+  /// No description provided for @feedbackCategoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get feedbackCategoryOther;
+
+  /// No description provided for @feedbackStatusNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get feedbackStatusNew;
+
+  /// No description provided for @feedbackStatusTriaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Triaged'**
+  String get feedbackStatusTriaged;
+
+  /// No description provided for @feedbackStatusProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get feedbackStatusProgress;
+
+  /// No description provided for @feedbackStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for you'**
+  String get feedbackStatusWaiting;
+
+  /// No description provided for @feedbackStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get feedbackStatusResolved;
+
+  /// No description provided for @feedbackStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get feedbackStatusRejected;
+
+  /// No description provided for @feedbackStatusDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get feedbackStatusDuplicate;
+
+  /// No description provided for @feedbackStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get feedbackStatusClosed;
+
+  /// No description provided for @feedbackSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get feedbackSupport;
+
+  /// No description provided for @feedbackYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get feedbackYou;
+
+  /// No description provided for @feedbackSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get feedbackSystem;
+
   /// No description provided for @signOutConfirmation.
   ///
   /// In en, this message translates to:

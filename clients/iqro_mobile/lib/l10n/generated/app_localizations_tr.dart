@@ -976,6 +976,156 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noDevices => 'Cihaz bulunamadı.';
 
   @override
+  String get feedbackTitle => 'Geri bildirim ve dini denetim';
+
+  @override
+  String get feedbackAccountHint =>
+      'Metin, ses, namaz vakitleri veya uygulama hakkında bildirim gönderin.';
+
+  @override
+  String get feedbackSignInRequired => 'Talep göndermek için giriş yapın';
+
+  @override
+  String get feedbackDescription =>
+      'Metin, zaman kodu veya namaz hesaplamalarındaki hataları dini editör ekibine bildirin.';
+
+  @override
+  String get feedbackCreate => 'Talep oluştur';
+
+  @override
+  String get feedbackCategory => 'Talep kategorisi';
+
+  @override
+  String get feedbackSubject => 'Konu';
+
+  @override
+  String get feedbackSubjectPlaceholder => 'Kısa açıklama';
+
+  @override
+  String get feedbackMessage => 'Mesaj';
+
+  @override
+  String get feedbackMessagePlaceholder =>
+      'Sorunun veya notun ayrıntılı açıklaması…';
+
+  @override
+  String get feedbackSend => 'Talebi gönder';
+
+  @override
+  String get feedbackNone => 'Etkin talep yok.';
+
+  @override
+  String feedbackTicket(String id) {
+    return 'Talep $id';
+  }
+
+  @override
+  String feedbackTeam(String team) {
+    return 'Ekip: $team';
+  }
+
+  @override
+  String get feedbackNoMessages => 'Henüz mesaj yok.';
+
+  @override
+  String get feedbackAddMessage => 'Mesaj ekle';
+
+  @override
+  String get feedbackReplyPlaceholder => 'Editör veya desteğe yanıtınız';
+
+  @override
+  String get feedbackSendMessage => 'Mesaj gönder';
+
+  @override
+  String get feedbackReopen => 'Yeniden aç';
+
+  @override
+  String get feedbackCloseTicket => 'Talebi kapat';
+
+  @override
+  String get feedbackCloseConfirmation =>
+      'Bu talep kapatılsın mı? Daha sonra yeniden açabilirsiniz.';
+
+  @override
+  String get feedbackNoFurtherActions =>
+      'Bu talep için başka mesaj gönderilemez.';
+
+  @override
+  String get feedbackRequiredFields => 'Konu ve mesaj girin.';
+
+  @override
+  String get feedbackRateLimited =>
+      'Çok fazla talep var. Daha sonra tekrar deneyin.';
+
+  @override
+  String get feedbackActionError =>
+      'Talep işlemi tamamlanamadı. Daha sonra tekrar deneyin.';
+
+  @override
+  String get feedbackCategoryReligious => 'Dini içerik';
+
+  @override
+  String get feedbackCategoryLayout => 'Mushaf sayfası veya düzeni';
+
+  @override
+  String get feedbackCategoryAudio => 'Ses, zaman kodu veya okuyucu';
+
+  @override
+  String get feedbackCategoryAdvertisement => 'Reklam';
+
+  @override
+  String get feedbackCategoryTechnical => 'Teknik sorun';
+
+  @override
+  String get feedbackCategoryAccount => 'Hesap veya eşitleme';
+
+  @override
+  String get feedbackCategoryDonation => 'Bağış veya harici bağlantı';
+
+  @override
+  String get feedbackCategoryAccessibility =>
+      'Erişilebilirlik veya yerelleştirme';
+
+  @override
+  String get feedbackCategoryGeneral => 'Genel öneri';
+
+  @override
+  String get feedbackCategoryOther => 'Diğer';
+
+  @override
+  String get feedbackStatusNew => 'Yeni';
+
+  @override
+  String get feedbackStatusTriaged => 'İnceleniyor';
+
+  @override
+  String get feedbackStatusProgress => 'Devam ediyor';
+
+  @override
+  String get feedbackStatusWaiting => 'Yanıtınız bekleniyor';
+
+  @override
+  String get feedbackStatusResolved => 'Çözüldü';
+
+  @override
+  String get feedbackStatusRejected => 'Reddedildi';
+
+  @override
+  String get feedbackStatusDuplicate => 'Yinelenen';
+
+  @override
+  String get feedbackStatusClosed => 'Kapalı';
+
+  @override
+  String get feedbackSupport => 'Destek';
+
+  @override
+  String get feedbackYou => 'Siz';
+
+  @override
+  String get feedbackSystem => 'Sistem';
+
+  @override
   String get signOutConfirmation => 'Bu cihazdan çıkış yapılsın mı?';
 
   @override

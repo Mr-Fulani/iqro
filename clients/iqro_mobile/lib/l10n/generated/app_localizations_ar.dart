@@ -970,6 +970,151 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noDevices => 'لم يتم العثور على أجهزة.';
 
   @override
+  String get feedbackTitle => 'الملاحظات والتدقيق الديني';
+
+  @override
+  String get feedbackAccountHint =>
+      'أبلغ عن مشكلة في النص أو الصوت أو أوقات الصلاة أو التطبيق.';
+
+  @override
+  String get feedbackSignInRequired => 'سجّل الدخول لإرسال طلب';
+
+  @override
+  String get feedbackDescription =>
+      'أبلغ هيئة التحرير الدينية عن أي خطأ في النص أو التوقيت أو حساب الصلاة.';
+
+  @override
+  String get feedbackCreate => 'إنشاء طلب';
+
+  @override
+  String get feedbackCategory => 'فئة الطلب';
+
+  @override
+  String get feedbackSubject => 'الموضوع';
+
+  @override
+  String get feedbackSubjectPlaceholder => 'وصف موجز';
+
+  @override
+  String get feedbackMessage => 'الرسالة';
+
+  @override
+  String get feedbackMessagePlaceholder => 'وصف تفصيلي للسؤال أو الملاحظة…';
+
+  @override
+  String get feedbackSend => 'إرسال الطلب';
+
+  @override
+  String get feedbackNone => 'لا توجد طلبات نشطة.';
+
+  @override
+  String feedbackTicket(String id) {
+    return 'الطلب $id';
+  }
+
+  @override
+  String feedbackTeam(String team) {
+    return 'الفريق: $team';
+  }
+
+  @override
+  String get feedbackNoMessages => 'لا توجد رسائل بعد.';
+
+  @override
+  String get feedbackAddMessage => 'إضافة رسالة';
+
+  @override
+  String get feedbackReplyPlaceholder => 'ردك إلى التحرير أو الدعم';
+
+  @override
+  String get feedbackSendMessage => 'إرسال الرسالة';
+
+  @override
+  String get feedbackReopen => 'إعادة الفتح';
+
+  @override
+  String get feedbackCloseTicket => 'إغلاق الطلب';
+
+  @override
+  String get feedbackCloseConfirmation =>
+      'هل تريد إغلاق هذا الطلب؟ يمكنك إعادة فتحه لاحقًا.';
+
+  @override
+  String get feedbackNoFurtherActions => 'لا يمكن إرسال رسائل أخرى لهذا الطلب.';
+
+  @override
+  String get feedbackRequiredFields => 'أدخل الموضوع والرسالة.';
+
+  @override
+  String get feedbackRateLimited => 'طلبات كثيرة جدًا. حاول لاحقًا.';
+
+  @override
+  String get feedbackActionError => 'تعذر تنفيذ إجراء الطلب. حاول لاحقًا.';
+
+  @override
+  String get feedbackCategoryReligious => 'المحتوى الديني';
+
+  @override
+  String get feedbackCategoryLayout => 'صفحة المصحف أو التخطيط';
+
+  @override
+  String get feedbackCategoryAudio => 'الصوت أو التوقيت أو القارئ';
+
+  @override
+  String get feedbackCategoryAdvertisement => 'إعلان';
+
+  @override
+  String get feedbackCategoryTechnical => 'مشكلة تقنية';
+
+  @override
+  String get feedbackCategoryAccount => 'الحساب أو المزامنة';
+
+  @override
+  String get feedbackCategoryDonation => 'تبرع أو رابط خارجي';
+
+  @override
+  String get feedbackCategoryAccessibility => 'إمكانية الوصول أو الترجمة';
+
+  @override
+  String get feedbackCategoryGeneral => 'اقتراح عام';
+
+  @override
+  String get feedbackCategoryOther => 'أخرى';
+
+  @override
+  String get feedbackStatusNew => 'جديد';
+
+  @override
+  String get feedbackStatusTriaged => 'قيد الفرز';
+
+  @override
+  String get feedbackStatusProgress => 'قيد التنفيذ';
+
+  @override
+  String get feedbackStatusWaiting => 'بانتظار ردك';
+
+  @override
+  String get feedbackStatusResolved => 'تم الحل';
+
+  @override
+  String get feedbackStatusRejected => 'مرفوض';
+
+  @override
+  String get feedbackStatusDuplicate => 'مكرر';
+
+  @override
+  String get feedbackStatusClosed => 'مغلق';
+
+  @override
+  String get feedbackSupport => 'الدعم';
+
+  @override
+  String get feedbackYou => 'أنت';
+
+  @override
+  String get feedbackSystem => 'النظام';
+
+  @override
   String get signOutConfirmation => 'هل تريد تسجيل الخروج من هذا الجهاز؟';
 
   @override

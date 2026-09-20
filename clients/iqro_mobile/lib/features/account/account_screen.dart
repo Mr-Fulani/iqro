@@ -283,6 +283,13 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       child: Column(
         children: <Widget>[
           IqroListTile(
+            icon: Icons.mark_email_unread_outlined,
+            title: context.l10n.feedbackTitle,
+            subtitle: context.l10n.feedbackAccountHint,
+            onTap: () => context.push('/feedback'),
+          ),
+          const Divider(height: 1),
+          IqroListTile(
             icon: Icons.devices_outlined,
             title: context.l10n.devices,
             subtitle: context.l10n.syncHint,

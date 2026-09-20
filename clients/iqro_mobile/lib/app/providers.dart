@@ -20,6 +20,8 @@ import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/dua/dua_repository.dart';
+import '../features/feedback/feedback_models.dart';
+import '../features/feedback/feedback_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/plan/plan_widget_service.dart';
@@ -89,6 +91,9 @@ final memorizationRepositoryProvider = Provider<MemorizationRepository>(
 );
 final duaRepositoryProvider = Provider<DuaRepository>(
   (ref) => _missing('DuaRepository'),
+);
+final feedbackRepositoryProvider = Provider<FeedbackRepository>(
+  (ref) => _missing('FeedbackRepository'),
 );
 final shareRepositoryProvider = Provider<ShareRepository>(
   (ref) => _missing('ShareRepository'),
@@ -358,6 +363,38 @@ final activeAccountScopeKeyProvider = Provider<AccountScopeKey?>((ref) {
       ? null
       : accountScopeKey(scope);
 });
+
+final feedbackTicketsProvider =
+    FutureProvider.autoDispose<List<FeedbackTicket>>((ref) async {
+      ref.watch(activeAccountScopeKeyProvider);
+      final session = ref.watch(sessionProvider).valueOrNull;
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (session == null ||
+          !session.isVerified ||
+          scope == null ||
+          scope.userId != session.userId) {
+        return const <FeedbackTicket>[];
+      }
+      return ref.watch(feedbackRepositoryProvider).list(accountScope: scope);
+    });
+
+final feedbackTicketProvider = FutureProvider.autoDispose
+    .family<FeedbackTicket, String>((ref, publicId) async {
+      ref.watch(activeAccountScopeKeyProvider);
+      final session = ref.watch(sessionProvider).valueOrNull;
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (session == null ||
+          !session.isVerified ||
+          scope == null ||
+          scope.userId != session.userId) {
+        throw StateError('A verified account is required');
+      }
+      return ref
+          .watch(feedbackRepositoryProvider)
+          .get(publicId, accountScope: scope);
+    });
 
 final quranCatalogProvider = FutureProvider<QuranCatalog>((ref) {
   return ref.watch(quranRepositoryProvider).surahs();

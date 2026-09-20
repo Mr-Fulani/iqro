@@ -979,6 +979,154 @@ class AppLocalizationsRu extends AppLocalizations {
   String get noDevices => 'Устройства не найдены.';
 
   @override
+  String get feedbackTitle => 'Обратная связь и религиозный аудит';
+
+  @override
+  String get feedbackAccountHint =>
+      'Сообщите о неточности в тексте, аудио, времени намаза или приложении.';
+
+  @override
+  String get feedbackSignInRequired => 'Войдите, чтобы отправить обращение';
+
+  @override
+  String get feedbackDescription =>
+      'Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.';
+
+  @override
+  String get feedbackCreate => 'Создать обращение';
+
+  @override
+  String get feedbackCategory => 'Категория обращения';
+
+  @override
+  String get feedbackSubject => 'Тема';
+
+  @override
+  String get feedbackSubjectPlaceholder => 'Краткое описание';
+
+  @override
+  String get feedbackMessage => 'Сообщение';
+
+  @override
+  String get feedbackMessagePlaceholder =>
+      'Подробное описание вопроса или замечания…';
+
+  @override
+  String get feedbackSend => 'Отправить обращение';
+
+  @override
+  String get feedbackNone => 'Активных обращений нет.';
+
+  @override
+  String feedbackTicket(String id) {
+    return 'Обращение $id';
+  }
+
+  @override
+  String feedbackTeam(String team) {
+    return 'Команда: $team';
+  }
+
+  @override
+  String get feedbackNoMessages => 'Сообщений пока нет.';
+
+  @override
+  String get feedbackAddMessage => 'Добавить сообщение';
+
+  @override
+  String get feedbackReplyPlaceholder => 'Ваш ответ редакции или поддержке';
+
+  @override
+  String get feedbackSendMessage => 'Отправить сообщение';
+
+  @override
+  String get feedbackReopen => 'Открыть повторно';
+
+  @override
+  String get feedbackCloseTicket => 'Закрыть обращение';
+
+  @override
+  String get feedbackCloseConfirmation =>
+      'Закрыть обращение? Позже его можно будет открыть снова.';
+
+  @override
+  String get feedbackNoFurtherActions =>
+      'Для этого обращения больше нельзя отправлять сообщения.';
+
+  @override
+  String get feedbackRequiredFields => 'Заполните тему и сообщение.';
+
+  @override
+  String get feedbackRateLimited => 'Слишком много обращений. Повторите позже.';
+
+  @override
+  String get feedbackActionError =>
+      'Не удалось выполнить действие с обращением. Повторите позже.';
+
+  @override
+  String get feedbackCategoryReligious => 'Религиозный контент';
+
+  @override
+  String get feedbackCategoryLayout => 'Страница или разметка Мусхафа';
+
+  @override
+  String get feedbackCategoryAudio => 'Аудио, таймкоды или чтец';
+
+  @override
+  String get feedbackCategoryAdvertisement => 'Реклама';
+
+  @override
+  String get feedbackCategoryTechnical => 'Техническая проблема';
+
+  @override
+  String get feedbackCategoryAccount => 'Аккаунт или синхронизация';
+
+  @override
+  String get feedbackCategoryDonation => 'Пожертвование или внешняя ссылка';
+
+  @override
+  String get feedbackCategoryAccessibility => 'Доступность или локализация';
+
+  @override
+  String get feedbackCategoryGeneral => 'Общее предложение';
+
+  @override
+  String get feedbackCategoryOther => 'Другое';
+
+  @override
+  String get feedbackStatusNew => 'Новое';
+
+  @override
+  String get feedbackStatusTriaged => 'Рассматривается';
+
+  @override
+  String get feedbackStatusProgress => 'В работе';
+
+  @override
+  String get feedbackStatusWaiting => 'Ждём ответа';
+
+  @override
+  String get feedbackStatusResolved => 'Решено';
+
+  @override
+  String get feedbackStatusRejected => 'Отклонено';
+
+  @override
+  String get feedbackStatusDuplicate => 'Дубликат';
+
+  @override
+  String get feedbackStatusClosed => 'Закрыто';
+
+  @override
+  String get feedbackSupport => 'Поддержка';
+
+  @override
+  String get feedbackYou => 'Вы';
+
+  @override
+  String get feedbackSystem => 'Система';
+
+  @override
   String get signOutConfirmation => 'Выйти из аккаунта на этом устройстве?';
 
   @override
