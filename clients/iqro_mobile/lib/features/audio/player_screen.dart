@@ -19,6 +19,8 @@ typedef _ReciterSelection = ({ReciterPerson person, Recitation recitation});
 typedef PlayerChromeSnapshot = ({
   AudioTrack? track,
   Reciter? reciter,
+  AudioPlaybackSource source,
+  AudioPlaybackChannel channel,
   String surahName,
   bool playing,
   bool buffering,
@@ -35,6 +37,8 @@ typedef PlayerChromeSnapshot = ({
 PlayerChromeSnapshot playerChromeSnapshot(IqroAudioState state) => (
   track: state.track,
   reciter: state.reciter,
+  source: state.source,
+  channel: state.channel,
   surahName: state.surahName,
   playing: state.playing,
   buffering: state.buffering,
@@ -52,6 +56,8 @@ IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
     IqroAudioState(
       track: chrome.track,
       reciter: chrome.reciter,
+      source: chrome.source,
+      channel: chrome.channel,
       surahName: chrome.surahName,
       playing: chrome.playing,
       buffering: chrome.buffering,
@@ -421,6 +427,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
           reciters: selection.person.sources,
         ),
+        channel: current.channel,
         surahName: current.surahName,
         startAyah: preserveRange ? current.rangeStartAyah : null,
         endAyah: preserveRange ? current.rangeEndAyah : null,
@@ -451,11 +458,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       )) {
         return;
       }
-      unawaited(
-        ref
-            .read(appPreferencesProvider.notifier)
-            .setPreferredRecitation(selection.recitation.id),
-      );
+      if (current.channel == AudioPlaybackChannel.listening) {
+        unawaited(
+          ref
+              .read(appPreferencesProvider.notifier)
+              .setListeningRecitation(selection.recitation.id),
+        );
+      }
     } on AccountScopeChanged {
       return;
     } on Object {
@@ -563,6 +572,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       await controller.loadPlayback(
         playback: playback,
         reciter: reciter,
+        channel: player.channel,
         surahName: surahName,
       );
     } on AccountScopeChanged {
@@ -664,6 +674,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       await controller.loadPlayback(
         playback: SurahPlayback(track: targetTrack, segments: current.segments),
         reciter: currentReciter,
+        channel: current.channel,
         surahName: current.surahName,
         startAyah: current.rangeStartAyah,
         endAyah: current.rangeEndAyah,

@@ -52,11 +52,20 @@ class AudioRepository {
 
   Future<Recitation?> recitationFor(String reciterId) async {
     final items = await recitations(reciterId: reciterId);
-    if (items.isEmpty) return null;
-    final timed = items.where((item) => item.timingsAvailable).toList();
-    final candidates = timed.isEmpty ? items : timed;
+    final candidates = items
+        .where((item) => item.supports(AudioRecitationRole.listening))
+        .toList(growable: false);
+    if (candidates.isEmpty) return null;
     final murattal = candidates.where((item) => item.style == 'murattal');
     return (murattal.isEmpty ? candidates : murattal).first;
+  }
+
+  Future<List<Recitation>> recitationsForRole(
+    AudioRecitationRole role, {
+    bool forceRefresh = false,
+  }) async {
+    final items = await recitations(forceRefresh: forceRefresh);
+    return items.where((item) => item.supports(role)).toList(growable: false);
   }
 
   Future<List<Recitation>> recitationsForReciters(

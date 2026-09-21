@@ -12,6 +12,7 @@ from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from quran_backend.modules.accounts.merge import merge_guest_into_account
@@ -35,10 +36,14 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     Reciter,
 )
+from quran_backend.modules.memorization.services import set_memorization_plan
 from quran_backend.modules.quran.models import (
+    Ayah,
     PublicationStatus,
     QuranEdition,
     QuranEditionVersion,
+    RevelationType,
+    Surah,
 )
 from quran_backend.settings.base import validate_https_base_url
 
@@ -282,6 +287,45 @@ def _create_second_public_recitation(
     return recitation
 
 
+def _create_incomplete_timed_recitation(
+    quran_dataset: dict[str, Any],
+) -> RecitationEdition:
+    reciter = Reciter.objects.create(
+        code="incomplete-timed-reciter",
+        name_ar="قارئ بتوقيت ناقص",
+        name_en="Incomplete Timed Reciter",
+        name_ru="Чтец без полных таймингов",
+    )
+    recitation = _create_recitation(
+        reciter,
+        quran_dataset["version"],
+        code="incomplete-timed-recitation",
+        version="1.0.0",
+    )
+    timing_version = AudioTimingVersion.objects.create(
+        recitation_edition=recitation,
+        version="1.0.0",
+        source_name="Incomplete synthetic timings",
+        source_version="2026-08-09",
+        source_checksum_sha256="e" * 64,
+        verified_at=timezone.now(),
+    )
+    track = _create_track(
+        recitation,
+        timing_version=timing_version,
+        object_key="audio/incomplete-timed-recitation/1.0.0/surah-001.mp3",
+    )
+    _complete_surah_catalog(recitation)
+    AyahAudioSegment.objects.create(
+        track=track,
+        ayah=quran_dataset["first_ayah"],
+        start_ms=0,
+        end_ms=5_000,
+    )
+    _publish(recitation)
+    return recitation
+
+
 def _playback_position_payload(
     track: AudioTrack,
     *,
@@ -489,11 +533,21 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
     assert recitation_detail.json()["coverage"] == {
         "track_count": 114,
         "surah_count": 114,
+        "expected_ayahs": 2,
+        "timed_ayahs": 2,
         "complete": True,
+        "timings_complete": True,
     }
     assert recitation_detail.json()["timings"] == {
         "available": True,
         "segment_count": 2,
+        "complete": True,
+    }
+    assert recitation_detail.json()["capabilities"] == {
+        "listen": True,
+        "ayah_playback": True,
+        "memorization": True,
+        "offline": True,
     }
     assert track_list.status_code == 200
     assert track_list.json()["results"][0]["id"] == str(published_audio_dataset["track"].id)
@@ -575,6 +629,122 @@ def test_audio_catalog_filters_recitations_and_tracks(
     assert surah_tracks.json()["results"]
     assert {item["scope"] for item in surah_tracks.json()["results"]} == {"surah"}
     assert full_tracks.json()["results"] == []
+
+
+@pytest.mark.django_db
+def test_untimed_recitation_remains_listenable_but_is_not_timed(
+    api_client: APIClient,
+    quran_dataset: dict[str, Any],
+) -> None:
+    untimed = _create_second_public_recitation(
+        quran_dataset,
+        code="untimed-catalog-recitation",
+        version="1.0.0",
+    )
+
+    response = api_client.get(reverse("audio:recitation-list"))
+    payload = next(item for item in response.json()["results"] if item["id"] == str(untimed.id))
+
+    assert payload["coverage"]["expected_ayahs"] == 2
+    assert payload["coverage"]["timed_ayahs"] == 0
+    assert payload["coverage"]["timings_complete"] is False
+    assert payload["timings"] == {
+        "available": False,
+        "segment_count": 0,
+        "complete": False,
+    }
+    assert payload["capabilities"] == {
+        "listen": True,
+        "ayah_playback": False,
+        "memorization": False,
+        "offline": True,
+    }
+
+
+@pytest.mark.django_db
+def test_memorization_recitation_must_match_edition_and_timing_range(
+    quran_dataset: dict[str, Any],
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation_id = published_audio_dataset["recitation"].id
+    now = timezone.now()
+
+    other_edition = QuranEdition.objects.create(
+        code="other-memorization-edition",
+        name_ar="مصحف آخر",
+        name_en="Other Quran edition",
+        name_ru="Другой Коран",
+        riwayah="Hafs 'an Asim",
+        source_name="Other test source",
+        license_name="Test license",
+    )
+    other_version = QuranEditionVersion.objects.create(
+        edition=other_edition,
+        version="1.0.0",
+        checksum_sha256="f" * 64,
+        status=PublicationStatus.PUBLISHED,
+        page_count=604,
+        surah_count=114,
+        juz_count=30,
+        published_at=now,
+    )
+    other_edition.active_version = other_version
+    other_edition.save(update_fields=["active_version", "updated_at"])
+    other_surah = Surah.objects.create(
+        edition_version=other_version,
+        number=1,
+        name_ar="الفاتحة",
+        name_en="Al-Fatihah",
+        name_ru="Аль-Фатиха",
+        revelation_type=RevelationType.MECCAN,
+        ayah_count=2,
+    )
+    other_first = Ayah.objects.create(
+        surah=other_surah,
+        number=1,
+        text_uthmani="بِسْمِ اللَّهِ",
+        text_search="بسم الله",
+        juz_number=1,
+        hizb_number=1,
+        rub_el_hizb_number=1,
+    )
+    other_second = Ayah.objects.create(
+        surah=other_surah,
+        number=2,
+        text_uthmani="الْحَمْدُ لِلَّهِ",
+        text_search="الحمد لله",
+        juz_number=1,
+        hizb_number=1,
+        rub_el_hizb_number=1,
+    )
+    user = User.objects.create_user()
+
+    with pytest.raises(ValidationError, match="public recitation"):
+        set_memorization_plan(
+            user=user,
+            start_ayah_id=other_first.id,
+            end_ayah_id=other_second.id,
+            recitation_id=recitation_id,
+            daily_repetitions=5,
+            pause_seconds=2,
+            timezone_name="UTC",
+            base_revision=0,
+            client_updated_at=now,
+        )
+
+    incomplete = _create_incomplete_timed_recitation(quran_dataset)
+    with pytest.raises(ValidationError, match="verified timings"):
+        set_memorization_plan(
+            user=User.objects.create_user(),
+            start_ayah_id=quran_dataset["first_ayah"].id,
+            end_ayah_id=quran_dataset["second_ayah"].id,
+            recitation_id=incomplete.id,
+            daily_repetitions=5,
+            pause_seconds=2,
+            timezone_name="UTC",
+            base_revision=0,
+            client_updated_at=now,
+        )
 
 
 @pytest.mark.django_db

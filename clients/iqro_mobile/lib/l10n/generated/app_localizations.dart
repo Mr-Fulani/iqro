@@ -2975,6 +2975,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} day in a row} other{{count} days in a row}}'**
   String planStreak(num count);
+
+  /// No description provided for @planSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress summary'**
+  String get planSummaryTitle;
+
+  /// No description provided for @planSummaryRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {days, plural, one{{days} day} other{{days} days}}'**
+  String planSummaryRange(num days);
+
+  /// No description provided for @planReadingDays.
+  ///
+  /// In en, this message translates to:
+  /// **'reading days'**
+  String get planReadingDays;
+
+  /// No description provided for @planCompletedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'targets met'**
+  String get planCompletedDays;
+
+  /// No description provided for @planPartialDays.
+  ///
+  /// In en, this message translates to:
+  /// **'partial days'**
+  String get planPartialDays;
+
+  /// No description provided for @planCalendarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress calendar'**
+  String get planCalendarTitle;
+
+  /// No description provided for @planCalendarHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a day to see its target, reading and after-prayer marks.'**
+  String get planCalendarHint;
+
+  /// No description provided for @planCalendarEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no data for this period.'**
+  String get planCalendarEmpty;
+
+  /// No description provided for @planSelectedDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected day'**
+  String get planSelectedDay;
+
+  /// No description provided for @planRelatedTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Related sections'**
+  String get planRelatedTools;
+
+  /// No description provided for @planHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No reading records for this period.'**
+  String get planHistoryEmpty;
+
+  /// No description provided for @planPrayerCount.
+  ///
+  /// In en, this message translates to:
+  /// **'After-prayer marks: {count}'**
+  String planPrayerCount(num count);
+
+  /// No description provided for @planAutomaticSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic sessions: {count}'**
+  String planAutomaticSessions(num count);
+
+  /// No description provided for @planManualRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Added manually'**
+  String get planManualRecord;
+
+  /// No description provided for @planEditEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit entry'**
+  String get planEditEntry;
+
+  /// No description provided for @planDeleteEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry'**
+  String get planDeleteEntry;
+
+  /// No description provided for @planDeleteEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry?'**
+  String get planDeleteEntryTitle;
+
+  /// No description provided for @planDeleteEntryConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This manual entry will be deleted and progress recalculated.'**
+  String get planDeleteEntryConfirm;
+
+  /// No description provided for @planReadingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get planReadingAmount;
+
+  /// No description provided for @planReadingDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading date'**
+  String get planReadingDate;
+
+  /// No description provided for @planStateNoGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'No target'**
+  String get planStateNoGoal;
+
+  /// No description provided for @planStatePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get planStatePending;
+
+  /// No description provided for @planStateMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get planStateMissed;
+
+  /// No description provided for @planStatePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get planStatePartial;
+
+  /// No description provided for @planStateCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get planStateCompleted;
+
+  /// No description provided for @planDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days'**
+  String planDays(num count);
 }
 
 class _AppLocalizationsDelegate

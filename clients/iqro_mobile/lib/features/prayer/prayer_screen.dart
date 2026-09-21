@@ -13,6 +13,7 @@ import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/mini_player.dart';
 import 'prayer_repository.dart';
 import 'prayer_places.dart';
 
@@ -36,7 +37,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
   var _profileLoading = false;
   var _savingSettings = false;
   var _addingWidget = false;
-  var _profileOffline = false;
   var _retryLocationOnResume = false;
 
   @override
@@ -74,7 +74,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       _error = null;
       _profileOwnerId = null;
       _profileLoading = false;
-      _profileOffline = false;
       if (ownerId != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _ownerId == ownerId) _loadAccountState(ownerId);
@@ -112,43 +111,60 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         subtitle: DateFormat.yMMMMd(
           Localizations.localeOf(context).languageCode,
         ).format(DateTime.now()),
+        actions: <Widget>[
+          IconButton(
+            tooltip: context.l10n.refresh,
+            onPressed: _schedule == null || selectedMethod == null || _loading
+                ? null
+                : _calculate,
+            icon: _loading
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: IqroPage(
+        padding: iqroRootTabPadding(
+          playerActive: ref.watch(
+            audioControllerProvider.select((value) => value.active),
+          ),
+          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            IqroCard(
-              color: context.iqroColors.ink,
-              borderColor: Colors.transparent,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  IqroEyebrow(context.l10n.nextPrayer, light: true),
-                  const SizedBox(height: 8),
-                  Text(
-                    _nextPrayerName(context),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.displaySmall?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _nextPrayerTime(),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: .72),
+            SizedBox(
+              width: double.infinity,
+              child: IqroCard(
+                color: context.iqroColors.ink,
+                borderColor: Colors.transparent,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    IqroEyebrow(context.l10n.nextPrayer, light: true),
+                    const SizedBox(height: 8),
+                    Text(
+                      _nextPrayerName(context),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.displaySmall?.copyWith(color: Colors.white),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _nextPrayerTime(),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .72),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
-            IqroStatusBanner(
-              icon: Icons.privacy_tip_outlined,
-              title: context.l10n.privacy,
-              message: context.l10n.prayerLocationPrivacy,
-              color: context.iqroColors.lavender,
-            ),
-            const SizedBox(height: 10),
             IqroCard(
               child: Row(
                 children: <Widget>[
@@ -285,14 +301,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                 ],
               ),
             ),
-            if (_profileOffline) ...<Widget>[
-              const SizedBox(height: 10),
-              IqroStatusBanner(
-                icon: Icons.cloud_off_outlined,
-                title: context.l10n.savedOnDevice,
-                message: context.l10n.prayerSettingsSyncPending,
-              ),
-            ],
             const SizedBox(height: 14),
             if (_schedule == null)
               IqroCard(
@@ -339,58 +347,48 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                 ),
               )
             else
-              IqroCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+              SizedBox(
+                width: double.infinity,
+                child: IqroCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      for (final code in const <String>[
+                        'fajr',
+                        'dhuhr',
+                        'asr',
+                        'maghrib',
+                        'isha',
+                      ])
+                        ListTile(
+                          minTileHeight: 62,
+                          leading: Icon(
+                            Icons.mosque_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(
+                            _name(context, code),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          trailing: Text(
+                            _schedule!.times[code] == null
+                                ? '—'
+                                : DateFormat.Hm().format(
+                                    _schedule!.times[code]!,
+                                  ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: <Widget>[
-                    for (final code in const <String>[
-                      'fajr',
-                      'dhuhr',
-                      'asr',
-                      'maghrib',
-                      'isha',
-                    ])
-                      ListTile(
-                        minTileHeight: 62,
-                        leading: Icon(
-                          Icons.mosque_outlined,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        title: Text(
-                          _name(context, code),
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        trailing: Text(
-                          _schedule!.times[code] == null
-                              ? '—'
-                              : DateFormat.Hm().format(_schedule!.times[code]!),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                        ),
-                      ),
-                  ],
-                ),
               ),
-            if (_schedule != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                '${selectedMethod?.nameFor(locale) ?? _schedule!.methodName} · ${_schedule!.timezone}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _loading || selectedMethod == null
-                    ? null
-                    : _calculate,
-                icon: const Icon(Icons.refresh),
-                label: Text(context.l10n.retry),
-              ),
-            ],
             if (qibla != null) ...<Widget>[
               const SizedBox(height: 14),
               IqroCard(
@@ -574,7 +572,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       setState(() {
         _selectedMethodCode = profile.method.code;
         _preferences = profile.preferences;
-        _profileOffline = profile.offline;
         _profileOwnerId = expectedOwnerId;
         _profileLoading = false;
       });
@@ -641,7 +638,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       setState(() {
         _selectedMethodCode = saved.method.code;
         _preferences = saved.preferences;
-        _profileOffline = saved.offline;
       });
       final schedule = await ref
           .read(prayerRepositoryProvider)

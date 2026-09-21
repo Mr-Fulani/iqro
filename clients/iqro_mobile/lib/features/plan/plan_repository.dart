@@ -21,6 +21,95 @@ enum ReadingGoalMetric {
   );
 }
 
+class ReadingPositionSummary {
+  const ReadingPositionSummary({
+    required this.editionCode,
+    required this.page,
+    required this.surah,
+    required this.ayah,
+  });
+
+  factory ReadingPositionSummary.fromJson(Map<String, Object?> json) {
+    final ayah = json['ayah'] is Map
+        ? Map<String, Object?>.from(json['ayah']! as Map)
+        : const <String, Object?>{};
+    return ReadingPositionSummary(
+      editionCode: json['edition_code']?.toString() ?? '',
+      page: (json['page_number'] as num?)?.toInt() ?? 1,
+      surah: (ayah['surah_number'] as num?)?.toInt(),
+      ayah: (ayah['ayah_number'] as num?)?.toInt(),
+    );
+  }
+
+  final String editionCode;
+  final int page;
+  final int? surah;
+  final int? ayah;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'edition_code': editionCode,
+    'page_number': page,
+    'surah_number': surah,
+    'ayah_number': ayah,
+  };
+}
+
+class ReadingSession {
+  const ReadingSession({
+    required this.id,
+    required this.source,
+    required this.status,
+    required this.timezoneName,
+    required this.localDate,
+    required this.activeSeconds,
+    required this.creditedPages,
+    required this.creditedAyahs,
+    required this.manualMetric,
+    required this.manualAmount,
+    required this.revision,
+    this.startedAt,
+    this.endedAt,
+    this.deletedAt,
+  });
+
+  factory ReadingSession.fromJson(Map<String, Object?> json) => ReadingSession(
+    id: json['id']?.toString() ?? '',
+    source: json['source']?.toString() ?? '',
+    status: json['status']?.toString() ?? '',
+    timezoneName: json['timezone_name']?.toString() ?? 'UTC',
+    localDate: json['local_date']?.toString() ?? '',
+    activeSeconds: (json['active_seconds'] as num?)?.toInt() ?? 0,
+    creditedPages: (json['credited_pages'] as num?)?.toInt() ?? 0,
+    creditedAyahs: (json['credited_ayahs'] as num?)?.toInt() ?? 0,
+    manualMetric: json['manual_metric'] == null
+        ? null
+        : ReadingGoalMetric.fromWire(json['manual_metric']),
+    manualAmount: _amount(json['manual_amount']),
+    revision: (json['revision'] as num?)?.toInt() ?? 0,
+    startedAt: DateTime.tryParse(json['started_at']?.toString() ?? ''),
+    endedAt: DateTime.tryParse(json['ended_at']?.toString() ?? ''),
+    deletedAt: DateTime.tryParse(json['deleted_at']?.toString() ?? ''),
+  );
+
+  final String id;
+  final String source;
+  final String status;
+  final String timezoneName;
+  final String localDate;
+  final int activeSeconds;
+  final int creditedPages;
+  final int creditedAyahs;
+  final ReadingGoalMetric? manualMetric;
+  final double manualAmount;
+  final int revision;
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+  final DateTime? deletedAt;
+
+  bool get isManual => source == 'manual' && status == 'completed';
+  bool get isAutomatic => source == 'automatic' && status == 'completed';
+}
+
 class ReadingHistoryDay {
   const ReadingHistoryDay({
     required this.localDate,
@@ -33,14 +122,26 @@ class ReadingHistoryDay {
     required this.automaticPages,
     required this.automaticAyahs,
     required this.prayerPages,
+    this.prayerCheckIns = const <PrayerReadingCheckIn>[],
+    this.prayerCount = 0,
+    this.automaticSessions = 0,
   });
 
   factory ReadingHistoryDay.fromJson(Map<String, Object?> json) {
     final goal = json['goal'] is Map
         ? Map<String, Object?>.from(json['goal']! as Map)
         : null;
+    final checkIns = <PrayerReadingCheckIn>[];
+    for (final raw
+        in (json['prayer_check_ins'] as List?) ?? const <Object?>[]) {
+      if (raw is Map) {
+        checkIns.add(
+          PrayerReadingCheckIn.fromJson(Map<String, Object?>.from(raw)),
+        );
+      }
+    }
     return ReadingHistoryDay(
-      localDate: DateTime.tryParse(json['local_date']?.toString() ?? ''),
+      localDate: _parseDateOnly(json['local_date']),
       state: json['state']?.toString() ?? 'no_goal',
       hasReading: json['has_reading'] == true,
       metric: goal == null ? null : ReadingGoalMetric.fromWire(goal['metric']),
@@ -51,6 +152,9 @@ class ReadingHistoryDay {
       automaticPages: (json['automatic_pages'] as num?)?.toInt() ?? 0,
       automaticAyahs: (json['automatic_ayahs'] as num?)?.toInt() ?? 0,
       prayerPages: (json['prayer_pages'] as num?)?.toInt() ?? 0,
+      prayerCheckIns: checkIns,
+      prayerCount: (json['prayer_count'] as num?)?.toInt() ?? checkIns.length,
+      automaticSessions: (json['automatic_sessions'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -64,6 +168,9 @@ class ReadingHistoryDay {
   final int automaticPages;
   final int automaticAyahs;
   final int prayerPages;
+  final List<PrayerReadingCheckIn> prayerCheckIns;
+  final int prayerCount;
+  final int automaticSessions;
 }
 
 class PrayerReadingCheckIn {
@@ -72,6 +179,9 @@ class PrayerReadingCheckIn {
     required this.prayer,
     required this.pages,
     required this.revision,
+    this.localDate,
+    this.timezoneName,
+    this.readingSessionId,
   });
 
   factory PrayerReadingCheckIn.fromJson(Map<String, Object?> json) =>
@@ -80,12 +190,48 @@ class PrayerReadingCheckIn {
         prayer: json['prayer']?.toString() ?? '',
         pages: (json['pages'] as num?)?.toInt() ?? 0,
         revision: (json['revision'] as num?)?.toInt() ?? 0,
+        localDate: json['local_date']?.toString(),
+        timezoneName: json['timezone_name']?.toString(),
+        readingSessionId: json['reading_session_id']?.toString(),
       );
 
   final String id;
   final String prayer;
   final int pages;
   final int revision;
+  final String? localDate;
+  final String? timezoneName;
+  final String? readingSessionId;
+}
+
+class ReadingPlanStats {
+  const ReadingPlanStats({
+    required this.readingDays,
+    required this.completedDays,
+    required this.partialDays,
+  });
+
+  final int readingDays;
+  final int completedDays;
+  final int partialDays;
+}
+
+class ReadingHistoryGroup {
+  const ReadingHistoryGroup({
+    required this.localDate,
+    required this.manualSessions,
+    required this.automaticSessions,
+    required this.automaticSeconds,
+    required this.automaticPages,
+    required this.automaticAyahs,
+  });
+
+  final String localDate;
+  final List<ReadingSession> manualSessions;
+  final int automaticSessions;
+  final int automaticSeconds;
+  final int automaticPages;
+  final int automaticAyahs;
 }
 
 class DailyPlan {
@@ -101,6 +247,8 @@ class DailyPlan {
     this.localDate = '',
     this.history = const <ReadingHistoryDay>[],
     this.prayerCheckIns = const <String, PrayerReadingCheckIn>{},
+    this.sessions = const <ReadingSession>[],
+    this.continueReading,
     this.prayerPlanRevision,
     this.prayerPlanPages,
     this.prayerTimezoneName,
@@ -126,6 +274,8 @@ class DailyPlan {
        localDate = '',
        history = const <ReadingHistoryDay>[],
        prayerCheckIns = const <String, PrayerReadingCheckIn>{},
+       sessions = const <ReadingSession>[],
+       continueReading = null,
        prayerPlanRevision = null,
        prayerPlanPages = null,
        prayerTimezoneName = null,
@@ -136,6 +286,11 @@ class DailyPlan {
     final prayer = json['prayer_pages'] is Map
         ? Map<String, Object?>.from(json['prayer_pages']! as Map)
         : const <String, Object?>{};
+    final continueReading = json['continue_reading'] is Map
+        ? ReadingPositionSummary.fromJson(
+            Map<String, Object?>.from(json['continue_reading']! as Map),
+          )
+        : null;
     return DailyPlan(
       metric: ReadingGoalMetric.fromWire(json['metric']),
       target: _amount(json['target'], fallback: 6),
@@ -151,6 +306,7 @@ class DailyPlan {
       localDate: json['local_date']?.toString() ?? '',
       prayerTimezoneName: json['prayer_timezone_name']?.toString(),
       prayerLocalDate: json['prayer_local_date']?.toString(),
+      continueReading: continueReading,
       fromCache: json['from_cache'] == true,
     );
   }
@@ -187,6 +343,17 @@ class DailyPlan {
         history.add(ReadingHistoryDay.fromJson(Map<String, Object?>.from(raw)));
       }
     }
+    final sessions = <ReadingSession>[];
+    for (final raw in jsonResults(snapshot['sessions'])) {
+      if (raw is Map) {
+        sessions.add(ReadingSession.fromJson(Map<String, Object?>.from(raw)));
+      }
+    }
+    final continueReading = today['continue_reading'] is Map
+        ? ReadingPositionSummary.fromJson(
+            Map<String, Object?>.from(today['continue_reading']! as Map),
+          )
+        : null;
     return DailyPlan(
       metric: ReadingGoalMetric.fromWire(goal['metric']),
       target: _amount(goal['target_amount'], fallback: 6),
@@ -202,8 +369,10 @@ class DailyPlan {
           planner['timezone_name']?.toString() ??
           'UTC',
       localDate: today['local_date']?.toString() ?? '',
-      history: history.reversed.toList(growable: false),
+      history: history.toList(growable: false),
       prayerCheckIns: checkIns,
+      sessions: sessions,
+      continueReading: continueReading,
       prayerPlanRevision: (rawPlan?['revision'] as num?)?.toInt(),
       prayerPlanPages: (rawPlan?['pages_per_prayer'] as num?)?.toInt(),
       prayerTimezoneName: prayer['timezone_name']?.toString(),
@@ -240,6 +409,8 @@ class DailyPlan {
     String? localDate,
     List<ReadingHistoryDay>? history,
     Map<String, PrayerReadingCheckIn>? prayerCheckIns,
+    List<ReadingSession>? sessions,
+    ReadingPositionSummary? continueReading,
     int? prayerPlanRevision,
     int? prayerPlanPages,
     bool? fromCache,
@@ -255,6 +426,8 @@ class DailyPlan {
     localDate: localDate ?? this.localDate,
     history: history ?? this.history,
     prayerCheckIns: prayerCheckIns ?? this.prayerCheckIns,
+    sessions: sessions ?? this.sessions,
+    continueReading: continueReading ?? this.continueReading,
     prayerPlanRevision: prayerPlanRevision ?? this.prayerPlanRevision,
     prayerPlanPages: prayerPlanPages ?? this.prayerPlanPages,
     prayerTimezoneName: prayerTimezoneName,
@@ -274,8 +447,117 @@ class DailyPlan {
     'local_date': localDate,
     'prayer_timezone_name': prayerTimezoneName,
     'prayer_local_date': prayerLocalDate,
+    'continue_reading': continueReading?.toJson(),
     'from_cache': fromCache,
   };
+
+  final List<ReadingSession> sessions;
+  final ReadingPositionSummary? continueReading;
+
+  List<ReadingHistoryDay> daysForRange(int rangeDays) {
+    final count = rangeDays.clamp(7, 90);
+    final today = _parseDateOnly(localDate);
+    if (today == null) return history;
+    final first = today.subtract(Duration(days: count - 1));
+    return history
+        .where(
+          (day) =>
+              day.localDate != null &&
+              !day.localDate!.isBefore(first) &&
+              !day.localDate!.isAfter(today),
+        )
+        .toList(growable: false);
+  }
+
+  ReadingHistoryDay? dayForDate(String date) {
+    for (final day in history) {
+      final localDate = day.localDate;
+      if (localDate != null && _dateOnly(localDate) == date) return day;
+    }
+    return null;
+  }
+
+  ReadingPlanStats statsForRange(int rangeDays) {
+    final days = daysForRange(rangeDays);
+    return ReadingPlanStats(
+      readingDays: days.where((day) => day.hasReading).length,
+      completedDays: days.where((day) => day.state == 'completed').length,
+      partialDays: days.where((day) => day.state == 'partial').length,
+    );
+  }
+
+  List<ReadingHistoryGroup> historyGroupsForRange(int rangeDays) {
+    final days = daysForRange(rangeDays);
+    final visibleDates = <String>{};
+    for (final day in days) {
+      final date = _dateKey(day.localDate);
+      if (date != null) visibleDates.add(date);
+    }
+    final prayerSessionIds = <String>{
+      for (final day in days)
+        for (final checkIn in day.prayerCheckIns)
+          if (checkIn.readingSessionId != null) checkIn.readingSessionId!,
+    };
+    final groups = <String, _ReadingHistoryGroupBuilder>{};
+    for (final day in days) {
+      final date = _dateKey(day.localDate);
+      if (date == null || day.automaticSessions == 0) continue;
+      groups[date] = _ReadingHistoryGroupBuilder(
+        localDate: date,
+        automaticSessions: day.automaticSessions,
+        automaticSeconds: day.automaticSeconds,
+        automaticPages: day.automaticPages,
+        automaticAyahs: day.automaticAyahs,
+      );
+    }
+    for (final session in sessions) {
+      if (!session.isManual || !visibleDates.contains(session.localDate)) {
+        continue;
+      }
+      if (prayerSessionIds.contains(session.id)) continue;
+      final group = groups.putIfAbsent(
+        session.localDate,
+        () => _ReadingHistoryGroupBuilder(localDate: session.localDate),
+      );
+      group.manualSessions.add(session);
+    }
+    final result = groups.values
+        .map((group) => group.build())
+        .toList(growable: false);
+    result.sort((left, right) => right.localDate.compareTo(left.localDate));
+    return result;
+  }
+}
+
+class _ReadingHistoryGroupBuilder {
+  _ReadingHistoryGroupBuilder({
+    required this.localDate,
+    this.automaticSessions = 0,
+    this.automaticSeconds = 0,
+    this.automaticPages = 0,
+    this.automaticAyahs = 0,
+  });
+
+  final String localDate;
+  final int automaticSessions;
+  final int automaticSeconds;
+  final int automaticPages;
+  final int automaticAyahs;
+  final List<ReadingSession> manualSessions = <ReadingSession>[];
+
+  ReadingHistoryGroup build() {
+    manualSessions.sort(
+      (left, right) => right.localDate.compareTo(left.localDate),
+    );
+    return ReadingHistoryGroup(
+      localDate: localDate,
+      manualSessions: List<ReadingSession>.unmodifiable(manualSessions),
+      automaticSessions: automaticSessions,
+      automaticSeconds: automaticSeconds,
+      automaticPages: automaticPages,
+      automaticAyahs: automaticAyahs,
+    );
+  }
 }
 
 abstract interface class PlanRemoteGateway {
@@ -289,8 +571,26 @@ abstract interface class PlanRemoteGateway {
     AccountScopeSnapshot? accountScope,
   });
 
+  Future<Object?> sessions({
+    int limit = 100,
+    AccountScopeSnapshot? accountScope,
+  });
+
   Future<Object?> prayerDay(
     String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  });
+
+  Future<Object?> updateManualSession(
+    String id,
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+
+  Future<void> deleteManualSession(
+    String id,
+    int revision,
+    DateTime updatedAt, {
     AccountScopeSnapshot? accountScope,
   });
 
@@ -354,7 +654,17 @@ class ApiPlanRemoteGateway implements PlanRemoteGateway {
     AccountScopeSnapshot? accountScope,
   }) => _api.get(
     '/me/reading-planner',
-    query: <String, Object?>{'days': 14, 'timezone_name': timezoneName},
+    query: <String, Object?>{'days': 90, 'timezone_name': timezoneName},
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> sessions({
+    int limit = 100,
+    AccountScopeSnapshot? accountScope,
+  }) => _api.get(
+    '/me/reading-sessions',
+    query: <String, Object?>{'limit': limit},
     accountScope: accountScope,
   );
 
@@ -367,6 +677,36 @@ class ApiPlanRemoteGateway implements PlanRemoteGateway {
     query: <String, Object?>{'timezone_name': timezoneName},
     accountScope: accountScope,
   );
+
+  @override
+  Future<Object?> updateManualSession(
+    String id,
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.patch(
+    '/me/reading-sessions/$id',
+    data: payload,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<void> deleteManualSession(
+    String id,
+    int revision,
+    DateTime updatedAt, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'base_revision': '$revision',
+        'client_updated_at': updatedAt.toUtc().toIso8601String(),
+      },
+    ).query;
+    await _api.delete(
+      '/me/reading-sessions/$id?$query',
+      accountScope: accountScope,
+    );
+  }
 
   @override
   Future<Object?> setGoal(
@@ -564,12 +904,14 @@ class PlanRepository {
     final results = await Future.wait<Object?>(<Future<Object?>>[
       remote.planner(timezoneName, accountScope: scope),
       remote.prayerDay(timezoneName, accountScope: scope),
+      remote.sessions(accountScope: scope),
     ]);
     _database.ensureCurrent(scope);
     final snapshot = <String, Object?>{
       'today': today,
       'planner': jsonMap(results[0]),
       'prayer': jsonMap(results[1]),
+      'sessions': results[2],
     };
     final plan = DailyPlan.fromRemote(snapshot);
     await _database.writeAccountCache(
@@ -647,6 +989,63 @@ class PlanRepository {
         metric: ReadingGoalMetric.pages,
         accountScope: accountScope,
       );
+
+  Future<DailyPlan> updateManualReading(
+    ReadingSession session, {
+    required ReadingGoalMetric metric,
+    required double amount,
+    required String localDate,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (!session.isManual || session.id.isEmpty) {
+      throw const FormatException('Only manual reading can be edited');
+    }
+    if (amount <= 0 || amount > maximumReadingTarget(metric)) {
+      throw const FormatException('Reading amount is out of range');
+    }
+    final parsedDate = DateTime.tryParse(localDate);
+    if (parsedDate == null) {
+      throw const FormatException('Reading date is invalid');
+    }
+    final scope = accountScope ?? await _database.captureAccount();
+    final remote = _remote;
+    if (remote == null) {
+      throw StateError('Manual reading editing requires an account');
+    }
+    final now = DateTime.now().toUtc();
+    await remote.updateManualSession(session.id, <String, Object?>{
+      'timezone_name': session.timezoneName,
+      'local_date': _dateOnly(parsedDate),
+      'metric': metric.wireValue,
+      'amount': amount,
+      'base_revision': session.revision,
+      'client_updated_at': now.toIso8601String(),
+    }, accountScope: scope);
+    _database.ensureCurrent(scope);
+    return _loadRemote(scope);
+  }
+
+  Future<DailyPlan> deleteManualReading(
+    ReadingSession session, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (!session.isManual || session.id.isEmpty) {
+      throw const FormatException('Only manual reading can be deleted');
+    }
+    final scope = accountScope ?? await _database.captureAccount();
+    final remote = _remote;
+    if (remote == null) {
+      throw StateError('Manual reading editing requires an account');
+    }
+    await remote.deleteManualSession(
+      session.id,
+      session.revision,
+      DateTime.now().toUtc(),
+      accountScope: scope,
+    );
+    _database.ensureCurrent(scope);
+    return _loadRemote(scope);
+  }
 
   Future<DailyPlan> setPrayerPages(
     String prayer,
@@ -1016,3 +1415,14 @@ String _dateOnly(DateTime value) =>
     '${value.year.toString().padLeft(4, '0')}-'
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
+
+String? _dateKey(DateTime? value) => value == null ? null : _dateOnly(value);
+
+DateTime? _parseDateOnly(Object? value) {
+  final raw = value?.toString();
+  if (raw == null || raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+  if (raw.contains('T')) return parsed;
+  return DateTime.utc(parsed.year, parsed.month, parsed.day);
+}

@@ -43,7 +43,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final locale = Localizations.localeOf(context).languageCode;
     final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
     final preferredRecitationId = ref.watch(
-      appPreferencesProvider.select((value) => value.preferredRecitationId),
+      appPreferencesProvider.select((value) => value.listeningRecitationId),
     );
     return Scaffold(
       appBar: IqroTopBar(
@@ -188,9 +188,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         title: context.l10n.noAudio,
       );
     }
-    final activePersonKey = player.reciter == null
-        ? null
-        : reciterPersonKey(player.reciter!);
+    final preferredPersonKey = recitations
+        .where((item) => item.id == preferredRecitationId)
+        .map((item) => reciterPersonKey(item.reciter))
+        .firstOrNull;
+    final activePersonKey = player.channel == AudioPlaybackChannel.listening
+        ? player.reciter == null
+              ? preferredPersonKey
+              : reciterPersonKey(player.reciter!)
+        : preferredPersonKey;
     final selectedPerson = visiblePeople.firstWhere(
       (item) => item.key == _selected,
       orElse: () => visiblePeople.firstWhere(
@@ -391,7 +397,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       unawaited(
         ref
             .read(appPreferencesProvider.notifier)
-            .setPreferredRecitation(recitation.id),
+            .setListeningRecitation(recitation.id),
       );
       if (!mounted) return;
       context.push('/player');
@@ -612,17 +618,23 @@ class _RecitationStyleFilter extends StatelessWidget {
     return Semantics(
       container: true,
       label: context.l10n.recitationStyle,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: <Widget>[
-          for (final style in styles)
-            ChoiceChip(
-              label: Text(_styleLabel(context, style)),
-              selected: style == selected,
-              onSelected: (_) => onSelected(style),
-            ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.only(end: 4),
+        child: Row(
+          children: <Widget>[
+            for (var index = 0; index < styles.length; index++) ...<Widget>[
+              if (index > 0) const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text(_styleLabel(context, styles[index])),
+                selected: styles[index] == selected,
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) => onSelected(styles[index]),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

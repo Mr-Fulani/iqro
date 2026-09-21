@@ -12,6 +12,7 @@ from django.db.models import (
     Prefetch,
     Q,
     QuerySet,
+    Subquery,
     Sum,
     When,
 )
@@ -27,7 +28,7 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     Reciter,
 )
-from quran_backend.modules.quran.models import PublicationStatus
+from quran_backend.modules.quran.models import PublicationStatus, Surah
 
 
 def public_recitation_base() -> QuerySet[RecitationEdition]:
@@ -63,6 +64,18 @@ def public_recitation_base() -> QuerySet[RecitationEdition]:
 def public_recitations() -> QuerySet[RecitationEdition]:
     """Return visible recitations with catalog summary annotations."""
 
+    expected_ayah_count = (
+        Surah.objects.filter(
+            edition_version_id=OuterRef("quran_edition_version_id"),
+        )
+        .values("edition_version_id")
+        .annotate(total=Sum("ayah_count"))
+        .values("total")[:1]
+    )
+    catalog_segment_scope = _segment_scope_matches_track(
+        track_lookup="tracks__",
+        ayah_lookup="tracks__segments__ayah__",
+    )
     return (
         public_recitation_base()
         .annotate(
@@ -79,7 +92,20 @@ def public_recitations() -> QuerySet[RecitationEdition]:
                     tracks__timing_version__recitation_edition_id=F("id"),
                     tracks__segments__ayah__surah__edition_version_id=F("quran_edition_version_id"),
                     tracks__segments__end_ms__lte=F("tracks__duration_ms"),
-                ),
+                )
+                & catalog_segment_scope,
+                distinct=True,
+            ),
+            expected_ayah_count=Subquery(expected_ayah_count),
+            timed_ayah_count=Count(
+                "tracks__segments__ayah",
+                filter=Q(
+                    tracks__timing_version__verified_at__isnull=False,
+                    tracks__timing_version__recitation_edition_id=F("id"),
+                    tracks__segments__ayah__surah__edition_version_id=F("quran_edition_version_id"),
+                    tracks__segments__end_ms__lte=F("tracks__duration_ms"),
+                )
+                & catalog_segment_scope,
                 distinct=True,
             ),
         )
@@ -195,17 +221,30 @@ def verified_audio_segments() -> QuerySet[AyahAudioSegment]:
             end_ms__lte=F("track__duration_ms"),
         )
         .filter(
-            Q(
-                track__scope=AudioTrackScope.SURAH,
-                ayah__surah__number=F("track__surah_number"),
+            _segment_scope_matches_track(
+                track_lookup="track__",
+                ayah_lookup="ayah__",
             )
-            | Q(
-                track__scope=AudioTrackScope.JUZ,
-                ayah__juz_number=F("track__juz_number"),
-            )
-            | Q(track__scope=AudioTrackScope.FULL)
         )
         .order_by("start_ms", "id")
+    )
+
+
+def _segment_scope_matches_track(*, track_lookup: str, ayah_lookup: str) -> Q:
+    return (
+        Q(
+            **{
+                f"{track_lookup}scope": AudioTrackScope.SURAH,
+                f"{ayah_lookup}surah__number": F(f"{track_lookup}surah_number"),
+            }
+        )
+        | Q(
+            **{
+                f"{track_lookup}scope": AudioTrackScope.JUZ,
+                f"{ayah_lookup}juz_number": F(f"{track_lookup}juz_number"),
+            }
+        )
+        | Q(**{f"{track_lookup}scope": AudioTrackScope.FULL})
     )
 
 

@@ -1609,4 +1609,92 @@ class AppLocalizationsTr extends AppLocalizations {
 
     return 'Üst üste $countString gün';
   }
+
+  @override
+  String get planSummaryTitle => 'İlerleme özeti';
+
+  @override
+  String planSummaryRange(num days) {
+    return 'Son $days gün';
+  }
+
+  @override
+  String get planReadingDays => 'okuma günü';
+
+  @override
+  String get planCompletedDays => 'tamamlanan hedef';
+
+  @override
+  String get planPartialDays => 'kısmi gün';
+
+  @override
+  String get planCalendarTitle => 'İlerleme takvimi';
+
+  @override
+  String get planCalendarHint =>
+      'Hedefi, okumayı ve namaz sonrası işaretleri görmek için bir gün seçin.';
+
+  @override
+  String get planCalendarEmpty => 'Bu dönem için veri yok.';
+
+  @override
+  String get planSelectedDay => 'Seçili gün';
+
+  @override
+  String get planRelatedTools => 'İlgili bölümler';
+
+  @override
+  String get planHistoryEmpty => 'Bu dönem için okuma kaydı yok.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'Namaz sonrası işaretler: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'Otomatik oturumlar: $count';
+  }
+
+  @override
+  String get planManualRecord => 'Elle eklendi';
+
+  @override
+  String get planEditEntry => 'Kaydı düzenle';
+
+  @override
+  String get planDeleteEntry => 'Kaydı sil';
+
+  @override
+  String get planDeleteEntryTitle => 'Kayıt silinsin mi?';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'Bu elle eklenen kayıt silinecek ve ilerleme yeniden hesaplanacak.';
+
+  @override
+  String get planReadingAmount => 'Miktar';
+
+  @override
+  String get planReadingDate => 'Okuma tarihi';
+
+  @override
+  String get planStateNoGoal => 'Hedef yok';
+
+  @override
+  String get planStatePending => 'Bugün';
+
+  @override
+  String get planStateMissed => 'Kaçırıldı';
+
+  @override
+  String get planStatePartial => 'Kısmi';
+
+  @override
+  String get planStateCompleted => 'Tamamlandı';
+
+  @override
+  String planDays(num count) {
+    return '$count gün';
+  }
 }

@@ -1642,4 +1642,108 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get planSummaryTitle => 'Сводка прогресса';
+
+  @override
+  String planSummaryRange(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дня',
+      many: '$days дней',
+      few: '$days дня',
+      one: '$days день',
+    );
+    return 'За последние $_temp0';
+  }
+
+  @override
+  String get planReadingDays => 'дней с чтением';
+
+  @override
+  String get planCompletedDays => 'норм выполнено';
+
+  @override
+  String get planPartialDays => 'частичных дней';
+
+  @override
+  String get planCalendarTitle => 'Календарь прогресса';
+
+  @override
+  String get planCalendarHint =>
+      'Выберите день, чтобы увидеть норму, чтение и отметки после намаза.';
+
+  @override
+  String get planCalendarEmpty => 'За этот период нет данных.';
+
+  @override
+  String get planSelectedDay => 'Выбранный день';
+
+  @override
+  String get planRelatedTools => 'Связанные разделы';
+
+  @override
+  String get planHistoryEmpty => 'Записей чтения за этот период нет.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'Отметок после намаза: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'Автоматических сессий: $count';
+  }
+
+  @override
+  String get planManualRecord => 'Добавлено вручную';
+
+  @override
+  String get planEditEntry => 'Изменить запись';
+
+  @override
+  String get planDeleteEntry => 'Удалить запись';
+
+  @override
+  String get planDeleteEntryTitle => 'Удалить запись?';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'Эта ручная запись будет удалена, а прогресс пересчитан.';
+
+  @override
+  String get planReadingAmount => 'Количество';
+
+  @override
+  String get planReadingDate => 'Дата чтения';
+
+  @override
+  String get planStateNoGoal => 'Без нормы';
+
+  @override
+  String get planStatePending => 'Сегодня';
+
+  @override
+  String get planStateMissed => 'Пропущено';
+
+  @override
+  String get planStatePartial => 'Частично';
+
+  @override
+  String get planStateCompleted => 'Выполнено';
+
+  @override
+  String planDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дн.',
+      many: '$count дн.',
+      few: '$count дн.',
+      one: '$count дн.',
+    );
+    return '$_temp0';
+  }
 }

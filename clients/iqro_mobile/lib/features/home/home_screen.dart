@@ -244,13 +244,6 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                   HomeUtilityRow(
-                    icon: Icons.notifications_none_rounded,
-                    title: context.l10n.reminders,
-                    subtitle: context.l10n.remindersSubtitle,
-                    onTap: () => context.push('/reminders'),
-                  ),
-                  const Divider(height: 1),
-                  HomeUtilityRow(
                     icon: Icons.download_outlined,
                     title: context.l10n.homeDownloads,
                     subtitle: context.l10n.offlineStorageSettingsSubtitle,

@@ -1632,4 +1632,98 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get planSummaryTitle => 'Progress summary';
+
+  @override
+  String planSummaryRange(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return 'Last $_temp0';
+  }
+
+  @override
+  String get planReadingDays => 'reading days';
+
+  @override
+  String get planCompletedDays => 'targets met';
+
+  @override
+  String get planPartialDays => 'partial days';
+
+  @override
+  String get planCalendarTitle => 'Progress calendar';
+
+  @override
+  String get planCalendarHint =>
+      'Choose a day to see its target, reading and after-prayer marks.';
+
+  @override
+  String get planCalendarEmpty => 'There is no data for this period.';
+
+  @override
+  String get planSelectedDay => 'Selected day';
+
+  @override
+  String get planRelatedTools => 'Related sections';
+
+  @override
+  String get planHistoryEmpty => 'No reading records for this period.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'After-prayer marks: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'Automatic sessions: $count';
+  }
+
+  @override
+  String get planManualRecord => 'Added manually';
+
+  @override
+  String get planEditEntry => 'Edit entry';
+
+  @override
+  String get planDeleteEntry => 'Delete entry';
+
+  @override
+  String get planDeleteEntryTitle => 'Delete entry?';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'This manual entry will be deleted and progress recalculated.';
+
+  @override
+  String get planReadingAmount => 'Amount';
+
+  @override
+  String get planReadingDate => 'Reading date';
+
+  @override
+  String get planStateNoGoal => 'No target';
+
+  @override
+  String get planStatePending => 'Today';
+
+  @override
+  String get planStateMissed => 'Missed';
+
+  @override
+  String get planStatePartial => 'Partial';
+
+  @override
+  String get planStateCompleted => 'Completed';
+
+  @override
+  String planDays(num count) {
+    return '$count days';
+  }
 }

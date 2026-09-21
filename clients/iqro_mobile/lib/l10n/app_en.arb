@@ -577,5 +577,35 @@
         "format": "decimalPattern"
       }
     }
-  }
+  },
+  "planSummaryTitle": "Progress summary",
+  "planSummaryRange": "Last {days, plural, one{{days} day} other{{days} days}}",
+  "@planSummaryRange": {"placeholders": {"days": {"type": "num"}}},
+  "planReadingDays": "reading days",
+  "planCompletedDays": "targets met",
+  "planPartialDays": "partial days",
+  "planCalendarTitle": "Progress calendar",
+  "planCalendarHint": "Choose a day to see its target, reading and after-prayer marks.",
+  "planCalendarEmpty": "There is no data for this period.",
+  "planSelectedDay": "Selected day",
+  "planRelatedTools": "Related sections",
+  "planHistoryEmpty": "No reading records for this period.",
+  "planPrayerCount": "After-prayer marks: {count}",
+  "@planPrayerCount": {"placeholders": {"count": {"type": "num"}}},
+  "planAutomaticSessions": "Automatic sessions: {count}",
+  "@planAutomaticSessions": {"placeholders": {"count": {"type": "num"}}},
+  "planManualRecord": "Added manually",
+  "planEditEntry": "Edit entry",
+  "planDeleteEntry": "Delete entry",
+  "planDeleteEntryTitle": "Delete entry?",
+  "planDeleteEntryConfirm": "This manual entry will be deleted and progress recalculated.",
+  "planReadingAmount": "Amount",
+  "planReadingDate": "Reading date",
+  "planStateNoGoal": "No target",
+  "planStatePending": "Today",
+  "planStateMissed": "Missed",
+  "planStatePartial": "Partial",
+  "planStateCompleted": "Completed",
+  "planDays": "{count} days",
+  "@planDays": {"placeholders": {"count": {"type": "num"}}}
 }

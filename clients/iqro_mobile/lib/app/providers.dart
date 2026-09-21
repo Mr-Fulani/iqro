@@ -185,8 +185,19 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setPreferredTafsirSource(int sourceId) =>
       _set(state.copyWith(preferredTafsirSourceId: sourceId));
 
+  Future<void> setListeningRecitation(String recitationId) =>
+      _set(state.copyWith(listeningRecitationId: recitationId));
+
+  Future<void> setMushafRecitation(String recitationId) =>
+      _set(state.copyWith(mushafRecitationId: recitationId));
+
+  Future<void> setMemorizationDefaultRecitation(String recitationId) =>
+      _set(state.copyWith(memorizationDefaultRecitationId: recitationId));
+
+  /// Compatibility entry point for code that still represents the old
+  /// single-reciter preference. It now changes only the Listening role.
   Future<void> setPreferredRecitation(String recitationId) =>
-      _set(state.copyWith(preferredRecitationId: recitationId));
+      setListeningRecitation(recitationId);
 
   Future<void> setPreferredAudioQuality(String quality) => _set(
     state.copyWith(
@@ -598,14 +609,11 @@ final recitersProvider = FutureProvider<List<Reciter>>((ref) {
 final audioRecitationsProvider = FutureProvider<List<Recitation>>((ref) {
   return ref.watch(audioRepositoryProvider).recitations();
 });
-final memorizationRecitationsProvider = FutureProvider<List<Recitation>>((
-  ref,
-) async {
-  final recitations = await ref.watch(audioRepositoryProvider).recitations();
-  return recitations
-      .where((item) => item.streamAllowed && item.timingsAvailable)
-      .toList(growable: false);
-});
+final memorizationRecitationsProvider = FutureProvider<List<Recitation>>(
+  (ref) async => ref
+      .watch(audioRepositoryProvider)
+      .recitationsForRole(AudioRecitationRole.memorization),
+);
 
 class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
   AudioDownloadController(this._repository, this._recitationId)
@@ -823,6 +831,25 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
 
   Future<void> addPages(int pages) =>
       _mutate((scope) => _repository.addPages(pages, accountScope: scope));
+
+  Future<void> updateManualReading(
+    ReadingSession session, {
+    required ReadingGoalMetric metric,
+    required double amount,
+    required String localDate,
+  }) => _mutate(
+    (scope) => _repository.updateManualReading(
+      session,
+      metric: metric,
+      amount: amount,
+      localDate: localDate,
+      accountScope: scope,
+    ),
+  );
+
+  Future<void> deleteManualReading(ReadingSession session) => _mutate(
+    (scope) => _repository.deleteManualReading(session, accountScope: scope),
+  );
 
   Future<void> setPrayerPages(String prayer, int pages) => _mutate(
     (scope) => _repository.setPrayerPages(prayer, pages, accountScope: scope),

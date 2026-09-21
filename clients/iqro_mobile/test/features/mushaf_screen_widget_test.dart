@@ -466,6 +466,15 @@ class _AudioRepository implements AudioRepository {
     bool forceRefresh = false,
   }) async =>
       pending == null ? <Recitation>[_recitation] : await pending!.future;
+
+  @override
+  Future<List<Recitation>> recitationsForRole(
+    AudioRecitationRole role, {
+    bool forceRefresh = false,
+  }) async => (await recitations(
+    forceRefresh: forceRefresh,
+  )).where((item) => item.supports(role)).toList(growable: false);
+
   @override
   Future<SurahPlayback> playback({
     required String recitationId,
@@ -499,6 +508,8 @@ class _Audio extends AudioController {
     required SurahPlayback playback,
     required Reciter reciter,
     required String surahName,
+    AudioPlaybackSource source = AudioPlaybackSource.audio,
+    AudioPlaybackChannel? channel,
     int? startAyah,
     int? endAyah,
     bool autoplay = true,
@@ -507,6 +518,8 @@ class _Audio extends AudioController {
     state = IqroAudioState(
       track: playback.track,
       reciter: reciter,
+      source: source,
+      channel: channel,
       surahName: surahName,
       playing: autoplay,
       activeAyah: startAyah,

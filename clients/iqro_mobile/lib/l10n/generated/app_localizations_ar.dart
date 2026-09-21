@@ -1635,4 +1635,92 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get planSummaryTitle => 'ملخص التقدم';
+
+  @override
+  String planSummaryRange(num days) {
+    return 'آخر $days يوماً';
+  }
+
+  @override
+  String get planReadingDays => 'أيام القراءة';
+
+  @override
+  String get planCompletedDays => 'الأهداف المكتملة';
+
+  @override
+  String get planPartialDays => 'الأيام الجزئية';
+
+  @override
+  String get planCalendarTitle => 'تقويم التقدم';
+
+  @override
+  String get planCalendarHint =>
+      'اختر يوماً لرؤية الهدف والقراءة وعلامات ما بعد الصلاة.';
+
+  @override
+  String get planCalendarEmpty => 'لا توجد بيانات لهذه الفترة.';
+
+  @override
+  String get planSelectedDay => 'اليوم المحدد';
+
+  @override
+  String get planRelatedTools => 'أقسام مرتبطة';
+
+  @override
+  String get planHistoryEmpty => 'لا توجد سجلات قراءة لهذه الفترة.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'علامات ما بعد الصلاة: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'جلسات تلقائية: $count';
+  }
+
+  @override
+  String get planManualRecord => 'أضيفت يدوياً';
+
+  @override
+  String get planEditEntry => 'تعديل السجل';
+
+  @override
+  String get planDeleteEntry => 'حذف السجل';
+
+  @override
+  String get planDeleteEntryTitle => 'حذف السجل؟';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'سيُحذف هذا السجل اليدوي ويُعاد حساب التقدم.';
+
+  @override
+  String get planReadingAmount => 'الكمية';
+
+  @override
+  String get planReadingDate => 'تاريخ القراءة';
+
+  @override
+  String get planStateNoGoal => 'بلا هدف';
+
+  @override
+  String get planStatePending => 'اليوم';
+
+  @override
+  String get planStateMissed => 'فائت';
+
+  @override
+  String get planStatePartial => 'جزئي';
+
+  @override
+  String get planStateCompleted => 'مكتمل';
+
+  @override
+  String planDays(num count) {
+    return '$count أيام';
+  }
 }

@@ -32,6 +32,12 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final player = ref.watch(
       audioControllerProvider.select(iqroAudioPresentation),
     );
+    // The app-shell player is Listening-only. Contextual surfaces such as
+    // Mushaf render the same control in expanded mode for their own channel.
+    if (widget.allowCollapse &&
+        player.channel != AudioPlaybackChannel.listening) {
+      return const SizedBox.shrink();
+    }
     final controller = ref.read(audioControllerProvider.notifier);
     if (!identical(_visibleController, controller)) {
       _visibleController = controller;
@@ -241,6 +247,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
       await controller.loadPlayback(
         playback: playback,
         reciter: reciter,
+        channel: player.channel,
         surahName: surahName,
       );
     } on Object {

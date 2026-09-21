@@ -127,4 +127,43 @@ void main() {
 
     expect(store.read().preferredAudioQuality, defaultPreferredAudioQuality);
   });
+
+  test(
+    'recitation preferences migrate independently after the legacy fallback',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'reader_recitation_id': 'legacy-recitation',
+      });
+      final store = PreferencesStore(await SharedPreferences.getInstance());
+
+      final migrated = store.read();
+      expect(migrated.listeningRecitationId, 'legacy-recitation');
+      expect(migrated.mushafRecitationId, 'legacy-recitation');
+      expect(migrated.memorizationDefaultRecitationId, 'legacy-recitation');
+
+      await store.write(
+        migrated.copyWith(
+          listeningRecitationId: 'listening-recitation',
+          mushafRecitationId: 'mushaf-recitation',
+          memorizationDefaultRecitationId: 'memorization-recitation',
+        ),
+      );
+
+      expect(store.read().listeningRecitationId, 'listening-recitation');
+      expect(store.read().mushafRecitationId, 'mushaf-recitation');
+      expect(
+        store.read().memorizationDefaultRecitationId,
+        'memorization-recitation',
+      );
+
+      await store.write(
+        store.read().copyWith(
+          memorizationDefaultRecitationId: 'memorization-2',
+        ),
+      );
+      expect(store.read().listeningRecitationId, 'listening-recitation');
+      expect(store.read().mushafRecitationId, 'mushaf-recitation');
+      expect(store.read().memorizationDefaultRecitationId, 'memorization-2');
+    },
+  );
 }

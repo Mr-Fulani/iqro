@@ -237,6 +237,84 @@ void main() {
     expect(updated.prayerPages['fajr'], 2);
   });
 
+  test('history grouping keeps prayer check-ins out of manual records', () {
+    final day = ReadingHistoryDay(
+      localDate: DateTime.utc(2026, 9, 21),
+      state: 'completed',
+      hasReading: true,
+      metric: ReadingGoalMetric.pages,
+      target: 1,
+      achieved: 2,
+      automaticSeconds: 120,
+      automaticPages: 1,
+      automaticAyahs: 4,
+      prayerPages: 1,
+      prayerCount: 1,
+      automaticSessions: 1,
+      prayerCheckIns: const <PrayerReadingCheckIn>[
+        PrayerReadingCheckIn(
+          id: 'check-in-1',
+          prayer: 'fajr',
+          pages: 1,
+          revision: 1,
+          readingSessionId: 'prayer-session-1',
+        ),
+      ],
+    );
+    final plan = DailyPlan(
+      metric: ReadingGoalMetric.pages,
+      target: 1,
+      achieved: 2,
+      prayerPages: const <String, int>{
+        'fajr': 1,
+        'dhuhr': 0,
+        'asr': 0,
+        'maghrib': 0,
+        'isha': 0,
+      },
+      streak: 1,
+      localDate: '2026-09-21',
+      history: <ReadingHistoryDay>[day],
+      sessions: <ReadingSession>[
+        const ReadingSession(
+          id: 'prayer-session-1',
+          source: 'manual',
+          status: 'completed',
+          timezoneName: 'UTC',
+          localDate: '2026-09-21',
+          activeSeconds: 0,
+          creditedPages: 0,
+          creditedAyahs: 0,
+          manualMetric: ReadingGoalMetric.pages,
+          manualAmount: 1,
+          revision: 1,
+        ),
+        const ReadingSession(
+          id: 'manual-session-1',
+          source: 'manual',
+          status: 'completed',
+          timezoneName: 'UTC',
+          localDate: '2026-09-21',
+          activeSeconds: 0,
+          creditedPages: 0,
+          creditedAyahs: 0,
+          manualMetric: ReadingGoalMetric.pages,
+          manualAmount: 1,
+          revision: 1,
+        ),
+      ],
+    );
+
+    expect(plan.daysForRange(30), hasLength(1));
+    final groups = plan.historyGroupsForRange(30);
+
+    expect(groups, hasLength(1));
+    expect(groups.single.automaticSessions, 1);
+    expect(groups.single.manualSessions.map((item) => item.id), <String>[
+      'manual-session-1',
+    ]);
+  });
+
   test(
     'automatic session counts active time and only sequential progress',
     () async {
@@ -543,6 +621,15 @@ class _FakePlanRemote implements PlanRemoteGateway {
   }
 
   @override
+  Future<Object?> sessions({
+    int limit = 100,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (offline) throw StateError('offline');
+    return const <String, Object?>{'results': <Object?>[]};
+  }
+
+  @override
   Future<Object?> prayerDay(
     String timezoneName, {
     AccountScopeSnapshot? accountScope,
@@ -554,6 +641,26 @@ class _FakePlanRemote implements PlanRemoteGateway {
       'plan': prayerPlan,
       'check_ins': <Object?>[?prayerCheckIn],
     };
+  }
+
+  @override
+  Future<Object?> updateManualSession(
+    String id,
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (offline) throw StateError('offline');
+    return <String, Object?>{'id': id, ...payload};
+  }
+
+  @override
+  Future<void> deleteManualSession(
+    String id,
+    int revision,
+    DateTime updatedAt, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (offline) throw StateError('offline');
   }
 
   @override

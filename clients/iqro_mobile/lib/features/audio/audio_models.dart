@@ -1,5 +1,78 @@
 import '../../core/utils/json_helpers.dart';
 
+enum AudioRecitationRole { listening, ayahPlayback, memorization }
+
+class RecitationCapabilities {
+  const RecitationCapabilities({
+    required this.listen,
+    required this.ayahPlayback,
+    required this.memorization,
+    required this.offline,
+  });
+
+  factory RecitationCapabilities.fromJson(
+    Map<String, Object?> json, {
+    required bool legacyListen,
+    required bool legacyTimed,
+    required bool legacyOffline,
+  }) {
+    return RecitationCapabilities(
+      listen: json.containsKey('listen')
+          ? json['listen'] == true
+          : legacyListen,
+      ayahPlayback: json.containsKey('ayah_playback')
+          ? json['ayah_playback'] == true
+          : legacyTimed,
+      memorization: json.containsKey('memorization')
+          ? json['memorization'] == true
+          : legacyTimed,
+      offline: json.containsKey('offline')
+          ? json['offline'] == true
+          : legacyOffline,
+    );
+  }
+
+  final bool listen;
+  final bool ayahPlayback;
+  final bool memorization;
+  final bool offline;
+
+  bool supports(AudioRecitationRole role) => switch (role) {
+    AudioRecitationRole.listening => listen,
+    AudioRecitationRole.ayahPlayback => ayahPlayback,
+    AudioRecitationRole.memorization => memorization,
+  };
+}
+
+class RecitationCoverage {
+  const RecitationCoverage({
+    required this.trackCount,
+    required this.surahCount,
+    required this.expectedAyahs,
+    required this.timedAyahs,
+    required this.complete,
+    required this.timingsComplete,
+  });
+
+  factory RecitationCoverage.fromJson(Map<String, Object?> json) {
+    return RecitationCoverage(
+      trackCount: (json['track_count'] as num?)?.toInt() ?? 0,
+      surahCount: (json['surah_count'] as num?)?.toInt() ?? 0,
+      expectedAyahs: (json['expected_ayahs'] as num?)?.toInt() ?? 0,
+      timedAyahs: (json['timed_ayahs'] as num?)?.toInt() ?? 0,
+      complete: json['complete'] == true,
+      timingsComplete: json['timings_complete'] == true,
+    );
+  }
+
+  final int trackCount;
+  final int surahCount;
+  final int expectedAyahs;
+  final int timedAyahs;
+  final bool complete;
+  final bool timingsComplete;
+}
+
 class Reciter {
   const Reciter({
     required this.id,
@@ -107,6 +180,8 @@ class Recitation {
     required this.surahCount,
     required this.streamAllowed,
     required this.offlineDownloadAllowed,
+    this.capabilities,
+    this.coverage,
   });
 
   factory Recitation.fromJson(Map<String, Object?> json) {
@@ -122,6 +197,9 @@ class Recitation {
     final rights = json['rights'] is Map
         ? Map<String, Object?>.from(json['rights']! as Map)
         : const <String, Object?>{};
+    final capabilitiesJson = json['capabilities'] is Map
+        ? Map<String, Object?>.from(json['capabilities']! as Map)
+        : const <String, Object?>{};
     return Recitation(
       id: json['id']?.toString() ?? '',
       code: json['code']?.toString() ?? '',
@@ -131,6 +209,15 @@ class Recitation {
       surahCount: (coverage['surah_count'] as num?)?.toInt() ?? 0,
       streamAllowed: rights['stream'] != false,
       offlineDownloadAllowed: rights['offline_download'] == true,
+      capabilities: RecitationCapabilities.fromJson(
+        capabilitiesJson,
+        legacyListen:
+            rights['stream'] != false &&
+            ((coverage['surah_count'] as num?)?.toInt() ?? 0) > 0,
+        legacyTimed: timings['available'] == true,
+        legacyOffline: rights['offline_download'] == true,
+      ),
+      coverage: RecitationCoverage.fromJson(coverage),
     );
   }
 
@@ -142,6 +229,18 @@ class Recitation {
   final int surahCount;
   final bool streamAllowed;
   final bool offlineDownloadAllowed;
+  final RecitationCapabilities? capabilities;
+  final RecitationCoverage? coverage;
+
+  bool supports(AudioRecitationRole role) {
+    final value = capabilities;
+    if (value != null) return value.supports(role);
+    return switch (role) {
+      AudioRecitationRole.listening => streamAllowed && surahCount > 0,
+      AudioRecitationRole.ayahPlayback => timingsAvailable,
+      AudioRecitationRole.memorization => timingsAvailable,
+    };
+  }
 }
 
 class AudioTrack {
