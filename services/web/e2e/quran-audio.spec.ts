@@ -1129,10 +1129,10 @@ test("displayed source page saves canonical position before server debounce and 
     route.fulfill({ json: { ...foundationPage(5, 151), verse_mapping: { "7": "1" },
       words: foundationPage(5, 151).words.filter((word) => word.verse_id === 1) } }),
   );
+  await page.clock.install({ time: new Date("2026-08-28T08:00:00Z") });
   await page.goto("/ru/quran?surah=6");
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await page.clock.pauseAt(new Date("2026-08-28T09:00:00Z"));
   const pageJump = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
   await pageJump.fill("151");
   await pageJump.press("Enter");
