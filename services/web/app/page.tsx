@@ -296,7 +296,7 @@ export default function HomePage() {
                   key={reciter.id}
                   href={localizedPath(locale, `/audio?reciter=${encodeURIComponent(reciter.id)}`)}
                   className="reciter-card"
-                  onClick={() => rememberReciterPreference(reciter)}
+                  onClick={() => rememberReciterPreference(reciter, null, "listening")}
                   aria-label={t("home.listenReciter", { name })}
                   data-testid="featured-reciter"
                 >

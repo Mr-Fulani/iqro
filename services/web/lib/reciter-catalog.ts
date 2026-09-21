@@ -16,6 +16,8 @@ export const HOME_POPULAR_RECITER_SLUGS = [
   "qf-10-saud-ash-shuraym",
 ] as const;
 
+export type RecitationRole = "listen" | "ayah_playback" | "memorization";
+
 export function reciterPersonKey(reciter: Pick<Reciter, "slug"> | string): string {
   const slug = typeof reciter === "string" ? reciter : reciter.slug;
   return CANONICAL_RECITER_SLUGS[slug] || slug;
@@ -62,14 +64,37 @@ export function reciterSourcesForPerson(reciters: Reciter[], selected: Reciter):
   return reciters.filter((reciter) => reciterPersonKey(reciter) === personKey);
 }
 
+export function supportsRecitationRole(
+  recitation: Recitation,
+  role: RecitationRole,
+): boolean {
+  const capability = recitation.capabilities?.[role];
+  if (typeof capability === "boolean") return capability;
+
+  // Keep old cached/API responses readable during the additive contract rollout.
+  if (role === "listen") return recitation.rights.stream && recitation.coverage.surah_count > 0;
+  return recitation.timings.available && recitation.timings.complete === true;
+}
+
+export function recitationsForRole(
+  recitations: Recitation[],
+  role: RecitationRole,
+): Recitation[] {
+  return recitations.filter((recitation) => supportsRecitationRole(recitation, role));
+}
+
 function publishedTimestamp(recitation: Recitation): number {
   const timestamp = Date.parse(recitation.published_at);
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-export function latestRecitationsByVariant(recitations: Recitation[]): Recitation[] {
+export function latestRecitationsByVariant(
+  recitations: Recitation[],
+  role?: RecitationRole,
+): Recitation[] {
   const variants = new Map<string, Recitation>();
-  for (const recitation of recitations) {
+  const eligible = role ? recitationsForRole(recitations, role) : recitations;
+  for (const recitation of eligible) {
     const key = [
       reciterPersonKey(recitation.reciter),
       recitation.style,

@@ -128,8 +128,21 @@ const recitation = {
     attribution: "Synthetic test audio.",
   },
   rights: { stream: true, offline_download: false },
-  coverage: { track_count: 114, surah_count: 114, complete: true },
-  timings: { available: true, segment_count: 2 },
+  coverage: {
+    track_count: 114,
+    surah_count: 114,
+    expected_ayahs: 2,
+    timed_ayahs: 2,
+    complete: true,
+    timings_complete: true,
+  },
+  timings: { available: true, segment_count: 2, complete: true },
+  capabilities: {
+    listen: true,
+    ayah_playback: true,
+    memorization: true,
+    offline: false,
+  },
   published_at: publishedAt,
 };
 

@@ -25,8 +25,21 @@ const recitation = {
     riwayah: "Hafs 'an Asim",
   },
   rights: { stream: true, offline_download: false },
-  coverage: { track_count: 114, surah_count: 114, complete: true },
-  timings: { available: true, segment_count: 6236 },
+  coverage: {
+    track_count: 114,
+    surah_count: 114,
+    expected_ayahs: 6236,
+    timed_ayahs: 6236,
+    complete: true,
+    timings_complete: true,
+  },
+  timings: { available: true, segment_count: 6236, complete: true },
+  capabilities: {
+    listen: true,
+    ayah_playback: true,
+    memorization: true,
+    offline: false,
+  },
 };
 
 const alternateReciter = {

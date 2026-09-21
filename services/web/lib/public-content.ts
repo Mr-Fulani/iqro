@@ -256,6 +256,7 @@ export const getPublishedRecitationsForPerson = cache(
     const recitations = await getPublishedRecitations();
     return latestRecitationsByVariant(
       recitations.filter((recitation) => reciterPersonKey(recitation.reciter) === personKey),
+      "listen",
     );
   },
 );

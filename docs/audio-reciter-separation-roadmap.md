@@ -1,6 +1,6 @@
 # Роадмап разделения аудиосценариев
 
-Статус: implementation in progress
+Статус: implementation in progress; этапы 0–5 завершены
 
 Дата начала: 2026-09-21
 
@@ -153,6 +153,27 @@ background/foreground, process restart, MediaItem ownership и snapshot isolatio
 - Проверить, что web global player и MemorizationAudioLoop не смешивают preferences.
 - Сохранить старые публичные endpoints во время миграции.
 - Запустить web lint, typecheck, build и audio/memorization E2E smoke.
+
+Статус: выполнен для web-клиента (2026-09-21).
+
+Результат:
+
+- TypeScript-модель `Recitation` принимает additive `coverage`, `timings.complete` и
+  `capabilities` поля.
+- Каталог фильтрует варианты по ролям `listen`, `ayah_playback` и `memorization` до
+  дедупликации, поэтому новый untimed-вариант не скрывает старый timed-вариант.
+- Настройки Listening, Mushaf и Memorization хранятся в независимых ключах; старый ключ
+  используется только как fallback для Listening.
+- Audio, Mushaf и Memorization используют соответствующие роли; публичный endpoint
+  чтецов сохраняет прежнюю форму и отбрасывает варианты, недоступные для обычного listen.
+
+Проверки:
+
+- `npm run test:public-contracts` — 16 passed.
+- `npm run typecheck` — passed.
+- `npm run lint` — passed.
+- `npm run build` и production build integrity check — passed.
+- Targeted Playwright smoke Audio/Memorization — 4 passed через системный Chromium.
 
 ### 6. Platform verification
 
