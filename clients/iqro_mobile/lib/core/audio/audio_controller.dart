@@ -213,10 +213,21 @@ class IqroStandaloneAudioState {
 typedef _StandaloneRequest = ({String mediaId, int intent, Object? owner});
 typedef _RestoredPlaybackRange = ({AudioSegment? start, AudioSegment? end});
 
+enum AudioPlaybackSource { audio, memorization }
+
+/// Logical ownership of the shared physical audio engine.
+///
+/// The engine remains shared so interruption, speed, clipping and decoder
+/// handling stay in one place. Persistence and global UI are selected by this
+/// channel, so contextual playback cannot overwrite Listening state.
+enum AudioPlaybackChannel { listening, mushaf, memorization }
+
 class IqroAudioState {
   const IqroAudioState({
     this.track,
     this.reciter,
+    this.source = AudioPlaybackSource.audio,
+    AudioPlaybackChannel? channel,
     this.surahName = '',
     this.playing = false,
     this.buffering = false,
@@ -231,10 +242,16 @@ class IqroAudioState {
     this.rangeEndAyah,
     this.error,
     this.standalone,
-  });
+  }) : channel =
+           channel ??
+           (source == AudioPlaybackSource.memorization
+               ? AudioPlaybackChannel.memorization
+               : AudioPlaybackChannel.listening);
 
   final AudioTrack? track;
   final Reciter? reciter;
+  final AudioPlaybackSource source;
+  final AudioPlaybackChannel channel;
   final String surahName;
   final bool playing;
   final bool buffering;
@@ -297,6 +314,8 @@ class IqroAudioState {
   IqroAudioState copyWith({
     AudioTrack? track,
     Reciter? reciter,
+    AudioPlaybackSource? source,
+    AudioPlaybackChannel? channel,
     String? surahName,
     bool? playing,
     bool? buffering,
@@ -317,9 +336,19 @@ class IqroAudioState {
     bool clearRange = false,
     bool clearStandalone = false,
   }) {
+    final nextSource = source ?? this.source;
+    final nextChannel =
+        channel ??
+        (source == null
+            ? this.channel
+            : source == AudioPlaybackSource.memorization
+            ? AudioPlaybackChannel.memorization
+            : AudioPlaybackChannel.listening);
     return IqroAudioState(
       track: track ?? this.track,
       reciter: reciter ?? this.reciter,
+      source: nextSource,
+      channel: nextChannel,
       surahName: surahName ?? this.surahName,
       playing: playing ?? this.playing,
       buffering: buffering ?? this.buffering,
@@ -340,9 +369,14 @@ class IqroAudioState {
   }
 }
 
+bool isPrimaryAudioPlayback(IqroAudioState state) =>
+    state.active && state.channel == AudioPlaybackChannel.listening;
+
 typedef IqroAudioPresentation = ({
   AudioTrack? track,
   Reciter? reciter,
+  AudioPlaybackSource source,
+  AudioPlaybackChannel channel,
   String surahName,
   bool playing,
   bool buffering,
@@ -351,6 +385,8 @@ typedef IqroAudioPresentation = ({
 IqroAudioPresentation iqroAudioPresentation(IqroAudioState state) => (
   track: state.track,
   reciter: state.reciter,
+  source: state.source,
+  channel: state.channel,
   surahName: state.surahName,
   playing: state.playing,
   buffering: state.buffering,
@@ -519,6 +555,9 @@ class AudioController extends StateNotifier<IqroAudioState> {
   var _activeSourceIntent = -1;
   var _sourceTransitionActive = false;
   _StandaloneRequest? _standaloneRequest;
+  var _memorizationSessionActive = false;
+  AudioPlaybackSnapshot? _listeningSnapshotBeforeMemorization;
+  AudioPlaybackSnapshot? _pendingRestoreSnapshot;
 
   ({int intent, Future<void> interruption}) _beginSourceIntent({
     String? standaloneMediaId,
@@ -545,6 +584,16 @@ class AudioController extends StateNotifier<IqroAudioState> {
       // A superseded load may report its own interruption; the latest intent
       // will either replace it or stop playback completely.
     }
+  }
+
+  Future<void> _pauseAndInterruptCurrentSource() async {
+    try {
+      await _player.pause();
+    } on Object {
+      // Stopping the source below is still required if the pause is rejected
+      // by a platform audio session during route teardown.
+    }
+    await _interruptCurrentSource();
   }
 
   Future<void> _serializeSource(Future<void> Function() operation) {
@@ -608,10 +657,35 @@ class AudioController extends StateNotifier<IqroAudioState> {
     await _restoreFromStore(force: true);
   }
 
+  Future<void> restoreAudioAfterMemorization() async {
+    if (!_memorizationSessionActive &&
+        state.channel != AudioPlaybackChannel.memorization) {
+      return;
+    }
+    final fallbackSnapshot = _listeningSnapshotBeforeMemorization;
+    try {
+      // Invalidate a queued memorization load and stop its physical source,
+      // while retaining the regular Listening snapshot for the hand-off.
+      await _stopCurrentSource(preserveMemorizationSession: true);
+      _memorizationSessionActive = false;
+
+      // The snapshot may already have been restored during app startup. It is
+      // still the correct regular-audio source after memorization has stopped,
+      // so allow this explicit hand-off to load that same snapshot again.
+      _restoredSavedAt = null;
+      _pendingRestoreSnapshot = fallbackSnapshot;
+      await restoreLatestIfIdle();
+    } finally {
+      _memorizationSessionActive = false;
+      _pendingRestoreSnapshot = null;
+      _listeningSnapshotBeforeMemorization = null;
+    }
+  }
+
   Future<void> _restoreFromStore({required bool force}) async {
     if ((!force && _restoreStarted) ||
         _restoring ||
-        _playbackStore == null ||
+        _playbackStore == null && _pendingRestoreSnapshot == null ||
         state.standalone != null ||
         (force &&
             (state.playing ||
@@ -625,7 +699,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     final restoreIntent = _sourceIntent;
     var snapshotValidated = false;
     try {
-      final snapshot = await _playbackStore.read();
+      final snapshot = _pendingRestoreSnapshot ?? await _playbackStore?.read();
       if (snapshot == null ||
           _disposed ||
           restoreIntent != _sourceIntent ||
@@ -646,6 +720,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
         () => _loadPlayback(
           playback: playback,
           reciter: snapshot.reciter,
+          source: AudioPlaybackSource.audio,
+          channel: AudioPlaybackChannel.listening,
           surahName: snapshot.surahName,
           startSegment: restoredRange.start,
           endSegment: restoredRange.end,
@@ -700,7 +776,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       try {
         await _serializeSource(() async {
           if (_disposed || restoreIntent != _sourceIntent) return;
-          await _playbackStore.clear();
+          await _playbackStore?.clear();
           if (!_disposed && restoreIntent == _sourceIntent) {
             state = const IqroAudioState();
             _activeSourceIntent = -1;
@@ -712,6 +788,27 @@ class AudioController extends StateNotifier<IqroAudioState> {
     } finally {
       _restoring = false;
     }
+  }
+
+  void _captureListeningSnapshotForMemorization() {
+    final track = state.track;
+    final reciter = state.reciter;
+    if (state.channel != AudioPlaybackChannel.listening ||
+        track == null ||
+        reciter == null) {
+      return;
+    }
+    _listeningSnapshotBeforeMemorization = AudioPlaybackSnapshot(
+      playback: SurahPlayback(track: track, segments: state.segments),
+      reciter: reciter,
+      surahName: state.surahName,
+      position: state.position,
+      speed: state.speed,
+      repeatEnabled: state.repeatEnabled,
+      rangeStartAyah: state.rangeStartAyah,
+      rangeEndAyah: state.rangeEndAyah,
+      savedAt: DateTime.now().toUtc(),
+    );
   }
 
   _RestoredPlaybackRange _validatedRestoredRange(
@@ -764,6 +861,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
     required SurahPlayback playback,
     required Reciter reciter,
     required String surahName,
+    AudioPlaybackSource source = AudioPlaybackSource.audio,
+    AudioPlaybackChannel? channel,
     int? startAyah,
     int? endAyah,
     bool autoplay = true,
@@ -792,11 +891,26 @@ class AudioController extends StateNotifier<IqroAudioState> {
         endSegment.end <= startSegment.start) {
       throw StateError('The selected ayah range has invalid audio timings');
     }
+    final effectiveChannel =
+        channel ??
+        (source == AudioPlaybackSource.memorization
+            ? AudioPlaybackChannel.memorization
+            : AudioPlaybackChannel.listening);
+    if (effectiveChannel == AudioPlaybackChannel.memorization) {
+      _memorizationSessionActive = true;
+      _captureListeningSnapshotForMemorization();
+    } else {
+      _memorizationSessionActive = false;
+      _listeningSnapshotBeforeMemorization = null;
+      _pendingRestoreSnapshot = null;
+    }
     final sourceIntent = _beginSourceIntent();
     return _serializeSource(
       () => _loadPlayback(
         playback: normalizedPlayback,
         reciter: reciter,
+        source: source,
+        channel: effectiveChannel,
         surahName: surahName,
         startSegment: startSegment,
         endSegment: endSegment,
@@ -810,6 +924,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
   Future<void> _loadPlayback({
     required SurahPlayback playback,
     required Reciter reciter,
+    required AudioPlaybackSource source,
+    required AudioPlaybackChannel channel,
     required String surahName,
     AudioSegment? startSegment,
     AudioSegment? endSegment,
@@ -847,6 +963,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state = IqroAudioState(
         track: track,
         reciter: reciter,
+        source: source,
+        channel: channel,
         surahName: surahName,
         buffering: true,
         duration: track.duration,
@@ -1456,10 +1574,22 @@ class AudioController extends StateNotifier<IqroAudioState> {
     });
   }
 
-  Future<void> stop() {
+  Future<void> stop() => _stopCurrentSource();
+
+  Future<void> _stopCurrentSource({bool preserveMemorizationSession = false}) {
+    if (!preserveMemorizationSession) {
+      _memorizationSessionActive = false;
+      _listeningSnapshotBeforeMemorization = null;
+      _pendingRestoreSnapshot = null;
+    }
+    final clearStoredPlayback =
+        !preserveMemorizationSession &&
+        state.channel == AudioPlaybackChannel.listening;
     final intent = ++_sourceIntent;
     ++_sourceGeneration;
-    final interruption = _interruptCurrentSource();
+    final interruption = preserveMemorizationSession
+        ? _pauseAndInterruptCurrentSource()
+        : _interruptCurrentSource();
     return _serializeSource(() async {
       if (_disposed || intent != _sourceIntent) return;
       _sleepTimer?.cancel();
@@ -1471,12 +1601,16 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state = const IqroAudioState();
       _activeSourceIntent = -1;
       _standaloneRequest = null;
-      await _playbackStore?.clear();
+      if (clearStoredPlayback) await _playbackStore?.clear();
     });
   }
 
   void _schedulePersistence({bool immediate = false}) {
-    if (_disposed || _restoring || _playbackStore == null || !state.active) {
+    if (_disposed ||
+        _restoring ||
+        _playbackStore == null ||
+        !state.active ||
+        state.channel != AudioPlaybackChannel.listening) {
       return;
     }
     _persistenceTimer?.cancel();
@@ -1494,7 +1628,12 @@ class AudioController extends StateNotifier<IqroAudioState> {
     final store = _playbackStore;
     final track = state.track;
     final reciter = state.reciter;
-    if (store == null || track == null || reciter == null) return;
+    if (store == null ||
+        track == null ||
+        reciter == null ||
+        state.channel != AudioPlaybackChannel.listening) {
+      return;
+    }
     final snapshot = AudioPlaybackSnapshot(
       playback: SurahPlayback(track: track, segments: state.segments),
       reciter: reciter,

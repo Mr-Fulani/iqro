@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/platform/reader_haptics.dart';
+import '../../core/audio/audio_controller.dart';
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
@@ -13,6 +14,7 @@ import '../../core/storage/local_database.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/utils/latest_async_work_queue.dart';
 import '../audio/mini_player.dart';
+import '../audio/audio_models.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
@@ -265,7 +267,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         (value) => (
           surah: value.track?.surah,
           ayah: value.activeAyah,
-          active: value.active,
+          active: value.active && value.channel == AudioPlaybackChannel.mushaf,
           playing: value.playing,
           buffering: value.buffering,
           start: value.rangeStartAyah,
@@ -569,6 +571,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     final controller = ref.read(audioControllerProvider.notifier);
     final current = ref.read(audioControllerProvider);
     if (current.error == null &&
+        current.channel == AudioPlaybackChannel.mushaf &&
         current.track?.surah == reference.surah &&
         current.rangeStartAyah == reference.ayah &&
         current.rangeEndAyah == reference.ayah) {
@@ -587,15 +590,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     setState(() => _audioLoading = true);
     try {
       final repository = ref.read(audioRepositoryProvider);
-      final recitations = (await repository.recitations())
-          .where((r) => r.timingsAvailable && r.streamAllowed)
-          .toList();
+      final recitations = await repository.recitationsForRole(
+        AudioRecitationRole.ayahPlayback,
+      );
       if (!ownsRequest()) return;
       final recitation = preferredRecitation(
         recitations,
         preferredId:
-            ref.read(appPreferencesProvider).preferredRecitationId ??
+            ref.read(appPreferencesProvider).mushafRecitationId ??
             current.track?.recitationId,
+        role: AudioRecitationRole.ayahPlayback,
       );
       if (recitation == null) throw StateError('No timed recitation');
       final playback = await repository.playback(
@@ -619,6 +623,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         surahName:
             surah?.nameFor(Localizations.localeOf(context).languageCode) ??
             '${context.l10n.surah} ${reference.surah}',
+        channel: AudioPlaybackChannel.mushaf,
         startAyah: reference.ayah,
         endAyah: reference.ayah,
       );

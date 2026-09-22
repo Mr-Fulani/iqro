@@ -41,6 +41,9 @@ class AppPreferences {
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
     this.preferredRecitationId,
+    this.listeningRecitationId,
+    this.mushafRecitationId,
+    this.memorizationDefaultRecitationId,
     this.preferredAudioQuality = defaultPreferredAudioQuality,
   });
 
@@ -62,6 +65,9 @@ class AppPreferences {
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
       preferredRecitationId = null,
+      listeningRecitationId = null,
+      mushafRecitationId = null,
+      memorizationDefaultRecitationId = null,
       preferredAudioQuality = defaultPreferredAudioQuality;
 
   final bool onboardingComplete;
@@ -80,7 +86,15 @@ class AppPreferences {
   final int hijriAdjustment;
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
+
+  /// Legacy alias kept for old callers and persisted clients.
+  ///
+  /// New code must use [listeningRecitationId], [mushafRecitationId], or
+  /// [memorizationDefaultRecitationId] according to the playback role.
   final String? preferredRecitationId;
+  final String? listeningRecitationId;
+  final String? mushafRecitationId;
+  final String? memorizationDefaultRecitationId;
   final String preferredAudioQuality;
 
   AppPreferences copyWith({
@@ -101,8 +115,15 @@ class AppPreferences {
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
     String? preferredRecitationId,
+    String? listeningRecitationId,
+    String? mushafRecitationId,
+    String? memorizationDefaultRecitationId,
     String? preferredAudioQuality,
   }) {
+    final nextListening =
+        listeningRecitationId ??
+        preferredRecitationId ??
+        this.listeningRecitationId;
     return AppPreferences(
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       locale: locale ?? this.locale,
@@ -122,8 +143,12 @@ class AppPreferences {
           preferredTranslationSourceId ?? this.preferredTranslationSourceId,
       preferredTafsirSourceId:
           preferredTafsirSourceId ?? this.preferredTafsirSourceId,
-      preferredRecitationId:
-          preferredRecitationId ?? this.preferredRecitationId,
+      preferredRecitationId: preferredRecitationId ?? nextListening,
+      listeningRecitationId: nextListening,
+      mushafRecitationId: mushafRecitationId ?? this.mushafRecitationId,
+      memorizationDefaultRecitationId:
+          memorizationDefaultRecitationId ??
+          this.memorizationDefaultRecitationId,
       preferredAudioQuality:
           preferredAudioQuality ?? this.preferredAudioQuality,
     );
@@ -141,6 +166,10 @@ class PreferencesStore {
 
   AppPreferences read() {
     final locale = _preferences.getString('locale') ?? 'ru';
+    final legacyRecitationId = _preferences.getString('reader_recitation_id');
+    final listeningRecitationId =
+        _preferences.getString('audio_listening_recitation_id') ??
+        legacyRecitationId;
     return AppPreferences(
       onboardingComplete: _preferences.getBool('onboarding_complete') ?? false,
       locale: supportedLocales.contains(locale) ? locale : 'ru',
@@ -182,7 +211,15 @@ class PreferencesStore {
         'reader_translation_source_id',
       ),
       preferredTafsirSourceId: _preferences.getInt('reader_tafsir_source_id'),
-      preferredRecitationId: _preferences.getString('reader_recitation_id'),
+      // Migrate the old single choice to each role exactly once by using it
+      // as the fallback. Subsequent writes persist independent values.
+      preferredRecitationId: listeningRecitationId,
+      listeningRecitationId: listeningRecitationId,
+      mushafRecitationId:
+          _preferences.getString('mushaf_recitation_id') ?? legacyRecitationId,
+      memorizationDefaultRecitationId:
+          _preferences.getString('memorization_recitation_id') ??
+          legacyRecitationId,
       preferredAudioQuality: _audioQuality(
         _preferences.getString('audio_quality'),
       ),
@@ -225,6 +262,21 @@ class PreferencesStore {
         _preferences.setString(
           'reader_recitation_id',
           value.preferredRecitationId!,
+        ),
+      if (value.listeningRecitationId != null)
+        _preferences.setString(
+          'audio_listening_recitation_id',
+          value.listeningRecitationId!,
+        ),
+      if (value.mushafRecitationId != null)
+        _preferences.setString(
+          'mushaf_recitation_id',
+          value.mushafRecitationId!,
+        ),
+      if (value.memorizationDefaultRecitationId != null)
+        _preferences.setString(
+          'memorization_recitation_id',
+          value.memorizationDefaultRecitationId!,
         ),
       _preferences.setString('audio_quality', value.preferredAudioQuality),
     ]);

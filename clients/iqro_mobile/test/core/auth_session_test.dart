@@ -47,4 +47,31 @@ void main() {
     expect(current.email, isNull);
     expect(current.isVerified, isFalse);
   });
+
+  test('a guest response without email clears stale account data', () {
+    final previous = AuthSession.fromApi(<String, Object?>{
+      'access_token': 'old-access',
+      'refresh_token': 'old-refresh',
+      'access_expires_at': '2030-01-01T00:00:00Z',
+      'refresh_expires_at': '2030-02-01T00:00:00Z',
+      'user': <String, Object?>{
+        'id': 'user',
+        'status': 'active',
+        'email': 'reader@example.com',
+      },
+      'device': <String, Object?>{'id': 'device'},
+    });
+
+    final current = AuthSession.fromApi(<String, Object?>{
+      'access_token': 'new-access',
+      'refresh_token': 'new-refresh',
+      'access_expires_at': '2030-01-02T00:00:00Z',
+      'refresh_expires_at': '2030-02-02T00:00:00Z',
+      'user': <String, Object?>{'id': 'guest', 'status': 'guest'},
+      'device': <String, Object?>{'id': 'device'},
+    }, previous: previous);
+
+    expect(current.email, isNull);
+    expect(current.isGuest, isTrue);
+  });
 }

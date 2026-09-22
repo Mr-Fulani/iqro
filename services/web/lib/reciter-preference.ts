@@ -1,9 +1,16 @@
 import type { Recitation, Reciter } from "./api";
-import { reciterPersonKey } from "./reciter-catalog";
+import { reciterPersonKey } from "./reciter-catalog.ts";
 
-const STORAGE_KEY = "quran_reciter_preference_v1";
+const LEGACY_STORAGE_KEY = "quran_reciter_preference_v1";
+const STORAGE_KEYS = {
+  listening: "quran_reciter_preference_v1:listening",
+  mushaf: "quran_reciter_preference_v1:mushaf",
+  memorization: "quran_reciter_preference_v1:memorization",
+} as const;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+
+export type ReciterPreferenceRole = keyof typeof STORAGE_KEYS;
 
 export type ReciterPreference = {
   personKey: string;
@@ -27,14 +34,34 @@ function isSafePreference(value: unknown): value is ReciterPreference {
   );
 }
 
-export function loadReciterPreference(): ReciterPreference | null {
+export function reciterPreferenceStorageKey(role: ReciterPreferenceRole): string {
+  return STORAGE_KEYS[role];
+}
+
+function storageFor(storage?: Storage): Storage | null {
+  if (storage) return storage;
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function loadReciterPreference(
+  role: ReciterPreferenceRole = "listening",
+  storage?: Storage,
+): ReciterPreference | null {
+  const target = storageFor(storage);
+  if (!target) return null;
+  try {
+    const raw =
+      target.getItem(reciterPreferenceStorageKey(role)) ||
+      (role === "listening" ? target.getItem(LEGACY_STORAGE_KEY) : null);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (isSafePreference(parsed)) return parsed;
-    window.localStorage.removeItem(STORAGE_KEY);
+    target.removeItem(reciterPreferenceStorageKey(role));
   } catch {
     // Storage can be unavailable in privacy-restricted browser contexts.
   }
@@ -44,10 +71,13 @@ export function loadReciterPreference(): ReciterPreference | null {
 export function rememberReciterPreference(
   reciter: Pick<Reciter, "id" | "slug">,
   recitation?: Pick<Recitation, "id" | "style"> | null,
+  role: ReciterPreferenceRole = "listening",
+  storage?: Storage,
 ): void {
-  if (typeof window === "undefined") return;
+  const target = storageFor(storage);
+  if (!target) return;
   const personKey = reciterPersonKey(reciter);
-  const current = loadReciterPreference();
+  const current = loadReciterPreference(role, target);
   const samePerson = current?.personKey === personKey;
   const preference: ReciterPreference = {
     personKey,
@@ -56,7 +86,7 @@ export function rememberReciterPreference(
     style: recitation?.style ?? (samePerson ? current.style : null),
   };
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preference));
+    target.setItem(reciterPreferenceStorageKey(role), JSON.stringify(preference));
   } catch {
     // The selection still works for the current page when storage is unavailable.
   }
@@ -64,7 +94,7 @@ export function rememberReciterPreference(
 
 export function preferredReciter(
   reciters: Reciter[],
-  preference = loadReciterPreference(),
+  preference = loadReciterPreference("listening"),
 ): Reciter | undefined {
   if (!preference) return undefined;
   return reciters.find((item) => reciterPersonKey(item) === preference.personKey);
@@ -72,7 +102,7 @@ export function preferredReciter(
 
 export function preferredRecitation(
   recitations: Recitation[],
-  preference = loadReciterPreference(),
+  preference = loadReciterPreference("listening"),
 ): Recitation | undefined {
   if (!preference) return undefined;
   const exact = recitations.find((item) => item.id === preference.recitationId);

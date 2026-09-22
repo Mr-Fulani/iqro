@@ -83,8 +83,21 @@ const recitation = {
   source: { name: "Test", url: "", version: "1", checksum_sha256: "a".repeat(64) },
   license: { rights_holder: "Test", name: "Test", url: "", spdx_id: "", attribution: "" },
   rights: { stream: true, offline_download: false },
-  coverage: { track_count: 1, surah_count: 1, complete: false },
-  timings: { available: true, segment_count: 2 },
+  coverage: {
+    track_count: 1,
+    surah_count: 1,
+    expected_ayahs: 2,
+    timed_ayahs: 2,
+    complete: false,
+    timings_complete: true,
+  },
+  timings: { available: true, segment_count: 2, complete: true },
+  capabilities: {
+    listen: true,
+    ayah_playback: true,
+    memorization: true,
+    offline: false,
+  },
   published_at: "2026-08-28T00:00:00Z",
 };
 

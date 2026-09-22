@@ -13,6 +13,22 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   setUpAll(sqfliteFfiInit);
 
+  test('memorization playback is not exposed as primary audio playback', () {
+    expect(
+      isPrimaryAudioPlayback(IqroAudioState(track: _playbackTrack)),
+      isTrue,
+    );
+    expect(
+      isPrimaryAudioPlayback(
+        IqroAudioState(
+          track: _playbackTrack,
+          source: AudioPlaybackSource.memorization,
+        ),
+      ),
+      isFalse,
+    );
+  });
+
   test('audio presentation ignores timeline-only position updates', () {
     final current = IqroAudioState(
       track: _playback.track,
@@ -436,6 +452,143 @@ void main() {
     expect(controller.state.sleepTimerMinutes, isNull);
     expect(engine.pauseCalls, 1);
   });
+
+  test(
+    'memorization playback does not replace or clear the regular audio snapshot',
+    () async {
+      final database = await _audioStoreDatabase();
+      addTearDown(database.close);
+      final store = AudioPlaybackStore(database);
+      await store.write(
+        AudioPlaybackSnapshot(
+          playback: _playback,
+          reciter: _reciter,
+          surahName: 'Saved Al-Fatiha',
+          position: const Duration(seconds: 25),
+          speed: 1,
+          repeatEnabled: false,
+          savedAt: DateTime.utc(2026, 9, 3),
+        ),
+      );
+      final controller = AudioController(
+        engine: _FakeAudioEngine(),
+        playbackStore: store,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Memorization Al-Baqarah',
+        autoplay: false,
+      );
+
+      expect(controller.state.source, AudioPlaybackSource.memorization);
+      expect((await store.read())?.playback.track.id, 'track-1');
+
+      await controller.stop();
+
+      expect(await store.read(), isNotNull);
+    },
+  );
+
+  test(
+    'leaving memorization restores the paused regular audio track',
+    () async {
+      final database = await _audioStoreDatabase();
+      addTearDown(database.close);
+      final store = AudioPlaybackStore(database);
+      await store.write(
+        AudioPlaybackSnapshot(
+          playback: _playback,
+          reciter: _reciter,
+          surahName: 'Saved Al-Fatiha',
+          position: const Duration(seconds: 25),
+          speed: 1,
+          repeatEnabled: false,
+          savedAt: DateTime.utc(2026, 9, 3),
+        ),
+      );
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine, playbackStore: store);
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Memorization Al-Baqarah',
+        autoplay: false,
+      );
+      await controller.restoreAudioAfterMemorization();
+
+      expect(controller.state.source, AudioPlaybackSource.audio);
+      expect(controller.state.track?.id, 'track-1');
+      expect(controller.state.reciter?.id, _reciter.id);
+      expect(controller.state.playing, isFalse);
+      expect(controller.state.position, const Duration(seconds: 25));
+      expect(engine.pauseCalls, 1);
+    },
+  );
+
+  test(
+    'leaving memorization restores an in-memory listening snapshot without a store',
+    () async {
+      final controller = AudioController(engine: _FakeAudioEngine());
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Audio Al-Fatiha',
+        autoplay: false,
+      );
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Memorization Al-Baqarah',
+        autoplay: false,
+      );
+
+      await controller.restoreAudioAfterMemorization();
+
+      expect(controller.state.channel, AudioPlaybackChannel.listening);
+      expect(controller.state.track?.id, 'track-1');
+      expect(controller.state.surahName, 'Audio Al-Fatiha');
+      expect(controller.state.playing, isFalse);
+    },
+  );
+
+  test(
+    'leaving memorization cancels a queued load before it replaces listening',
+    () async {
+      final controller = AudioController(engine: _FakeAudioEngine());
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Audio Al-Fatiha',
+        autoplay: false,
+      );
+      final memorizationLoad = controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Memorization Al-Baqarah',
+        autoplay: false,
+      );
+      final restore = controller.restoreAudioAfterMemorization();
+
+      await Future.wait(<Future<void>>[memorizationLoad, restore]);
+
+      expect(controller.state.channel, AudioPlaybackChannel.listening);
+      expect(controller.state.track?.id, 'track-1');
+      expect(controller.state.surahName, 'Audio Al-Fatiha');
+    },
+  );
 
   test('stale same-track restore never seeks a manual load', () async {
     final database = await _audioStoreDatabase();

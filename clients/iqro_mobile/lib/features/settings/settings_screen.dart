@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
-import '../../core/theme/iqro_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -89,13 +88,6 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                   IqroListTile(
-                    icon: Icons.notifications_active_outlined,
-                    title: context.l10n.reminders,
-                    subtitle: context.l10n.remindersSubtitle,
-                    onTap: () => context.push('/reminders'),
-                  ),
-                  const Divider(height: 1),
-                  IqroListTile(
                     icon: Icons.ios_share_outlined,
                     title: context.l10n.shareApp,
                     subtitle: context.l10n.shareBody,
@@ -133,15 +125,6 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
-            IqroStatusBanner(
-              icon: Icons.storage_outlined,
-              title: preferences.onboardingComplete
-                  ? context.l10n.savedAutomatically
-                  : context.l10n.guestNote,
-              message: context.l10n.offlineUsingCache,
-              color: context.iqroColors.sand,
             ),
           ],
         ),

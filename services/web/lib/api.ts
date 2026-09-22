@@ -567,8 +567,21 @@ export type Recitation = {
     attribution: string;
   };
   rights: { stream: boolean; offline_download: boolean };
-  coverage: { track_count: number; surah_count: number; complete: boolean };
-  timings: { available: boolean; segment_count: number };
+  coverage: {
+    track_count: number;
+    surah_count: number;
+    expected_ayahs: number;
+    timed_ayahs: number;
+    complete: boolean;
+    timings_complete: boolean;
+  };
+  timings: { available: boolean; segment_count: number; complete: boolean };
+  capabilities: {
+    listen: boolean;
+    ayah_playback: boolean;
+    memorization: boolean;
+    offline: boolean;
+  };
   published_at: string;
 };
 

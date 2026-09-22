@@ -15,6 +15,7 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/dua/dua_repository.dart';
+import '../features/feedback/feedback_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
@@ -44,6 +45,7 @@ class AppDependencies {
     required this.notifications,
     required this.memorization,
     required this.dua,
+    required this.feedback,
     required this.share,
     required this.sync,
     required this.maintenance,
@@ -66,6 +68,7 @@ class AppDependencies {
   final NotificationGateway notifications;
   final MemorizationRepository memorization;
   final DuaRepository dua;
+  final FeedbackRepository feedback;
   final ShareRepository share;
   final SyncService sync;
   final BackgroundMaintenanceService maintenance;
@@ -118,6 +121,11 @@ class AppDependencies {
       locale: () => preferences.read().locale,
     );
     final sync = SyncService(api: api, database: database);
+    final feedback = FeedbackRepository(
+      api: api,
+      database: database,
+      locale: () => preferences.read().locale,
+    );
     final maintenance = BackgroundMaintenanceService(
       sync: sync,
       audio: playbackSync,
@@ -146,6 +154,7 @@ class AppDependencies {
       notifications: notifications,
       memorization: MemorizationRepository(api: api, database: database),
       dua: DuaRepository(api: api, database: database),
+      feedback: feedback,
       share: ShareRepository(
         api: api,
         config: config,
@@ -175,6 +184,7 @@ class AppDependencies {
     notificationGatewayProvider.overrideWithValue(notifications),
     memorizationRepositoryProvider.overrideWithValue(memorization),
     duaRepositoryProvider.overrideWithValue(dua),
+    feedbackRepositoryProvider.overrideWithValue(feedback),
     shareRepositoryProvider.overrideWithValue(share),
     syncServiceProvider.overrideWithValue(sync),
     backgroundMaintenanceProvider.overrideWithValue(maintenance),

@@ -10,6 +10,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/audio_models.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
 import 'ayah_action_sheet.dart';
@@ -158,6 +159,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           surah: value.track?.surah,
           ayah: value.activeAyah,
           playing: value.playing,
+          active: value.channel == AudioPlaybackChannel.mushaf,
         ),
       ),
     );
@@ -239,7 +241,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     List<QuranAyah> items,
     Surah? surah,
     String title,
-    ({int? surah, int? ayah, bool playing}) audio,
+    ({int? surah, int? ayah, bool playing, bool active}) audio,
     ({double fontSize, double lineHeight, double ayahSpacing, bool focusMode})
     presentation,
   ) {
@@ -267,7 +269,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           }
           final ayah = items[index - 1];
           final audioActive =
-              audio.surah == ayah.surahNumber && audio.ayah == ayah.number;
+              audio.active &&
+              audio.surah == ayah.surahNumber &&
+              audio.ayah == ayah.number;
           return Padding(
             key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
             padding: EdgeInsets.only(bottom: presentation.ayahSpacing),
@@ -511,13 +515,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
     final preferredRecitationId = ref
         .read(appPreferencesProvider)
-        .preferredRecitationId;
+        .mushafRecitationId;
     final request = ++_audioRequest;
     setState(() => _audioLoadingAyah = ayah.number);
     try {
-      final recitations = (await repository.recitations())
-          .where((item) => item.timingsAvailable)
-          .toList(growable: false);
+      final recitations = await repository.recitationsForRole(
+        AudioRecitationRole.ayahPlayback,
+      );
       if (!_isCurrentAudioRequest(scope, controller, request)) return;
       final recitation =
           recitations
@@ -544,6 +548,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           reciters: recitations.map((item) => item.reciter),
         ),
         surahName: surahName,
+        channel: AudioPlaybackChannel.mushaf,
         startAyah: ayah.number,
         endAyah: ayah.number,
       );

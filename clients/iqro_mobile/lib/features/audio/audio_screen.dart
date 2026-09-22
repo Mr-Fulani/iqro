@@ -43,7 +43,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final locale = Localizations.localeOf(context).languageCode;
     final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
     final preferredRecitationId = ref.watch(
-      appPreferencesProvider.select((value) => value.preferredRecitationId),
+      appPreferencesProvider.select((value) => value.listeningRecitationId),
     );
     return Scaffold(
       appBar: IqroTopBar(
@@ -122,11 +122,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ),
             ),
             const SizedBox(height: 26),
-            IqroSectionHeader(
-              title: context.l10n.chooseReciter,
-              eyebrow: context.l10n.allReciters,
-            ),
-            const SizedBox(height: 12),
             reciters.when(
               loading: () => const IqroLoading(),
               error: (error, stack) => IqroAsyncError(
@@ -193,9 +188,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         title: context.l10n.noAudio,
       );
     }
-    final activePersonKey = player.reciter == null
-        ? null
-        : reciterPersonKey(player.reciter!);
+    final preferredPersonKey = recitations
+        .where((item) => item.id == preferredRecitationId)
+        .map((item) => reciterPersonKey(item.reciter))
+        .firstOrNull;
+    final activePersonKey = player.channel == AudioPlaybackChannel.listening
+        ? player.reciter == null
+              ? preferredPersonKey
+              : reciterPersonKey(player.reciter!)
+        : preferredPersonKey;
     final selectedPerson = visiblePeople.firstWhere(
       (item) => item.key == _selected,
       orElse: () => visiblePeople.firstWhere(
@@ -212,6 +213,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        Text(
+          context.l10n.recitationStyle,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
         _RecitationStyleFilter(
           styles: styles,
           selected: selectedStyle,
@@ -224,10 +230,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
             });
           },
         ),
-        if (selectedRecitation != null) ...<Widget>[
+        if (selectedRecitation?.offlineDownloadAllowed == true) ...<Widget>[
           const SizedBox(height: 12),
-          _OfflineAudioCard(recitation: selectedRecitation),
+          _OfflineAudioCard(recitation: selectedRecitation!),
         ],
+        const SizedBox(height: 22),
+        Text(
+          context.l10n.allReciters,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -386,7 +397,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       unawaited(
         ref
             .read(appPreferencesProvider.notifier)
-            .setPreferredRecitation(recitation.id),
+            .setListeningRecitation(recitation.id),
       );
       if (!mounted) return;
       context.push('/player');
@@ -448,23 +459,6 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (!recitation.offlineDownloadAllowed) {
-      return IqroCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.cloud_off_outlined),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                context.l10n.audioOfflineUnavailable,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
     final state = ref.watch(audioDownloadProvider(recitation.id));
     final downloading = state.status == AudioDownloadStatus.downloading;
     final ready = state.status == AudioDownloadStatus.ready;
@@ -519,22 +513,22 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            failed
-                ? context.l10n.audioDownloadFailed
-                : context.l10n.offlineAudioDescription,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          if (failed) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioDownloadFailed,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           if (downloading) ...<Widget>[
             const SizedBox(height: 10),
             LinearProgressIndicator(
               value: state.totalBytes > 0 ? state.progress : null,
             ),
-          ],
-          if (progressLabel != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+            if (progressLabel != null) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(progressLabel, style: Theme.of(context).textTheme.bodySmall),
+            ],
           ],
         ],
       ),
@@ -624,17 +618,23 @@ class _RecitationStyleFilter extends StatelessWidget {
     return Semantics(
       container: true,
       label: context.l10n.recitationStyle,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: <Widget>[
-          for (final style in styles)
-            ChoiceChip(
-              label: Text(_styleLabel(context, style)),
-              selected: style == selected,
-              onSelected: (_) => onSelected(style),
-            ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.only(end: 4),
+        child: Row(
+          children: <Widget>[
+            for (var index = 0; index < styles.length; index++) ...<Widget>[
+              if (index > 0) const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text(_styleLabel(context, styles[index])),
+                selected: styles[index] == selected,
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) => onSelected(styles[index]),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

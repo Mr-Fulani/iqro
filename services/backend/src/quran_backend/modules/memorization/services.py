@@ -15,8 +15,8 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.audio.models import (
     RecitationEdition,
-    RecitationPublicationStatus,
 )
+from quran_backend.modules.audio.selectors import public_recitation_base, verified_audio_segments
 from quran_backend.modules.memorization.models import (
     MemorizationPlan,
     MemorizationSession,
@@ -158,7 +158,18 @@ def set_memorization_plan(  # noqa: PLR0913
         raise ValidationError({"ayah_range": "One or more ayahs were not found."})
     start_ayah = ayahs[start_ayah_id]
     end_ayah = ayahs[end_ayah_id]
-    recitation = _published_recitation(recitation_id)
+    if start_ayah.surah.edition_version_id != end_ayah.surah.edition_version_id:
+        raise ValidationError({"ayah_range": "The ayahs must use one Quran edition."})
+    if start_ayah.surah_id != end_ayah.surah_id:
+        raise ValidationError({"ayah_range": "The memorization range must stay in one surah."})
+    if start_ayah.number > end_ayah.number:
+        raise ValidationError({"ayah_range": "The start ayah must not be after the end ayah."})
+    recitation = _published_recitation(
+        recitation_id,
+        edition_version_id=start_ayah.surah.edition_version_id,
+        start_ayah=start_ayah,
+        end_ayah=end_ayah,
+    )
     device = _device_for_user(user, device_id)
     current = (
         MemorizationPlan.objects.select_for_update(of=("self",))
@@ -361,17 +372,48 @@ def _ayah_snapshot(ayah: Ayah) -> dict[str, Any]:
     }
 
 
-def _published_recitation(recitation_id: uuid.UUID | None) -> RecitationEdition | None:
+def _published_recitation(
+    recitation_id: uuid.UUID | None,
+    *,
+    edition_version_id: uuid.UUID,
+    start_ayah: Ayah,
+    end_ayah: Ayah,
+) -> RecitationEdition | None:
     if recitation_id is None:
         return None
-    try:
-        return RecitationEdition.objects.select_related("reciter").get(
+    recitation = (
+        public_recitation_base()
+        .filter(
             id=recitation_id,
-            status=RecitationPublicationStatus.PUBLISHED,
-            stream_allowed=True,
+            quran_edition_version_id=edition_version_id,
         )
-    except RecitationEdition.DoesNotExist as exc:
-        raise ValidationError({"recitation_id": "A streamable recitation was not found."}) from exc
+        .first()
+    )
+    if recitation is None:
+        raise ValidationError(
+            {"recitation_id": "A public recitation for this Quran edition was not found."}
+        )
+    ayah_ids = Ayah.objects.filter(
+        surah_id=start_ayah.surah_id,
+        number__gte=start_ayah.number,
+        number__lte=end_ayah.number,
+    ).values_list("id", flat=True)
+    covered_count = (
+        verified_audio_segments()
+        .filter(
+            track__recitation_edition_id=recitation.id,
+            ayah_id__in=ayah_ids,
+        )
+        .values("ayah_id")
+        .distinct()
+        .count()
+    )
+    expected_count = Ayah.objects.filter(id__in=ayah_ids).count()
+    if expected_count == 0 or covered_count != expected_count:
+        raise ValidationError(
+            {"recitation_id": "The recitation has no verified timings for this range."}
+        )
+    return recitation
 
 
 def _device_for_user(user: User, device_id: uuid.UUID | None) -> Device | None:

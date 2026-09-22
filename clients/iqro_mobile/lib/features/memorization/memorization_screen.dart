@@ -5,10 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
+import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
+import '../audio/reciter_catalog.dart';
+import '../audio/reciter_portraits.dart';
 import '../quran/quran_models.dart';
 import 'memorization_repository.dart';
 
@@ -64,17 +67,33 @@ class _MemorizationScreenBodyState
   var _pauseSeconds = 2;
   String? _recitationId;
   var _requestGeneration = 0;
+  var _audioExitRestoreRequested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _recitationId = ref
+        .read(appPreferencesProvider)
+        .memorizationDefaultRecitationId;
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(memorizationProvider);
-    return Scaffold(
-      appBar: IqroTopBar(title: context.l10n.memorizationTitle),
-      body: state.when(
-        loading: () => const IqroLoading(),
-        error: (error, stack) =>
-            IqroAsyncError(title: context.l10n.networkError, onRetry: _reload),
-        data: _buildDashboard,
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) _restoreAudioOnExit();
+      },
+      child: Scaffold(
+        appBar: IqroTopBar(title: context.l10n.memorizationTitle),
+        body: state.when(
+          loading: () => const IqroLoading(),
+          error: (error, stack) => IqroAsyncError(
+            title: context.l10n.networkError,
+            onRetry: _reload,
+          ),
+          data: _buildDashboard,
+        ),
       ),
     );
   }
@@ -85,13 +104,6 @@ class _MemorizationScreenBodyState
     return IqroPage(
       child: Column(
         children: <Widget>[
-          if (dashboard.fromCache) ...<Widget>[
-            IqroStatusBanner(
-              icon: Icons.cloud_off_outlined,
-              title: context.l10n.offlineUsingCache,
-            ),
-            const SizedBox(height: 12),
-          ],
           if (showEditor)
             _PlanEditor(
               selectedSurah: _selectedSurah,
@@ -141,7 +153,9 @@ class _MemorizationScreenBodyState
       _endAyah = plan.endAyah.ayah;
       _dailyRepetitions = plan.dailyRepetitions;
       _pauseSeconds = plan.pauseSeconds;
-      _recitationId = plan.recitationId;
+      _recitationId =
+          plan.recitationId ??
+          ref.read(appPreferencesProvider).memorizationDefaultRecitationId;
       _editing = true;
     });
   }
@@ -168,6 +182,12 @@ class _MemorizationScreenBodyState
         ),
         baseRevision: dashboard.plan?.revision ?? 0,
       );
+      final selectedRecitationId = _recitationId?.trim();
+      if (selectedRecitationId != null && selectedRecitationId.isNotEmpty) {
+        await ref
+            .read(appPreferencesProvider.notifier)
+            .setMemorizationDefaultRecitation(selectedRecitationId);
+      }
       if (!mounted) return;
       if (!_isCurrent(request)) return;
       setState(() => _editing = false);
@@ -249,9 +269,19 @@ class _MemorizationScreenBodyState
     );
   }
 
+  void _restoreAudioOnExit() {
+    if (_audioExitRestoreRequested) return;
+    _audioExitRestoreRequested = true;
+    final audioController = ref.read(audioControllerProvider.notifier);
+    unawaited(
+      audioController.restoreAudioAfterMemorization().catchError((Object _) {}),
+    );
+  }
+
   @override
   void dispose() {
     _requestGeneration += 1;
+    _restoreAudioOnExit();
     super.dispose();
   }
 
@@ -556,7 +586,7 @@ class _NumberSlider extends StatelessWidget {
   }
 }
 
-class _PracticeDashboard extends ConsumerWidget {
+class _PracticeDashboard extends ConsumerStatefulWidget {
   const _PracticeDashboard({
     required this.dashboard,
     required this.saving,
@@ -572,7 +602,16 @@ class _PracticeDashboard extends ConsumerWidget {
   final VoidCallback onReset;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PracticeDashboard> createState() => _PracticeDashboardState();
+}
+
+class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
+  String? _audioLoadingKey;
+  var _audioRequest = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final dashboard = widget.dashboard;
     final plan = dashboard.plan!;
     final locale = Localizations.localeOf(context).languageCode;
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
@@ -589,15 +628,66 @@ class _PracticeDashboard extends ConsumerWidget {
         .toList(growable: false);
     final completed = dashboard.today.completedRepetitions;
     final target = plan.dailyRepetitions;
+    final progress = target == 0
+        ? 0.0
+        : (completed / target).clamp(0.0, 1.0).toDouble();
+    final hasRecitation = plan.recitationId?.trim().isNotEmpty == true;
+    final reciterLabel =
+        plan.reciter?.nameFor(locale) ??
+        (hasRecitation
+            ? context.l10n.chooseReciter
+            : context.l10n.memorizationWithoutAudio);
+    final audio = ref.watch(
+      audioControllerProvider.select(
+        (state) => (
+          track: state.track,
+          channel: state.channel,
+          playing: state.playing,
+          rangeStartAyah: state.rangeStartAyah,
+          rangeEndAyah: state.rangeEndAyah,
+        ),
+      ),
+    );
+    final rangeIsActive =
+        hasRecitation &&
+        audio.channel == AudioPlaybackChannel.memorization &&
+        audio.track?.recitationId == plan.recitationId &&
+        audio.track?.surah == plan.startAyah.surah &&
+        audio.rangeStartAyah == plan.startAyah.ayah &&
+        audio.rangeEndAyah == plan.endAyah.ayah;
+    final rangeKey = _audioKey(plan.startAyah.ayah, plan.endAyah.ayah);
+    final surahName =
+        surah?.nameFor(locale) ??
+        '${context.l10n.surah} ${plan.startAyah.surah}';
+    final items = practiceAyahs ?? const <QuranAyah>[];
+
     return Column(
       children: <Widget>[
         IqroCard(
           color: context.iqroColors.ink,
           borderColor: Colors.transparent,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.iqroColors.gold.withValues(alpha: .18),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.menu_book_rounded,
+                        color: context.iqroColors.gold,
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,9 +700,10 @@ class _PracticeDashboard extends ConsumerWidget {
                               ?.copyWith(
                                 color: Colors.white,
                                 fontFamily: 'serif',
+                                fontSize: 32,
                               ),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 6),
                         Text(
                           '${surah?.nameFor(locale) ?? '${context.l10n.surah} ${plan.startAyah.surah}'} · '
                           '${context.l10n.ayah} ${plan.startAyah.ayah}–${plan.endAyah.ayah}',
@@ -625,68 +716,153 @@ class _PracticeDashboard extends ConsumerWidget {
                   ),
                   IconButton.filledTonal(
                     tooltip: context.l10n.memorizationEditPlan,
-                    onPressed: saving ? null : onEdit,
+                    onPressed: widget.saving ? null : widget.onEdit,
                     icon: const Icon(Icons.edit_outlined),
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: 118,
-                height: 118,
-                child: Stack(
-                  alignment: Alignment.center,
+              const SizedBox(height: 14),
+              TextButton(
+                onPressed: widget.saving ? null : widget.onEdit,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  alignment: AlignmentDirectional.centerStart,
+                  foregroundColor: Colors.white.withValues(alpha: .84),
+                  disabledForegroundColor: Colors.white.withValues(alpha: .38),
+                ),
+                child: Row(
                   children: <Widget>[
-                    CircularProgressIndicator(
-                      value: target == 0 ? 0 : (completed / target).clamp(0, 1),
-                      strokeWidth: 9,
-                      backgroundColor: Colors.white.withValues(alpha: .15),
+                    const Icon(Icons.record_voice_over_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        reciterLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Text(
-                      '$completed / $target',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_right_rounded, size: 18),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                dashboard.today.isCompleted
-                    ? context.l10n.memorizationTodayCompleted
-                    : '${context.l10n.memorizationRemaining}: '
-                          '${dashboard.today.remainingRepetitions}',
-                style: TextStyle(color: Colors.white.withValues(alpha: .72)),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      dashboard.today.isCompleted
+                          ? context.l10n.memorizationTodayCompleted
+                          : '${context.l10n.memorizationRemaining}: '
+                                '${dashboard.today.remainingRepetitions}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .72),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$completed / $target',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 9),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: progress),
+                duration: const Duration(milliseconds: 520),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) => ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: value,
+                    minHeight: 8,
+                    backgroundColor: Colors.white.withValues(alpha: .14),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      context.iqroColors.gold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: hasRecitation
+                    ? FilledButton.icon(
+                        onPressed: widget.saving || _audioLoadingKey != null
+                            ? null
+                            : () => _playRange(
+                                plan: plan,
+                                surahName: surahName,
+                                startAyah: plan.startAyah.ayah,
+                                endAyah: plan.endAyah.ayah,
+                              ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: context.iqroColors.gold,
+                          foregroundColor: context.iqroColors.ink,
+                        ),
+                        icon: _audioLoadingKey == rangeKey
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                audio.playing && rangeIsActive
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                              ),
+                        label: Text(
+                          audio.playing && rangeIsActive
+                              ? context.l10n.pause
+                              : context.l10n.play,
+                        ),
+                      )
+                    : TextButton.icon(
+                        onPressed: widget.saving ? null : widget.onEdit,
+                        style: TextButton.styleFrom(
+                          foregroundColor: context.iqroColors.gold,
+                        ),
+                        icon: const Icon(Icons.volume_off_outlined),
+                        label: Text(context.l10n.memorizationReciter),
+                      ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
         IqroCard(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           child: ayahs.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(20),
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, stack) => Text(context.l10n.noQuranData),
-            data: (_) => Column(
-              children: <Widget>[
-                for (final ayah
-                    in practiceAyahs ?? const <QuranAyah>[]) ...<Widget>[
-                  Text(
-                    '${ayah.textUthmani}  ﴿${ayah.number}﴾',
-                    textAlign: TextAlign.right,
-                    textDirection: TextDirection.rtl,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontFamily: 'serif',
-                      height: 1.8,
-                    ),
+            data: (_) => items.isEmpty
+                ? Text(context.l10n.noQuranData)
+                : Column(
+                    children: <Widget>[
+                      for (
+                        var index = 0;
+                        index < items.length;
+                        index++
+                      ) ...<Widget>[
+                        _buildAyahRow(
+                          context: context,
+                          ayah: items[index],
+                          plan: plan,
+                          surahName: surahName,
+                          player: audio,
+                        ),
+                        if (index < items.length - 1) const Divider(height: 20),
+                      ],
+                    ],
                   ),
-                  if (ayah != practiceAyahs?.last) const Divider(height: 24),
-                ],
-              ],
-            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -694,46 +870,47 @@ class _PracticeDashboard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              IqroEyebrow(context.l10n.repetitionTarget),
-              const SizedBox(height: 10),
               Text(
-                '${context.l10n.memorizationDailyRepetitions}: ${plan.dailyRepetitions}\n'
-                '${context.l10n.memorizationPauseSeconds}: ${plan.pauseSeconds}\n'
-                '${context.l10n.memorizationReciter}: '
-                '${plan.reciter?.nameFor(locale) ?? context.l10n.memorizationWithoutAudio}',
+                context.l10n.repetitionTarget,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: <Widget>[
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: saving
+                      onPressed: widget.saving
                           ? null
-                          : () => onAssess(MemorizationAssessment.repeat),
+                          : () =>
+                                widget.onAssess(MemorizationAssessment.repeat),
                       child: Text(context.l10n.again),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: saving
+                      onPressed: widget.saving
                           ? null
-                          : () => onAssess(MemorizationAssessment.difficult),
+                          : () => widget.onAssess(
+                              MemorizationAssessment.difficult,
+                            ),
                       child: Text(context.l10n.hard),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton(
-                      onPressed: saving
+                      onPressed: widget.saving
                           ? null
-                          : () => onAssess(MemorizationAssessment.memorized),
+                          : () => widget.onAssess(
+                              MemorizationAssessment.memorized,
+                            ),
                       child: Text(context.l10n.good),
                     ),
                   ),
                 ],
               ),
-              if (saving) ...<Widget>[
+              if (widget.saving) ...<Widget>[
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(),
               ],
@@ -742,11 +919,166 @@ class _PracticeDashboard extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         TextButton.icon(
-          onPressed: saving || completed == 0 ? null : onReset,
+          onPressed: widget.saving || completed == 0 ? null : widget.onReset,
           icon: const Icon(Icons.restart_alt),
           label: Text(context.l10n.resetToday),
         ),
       ],
     );
+  }
+
+  Widget _buildAyahRow({
+    required BuildContext context,
+    required QuranAyah ayah,
+    required MemorizationPlan plan,
+    required String surahName,
+    required ({
+      AudioTrack? track,
+      bool playing,
+      int? rangeStartAyah,
+      int? rangeEndAyah,
+      AudioPlaybackChannel channel,
+    })
+    player,
+  }) {
+    final hasRecitation = plan.recitationId?.trim().isNotEmpty == true;
+    final rangeKey = _audioKey(ayah.number, ayah.number);
+    final isActive =
+        hasRecitation &&
+        player.channel == AudioPlaybackChannel.memorization &&
+        player.track?.recitationId == plan.recitationId &&
+        player.track?.surah == ayah.surahNumber &&
+        player.rangeStartAyah == ayah.number &&
+        player.rangeEndAyah == ayah.number;
+    final loading = _audioLoadingKey == rangeKey;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              '${ayah.textUthmani}  ﴿${ayah.number}﴾',
+              textAlign: TextAlign.right,
+              textDirection: TextDirection.rtl,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontFamily: 'serif',
+                height: 1.8,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
+            tooltip: hasRecitation
+                ? (isActive && player.playing
+                      ? context.l10n.pause
+                      : context.l10n.play)
+                : context.l10n.chooseReciter,
+            onPressed: widget.saving
+                ? null
+                : hasRecitation
+                ? () => _playRange(
+                    plan: plan,
+                    surahName: surahName,
+                    startAyah: ayah.number,
+                    endAyah: ayah.number,
+                  )
+                : widget.onEdit,
+            icon: loading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    isActive && player.playing
+                        ? Icons.pause_rounded
+                        : hasRecitation
+                        ? Icons.play_arrow_rounded
+                        : Icons.record_voice_over_outlined,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _playRange({
+    required MemorizationPlan plan,
+    required String surahName,
+    required int startAyah,
+    required int endAyah,
+  }) async {
+    final selectedRecitationId = plan.recitationId?.trim();
+    if (selectedRecitationId == null || selectedRecitationId.isEmpty) {
+      widget.onEdit();
+      return;
+    }
+
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    final isActive =
+        current.channel == AudioPlaybackChannel.memorization &&
+        current.track?.recitationId == selectedRecitationId &&
+        current.track?.surah == plan.startAyah.surah &&
+        current.rangeStartAyah == startAyah &&
+        current.rangeEndAyah == endAyah;
+    if (isActive) {
+      await controller.toggle();
+      return;
+    }
+
+    final request = ++_audioRequest;
+    final key = _audioKey(startAyah, endAyah);
+    setState(() => _audioLoadingKey = key);
+    try {
+      final recitations = await ref.read(
+        memorizationRecitationsProvider.future,
+      );
+      final recitation =
+          recitations
+              .where((item) => item.id == selectedRecitationId)
+              .firstOrNull ??
+          preferredRecitation(
+            recitations,
+            preferredId: selectedRecitationId,
+            role: AudioRecitationRole.memorization,
+          );
+      if (recitation == null) throw const FormatException('no recitation');
+      final playback = await ref
+          .read(audioRepositoryProvider)
+          .playback(recitationId: recitation.id, surah: plan.startAyah.surah);
+      if (!mounted || request != _audioRequest) return;
+      final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciterWithPersonPortrait(
+          recitation.reciter,
+          apiBaseUrl: apiBaseUrl,
+          reciters: recitations.map((item) => item.reciter),
+        ),
+        channel: AudioPlaybackChannel.memorization,
+        surahName: surahName,
+        startAyah: startAyah,
+        endAyah: endAyah,
+      );
+    } on Object {
+      if (mounted && request == _audioRequest) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+    } finally {
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoadingKey = null);
+      }
+    }
+  }
+
+  String _audioKey(int startAyah, int endAyah) => '$startAyah:$endAyah';
+
+  @override
+  void dispose() {
+    _audioRequest += 1;
+    super.dispose();
   }
 }

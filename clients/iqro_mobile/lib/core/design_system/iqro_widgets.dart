@@ -335,7 +335,8 @@ class IqroListTile extends StatelessWidget {
       ),
       title: Text(title, style: Theme.of(context).textTheme.titleSmall),
       subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: trailing ?? const Icon(Icons.chevron_right),
+      trailing:
+          trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right)),
       onTap: onTap,
     );
   }

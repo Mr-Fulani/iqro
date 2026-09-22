@@ -29,6 +29,53 @@ Django Admin, но не создают дубли чтецов и не дают 
 - `GET /api/v1/quran-foundation/ayah-recitations`
 - `GET /api/v1/quran-foundation/ayah-recitations/{source_id}/surahs/{surah}`
 
+## Recitation roles and coverage
+
+`RecitationEdition.id` is the stable identifier of a concrete audio variant. A
+`Reciter` is only the person profile; clients must persist and send the variant
+ID when selecting playback.
+
+The recitation catalog is additive and returns role capabilities alongside the
+legacy `timings` fields:
+
+```json
+{
+  "id": "019c...",
+  "coverage": {
+    "track_count": 114,
+    "surah_count": 114,
+    "expected_ayahs": 6236,
+    "timed_ayahs": 6236,
+    "complete": true,
+    "timings_complete": true
+  },
+  "timings": {
+    "available": true,
+    "segment_count": 6236,
+    "complete": true
+  },
+  "capabilities": {
+    "listen": true,
+    "ayah_playback": true,
+    "memorization": true,
+    "offline": false
+  }
+}
+```
+
+`listen` describes a streamable complete surah catalog. `ayah_playback` and
+`memorization` require verified timing coverage for every ayah in the active
+Quran edition. `offline` reflects the redistribution right and does not imply
+that a client has downloaded the package. Older clients may continue using
+`timings.available`; new clients must use capabilities and coverage to avoid
+offering partial or untimed variants in Mushaf and Memorization.
+
+The Memorization plan endpoint accepts a `recitation_id` only when the variant
+is public, streamable, belongs to the same Quran edition as the selected ayahs,
+and has verified timing segments for the complete requested range. A source
+without timing tags remains valid for ordinary listening but is rejected for a
+timed memorization plan.
+
 Ответ трека содержит продолжительность, право офлайн-загрузки и asset contract:
 
 ```json

@@ -7,15 +7,25 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/mini_player.dart';
 import 'plan_repository.dart';
 
-class PlanScreen extends ConsumerWidget {
+class PlanScreen extends ConsumerStatefulWidget {
   const PlanScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlanScreen> createState() => _PlanScreenState();
+}
+
+class _PlanScreenState extends ConsumerState<PlanScreen> {
+  var _rangeDays = 30;
+  String? _selectedDate;
+  String? _busySessionId;
+
+  @override
+  Widget build(BuildContext context) {
     final plan = ref.watch(planProvider);
     final database = ref.watch(localDatabaseProvider);
     final accountKey = ref.watch(activeAccountScopeKeyProvider);
@@ -32,7 +42,12 @@ class PlanScreen extends ConsumerWidget {
       appBar: IqroTopBar(
         title: context.l10n.dailyPlan,
         subtitle: context.l10n.today,
-        actions: [
+        actions: <Widget>[
+          IconButton(
+            tooltip: context.l10n.refresh,
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: canMutate ? controller.reload : null,
+          ),
           IconButton(
             tooltip: context.l10n.addPrayerWidget,
             icon: const Icon(Icons.widgets_outlined),
@@ -51,6 +66,14 @@ class PlanScreen extends ConsumerWidget {
           },
         ),
         data: (value) {
+          final selectedDate = _selectedDate ?? value.localDate;
+          final days = value.daysForRange(_rangeDays);
+          final selectedDay = value.dayForDate(selectedDate);
+          final stats = value.statsForRange(_rangeDays);
+          final historyGroups = value.historyGroupsForRange(_rangeDays);
+          final selectedHistoryGroup = historyGroups
+              .where((group) => group.localDate == selectedDate)
+              .firstOrNull;
           return IqroPage(
             padding: iqroRootTabPadding(
               playerActive: playerActive,
@@ -68,6 +91,74 @@ class PlanScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
+                _PlanSummary(
+                  stats: stats,
+                  streak: value.streak,
+                  rangeDays: _rangeDays,
+                ),
+                const SizedBox(height: 12),
+                if (value.continueReading != null) ...<Widget>[
+                  _ContinueReadingCard(
+                    position: value.continueReading!,
+                    onTap: () =>
+                        _openContinueReading(context, value.continueReading!),
+                  ),
+                  const SizedBox(height: 22),
+                ],
+                IqroSectionHeader(title: context.l10n.planCalendarTitle),
+                const SizedBox(height: 8),
+                Text(context.l10n.planCalendarHint),
+                const SizedBox(height: 12),
+                _RangeSelector(
+                  selected: _rangeDays,
+                  onChanged: (range) {
+                    setState(() {
+                      _rangeDays = range;
+                      if (_selectedDate != null &&
+                          !value
+                              .daysForRange(range)
+                              .any(
+                                (day) =>
+                                    day.localDate != null &&
+                                    _dateOnly(day.localDate!) == _selectedDate,
+                              )) {
+                        _selectedDate = null;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CalendarCard(
+                  days: days,
+                  selectedDate: selectedDate,
+                  onSelected: (date) => setState(() => _selectedDate = date),
+                ),
+                const SizedBox(height: 22),
+                IqroSectionHeader(title: context.l10n.planSelectedDay),
+                const SizedBox(height: 8),
+                _SelectedDayCard(
+                  day: selectedDay,
+                  manualSessions:
+                      selectedHistoryGroup?.manualSessions ??
+                      const <ReadingSession>[],
+                  onEdit: canMutate && !value.fromCache
+                      ? (session) => _editManualReading(
+                          context,
+                          controller,
+                          scope,
+                          session,
+                        )
+                      : null,
+                  onDelete: canMutate && !value.fromCache
+                      ? (session) => _deleteManualReading(
+                          context,
+                          controller,
+                          scope,
+                          session,
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 22),
                 _DailyProgressCard(
                   plan: value,
                   onEdit: !canMutate || value.fromCache
@@ -130,22 +221,42 @@ class PlanScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                IqroSectionHeader(title: context.l10n.history),
-                const SizedBox(height: 12),
-                _StreakCard(plan: value),
-                if (value.history.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 10),
-                  for (final day in value.history.take(7)) ...<Widget>[
-                    _HistoryCard(day: day),
-                    const SizedBox(height: 8),
-                  ],
-                ],
+                IqroSectionHeader(title: context.l10n.planRelatedTools),
+                const SizedBox(height: 8),
+                _RelatedToolsCard(
+                  onReminders: () => context.push('/reminders'),
+                  onMemorization: () => context.push('/memorization'),
+                ),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  void _openContinueReading(
+    BuildContext context,
+    ReadingPositionSummary position,
+  ) {
+    final preferences = ref.read(appPreferencesProvider);
+    if (preferences.readerMode == ReaderMode.mushaf) {
+      final surah = position.surah;
+      final ayah = position.ayah;
+      if (surah != null && ayah != null) {
+        context.push('/mushaf?page=${position.page}&surah=$surah&ayah=$ayah');
+        return;
+      }
+      context.push('/mushaf?page=${position.page}');
+      return;
+    }
+    final surah = position.surah;
+    final ayah = position.ayah;
+    if (surah != null && ayah != null) {
+      context.push('/reader/$surah?ayah=$ayah');
+    } else {
+      context.push('/mushaf?page=${position.page}');
+    }
   }
 
   Future<void> _addHomeWidget(
@@ -275,6 +386,75 @@ class PlanScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _editManualReading(
+    BuildContext context,
+    PlanController controller,
+    AccountScopeSnapshot scope,
+    ReadingSession session,
+  ) async {
+    if (_busySessionId != null) return;
+    final draft = await showModalBottomSheet<_ManualEntryDraft>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _ManualEntryEditor(session: session),
+    );
+    if (draft == null ||
+        !context.mounted ||
+        !_stillCurrent(ref, controller, scope)) {
+      return;
+    }
+    setState(() => _busySessionId = session.id);
+    try {
+      await controller.updateManualReading(
+        session,
+        metric: draft.metric,
+        amount: draft.amount,
+        localDate: draft.localDate,
+      );
+    } on Object {
+      if (context.mounted) _showError(context);
+    } finally {
+      if (mounted) setState(() => _busySessionId = null);
+    }
+  }
+
+  Future<void> _deleteManualReading(
+    BuildContext context,
+    PlanController controller,
+    AccountScopeSnapshot scope,
+    ReadingSession session,
+  ) async {
+    if (_busySessionId != null || !_stillCurrent(ref, controller, scope)) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.l10n.planDeleteEntryTitle),
+        content: Text(context.l10n.planDeleteEntryConfirm),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    setState(() => _busySessionId = session.id);
+    try {
+      await controller.deleteManualReading(session);
+    } on Object {
+      if (context.mounted) _showError(context);
+    } finally {
+      if (mounted) setState(() => _busySessionId = null);
+    }
+  }
+
   bool _stillCurrent(
     WidgetRef ref,
     PlanController controller,
@@ -289,6 +469,561 @@ class PlanScreen extends ConsumerWidget {
   void _showError(BuildContext context) => ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
+}
+
+class _PlanSummary extends StatelessWidget {
+  const _PlanSummary({
+    required this.stats,
+    required this.streak,
+    required this.rangeDays,
+  });
+
+  final ReadingPlanStats stats;
+  final int streak;
+  final int rangeDays;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          context.l10n.planSummaryTitle,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(context.l10n.planSummaryRange(rangeDays)),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: _SummaryMetric(
+                value: '${stats.readingDays}',
+                label: context.l10n.planReadingDays,
+              ),
+            ),
+            Expanded(
+              child: _SummaryMetric(
+                value: '${stats.completedDays}',
+                label: context.l10n.planCompletedDays,
+              ),
+            ),
+            Expanded(
+              child: _SummaryMetric(
+                value: '${stats.partialDays}',
+                label: context.l10n.planPartialDays,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: <Widget>[
+            Icon(
+              Icons.local_fire_department_outlined,
+              size: 20,
+              color: context.iqroColors.gold,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(context.l10n.planStreak(streak))),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(value, style: Theme.of(context).textTheme.headlineSmall),
+      const SizedBox(height: 2),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
+}
+
+class _ContinueReadingCard extends StatelessWidget {
+  const _ContinueReadingCard({required this.position, required this.onTap});
+
+  final ReadingPositionSummary position;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    onTap: onTap,
+    child: Row(
+      children: <Widget>[
+        Icon(
+          Icons.menu_book_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(context.l10n.continueReading),
+              const SizedBox(height: 4),
+              Text(
+                position.surah == null
+                    ? '${context.l10n.page} ${position.page}'
+                    : '${context.l10n.surah} ${position.surah} · ${context.l10n.ayah} ${position.ayah ?? 1}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 2),
+              Text('${context.l10n.page} ${position.page}'),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right),
+      ],
+    ),
+  );
+}
+
+class _RangeSelector extends StatelessWidget {
+  const _RangeSelector({required this.selected, required this.onChanged});
+
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: <Widget>[
+        for (final days in const <int>[7, 30, 90]) ...<Widget>[
+          ChoiceChip(
+            label: Text(context.l10n.planDays(days)),
+            selected: selected == days,
+            onSelected: (_) => onChanged(days),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ],
+    ),
+  );
+}
+
+class _CalendarCard extends StatelessWidget {
+  const _CalendarCard({
+    required this.days,
+    required this.selectedDate,
+    required this.onSelected,
+  });
+
+  final List<ReadingHistoryDay> days;
+  final String selectedDate;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (days.isEmpty) return Text(context.l10n.planCalendarEmpty);
+    final firstDate = days.first.localDate;
+    final offset = firstDate == null ? 0 : firstDate.weekday - 1;
+    final weekdays = <String>[
+      context.l10n.mondayShort,
+      context.l10n.tuesdayShort,
+      context.l10n.wednesdayShort,
+      context.l10n.thursdayShort,
+      context.l10n.fridayShort,
+      context.l10n.saturdayShort,
+      context.l10n.sundayShort,
+    ];
+    return IqroCard(
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              for (final weekday in weekdays)
+                Expanded(
+                  child: Text(
+                    weekday,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: offset + days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisExtent: 58,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemBuilder: (context, index) {
+              if (index < offset) return const SizedBox.shrink();
+              final day = days[index - offset];
+              final date = day.localDate;
+              if (date == null) return const SizedBox.shrink();
+              final key = _dateOnly(date);
+              return _CalendarDayCell(
+                day: day,
+                selected: key == selectedDate,
+                onTap: () => onSelected(key),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarDayCell extends StatelessWidget {
+  const _CalendarDayCell({
+    required this.day,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ReadingHistoryDay day;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = day.localDate!;
+    final color = _stateColor(context, day.state);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: DateFormat.yMMMMd(
+        Localizations.localeOf(context).languageCode,
+      ).format(date),
+      child: Material(
+        color: selected
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  '${date.day}',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 3),
+                Icon(_stateIcon(day.state), size: 15, color: color),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedDayCard extends StatelessWidget {
+  const _SelectedDayCard({
+    required this.day,
+    required this.manualSessions,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final ReadingHistoryDay? day;
+  final List<ReadingSession> manualSessions;
+  final ValueChanged<ReadingSession>? onEdit;
+  final ValueChanged<ReadingSession>? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = day;
+    if (value == null || value.localDate == null) {
+      return Text(context.l10n.planCalendarEmpty);
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    return IqroCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            DateFormat.yMMMMd(locale).format(value.localDate!),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Icon(
+                _stateIcon(value.state),
+                size: 20,
+                color: _stateColor(context, value.state),
+              ),
+              const SizedBox(width: 8),
+              Text(_stateLabel(context, value.state)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (value.metric != null)
+            Text(
+              '${context.l10n.planCreditedAmount(_metricAmount(context, value.metric!, value.achieved))} · '
+              '${context.l10n.planGoalAmount(_metricAmount(context, value.metric!, value.target))}',
+            ),
+          if (value.prayerCount > 0) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(context.l10n.planPrayerCount(value.prayerCount)),
+            for (final checkIn in value.prayerCheckIns)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${_prayerName(context, checkIn.prayer)} · ${context.l10n.planPages(checkIn.pages)}',
+                ),
+              ),
+          ],
+          if (value.automaticSessions > 0) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              '${context.l10n.planAutomaticSessions(value.automaticSessions)} · '
+              '${context.l10n.planActiveTime(context.l10n.planMinutes((value.automaticSeconds / 60).floor()))}',
+            ),
+          ],
+          if (manualSessions.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.edit_note_outlined),
+              title: Text(context.l10n.history),
+              subtitle: Text(context.l10n.planManualRecord),
+              children: <Widget>[
+                for (final session in manualSessions)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      session.manualMetric == null
+                          ? context.l10n.manualEntry
+                          : _metricAmount(
+                              context,
+                              session.manualMetric!,
+                              session.manualAmount,
+                            ),
+                    ),
+                    subtitle: Text(context.l10n.planManualRecord),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        IconButton(
+                          tooltip: context.l10n.planEditEntry,
+                          onPressed: onEdit == null
+                              ? null
+                              : () => onEdit!(session),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: context.l10n.planDeleteEntry,
+                          onPressed: onDelete == null
+                              ? null
+                              : () => onDelete!(session),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RelatedToolsCard extends StatelessWidget {
+  const _RelatedToolsCard({
+    required this.onReminders,
+    required this.onMemorization,
+  });
+
+  final VoidCallback onReminders;
+  final VoidCallback onMemorization;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    padding: EdgeInsets.zero,
+    child: Column(
+      children: <Widget>[
+        ListTile(
+          leading: const Icon(Icons.notifications_none_outlined),
+          title: Text(context.l10n.reminders),
+          subtitle: Text(context.l10n.remindersSubtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onReminders,
+        ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.school_outlined),
+          title: Text(context.l10n.memorization),
+          subtitle: Text(context.l10n.memorizationPlanDescription),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onMemorization,
+        ),
+      ],
+    ),
+  );
+}
+
+class _ManualEntryDraft {
+  const _ManualEntryDraft({
+    required this.metric,
+    required this.amount,
+    required this.localDate,
+  });
+
+  final ReadingGoalMetric metric;
+  final double amount;
+  final String localDate;
+}
+
+class _ManualEntryEditor extends StatefulWidget {
+  const _ManualEntryEditor({required this.session});
+
+  final ReadingSession session;
+
+  @override
+  State<_ManualEntryEditor> createState() => _ManualEntryEditorState();
+}
+
+class _ManualEntryEditorState extends State<_ManualEntryEditor> {
+  late ReadingGoalMetric _metric =
+      widget.session.manualMetric ?? ReadingGoalMetric.pages;
+  late final TextEditingController _amount = TextEditingController(
+    text: _formatAmount(widget.session.manualAmount),
+  );
+  late String _localDate = widget.session.localDate;
+  String? _error;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              context.l10n.planEditEntry,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final metric in ReadingGoalMetric.values)
+                  ChoiceChip(
+                    label: Text(_metricLabel(context, metric)),
+                    selected: _metric == metric,
+                    onSelected: (_) => setState(() {
+                      _metric = metric;
+                      _error = null;
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _amount,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: context.l10n.planReadingAmount,
+                suffixText: _metricLabel(context, _metric),
+                errorText: _error,
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_outlined),
+              title: Text(context.l10n.planReadingDate),
+              subtitle: Text(_formatLocalDate(context, _localDate)),
+              onTap: _pickDate,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(context.l10n.cancel),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _save,
+                    child: Text(context.l10n.save),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Future<void> _pickDate() async {
+    final initial = DateTime.tryParse(_localDate) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _localDate = _dateOnly(picked));
+  }
+
+  void _save() {
+    final amount = double.tryParse(_amount.text.trim().replaceAll(',', '.'));
+    if (amount == null ||
+        amount <= 0 ||
+        amount > maximumReadingTarget(_metric)) {
+      setState(() => _error = '1–${maximumReadingTarget(_metric)}');
+      return;
+    }
+    Navigator.pop(
+      context,
+      _ManualEntryDraft(metric: _metric, amount: amount, localDate: _localDate),
+    );
+  }
 }
 
 class _DailyProgressCard extends StatelessWidget {
@@ -537,86 +1272,6 @@ class _GoalEditorState extends State<_GoalEditor> {
   }
 }
 
-class _StreakCard extends StatelessWidget {
-  const _StreakCard({required this.plan});
-
-  final DailyPlan plan;
-
-  @override
-  Widget build(BuildContext context) {
-    return IqroCard(
-      color: context.iqroColors.lavender,
-      borderColor: Colors.transparent,
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.local_fire_department_outlined,
-            color: context.iqroColors.gold,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '${context.l10n.planStreak(plan.streak)}\n'
-              '${context.l10n.planBestStreak(context.l10n.planStreak(plan.longestStreak))}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({required this.day});
-
-  final ReadingHistoryDay day;
-
-  @override
-  Widget build(BuildContext context) {
-    final metric = day.metric;
-    final locale = Localizations.localeOf(context).languageCode;
-    return IqroCard(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ListTile(
-        minTileHeight: 58,
-        leading: Icon(
-          _stateIcon(day.state),
-          color: _stateColor(context, day.state),
-        ),
-        title: Text(
-          day.localDate == null
-              ? '—'
-              : DateFormat.MMMEd(locale).format(day.localDate!),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (metric != null) ...[
-              Text(
-                context.l10n.planCreditedAmount(
-                  _metricAmount(context, metric, day.achieved),
-                ),
-              ),
-              Text(
-                context.l10n.planGoalAmount(
-                  _metricAmount(context, metric, day.target),
-                ),
-              ),
-            ],
-            if (day.automaticSeconds > 0)
-              Text(
-                context.l10n.planActiveTime(
-                  context.l10n.planMinutes((day.automaticSeconds / 60).floor()),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class AfterPrayerScreen extends ConsumerStatefulWidget {
   const AfterPrayerScreen({super.key});
 
@@ -837,6 +1492,27 @@ List<int> _manualAmounts(ReadingGoalMetric metric) => switch (metric) {
 String _formatAmount(num value) => value == value.roundToDouble()
     ? value.toInt().toString()
     : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+
+String _dateOnly(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-'
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}';
+
+String _formatLocalDate(BuildContext context, String value) {
+  final date = DateTime.tryParse(value);
+  if (date == null) return value;
+  return DateFormat.yMMMMd(
+    Localizations.localeOf(context).languageCode,
+  ).format(date);
+}
+
+String _stateLabel(BuildContext context, String state) => switch (state) {
+  'completed' => context.l10n.planStateCompleted,
+  'partial' => context.l10n.planStatePartial,
+  'missed' => context.l10n.planStateMissed,
+  'pending' => context.l10n.planStatePending,
+  _ => context.l10n.planStateNoGoal,
+};
 
 IconData _stateIcon(String state) => switch (state) {
   'completed' => Icons.check_circle_outline,

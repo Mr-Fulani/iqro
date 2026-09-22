@@ -109,19 +109,24 @@ export function MemorizationWorkspace() {
       .then(([nextDashboard, nextSurahs, allRecitations]) => {
         if (!active) return;
         setSurahs(nextSurahs);
-        const availableRecitations = latestRecitationsByVariant(allRecitations).filter(
-          (item) => item.rights.stream && item.timings.available,
+        const availableRecitations = latestRecitationsByVariant(
+          allRecitations,
+          "memorization",
         );
         setRecitations(availableRecitations);
         const plannedRecitation = availableRecitations.find(
           (item) => item.id === nextDashboard.plan?.recitation_id,
         );
         if (plannedRecitation) {
-          rememberReciterPreference(plannedRecitation.reciter, plannedRecitation);
+          rememberReciterPreference(
+            plannedRecitation.reciter,
+            plannedRecitation,
+            "memorization",
+          );
         } else if (!nextDashboard.plan) {
           const remembered = preferredRecitation(
             availableRecitations,
-            loadReciterPreference(),
+            loadReciterPreference("memorization"),
           );
           if (remembered) setRecitationId(remembered.id);
         }
@@ -228,7 +233,9 @@ export function MemorizationWorkspace() {
 
   const selectRecitation = (nextRecitationId: string) => {
     const recitation = recitations.find((item) => item.id === nextRecitationId);
-    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    if (recitation) {
+      rememberReciterPreference(recitation.reciter, recitation, "memorization");
+    }
     setRecitationId(nextRecitationId);
   };
 

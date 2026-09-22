@@ -76,10 +76,10 @@ export default function AudioPage() {
             : undefined;
           const selected =
             requestedPerson ||
-            preferredReciter(people, loadReciterPreference()) ||
+            preferredReciter(people, loadReciterPreference("listening")) ||
             people[0];
           setSelectedReciterId(selected.id);
-          rememberReciterPreference(selected);
+          rememberReciterPreference(selected, null, "listening");
         }
         setLoading(false);
       })
@@ -102,13 +102,18 @@ export default function AudioPage() {
         if (cancelled) return;
         const available = latestRecitationsByVariant(
           responses.flatMap((response) => response.results || []),
+          "listen",
         );
         setRecitations(available);
         if (available.length > 0) {
           const selectedRecitation =
-            preferredRecitation(available, loadReciterPreference()) || available[0];
+            preferredRecitation(available, loadReciterPreference("listening")) || available[0];
           setSelectedRecitationId(selectedRecitation.id);
-          rememberReciterPreference(selectedRecitation.reciter, selectedRecitation);
+          rememberReciterPreference(
+            selectedRecitation.reciter,
+            selectedRecitation,
+            "listening",
+          );
         } else {
           setSelectedRecitationId("");
           setTracks([]);
@@ -169,7 +174,7 @@ export default function AudioPage() {
   const selectReciter = useCallback((reciterId: string) => {
     if (reciterId === selectedReciterId) return;
     const reciter = reciters.find((item) => item.id === reciterId);
-    if (reciter) rememberReciterPreference(reciter);
+    if (reciter) rememberReciterPreference(reciter, null, "listening");
     rememberCurrentTrackFor(reciterId);
     setRecitations([]);
     setSelectedRecitationId("");
@@ -180,7 +185,9 @@ export default function AudioPage() {
   const selectRecitation = useCallback((recitationId: string) => {
     if (recitationId === selectedRecitationId) return;
     const recitation = recitations.find((item) => item.id === recitationId);
-    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    if (recitation) {
+      rememberReciterPreference(recitation.reciter, recitation, "listening");
+    }
     rememberCurrentTrackFor(selectedReciterId);
     setTracks([]);
     setSelectedRecitationId(recitationId);

@@ -955,6 +955,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get email => 'Электронная почта';
 
   @override
+  String get invalidEmail => 'Проверьте формат email.';
+
+  @override
   String get verificationCode => 'Код подтверждения';
 
   @override
@@ -968,6 +971,163 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get devices => 'Устройства';
+
+  @override
+  String get currentDevice => 'Это устройство';
+
+  @override
+  String get noDevices => 'Устройства не найдены.';
+
+  @override
+  String get feedbackTitle => 'Обратная связь и религиозный аудит';
+
+  @override
+  String get feedbackAccountHint =>
+      'Сообщите о неточности в тексте, аудио, времени намаза или приложении.';
+
+  @override
+  String get feedbackSignInRequired => 'Войдите, чтобы отправить обращение';
+
+  @override
+  String get feedbackDescription =>
+      'Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.';
+
+  @override
+  String get feedbackCreate => 'Создать обращение';
+
+  @override
+  String get feedbackCategory => 'Категория обращения';
+
+  @override
+  String get feedbackSubject => 'Тема';
+
+  @override
+  String get feedbackSubjectPlaceholder => 'Краткое описание';
+
+  @override
+  String get feedbackMessage => 'Сообщение';
+
+  @override
+  String get feedbackMessagePlaceholder =>
+      'Подробное описание вопроса или замечания…';
+
+  @override
+  String get feedbackSend => 'Отправить обращение';
+
+  @override
+  String get feedbackNone => 'Активных обращений нет.';
+
+  @override
+  String feedbackTicket(String id) {
+    return 'Обращение $id';
+  }
+
+  @override
+  String feedbackTeam(String team) {
+    return 'Команда: $team';
+  }
+
+  @override
+  String get feedbackNoMessages => 'Сообщений пока нет.';
+
+  @override
+  String get feedbackAddMessage => 'Добавить сообщение';
+
+  @override
+  String get feedbackReplyPlaceholder => 'Ваш ответ редакции или поддержке';
+
+  @override
+  String get feedbackSendMessage => 'Отправить сообщение';
+
+  @override
+  String get feedbackReopen => 'Открыть повторно';
+
+  @override
+  String get feedbackCloseTicket => 'Закрыть обращение';
+
+  @override
+  String get feedbackCloseConfirmation =>
+      'Закрыть обращение? Позже его можно будет открыть снова.';
+
+  @override
+  String get feedbackNoFurtherActions =>
+      'Для этого обращения больше нельзя отправлять сообщения.';
+
+  @override
+  String get feedbackRequiredFields => 'Заполните тему и сообщение.';
+
+  @override
+  String get feedbackRateLimited => 'Слишком много обращений. Повторите позже.';
+
+  @override
+  String get feedbackActionError =>
+      'Не удалось выполнить действие с обращением. Повторите позже.';
+
+  @override
+  String get feedbackCategoryReligious => 'Религиозный контент';
+
+  @override
+  String get feedbackCategoryLayout => 'Страница или разметка Мусхафа';
+
+  @override
+  String get feedbackCategoryAudio => 'Аудио, таймкоды или чтец';
+
+  @override
+  String get feedbackCategoryAdvertisement => 'Реклама';
+
+  @override
+  String get feedbackCategoryTechnical => 'Техническая проблема';
+
+  @override
+  String get feedbackCategoryAccount => 'Аккаунт или синхронизация';
+
+  @override
+  String get feedbackCategoryDonation => 'Пожертвование или внешняя ссылка';
+
+  @override
+  String get feedbackCategoryAccessibility => 'Доступность или локализация';
+
+  @override
+  String get feedbackCategoryGeneral => 'Общее предложение';
+
+  @override
+  String get feedbackCategoryOther => 'Другое';
+
+  @override
+  String get feedbackStatusNew => 'Новое';
+
+  @override
+  String get feedbackStatusTriaged => 'Рассматривается';
+
+  @override
+  String get feedbackStatusProgress => 'В работе';
+
+  @override
+  String get feedbackStatusWaiting => 'Ждём ответа';
+
+  @override
+  String get feedbackStatusResolved => 'Решено';
+
+  @override
+  String get feedbackStatusRejected => 'Отклонено';
+
+  @override
+  String get feedbackStatusDuplicate => 'Дубликат';
+
+  @override
+  String get feedbackStatusClosed => 'Закрыто';
+
+  @override
+  String get feedbackSupport => 'Поддержка';
+
+  @override
+  String get feedbackYou => 'Вы';
+
+  @override
+  String get feedbackSystem => 'Система';
+
+  @override
+  String get signOutConfirmation => 'Выйти из аккаунта на этом устройстве?';
 
   @override
   String get syncNow => 'Синхронизировать';
@@ -1479,6 +1639,110 @@ class AppLocalizationsRu extends AppLocalizations {
       many: '$countString дней подряд',
       few: '$countString дня подряд',
       one: '$countString день подряд',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get planSummaryTitle => 'Сводка прогресса';
+
+  @override
+  String planSummaryRange(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дня',
+      many: '$days дней',
+      few: '$days дня',
+      one: '$days день',
+    );
+    return 'За последние $_temp0';
+  }
+
+  @override
+  String get planReadingDays => 'дней с чтением';
+
+  @override
+  String get planCompletedDays => 'норм выполнено';
+
+  @override
+  String get planPartialDays => 'частичных дней';
+
+  @override
+  String get planCalendarTitle => 'Календарь прогресса';
+
+  @override
+  String get planCalendarHint =>
+      'Выберите день, чтобы увидеть норму, чтение и отметки после намаза.';
+
+  @override
+  String get planCalendarEmpty => 'За этот период нет данных.';
+
+  @override
+  String get planSelectedDay => 'Выбранный день';
+
+  @override
+  String get planRelatedTools => 'Связанные разделы';
+
+  @override
+  String get planHistoryEmpty => 'Записей чтения за этот период нет.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'Отметок после намаза: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'Автоматических сессий: $count';
+  }
+
+  @override
+  String get planManualRecord => 'Добавлено вручную';
+
+  @override
+  String get planEditEntry => 'Изменить запись';
+
+  @override
+  String get planDeleteEntry => 'Удалить запись';
+
+  @override
+  String get planDeleteEntryTitle => 'Удалить запись?';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'Эта ручная запись будет удалена, а прогресс пересчитан.';
+
+  @override
+  String get planReadingAmount => 'Количество';
+
+  @override
+  String get planReadingDate => 'Дата чтения';
+
+  @override
+  String get planStateNoGoal => 'Без нормы';
+
+  @override
+  String get planStatePending => 'Сегодня';
+
+  @override
+  String get planStateMissed => 'Пропущено';
+
+  @override
+  String get planStatePartial => 'Частично';
+
+  @override
+  String get planStateCompleted => 'Выполнено';
+
+  @override
+  String planDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дн.',
+      many: '$count дн.',
+      few: '$count дн.',
+      one: '$count дн.',
     );
     return '$_temp0';
   }

@@ -74,15 +74,18 @@ List<ReciterPerson> groupRecitersByPerson(List<Reciter> reciters) {
 Recitation? preferredRecitation(
   List<Recitation> recitations, {
   String? preferredId,
+  AudioRecitationRole role = AudioRecitationRole.listening,
 }) {
-  if (recitations.isEmpty) return null;
+  final supported = recitations
+      .where((item) => item.supports(role))
+      .toList(growable: false);
+  if (supported.isEmpty) return null;
   if (preferredId != null) {
-    for (final recitation in recitations) {
+    for (final recitation in supported) {
       if (recitation.id == preferredId) return recitation;
     }
   }
-  final timed = recitations.where((item) => item.timingsAvailable).toList();
-  final candidates = timed.isEmpty ? recitations : timed;
+  final candidates = supported;
   for (final recitation in candidates) {
     if (recitation.style == 'murattal') return recitation;
   }

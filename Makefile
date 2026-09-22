@@ -5,12 +5,22 @@ DEV_DATA_ARGS ?=
 DEV_UP_ARGS ?=
 MOBILE_ARGS ?=
 
-.PHONY: dev-init dev-up dev-data dev-doctor mobile-run mobile-ios-run mobile-ios-deps
+.PHONY: dev-init dev-up dev-data dev-doctor android-adb-reverse mobile-run mobile-ios-run mobile-ios-deps
 dev-init:
 	python3 ops/dev.py init
 
 dev-up:
 	python3 ops/dev.py up $(DEV_UP_ARGS)
+	@$(MAKE) --no-print-directory android-adb-reverse
+
+android-adb-reverse:
+	@if ! command -v adb >/dev/null 2>&1; then \
+		echo "Android USB: adb не найден, пропускаю проброс localhost:8000."; \
+	elif adb reverse tcp:8000 tcp:8000 >/dev/null 2>&1; then \
+		echo "Android USB: localhost:8000 проброшен на подключённое устройство."; \
+	else \
+		echo "Android USB: устройство не подключено, проброс localhost:8000 пропущен."; \
+	fi
 
 dev-data:
 	python3 ops/dev.py data $(DEV_DATA_ARGS)

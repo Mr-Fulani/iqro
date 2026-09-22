@@ -10,7 +10,6 @@ import '../features/home/home_screen.dart';
 import '../features/more/more_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/quran/quran_screen.dart';
-import 'providers.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({this.initialIndex = 0, this.child, super.key});
@@ -34,9 +33,6 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final playerActive = ref.watch(
-      audioControllerProvider.select((value) => value.active),
-    );
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -52,13 +48,12 @@ class _AppShellState extends ConsumerState<AppShell> {
                   (_) => const MoreScreen(),
                 ],
               ),
-          if (playerActive)
-            const PositionedDirectional(
-              start: 0,
-              end: 0,
-              bottom: 72,
-              child: IqroMiniPlayer(),
-            ),
+          const PositionedDirectional(
+            start: 0,
+            end: 0,
+            bottom: 72,
+            child: IqroMiniPlayer(),
+          ),
         ],
       ),
       bottomNavigationBar: Material(

@@ -952,6 +952,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get email => 'Email';
 
   @override
+  String get invalidEmail => 'Check the email format.';
+
+  @override
   String get verificationCode => 'Verification code';
 
   @override
@@ -965,6 +968,163 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devices => 'Devices';
+
+  @override
+  String get currentDevice => 'This device';
+
+  @override
+  String get noDevices => 'No devices found.';
+
+  @override
+  String get feedbackTitle => 'Feedback and religious audit';
+
+  @override
+  String get feedbackAccountHint =>
+      'Report an issue with text, audio, prayer times or the app.';
+
+  @override
+  String get feedbackSignInRequired => 'Sign in to send a request';
+
+  @override
+  String get feedbackDescription =>
+      'Report inaccuracies in text, timings, or prayer calculations to the religious editorial team.';
+
+  @override
+  String get feedbackCreate => 'Create request';
+
+  @override
+  String get feedbackCategory => 'Request category';
+
+  @override
+  String get feedbackSubject => 'Subject';
+
+  @override
+  String get feedbackSubjectPlaceholder => 'Brief description';
+
+  @override
+  String get feedbackMessage => 'Message';
+
+  @override
+  String get feedbackMessagePlaceholder =>
+      'Detailed description of the question or issue…';
+
+  @override
+  String get feedbackSend => 'Send request';
+
+  @override
+  String get feedbackNone => 'No active requests.';
+
+  @override
+  String feedbackTicket(String id) {
+    return 'Request $id';
+  }
+
+  @override
+  String feedbackTeam(String team) {
+    return 'Team: $team';
+  }
+
+  @override
+  String get feedbackNoMessages => 'No messages yet.';
+
+  @override
+  String get feedbackAddMessage => 'Add a message';
+
+  @override
+  String get feedbackReplyPlaceholder => 'Your reply to editorial or support';
+
+  @override
+  String get feedbackSendMessage => 'Send message';
+
+  @override
+  String get feedbackReopen => 'Reopen';
+
+  @override
+  String get feedbackCloseTicket => 'Close request';
+
+  @override
+  String get feedbackCloseConfirmation =>
+      'Close this request? You can reopen it later.';
+
+  @override
+  String get feedbackNoFurtherActions =>
+      'No more messages can be sent for this request.';
+
+  @override
+  String get feedbackRequiredFields => 'Enter a subject and message.';
+
+  @override
+  String get feedbackRateLimited => 'Too many requests. Try again later.';
+
+  @override
+  String get feedbackActionError =>
+      'Could not complete this request action. Try again later.';
+
+  @override
+  String get feedbackCategoryReligious => 'Religious content';
+
+  @override
+  String get feedbackCategoryLayout => 'Mushaf page or layout';
+
+  @override
+  String get feedbackCategoryAudio => 'Audio, timing or reciter';
+
+  @override
+  String get feedbackCategoryAdvertisement => 'Advertisement';
+
+  @override
+  String get feedbackCategoryTechnical => 'Technical problem';
+
+  @override
+  String get feedbackCategoryAccount => 'Account or synchronization';
+
+  @override
+  String get feedbackCategoryDonation => 'Donation or external link';
+
+  @override
+  String get feedbackCategoryAccessibility => 'Accessibility or localization';
+
+  @override
+  String get feedbackCategoryGeneral => 'General suggestion';
+
+  @override
+  String get feedbackCategoryOther => 'Other';
+
+  @override
+  String get feedbackStatusNew => 'New';
+
+  @override
+  String get feedbackStatusTriaged => 'Triaged';
+
+  @override
+  String get feedbackStatusProgress => 'In progress';
+
+  @override
+  String get feedbackStatusWaiting => 'Waiting for you';
+
+  @override
+  String get feedbackStatusResolved => 'Resolved';
+
+  @override
+  String get feedbackStatusRejected => 'Rejected';
+
+  @override
+  String get feedbackStatusDuplicate => 'Duplicate';
+
+  @override
+  String get feedbackStatusClosed => 'Closed';
+
+  @override
+  String get feedbackSupport => 'Support';
+
+  @override
+  String get feedbackYou => 'You';
+
+  @override
+  String get feedbackSystem => 'System';
+
+  @override
+  String get signOutConfirmation => 'Sign out of this device?';
 
   @override
   String get syncNow => 'Sync now';
@@ -1471,5 +1631,99 @@ class AppLocalizationsEn extends AppLocalizations {
       one: '$countString day in a row',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get planSummaryTitle => 'Progress summary';
+
+  @override
+  String planSummaryRange(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return 'Last $_temp0';
+  }
+
+  @override
+  String get planReadingDays => 'reading days';
+
+  @override
+  String get planCompletedDays => 'targets met';
+
+  @override
+  String get planPartialDays => 'partial days';
+
+  @override
+  String get planCalendarTitle => 'Progress calendar';
+
+  @override
+  String get planCalendarHint =>
+      'Choose a day to see its target, reading and after-prayer marks.';
+
+  @override
+  String get planCalendarEmpty => 'There is no data for this period.';
+
+  @override
+  String get planSelectedDay => 'Selected day';
+
+  @override
+  String get planRelatedTools => 'Related sections';
+
+  @override
+  String get planHistoryEmpty => 'No reading records for this period.';
+
+  @override
+  String planPrayerCount(num count) {
+    return 'After-prayer marks: $count';
+  }
+
+  @override
+  String planAutomaticSessions(num count) {
+    return 'Automatic sessions: $count';
+  }
+
+  @override
+  String get planManualRecord => 'Added manually';
+
+  @override
+  String get planEditEntry => 'Edit entry';
+
+  @override
+  String get planDeleteEntry => 'Delete entry';
+
+  @override
+  String get planDeleteEntryTitle => 'Delete entry?';
+
+  @override
+  String get planDeleteEntryConfirm =>
+      'This manual entry will be deleted and progress recalculated.';
+
+  @override
+  String get planReadingAmount => 'Amount';
+
+  @override
+  String get planReadingDate => 'Reading date';
+
+  @override
+  String get planStateNoGoal => 'No target';
+
+  @override
+  String get planStatePending => 'Today';
+
+  @override
+  String get planStateMissed => 'Missed';
+
+  @override
+  String get planStatePartial => 'Partial';
+
+  @override
+  String get planStateCompleted => 'Completed';
+
+  @override
+  String planDays(num count) {
+    return '$count days';
   }
 }

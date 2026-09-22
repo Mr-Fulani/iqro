@@ -105,12 +105,23 @@ class RecitationRightsSerializer(serializers.Serializer[Any]):
 class RecitationCoverageSerializer(serializers.Serializer[Any]):
     track_count = serializers.IntegerField(min_value=0)
     surah_count = serializers.IntegerField(min_value=0)
+    expected_ayahs = serializers.IntegerField(min_value=0)
+    timed_ayahs = serializers.IntegerField(min_value=0)
     complete = serializers.BooleanField()
+    timings_complete = serializers.BooleanField()
 
 
 class RecitationTimingsSerializer(serializers.Serializer[Any]):
     available = serializers.BooleanField()
     segment_count = serializers.IntegerField(min_value=0)
+    complete = serializers.BooleanField()
+
+
+class RecitationCapabilitiesSerializer(serializers.Serializer[Any]):
+    listen = serializers.BooleanField()
+    ayah_playback = serializers.BooleanField()
+    memorization = serializers.BooleanField()
+    offline = serializers.BooleanField()
 
 
 class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]):
@@ -124,6 +135,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     rights = serializers.SerializerMethodField()
     coverage = serializers.SerializerMethodField()
     timings = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = RecitationEdition
@@ -139,6 +151,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "rights",
             "coverage",
             "timings",
+            "capabilities",
             "published_at",
         )
 
@@ -172,16 +185,39 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool]:
         track_count = int(getattr(obj, "track_count", 0))
         surah_count = int(getattr(obj, "surah_track_count", 0))
+        expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
+        timed_ayahs = int(getattr(obj, "timed_ayah_count", 0) or 0)
         return {
             "track_count": track_count,
             "surah_count": surah_count,
             "complete": surah_count == 114,
+            "expected_ayahs": expected_ayahs,
+            "timed_ayahs": timed_ayahs,
+            "timings_complete": expected_ayahs > 0 and timed_ayahs >= expected_ayahs,
         }
 
     @extend_schema_field(RecitationTimingsSerializer)
     def get_timings(self, obj: RecitationEdition) -> dict[str, int | bool]:
         segment_count = int(getattr(obj, "timing_segment_count", 0))
-        return {"available": segment_count > 0, "segment_count": segment_count}
+        expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
+        timed_ayahs = int(getattr(obj, "timed_ayah_count", 0) or 0)
+        return {
+            "available": segment_count > 0,
+            "segment_count": segment_count,
+            "complete": expected_ayahs > 0 and timed_ayahs >= expected_ayahs,
+        }
+
+    @extend_schema_field(RecitationCapabilitiesSerializer)
+    def get_capabilities(self, obj: RecitationEdition) -> dict[str, bool]:
+        expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
+        timed_ayahs = int(getattr(obj, "timed_ayah_count", 0) or 0)
+        timings_complete = expected_ayahs > 0 and timed_ayahs >= expected_ayahs
+        return {
+            "listen": bool(obj.stream_allowed),
+            "ayah_playback": timings_complete,
+            "memorization": timings_complete,
+            "offline": bool(obj.offline_download_allowed),
+        }
 
 
 class QuranFoundationAyahCoverageSerializer(serializers.Serializer[Any]):

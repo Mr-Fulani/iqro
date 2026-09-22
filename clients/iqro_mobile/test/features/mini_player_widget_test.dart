@@ -61,6 +61,21 @@ void main() {
         final collapse = find.byKey(const ValueKey('mini-player-collapse'));
         final expand = find.byKey(const ValueKey('mini-player-expand'));
         final expandedWidth = tester.getSize(find.byType(ListTile)).width;
+        await tester.pumpAndSettle();
+        expect(tester.getSize(expand), const Size(60, 60));
+        expect(expand.hitTestable(), findsOneWidget);
+        expect(collapse.hitTestable(), findsNothing);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(IqroMiniPlayer)),
+        );
+        expect(container.read(miniPlayerCollapsedProvider), isTrue);
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isFalse);
+        expect(tester.getSize(find.byType(ListTile)).width, expandedWidth);
+        expect(collapse.hitTestable(), findsOneWidget);
+        expect(expand.hitTestable(), findsNothing);
+        expect(tester.takeException(), isNull);
         await tester.tap(collapse);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
@@ -69,9 +84,6 @@ void main() {
         expect(tester.getSize(expand), const Size(60, 60));
         expect(expand.hitTestable(), findsOneWidget);
         expect(collapse.hitTestable(), findsNothing);
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(IqroMiniPlayer)),
-        );
         expect(container.read(miniPlayerCollapsedProvider), isTrue);
         expect(find.text('tab=3'), findsNothing);
         await tester.tap(expand);

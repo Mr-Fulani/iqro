@@ -109,15 +109,15 @@ export function MushafAudioPlayer({
       .getRecitations({ quran_edition: editionCode })
       .then((response) => {
         if (cancelled) return;
-        const available = latestRecitationsByVariant(response.results || []);
+        const available = latestRecitationsByVariant(response.results || [], "ayah_playback");
         setRecitations(available);
-        const remembered = preferredRecitation(available, loadReciterPreference());
+        const remembered = preferredRecitation(available, loadReciterPreference("mushaf"));
         const fallback = available
           .filter((item) => item.code.startsWith("qf-7-"))
           .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
         const selected = remembered || fallback || available[0];
         setSelectedRecitationId(selected?.id || "");
-        if (selected) rememberReciterPreference(selected.reciter, selected);
+        if (selected) rememberReciterPreference(selected.reciter, selected, "mushaf");
       })
       .catch((reason) => {
         if (!cancelled) setError(api.normalizeError(reason));
@@ -132,7 +132,7 @@ export function MushafAudioPlayer({
 
   const selectRecitation = (recitationId: string) => {
     const recitation = recitations.find((item) => item.id === recitationId);
-    if (recitation) rememberReciterPreference(recitation.reciter, recitation);
+    if (recitation) rememberReciterPreference(recitation.reciter, recitation, "mushaf");
     setSelectedRecitationId(recitationId);
   };
 

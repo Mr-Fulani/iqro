@@ -92,6 +92,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           recitationId: value.track?.recitationId,
           rangeStartAyah: value.rangeStartAyah,
           rangeEndAyah: value.rangeEndAyah,
+          active: value.channel == AudioPlaybackChannel.mushaf,
           hasError: value.error != null,
         ),
       ),
@@ -102,7 +103,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         audio.ayah == widget.reference.ayah &&
         audio.recitationId == _recitationId &&
         audio.rangeStartAyah == widget.reference.ayah &&
-        audio.rangeEndAyah == widget.reference.ayah;
+        audio.rangeEndAyah == widget.reference.ayah &&
+        audio.active;
     final playingThis = loadedThis && audio.playing;
     return SafeArea(
       top: false,
@@ -236,9 +238,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         if (value == null) return;
         setState(() => _recitationId = value);
         unawaited(
-          ref
-              .read(appPreferencesProvider.notifier)
-              .setPreferredRecitation(value),
+          ref.read(appPreferencesProvider.notifier).setMushafRecitation(value),
         );
       },
     );
@@ -364,7 +364,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           tafsirEditions.firstOrNull?.sourceId;
       _recitationId ??=
           recitations
-              .where((item) => item.id == preferences.preferredRecitationId)
+              .where((item) => item.id == preferences.mushafRecitationId)
               .firstOrNull
               ?.id ??
           _preferredRecitation(recitations)?.id;
@@ -437,9 +437,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
 
   Future<List<Recitation>> _safeRecitations(AudioRepository repository) async {
     try {
-      return (await repository.recitations())
-          .where((item) => item.timingsAvailable)
-          .toList(growable: false);
+      return repository.recitationsForRole(AudioRecitationRole.ayahPlayback);
     } on Object {
       return const <Recitation>[];
     }
@@ -535,6 +533,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           reciters: _details!.recitations.map((item) => item.reciter),
         ),
         surahName: surahName,
+        channel: AudioPlaybackChannel.mushaf,
         startAyah: widget.reference.ayah,
         endAyah: widget.reference.ayah,
       );
