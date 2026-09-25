@@ -36,6 +36,13 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     Reciter,
 )
+from quran_backend.modules.audio.variant_resolver import (
+    AudioAyahNotAvailableError,
+    AudioVariantDelivery,
+    AudioVariantResolver,
+    AudioVariantRoleNotSupportedError,
+    AudioVariantTimingMode,
+)
 from quran_backend.modules.memorization.services import set_memorization_plan
 from quran_backend.modules.quran.models import (
     Ayah,
@@ -906,6 +913,127 @@ def test_external_track_exposes_non_immutable_streaming_asset(
         "range_supported": False,
         "immutable": False,
     }
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_audio_variant_resolver_normalizes_timed_managed_and_external_delivery(
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation = published_audio_dataset["recitation"]
+    resolver = AudioVariantResolver()
+
+    variant = resolver.resolve(str(recitation.id))
+    assert variant.id == str(recitation.id)
+    assert variant.timing_mode is AudioVariantTimingMode.TIMED
+    assert variant.delivery is AudioVariantDelivery.MANAGED
+    assert variant.coverage.timings_complete is True
+    assert variant.capabilities.memorization is True
+
+    track = resolver.resolve_track(str(recitation.id), surah_number=1)
+    assert track.delivery is AudioVariantDelivery.MANAGED
+    assert track.url == (
+        "https://cdn.example.test/quran-audio/audio/test-recitation/1.0.0/surah-001.mp3"
+    )
+    assert len(track.ayahs) == 2
+
+    ayah = resolver.resolve_ayah(str(recitation.id), surah_number=1, ayah_number=2)
+    assert ayah.delivery is AudioVariantDelivery.MANAGED
+    assert ayah.start_ms == 5_000
+    assert ayah.end_ms == 10_000
+
+    AudioRendition.objects.filter(pk=published_audio_dataset["rendition"].pk).update(
+        object_key=None,
+        external_url="https://download.quranicaudio.com/qdc/test/1.mp3",
+        checksum_sha256="",
+        etag="",
+    )
+    mixed = resolver.resolve(str(recitation.id))
+    assert mixed.delivery is AudioVariantDelivery.MIXED
+    assert resolver.resolve_track(str(recitation.id), surah_number=1).delivery is (
+        AudioVariantDelivery.EXTERNAL
+    )
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_generic_audio_variant_endpoints_use_the_same_resolver(
+    api_client: APIClient,
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation = published_audio_dataset["recitation"]
+    track_response = api_client.get(
+        reverse(
+            "audio:variant-track",
+            kwargs={"variant_id": str(recitation.id), "surah": 1},
+        )
+    )
+    ayah_response = api_client.get(
+        reverse(
+            "audio:variant-ayah",
+            kwargs={
+                "variant_id": str(recitation.id),
+                "surah": 1,
+                "ayah": 2,
+            },
+        )
+    )
+
+    assert track_response.status_code == 200
+    assert track_response.json()["variant"]["id"] == str(recitation.id)
+    assert track_response.json()["track"]["ayahs"][1]["end_ms"] == 10_000
+    assert ayah_response.status_code == 200
+    assert ayah_response.json()["audio"]["start_ms"] == 5_000
+    assert ayah_response.json()["variant"]["capabilities"]["ayah_playback"] is True
+
+
+@pytest.mark.django_db
+def test_audio_variant_resolver_keeps_untimed_and_partial_variants_out_of_ayah_roles(
+    quran_dataset: dict[str, Any],
+) -> None:
+    untimed = _create_second_public_recitation(
+        quran_dataset,
+        code="resolver-untimed-recitation",
+        version="1.0.0",
+    )
+    resolver = AudioVariantResolver()
+    untimed_variant = resolver.resolve(str(untimed.id))
+    assert untimed_variant.timing_mode is AudioVariantTimingMode.UNTIMED
+    assert untimed_variant.capabilities.listen is True
+    assert untimed_variant.capabilities.ayah_playback is False
+    assert resolver.resolve_track(str(untimed.id), surah_number=1).ayahs == ()
+    with pytest.raises(AudioVariantRoleNotSupportedError):
+        resolver.resolve_ayah(str(untimed.id), surah_number=1, ayah_number=1)
+
+    partial = _create_recitation(
+        Reciter.objects.create(
+            code="resolver-partial-reciter",
+            name_ar="قارئ جزئي",
+            name_en="Partial Reciter",
+            name_ru="Частичный чтец",
+        ),
+        quran_dataset["version"],
+        code="resolver-partial-recitation",
+        version="1.0.0",
+    )
+    _create_track(
+        partial,
+        object_key="audio/resolver-partial/1.0.0/surah-001.mp3",
+    )
+    _publish(partial)
+
+    non_public_resolver = AudioVariantResolver(public_only=False)
+    partial_variant = non_public_resolver.resolve(str(partial.id))
+    assert partial_variant.coverage.partial is True
+    assert partial_variant.capabilities.listen is True
+    assert partial_variant.capabilities.ayah_playback is False
+    with pytest.raises(AudioAyahNotAvailableError):
+        non_public_resolver.resolve_ayah(
+            str(partial.id),
+            surah_number=1,
+            ayah_number=1,
+            role=None,
+        )
 
 
 @pytest.mark.django_db

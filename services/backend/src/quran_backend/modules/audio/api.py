@@ -37,6 +37,8 @@ from quran_backend.modules.audio.selectors import (
 )
 from quran_backend.modules.audio.serializers import (
     AudioTrackSerializer,
+    AudioVariantAyahResponseSerializer,
+    AudioVariantTrackResponseSerializer,
     AyahAudioSegmentSerializer,
     AyahPlaybackSerializer,
     OfflineAudioManifestQuerySerializer,
@@ -50,6 +52,11 @@ from quran_backend.modules.audio.serializers import (
     SurahPlaybackSerializer,
     TrackListQuerySerializer,
     public_audio_url,
+)
+from quran_backend.modules.audio.variant_resolver import (
+    AudioVariantResolutionError,
+    AudioVariantResolver,
+    AudioVariantRole,
 )
 from quran_backend.modules.core.offline_packages import (
     OFFLINE_PACKAGE_SCHEMA_VERSION,
@@ -437,3 +444,60 @@ class AyahPlaybackView(PublicReadOnlyViewMixin, APIView):
                 "segment": AyahAudioSegmentSerializer(segment).data,
             }
         )
+
+
+@extend_schema(tags=["audio"])
+class AudioVariantTrackView(PublicReadOnlyViewMixin, APIView):
+    @extend_schema(
+        responses=AudioVariantTrackResponseSerializer,
+        parameters=[
+            OpenApiParameter("variant_id", str, OpenApiParameter.PATH),
+            OpenApiParameter("surah", int, OpenApiParameter.PATH),
+        ],
+    )
+    def get(
+        self,
+        request: Request,  # noqa: ARG002
+        variant_id: str,
+        surah: int,
+    ) -> Response:
+        try:
+            track = AudioVariantResolver().resolve_track(
+                variant_id,
+                surah_number=surah,
+                role=AudioVariantRole.LISTEN,
+            )
+        except AudioVariantResolutionError as exc:
+            raise NotFound(str(exc)) from exc
+        payload = track.to_dict()
+        variant = payload.pop("variant")
+        return Response({"variant": variant, "track": payload})
+
+
+@extend_schema(tags=["audio"])
+class AudioVariantAyahView(PublicReadOnlyViewMixin, APIView):
+    @extend_schema(
+        responses=AudioVariantAyahResponseSerializer,
+        parameters=[
+            OpenApiParameter("variant_id", str, OpenApiParameter.PATH),
+            OpenApiParameter("surah", int, OpenApiParameter.PATH),
+            OpenApiParameter("ayah", int, OpenApiParameter.PATH),
+        ],
+    )
+    def get(
+        self,
+        request: Request,  # noqa: ARG002
+        variant_id: str,
+        surah: int,
+        ayah: int,
+    ) -> Response:
+        try:
+            audio = AudioVariantResolver().resolve_ayah(
+                variant_id,
+                surah_number=surah,
+                ayah_number=ayah,
+                role=AudioVariantRole.AYAH_PLAYBACK,
+            )
+        except AudioVariantResolutionError as exc:
+            raise NotFound(str(exc)) from exc
+        return Response({"variant": audio.variant.to_dict(), "audio": audio.to_dict()})

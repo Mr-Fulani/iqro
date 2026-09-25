@@ -5,6 +5,7 @@
   "bookmarks": "Yer işaretleri",
   "emptyBookmarks": "Henüz yer işareti yok. Mushaftaki yer işareti simgesine dokunarak bir ayeti kaydedin.",
   "bookmarksLoadError": "Yer işaretleri yüklenemedi",
+  "repeatSelectedAyah": "Seçili ayeti tekrarla",
   "mushafFitWidth": "Genişliğe sığdır",
   "mushafFitPage": "Tam sayfa",
   "checkMushafUpdates": "Güncellemeleri denetle",

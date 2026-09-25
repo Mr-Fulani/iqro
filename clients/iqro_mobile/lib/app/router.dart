@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/design_system/iqro_widgets.dart';
 import '../core/widgets/home_widget_routes.dart';
+import 'audio_navigation_boundary.dart';
 import '../features/account/account_screen.dart';
 import '../features/account/devices_screen.dart';
 import '../features/calendar/hijri_calendar_screen.dart';
@@ -56,28 +57,40 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(path: '/plan', redirect: (context, state) => '/app?tab=2'),
       GoRoute(
         path: '/app',
-        builder: (context, state) => AppShell(
-          initialIndex:
-              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
-        ),
+        builder: (context, state) {
+          final index =
+              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+          return AudioNavigationBoundary(
+            section: index == 1
+                ? AudioNavigationSection.quran
+                : AudioNavigationSection.other,
+            child: AppShell(initialIndex: index),
+          );
+        },
       ),
       GoRoute(
         path: '/reader/:surah',
-        builder: (context, state) => ReaderScreen(
-          surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
-          initialAyah:
-              int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.quran,
+          child: ReaderScreen(
+            surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
+            initialAyah:
+                int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+          ),
         ),
       ),
       GoRoute(
         path: '/mushaf',
-        builder: (context, state) => MushafScreen(
-          initialPageIsPhysical:
-              state.uri.queryParameters['layout'] == 'physical',
-          initialPage:
-              int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1,
-          surah: int.tryParse(state.uri.queryParameters['surah'] ?? '') ?? 1,
-          ayah: int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.quran,
+          child: MushafScreen(
+            initialPageIsPhysical:
+                state.uri.queryParameters['layout'] == 'physical',
+            initialPage:
+                int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1,
+            surah: int.tryParse(state.uri.queryParameters['surah'] ?? '') ?? 1,
+            ayah: int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+          ),
         ),
       ),
       GoRoute(
@@ -107,26 +120,41 @@ GoRouter createRouter({required bool onboardingComplete}) {
       ),
       GoRoute(
         path: '/memorization',
-        builder: (context, state) => const MemorizationScreen(),
+        builder: (context, state) => const AudioNavigationBoundary(
+          section: AudioNavigationSection.memorization,
+          child: MemorizationScreen(),
+        ),
       ),
-      GoRoute(path: '/dua', builder: (context, state) => const DuaScreen()),
+      GoRoute(
+        path: '/dua',
+        builder: (context, state) => const AudioNavigationBoundary(
+          section: AudioNavigationSection.dua,
+          child: DuaScreen(),
+        ),
+      ),
       GoRoute(
         path: '/dua/:collection/:sourceNumber',
         builder: (context, state) {
           final entry = state.extra;
-          return DuaEntryRouteScreen(
-            collection: state.pathParameters['collection'] ?? '',
-            sourceNumber:
-                int.tryParse(state.pathParameters['sourceNumber'] ?? '') ?? 0,
-            initialEntry: entry is DuaEntry ? entry : null,
+          return AudioNavigationBoundary(
+            section: AudioNavigationSection.dua,
+            child: DuaEntryRouteScreen(
+              collection: state.pathParameters['collection'] ?? '',
+              sourceNumber:
+                  int.tryParse(state.pathParameters['sourceNumber'] ?? '') ?? 0,
+              initialEntry: entry is DuaEntry ? entry : null,
+            ),
           );
         },
       ),
       GoRoute(
         path: '/dua/:collection/categories/:category',
-        builder: (context, state) => DuaScreen(
-          initialCollection: state.pathParameters['collection'],
-          initialCategory: state.pathParameters['category'],
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.dua,
+          child: DuaScreen(
+            initialCollection: state.pathParameters['collection'],
+            initialCategory: state.pathParameters['category'],
+          ),
         ),
       ),
       GoRoute(
@@ -134,10 +162,18 @@ GoRouter createRouter({required bool onboardingComplete}) {
         builder: (context, state) {
           final entry = state.extra;
           final id = state.pathParameters['id'] ?? '';
-          if (!isDuaEntryId(id)) return DuaScreen(initialCategory: id);
-          return DuaEntryRouteScreen(
-            entryId: id,
-            initialEntry: entry is DuaEntry ? entry : null,
+          if (!isDuaEntryId(id)) {
+            return AudioNavigationBoundary(
+              section: AudioNavigationSection.dua,
+              child: DuaScreen(initialCategory: id),
+            );
+          }
+          return AudioNavigationBoundary(
+            section: AudioNavigationSection.dua,
+            child: DuaEntryRouteScreen(
+              entryId: id,
+              initialEntry: entry is DuaEntry ? entry : null,
+            ),
           );
         },
       ),

@@ -6,6 +6,7 @@
   "bookmarks": "Bookmarks",
   "emptyBookmarks": "No bookmarks yet. Save an ayah using the bookmark icon in the reader.",
   "bookmarksLoadError": "Could not load bookmarks",
+  "repeatSelectedAyah": "Repeat selected ayah",
   "mushafFitWidth": "Fit width",
   "mushafFitPage": "Whole page",
   "checkMushafUpdates": "Check for updates",

@@ -52,6 +52,188 @@ void main() {
   });
 
   test(
+    'audio presentation exposes standalone playback without timeline churn',
+    () {
+      final standalone = IqroStandaloneAudioState(
+        uri: Uri.https('media.example.test', '/dua/1.mp3'),
+        mediaItem: buildIqroStandaloneMediaItem(
+          id: 'dua:1',
+          title: 'Morning remembrance',
+          album: 'IQRO · Dua',
+          artist: 'Reader',
+          contentType: 'dua',
+        ),
+        playing: true,
+        position: const Duration(seconds: 10),
+        duration: const Duration(minutes: 1),
+      );
+      final current = IqroAudioState(standalone: standalone);
+      final presentation = iqroAudioPresentation(current);
+
+      expect(presentation.standalone, (
+        id: 'dua:1',
+        title: 'Morning remembrance',
+        artist: 'Reader',
+        album: 'IQRO · Dua',
+        contentType: 'dua',
+      ));
+      expect(presentation.playing, isTrue);
+      expect(presentation.buffering, isFalse);
+      expect(
+        iqroAudioPresentation(
+          current.copyWith(
+            standalone: standalone.copyWith(
+              position: const Duration(seconds: 11),
+            ),
+          ),
+        ),
+        presentation,
+      );
+    },
+  );
+
+  test(
+    'entering Quran pauses Quran playback without clearing its track',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      expect(controller.state.playing, isTrue);
+
+      await controller.pauseForQuranEntry();
+
+      expect(engine.pauseCalls, 1);
+      expect(engine.playing, isFalse);
+      expect(controller.state.playing, isFalse);
+      expect(controller.state.buffering, isFalse);
+      expect(controller.state.track?.id, _playback.track.id);
+      await controller.pauseForQuranEntry();
+      expect(engine.pauseCalls, 1);
+    },
+  );
+
+  test(
+    'entering Quran pauses memorization playback without clearing its track',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _memorizationReciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Memorization Al-Baqarah',
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      expect(controller.state.playing, isTrue);
+      expect(controller.state.channel, AudioPlaybackChannel.memorization);
+
+      await controller.pauseForQuranEntry();
+
+      expect(engine.pauseCalls, 1);
+      expect(engine.playing, isFalse);
+      expect(controller.state.playing, isFalse);
+      expect(controller.state.track?.id, _secondPlayback.track.id);
+      expect(controller.state.channel, AudioPlaybackChannel.memorization);
+    },
+  );
+
+  test('moving within Quran keeps its own Mushaf playback', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _playback,
+      reciter: _reciter,
+      channel: AudioPlaybackChannel.mushaf,
+      surahName: 'Al-Fatiha',
+    );
+    engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+
+    await controller.pauseForQuranEntry();
+
+    expect(engine.pauseCalls, 0);
+    expect(controller.state.playing, isTrue);
+    expect(controller.state.channel, AudioPlaybackChannel.mushaf);
+  });
+
+  test(
+    'entering Quran pauses standalone playback without clearing its item',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadStandalone(
+        id: 'standalone:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Morning remembrance',
+      );
+      expect(controller.state.standalone?.playing, isTrue);
+
+      await controller.pauseForQuranEntry();
+
+      expect(engine.pauseCalls, 1);
+      expect(engine.playing, isFalse);
+      expect(controller.state.standalone?.playing, isFalse);
+      expect(controller.state.standalone?.mediaItem.id, 'standalone:1');
+    },
+  );
+
+  test(
+    'entering Dua pauses Quran playback without clearing its track',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+
+      await controller.pauseForDuaEntry();
+
+      expect(engine.pauseCalls, 1);
+      expect(engine.playing, isFalse);
+      expect(controller.state.playing, isFalse);
+      expect(controller.state.track?.id, _playback.track.id);
+    },
+  );
+
+  test('entering Dua preserves a currently playing Dua source', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+
+    await controller.loadStandalone(
+      id: 'dua:1',
+      url: 'https://media.example.test/dua/1.mp3',
+      title: 'Morning remembrance',
+      contentType: 'dua',
+    );
+    expect(controller.state.standalone?.playing, isTrue);
+
+    await controller.pauseForDuaEntry();
+
+    expect(engine.pauseCalls, 0);
+    expect(engine.playing, isTrue);
+    expect(controller.state.standalone?.playing, isTrue);
+    expect(controller.state.standalone?.mediaItem.id, 'dua:1');
+  });
+
+  test(
     'Quran and standalone audio use one engine and preserve Quran options',
     () async {
       final engine = _FakeAudioEngine();
@@ -191,6 +373,34 @@ void main() {
       expect(controller.state.standalone, isNull);
     },
   );
+
+  test('global player can toggle the current route-owned Dua source', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+    final owner = Object();
+
+    await controller.loadStandalone(
+      id: 'dua:1',
+      url: 'https://media.example.test/dua/1.mp3',
+      title: 'Morning remembrance',
+      contentType: 'dua',
+      owner: owner,
+      autoplay: false,
+    );
+
+    await controller.toggleStandaloneFromGlobalPlayer('dua:1');
+    expect(engine.playCalls, 1);
+    expect(controller.state.standalone?.playing, isTrue);
+
+    await controller.toggleStandaloneFromGlobalPlayer('old-dua:1');
+    expect(engine.pauseCalls, 0);
+    expect(controller.state.standalone?.playing, isTrue);
+
+    await controller.toggleStandaloneFromGlobalPlayer('dua:1');
+    expect(engine.pauseCalls, 1);
+    expect(controller.state.standalone?.playing, isFalse);
+  });
 
   test(
     'the newest standalone request wins while an older load is pending',
@@ -478,7 +688,7 @@ void main() {
 
       await controller.loadPlayback(
         playback: _secondPlayback,
-        reciter: _reciter,
+        reciter: _memorizationReciter,
         source: AudioPlaybackSource.memorization,
         surahName: 'Memorization Al-Baqarah',
         autoplay: false,
@@ -516,7 +726,7 @@ void main() {
 
       await controller.loadPlayback(
         playback: _secondPlayback,
-        reciter: _reciter,
+        reciter: _memorizationReciter,
         source: AudioPlaybackSource.memorization,
         surahName: 'Memorization Al-Baqarah',
         autoplay: false,
@@ -529,6 +739,7 @@ void main() {
       expect(controller.state.playing, isFalse);
       expect(controller.state.position, const Duration(seconds: 25));
       expect(engine.pauseCalls, 1);
+      expect((await store.read())?.reciter.id, _reciter.id);
     },
   );
 
@@ -589,6 +800,71 @@ void main() {
       expect(controller.state.surahName, 'Audio Al-Fatiha');
     },
   );
+
+  test('Audio can resume its saved reader after Mushaf playback', () async {
+    final database = await _audioStoreDatabase();
+    addTearDown(database.close);
+    final store = AudioPlaybackStore(database);
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine, playbackStore: store);
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _playback,
+      reciter: _reciter,
+      surahName: 'Audio Al-Fatiha',
+      autoplay: false,
+    );
+    await controller.loadPlayback(
+      playback: _secondPlayback,
+      reciter: _memorizationReciter,
+      channel: AudioPlaybackChannel.mushaf,
+      surahName: 'Mushaf Al-Baqarah',
+      autoplay: false,
+    );
+    expect((await store.read())?.reciter.id, _reciter.id);
+    expect(controller.listeningSurah, 1);
+
+    await controller.restoreLatestIfIdle();
+    expect(controller.state.channel, AudioPlaybackChannel.mushaf);
+
+    expect(await controller.activateListening(), isTrue);
+    expect(controller.state.channel, AudioPlaybackChannel.listening);
+    expect(controller.state.reciter?.id, _reciter.id);
+    expect(controller.state.track?.id, _playback.track.id);
+    expect((await store.read())?.reciter.id, _reciter.id);
+  });
+
+  test('Dua handoff retains the saved Audio session', () async {
+    final database = await _audioStoreDatabase();
+    addTearDown(database.close);
+    final store = AudioPlaybackStore(database);
+    final controller = AudioController(
+      engine: _FakeAudioEngine(),
+      playbackStore: store,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _playback,
+      reciter: _reciter,
+      surahName: 'Audio Al-Fatiha',
+      autoplay: false,
+    );
+    await controller.loadStandalone(
+      id: 'dua:1',
+      url: 'https://media.example.test/dua/1.mp3',
+      title: 'Morning remembrance',
+      contentType: 'dua',
+      autoplay: false,
+    );
+    expect((await store.read())?.playback.track.id, _playback.track.id);
+
+    expect(await controller.activateListening(), isTrue);
+    expect(controller.state.standalone, isNull);
+    expect(controller.state.track?.id, _playback.track.id);
+    expect((await store.read())?.playback.track.id, _playback.track.id);
+  });
 
   test('stale same-track restore never seeks a manual load', () async {
     final database = await _audioStoreDatabase();
@@ -964,6 +1240,19 @@ const _reciter = Reciter(
   nameEn: 'Reader',
   nameRu: 'Чтец',
   nameTr: 'Okuyucu',
+  biographyAr: '',
+  biographyEn: '',
+  biographyRu: '',
+  biographyTr: '',
+);
+
+const _memorizationReciter = Reciter(
+  id: 'reciter-2',
+  slug: 'memorization-reciter',
+  nameAr: 'قارئ الحفظ',
+  nameEn: 'Memorization Reader',
+  nameRu: 'Чтец для заучивания',
+  nameTr: 'Ezber okuyucusu',
   biographyAr: '',
   biographyEn: '',
   biographyRu: '',

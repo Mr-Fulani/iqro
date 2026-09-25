@@ -30,6 +30,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bookmarksLoadError => 'تعذر تحميل العلامات المرجعية';
 
   @override
+  String get repeatSelectedAyah => 'تكرار الآية المحددة';
+
+  @override
   String get mushafFitWidth => 'ملاءمة العرض';
 
   @override

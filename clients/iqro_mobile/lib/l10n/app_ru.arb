@@ -5,6 +5,7 @@
   "bookmarks": "Закладки",
   "emptyBookmarks": "Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.",
   "bookmarksLoadError": "Не удалось загрузить закладки",
+  "repeatSelectedAyah": "Повторять выбранный аят",
   "mushafFitWidth": "По ширине",
   "mushafFitPage": "Вся страница",
   "checkMushafUpdates": "Проверить обновления",

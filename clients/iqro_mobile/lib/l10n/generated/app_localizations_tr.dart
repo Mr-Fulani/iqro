@@ -30,6 +30,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bookmarksLoadError => 'Yer işaretleri yüklenemedi';
 
   @override
+  String get repeatSelectedAyah => 'Seçili ayeti tekrarla';
+
+  @override
   String get mushafFitWidth => 'Genişliğe sığdır';
 
   @override

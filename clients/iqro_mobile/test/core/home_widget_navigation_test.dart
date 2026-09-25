@@ -24,6 +24,7 @@ void main() {
       tester,
     ) async {
       final router = createRouter(onboardingComplete: true);
+      final audioController = _IdleAudio();
       addTearDown(router.dispose);
       // Cold start receives the raw native URI, before the plugin maps it.
       router.go('iqro://open/plan?homeWidget');
@@ -31,7 +32,7 @@ void main() {
         ProviderScope(
           overrides: [
             sessionProvider.overrideWith((ref) => _SignedOut()),
-            audioControllerProvider.overrideWith((ref) => _IdleAudio()),
+            audioControllerProvider.overrideWith((ref) => audioController),
             localDatabaseProvider.overrideWithValue(_Database()),
             activeAccountScopeKeyProvider.overrideWithValue(null),
             planProvider.overrideWith((ref) => _UnavailablePlan()),
@@ -74,6 +75,15 @@ void main() {
         expect(find.byType(PlanScreen), findsOneWidget);
         expect(find.byType(AfterPrayerScreen), findsNothing);
         expect(find.byType(NavigationBar), findsOneWidget);
+        expect(audioController.quranPauseRequests, 0);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(l10n.navPlan),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(audioController.quranPauseRequests, 0);
         // The plugin and Flutter's native-link handler can fire in either order.
         for (final nativeUri in [
           'iqro://open/plan?homeWidget',
@@ -122,6 +132,20 @@ class _SignedOut extends StateNotifier<AsyncValue<AuthSession?>>
 class _IdleAudio extends StateNotifier<IqroAudioState>
     implements AudioController {
   _IdleAudio() : super(const IqroAudioState());
+
+  var quranPauseRequests = 0;
+  var duaPauseRequests = 0;
+
+  @override
+  Future<void> pauseForQuranEntry() async {
+    quranPauseRequests += 1;
+  }
+
+  @override
+  Future<void> pauseForDuaEntry() async {
+    duaPauseRequests += 1;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

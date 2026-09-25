@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AudioTrack, AyahAudioSegment } from "../lib/api";
+import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey, TranslationVariables } from "../lib/i18n";
 
@@ -134,6 +135,7 @@ export function SegmentedAudioPlayer({
   readerControls,
 }: SegmentedAudioPlayerProps) {
   const { t, formatNumber } = useI18n();
+  const [audioPlayerId] = useState(() => Symbol("segmented-audio-player"));
   const readerControlsRef = useRef(readerControls);
   useEffect(() => { readerControlsRef.current = readerControls; }, [readerControls]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -234,6 +236,7 @@ export function SegmentedAudioPlayer({
   const attemptPlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    claimAudioFocus(audioPlayerId);
     const attempt = ++playAttemptRef.current;
     void audio.play().catch((reason: unknown) => {
       // A newer selection, pause or load cancels the old promise normally.
@@ -244,7 +247,7 @@ export function SegmentedAudioPlayer({
       setError(t(reason instanceof DOMException && reason.name === "NotAllowedError"
         ? "player.autoplayBlocked" : "player.playbackFailed"));
     });
-  }, [t]);
+  }, [audioPlayerId, t]);
 
   const setPlanPosition = useCallback((
     plan: RuntimePlan,
@@ -276,6 +279,19 @@ export function SegmentedAudioPlayer({
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     updateMediaPosition();
   }, [clearTransition, updateMediaPosition]);
+
+  useEffect(
+    () => registerAudioPlayer(audioPlayerId, (reason) => {
+      if (!requestRef.current) return;
+      stopAtCurrentPosition({
+        key: reason === "navigation"
+          ? "player.status.pausedNavigation"
+          : "player.status.paused",
+      });
+      onActiveAyahChangeRef.current?.(null);
+    }),
+    [audioPlayerId, stopAtCurrentPosition],
+  );
 
   useEffect(() => {
     if (navigationKeyRef.current === pauseOnNavigationKey) return;
@@ -768,6 +784,7 @@ export function SegmentedAudioPlayer({
           preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
           onPlay={() => {
+            claimAudioFocus(audioPlayerId);
             pendingPauseStatusRef.current = null;
             hasStartedRef.current = true;
             setIsPlaying(true);

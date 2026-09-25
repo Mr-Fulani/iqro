@@ -20,6 +20,10 @@ from quran_backend.modules.audio.models import (
     RecitationStyle,
     Reciter,
 )
+from quran_backend.modules.audio.variant_resolver import (
+    quran_foundation_ayah_variant_id,
+    recitation_variant_id,
+)
 from quran_backend.modules.quran.models import QuranEditionVersion
 
 
@@ -126,6 +130,7 @@ class RecitationCapabilitiesSerializer(serializers.Serializer[Any]):
 
 class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]):
     reciter = ReciterSummarySerializer(read_only=True)
+    variant_id = serializers.SerializerMethodField()
     quran_edition = QuranEditionAudioReferenceSerializer(
         source="quran_edition_version",
         read_only=True,
@@ -141,6 +146,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
         model = RecitationEdition
         fields = (
             "id",
+            "variant_id",
             "code",
             "version",
             "style",
@@ -154,6 +160,9 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "capabilities",
             "published_at",
         )
+
+    def get_variant_id(self, obj: RecitationEdition) -> str:
+        return recitation_variant_id(obj.id)
 
     @extend_schema_field(RecitationSourceSerializer)
     def get_source(self, obj: RecitationEdition) -> dict[str, str]:
@@ -229,6 +238,12 @@ class QuranFoundationAyahCoverageSerializer(serializers.Serializer[Any]):
 class QuranFoundationAyahRecitationSerializer(
     serializers.ModelSerializer[QuranFoundationAyahRecitation]
 ):
+    variant_id = serializers.SerializerMethodField()
+    provider = serializers.SerializerMethodField()
+    delivery = serializers.SerializerMethodField()
+    granularity = serializers.SerializerMethodField()
+    timing_mode = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
     quran_edition = QuranEditionAudioReferenceSerializer(
         source="quran_edition_version",
         read_only=True,
@@ -241,6 +256,11 @@ class QuranFoundationAyahRecitationSerializer(
         model = QuranFoundationAyahRecitation
         fields = (
             "source_id",
+            "variant_id",
+            "provider",
+            "delivery",
+            "granularity",
+            "timing_mode",
             "name_ar",
             "name_en",
             "name_ru",
@@ -249,8 +269,44 @@ class QuranFoundationAyahRecitationSerializer(
             "coverage",
             "source",
             "rights",
+            "capabilities",
             "last_synced_at",
         )
+
+    @extend_schema_field(serializers.CharField())
+    def get_variant_id(self, obj: QuranFoundationAyahRecitation) -> str:
+        return quran_foundation_ayah_variant_id(
+            environment=obj.environment,
+            source_id=obj.source_id,
+            quran_edition_version_id=obj.quran_edition_version_id,
+        )
+
+    @extend_schema_field(serializers.CharField())
+    def get_provider(self, obj: QuranFoundationAyahRecitation) -> str:  # noqa: ARG002
+        return "quran_foundation"
+
+    @extend_schema_field(serializers.CharField())
+    def get_delivery(self, obj: QuranFoundationAyahRecitation) -> str:  # noqa: ARG002
+        return "external"
+
+    @extend_schema_field(serializers.CharField())
+    def get_granularity(self, obj: QuranFoundationAyahRecitation) -> str:  # noqa: ARG002
+        return "ayah"
+
+    @extend_schema_field(serializers.CharField())
+    def get_timing_mode(self, obj: QuranFoundationAyahRecitation) -> str:  # noqa: ARG002
+        return "ayah"
+
+    @extend_schema_field(RecitationCapabilitiesSerializer)
+    def get_capabilities(self, obj: QuranFoundationAyahRecitation) -> dict[str, bool]:
+        coverage = self.get_coverage(obj)
+        complete = bool(coverage["complete"])
+        return {
+            "listen": complete,
+            "ayah_playback": complete,
+            "memorization": complete,
+            "offline": False,
+        }
 
     @extend_schema_field(QuranFoundationAyahCoverageSerializer)
     def get_coverage(self, obj: QuranFoundationAyahRecitation) -> dict[str, object]:
@@ -288,6 +344,7 @@ class QuranFoundationAyahAudioFileSerializer(serializers.Serializer[Any]):
 class QuranFoundationAyahChapterSerializer(
     serializers.ModelSerializer[QuranFoundationAyahRecitationChapter]
 ):
+    variant_id = serializers.SerializerMethodField()
     recitation_id = serializers.IntegerField(source="recitation.source_id", read_only=True)
     reciter_name = serializers.CharField(source="recitation.name_en", read_only=True)
     style = serializers.CharField(  # type: ignore[assignment]
@@ -299,12 +356,21 @@ class QuranFoundationAyahChapterSerializer(
     class Meta:
         model = QuranFoundationAyahRecitationChapter
         fields = (
+            "variant_id",
             "recitation_id",
             "reciter_name",
             "style",
             "chapter_number",
             "ayah_count",
             "audio_files",
+        )
+
+    @extend_schema_field(serializers.CharField())
+    def get_variant_id(self, obj: QuranFoundationAyahRecitationChapter) -> str:
+        return quran_foundation_ayah_variant_id(
+            environment=obj.recitation.environment,
+            source_id=obj.recitation.source_id,
+            quran_edition_version_id=obj.recitation.quran_edition_version_id,
         )
 
 
@@ -498,6 +564,74 @@ class SurahPlaybackSerializer(serializers.Serializer[Any]):
 class AyahPlaybackSerializer(serializers.Serializer[Any]):
     track = AudioTrackSerializer()
     segment = AyahAudioSegmentSerializer()
+
+
+class AudioVariantCoverageSerializer(serializers.Serializer[Any]):
+    track_count = serializers.IntegerField(min_value=0)
+    surah_count = serializers.IntegerField(min_value=0)
+    expected_ayahs = serializers.IntegerField(min_value=0)
+    delivered_ayahs = serializers.IntegerField(min_value=0)
+    timed_ayahs = serializers.IntegerField(min_value=0)
+    complete = serializers.BooleanField()
+    timings_complete = serializers.BooleanField()
+
+
+class AudioVariantCapabilitiesSerializer(serializers.Serializer[Any]):
+    listen = serializers.BooleanField()
+    ayah_playback = serializers.BooleanField()
+    memorization = serializers.BooleanField()
+    offline = serializers.BooleanField()
+
+
+class AudioVariantDescriptorSerializer(serializers.Serializer[Any]):
+    id = serializers.CharField()
+    provider = serializers.CharField()
+    delivery = serializers.CharField()
+    granularity = serializers.CharField()
+    timing_mode = serializers.CharField()
+    quran_edition_version_id = serializers.UUIDField()
+    reciter_id = serializers.UUIDField(allow_null=True)
+    source_id = serializers.IntegerField(allow_null=True)
+    code = serializers.CharField()
+    version = serializers.CharField()
+    style: Any = serializers.CharField()
+    name_ar = serializers.CharField()
+    name_en = serializers.CharField()
+    name_ru = serializers.CharField()
+    name_tr = serializers.CharField()
+    coverage = AudioVariantCoverageSerializer()
+    capabilities = AudioVariantCapabilitiesSerializer()
+
+
+class ResolvedAudioAyahSerializer(serializers.Serializer[Any]):
+    variant_id = serializers.CharField()
+    surah_number = serializers.IntegerField(min_value=1, max_value=114)
+    ayah_number = serializers.IntegerField(min_value=1)
+    url = serializers.URLField()
+    delivery = serializers.CharField()
+    track_id = serializers.UUIDField(allow_null=True)
+    duration_ms = serializers.IntegerField(min_value=1, allow_null=True)
+    start_ms = serializers.IntegerField(min_value=0, allow_null=True)
+    end_ms = serializers.IntegerField(min_value=1, allow_null=True)
+
+
+class ResolvedAudioTrackSerializer(serializers.Serializer[Any]):
+    surah_number = serializers.IntegerField(min_value=1, max_value=114)
+    url = serializers.URLField(allow_null=True)
+    delivery = serializers.CharField()
+    track_id = serializers.UUIDField(allow_null=True)
+    duration_ms = serializers.IntegerField(min_value=1, allow_null=True)
+    ayahs = ResolvedAudioAyahSerializer(many=True)
+
+
+class AudioVariantTrackResponseSerializer(serializers.Serializer[Any]):
+    variant = AudioVariantDescriptorSerializer()
+    track = ResolvedAudioTrackSerializer()
+
+
+class AudioVariantAyahResponseSerializer(serializers.Serializer[Any]):
+    variant = AudioVariantDescriptorSerializer()
+    audio = ResolvedAudioAyahSerializer()
 
 
 class PublicCatalogPageQuerySerializer(serializers.Serializer[Any]):

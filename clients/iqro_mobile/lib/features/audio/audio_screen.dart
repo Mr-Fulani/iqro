@@ -24,6 +24,7 @@ class AudioScreen extends ConsumerStatefulWidget {
 }
 
 class _AudioScreenState extends ConsumerState<AudioScreen> {
+  AccountScopeKey? _accountKey;
   String? _selected;
   String? _selectedRecitationId;
   String _selectedStyle = defaultRecitationStyle;
@@ -35,6 +36,16 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accountKey = ref.watch(activeAccountScopeKeyProvider);
+    if (_accountKey != accountKey) {
+      _accountKey = accountKey;
+      _selected = null;
+      _selectedRecitationId = null;
+      _playRequest += 1;
+      _refreshRequest += 1;
+      _loadingTrack = false;
+      _refreshingReciters = false;
+    }
     final reciters = ref.watch(recitersProvider);
     final recitations = ref.watch(audioRecitationsProvider);
     final player = ref.watch(
@@ -45,6 +56,17 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final preferredRecitationId = ref.watch(
       appPreferencesProvider.select((value) => value.listeningRecitationId),
     );
+    final listeningActive =
+        player.channel == AudioPlaybackChannel.listening &&
+        player.standalone == null &&
+        player.track != null;
+    final listeningController = ref.read(audioControllerProvider.notifier);
+    final preferredReciter = recitations.valueOrNull
+        ?.where((item) => item.id == preferredRecitationId)
+        .firstOrNull
+        ?.reciter;
+    final listeningReciter =
+        listeningController.listeningReciter ?? preferredReciter;
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navAudio,
@@ -60,7 +82,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   )
                 : const Icon(Icons.refresh_rounded),
           ),
-          if (player.track != null)
+          if (listeningActive)
             IconButton(
               tooltip: context.l10n.nowPlaying,
               onPressed: () => context.push('/player'),
@@ -71,7 +93,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       ),
       body: IqroPage(
         padding: iqroRootTabPadding(
-          playerActive: player.track != null,
+          playerActive: player.track != null || player.standalone != null,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
         ),
         child: Column(
@@ -90,15 +112,20 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                         IqroEyebrow(context.l10n.audioTitle, light: true),
                         const SizedBox(height: 6),
                         Text(
-                          player.track != null
+                          listeningActive
                               ? player.surahName
+                              : listeningController.listeningSurahName
+                                        ?.trim()
+                                        .isNotEmpty ==
+                                    true
+                              ? listeningController.listeningSurahName!
                               : context.l10n.alFatiha,
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(color: Colors.white),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          player.reciter?.nameFor(locale) ??
+                          listeningReciter?.nameFor(locale) ??
                               context.l10n.chooseReciter,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: .7),
@@ -108,15 +135,19 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                     ),
                   ),
                   IconButton.filled(
-                    tooltip: player.playing
+                    tooltip: listeningActive && player.playing
                         ? context.l10n.pause
                         : context.l10n.play,
-                    onPressed: player.track != null
-                        ? () => ref
-                              .read(audioControllerProvider.notifier)
-                              .toggle()
+                    onPressed: listeningActive
+                        ? listeningController.toggle
+                        : listeningController.hasListeningPlayback
+                        ? _resumeListening
                         : null,
-                    icon: Icon(player.playing ? Icons.pause : Icons.play_arrow),
+                    icon: Icon(
+                      listeningActive && player.playing
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                    ),
                   ),
                 ],
               ),
@@ -296,7 +327,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   Future<void> _refreshReciters() async {
     if (_refreshingReciters) return;
     final controller = ref.read(audioControllerProvider.notifier);
-    final activeId = ref.read(audioControllerProvider).reciter?.id;
+    final activeId = controller.listeningReciter?.id;
     final request = ++_refreshRequest;
     setState(() => _refreshingReciters = true);
     try {
@@ -367,10 +398,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   ) async {
     if (_loadingTrack) return;
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
-    final player = ref.read(audioControllerProvider);
-    final surah = player.track?.surah ?? 1;
-    final surahName = _surahName(surah, fallback: player.surahName);
+    final surah = controller.listeningSurah ?? 1;
+    final surahName = _surahName(
+      surah,
+      fallback: controller.listeningSurahName ?? '',
+    );
     final request = ++_playRequest;
     setState(() {
       _selected = person.key;
@@ -382,7 +416,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         recitationId: recitation.id,
         surah: surah,
       );
-      if (!_isCurrentAudioRequest(controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       await controller.loadPlayback(
         playback: playback,
         reciter: reciterWithPersonPortrait(
@@ -392,7 +432,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         ),
         surahName: surahName,
       );
-      if (!_isCurrentAudioRequest(controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       _selectedRecitationId = recitation.id;
       unawaited(
         ref
@@ -402,7 +448,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       if (!mounted) return;
       context.push('/player');
     } on Object {
-      if (_isCurrentAudioRequest(controller, request)) {
+      if (_isCurrentAudioRequest(
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -436,10 +486,31 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     AudioController controller,
     int request, {
     bool refresh = false,
+    int? navigationEpoch,
   }) {
     return mounted &&
         request == (refresh ? _refreshRequest : _playRequest) &&
+        (navigationEpoch == null ||
+            controller.navigationEpoch == navigationEpoch) &&
         identical(ref.read(audioControllerProvider.notifier), controller);
+  }
+
+  Future<void> _resumeListening() async {
+    final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
+    try {
+      if (await controller.activateListening()) return;
+    } on Object {
+      // The current saved stream may be temporarily unavailable.
+    }
+    if (!mounted ||
+        !identical(controller, ref.read(audioControllerProvider.notifier)) ||
+        controller.navigationEpoch != navigationEpoch) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
   }
 }
 

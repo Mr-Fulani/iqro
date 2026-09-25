@@ -980,7 +980,7 @@ test("switching the reciter stops the old source and prepares the same surah for
   await expect(player.getByText("Готово к воспроизведению", { exact: true })).toBeVisible();
 });
 
-test("audio widget survives route navigation and pauses at the current position", async ({ page }) => {
+test("audio keeps playing on ordinary navigation and pauses when opening Quran", async ({ page }) => {
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
 
@@ -1003,9 +1003,20 @@ test("audio widget survives route navigation and pauses at the current position"
   const compactPlayerBox = await player.boundingBox();
   expect(compactPlayerBox).not.toBeNull();
   expect(compactPlayerBox!.height).toBeLessThan(130);
-  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
   expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await page.locator('.app-menu a[href="/ru/quran"]').click();
+  await expect(page).toHaveURL("/ru/quran");
+  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await page.locator('.brand-link[href="/ru"]').click();
+  await expect(page).toHaveURL("/ru");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 
   await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
   await expect(player.getByLabel("Режим повтора")).toBeVisible();
@@ -1016,9 +1027,43 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect.poll(async () => (await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toBeVisible();
 
-  await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
-  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+});
+
+test("global recitation and Dua audio take turns without overlapping", async ({ page }) => {
+  await page.route("**/audio/ar/1.mp3", (route) =>
+    route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
+  );
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await page.locator('.app-menu a[href="/ru/dua"]').click();
+  await expect(page).toHaveURL("/ru/dua");
+  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+
+  await page.locator(".dua-category-chip").click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
+  const duaAudio = page.locator(".dua-audio-panel audio");
+  const duaButton = page.locator(".dua-entry-tools .dua-icon-action").first();
+  await duaButton.click();
+  await expect(duaAudio).toHaveAttribute(
+    "src",
+    "https://www.hisnmuslim.com/audio/ar/1.mp3",
+  );
+  await duaAudio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
+
+  const globalAudio = player.locator("audio");
+  await globalAudio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await expect(duaButton).toHaveAttribute("aria-pressed", "false");
+
+  await duaButton.click();
+  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 
 test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {

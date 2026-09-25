@@ -30,6 +30,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookmarksLoadError => 'Could not load bookmarks';
 
   @override
+  String get repeatSelectedAyah => 'Repeat selected ayah';
+
+  @override
   String get mushafFitWidth => 'Fit width';
 
   @override

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audio_session/audio_session.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
 import 'core/startup/startup_tasks.dart';
+import 'core/audio/listening_media_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +20,7 @@ Future<AppDependencies> _initialize() async {
 }
 
 Future<void> _initializeAudioPlatform() async {
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'forum.iqro.app.audio',
-    androidNotificationChannelName: 'IQRO Quran audio',
-    androidNotificationOngoing: true,
-  );
+  await ListeningMediaService.initialize();
   final audioSession = await AudioSession.instance;
   await audioSession.configure(const AudioSessionConfiguration.speech());
 }

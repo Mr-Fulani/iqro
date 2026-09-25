@@ -128,8 +128,16 @@ class _MemorizationScreenBodyState
                   setState(() => _dailyRepetitions = value),
               onPauseSecondsChanged: (value) =>
                   setState(() => _pauseSeconds = value),
-              onRecitationChanged: (value) =>
-                  setState(() => _recitationId = value),
+              onRecitationChanged: (value) {
+                setState(() => _recitationId = value);
+                if (value != null) {
+                  unawaited(
+                    ref
+                        .read(appPreferencesProvider.notifier)
+                        .setMemorizationDefaultRecitation(value),
+                  );
+                }
+              },
               onSave: () => _savePlan(dashboard),
               onCancel: () => setState(() => _editing = false),
             )
@@ -1015,6 +1023,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
     }
 
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final current = ref.read(audioControllerProvider);
     final isActive =
         current.channel == AudioPlaybackChannel.memorization &&
@@ -1047,7 +1056,11 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
       final playback = await ref
           .read(audioRepositoryProvider)
           .playback(recitationId: recitation.id, surah: plan.startAyah.surah);
-      if (!mounted || request != _audioRequest) return;
+      if (!mounted ||
+          request != _audioRequest ||
+          controller.navigationEpoch != navigationEpoch) {
+        return;
+      }
       final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
       await controller.loadPlayback(
         playback: playback,

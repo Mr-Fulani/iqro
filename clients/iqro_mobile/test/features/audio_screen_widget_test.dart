@@ -77,6 +77,44 @@ void main() {
     expect(find.text('PLAYER'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Audio keeps its reader while Mushaf owns the physical player', (
+    tester,
+  ) async {
+    final harness = await _pumpAudioScreen(tester);
+    await harness.preferences.setListeningRecitation('recitation-1');
+    await harness.controller.loadPlayback(
+      playback: await harness.repository.playback(
+        recitationId: 'recitation-1',
+        surah: 1,
+      ),
+      reciter: _reciter,
+      surahName: 'Audio Al-Fatiha',
+      autoplay: false,
+    );
+    await harness.controller.loadPlayback(
+      playback: await harness.repository.playback(
+        recitationId: 'recitation-2',
+        surah: 2,
+      ),
+      reciter: _mujawwadReciter,
+      channel: AudioPlaybackChannel.mushaf,
+      surahName: 'Mushaf Al-Baqarah',
+      autoplay: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(harness.controller.state.channel, AudioPlaybackChannel.mushaf);
+    expect(find.text('Чтец муджаввада'), findsNothing);
+    expect(find.text('Тестовый чтец'), findsWidgets);
+    expect(find.text('Mushaf Al-Baqarah'), findsNothing);
+
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.play_arrow));
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.channel, AudioPlaybackChannel.listening);
+    expect(harness.controller.state.reciter?.id, _reciter.id);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
@@ -118,6 +156,9 @@ Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
           ),
         ),
         appPreferencesProvider.overrideWith((ref) => preferences),
+        activeAccountScopeKeyProvider.overrideWithValue(
+          accountScopeKey(database.accountScope.current!),
+        ),
         audioRepositoryProvider.overrideWithValue(repository),
         audioControllerProvider.overrideWith((ref) => controller),
         quranCatalogProvider.overrideWith(
@@ -147,15 +188,21 @@ Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
-  return _AudioTestHarness(repository, engine, controller);
+  return _AudioTestHarness(repository, engine, controller, preferences);
 }
 
 class _AudioTestHarness {
-  const _AudioTestHarness(this.repository, this.engine, this.controller);
+  const _AudioTestHarness(
+    this.repository,
+    this.engine,
+    this.controller,
+    this.preferences,
+  );
 
   final _AudioRepositoryFake repository;
   final _RecordingAudioEngine engine;
   final AudioController controller;
+  final AppPreferencesController preferences;
 }
 
 const _reciter = Reciter(

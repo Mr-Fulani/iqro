@@ -30,6 +30,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bookmarksLoadError => 'Не удалось загрузить закладки';
 
   @override
+  String get repeatSelectedAyah => 'Повторять выбранный аят';
+
+  @override
   String get mushafFitWidth => 'По ширине';
 
   @override

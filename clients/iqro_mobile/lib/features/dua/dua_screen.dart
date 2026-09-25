@@ -617,11 +617,9 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
     _accountGeneration += 1;
     _favoriteRequest += 1;
     _audioRequest += 1;
-    final audioId = _ownedAudioId;
     _ownedAudioId = null;
-    if (audioId != null) {
-      unawaited(_audioController.stopStandalone(audioId, owner: _audioOwner));
-    }
+    // Dua audio belongs to the shared player and can continue after this route
+    // closes. The app-shell mini-player controls the current request safely.
     super.dispose();
   }
 

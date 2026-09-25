@@ -113,13 +113,59 @@ final offlinePackagesProvider =
     );
 
 class AppPreferencesController extends StateNotifier<AppPreferences> {
-  AppPreferencesController(this._store, this._plan) : super(_store.read());
+  AppPreferencesController(
+    this._store,
+    this._plan, {
+    AccountScope? accountScope,
+  }) : _accountScope = accountScope,
+       _boundScope = accountScope?.current,
+       super(
+         accountScope == null
+             ? _store.read()
+             : _store.readForAccount(accountScope.current?.userId),
+       );
   final PreferencesStore _store;
   final PlanRepository _plan;
+  final AccountScope? _accountScope;
+  final AccountScopeSnapshot? _boundScope;
+
+  bool get _canWrite {
+    final accountScope = _accountScope;
+    if (accountScope == null) return true;
+    final boundScope = _boundScope;
+    return boundScope == null
+        ? accountScope.current == null
+        : accountScope.isCurrent(boundScope);
+  }
 
   Future<void> _set(AppPreferences value) async {
+    if (!_canWrite) return;
     state = value;
-    await _store.write(value);
+    await _store.write(value, includeLegacyRecitations: _accountScope == null);
+  }
+
+  Future<void> _setRecitation(
+    RecitationPreferenceRole role,
+    String recitationId,
+  ) async {
+    if (!_canWrite || (_accountScope != null && _boundScope == null)) return;
+    state = switch (role) {
+      RecitationPreferenceRole.listening => state.copyWith(
+        listeningRecitationId: recitationId,
+      ),
+      RecitationPreferenceRole.mushaf => state.copyWith(
+        mushafRecitationId: recitationId,
+      ),
+      RecitationPreferenceRole.memorization => state.copyWith(
+        memorizationDefaultRecitationId: recitationId,
+      ),
+    };
+    final ownerId = _boundScope?.userId;
+    if (ownerId == null) {
+      await _store.writeLegacyRecitation(role, recitationId);
+    } else {
+      await _store.writeAccountRecitation(ownerId, role, recitationId);
+    }
   }
 
   Future<void> completeOnboarding({
@@ -186,13 +232,13 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
       _set(state.copyWith(preferredTafsirSourceId: sourceId));
 
   Future<void> setListeningRecitation(String recitationId) =>
-      _set(state.copyWith(listeningRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.listening, recitationId);
 
   Future<void> setMushafRecitation(String recitationId) =>
-      _set(state.copyWith(mushafRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.mushaf, recitationId);
 
   Future<void> setMemorizationDefaultRecitation(String recitationId) =>
-      _set(state.copyWith(memorizationDefaultRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.memorization, recitationId);
 
   /// Compatibility entry point for code that still represents the old
   /// single-reciter preference. It now changes only the Listening role.
@@ -215,9 +261,11 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
 
 final appPreferencesProvider =
     StateNotifierProvider<AppPreferencesController, AppPreferences>((ref) {
+      ref.watch(_accountScopeEpochProvider);
       return AppPreferencesController(
         ref.watch(preferencesStoreProvider),
         ref.watch(planRepositoryProvider),
+        accountScope: ref.watch(localDatabaseProvider).accountScope,
       );
     });
 

@@ -451,7 +451,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                           child: Row(
                             children: <Widget>[
                               const Expanded(
-                                child: IqroMiniPlayer(allowCollapse: false),
+                                child: IqroMiniPlayer(
+                                  allowCollapse: false,
+                                  mushafControls: true,
+                                ),
                               ),
                               IconButton(
                                 tooltip: context.l10n.close,
@@ -569,6 +572,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       return;
     }
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final current = ref.read(audioControllerProvider);
     if (current.error == null &&
         current.channel == AudioPlaybackChannel.mushaf &&
@@ -584,6 +588,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     bool ownsRequest() =>
         _isCurrentAccount(scope) &&
         request == _audioRequest &&
+        controller.navigationEpoch == navigationEpoch &&
         page == _currentPage &&
         reference == (_selectedAyah ?? _pageReference) &&
         identical(controller, ref.read(audioControllerProvider.notifier));
@@ -598,7 +603,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         recitations,
         preferredId:
             ref.read(appPreferencesProvider).mushafRecitationId ??
-            current.track?.recitationId,
+            (current.channel == AudioPlaybackChannel.mushaf
+                ? current.track?.recitationId
+                : null),
         role: AudioRecitationRole.ayahPlayback,
       );
       if (recitation == null) throw StateError('No timed recitation');
@@ -627,7 +634,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         startAyah: reference.ayah,
         endAyah: reference.ayah,
       );
-      if (ownsRequest()) setState(() => _playerExpanded = true);
+      if (ownsRequest()) {
+        if (ref.read(appPreferencesProvider).mushafRecitationId !=
+            recitation.id) {
+          unawaited(
+            ref
+                .read(appPreferencesProvider.notifier)
+                .setMushafRecitation(recitation.id),
+          );
+        }
+        setState(() => _playerExpanded = true);
+      }
     } on AccountScopeChanged {
       return;
     } on Object {
@@ -762,11 +779,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     title: Text(context.l10n.nowPlaying),
                     onTap: () {
                       Navigator.pop(sheetContext);
-                      context.push(
-                        ref.read(audioControllerProvider).active
-                            ? '/player'
-                            : '/app?tab=3',
-                      );
+                      context.push('/app?tab=3');
                     },
                   ),
                   ListTile(

@@ -92,6 +92,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           recitationId: value.track?.recitationId,
           rangeStartAyah: value.rangeStartAyah,
           rangeEndAyah: value.rangeEndAyah,
+          repeatEnabled: value.repeatEnabled,
           active: value.channel == AudioPlaybackChannel.mushaf,
           hasError: value.error != null,
         ),
@@ -118,13 +119,21 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
               ? const IqroLoading()
               : _error != null
               ? IqroAsyncError(title: context.l10n.networkError, onRetry: _load)
-              : _content(playingThis, loadedThis),
+              : _content(
+                  playingThis,
+                  loadedThis,
+                  repeatEnabled: loadedThis && audio.repeatEnabled,
+                ),
         ),
       ),
     );
   }
 
-  Widget _content(bool playingThis, bool loadedThis) {
+  Widget _content(
+    bool playingThis,
+    bool loadedThis, {
+    required bool repeatEnabled,
+  }) {
     final details = _details!;
     return CustomScrollView(
       slivers: <Widget>[
@@ -162,6 +171,15 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                 const MushafAyahText(text: ''),
               const SizedBox(height: 12),
               _actionRow(playingThis, loadedThis),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.repeat_rounded),
+                title: Text(context.l10n.repeatSelectedAyah),
+                subtitle: Text(
+                  repeatEnabled ? context.l10n.repeatOn : context.l10n.repeatOff,
+                ),
+                onTap: _toggleRepeatSelectedAyah,
+              ),
               const SizedBox(height: 20),
               _reciterSelector(details),
               const SizedBox(height: 22),
@@ -425,7 +443,10 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   }
 
   Recitation? _preferredRecitation(List<Recitation> recitations) {
-    final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
+    final current = ref.read(audioControllerProvider);
+    final activeReciterId = current.channel == AudioPlaybackChannel.mushaf
+        ? current.reciter?.id
+        : null;
     return recitations
             .where((item) => item.reciter.id == activeReciterId)
             .firstOrNull ??
@@ -506,6 +527,22 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     }
   }
 
+  Future<void> _toggleRepeatSelectedAyah() async {
+    final controller = ref.read(audioControllerProvider.notifier);
+    bool isSelected(IqroAudioState state) {
+      return state.channel == AudioPlaybackChannel.mushaf &&
+          state.track?.surah == widget.reference.surah &&
+          state.rangeStartAyah == widget.reference.ayah &&
+          state.rangeEndAyah == widget.reference.ayah;
+    }
+
+    if (!isSelected(ref.read(audioControllerProvider))) {
+      await _play();
+    }
+    if (!mounted || !isSelected(ref.read(audioControllerProvider))) return;
+    await controller.toggleRepeat();
+  }
+
   Future<void> _play() async {
     final recitation = _details?.recitations
         .where((item) => item.id == _recitationId)
@@ -515,6 +552,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     final scope = database.accountScope.current;
     if (scope == null) return;
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
     final surahName = '${context.l10n.surah} ${widget.reference.surah}';
     final request = ++_audioRequest;
@@ -524,7 +562,14 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         recitationId: recitation.id,
         surah: widget.reference.surah,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       await controller.loadPlayback(
         playback: playback,
         reciter: reciterWithPersonPortrait(
@@ -537,10 +582,29 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         startAyah: widget.reference.ayah,
         endAyah: widget.reference.ayah,
       );
+      if (_isCurrentAudioRequest(
+            scope,
+            controller,
+            request,
+            navigationEpoch: navigationEpoch,
+          ) &&
+          ref.read(appPreferencesProvider).mushafRecitationId !=
+              recitation.id) {
+        unawaited(
+          ref
+              .read(appPreferencesProvider.notifier)
+              .setMushafRecitation(recitation.id),
+        );
+      }
     } on AccountScopeChanged {
       return;
     } on Object {
-      if (_isCurrentAudioRequest(scope, controller, request)) {
+      if (_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -556,10 +620,13 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   bool _isCurrentAudioRequest(
     AccountScopeSnapshot scope,
     AudioController controller,
-    int request,
-  ) {
+    int request, {
+    int? navigationEpoch,
+  }) {
     return mounted &&
         request == _audioRequest &&
+        (navigationEpoch == null ||
+            controller.navigationEpoch == navigationEpoch) &&
         ref.read(sessionProvider).valueOrNull?.userId == scope.userId &&
         ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
         identical(ref.read(audioControllerProvider.notifier), controller);

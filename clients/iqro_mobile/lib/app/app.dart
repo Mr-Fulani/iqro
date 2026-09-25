@@ -11,6 +11,7 @@ import '../core/widgets/home_widget_routes.dart';
 import '../features/plan/plan_repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'account_scoped_maintenance.dart';
+import 'audio_navigation_boundary.dart';
 import 'providers.dart';
 import 'router.dart';
 
@@ -28,11 +29,14 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   StreamSubscription<String>? _notificationRoutes;
   StreamSubscription<String>? _widgetRoutes;
   final _maintenance = AccountScopedMaintenanceCoordinator();
+  late Uri _previousAudioUri;
   var _backgroundWorkRequested = false;
 
   @override
   void initState() {
     super.initState();
+    _previousAudioUri = _router.routeInformationProvider.value.uri;
+    _router.routerDelegate.addListener(_handleAudioNavigation);
     WidgetsBinding.instance.addObserver(this);
     _clearPlanWidget();
     final notifications = ref.read(notificationGatewayProvider);
@@ -56,6 +60,36 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       _requestBackgroundWork();
       _requestMaintenance();
     });
+  }
+
+  void _handleAudioNavigation() {
+    final configuration = _router.routerDelegate.currentConfiguration;
+    if (configuration.isEmpty) return;
+    // RouteMatchList.uri stays on the base route for GoRouter.push. The top
+    // state resolves the actual visible URI, including imperative routes.
+    final next = _router.routerDelegate.state.uri;
+    final previous = _previousAudioUri;
+    if (next == previous) return;
+    _previousAudioUri = next;
+    if (!exitsAudioSection(previous, next)) return;
+    final audio = ref.read(audioControllerProvider.notifier);
+    final pause = switch (audioSectionForUri(previous)) {
+      AudioNavigationSection.quran => audio.pauseForQuranExit(),
+      AudioNavigationSection.dua => audio.pauseForDuaExit(),
+      AudioNavigationSection.memorization => audio.pauseForMemorizationExit(),
+      AudioNavigationSection.other => Future<void>.value(),
+    };
+    unawaited(
+      pause.catchError((Object error, StackTrace stackTrace) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'IQRO audio pause on route exit',
+          ),
+        );
+      }),
+    );
   }
 
   void _requestBackgroundWork() {
@@ -141,6 +175,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _router.routerDelegate.removeListener(_handleAudioNavigation);
     _notificationRoutes?.cancel();
     _widgetRoutes?.cancel();
     _router.dispose();

@@ -138,6 +138,12 @@ abstract class AppLocalizations {
   /// **'Could not load bookmarks'**
   String get bookmarksLoadError;
 
+  /// No description provided for @repeatSelectedAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat selected ayah'**
+  String get repeatSelectedAyah;
+
   /// No description provided for @mushafFitWidth.
   ///
   /// In en, this message translates to:

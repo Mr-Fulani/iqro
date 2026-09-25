@@ -5,6 +5,7 @@
   "bookmarks": "العلامات المرجعية",
   "emptyBookmarks": "لا توجد علامات مرجعية بعد. احفظ آية باستخدام رمز العلامة المرجعية في المصحف.",
   "bookmarksLoadError": "تعذر تحميل العلامات المرجعية",
+  "repeatSelectedAyah": "تكرار الآية المحددة",
   "mushafFitWidth": "ملاءمة العرض",
   "mushafFitPage": "الصفحة كاملة",
   "checkMushafUpdates": "التحقق من التحديثات",

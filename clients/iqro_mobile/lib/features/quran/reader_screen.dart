@@ -511,8 +511,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     final scope = database.accountScope.current;
     if (scope == null) return;
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
-    final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
+    final currentAudio = ref.read(audioControllerProvider);
+    final activeReciterId = currentAudio.channel == AudioPlaybackChannel.mushaf
+        ? currentAudio.reciter?.id
+        : null;
     final preferredRecitationId = ref
         .read(appPreferencesProvider)
         .mushafRecitationId;
@@ -522,7 +526,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       final recitations = await repository.recitationsForRole(
         AudioRecitationRole.ayahPlayback,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       final recitation =
           recitations
               .where((item) => item.id == preferredRecitationId)
@@ -539,7 +550,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         recitationId: recitation.id,
         surah: ayah.surahNumber,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       await controller.loadPlayback(
         playback: playback,
         reciter: reciterWithPersonPortrait(
@@ -552,10 +570,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         startAyah: ayah.number,
         endAyah: ayah.number,
       );
+      if (_isCurrentAudioRequest(
+            scope,
+            controller,
+            request,
+            navigationEpoch: navigationEpoch,
+          ) &&
+          ref.read(appPreferencesProvider).mushafRecitationId !=
+              recitation.id) {
+        unawaited(
+          ref
+              .read(appPreferencesProvider.notifier)
+              .setMushafRecitation(recitation.id),
+        );
+      }
     } on AccountScopeChanged {
       return;
     } on Object {
-      if (_isCurrentAudioRequest(scope, controller, request)) {
+      if (_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -571,10 +608,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   bool _isCurrentAudioRequest(
     AccountScopeSnapshot scope,
     AudioController controller,
-    int request,
-  ) {
+    int request, {
+    int? navigationEpoch,
+  }) {
     return mounted &&
         request == _audioRequest &&
+        (navigationEpoch == null ||
+            controller.navigationEpoch == navigationEpoch) &&
         ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
         identical(ref.read(audioControllerProvider.notifier), controller);
   }

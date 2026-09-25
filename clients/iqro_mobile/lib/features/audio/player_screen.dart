@@ -458,13 +458,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       )) {
         return;
       }
-      if (current.channel == AudioPlaybackChannel.listening) {
-        unawaited(
-          ref
-              .read(appPreferencesProvider.notifier)
-              .setListeningRecitation(selection.recitation.id),
-        );
-      }
+      final preferences = ref.read(appPreferencesProvider.notifier);
+      unawaited(switch (current.channel) {
+        AudioPlaybackChannel.listening => preferences.setListeningRecitation(
+          selection.recitation.id,
+        ),
+        AudioPlaybackChannel.mushaf => preferences.setMushafRecitation(
+          selection.recitation.id,
+        ),
+        AudioPlaybackChannel.memorization =>
+          preferences.setMemorizationDefaultRecitation(selection.recitation.id),
+      });
     } on AccountScopeChanged {
       return;
     } on Object {
