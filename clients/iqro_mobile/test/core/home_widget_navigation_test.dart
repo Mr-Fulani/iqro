@@ -133,6 +133,10 @@ class _IdleAudio extends StateNotifier<IqroAudioState>
     implements AudioController {
   _IdleAudio() : super(const IqroAudioState());
 
+  @override
+  IqroAudioPresentation listeningPresentation(IqroAudioState current) =>
+      iqroAudioPresentation(current);
+
   var quranPauseRequests = 0;
   var duaPauseRequests = 0;
 

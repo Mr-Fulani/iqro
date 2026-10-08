@@ -18,6 +18,7 @@ import '../audio/audio_models.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
+import 'ayah_annotations.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
 import 'mushaf_paper.dart';
@@ -238,6 +239,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         ),
       );
     }
+    final annotationRows = activeAccount == null
+        ? const <Map<String, Object?>>[]
+        : ref.watch(ayahAnnotationsProvider(activeAccount)).valueOrNull ??
+              const <Map<String, Object?>>[];
+    final highlightColors = ayahHighlightColorsFromRows(annotationRows);
     final divisions =
         ref.watch(quranJuzProvider).valueOrNull ?? const <QuranDivision>[];
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
@@ -318,6 +324,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     ),
                     selectedAyah: _selectedAyah,
                     playingAyah: playingAyah,
+                    highlightColors: highlightColors,
                     surahs: catalog?.surahs ?? const <Surah>[],
                     divisions: divisions,
                     onSelectAyah: _selectAyah,
@@ -772,6 +779,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     onTap: () {
                       Navigator.pop(sheetContext);
                       unawaited(_showBookmarks());
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.note_alt_outlined),
+                    title: Text(context.l10n.notes),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/notes');
                     },
                   ),
                   ListTile(

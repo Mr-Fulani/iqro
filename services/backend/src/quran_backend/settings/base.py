@@ -576,6 +576,7 @@ SPECTACULAR_SETTINGS = {
         "SyncEntityTypeEnum": [
             ("reading_position", "Reading position"),
             ("bookmark", "Bookmark"),
+            ("ayah_annotation", "Ayah annotation"),
             ("reminder", "Reminder"),
         ],
     },

@@ -49,6 +49,7 @@ class SyncOutboxEntry {
     if (!const <String>{
       'reading_position',
       'bookmark',
+      'ayah_annotation',
       'reminder',
     }.contains(entityType)) {
       throw FormatException('Unsupported sync entity type: $entityType');
@@ -81,6 +82,7 @@ class SyncOutboxEntry {
     if (!const <String>{
       'reading_position',
       'bookmark',
+      'ayah_annotation',
       'reminder',
     }.contains(type)) {
       throw FormatException('Unsupported sync entity type: $type');
@@ -161,6 +163,7 @@ class SqliteSyncStore implements SyncStore {
   static const _entityTypes = <String>{
     'reading_position',
     'bookmark',
+    'ayah_annotation',
     'reminder',
   };
 
@@ -177,7 +180,7 @@ class SqliteSyncStore implements SyncStore {
       'outbox',
       where:
           "owner_id = ? AND entity_type NOT IN "
-          "('reading_position', 'bookmark', 'reminder')",
+          "('reading_position', 'bookmark', 'ayah_annotation', 'reminder')",
       whereArgs: <Object?>[_ownerId],
       orderBy: 'created_at ASC',
       limit: limit,
@@ -193,7 +196,7 @@ class SqliteSyncStore implements SyncStore {
       'outbox',
       where:
           "owner_id = ? AND entity_type IN "
-          "('reading_position', 'bookmark', 'reminder')",
+          "('reading_position', 'bookmark', 'ayah_annotation', 'reminder')",
       whereArgs: <Object?>[_ownerId],
       orderBy: 'created_at ASC',
       limit: limit,
@@ -348,7 +351,7 @@ class SqliteSyncStore implements SyncStore {
         'outbox',
         where:
             "owner_id = ? AND entity_type IN "
-            "('reading_position', 'bookmark', 'reminder')",
+            "('reading_position', 'bookmark', 'ayah_annotation', 'reminder')",
         whereArgs: <Object?>[_ownerId],
         orderBy: 'created_at ASC',
       );
@@ -375,6 +378,11 @@ class SqliteSyncStore implements SyncStore {
         whereArgs: <Object?>[_ownerId],
       );
       await transaction.delete(
+        'ayah_annotations',
+        where: 'owner_id = ?',
+        whereArgs: <Object?>[_ownerId],
+      );
+      await transaction.delete(
         'reminders',
         where: 'owner_id = ?',
         whereArgs: <Object?>[_ownerId],
@@ -383,7 +391,7 @@ class SqliteSyncStore implements SyncStore {
         'outbox',
         where:
             "owner_id = ? AND entity_type IN "
-            "('reading_position', 'bookmark', 'reminder')",
+            "('reading_position', 'bookmark', 'ayah_annotation', 'reminder')",
         whereArgs: <Object?>[_ownerId],
       );
       for (final entity in normalized) {
@@ -769,6 +777,49 @@ class SqliteSyncStore implements SyncStore {
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
     }
+    if (type == 'ayah_annotation') {
+      final remoteAyah = _ayahMap(remote?['ayah']);
+      await transaction.insert('ayah_annotations', <String, Object?>{
+        'owner_id': _ownerId,
+        'id': entityId,
+        'edition':
+            intent['edition_code']?.toString() ??
+            localDesired?['edition_code']?.toString() ??
+            remote?['edition_code']?.toString() ??
+            'madani-hafs',
+        'surah':
+            (intent['surah_number'] as num?)?.toInt() ??
+            (localDesired?['surah_number'] as num?)?.toInt() ??
+            (remoteAyah['surah_number'] as num?)?.toInt() ??
+            1,
+        'ayah':
+            (intent['ayah_number'] as num?)?.toInt() ??
+            (localDesired?['ayah_number'] as num?)?.toInt() ??
+            (remoteAyah['ayah_number'] as num?)?.toInt() ??
+            1,
+        'page':
+            (intent['page_number'] as num?)?.toInt() ??
+            (localDesired?['page_number'] as num?)?.toInt() ??
+            (remote?['page_number'] as num?)?.toInt(),
+        'color_key':
+            intent['color_key']?.toString() ??
+            localDesired?['color_key']?.toString() ??
+            remote?['color_key']?.toString() ??
+            'lime',
+        'note':
+            intent['note']?.toString() ??
+            localDesired?['note']?.toString() ??
+            remote?['note']?.toString() ??
+            '',
+        'server_revision': baseRevision,
+        'is_deleted':
+            body['action'] == 'delete' || localDesired?['deleted_at'] != null
+            ? 1
+            : 0,
+        'updated_at': clientUpdatedAt,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      return;
+    }
     if (type == 'reminder') {
       final desired = localDesired ?? intent;
       final merged = <String, Object?>{
@@ -836,6 +887,31 @@ class SqliteSyncStore implements SyncStore {
         'edition_code': row['edition'],
         'surah_number': row['surah'],
         'ayah_number': row['ayah'],
+        'revision': row['server_revision'],
+        'deleted_at': (row['is_deleted'] as num?)?.toInt() == 1
+            ? row['updated_at']
+            : null,
+        'updated_at': row['updated_at'],
+      };
+    }
+    if (operation.entityType == 'ayah_annotation') {
+      final rows = await executor.query(
+        'ayah_annotations',
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, id],
+        limit: 1,
+      );
+      if (rows.isEmpty) return null;
+      final row = rows.single;
+      return <String, Object?>{
+        'id': row['id'],
+        'entity_type': 'ayah_annotation',
+        'edition_code': row['edition'],
+        'page_number': row['page'],
+        'surah_number': row['surah'],
+        'ayah_number': row['ayah'],
+        'color_key': row['color_key'],
+        'note': row['note'],
         'revision': row['server_revision'],
         'deleted_at': (row['is_deleted'] as num?)?.toInt() == 1
             ? row['updated_at']
@@ -937,6 +1013,42 @@ class SqliteSyncStore implements SyncStore {
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return true;
     }
+    if (type == 'ayah_annotation') {
+      if (!authoritative &&
+          !await _isNewer(
+            executor,
+            table: 'ayah_annotations',
+            keyColumn: 'id',
+            key: id,
+            revisionColumn: 'server_revision',
+            revision: revision,
+          )) {
+        return false;
+      }
+      final ayah = _ayahMap(entity['ayah']);
+      await executor.insert('ayah_annotations', <String, Object?>{
+        'owner_id': _ownerId,
+        'id': id,
+        'edition': entity['edition_code']?.toString() ?? 'madani-hafs',
+        'surah':
+            (ayah['surah_number'] as num?)?.toInt() ??
+            (entity['surah_number'] as num?)?.toInt() ??
+            1,
+        'ayah':
+            (ayah['ayah_number'] as num?)?.toInt() ??
+            (entity['ayah_number'] as num?)?.toInt() ??
+            1,
+        'page': (entity['page_number'] as num?)?.toInt(),
+        'color_key': entity['color_key']?.toString() ?? 'lime',
+        'note': entity['note']?.toString() ?? '',
+        'server_revision': revision,
+        'is_deleted': entity['deleted_at'] == null ? 0 : 1,
+        'updated_at':
+            entity['updated_at']?.toString() ??
+            _now().toUtc().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      return true;
+    }
     if (type == 'reminder') {
       if (!authoritative &&
           !await _isNewer(
@@ -997,6 +1109,12 @@ class SqliteSyncStore implements SyncStore {
     } else if (type == 'bookmark') {
       await executor.delete(
         'bookmarks',
+        where: 'owner_id = ? AND id = ?',
+        whereArgs: <Object?>[_ownerId, entityId],
+      );
+    } else if (type == 'ayah_annotation') {
+      await executor.delete(
+        'ayah_annotations',
         where: 'owner_id = ? AND id = ?',
         whereArgs: <Object?>[_ownerId, entityId],
       );

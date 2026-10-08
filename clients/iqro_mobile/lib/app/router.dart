@@ -14,6 +14,7 @@ import '../features/feedback/feedback_models.dart';
 import '../features/feedback/feedback_screen.dart';
 import '../features/favorites/favorites_screen.dart';
 import '../features/memorization/memorization_screen.dart';
+import '../features/notes/notes_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/prayer/prayer_screen.dart';
@@ -181,6 +182,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
         path: '/favorites',
         builder: (context, state) => const FavoritesScreen(),
       ),
+      GoRoute(path: '/notes', builder: (context, state) => const NotesScreen()),
       GoRoute(
         path: '/account',
         builder: (context, state) => const AccountScreen(),

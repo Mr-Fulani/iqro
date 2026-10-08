@@ -55,12 +55,6 @@ function positiveInteger(value: string | null): number | null {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function nonNegativeInteger(value: string | null): number | null {
-  if (value === null || !/^\d+$/.test(value)) return null;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
 const PRAYER_READING_PRAYERS = new Set<PrayerReadingPrayer>([
   "fajr",
   "dhuhr",
@@ -285,8 +279,10 @@ function QuranContent() {
     const prayer = searchParams.get("prayer") as PrayerReadingPrayer | null;
     const localDate = searchParams.get("prayer_date");
     const timezoneName = searchParams.get("prayer_timezone");
-    const targetPages = positiveInteger(searchParams.get("prayer_target"));
-    const creditedPages = nonNegativeInteger(searchParams.get("prayer_credited")) ?? 0;
+    const metricValue = searchParams.get("prayer_metric") || "pages";
+    const metric = metricValue === "minutes" || metricValue === "ayahs" ? metricValue : "pages";
+    const targetPages = Number(searchParams.get("prayer_target"));
+    const creditedPages = Number(searchParams.get("prayer_credited") || 0);
     const checkInId = searchParams.get("check_in_id");
     const checkInRevision = positiveInteger(searchParams.get("check_in_revision"));
     const hasValidExistingCheckIn = checkInId !== null || checkInRevision !== null
@@ -299,9 +295,12 @@ function QuranContent() {
       || !/^\d{4}-\d{2}-\d{2}$/.test(localDate)
       || timezoneName === null
       || timezoneName.length > 64
-      || targetPages === null
-      || targetPages > 20
-      || creditedPages > 604
+      || !["pages", "minutes", "ayahs"].includes(metricValue)
+      || !Number.isFinite(targetPages) || targetPages <= 0
+      || !Number.isFinite(creditedPages) || creditedPages < 0
+      || targetPages > (metric === "minutes" ? 1440 : metric === "ayahs" ? 6236 : 604)
+      || creditedPages > (metric === "minutes" ? 1440 : metric === "ayahs" ? 6236 : 604)
+      || (metric !== "minutes" && (!Number.isInteger(targetPages) || !Number.isInteger(creditedPages)))
       || !hasValidExistingCheckIn
     ) {
       return null;
@@ -312,6 +311,7 @@ function QuranContent() {
       timezoneName,
       targetPages,
       creditedPages,
+      metric,
       checkInId,
       checkInRevision,
     };
@@ -1429,6 +1429,7 @@ function QuranContent() {
                 currentPage={canonicalPage ?? 1}
                 viewMode={viewMode}
                 creditPageProgress={false}
+                persistActivity={false}
                 timezoneName={prayerReadingConfig.timezoneName}
                 onActiveSecondsChange={setPrayerReadingActiveSeconds}
               />

@@ -719,3 +719,87 @@ def test_guest_merge_keeps_newer_goal_sessions_progress_and_is_idempotent() -> N
         ).count()
         == 1
     )
+
+
+@pytest.mark.parametrize(
+    ("metric", "target", "expected"),
+    [
+        ("pages", "7", ["2.00", "2.00", "1.00", "1.00", "1.00"]),
+        ("ayahs", "3", ["1.00", "1.00", "1.00", "0.00", "0.00"]),
+        ("minutes", "1.03", ["0.21", "0.21", "0.21", "0.20", "0.20"]),
+    ],
+)
+def test_unified_goal_distribution_and_prayer_credit(metric, target, expected) -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    goal = client.put(
+        reverse("reading:reading-goal"), _goal_payload(metric=metric, amount=target), format="json"
+    )
+    assert goal.status_code == 201
+    day_url = reverse("reading:prayer-reading-plan")
+    day = client.get(day_url).json()
+    assert list(day["targets"].values()) == expected
+    assert sum(Decimal(value) for value in day["targets"].values()) == Decimal(target)
+    # A legacy prayer configuration cannot override the single daily goal.
+    client.put(
+        day_url,
+        {
+            "pages_per_prayer": 20,
+            "notifications_enabled": True,
+            "timezone_name": "UTC",
+            "base_revision": 0,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    assert client.get(day_url).json()["target_amount"] == f"{Decimal(target):.2f}"
+    payload = {
+        "id": str(uuid.uuid7()),
+        "session_id": str(uuid.uuid7()),
+        "prayer": "fajr",
+        "local_date": day["local_date"],
+        "timezone_name": "UTC",
+        "metric": metric,
+        "amount": expected[0],
+        "client_updated_at": timezone.now().isoformat(),
+    }
+    created = client.post(reverse("reading:prayer-reading-check-in-create"), payload, format="json")
+    assert created.status_code == 201, created.json()
+    repeated = client.post(
+        reverse("reading:prayer-reading-check-in-create"), payload, format="json"
+    )
+    assert repeated.status_code == 200
+    assert ReadingSession.objects.filter(user=user).count() == 1
+    today = client.get(reverse("reading:today")).json()
+    assert today["progress"]["achieved_amount"] == expected[0]
+    assert client.get(day_url).json()["achieved_amount"] == expected[0]
+    assert created.json()["metric"] == metric
+    assert created.json()["pages"] == (int(Decimal(expected[0])) if metric == "pages" else 0)
+    detail = reverse(
+        "reading:prayer-reading-check-in-detail", kwargs={"check_in_id": created.json()["id"]}
+    )
+    updated = client.patch(
+        detail,
+        {
+            "metric": metric,
+            "amount": target,
+            "base_revision": 1,
+            "client_updated_at": timezone.now().isoformat(),
+        },
+        format="json",
+    )
+    assert updated.status_code == 200, updated.json()
+    assert client.get(day_url).json()["achieved_amount"] == f"{Decimal(target):.2f}"
+    assert client.get(reverse("reading:today")).json()["progress"]["is_completed"]
+    removed = client.delete(
+        detail
+        + "?"
+        + urlencode(
+            {
+                "base_revision": 2,
+                "client_updated_at": timezone.now().isoformat(),
+            }
+        )
+    )
+    assert removed.status_code == 204
+    assert client.get(day_url).json()["achieved_amount"] == "0.00"

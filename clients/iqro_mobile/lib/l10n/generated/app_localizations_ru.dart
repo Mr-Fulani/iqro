@@ -30,7 +30,84 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bookmarksLoadError => 'Не удалось загрузить закладки';
 
   @override
+  String get notes => 'Заметки';
+
+  @override
+  String get emptyNotes =>
+      'Пока нет заметок. Добавьте заметку к аяту в Мусхафе.';
+
+  @override
+  String get addNote => 'Добавить заметку';
+
+  @override
+  String get editNote => 'Изменить заметку';
+
+  @override
+  String get noteHint => 'Напишите заметку к этому аяту';
+
+  @override
+  String get noteLabel => 'ВАША ЗАМЕТКА';
+
+  @override
+  String noteWordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count слова',
+      many: '$count слов',
+      few: '$count слова',
+      one: '$count слово',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get removeNote => 'Удалить заметку';
+
+  @override
+  String get noteSaved => 'Заметка сохранена';
+
+  @override
+  String get noteRemoved => 'Заметка удалена';
+
+  @override
+  String get highlightAyah => 'Выделить';
+
+  @override
+  String get chooseHighlightColor => 'Выбрать цвет выделения';
+
+  @override
+  String get highlightColorEmerald => 'Изумрудный';
+
+  @override
+  String get highlightColorYellow => 'Жёлтый';
+
+  @override
+  String get highlightColorPink => 'Розовый';
+
+  @override
+  String get highlightColorLime => 'Лаймовый';
+
+  @override
+  String get highlightColorBlue => 'Голубой';
+
+  @override
+  String get highlightColorLavender => 'Лавандовый';
+
+  @override
   String get repeatSelectedAyah => 'Повторять выбранный аят';
+
+  @override
+  String get copyAyah => 'Копировать аят';
+
+  @override
+  String get shareAyah => 'Поделиться аятом';
+
+  @override
+  String get copied => 'Аят скопирован';
+
+  @override
+  String get copyAyahFailed => 'Не удалось скопировать аят';
 
   @override
   String get mushafFitWidth => 'По ширине';

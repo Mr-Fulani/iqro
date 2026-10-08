@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { api, PrayerReadingPrayer } from "../lib/api";
+import { api, PrayerReadingPrayer, ReadingGoalMetric } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { MessageKey } from "../lib/i18n";
 import { useI18n } from "../lib/i18n-context";
@@ -10,6 +10,7 @@ import { localizedPath } from "../lib/routing";
 
 export type PrayerReadingSessionConfig = {
   prayer: PrayerReadingPrayer;
+  metric?: ReadingGoalMetric;
   localDate: string;
   timezoneName: string;
   targetPages: number;
@@ -49,9 +50,12 @@ export function PrayerReadingSessionBar({
 }: PrayerReadingSessionBarProps) {
   const { loginGuest } = useAuth();
   const { formatNumber, locale, t } = useI18n();
+  const metric = config.metric || "pages";
+  const limit = metric === "minutes" ? 1440 : metric === "ayahs" ? 6236 : 604;
+  const boundedAmount = (value: number) => Math.min(limit, Math.max(metric === "minutes" ? 0.01 : 1, metric === "minutes" ? Math.round(value * 100) / 100 : Math.round(value)));
   const visitedPages = useRef(new Set<number>());
   const userEditedAmount = useRef(false);
-  const [actualPages, setActualPages] = useState(() => boundedPages(config.creditedPages + 1));
+  const [actualPages, setActualPages] = useState(() => Math.min(limit, config.creditedPages + (metric === "minutes" ? 0.01 : 1)));
   const [saving, setSaving] = useState(false);
   const [savedPages, setSavedPages] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +70,18 @@ export function PrayerReadingSessionBar({
   }, [activeSeconds, formatNumber]);
 
   useEffect(() => {
-    if (currentPage === null) return;
+    if (metric !== "pages" || currentPage === null) return;
     visitedPages.current.add(currentPage);
     if (!userEditedAmount.current) {
       setActualPages(boundedPages(config.creditedPages + visitedPages.current.size));
     }
-  }, [config.creditedPages, currentPage]);
+  }, [config.creditedPages, currentPage, metric]);
+
+  useEffect(() => {
+    if (metric === "minutes" && !userEditedAmount.current) {
+      setActualPages(Math.max(0.01, Math.round((config.creditedPages + activeSeconds / 60) * 100) / 100));
+    }
+  }, [metric, activeSeconds, config.creditedPages]);
 
   const progressPercent = useMemo(
     () => Math.min(100, Math.round((actualPages / config.targetPages) * 100)),
@@ -80,7 +90,7 @@ export function PrayerReadingSessionBar({
 
   const saveProgress = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const pages = boundedPages(actualPages);
+    const amount = boundedAmount(actualPages);
     setSaving(true);
     setError(null);
     try {
@@ -89,14 +99,14 @@ export function PrayerReadingSessionBar({
       }
       const checkIn = config.checkInId && config.checkInRevision
         ? await api.updatePrayerReadingCheckIn(config.checkInId, {
-            pages,
+            metric, amount,
             base_revision: config.checkInRevision,
           })
         : await api.createPrayerReadingCheckIn({
             prayer: config.prayer,
             local_date: config.localDate,
             timezone_name: config.timezoneName,
-            pages,
+            metric, amount,
           });
       try {
         if (currentPage !== null) await api.saveReadingPosition(edition, {
@@ -109,7 +119,7 @@ export function PrayerReadingSessionBar({
       } catch {
         // The after-prayer progress is already saved; position sync is best-effort.
       }
-      setSavedPages(checkIn.pages);
+      setSavedPages(Number(checkIn.amount ?? checkIn.pages));
       onFinished();
       window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (reason) {
@@ -124,13 +134,13 @@ export function PrayerReadingSessionBar({
       <div className="prayer-reading-session-copy">
         <p className="eyebrow">{t("prayerReading.readerEyebrow")}</p>
         <h2>{t("prayerReading.readerTitle", { prayer: prayerLabel })}</h2>
-        <p>{t("prayerReading.readerDescription")}</p>
+        <p>{t("prayerReading.unifiedReaderDescription")}</p>
       </div>
 
       <div className="prayer-reading-session-progress">
         <div>
           <strong>
-            {formatNumber(actualPages)} / {formatNumber(config.targetPages)} {t("reading.unit.pages")}
+            {formatNumber(actualPages)} / {formatNumber(config.targetPages)} {t(`reading.unit.${metric}`)}
           </strong>
           <span>{t("prayerReading.readerActualProgress")}</span>
         </div>
@@ -153,14 +163,14 @@ export function PrayerReadingSessionBar({
       {savedPages === null ? (
         <form className="prayer-reading-session-form" onSubmit={saveProgress}>
           <label className="form-label" htmlFor="prayer-reading-actual-pages">
-            {t("prayerReading.actualPages")}
+            {t("reading.manualAmount", { unit: t(`reading.unit.${metric}`) })}
           </label>
           <input
             id="prayer-reading-actual-pages"
             type="number"
-            min={1}
-            max={604}
-            step={1}
+            min={metric === "minutes" ? 0.01 : 1}
+            max={limit}
+            step={metric === "minutes" ? 0.01 : 1}
             value={actualPages}
             onChange={(event) => {
               userEditedAmount.current = true;
@@ -173,12 +183,12 @@ export function PrayerReadingSessionBar({
             {saving ? t("common.saving") : t("prayerReading.finishReading")}
           </button>
           <small>{t("prayerReading.actualHint")}</small>
-          <small>{t("prayerReading.readerTimeHint")}</small>
+          <small>{t("prayerReading.unifiedTimeHint")}</small>
         </form>
       ) : (
         <div className="alert alert-success prayer-reading-session-success" role="status">
-          <span>{t("prayerReading.savedActual", { pages: formatNumber(savedPages), prayer: prayerLabel })}</span>
-          <Link href={`${localizedPath(locale, "/")}#prayer-reading-plan`} className="btn btn-primary btn-sm">
+          <span>{t("prayerReading.unifiedSavedActual", { amount: formatNumber(savedPages), unit: t(`reading.unit.${metric}`), prayer: prayerLabel })}</span>
+          <Link href={`${localizedPath(locale, "/planner")}#prayer-reading-plan`} className="btn btn-primary btn-sm">
             {t("prayerReading.returnToPlan")}
           </Link>
         </div>

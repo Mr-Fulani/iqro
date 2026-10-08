@@ -162,11 +162,26 @@ class PrayerReadingPlanWriteSerializer(StrictFieldsSerializer):
         return _validate_timezone_name(value)
 
 
-class PrayerReadingCheckInCreateSerializer(StrictFieldsSerializer):
+class PrayerReadingAmountSerializer(StrictFieldsSerializer):
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if "amount" in attrs or "metric" in attrs:
+            if "amount" not in attrs or "metric" not in attrs or "pages" in attrs:
+                raise serializers.ValidationError("Use either pages or metric and amount.")
+            _validate_metric_amount(attrs["metric"], attrs["amount"], field="amount")
+        elif isinstance(self, PrayerReadingCheckInUpdateSerializer) and "pages" not in attrs:
+            raise serializers.ValidationError("An amount is required.")
+        return attrs
+
+
+class PrayerReadingCheckInCreateSerializer(PrayerReadingAmountSerializer):
     id = UUIDv7Field()
     session_id = UUIDv7Field()
     prayer = serializers.ChoiceField(choices=PrayerReadingPrayer.choices)
     pages = serializers.IntegerField(min_value=1, max_value=604, required=False)
+    metric = serializers.ChoiceField(choices=ReadingGoalMetric.choices, required=False)
+    amount = serializers.DecimalField(
+        max_digits=8, decimal_places=2, min_value=Decimal("0.01"), required=False
+    )
     local_date = serializers.DateField()
     timezone_name = serializers.CharField(max_length=64)
     client_updated_at = serializers.DateTimeField()
@@ -176,8 +191,12 @@ class PrayerReadingCheckInCreateSerializer(StrictFieldsSerializer):
         return _validate_timezone_name(value)
 
 
-class PrayerReadingCheckInUpdateSerializer(StrictFieldsSerializer):
-    pages = serializers.IntegerField(min_value=1, max_value=604)
+class PrayerReadingCheckInUpdateSerializer(PrayerReadingAmountSerializer):
+    pages = serializers.IntegerField(min_value=1, max_value=604, required=False)
+    metric = serializers.ChoiceField(choices=ReadingGoalMetric.choices, required=False)
+    amount = serializers.DecimalField(
+        max_digits=8, decimal_places=2, min_value=Decimal("0.01"), required=False
+    )
     base_revision = serializers.IntegerField(min_value=1)
     client_updated_at = serializers.DateTimeField()
     device_id = serializers.UUIDField(required=False, allow_null=True)
@@ -217,6 +236,8 @@ class PrayerReadingPlanOutputSerializer(serializers.Serializer[Any]):
 
 
 class PrayerReadingCheckInOutputSerializer(serializers.Serializer[Any]):
+    metric = serializers.ChoiceField(choices=ReadingGoalMetric.choices)
+    amount = serializers.DecimalField(max_digits=8, decimal_places=2)
     id = serializers.UUIDField()
     prayer = serializers.ChoiceField(choices=PrayerReadingPrayer.choices)
     local_date = serializers.DateField()
@@ -231,6 +252,11 @@ class PrayerReadingCheckInOutputSerializer(serializers.Serializer[Any]):
 
 
 class PrayerReadingDayOutputSerializer(serializers.Serializer[Any]):
+    goal = ReadingGoalOutputSerializer(allow_null=True)
+    targets = serializers.DictField(child=serializers.DecimalField(max_digits=8, decimal_places=2))
+    achieved_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    target_amount = serializers.DecimalField(max_digits=8, decimal_places=2)
+    remaining_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
     local_date = serializers.DateField()
     timezone_name = serializers.CharField()
     plan = PrayerReadingPlanOutputSerializer(allow_null=True)

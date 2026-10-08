@@ -476,6 +476,25 @@ final ayahBookmarkProvider = FutureProvider.autoDispose
       return bookmarked;
     });
 
+final ayahAnnotationsProvider = FutureProvider.autoDispose
+    .family<List<Map<String, Object?>>, AccountScopeKey>((ref, key) async {
+      if (ref.watch(activeAccountScopeKeyProvider) != key) {
+        throw const AccountScopeChanged();
+      }
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (scope == null || accountScopeKey(scope) != key) {
+        throw const AccountScopeChanged();
+      }
+      final annotations = await ref
+          .watch(quranRepositoryProvider)
+          .ayahAnnotations(accountScope: scope);
+      if (!database.accountScope.isCurrent(scope)) {
+        throw const AccountScopeChanged();
+      }
+      return annotations;
+    });
+
 final readingPositionProvider = FutureProvider.autoDispose
     .family<ReadingPosition, AccountScopeKey>((ref, key) {
       final database = ref.watch(localDatabaseProvider);

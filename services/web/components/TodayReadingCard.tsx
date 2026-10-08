@@ -108,6 +108,7 @@ export function TodayReadingCard() {
       });
       setEditingGoal(false);
       await loadToday();
+      window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -132,6 +133,7 @@ export function TodayReadingCard() {
       setManualOpen(false);
       setManualAmount("1");
       await loadToday();
+      window.dispatchEvent(new Event("quran-reading-progress-changed"));
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -160,7 +162,7 @@ export function TodayReadingCard() {
   const showGoalForm = !today?.goal || editingGoal;
 
   return (
-    <section className="surface today-reading" data-testid="today-reading">
+    <section id="reading-goal" className="surface today-reading" data-testid="today-reading">
       <div className="surface-head today-reading-head">
         <div>
           <p className="eyebrow">{t("reading.todayEyebrow")}</p>

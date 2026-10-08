@@ -18,7 +18,12 @@ from quran_backend.modules.accounts.models import (
     User,
 )
 from quran_backend.modules.accounts.services import AccessAuthContext
-from quran_backend.modules.reading.models import Bookmark, SyncChange, SyncOperation
+from quran_backend.modules.reading.models import (
+    AyahAnnotation,
+    Bookmark,
+    SyncChange,
+    SyncOperation,
+)
 from quran_backend.modules.reading.serializers import ReadingPositionPayloadSerializer
 from quran_backend.modules.reading.throttling import (
     ReadingMutationRateThrottle,
@@ -70,6 +75,32 @@ def _bookmark_sync_operation(
             "page_number": 1,
             "label": label,
             "color_key": "green",
+        },
+    }
+
+
+def _ayah_annotation_sync_operation(
+    *,
+    operation_id: uuid.UUID,
+    entity_id: uuid.UUID,
+    base_revision: int = 0,
+    note: str = "Remember this ayah",
+    color_key: str = "yellow",
+) -> dict[str, Any]:
+    return {
+        "operation_id": str(operation_id),
+        "entity_type": "ayah_annotation",
+        "entity_id": str(entity_id),
+        "action": "upsert",
+        "base_revision": base_revision,
+        "client_updated_at": _timestamp(),
+        "payload": {
+            "edition_code": "madani-hafs",
+            "page_number": 1,
+            "surah_number": 1,
+            "ayah_number": 1,
+            "color_key": color_key,
+            "note": note,
         },
     }
 
@@ -659,6 +690,55 @@ def test_bookmark_detail_is_isolated_by_user(quran_dataset: dict[str, Any]) -> N
 
     assert response.status_code == 404
     assert response.json()["code"] == "bookmark_not_found"
+
+
+@pytest.mark.django_db
+def test_ayah_annotation_sync_is_separate_from_bookmark(
+    quran_dataset: dict[str, Any],
+) -> None:
+    user = User.objects.create_user()
+    client = _authenticated_client(user)
+    annotation_id = uuid.uuid7()
+    push = client.post(
+        reverse("reading:sync-push"),
+        {
+            "operations": [
+                _ayah_annotation_sync_operation(
+                    operation_id=uuid.uuid7(),
+                    entity_id=annotation_id,
+                )
+            ]
+        },
+        format="json",
+    )
+
+    bookmark = client.post(
+        reverse("reading:bookmark-list"),
+        {
+            "id": str(uuid.uuid7()),
+            "edition_code": "madani-hafs",
+            "page_number": 1,
+            "surah_number": 1,
+            "ayah_number": 1,
+            "client_updated_at": _timestamp(),
+        },
+        format="json",
+    )
+    bookmark_id = bookmark.json()["id"]
+    deleted = client.delete(
+        reverse("reading:bookmark-detail", kwargs={"bookmark_id": bookmark_id}),
+        query_params={"base_revision": 1, "client_updated_at": _timestamp()},
+    )
+
+    assert push.status_code == 200
+    assert push.json()["results"][0]["entity"]["entity_type"] == "ayah_annotation"
+    assert AyahAnnotation.objects.filter(user=user, id=annotation_id).exists()
+    assert Bookmark.objects.filter(user=user).count() == 1
+    assert deleted.status_code == 200
+    annotation = AyahAnnotation.objects.get(user=user, id=annotation_id)
+    assert annotation.deleted_at is None
+    assert annotation.note == "Remember this ayah"
+    assert annotation.color_key == "yellow"
 
 
 @pytest.mark.django_db

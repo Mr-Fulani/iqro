@@ -14,6 +14,7 @@ type ReadingActivityTrackerProps = {
   currentPage: number;
   viewMode: "text" | "mushaf";
   creditPageProgress?: boolean;
+  persistActivity?: boolean;
   timezoneName?: string;
   onActiveSecondsChange?: (seconds: number) => void;
 };
@@ -33,6 +34,7 @@ export function ReadingActivityTracker({
   currentPage,
   viewMode,
   creditPageProgress = true,
+  persistActivity = true,
   timezoneName,
   onActiveSecondsChange,
 }: ReadingActivityTrackerProps) {
@@ -84,6 +86,7 @@ export function ReadingActivityTracker({
   }, [loginGuest]);
 
   const finalizeSegment = useCallback((allowPageOnly: boolean) => {
+    if (!persistActivity) return;
     const seconds = activeSeconds.current;
     if (
       seconds >= HEARTBEAT_SECONDS &&
@@ -112,7 +115,7 @@ export function ReadingActivityTracker({
     changedPages.current = new Set();
     segmentStartedAt.current = endedAt;
     void deliver(payload);
-  }, [creditPageProgress, deliver, timezoneName]);
+  }, [creditPageProgress, deliver, timezoneName, persistActivity]);
 
   useEffect(() => {
     if (authLoading) return;

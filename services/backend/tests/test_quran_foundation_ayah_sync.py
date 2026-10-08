@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from django.test import override_settings
+from django.urls import reverse
 from rest_framework.test import APIClient
 
 from quran_backend.modules.audio.models import (
@@ -13,6 +14,12 @@ from quran_backend.modules.audio.models import (
 from quran_backend.modules.audio.quran_foundation import ENVIRONMENTS
 from quran_backend.modules.audio.quran_foundation_ayah_sync import (
     sync_quran_foundation_ayah_recitations,
+)
+from quran_backend.modules.audio.variant_resolver import (
+    AudioVariantDelivery,
+    AudioVariantGranularity,
+    AudioVariantResolver,
+    quran_foundation_ayah_variant_id,
 )
 from quran_backend.modules.quran.models import Ayah, RevelationType, Surah
 
@@ -168,6 +175,13 @@ def test_public_ayah_recitation_catalog_and_chapter_api(
 
     assert catalog.status_code == 200
     assert catalog.json()[0]["source_id"] == 8
+    assert catalog.json()[0]["variant_id"].startswith("qf-ayah:production:8:")
+    assert catalog.json()[0]["capabilities"] == {
+        "listen": True,
+        "ayah_playback": True,
+        "memorization": True,
+        "offline": False,
+    }
     assert catalog.json()[0]["coverage"] == {
         "chapter_count": 114,
         "audio_file_count": len(verse_keys),
@@ -177,3 +191,47 @@ def test_public_ayah_recitation_catalog_and_chapter_api(
     assert chapter.status_code == 200
     assert chapter.json()["ayah_count"] == 2
     assert chapter.json()["audio_files"][0]["url"].startswith("https://verses.quran.foundation/")
+
+
+@pytest.mark.django_db
+def test_quran_foundation_ayah_variant_resolves_through_common_delivery_contract(
+    quran_dataset: dict[str, Any],
+    api_client: APIClient,
+) -> None:
+    verse_keys = _complete_test_quran(quran_dataset)
+    sync_quran_foundation_ayah_recitations(
+        quran_version=quran_dataset["version"],
+        client=FakeAyahAudioClient(verse_keys),
+    )
+    variant_id = quran_foundation_ayah_variant_id(
+        environment="production",
+        source_id=8,
+        quran_edition_version_id=quran_dataset["version"].id,
+    )
+
+    resolver = AudioVariantResolver()
+    variant = resolver.resolve(variant_id)
+    assert variant.id == variant_id
+    assert variant.granularity is AudioVariantGranularity.AYAH
+    assert variant.delivery is AudioVariantDelivery.EXTERNAL
+    assert variant.coverage.complete is True
+    assert variant.capabilities.memorization is True
+
+    track = resolver.resolve_track(variant_id, surah_number=1)
+    assert track.url is None
+    assert track.delivery is AudioVariantDelivery.EXTERNAL
+    assert [item.ayah_number for item in track.ayahs] == [1, 2]
+    ayah = resolver.resolve_ayah(variant_id, surah_number=1, ayah_number=2)
+    assert ayah.url.endswith("12.mp3")
+    assert ayah.start_ms is None
+    assert ayah.end_ms is None
+
+    generic = api_client.get(
+        reverse(
+            "audio:variant-ayah",
+            kwargs={"variant_id": variant_id, "surah": 1, "ayah": 2},
+        )
+    )
+    assert generic.status_code == 200
+    assert generic.json()["variant"]["delivery"] == "external"
+    assert generic.json()["audio"]["start_ms"] is None

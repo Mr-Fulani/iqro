@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
 import 'mushaf_raster_layout.dart';
@@ -69,6 +71,7 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     required this.onOpenAyah,
     required this.onBackgroundTap,
     required this.onScale,
+    this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const <Surah>[],
     this.divisions = const <QuranDivision>[],
     super.key,
@@ -82,6 +85,7 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   final ValueChanged<QuranAyahReference> onOpenAyah;
   final VoidCallback onBackgroundTap;
   final ValueChanged<double> onScale;
+  final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final List<QuranDivision> divisions;
 
@@ -359,6 +363,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                         page: pageData.foundation!,
                         selected: widget.selectedAyah,
                         playing: widget.playingAyah,
+                        highlightColors: widget.highlightColors,
                         onSelect: widget.onSelectAyah,
                         onOpen: widget.onOpenAyah,
                         onBackgroundTap: widget.onBackgroundTap,
@@ -508,6 +513,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                               regions: pageData.regions,
                               selectedAyah: widget.selectedAyah,
                               playingAyah: widget.playingAyah,
+                              highlightColors: widget.highlightColors,
                               layout: rasterLayout,
                             ),
                           ),
@@ -530,12 +536,14 @@ class _AyahRegionPainter extends CustomPainter {
     required this.regions,
     required this.selectedAyah,
     required this.playingAyah,
+    required this.highlightColors,
     required this.layout,
   });
 
   final List<MushafAyahRegion> regions;
   final QuranAyahReference? selectedAyah;
   final QuranAyahReference? playingAyah;
+  final Map<QuranAyahReference, String> highlightColors;
   final MushafRasterLayout layout;
 
   @override
@@ -556,12 +564,25 @@ class _AyahRegionPainter extends CustomPainter {
       ..strokeWidth = 1.5;
 
     for (final region in regions) {
+      final highlightColor = highlightColors[region.ayah];
       final selected = region.ayah == selectedAyah;
       final playing = region.ayah == playingAyah;
-      if (!selected && !playing) continue;
+      if (highlightColor == null && !selected && !playing) continue;
       final path = layout.regionPath(region);
-      canvas.drawPath(path, playing ? playingFill : selectedFill);
-      canvas.drawPath(path, playing ? playingStroke : selectedStroke);
+      if (highlightColor != null) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = ayahHighlightColor(highlightColor).withValues(alpha: .4),
+        );
+      }
+      if (playing) {
+        if (highlightColor == null) canvas.drawPath(path, playingFill);
+        canvas.drawPath(path, playingStroke);
+      } else if (selected) {
+        if (highlightColor == null) canvas.drawPath(path, selectedFill);
+        canvas.drawPath(path, selectedStroke);
+      }
     }
   }
 
@@ -570,6 +591,7 @@ class _AyahRegionPainter extends CustomPainter {
     return oldDelegate.layout != layout ||
         oldDelegate.selectedAyah != selectedAyah ||
         oldDelegate.playingAyah != playingAyah ||
+        !mapEquals(oldDelegate.highlightColors, highlightColors) ||
         !identical(oldDelegate.regions, regions);
   }
 }

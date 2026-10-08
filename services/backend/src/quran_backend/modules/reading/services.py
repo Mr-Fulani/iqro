@@ -26,6 +26,7 @@ from quran_backend.modules.quran.models import (
 )
 from quran_backend.modules.reading.change_log import append_sync_change, current_sync_cursor
 from quran_backend.modules.reading.models import (
+    AyahAnnotation,
     Bookmark,
     ReadingPosition,
     RetiredBookmarkId,
@@ -113,9 +114,10 @@ class QuranEditionNotFoundError(NotFound):
 _FULL_RESYNC_PHASES = (
     SyncEntityType.READING_POSITION,
     SyncEntityType.BOOKMARK,
+    SyncEntityType.AYAH_ANNOTATION,
     SyncEntityType.REMINDER,
 )
-_FULL_RESYNC_REGISTRY_VERSION = "v2:reading_position:bookmark:reminder"
+_FULL_RESYNC_REGISTRY_VERSION = "v3:reading_position:bookmark:ayah_annotation:reminder"
 _FULL_RESYNC_SIGNING_CONTEXT = "quran-platform.offline-sync.full-resync.v2"
 
 
@@ -173,6 +175,32 @@ def bookmark_snapshot(bookmark: Bookmark) -> dict[str, Any]:
         "device_id": str(bookmark.device_id) if bookmark.device_id else None,
         "created_at": bookmark.created_at.isoformat(),
         "updated_at": bookmark.updated_at.isoformat(),
+    }
+
+
+def ayah_annotation_snapshot(annotation: AyahAnnotation) -> dict[str, Any]:
+    ayah = annotation.ayah
+    return {
+        "id": str(annotation.id),
+        "entity_type": SyncEntityType.AYAH_ANNOTATION,
+        "edition_code": annotation.edition.code,
+        "page_number": annotation.page.number if annotation.page is not None else None,
+        "ayah": {
+            "id": str(ayah.id),
+            "surah_number": ayah.surah.number,
+            "ayah_number": ayah.number,
+            "surah_name_ar": ayah.surah.name_ar,
+            "surah_name_en": ayah.surah.name_en,
+            "surah_name_ru": ayah.surah.name_ru,
+        },
+        "color_key": annotation.color_key,
+        "note": annotation.note,
+        "client_updated_at": annotation.client_updated_at.isoformat(),
+        "revision": annotation.revision,
+        "deleted_at": annotation.deleted_at.isoformat() if annotation.deleted_at else None,
+        "device_id": str(annotation.device_id) if annotation.device_id else None,
+        "created_at": annotation.created_at.isoformat(),
+        "updated_at": annotation.updated_at.isoformat(),
     }
 
 
@@ -364,6 +392,16 @@ def _apply_sync_operation(
         )
     elif entity_type == SyncEntityType.BOOKMARK:
         mutation = _mutate_bookmark(
+            user=user,
+            entity_id=operation["entity_id"],
+            action=operation["action"],
+            base_revision=operation["base_revision"],
+            client_updated_at=operation["client_updated_at"],
+            device_id=operation.get("device_id"),
+            payload=operation["payload"],
+        )
+    elif entity_type == SyncEntityType.AYAH_ANNOTATION:
+        mutation = _mutate_ayah_annotation(
             user=user,
             entity_id=operation["entity_id"],
             action=operation["action"],
@@ -579,6 +617,18 @@ def _full_resync_bookmarks(
     return list(queryset[:limit])
 
 
+def _full_resync_annotations(
+    user: User,
+    *,
+    after: uuid.UUID | None,
+    limit: int,
+) -> list[AyahAnnotation]:
+    queryset = _annotation_queryset().filter(user=user).order_by("id")
+    if after:
+        queryset = queryset.filter(id__gt=after)
+    return list(queryset[:limit])
+
+
 def _full_resync_entities(
     phase: str,
     *,
@@ -595,6 +645,11 @@ def _full_resync_entities(
         return [
             bookmark_snapshot(bookmark)
             for bookmark in _full_resync_bookmarks(user, after=after, limit=limit)
+        ]
+    if phase == SyncEntityType.AYAH_ANNOTATION:
+        return [
+            ayah_annotation_snapshot(annotation)
+            for annotation in _full_resync_annotations(user, after=after, limit=limit)
         ]
     if phase == SyncEntityType.REMINDER:
         return full_resync_reminders(user, after=after, limit=limit)
@@ -859,6 +914,140 @@ def _mutate_bookmark(  # noqa: PLR0911, PLR0912, PLR0913
     return {"outcome": SyncOutcome.ACCEPTED, "entity": snapshot, "cursor": cursor}
 
 
+def _mutate_ayah_annotation(  # noqa: PLR0911, PLR0912, PLR0913
+    *,
+    user: User,
+    entity_id: uuid.UUID,
+    action: str,
+    base_revision: int,
+    client_updated_at: Any,
+    device_id: uuid.UUID | None,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    annotation = _annotation_queryset(for_update=True).filter(user=user, id=entity_id).first()
+    device = _device_for_user(user, device_id)
+
+    if action == SyncAction.DELETE:
+        if annotation is None:
+            return _conflict(user, "entity_missing", None)
+        if annotation.revision != base_revision:
+            return _conflict(user, "revision_mismatch", ayah_annotation_snapshot(annotation))
+        annotation.deleted_at = timezone.now()
+        annotation.client_updated_at = client_updated_at
+        annotation.device = device
+        annotation.revision += 1
+        annotation.save(
+            update_fields=[
+                "deleted_at",
+                "client_updated_at",
+                "device",
+                "revision",
+                "updated_at",
+            ]
+        )
+        snapshot = ayah_annotation_snapshot(annotation)
+        cursor = append_sync_change(
+            user=user,
+            entity_type=SyncEntityType.AYAH_ANNOTATION,
+            entity_id=annotation.id,
+            action=SyncAction.DELETE,
+            revision=annotation.revision,
+            snapshot=snapshot,
+        )
+        return {"outcome": SyncOutcome.ACCEPTED, "entity": snapshot, "cursor": cursor}
+
+    if annotation is None:
+        if base_revision != 0:
+            return _conflict(user, "entity_missing", None)
+        if AyahAnnotation.objects.filter(id=entity_id).exists():
+            return _conflict(user, "entity_id_unavailable", None)
+        if not _new_bookmark_id_is_acceptable(entity_id, now=timezone.now()):
+            return _conflict(user, "entity_id_not_reusable", None)
+        edition = _active_edition(payload["edition_code"])
+        page, ayah = _annotation_target(edition, payload, None)
+        try:
+            with transaction.atomic():
+                annotation = AyahAnnotation.objects.create(
+                    id=entity_id,
+                    user=user,
+                    edition=edition,
+                    page=page,
+                    ayah=ayah,
+                    color_key=payload.get("color_key", "lime"),
+                    note=payload.get("note", ""),
+                    client_updated_at=client_updated_at,
+                    revision=1,
+                    device=device,
+                )
+        except IntegrityError:
+            return _conflict(user, "entity_id_unavailable", None)
+    else:
+        if annotation.revision != base_revision:
+            return _conflict(user, "revision_mismatch", ayah_annotation_snapshot(annotation))
+        if payload.get("edition_code", annotation.edition.code) != annotation.edition.code:
+            raise ValidationError({"edition_code": "An annotation's edition cannot be changed."})
+        page, ayah = _annotation_target(annotation.edition, payload, annotation)
+        annotation.page = page
+        annotation.ayah = ayah
+        if "color_key" in payload:
+            annotation.color_key = payload["color_key"]
+        if "note" in payload:
+            annotation.note = payload["note"]
+        annotation.client_updated_at = client_updated_at
+        annotation.device = device
+        annotation.deleted_at = None
+        annotation.revision += 1
+        annotation.save(
+            update_fields=[
+                "page",
+                "ayah",
+                "color_key",
+                "note",
+                "client_updated_at",
+                "device",
+                "deleted_at",
+                "revision",
+                "updated_at",
+            ]
+        )
+
+    snapshot = ayah_annotation_snapshot(annotation)
+    cursor = append_sync_change(
+        user=user,
+        entity_type=SyncEntityType.AYAH_ANNOTATION,
+        entity_id=annotation.id,
+        action=SyncAction.UPSERT,
+        revision=annotation.revision,
+        snapshot=snapshot,
+    )
+    return {"outcome": SyncOutcome.ACCEPTED, "entity": snapshot, "cursor": cursor}
+
+
+def _annotation_target(
+    edition: QuranEdition,
+    payload: dict[str, Any],
+    annotation: AyahAnnotation | None,
+) -> tuple[MushafPage | None, Ayah]:
+    if "page_number" in payload:
+        page_number = payload["page_number"]
+        page = _page_for_active_edition(edition, page_number) if page_number is not None else None
+    else:
+        page = annotation.page if annotation else None
+
+    if "surah_number" in payload or "ayah_number" in payload:
+        ayah = _ayah_for_active_edition(
+            edition,
+            payload.get("surah_number"),
+            payload.get("ayah_number"),
+        )
+    else:
+        ayah = annotation.ayah if annotation else None
+    if ayah is None:
+        raise ValidationError({"ayah_number": "An annotation must reference an ayah."})
+    _validate_page_ayah(page, ayah)
+    return page, ayah
+
+
 def _bookmark_target(
     edition: QuranEdition,
     payload: dict[str, Any],
@@ -957,6 +1146,16 @@ def _position_queryset(*, for_update: bool = False) -> QuerySet[ReadingPosition]
 
 def _bookmark_queryset(*, for_update: bool = False) -> QuerySet[Bookmark]:
     queryset = Bookmark.objects.select_related(
+        "edition",
+        "page__edition_version__edition",
+        "ayah__surah__edition_version__edition",
+        "device",
+    )
+    return queryset.select_for_update(of=("self",)) if for_update else queryset
+
+
+def _annotation_queryset(*, for_update: bool = False) -> QuerySet[AyahAnnotation]:
+    queryset = AyahAnnotation.objects.select_related(
         "edition",
         "page__edition_version__edition",
         "ayah__surah__edition_version__edition",

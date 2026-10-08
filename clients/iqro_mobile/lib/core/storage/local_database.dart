@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 import '../auth/account_scope.dart';
 
@@ -30,7 +31,7 @@ class LocalDatabase {
   LocalDatabase.forTesting(this.database, {AccountScope? accountScope})
     : accountScope = accountScope ?? AccountScope.forTesting();
 
-  static const schemaVersion = 4;
+  static const schemaVersion = 6;
   static const quarantinedLegacyOwner = '__legacy_unscoped__';
   final Database database;
   final AccountScope accountScope;
@@ -68,6 +69,20 @@ class LocalDatabase {
         if (oldVersion < 4) {
           await _migrateAccountTables(db, _safeLegacyOwner(legacyOwnerId));
           await _createDeviceStateTable(db);
+        }
+        if (oldVersion >= 4 && oldVersion < 5) {
+          await db.execute(
+            "ALTER TABLE bookmarks ADD COLUMN color_key TEXT NOT NULL DEFAULT 'emerald'",
+          );
+          await db.execute(
+            "ALTER TABLE bookmarks ADD COLUMN note TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (oldVersion < 6) {
+          await _createAyahAnnotationTable(db);
+          if (oldVersion >= 5) {
+            await _migrateLegacyBookmarkDetails(db);
+          }
         }
       },
     );
@@ -522,6 +537,16 @@ class LocalDatabase {
   static const _accountTables = <String>[
     'reading_positions',
     'bookmarks',
+    'ayah_annotations',
+    'favorites',
+    'outbox',
+    'app_state',
+    'reminders',
+  ];
+
+  static const _legacyAccountTables = <String>[
+    'reading_positions',
+    'bookmarks',
     'favorites',
     'outbox',
     'app_state',
@@ -531,6 +556,7 @@ class LocalDatabase {
   static const _accountTableKeys = <String, String>{
     'reading_positions': 'edition',
     'bookmarks': 'id',
+    'ayah_annotations': 'id',
     'favorites': 'item_key',
     'outbox': 'operation_id',
     'app_state': 'state_key',
@@ -540,6 +566,7 @@ class LocalDatabase {
   static const _accountTableTimestamps = <String, String>{
     'reading_positions': 'updated_at',
     'bookmarks': 'updated_at',
+    'ayah_annotations': 'updated_at',
     'favorites': 'updated_at',
     'outbox': 'created_at',
     'app_state': 'updated_at',
@@ -566,6 +593,7 @@ class LocalDatabase {
     for (final table in const <String>[
       'reading_positions',
       'bookmarks',
+      'ayah_annotations',
       'favorites',
       'reminders',
     ]) {
@@ -589,7 +617,7 @@ class LocalDatabase {
       'outbox',
       where:
           'owner_id IN (?, ?) AND entity_type IN '
-          "('reading_position', 'bookmark', 'reminder', 'dua_favorite')",
+          "('reading_position', 'bookmark', 'ayah_annotation', 'reminder', 'dua_favorite')",
       whereArgs: <Object?>[sourceOwnerId, targetOwnerId],
       orderBy: 'created_at ASC, rowid ASC',
     );
@@ -612,6 +640,7 @@ class LocalDatabase {
     final value = switch (table) {
       'reading_positions' => row['edition'],
       'bookmarks' => row['id'],
+      'ayah_annotations' => row['id'],
       'favorites' => row['item_key'],
       'reminders' => row['id'],
       _ => null,
@@ -621,6 +650,7 @@ class LocalDatabase {
     final type = switch (table) {
       'reading_positions' => 'reading_position',
       'bookmarks' => 'bookmark',
+      'ayah_annotations' => 'ayah_annotation',
       'favorites' => 'dua_favorite',
       'reminders' => 'reminder',
       _ => '',
@@ -633,6 +663,7 @@ class LocalDatabase {
     if (!const <String>{
       'reading_position',
       'bookmark',
+      'ayah_annotation',
       'reminder',
       'dua_favorite',
     }.contains(type)) {
@@ -810,6 +841,7 @@ class LocalDatabase {
       CREATE INDEX bookmarks_owner_location_idx
       ON bookmarks(owner_id, edition, surah, ayah, is_deleted)
     ''');
+    await _createAyahAnnotationTable(db);
     await db.execute('''
       CREATE TABLE favorites (
         owner_id TEXT NOT NULL,
@@ -849,6 +881,99 @@ class LocalDatabase {
     await _createReminderTable(db);
   }
 
+  static Future<void> _createAyahAnnotationTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ayah_annotations (
+        owner_id TEXT NOT NULL,
+        id TEXT NOT NULL,
+        edition TEXT NOT NULL,
+        surah INTEGER NOT NULL,
+        ayah INTEGER NOT NULL,
+        page INTEGER,
+        color_key TEXT NOT NULL DEFAULT 'lime',
+        note TEXT NOT NULL DEFAULT '',
+        server_revision INTEGER NOT NULL DEFAULT 0,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (owner_id, id)
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS ayah_annotations_owner_location_idx
+      ON ayah_annotations(owner_id, edition, surah, ayah, is_deleted)
+    ''');
+  }
+
+  static Future<void> _migrateLegacyBookmarkDetails(DatabaseExecutor db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(bookmarks)');
+    final hasLegacyDetails = columns.any(
+      (row) => row['name'] == 'color_key' || row['name'] == 'note',
+    );
+    if (!hasLegacyDetails) return;
+
+    final rows = await db.query(
+      'bookmarks',
+      where: "TRIM(COALESCE(note, '')) <> '' OR color_key <> ?",
+      whereArgs: const <Object?>['emerald'],
+    );
+    const uuid = Uuid();
+    for (final row in rows) {
+      final ownerId = row['owner_id']?.toString();
+      final id = row['id']?.toString();
+      final edition = row['edition']?.toString();
+      final updatedAt = row['updated_at']?.toString();
+      if (ownerId == null ||
+          id == null ||
+          edition == null ||
+          updatedAt == null) {
+        continue;
+      }
+      final colorKey = row['color_key']?.toString();
+      final note = row['note']?.toString() ?? '';
+      final normalizedColor = colorKey == null || colorKey.isEmpty
+          ? 'lime'
+          : colorKey;
+      await db.insert('ayah_annotations', <String, Object?>{
+        'owner_id': ownerId,
+        'id': id,
+        'edition': edition,
+        'surah': row['surah'],
+        'ayah': row['ayah'],
+        'page': null,
+        'color_key': normalizedColor,
+        'note': note,
+        'server_revision': 0,
+        'is_deleted': 0,
+        'updated_at': updatedAt,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      final operationId = uuid.v4();
+      await db.insert('outbox', <String, Object?>{
+        'owner_id': ownerId,
+        'operation_id': operationId,
+        'entity_type': 'ayah_annotation',
+        'entity_id': id,
+        'payload': jsonEncode(<String, Object?>{
+          'operation_id': operationId,
+          'entity_type': 'ayah_annotation',
+          'entity_id': id,
+          'action': 'upsert',
+          'base_revision': 0,
+          'client_updated_at': updatedAt,
+          'payload': <String, Object?>{
+            'edition_code': edition,
+            'surah_number': row['surah'],
+            'ayah_number': row['ayah'],
+            'color_key': normalizedColor,
+            'note': note,
+          },
+        }),
+        'attempts': 0,
+        'created_at': updatedAt,
+        'last_error': null,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+  }
+
   static Future<void> _createDeviceStateTable(DatabaseExecutor db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS device_state (
@@ -869,7 +994,7 @@ class LocalDatabase {
     // when no trustworthy legacy account owner can be recovered.
     await _createDeviceStateTable(db);
     await _extractLegacyManagedNotificationPlan(db);
-    for (final table in _accountTables) {
+    for (final table in _legacyAccountTables) {
       await db.execute('ALTER TABLE $table RENAME TO ${table}_legacy_v3');
     }
     await _createAccountTables(db);
@@ -931,7 +1056,7 @@ class LocalDatabase {
     ''',
       <Object?>[legacyOwnerId],
     );
-    for (final table in _accountTables.reversed) {
+    for (final table in _legacyAccountTables.reversed) {
       await db.execute('DROP TABLE ${table}_legacy_v3');
     }
   }

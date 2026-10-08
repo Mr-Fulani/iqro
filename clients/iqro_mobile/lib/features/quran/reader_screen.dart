@@ -13,6 +13,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
+import 'ayah_annotations.dart';
 import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 
@@ -141,6 +142,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       // Never paint or persist the previous account's route-derived location.
       return const Scaffold(body: IqroLoading());
     }
+    final annotationRows = activeAccount == null
+        ? const <Map<String, Object?>>[]
+        : ref.watch(ayahAnnotationsProvider(activeAccount)).valueOrNull ??
+              const <Map<String, Object?>>[];
+    final annotationColors = ayahHighlightColorsFromRows(annotationRows);
+    final highlightColors = <int, String>{
+      for (final entry in annotationColors.entries)
+        if (entry.key.surah == widget.surah) entry.key.ayah: entry.value,
+    };
     final ayahs = ref.watch(ayahsProvider(widget.surah));
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final presentation = ref.watch(
@@ -229,7 +239,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                 ),
               ),
             Expanded(
-              child: _readerList(items, surah, title, audio, presentation),
+              child: _readerList(
+                items,
+                surah,
+                title,
+                audio,
+                highlightColors,
+                presentation,
+              ),
             ),
           ],
         ),
@@ -242,6 +259,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     Surah? surah,
     String title,
     ({int? surah, int? ayah, bool playing, bool active}) audio,
+    Map<int, String> highlightColors,
     ({double fontSize, double lineHeight, double ayahSpacing, bool focusMode})
     presentation,
   ) {
@@ -278,6 +296,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
             child: _AyahCard(
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
+              highlightColorKey: highlightColors[ayah.number],
               audioActive: audioActive,
               audioPlaying: audioActive && audio.playing,
               audioLoading: _audioLoadingAyah == ayah.number,
@@ -1036,6 +1055,7 @@ class _AyahCard extends StatelessWidget {
   const _AyahCard({
     required this.ayah,
     required this.selected,
+    required this.highlightColorKey,
     required this.audioActive,
     required this.audioPlaying,
     required this.audioLoading,
@@ -1053,6 +1073,7 @@ class _AyahCard extends StatelessWidget {
   });
   final QuranAyah ayah;
   final bool selected;
+  final String? highlightColorKey;
   final bool audioActive;
   final bool audioPlaying;
   final bool audioLoading;
@@ -1074,6 +1095,9 @@ class _AyahCard extends StatelessWidget {
       selected: selected || audioActive,
       child: IqroCard(
         onTap: onSelected,
+        color: highlightColorKey == null
+            ? null
+            : ayahHighlightCardColor(context, highlightColorKey),
         borderColor: audioActive
             ? Theme.of(context).colorScheme.tertiary
             : selected

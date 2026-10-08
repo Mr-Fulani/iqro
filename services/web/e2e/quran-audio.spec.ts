@@ -1243,7 +1243,8 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
         prayer: checkInPayload.prayer,
         local_date: checkInPayload.local_date,
         timezone_name: checkInPayload.timezone_name,
-        pages: checkInPayload.pages,
+        pages: checkInPayload.amount,
+        metric: checkInPayload.metric, amount: String(checkInPayload.amount),
         reading_session_id: checkInPayload.session_id,
         revision: 1,
         client_updated_at: checkInPayload.client_updated_at,
@@ -1258,7 +1259,8 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     return route.fulfill({ status: 201, json: {} });
   });
 
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-08-28T09:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-08-28T09:00:01Z"));
   await page.goto(
     "/quran?surah=6&mode=after-prayer&prayer=fajr&prayer_date=2026-08-28"
       + "&prayer_timezone=Europe%2FIstanbul&prayer_target=2&prayer_credited=0",
@@ -1267,12 +1269,12 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
   const guided = page.getByTestId("prayer-reading-session");
   await expect(guided.getByRole("heading", { name: "После намаза Фаджр" })).toBeVisible();
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
-  await expect(guided.getByLabel("Фактически прочитано — страниц")).toHaveValue("1");
+  await expect(guided.getByLabel("Прочитано — стр.")).toHaveValue("1");
   await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("0:00");
   await page.clock.runFor(60_000);
   await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("1:00");
-  await expect.poll(() => automaticSessionPayloads.length).toBe(1);
-  await guided.getByLabel("Фактически прочитано — страниц").fill("3");
+  expect(automaticSessionPayloads).toHaveLength(0);
+  await guided.getByLabel("Прочитано — стр.").fill("3");
   await guided.getByRole("button", { name: "Завершить и сохранить" }).click();
 
   await expect(guided.getByText("Сохранено: 3 стр. после намаза Фаджр.")).toBeVisible();
@@ -1280,17 +1282,11 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     prayer: "fajr",
     local_date: "2026-08-28",
     timezone_name: "Europe/Istanbul",
-    pages: 3,
+    metric: "pages", amount: 3,
   });
-  expect(automaticSessionPayloads).toHaveLength(1);
-  expect(automaticSessionPayloads[0]).toMatchObject({
-    timezone_name: "Europe/Istanbul",
-    active_seconds: 60,
-    credited_pages: 0,
-    credited_ayahs: 0,
-  });
+  expect(automaticSessionPayloads).toHaveLength(0);
   await page.clock.runFor(60_000);
-  expect(automaticSessionPayloads).toHaveLength(1);
+  expect(automaticSessionPayloads).toHaveLength(0);
 
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

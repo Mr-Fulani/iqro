@@ -806,6 +806,8 @@ export type PrayerReadingPlan = {
 };
 
 export type PrayerReadingCheckIn = {
+  metric: ReadingGoalMetric;
+  amount: string;
   id: string;
   prayer: PrayerReadingPrayer;
   local_date: string;
@@ -820,6 +822,11 @@ export type PrayerReadingCheckIn = {
 };
 
 export type PrayerReadingDay = {
+  goal: ReadingGoal | null;
+  targets: Record<PrayerReadingPrayer, string>;
+  achieved_amount: string;
+  target_amount: string;
+  remaining_amount: string;
   local_date: string;
   timezone_name: string;
   plan: PrayerReadingPlan | null;
@@ -1366,14 +1373,20 @@ export class ApiClient {
       headers,
       ...(method === "GET" ? { cache: options.cache || "no-cache" } : {}),
     };
-    let response = await fetch(url, fetchOptions);
+    let activeFetchOptions = fetchOptions;
+    let response = await fetch(url, activeFetchOptions);
+
+    if (method === "GET" && response.status === 304) {
+      activeFetchOptions = { ...fetchOptions, cache: "no-store" };
+      response = await fetch(url, activeFetchOptions);
+    }
 
     // Refresh is handled by the same-origin BFF; the refresh credential is HttpOnly.
     if (response.status === 401 && this.session?.access_token && !path.includes("/auth/")) {
       const newToken = await this.performTokenRefresh();
       if (newToken) {
         headers.set("Authorization", `Bearer ${newToken}`);
-        response = await fetch(url, fetchOptions);
+        response = await fetch(url, activeFetchOptions);
       }
     }
 
@@ -1899,6 +1912,8 @@ export class ApiClient {
     local_date: string;
     timezone_name: string;
     pages?: number;
+    metric?: ReadingGoalMetric;
+    amount?: number;
   }): Promise<PrayerReadingCheckIn> {
     return this.request<PrayerReadingCheckIn>("/api/v1/me/prayer-reading-check-ins", {
       method: "POST",
@@ -1913,7 +1928,7 @@ export class ApiClient {
 
   public async updatePrayerReadingCheckIn(
     checkInId: string,
-    data: { pages: number; base_revision: number },
+    data: { pages?: number; metric?: ReadingGoalMetric; amount?: number; base_revision: number },
   ): Promise<PrayerReadingCheckIn> {
     return this.request<PrayerReadingCheckIn>(
       `/api/v1/me/prayer-reading-check-ins/${encodeURIComponent(checkInId)}`,

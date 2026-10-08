@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { SocialProfile } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
@@ -18,7 +19,7 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
       <MobileDisclosure title={t("footer.aboutLinks")} className="mobile-footer-details">
         <div className="footer-content">
           <div className="footer-brand">
-            <span className="brand-mark sm">Q</span>
+            <Image src="/iqro-wax-seal.png" alt="" width={40} height={40} sizes="40px" className="brand-logo brand-logo-sm" />
             <p>
               <strong>IQRO</strong> — {t("brand.subtitle")}. {t("footer.description")}
             </p>

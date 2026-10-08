@@ -14,6 +14,7 @@ from quran_backend.modules.core.models import BaseModel
 class SyncEntityType(models.TextChoices):
     READING_POSITION = "reading_position", "Reading position"
     BOOKMARK = "bookmark", "Bookmark"
+    AYAH_ANNOTATION = "ayah_annotation", "Ayah annotation"
     REMINDER = "reminder", "Reminder"
 
 
@@ -163,6 +164,73 @@ class Bookmark(BaseModel):
             raise ValidationError({"page": "Page must belong to the selected Quran edition."})
         ayah = self.ayah
         if ayah is not None and ayah.surah.edition_version.edition_id != self.edition_id:
+            raise ValidationError({"ayah": "Ayah must belong to the selected Quran edition."})
+        device = self.device
+        if device is not None and device.user_id != self.user_id:
+            raise ValidationError({"device": "Device must belong to the same user."})
+
+
+class AyahAnnotation(BaseModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ayah_annotations",
+    )
+    edition = models.ForeignKey(
+        "quran.QuranEdition",
+        on_delete=models.PROTECT,
+        related_name="ayah_annotations",
+    )
+    page = models.ForeignKey(
+        "quran.MushafPage",
+        on_delete=models.PROTECT,
+        related_name="ayah_annotations",
+        null=True,
+        blank=True,
+    )
+    ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        related_name="annotations",
+    )
+    color_key = models.CharField(max_length=32, default="lime")
+    note = models.TextField(blank=True, max_length=2000)
+    client_updated_at = models.DateTimeField()
+    revision = models.PositiveBigIntegerField(default=1)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    device = models.ForeignKey(
+        "accounts.Device",
+        on_delete=models.SET_NULL,
+        related_name="ayah_annotations",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "reading_ayah_annotation"
+        ordering = ["-updated_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(revision__gte=1),
+                name="reading_annotation_revision_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "deleted_at"],
+                name="reading_annot_user_del_idx",
+            ),
+            models.Index(
+                fields=["user", "edition", "ayah"],
+                name="reading_annot_user_ayah_idx",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.page is not None and self.page.edition_version.edition_id != self.edition_id:
+            raise ValidationError({"page": "Page must belong to the selected Quran edition."})
+        if self.ayah.surah.edition_version.edition_id != self.edition_id:
             raise ValidationError({"ayah": "Ayah must belong to the selected Quran edition."})
         device = self.device
         if device is not None and device.user_id != self.user_id:
@@ -698,7 +766,7 @@ class PrayerReadingCheckIn(BaseModel):
                 name="prayer_reading_check_in_daily_prayer_unique",
             ),
             models.CheckConstraint(
-                condition=models.Q(pages__gte=1, pages__lte=604),
+                condition=models.Q(pages__gte=0, pages__lte=604),
                 name="prayer_reading_check_in_pages_range",
             ),
             models.CheckConstraint(

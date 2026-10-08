@@ -972,6 +972,26 @@ class QuranRepository {
     return rows.isNotEmpty;
   }
 
+  Future<Map<String, Object?>?> annotationDetails(
+    int surah,
+    int ayah, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final rows = await _database.database.query(
+      'ayah_annotations',
+      where:
+          'owner_id = ? AND edition = ? AND surah = ? AND ayah = ? '
+          'AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId, edition, surah, ayah],
+      orderBy: 'updated_at DESC',
+      limit: 1,
+    );
+    _database.ensureCurrent(scope);
+    return rows.firstOrNull;
+  }
+
   Future<bool> toggleBookmark(
     int surah,
     int ayah, {
@@ -1005,8 +1025,8 @@ class QuranRepository {
           );
           await transaction.delete(
             'outbox',
-            where: 'owner_id = ? AND entity_id = ?',
-            whereArgs: <Object?>[scope.userId, id],
+            where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+            whereArgs: <Object?>[scope.userId, 'bookmark', id],
           );
         } else {
           await transaction.update(
@@ -1056,7 +1076,6 @@ class QuranRepository {
       'surah_number': surah,
       'ayah_number': ayah,
       'page_number': ?page,
-      'color_key': 'emerald',
     };
     await _database.database.transaction((transaction) async {
       _database.ensureCurrent(scope);
@@ -1093,6 +1112,92 @@ class QuranRepository {
     return true;
   }
 
+  Future<void> updateAyahAnnotation(
+    int surah,
+    int ayah, {
+    int? page,
+    required String note,
+    required String colorKey,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final rows = await _database.database.query(
+      'ayah_annotations',
+      where: 'owner_id = ? AND edition = ? AND surah = ? AND ayah = ?',
+      whereArgs: <Object?>[scope.userId, edition, surah, ayah],
+      orderBy: 'updated_at DESC',
+      limit: 1,
+    );
+    _database.ensureCurrent(scope);
+    final now = DateTime.now().toUtc();
+    final normalizedNote = note.trim();
+    final normalizedColor =
+        const <String>{
+          'yellow',
+          'pink',
+          'lime',
+          'blue',
+          'lavender',
+        }.contains(colorKey)
+        ? colorKey
+        : 'lime';
+    final id = rows.isEmpty ? _uuid.v7() : rows.single['id']! as String;
+    final revision = rows.isEmpty
+        ? 0
+        : (rows.single['server_revision'] as num?)?.toInt() ?? 0;
+    final operationId = _uuid.v4();
+    final payload = <String, Object?>{
+      'edition_code': edition,
+      'surah_number': surah,
+      'ayah_number': ayah,
+      'page_number': ?page,
+      'color_key': normalizedColor,
+      'note': normalizedNote,
+    };
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      await transaction.insert('ayah_annotations', <String, Object?>{
+        'owner_id': scope.userId,
+        'id': id,
+        'edition': edition,
+        'surah': surah,
+        'ayah': ayah,
+        'page': page,
+        'color_key': normalizedColor,
+        'note': normalizedNote,
+        'server_revision': revision,
+        'is_deleted': 0,
+        'updated_at': now.toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await transaction.delete(
+        'outbox',
+        where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+        whereArgs: <Object?>[scope.userId, 'ayah_annotation', id],
+      );
+      await transaction.insert(
+        'outbox',
+        _outboxRow(
+          operationId: operationId,
+          entityId: id,
+          ownerId: scope.userId,
+          now: now,
+          entityType: 'ayah_annotation',
+          body: <String, Object?>{
+            'operation_id': operationId,
+            'entity_type': 'ayah_annotation',
+            'entity_id': id,
+            'action': 'upsert',
+            'base_revision': revision,
+            'client_updated_at': now.toIso8601String(),
+            'payload': payload,
+          },
+        ),
+      );
+    });
+    _database.ensureCurrent(scope);
+  }
+
   Future<List<Map<String, Object?>>> bookmarks({
     AccountScopeSnapshot? accountScope,
   }) async {
@@ -1108,17 +1213,33 @@ class QuranRepository {
     return rows;
   }
 
+  Future<List<Map<String, Object?>>> ayahAnnotations({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final rows = await _database.database.query(
+      'ayah_annotations',
+      where: 'owner_id = ? AND edition = ? AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId, edition],
+      orderBy: 'updated_at DESC',
+    );
+    _database.ensureCurrent(scope);
+    return rows;
+  }
+
   Map<String, Object?> _outboxRow({
     required String operationId,
     required String entityId,
     required String ownerId,
     required DateTime now,
+    String entityType = 'bookmark',
     required Map<String, Object?> body,
   }) {
     return <String, Object?>{
       'owner_id': ownerId,
       'operation_id': operationId,
-      'entity_type': 'bookmark',
+      'entity_type': entityType,
       'entity_id': entityId,
       'payload': jsonEncode(body),
       'attempts': 0,

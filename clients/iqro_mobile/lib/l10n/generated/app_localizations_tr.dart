@@ -30,7 +30,75 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bookmarksLoadError => 'Yer işaretleri yüklenemedi';
 
   @override
+  String get notes => 'Notlar';
+
+  @override
+  String get emptyNotes => 'Henüz not yok. Mushaf\'ta bir ayete not ekleyin.';
+
+  @override
+  String get addNote => 'Not ekle';
+
+  @override
+  String get editNote => 'Notu düzenle';
+
+  @override
+  String get noteHint => 'Bu ayet hakkında bir not yazın';
+
+  @override
+  String get noteLabel => 'NOTUNUZ';
+
+  @override
+  String noteWordCount(int count) {
+    return 'Kelime: $count';
+  }
+
+  @override
+  String get removeNote => 'Notu sil';
+
+  @override
+  String get noteSaved => 'Not kaydedildi';
+
+  @override
+  String get noteRemoved => 'Not silindi';
+
+  @override
+  String get highlightAyah => 'Vurgula';
+
+  @override
+  String get chooseHighlightColor => 'Vurgu rengi seç';
+
+  @override
+  String get highlightColorEmerald => 'Zümrüt';
+
+  @override
+  String get highlightColorYellow => 'Sarı';
+
+  @override
+  String get highlightColorPink => 'Pembe';
+
+  @override
+  String get highlightColorLime => 'Limon';
+
+  @override
+  String get highlightColorBlue => 'Mavi';
+
+  @override
+  String get highlightColorLavender => 'Lavanta';
+
+  @override
   String get repeatSelectedAyah => 'Seçili ayeti tekrarla';
+
+  @override
+  String get copyAyah => 'Ayeti kopyala';
+
+  @override
+  String get shareAyah => 'Ayeti paylaş';
+
+  @override
+  String get copied => 'Ayet kopyalandı';
+
+  @override
+  String get copyAyahFailed => 'Ayet kopyalanamadı';
 
   @override
   String get mushafFitWidth => 'Genişliğe sığdır';

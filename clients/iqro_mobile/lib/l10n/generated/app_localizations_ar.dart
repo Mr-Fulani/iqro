@@ -30,7 +30,75 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bookmarksLoadError => 'تعذر تحميل العلامات المرجعية';
 
   @override
+  String get notes => 'ملاحظات';
+
+  @override
+  String get emptyNotes => 'لا توجد ملاحظات بعد. أضف ملاحظة إلى آية في المصحف.';
+
+  @override
+  String get addNote => 'إضافة ملاحظة';
+
+  @override
+  String get editNote => 'تعديل الملاحظة';
+
+  @override
+  String get noteHint => 'اكتب ملاحظة حول هذه الآية';
+
+  @override
+  String get noteLabel => 'ملاحظتك';
+
+  @override
+  String noteWordCount(int count) {
+    return 'عدد الكلمات: $count';
+  }
+
+  @override
+  String get removeNote => 'حذف الملاحظة';
+
+  @override
+  String get noteSaved => 'تم حفظ الملاحظة';
+
+  @override
+  String get noteRemoved => 'تم حذف الملاحظة';
+
+  @override
+  String get highlightAyah => 'تمييز';
+
+  @override
+  String get chooseHighlightColor => 'اختر لون التمييز';
+
+  @override
+  String get highlightColorEmerald => 'زمردي';
+
+  @override
+  String get highlightColorYellow => 'أصفر';
+
+  @override
+  String get highlightColorPink => 'وردي';
+
+  @override
+  String get highlightColorLime => 'ليموني';
+
+  @override
+  String get highlightColorBlue => 'أزرق';
+
+  @override
+  String get highlightColorLavender => 'لافندر';
+
+  @override
   String get repeatSelectedAyah => 'تكرار الآية المحددة';
+
+  @override
+  String get copyAyah => 'نسخ الآية';
+
+  @override
+  String get shareAyah => 'مشاركة الآية';
+
+  @override
+  String get copied => 'تم نسخ الآية';
+
+  @override
+  String get copyAyahFailed => 'تعذّر نسخ الآية';
 
   @override
   String get mushafFitWidth => 'ملاءمة العرض';

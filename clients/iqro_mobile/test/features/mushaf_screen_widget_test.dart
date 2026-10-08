@@ -34,6 +34,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.more_horiz));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Заметки'), findsOneWidget);
       await tester.tap(find.text('Закладки'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

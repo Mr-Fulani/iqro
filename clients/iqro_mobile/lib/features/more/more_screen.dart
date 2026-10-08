@@ -134,6 +134,12 @@ class MoreToolsGrid extends StatelessWidget {
         color: context.iqroColors.panelSoft,
         onTap: () => context.push('/favorites'),
       ),
+      _ToolCard(
+        icon: Icons.note_alt_outlined,
+        title: context.l10n.notes,
+        color: context.iqroColors.panelSoft,
+        onTap: () => context.push('/notes'),
+      ),
     ],
   );
 }

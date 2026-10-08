@@ -108,9 +108,91 @@ void main() {
     AudioPlaybackChannel.mushaf,
     AudioPlaybackChannel.memorization,
   ]) {
-    testWidgets('app-shell player keeps ${channel.name} playback visible', (
-      tester,
-    ) async {
+    testWidgets(
+      'app-shell player restores listening instead of ${channel.name} playback',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(360, 800);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final controller = AudioController(engine: _MiniPlayerAudioEngine());
+        addTearDown(controller.dispose);
+        await controller.loadPlayback(
+          playback: const SurahPlayback(
+            track: _miniPlayerTrack,
+            segments: <AudioSegment>[],
+          ),
+          reciter: _miniPlayerReciter,
+          surahName: 'Listening session',
+          autoplay: false,
+        );
+        await controller.loadPlayback(
+          playback: const SurahPlayback(
+            track: _miniPlayerTrack,
+            segments: <AudioSegment>[],
+          ),
+          reciter: _miniPlayerReciter,
+          channel: channel,
+          surahName: 'Al-Baqara',
+          autoplay: false,
+        );
+        final router = GoRouter(
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/',
+              builder: (context, state) => const Scaffold(
+                body: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: IqroMiniPlayer(),
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              audioControllerProvider.overrideWith((ref) => controller),
+              appConfigProvider.overrideWithValue(
+                const AppConfig(
+                  apiBaseUrl: 'https://media.example.test',
+                  fallbackDownloadUrl: 'https://iqro.forum',
+                  environment: 'local',
+                ),
+              ),
+              recitersProvider.overrideWith(
+                (ref) async => <Reciter>[_miniPlayerReciter],
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('mini-player-expand')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Al-Baqara'), findsNothing);
+        expect(find.text('Listening session'), findsOneWidget);
+        expect(controller.state.channel, channel);
+        await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
+        await tester.pumpAndSettle();
+        expect(controller.state.channel, AudioPlaybackChannel.listening);
+        expect(controller.state.surahName, 'Listening session');
+        expect(controller.state.playing, isTrue);
+      },
+    );
+  }
+
+  testWidgets(
+    'app-shell player restores listening instead of owned Dua audio',
+    (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(360, 800);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -124,9 +206,17 @@ void main() {
           segments: <AudioSegment>[],
         ),
         reciter: _miniPlayerReciter,
-        channel: channel,
-        surahName: 'Al-Baqara',
+        surahName: 'Listening session',
         autoplay: false,
+      );
+      await controller.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Morning remembrance',
+        artist: 'Reader',
+        album: 'IQRO · Dua',
+        contentType: 'dua',
+        owner: Object(),
       );
       final router = GoRouter(
         routes: <RouteBase>[
@@ -139,6 +229,16 @@ void main() {
               ),
             ),
           ),
+          GoRoute(
+            path: '/app',
+            builder: (context, state) =>
+                Scaffold(body: Text('tab=${state.uri.queryParameters['tab']}')),
+          ),
+          GoRoute(
+            path: '/player',
+            builder: (context, state) =>
+                const Scaffold(body: Text('player-route')),
+          ),
         ],
       );
       addTearDown(router.dispose);
@@ -147,15 +247,13 @@ void main() {
         ProviderScope(
           overrides: [
             audioControllerProvider.overrideWith((ref) => controller),
+            recitersProvider.overrideWith((ref) async => <Reciter>[]),
             appConfigProvider.overrideWithValue(
               const AppConfig(
                 apiBaseUrl: 'https://media.example.test',
                 fallbackDownloadUrl: 'https://iqro.forum',
                 environment: 'local',
               ),
-            ),
-            recitersProvider.overrideWith(
-              (ref) async => <Reciter>[_miniPlayerReciter],
             ),
           ],
           child: MaterialApp.router(
@@ -169,86 +267,23 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('mini-player-expand')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Al-Baqara'), findsOneWidget);
+      expect(find.text('Morning remembrance'), findsNothing);
+      expect(find.text('Listening session'), findsOneWidget);
+      expect(controller.state.standalone?.mediaItem.id, 'dua:1');
+      expect(find.text('Reader'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
       await tester.pumpAndSettle();
-      expect(controller.state.channel, channel);
+      expect(controller.state.standalone, isNull);
+      expect(controller.state.channel, AudioPlaybackChannel.listening);
       expect(controller.state.playing, isTrue);
-    });
-  }
+      expect(find.text('tab=3'), findsNothing);
 
-  testWidgets('app-shell player controls owned Dua audio after leaving Dua', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(360, 800);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-
-    final controller = AudioController(engine: _MiniPlayerAudioEngine());
-    addTearDown(controller.dispose);
-    await controller.loadStandalone(
-      id: 'dua:1',
-      url: 'https://media.example.test/dua/1.mp3',
-      title: 'Morning remembrance',
-      artist: 'Reader',
-      album: 'IQRO · Dua',
-      contentType: 'dua',
-      owner: Object(),
-    );
-    final router = GoRouter(
-      routes: <RouteBase>[
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const Scaffold(
-            body: Align(
-              alignment: Alignment.bottomCenter,
-              child: IqroMiniPlayer(),
-            ),
-          ),
-        ),
-        GoRoute(
-          path: '/app',
-          builder: (context, state) =>
-              Scaffold(body: Text('tab=${state.uri.queryParameters['tab']}')),
-        ),
-        GoRoute(
-          path: '/dua',
-          builder: (context, state) => const Scaffold(body: Text('dua-route')),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          audioControllerProvider.overrideWith((ref) => controller),
-          recitersProvider.overrideWith((ref) async => <Reciter>[]),
-        ],
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('mini-player-expand')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Morning remembrance'), findsOneWidget);
-    expect(find.text('Reader'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
-    await tester.pumpAndSettle();
-    expect(controller.state.standalone?.playing, isFalse);
-    expect(find.text('tab=3'), findsNothing);
-
-    await tester.tap(find.text('Morning remembrance'));
-    await tester.pumpAndSettle();
-    expect(find.text('dua-route'), findsOneWidget);
-    expect(controller.state.standalone?.mediaItem.id, 'dua:1');
-  });
+      await tester.tap(find.text('Listening session'));
+      await tester.pumpAndSettle();
+      expect(find.text('player-route'), findsOneWidget);
+      expect(controller.state.surahName, 'Listening session');
+    },
+  );
 }
 
 const _miniPlayerTrack = AudioTrack(
