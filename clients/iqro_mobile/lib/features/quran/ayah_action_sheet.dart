@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
@@ -1063,7 +1064,7 @@ class _ContentSection extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(icon, size: 20),
+              IqroIcon(icon, size: 20),
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
@@ -1368,7 +1369,7 @@ class _ActionTile extends StatelessWidget {
               child: ScaleTransition(scale: curved, child: child),
             );
           },
-          child: Icon(
+          child: IqroIcon(
             icon,
             key: ValueKey<IconData>(icon),
             color: foreground,

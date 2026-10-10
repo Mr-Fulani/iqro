@@ -1,0 +1,527 @@
+{
+  "schema_version": 1,
+  "topics": [
+    {
+      "id": "morning",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        27
+      ],
+      "title": {
+        "ru": "Утренние азкары",
+        "en": "Morning adhkar",
+        "ar": "أذكار الصباح",
+        "tr": "Sabah zikirleri"
+      },
+      "description": {
+        "ru": "Поминание Аллаха утром",
+        "en": "Remembrance in the morning",
+        "ar": "ذكر الله في الصباح",
+        "tr": "Sabah Allah’ı anma"
+      },
+      "entry_numbers": [
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        98
+      ]
+    },
+    {
+      "id": "evening",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        27
+      ],
+      "title": {
+        "ru": "Вечерние азкары",
+        "en": "Evening adhkar",
+        "ar": "أذكار المساء",
+        "tr": "Akşam zikirleri"
+      },
+      "description": {
+        "ru": "Поминание Аллаха вечером",
+        "en": "Remembrance in the evening",
+        "ar": "ذكر الله في المساء",
+        "tr": "Akşam Allah’ı anma"
+      },
+      "entry_numbers": [
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        96,
+        97,
+        98
+      ]
+    },
+    {
+      "id": "after-prayer",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        25
+      ],
+      "title": {
+        "ru": "После намаза",
+        "en": "After prayer",
+        "ar": "أذكار بعد الصلاة",
+        "tr": "Namaz sonrası"
+      },
+      "description": {
+        "ru": "Азкары после завершения намаза",
+        "en": "Adhkar after completing prayer",
+        "ar": "الأذكار بعد إتمام الصلاة",
+        "tr": "Namazdan sonra zikirler"
+      }
+    },
+    {
+      "id": "sleep",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        1,
+        28,
+        29,
+        30,
+        31
+      ],
+      "title": {
+        "ru": "Сон и пробуждение",
+        "en": "Sleep and waking",
+        "ar": "النوم والاستيقاظ",
+        "tr": "Uyku ve uyanma"
+      },
+      "description": {
+        "ru": "Перед сном, ночью и при пробуждении",
+        "en": "Before sleep, at night and on waking",
+        "ar": "قبل النوم وفي الليل وعند الاستيقاظ",
+        "tr": "Uyumadan önce, gece ve uyanırken"
+      }
+    },
+    {
+      "id": "prayer",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        26,
+        32,
+        33
+      ],
+      "title": {
+        "ru": "Намаз и мечеть",
+        "en": "Prayer and mosque",
+        "ar": "الصلاة والمسجد",
+        "tr": "Namaz ve cami"
+      },
+      "description": {
+        "ru": "Азан, мечеть, намаз, витр и истихара",
+        "en": "Adhan, mosque, prayer, witr and istikhara",
+        "ar": "الأذان والمسجد والصلاة والوتر والاستخارة",
+        "tr": "Ezan, cami, namaz, vitir ve istihare"
+      }
+    },
+    {
+      "id": "purification",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "title": {
+        "ru": "Очищение и одежда",
+        "en": "Purification and clothing",
+        "ar": "الطهارة واللباس",
+        "tr": "Temizlik ve giyim"
+      },
+      "description": {
+        "ru": "Омовение, туалет и одевание",
+        "en": "Ablution, bathroom and getting dressed",
+        "ar": "الوضوء والخلاء وارتداء الملابس",
+        "tr": "Abdest, tuvalet ve giyinme"
+      }
+    },
+    {
+      "id": "home",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        10,
+        11,
+        98
+      ],
+      "title": {
+        "ru": "Дом и повседневные дела",
+        "en": "Home and daily life",
+        "ar": "المنزل والحياة اليومية",
+        "tr": "Ev ve günlük yaşam"
+      },
+      "description": {
+        "ru": "Вход и выход из дома, посещение рынка",
+        "en": "Entering and leaving home, visiting the market",
+        "ar": "دخول المنزل والخروج منه ودخول السوق",
+        "tr": "Eve giriş, evden çıkış ve çarşı"
+      }
+    },
+    {
+      "id": "food",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76
+      ],
+      "title": {
+        "ru": "Еда и пост",
+        "en": "Food and fasting",
+        "ar": "الطعام والصيام",
+        "tr": "Yemek ve oruç"
+      },
+      "description": {
+        "ru": "Приём пищи, угощение и разговение",
+        "en": "Meals, hospitality and breaking the fast",
+        "ar": "الطعام والضيافة والإفطار",
+        "tr": "Yemek, ikram ve iftar"
+      }
+    },
+    {
+      "id": "family",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        47,
+        48,
+        79,
+        80,
+        81
+      ],
+      "title": {
+        "ru": "Семья и дети",
+        "en": "Family and children",
+        "ar": "الأسرة والأطفال",
+        "tr": "Aile ve çocuklar"
+      },
+      "description": {
+        "ru": "Брак, рождение и защита детей",
+        "en": "Marriage, birth and protection of children",
+        "ar": "الزواج والولادة وحماية الأطفال",
+        "tr": "Evlilik, doğum ve çocukları koruma"
+      }
+    },
+    {
+      "id": "social",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        77,
+        78,
+        84,
+        85,
+        86,
+        87,
+        89,
+        90,
+        91,
+        93,
+        108,
+        109,
+        112,
+        113,
+        114,
+        132
+      ],
+      "title": {
+        "ru": "Общение с людьми",
+        "en": "Meeting people",
+        "ar": "التعامل مع الناس",
+        "tr": "İnsanlarla ilişkiler"
+      },
+      "description": {
+        "ru": "Приветствия, собрания и благодарность",
+        "en": "Greetings, gatherings and gratitude",
+        "ar": "السلام والمجالس والشكر",
+        "tr": "Selamlaşma, toplantılar ve teşekkür"
+      }
+    },
+    {
+      "id": "travel",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        95,
+        96,
+        97,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105
+      ],
+      "title": {
+        "ru": "Путешествие",
+        "en": "Travel",
+        "ar": "السفر",
+        "tr": "Yolculuk"
+      },
+      "description": {
+        "ru": "Дорога, остановки и возвращение",
+        "en": "Journeys, stops and returning home",
+        "ar": "الطريق والنزول والعودة",
+        "tr": "Yol, konaklama ve dönüş"
+      }
+    },
+    {
+      "id": "hardship",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        34,
+        35,
+        41,
+        43,
+        46,
+        82
+      ],
+      "title": {
+        "ru": "Тревога и трудности",
+        "en": "Worry and hardship",
+        "ar": "الهم والصعوبات",
+        "tr": "Kaygı ve zorluklar"
+      },
+      "description": {
+        "ru": "Грусть, гнев, долги и трудные обстоятельства",
+        "en": "Sorrow, anger, debt and difficult circumstances",
+        "ar": "الحزن والغضب والدين والظروف الصعبة",
+        "tr": "Üzüntü, öfke, borç ve zor durumlar"
+      }
+    },
+    {
+      "id": "protection",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        36,
+        37,
+        38,
+        39,
+        40,
+        42,
+        45,
+        88,
+        92,
+        94,
+        110,
+        111,
+        125,
+        126,
+        128
+      ],
+      "title": {
+        "ru": "Защита",
+        "en": "Protection",
+        "ar": "الحماية",
+        "tr": "Korunma"
+      },
+      "description": {
+        "ru": "Страх, наущения, сглаз и защита от зла",
+        "en": "Fear, whispers, the evil eye and protection from harm",
+        "ar": "الخوف والوسوسة والعين والحماية من الشر",
+        "tr": "Korku, vesvese, nazar ve kötülükten korunma"
+      }
+    },
+    {
+      "id": "health",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        49,
+        50,
+        51,
+        83,
+        124
+      ],
+      "title": {
+        "ru": "Болезнь и здоровье",
+        "en": "Illness and health",
+        "ar": "المرض والصحة",
+        "tr": "Hastalık ve sağlık"
+      },
+      "description": {
+        "ru": "Боль, болезнь и посещение больного",
+        "en": "Pain, illness and visiting the sick",
+        "ar": "الألم والمرض وعيادة المريض",
+        "tr": "Ağrı, hastalık ve hasta ziyareti"
+      }
+    },
+    {
+      "id": "loss",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "title": {
+        "ru": "Утрата и соболезнования",
+        "en": "Loss and condolences",
+        "ar": "الفقد والتعزية",
+        "tr": "Kayıp ve taziye"
+      },
+      "description": {
+        "ru": "Несчастье, смерть, погребение и посещение могил",
+        "en": "Calamity, death, burial and visiting graves",
+        "ar": "المصيبة والموت والدفن وزيارة القبور",
+        "tr": "Musibet, ölüm, defin ve kabir ziyareti"
+      }
+    },
+    {
+      "id": "nature",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67
+      ],
+      "title": {
+        "ru": "Природа и погода",
+        "en": "Nature and weather",
+        "ar": "الطبيعة والطقس",
+        "tr": "Doğa ve hava"
+      },
+      "description": {
+        "ru": "Дождь, ветер, гром и молодой месяц",
+        "en": "Rain, wind, thunder and the new moon",
+        "ar": "المطر والرياح والرعد والهلال",
+        "tr": "Yağmur, rüzgâr, gök gürültüsü ve hilal"
+      }
+    },
+    {
+      "id": "pilgrimage",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        127
+      ],
+      "title": {
+        "ru": "Хадж и умра",
+        "en": "Hajj and umrah",
+        "ar": "الحج والعمرة",
+        "tr": "Hac ve umre"
+      },
+      "description": {
+        "ru": "Ихрам, таваф, Арафат и другие обряды",
+        "en": "Ihram, tawaf, Arafat and other rites",
+        "ar": "الإحرام والطواف وعرفة وسائر المناسك",
+        "tr": "İhram, tavaf, Arafat ve diğer ibadetler"
+      }
+    },
+    {
+      "id": "remembrance",
+      "collection": "hisn-al-muslim",
+      "chapter_numbers": [
+        44,
+        106,
+        107,
+        122,
+        123,
+        129,
+        130,
+        131
+      ],
+      "title": {
+        "ru": "Зикр и покаяние",
+        "en": "Remembrance and repentance",
+        "ar": "الذكر والتوبة",
+        "tr": "Zikir ve tövbe"
+      },
+      "description": {
+        "ru": "Истигфар, прославление Аллаха и салават",
+        "en": "Seeking forgiveness, praising Allah and salawat",
+        "ar": "الاستغفار وتسبيح الله والصلاة على النبي",
+        "tr": "İstiğfar, Allah’ı tesbih ve salavat"
+      }
+    },
+    {
+      "id": "quran",
+      "collection": "supplications-from-quran",
+      "chapter_numbers": [],
+      "title": {
+        "ru": "Ду’а из Корана",
+        "en": "Duas from the Quran",
+        "ar": "أدعية من القرآن",
+        "tr": "Kur’an’dan dualar"
+      },
+      "description": {
+        "ru": "Отдельный сборник коранических ду’а",
+        "en": "A separate collection of Quranic supplications",
+        "ar": "مجموعة مستقلة من الأدعية القرآنية",
+        "tr": "Kur’an dualarından ayrı bir derleme"
+      }
+    }
+  ]
+}

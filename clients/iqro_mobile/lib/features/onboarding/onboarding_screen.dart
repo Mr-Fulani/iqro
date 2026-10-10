@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 
@@ -173,22 +175,7 @@ class _Logo extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: context.iqroColors.ink,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Text(
-            'اق',
-            textDirection: TextDirection.rtl,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.white),
-          ),
-        ),
+        const IqroAnimatedLogo(size: 42),
         const SizedBox(width: 10),
         Text(
           locale == 'ar' ? 'إقرأ' : 'IQRO',
@@ -363,7 +350,7 @@ class _GoalStep extends StatelessWidget {
                       : null,
                   child: Row(
                     children: <Widget>[
-                      Icon(
+                      IqroIcon(
                         goal.$2,
                         color: Theme.of(context).colorScheme.primary,
                       ),

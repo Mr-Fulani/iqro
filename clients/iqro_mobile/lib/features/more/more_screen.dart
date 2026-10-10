@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
@@ -67,7 +68,7 @@ class MoreScreen extends ConsumerWidget {
               borderColor: Colors.transparent,
               child: Row(
                 children: <Widget>[
-                  Icon(
+                  IqroIcon(
                     Icons.auto_stories_outlined,
                     color: context.iqroColors.gold,
                   ),

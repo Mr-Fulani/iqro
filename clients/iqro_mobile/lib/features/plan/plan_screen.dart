@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/widgets/home_widget_pinning.dart';
@@ -562,7 +563,7 @@ class _ContinueReadingCard extends StatelessWidget {
     onTap: onTap,
     child: Row(
       children: <Widget>[
-        Icon(
+        IqroIcon(
           Icons.menu_book_outlined,
           color: Theme.of(context).colorScheme.primary,
         ),

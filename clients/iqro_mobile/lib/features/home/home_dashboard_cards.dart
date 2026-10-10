@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../plan/plan_repository.dart';
@@ -172,7 +173,7 @@ class HomeContinueReadingCard extends StatelessWidget {
                     MediaQuery.textScalerOf(context).scale(16) > 20;
                 final summary = Row(
                   children: [
-                    Icon(
+                    IqroIcon(
                       Icons.menu_book_outlined,
                       color: theme.colorScheme.primary,
                       size: 36,
@@ -214,7 +215,7 @@ class HomeContinueReadingCard extends StatelessWidget {
                         : theme.colorScheme.onPrimary,
                   ),
                   onPressed: onTap,
-                  icon: Icon(
+                  icon: IqroIcon(
                     error ? Icons.refresh_rounded : Icons.menu_book_outlined,
                     size: 20,
                   ),
@@ -367,7 +368,7 @@ class HomeFeatureCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
-          Icon(icon, color: theme.colorScheme.primary, size: 26),
+          IqroIcon(icon, color: theme.colorScheme.primary, size: 26),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -413,7 +414,7 @@ class HomeUtilityRow extends StatelessWidget {
     contentPadding: EdgeInsets.zero,
     minTileHeight: compact ? 48 : 72,
     horizontalTitleGap: 14,
-    leading: Icon(
+    leading: IqroIcon(
       icon,
       size: compact ? 24 : 28,
       color: Theme.of(context).colorScheme.primary,

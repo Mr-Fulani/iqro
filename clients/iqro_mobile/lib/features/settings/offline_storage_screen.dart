@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
@@ -198,7 +199,7 @@ class _OfflinePackageCard extends StatelessWidget {
                       : Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
+                child: IqroIcon(
                   package.isMushaf
                       ? Icons.menu_book_outlined
                       : Icons.headphones_outlined,

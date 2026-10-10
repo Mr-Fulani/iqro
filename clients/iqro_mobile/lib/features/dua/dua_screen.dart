@@ -6,13 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/design_system/iqro_action_grid.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'dua_presentation.dart';
 import 'dua_repository.dart';
+import 'dua_topics.dart';
+import 'dua_thematic_icon.dart';
 
 class DuaScreen extends ConsumerStatefulWidget {
   const DuaScreen({this.initialCollection, this.initialCategory, super.key});
@@ -28,6 +32,7 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
   final _searchController = TextEditingController();
   DuaCategoryIdentity? _categoryIdentity;
   String? _legacyCategorySlug;
+  DuaTopic? _topic;
   var _query = '';
   var _submittedQuery = '';
   Timer? _searchDebounce;
@@ -68,69 +73,147 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
         : categories.valueOrNull
               ?.where((item) => item.identity == activeCategoryIdentity)
               .firstOrNull;
-    final entries = activeCategoryIdentity == null
+    final sourceEntries = activeCategoryIdentity == null
         ? null
         : ref.watch(duaEntriesByCategoryProvider(activeCategoryIdentity));
+    final entries = _topic == null
+        ? sourceEntries
+        : ref.watch(duaEntriesByTopicProvider(_topic!.id));
+    final availableTopics = duaTopics;
+    final locale = Localizations.localeOf(context).languageCode;
     final searchRequest = (
       query: _submittedQuery,
       collection: null as String?,
       category: null as String?,
     );
     final searchResults =
-        activeCategoryIdentity == null && _submittedQuery.length >= 2
+        activeCategoryIdentity == null &&
+            _topic == null &&
+            _submittedQuery.length >= 2
         ? ref.watch(duaSearchProvider(searchRequest))
         : null;
     return PopScope(
-      canPop: activeCategoryIdentity == null,
+      canPop: activeCategoryIdentity == null && _topic == null,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && activeCategoryIdentity != null) _openCategory(null);
+        if (!didPop) _goBack();
       },
       child: Scaffold(
         appBar: IqroTopBar(
-          title: category?.title ?? context.l10n.dua,
-          subtitle: category == null
+          title:
+              _topic != null &&
+                  (category == null || _topic!.entryNumbers != null)
+              ? _topic!.title(locale)
+              : category?.title ?? context.l10n.dua,
+          subtitle:
+              _topic != null &&
+                  (category == null || _topic!.entryNumbers != null)
+              ? _topic!.description(locale)
+              : category == null
               ? context.l10n.duaSubtitle
               : category.collectionTitle.isEmpty
               ? category.collection
               : category.collectionTitle,
-          leading: activeCategoryIdentity == null
+          leading: activeCategoryIdentity == null && _topic == null
               ? null
               : IconButton(
                   tooltip: context.l10n.back,
-                  onPressed: () => _openCategory(null),
+                  onPressed: _goBack,
                   icon: const Icon(Icons.arrow_back),
                 ),
         ),
         body: IqroPage(
           scrollable: false,
-          child: activeCategoryIdentity == null
-              ? _DuaCatalog(
-                  categories: categories,
-                  searchResults: searchResults,
-                  searchPending:
-                      _query.length >= 2 && _query != _submittedQuery,
-                  query: _query,
-                  searchController: _searchController,
-                  onQueryChanged: _onRootQueryChanged,
-                  onOpen: _openCategory,
-                  onCategoriesRetry: () =>
-                      ref.invalidate(duaCategoriesProvider),
-                  onSearchRetry: () =>
-                      ref.invalidate(duaSearchProvider(searchRequest)),
-                )
-              : _EntryList(
-                  entries: entries!,
-                  query: _query,
-                  searchController: _searchController,
-                  onQueryChanged: (value) =>
-                      setState(() => _query = value.trim()),
-                  onRetry: () => ref.invalidate(
-                    duaEntriesByCategoryProvider(activeCategoryIdentity),
-                  ),
-                ),
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                key: ValueKey('dua-topic-selector-${_topic?.id ?? "all"}'),
+                initialValue: _topic?.id ?? '',
+                isExpanded: true,
+                decoration: InputDecoration(labelText: context.l10n.dua),
+                items: [
+                  DropdownMenuItem(value: '', child: Text(context.l10n.dua)),
+                  for (final topic in availableTopics)
+                    DropdownMenuItem(
+                      value: topic.id,
+                      child: Text(
+                        topic.title(locale),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  if (value.isEmpty) {
+                    _goBack();
+                  } else {
+                    _openTopic(
+                      duaTopics.singleWhere((topic) => topic.id == value),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: activeCategoryIdentity == null && _topic == null
+                    ? _DuaCatalog(
+                        categories: categories,
+                        searchResults: searchResults,
+                        searchPending:
+                            _query.length >= 2 && _query != _submittedQuery,
+                        query: _query,
+                        searchController: _searchController,
+                        onQueryChanged: _onRootQueryChanged,
+                        onOpen: _openCategory,
+                        onOpenTopic: _openTopic,
+                        onCategoriesRetry: () =>
+                            ref.invalidate(duaCategoriesProvider),
+                        onSearchRetry: () =>
+                            ref.invalidate(duaSearchProvider(searchRequest)),
+                      )
+                    : _EntryList(
+                        entries: entries!,
+                        query: _query,
+                        searchController: _searchController,
+                        onQueryChanged: (value) =>
+                            setState(() => _query = value.trim()),
+                        onRetry: () {
+                          if (_topic == null) {
+                            ref.invalidate(
+                              duaEntriesByCategoryProvider(
+                                activeCategoryIdentity!,
+                              ),
+                            );
+                          } else {
+                            for (final member
+                                in (categories.valueOrNull ?? <DuaCategory>[])
+                                    .where(_topic!.includesCategory)) {
+                              ref.invalidate(
+                                duaEntriesByCategoryProvider(member.identity),
+                              );
+                            }
+                            ref.invalidate(
+                              duaEntriesByTopicProvider(_topic!.id),
+                            );
+                          }
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _goBack() {
+    _openCategory(null);
+    setState(() => _topic = null);
+  }
+
+  void _openTopic(DuaTopic topic) {
+    _openCategory(null);
+    setState(() => _topic = topic);
   }
 
   void _openCategory(DuaCategory? category) {
@@ -169,6 +252,7 @@ class _DuaCatalog extends StatelessWidget {
     required this.onQueryChanged,
     required this.onOpen,
     required this.onCategoriesRetry,
+    required this.onOpenTopic,
     required this.onSearchRetry,
   });
 
@@ -179,6 +263,7 @@ class _DuaCatalog extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<DuaCategory> onOpen;
+  final ValueChanged<DuaTopic> onOpenTopic;
   final VoidCallback onCategoriesRetry;
   final VoidCallback onSearchRetry;
 
@@ -215,67 +300,42 @@ class _DuaCatalog extends StatelessWidget {
                     if (items.isEmpty) {
                       return _DuaEmpty(message: context.l10n.noDuaCategories);
                     }
-                    final showCollection =
-                        items.map((item) => item.collection).toSet().length > 1;
-                    return ListView.separated(
+                    final locale = Localizations.localeOf(context).languageCode;
+                    final topics = duaTopics
+                        .where((topic) => items.any(topic.includesCategory))
+                        .toList(growable: false);
+                    final other = items
+                        .where(
+                          (category) => !duaTopics.any(
+                            (topic) => topic.includesCategory(category),
+                          ),
+                        )
+                        .toList(growable: false);
+                    return SingleChildScrollView(
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
-                      itemCount: items.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final category = items[index];
-                        return IqroCard(
-                          color: index.isEven
-                              ? context.iqroColors.sand
-                              : context.iqroColors.lavender,
-                          borderColor: Colors.transparent,
-                          onTap: () => onOpen(category),
-                          child: Row(
-                            children: <Widget>[
-                              const Icon(Icons.auto_awesome_outlined),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      category.title,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleSmall,
-                                    ),
-                                    if (showCollection) ...<Widget>[
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        category.collectionTitle.isEmpty
-                                            ? category.collection
-                                            : category.collectionTitle,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.labelSmall,
-                                      ),
-                                    ],
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      context.l10n.duaCount(
-                                        category.entryCount,
-                                      ),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ],
+                      child: Column(
+                        children: [
+                          IqroActionGrid(
+                            children: [
+                              for (final topic in topics)
+                                _DuaTopicCard(
+                                  topic: topic,
+                                  locale: locale,
+                                  count: topic.entryCount(items),
+                                  onTap: () => onOpenTopic(topic),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right),
                             ],
                           ),
-                        );
-                      },
+                          for (final category in other) ...[
+                            const SizedBox(height: 12),
+                            IqroCard(
+                              onTap: () => onOpen(category),
+                              child: Text(category.title),
+                            ),
+                          ],
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -283,6 +343,46 @@ class _DuaCatalog extends StatelessWidget {
       ],
     );
   }
+}
+
+class _DuaTopicCard extends StatelessWidget {
+  const _DuaTopicCard({
+    required this.topic,
+    required this.locale,
+    required this.count,
+    required this.onTap,
+  });
+  final DuaTopic topic;
+  final String locale;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    key: ValueKey('dua-topic-${topic.id}'),
+    onTap: onTap,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DuaThematicIcon(topic: topic.id),
+        const SizedBox(height: 12),
+        Text(
+          topic.title(locale),
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          topic.description(locale),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.duaCount(count),
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+      ],
+    ),
+  );
 }
 
 class _EntryList extends StatelessWidget {
@@ -359,7 +459,30 @@ class _AsyncDuaEntries extends StatelessWidget {
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           itemCount: visible.length,
           separatorBuilder: (context, index) => const SizedBox(height: 10),
-          itemBuilder: (context, index) => _DuaEntryCard(entry: visible[index]),
+          itemBuilder: (context, index) {
+            final entry = visible[index];
+            final startsChapter =
+                index == 0 ||
+                visible[index - 1].collection != entry.collection ||
+                visible[index - 1].categorySlug != entry.categorySlug;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (startsChapter)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      top: 12,
+                      bottom: 10,
+                    ),
+                    child: Text(
+                      entry.categoryTitle,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                _DuaEntryCard(entry: entry),
+              ],
+            );
+          },
         );
       },
     );
@@ -373,69 +496,31 @@ class _DuaEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final preview = locale == 'ar' || entry.meaning.trim().isEmpty
+        ? entry.arabicText
+        : entry.meaning;
     return IqroCard(
       onTap: () => context.push(duaEntryRoute(entry), extra: entry),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  entry.categoryTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              Text(
-                '#${entry.sourceNumber}',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            entry.arabicText,
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontFamily: 'serif', height: 1.8),
+            '#${entry.sourceNumber}',
+            style: Theme.of(context).textTheme.labelLarge,
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              Icon(
-                entry.isEditoriallyVerified
-                    ? Icons.verified_outlined
-                    : Icons.menu_book_outlined,
-                size: 17,
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  entry.sourceLabel.isEmpty
-                      ? context.l10n.sourceUnavailable
-                      : entry.sourceLabel,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              if (entry.catalogVersionVerified &&
-                  entry.audio.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 8),
-                const Icon(Icons.headphones_outlined, size: 17),
-              ],
-              if (entry.repetitions > 1 ||
-                  entry.repetitionLabel.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 8),
-                const Icon(Icons.repeat, size: 17),
-              ],
-              const Icon(Icons.chevron_right),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              preview,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textDirection: locale == 'ar' ? TextDirection.rtl : null,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right),
         ],
       ),
     );
@@ -1478,7 +1563,7 @@ class _DuaSourceCard extends StatelessWidget {
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsetsDirectional.only(top: 4, bottom: 4),
-        leading: Icon(
+        leading: IqroIcon(
           verified ? Icons.verified_outlined : Icons.menu_book_outlined,
           color: Theme.of(context).colorScheme.primary,
         ),

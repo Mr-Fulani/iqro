@@ -1,9 +1,15 @@
+import 'dart:io';
+
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Android's media card belongs to the Audio tab, even while another section
 /// uses the app's shared decoder. Contextual audio never publishes its item.
 class ListeningMediaService extends BaseAudioHandler with SeekHandler {
-  ListeningMediaService();
+  ListeningMediaService({this.defaultArtwork});
+
+  final Uri? defaultArtwork;
 
   static ListeningMediaService? current;
 
@@ -13,11 +19,21 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
   Future<void> Function(Duration)? _seek;
 
   static Future<void> initialize() async {
+    final directory = await getApplicationSupportDirectory();
+    final artwork = File('${directory.path}/iqro-media-seal-v1.png');
+    if (!await artwork.exists()) {
+      final data = await rootBundle.load('assets/brand/iqro-media-logo.png');
+      await artwork.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+    }
     current = await AudioService.init<ListeningMediaService>(
-      builder: ListeningMediaService.new,
+      builder: () => ListeningMediaService(defaultArtwork: artwork.uri),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'forum.iqro.app.audio',
         androidNotificationChannelName: 'IQRO Quran audio',
+        androidNotificationIcon: 'drawable/iqro_status_icon',
         androidStopForegroundOnPause: false,
       ),
     );
@@ -51,6 +67,9 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     Duration position = Duration.zero,
     double speed = 1,
   }) {
+    if (item != null && item.artUri == null && defaultArtwork != null) {
+      item = item.copyWith(artUri: defaultArtwork);
+    }
     final previousItem = mediaItem.value;
     if (previousItem?.id != item?.id ||
         previousItem?.title != item?.title ||

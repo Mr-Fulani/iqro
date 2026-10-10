@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { DuaEntryList } from "@/components/DuaEntryList";
+import { DuaEntrySummaryList } from "@/components/DuaEntrySummaryList";
+import { DuaTopicSelector } from "@/components/DuaTopicSelector";
 import { DuaTopicIcon } from "@/components/DuaTopicIcon";
 import { localeTag, translate, type Locale } from "@/lib/i18n";
 import type { PublishedDuaCategoryData } from "@/lib/public-content";
@@ -71,6 +72,7 @@ export function DuaCategoryPage({
       </header>
 
       <section className="surface dua-topic-content">
+        <DuaTopicSelector />
         <div className="surface-head">
           <div>
             <p className="eyebrow">{translate(locale, "dua.eyebrow")}</p>
@@ -82,7 +84,7 @@ export function DuaCategoryPage({
             })}
           </span>
         </div>
-        <DuaEntryList entries={published.entries} headingLevel={3} />
+        <DuaEntrySummaryList entries={published.entries} locale={locale} />
         {published.collection?.source ? (
           <p className="dua-source-lead">
             {translate(locale, "dua.sourceEdition")}: {published.collection.source.title}.{" "}

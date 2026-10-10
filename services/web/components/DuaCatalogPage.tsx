@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DuaTopicIcon } from "./DuaTopicIcon";
+import { DuaTopicSelector } from "./DuaTopicSelector";
+import { duaTopics, topicCategories, topicEntryCount } from "../lib/dua-topics";
 import {
   api,
   DuaCategory,
@@ -63,6 +65,20 @@ export default function DuaPage({
     });
   }, [appliedQuery, categories, locale, selectedCollection]);
 
+  const visibleTopics = useMemo(() => {
+    const normalizedQuery = appliedQuery.toLocaleLowerCase(locale).trim();
+    return duaTopics.filter((topic) => {
+      if (selectedCollection && topic.collection !== selectedCollection) return false;
+      if (!topicCategories(topic, categories).length) return false;
+      return !normalizedQuery || topic.title[locale].toLocaleLowerCase(locale).includes(normalizedQuery)
+        || topic.description[locale].toLocaleLowerCase(locale).includes(normalizedQuery)
+        || topicCategories(topic, visibleCategories).length > 0;
+    });
+  }, [appliedQuery, categories, locale, selectedCollection, visibleCategories]);
+  const otherCategories = visibleCategories.filter(
+    (category) => !duaTopics.some((topic) => topicCategories(topic, [category]).length > 0),
+  );
+
   const summaryCollections = useMemo(
     () => selectedCollection
       ? collections.filter((item) => item.slug === selectedCollection)
@@ -93,11 +109,9 @@ export default function DuaPage({
       <section className="surface dua-hero">
         <div className="surface-head">
           <div>
-            <p className="eyebrow">{t("dua.eyebrow")}</p>
             <h1 className="surface-title">{t("dua.title")}</h1>
             <p className="surface-subtitle">{t("dua.description")}</p>
           </div>
-          <span className="dua-hero-icon" aria-hidden="true">🤲</span>
         </div>
 
         <div className="dua-catalog-summary">
@@ -123,6 +137,7 @@ export default function DuaPage({
       </section>
 
       <section className="surface dua-browser" aria-busy={catalogLoading}>
+        <DuaTopicSelector />
         <form className="dua-search" onSubmit={handleSearch}>
           <label className="sr-only" htmlFor="dua-collection-filter">
             {t("dua.collectionFilter")}
@@ -163,7 +178,23 @@ export default function DuaPage({
             <p>{t("dua.categoryFilter")}</p>
           </header>
           <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
-            {visibleCategories.map((category) => (
+            {visibleTopics.map((topic) => (
+              <Link
+                key={topic.id}
+                href={localizedPath(locale, `/dua/topics/${topic.id}`)}
+                className="dua-category-chip dua-thematic-card"
+                aria-label={t("dua.openTopic", { topic: topic.title[locale] })}
+              >
+                <DuaTopicIcon sourceNumber={topic.chapter_numbers[0] || 0} slug={topic.id} />
+                <span className="dua-category-title">{topic.title[locale]}</span>
+                <span className="dua-topic-description">{topic.description[locale]}</span>
+                <span className="dua-category-meta">
+                  <small>{t("dua.categoryEntryCount", { count: formatNumber(topicEntryCount(topic, categories)) })}</small>
+                  <span className="dua-category-arrow" aria-hidden="true">{locale === "ar" ? "←" : "→"}</span>
+                </span>
+              </Link>
+            ))}
+            {otherCategories.map((category) => (
               <Link
                 key={category.id}
                 href={localizedPath(
@@ -194,7 +225,7 @@ export default function DuaPage({
               </Link>
             ))}
           </div>
-          {!catalogLoading && visibleCategories.length === 0 ? (
+          {!catalogLoading && visibleTopics.length === 0 && otherCategories.length === 0 ? (
             <div className="dua-empty">
               <span aria-hidden="true">⌕</span>
               <p>{t("dua.noTopics")}</p>

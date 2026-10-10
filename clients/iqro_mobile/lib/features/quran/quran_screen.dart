@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
@@ -88,7 +89,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                         ),
                         ButtonSegment(
                           value: ReaderMode.mushaf,
-                          icon: const Icon(Icons.menu_book_outlined),
+                          icon: const IqroIcon(Icons.menu_book_outlined),
                           label: Text(context.l10n.mushafMode),
                         ),
                       ],
@@ -157,7 +158,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                       ),
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    child: Icon(
+                    child: IqroIcon(
                       preferences.readerMode == ReaderMode.text
                           ? Icons.format_list_bulleted
                           : Icons.menu_book_outlined,
@@ -351,7 +352,9 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                                 ? context.l10n.mushafPreviewDescription
                                 : context.l10n.mushafPublishedDescription,
                           ),
-                          secondary: const Icon(Icons.auto_stories_outlined),
+                          secondary: const IqroIcon(
+                            Icons.auto_stories_outlined,
+                          ),
                         ),
                   ],
                 ),

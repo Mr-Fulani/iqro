@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/design_system/iqro_icon.dart';
 import '../core/design_system/iqro_lazy_indexed_stack.dart';
 import '../core/design_system/iqro_widgets.dart';
 import '../features/audio/audio_screen.dart';
@@ -74,8 +75,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                   label: context.l10n.navHome,
                 ),
                 NavigationDestination(
-                  icon: const Icon(Icons.menu_book_outlined),
-                  selectedIcon: const Icon(Icons.menu_book),
+                  icon: const IqroIcon(Icons.menu_book_outlined),
+                  selectedIcon: const IqroIcon(Icons.menu_book),
                   label: context.l10n.navQuran,
                 ),
                 NavigationDestination(

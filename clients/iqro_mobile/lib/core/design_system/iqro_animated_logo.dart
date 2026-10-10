@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The existing launcher artwork, revealed once. No video, repeating ticker or
-/// generated replacement for the approved IQRO mark.
+/// The approved IQRO wax seal, revealed once within the app.
 class IqroAnimatedLogo extends StatefulWidget {
   const IqroAnimatedLogo({super.key, this.size = 40});
   final double size;
@@ -51,14 +50,11 @@ class _IqroAnimatedLogoState extends State<IqroAnimatedLogo>
         opacity: Tween<double>(begin: .25, end: 1).animate(_reveal),
         child: ScaleTransition(
           scale: Tween<double>(begin: .88, end: 1).animate(_reveal),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.size * .28),
-            child: Image.asset(
-              'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png',
-              width: widget.size,
-              height: widget.size,
-              excludeFromSemantics: true,
-            ),
+          child: Image.asset(
+            'assets/brand/iqro-logo.png',
+            width: widget.size,
+            height: widget.size,
+            excludeFromSemantics: true,
           ),
         ),
       ),

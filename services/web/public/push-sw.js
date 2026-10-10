@@ -26,8 +26,8 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body,
       tag,
-      icon: "/icon",
-      badge: "/icon",
+      icon: "/iqro-app-icon.png",
+      badge: "/iqro-notification-badge.png",
       silent: signal === "silent",
       vibrate: signal === "vibration" ? [180, 80, 180] : undefined,
       renotify: signal !== "silent",

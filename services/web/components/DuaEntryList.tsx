@@ -55,6 +55,7 @@ export function DuaEntryList({
   const [activeAudioKey, setActiveAudioKey] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -159,6 +160,30 @@ export function DuaEntryList({
     }
   };
 
+  const shareEntry = async (entry: DuaEntry) => {
+    const url = new URL(localizedPath(locale, `/dua/${entry.collection}/${entry.source_number}`), window.location.origin).href;
+    const text = [
+      `${entry.category.title} · #${entry.source_number}`,
+      entry.arabic_text,
+      entry.translation?.meaning_text,
+      entry.source?.title,
+      ...entry.evidence.map((evidence) => evidence.source_reference),
+    ].filter(Boolean).join("\n\n");
+    setShareStatus("");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: entry.category.title, text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n\n${url}`);
+        setShareStatus(t("dua.shareCopied"));
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setShareStatus(t("dua.shareError"));
+      }
+    }
+  };
+
   if (entries.length === 0) {
     return (
       <div className="dua-empty">
@@ -170,6 +195,7 @@ export function DuaEntryList({
 
   return (
     <div className={`dua-entry-list${compact ? " is-compact" : ""}`}>
+      {shareStatus ? <p role="status">{shareStatus}</p> : null}
       {entries.map((entry) => {
         const key = entryKey(entry);
         const audio = entry.audio?.[0];
@@ -192,7 +218,7 @@ export function DuaEntryList({
                     className="dua-entry-title-link"
                     href={localizedPath(
                       locale,
-                      `/dua/${entry.collection}/categories/${entry.category.slug}#${entryAnchor(entry)}`,
+                      `/dua/${entry.collection}/${entry.source_number}`,
                     )}
                   >
                     {entry.category.title}
@@ -201,6 +227,9 @@ export function DuaEntryList({
               </div>
               <div className="dua-entry-tools">
                 <div className="dua-entry-actions">
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={() => void shareEntry(entry)}>
+                    {t("dua.share")}
+                  </button>
                   {audio ? (
                     <button
                       type="button"

@@ -88,7 +88,6 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: IqroTopBar(
         title: 'IQRO',
-        subtitle: context.l10n.greeting,
         leading: const Padding(
           padding: EdgeInsetsDirectional.only(start: 10, end: 8),
           child: Center(child: IqroAnimatedLogo(size: 36)),

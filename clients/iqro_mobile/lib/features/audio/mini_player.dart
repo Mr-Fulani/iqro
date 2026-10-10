@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
@@ -75,7 +76,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               color: Color(0xFF163C33),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: const IqroIcon(
               Icons.menu_book_rounded,
               color: Color(0xFFB6E8D9),
               size: 24,

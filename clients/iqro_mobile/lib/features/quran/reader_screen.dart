@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
@@ -1208,7 +1209,7 @@ class _ReaderContentBlock extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(icon, size: 18),
+              IqroIcon(icon, size: 18),
               const SizedBox(width: 8),
               Text(title, style: Theme.of(context).textTheme.titleSmall),
               if (loading) ...<Widget>[

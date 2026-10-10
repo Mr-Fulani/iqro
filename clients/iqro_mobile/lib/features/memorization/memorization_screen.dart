@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/audio/audio_controller.dart';
@@ -688,7 +689,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Icon(
+                      child: IqroIcon(
                         Icons.menu_book_rounded,
                         color: context.iqroColors.gold,
                         size: 26,

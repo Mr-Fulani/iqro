@@ -1,3 +1,6 @@
+import { DuaThematicIcon } from "./DuaThematicIcon";
+import { duaTopics } from "../lib/dua-topics";
+
 type DuaTopicIconName =
   | "sun"
   | "shirt"
@@ -12,6 +15,12 @@ type DuaTopicIconName =
   | "compass";
 
 function iconName(sourceNumber: number, slug: string): DuaTopicIconName {
+  if (slug === "evening" || slug === "sleep") return "moon";
+  if (slug === "after-prayer" || slug === "pilgrimage") return "mosque";
+  if (slug === "purification") return "drop";
+  if (slug === "family" || slug === "health" || slug === "loss" || slug === "hardship") return "heart";
+  if (slug === "nature") return "cloud";
+  if (slug === "food") return "bowl";
   if (/waking|morning|evening/.test(slug)) return "sun";
   if (/cloth|dress|undress/.test(slug)) return "shirt";
   if (/toilet|ablution/.test(slug)) return "drop";
@@ -27,6 +36,9 @@ function iconName(sourceNumber: number, slug: string): DuaTopicIconName {
 }
 
 export function DuaTopicIcon({ sourceNumber, slug }: { sourceNumber: number; slug: string }) {
+  if (duaTopics.some((topic) => topic.id === slug)) {
+    return <DuaThematicIcon topic={slug} />;
+  }
   const name = iconName(sourceNumber, slug);
 
   return (

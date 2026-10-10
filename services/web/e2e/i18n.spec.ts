@@ -151,7 +151,7 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.locator(".dua-category-chip")).toHaveCount(1);
   await expect(page.locator(".dua-category-chip")).toHaveAttribute(
     "href",
-    "/ru/dua/hisn-al-muslim/categories/waking-up",
+    "/ru/dua/topics/sleep",
   );
   await expect(page.locator(".dua-category-chip")).toContainText("1 ду’а");
   expect(await page.locator(".dua-category-list").evaluate(
@@ -161,8 +161,11 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.locator(".dua-arabic")).toHaveCount(0);
 
   await page.locator(".dua-category-chip").click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
-  await expect(page.getByRole("heading", { level: 1, name: "Слова поминания при пробуждении ото сна" })).toBeVisible();
+  await expect(page).toHaveURL("/ru/dua/topics/sleep");
+  await expect(page.getByRole("heading", { level: 1, name: "Сон и пробуждение" })).toBeVisible();
+  await expect(page.locator(".dua-topic-selector option")).toHaveCount(20);
+  await page.locator(".dua-summary-row").click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
   await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
   await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
 });
@@ -188,32 +191,21 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
   await expect(cards).toHaveCount(1);
 
   await cards.first().click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
-  await expect(page.getByRole("heading", {
-    level: 1,
-    name: "Слова поминания при пробуждении ото сна",
-  })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Вернуться ко всем темам" })).toHaveAttribute(
-    "href",
-    "/ru/dua",
-  );
-  await expect(page.locator(".dua-topic-content .dua-entry-card")).toHaveCount(1);
-  await expect(page.locator(".dua-topic-content .dua-entry-card")).toHaveAttribute(
-    "id",
-    "dua-hisn-al-muslim-1",
-  );
-  await expect(page.getByRole("link", {
-    name: "Слова поминания при пробуждении ото сна",
-  })).toHaveAttribute(
-    "href",
-    "/ru/dua/hisn-al-muslim/categories/waking-up#dua-hisn-al-muslim-1",
-  );
-  await expect(page.locator(".dua-topic-content .dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
+  await expect(page).toHaveURL("/ru/dua/topics/sleep");
+  await expect(page.getByRole("heading", { level: 1, name: "Сон и пробуждение" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Вернуться ко всем темам" })).toHaveAttribute("href", "/ru/dua");
+  await expect(page.locator(".dua-summary-row")).toHaveCount(1);
+  await expect(page.locator(".dua-summary-row")).toHaveAttribute("href", "/ru/dua/hisn-al-muslim/1");
+  await expect(page.locator(".dua-topic-content .dua-arabic")).toHaveCount(0);
+  await expect(page.locator(".dua-topic-selector option")).toHaveCount(20);
+  await page.locator(".dua-summary-row").click();
+  await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ");
+  await expect(page.getByRole("button", { name: "Поделиться", exact: true })).toBeVisible();
 });
 
 test("Dua cards expose source audio and account favorites", async ({ page }) => {
   await page.route("**/audio/ar/1.mp3", (route) => route.abort());
-  await page.goto("/ru/dua/hisn-al-muslim/categories/waking-up");
+  await page.goto("/ru/dua/hisn-al-muslim/1");
 
   const play = page.getByRole("button", { name: "Прослушать ду’а" });
   const favorite = page.getByRole("button", { name: "Добавить в избранное" });

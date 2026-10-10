@@ -20,6 +20,7 @@ import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/dua/dua_repository.dart';
+import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
 import '../features/feedback/feedback_repository.dart';
 import '../features/memorization/memorization_repository.dart';
@@ -771,6 +772,25 @@ final duaEntriesByCategoryProvider =
     });
 
 typedef DuaSearchQuery = ({String query, String? collection, String? category});
+
+final duaEntriesByTopicProvider = FutureProvider.family<List<DuaEntry>, String>(
+  (ref, id) async {
+    final topic = duaTopics.singleWhere((item) => item.id == id);
+    final categories = await ref.watch(duaCategoriesProvider.future);
+    final members =
+        categories.where(topic.includesCategory).toList(growable: false)..sort(
+          (left, right) => left.sourceNumber.compareTo(right.sourceNumber),
+        );
+    final pages = await Future.wait([
+      for (final category in members)
+        ref.watch(duaEntriesByCategoryProvider(category.identity).future),
+    ]);
+    return pages
+        .expand((entries) => entries)
+        .where(topic.includesEntry)
+        .toList(growable: false);
+  },
+);
 
 final duaSearchProvider = FutureProvider.autoDispose
     .family<List<DuaEntry>, DuaSearchQuery>((ref, request) {
