@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import CalendarPage from "../../calendar/page";
+import CalendarPage from "../../../components/CalendarPage";
 import { isLocale } from "../../../lib/i18n";
 import { createPageMetadata } from "../../../lib/seo";
 

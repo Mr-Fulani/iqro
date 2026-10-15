@@ -13,15 +13,15 @@ import {
   ReferralLink,
   ReferralSummary,
   ShareConfigResponse,
-} from "../../lib/api";
-import { useAuth } from "../../lib/auth-context";
-import { AccountSecurityPanel } from "../../components/AccountSecurityPanel";
-import { SYNC_STATE_EVENT } from "../../lib/sync-state";
-import { useI18n } from "../../lib/i18n-context";
-import { MessageKey } from "../../lib/i18n";
-import { localizedPath } from "../../lib/routing";
-import { DuaEntryList } from "../../components/DuaEntryList";
-import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
+} from "../lib/api";
+import { useAuth } from "../lib/auth-context";
+import { AccountSecurityPanel } from "./AccountSecurityPanel";
+import { SYNC_STATE_EVENT } from "../lib/sync-state";
+import { useI18n } from "../lib/i18n-context";
+import { MessageKey } from "../lib/i18n";
+import { localizedPath } from "../lib/routing";
+import { DuaEntryList } from "./DuaEntryList";
+import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 
 type FavoriteFilter = "all" | "dua" | "quran";
 

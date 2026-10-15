@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { requestLocale } from "@/lib/server-locale";
-import { translate } from "@/lib/i18n";
+import { locale as rootLocale } from "next/root-params";
+import { DEFAULT_LOCALE, isLocale, translate } from "@/lib/i18n";
 import { localizedPath } from "@/lib/routing";
 
 export default async function NotFound() {
-  const locale = await requestLocale();
+  const routedLocale = await rootLocale();
+  const locale = isLocale(routedLocale) ? routedLocale : DEFAULT_LOCALE;
   return (
     <section className="surface system-state" aria-labelledby="not-found-title">
       <span className="system-state-code" aria-hidden="true">404</span>

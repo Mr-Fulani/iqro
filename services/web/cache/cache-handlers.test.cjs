@@ -1,4 +1,7 @@
 const assert = require("node:assert/strict");
+const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = require("node:fs");
+const { tmpdir } = require("node:os");
+const { join } = require("node:path");
 const { after, test } = require("node:test");
 
 const RedisIncrementalCacheHandler = require("./incremental-cache-handler.cjs");
@@ -81,6 +84,54 @@ test("incremental cache round-trips binary route entries", async () => {
 
   const cached = await handler.get("binary-entry", context);
   assert.deepEqual(cached.value.body, Buffer.from([0, 1, 254, 255]));
+});
+
+test("incremental cache scopes rendered pages to their build and shares fetch data", async () => {
+  const root = mkdtempSync(join(tmpdir(), "web-cache-build-"));
+  const serverDistDir = (buildId) => {
+    mkdirSync(join(root, buildId, "server"), { recursive: true });
+    writeFileSync(join(root, buildId, "BUILD_ID"), `${buildId}\n`);
+    return join(root, buildId, "server");
+  };
+  const previous = new RedisIncrementalCacheHandler({ serverDistDir: serverDistDir("build-a") });
+  const current = new RedisIncrementalCacheHandler({ serverDistDir: serverDistDir("build-b") });
+  const pageContext = { kind: "APP_PAGE" };
+  const fetchContext = { fetchCache: true, kind: "FETCH", tags: [] };
+
+  try {
+    await previous.set(
+      "/ru/quran",
+      { kind: "APP_PAGE", html: "<html></html>", headers: {}, status: 200 },
+      pageContext,
+    );
+    await previous.set(
+      "shared-fetch-entry",
+      {
+        kind: "FETCH",
+        data: { body: "{}", headers: {}, status: 200, url: "https://backend/api" },
+        revalidate: 3_600,
+      },
+      fetchContext,
+    );
+
+    assert.equal((await previous.get("/ru/quran", pageContext)).value.html, "<html></html>");
+    assert.equal(await current.get("/ru/quran", pageContext), null);
+    assert.equal((await current.get("shared-fetch-entry", fetchContext)).value.data.body, "{}");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("incremental cache does not store not-found pages", async () => {
+  const handler = new RedisIncrementalCacheHandler();
+  const context = { kind: "APP_PAGE" };
+  await handler.set(
+    "/xx/quran",
+    { kind: "APP_PAGE", html: "<html></html>", headers: {}, status: 404 },
+    context,
+  );
+
+  assert.equal(await handler.get("/xx/quran", context), null);
 });
 
 test("use-cache handler coordinates explicit and soft tags", async () => {

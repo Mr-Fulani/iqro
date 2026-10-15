@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { preload } from "react-dom";
-import { ReciterAvatar } from "../components/ReciterAvatar";
-import { TodayReadingCard } from "../components/TodayReadingCard";
-import { PrayerReadingPlanCard } from "../components/PrayerReadingPlanCard";
-import { MemorizationPlannerCard } from "../components/MemorizationPlannerCard";
+import { ReciterAvatar } from "./ReciterAvatar";
+import { TodayReadingCard } from "./TodayReadingCard";
+import { PrayerReadingPlanCard } from "./PrayerReadingPlanCard";
+import { MemorizationPlannerCard } from "./MemorizationPlannerCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";

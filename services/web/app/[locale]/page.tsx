@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import HomePage from "../page";
+import HomePage from "../../components/HomePage";
 import { isLocale } from "../../lib/i18n";
 import { createRootMetadata } from "../../lib/seo";
 import { notFound } from "next/navigation";

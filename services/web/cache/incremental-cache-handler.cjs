@@ -1,8 +1,22 @@
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
 const { cacheWarning, getSharedStore } = require("./shared-store.cjs");
 const { deserialize, serialize } = require("./serialization.cjs");
 
 const CACHE_SCHEMA = 1;
 const CACHE_TAGS_HEADER = "x-next-cache-tags";
+
+// Rendered pages and route responses reference the static assets of the build that
+// produced them, so a new deployment must not serve them from the shared store.
+// Fetch entries hold backend data only and stay shared across builds.
+function readBuildId(serverDistDir) {
+  if (!serverDistDir) return "";
+  try {
+    return readFileSync(join(serverDistDir, "..", "BUILD_ID"), "utf8").trim();
+  } catch {
+    return "";
+  }
+}
 
 function normalizeTags(tags) {
   return [...new Set((tags ?? []).filter((tag) => typeof tag === "string" && tag))];
@@ -18,13 +32,21 @@ function entryTags(entry, context) {
 }
 
 module.exports = class RedisIncrementalCacheHandler {
-  constructor() {
+  constructor(options = {}) {
     this.store = getSharedStore();
+    this.buildId = readBuildId(options.serverDistDir);
+  }
+
+  storageKey(key, isFetch) {
+    return isFetch ? key : `build:${this.buildId}:${key}`;
   }
 
   async get(key, context) {
     try {
-      const stored = await this.store.getEntry("incremental", key);
+      const stored = await this.store.getEntry(
+        "incremental",
+        this.storageKey(key, context?.kind === "FETCH"),
+      );
       if (!stored) return null;
       const entry = deserialize(stored);
       if (
@@ -48,9 +70,14 @@ module.exports = class RedisIncrementalCacheHandler {
   async set(key, data, context) {
     try {
       if (data === null) {
-        await this.store.deleteEntry("incremental", key);
+        await this.store.deleteEntry(
+          "incremental",
+          this.storageKey(key, context?.fetchCache === true),
+        );
         return;
       }
+      // Every unknown URL would get its own not-found entry; render those on demand.
+      if (data.kind === "APP_PAGE" && data.status === 404) return;
       const value =
         data.kind === "FETCH"
           ? { ...data, tags: normalizeTags([...(data.tags ?? []), ...(context.tags ?? [])]) }
@@ -60,7 +87,11 @@ module.exports = class RedisIncrementalCacheHandler {
         cacheWarning("incremental cache entry size limit", { code: "ENTRY_TOO_LARGE" });
         return;
       }
-      await this.store.setEntry("incremental", key, serialized);
+      await this.store.setEntry(
+        "incremental",
+        this.storageKey(key, context?.fetchCache === true),
+        serialized,
+      );
     } catch (error) {
       cacheWarning("incremental cache write", error);
     }

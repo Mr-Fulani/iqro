@@ -13,6 +13,12 @@ import { createContentMetadata } from "@/lib/seo";
 
 export const revalidate = 3_600;
 
+// Published content is not prerendered at build time; each path is rendered on
+// its first request and then served through ISR.
+export function generateStaticParams() {
+  return [];
+}
+
 type RouteParams = { locale: string; category: string; topic: string };
 
 function parseParams(params: RouteParams): {

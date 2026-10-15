@@ -12,22 +12,22 @@ import { useSearchParams } from "next/navigation";
 import {
   MushafAudioPlayer,
   type AyahPlaybackTrigger,
-} from "../../components/MushafAudioPlayer";
-import { useMushafPages } from "../../components/useMushafPages";
-import { MushafPageTurn } from "../../components/MushafPageTurn";
-import { MushafGestureSurface } from "../../components/MushafGestureSurface";
-import { QuranFoundationMushafPageView } from "../../components/QuranFoundationMushafPage";
+} from "./MushafAudioPlayer";
+import { useMushafPages } from "./useMushafPages";
+import { MushafPageTurn } from "./MushafPageTurn";
+import { MushafGestureSurface } from "./MushafGestureSurface";
+import { QuranFoundationMushafPageView } from "./QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
   type PrayerReadingSessionConfig,
-} from "../../components/PrayerReadingSessionBar";
-import { ReadingActivityTracker } from "../../components/ReadingActivityTracker";
-import { FavoriteBookmarkIcon } from "../../components/FavoriteBookmarkIcon";
-import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "../../components/MushafReaderLayout";
+} from "./PrayerReadingSessionBar";
+import { ReadingActivityTracker } from "./ReadingActivityTracker";
+import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
+import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "./MushafReaderLayout";
 import type {
   AudioPlayerControlRequest,
   AudioPlaybackSettings,
-} from "../../components/SegmentedAudioPlayer";
+} from "./SegmentedAudioPlayer";
 import {
   api,
   ApiError,
@@ -45,10 +45,10 @@ import {
   Surah,
   type AyahTranslation,
   type PrayerReadingPrayer,
-} from "../../lib/api";
-import { indexAyahBookmarks } from "../../lib/ayah-bookmarks";
-import { useAuth } from "../../lib/auth-context";
-import { useI18n } from "../../lib/i18n-context";
+} from "../lib/api";
+import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
+import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
 
 function positiveInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
@@ -85,7 +85,7 @@ const DEFAULT_TAFSIR_BY_LOCALE: Record<string, number | null> = {
 import {
   readLocalReadingPosition,
   writeLocalReadingPosition,
-} from "../../lib/reading-position-storage";
+} from "../lib/reading-position-storage";
 
 type TranslationPreference = {
   enabled: boolean;

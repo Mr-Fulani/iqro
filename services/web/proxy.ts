@@ -28,12 +28,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 307);
   }
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-quran-locale", locale);
-
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const response = NextResponse.next();
+  // Rewriting an unchanged cookie would add Set-Cookie to every cached page.
+  if (request.cookies.get(LOCALE_COOKIE_NAME)?.value === locale) return response;
   response.cookies.set(LOCALE_COOKIE_NAME, locale, {
     path: "/",
     maxAge: 31_536_000,
@@ -48,6 +45,8 @@ export const config = {
     "/quran/:path*",
     "/audio/:path*",
     "/dua/:path*",
+    "/memorization/:path*",
+    "/planner/:path*",
     "/prayer/:path*",
     "/calendar/:path*",
     "/profile/:path*",

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { notFound } from "next/navigation";
 import { recitationLabel, reciterName } from "@/lib/audio-content";
+import type { QuranEdition, Recitation } from "@/lib/api";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { legalConfig } from "@/lib/legal-config";
 import { legalCopy } from "@/lib/legal-content";
@@ -23,6 +25,19 @@ function localeParam(value: string): Locale {
   return value;
 }
 
+async function publishedSources(): Promise<[QuranEdition[], Recitation[]]> {
+  try {
+    return await Promise.all([getPublishedEditions(), getPublishedRecitations()]);
+  } catch (error) {
+    // `next build` prerenders this page without a backend (CI, Docker images), so
+    // the build keeps the empty state. At runtime a failure still throws, and ISR
+    // keeps serving the last good page.
+    if (process.env.NEXT_PHASE !== PHASE_PRODUCTION_BUILD) throw error;
+    console.warn("Sources page was prerendered without published content", error);
+    return [[], []];
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<RouteParams> }): Promise<Metadata> {
   const locale = localeParam((await params).locale);
   const copy = legalCopy(locale, legalConfig()).sources;
@@ -32,10 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
 export default async function SourcesPage({ params }: { params: Promise<RouteParams> }) {
   const locale = localeParam((await params).locale);
   const copy = legalCopy(locale, legalConfig()).sources;
-  const [editions, recitations] = await Promise.all([
-    getPublishedEditions(),
-    getPublishedRecitations(),
-  ]);
+  const [editions, recitations] = await publishedSources();
   return (
     <article className="seo-quran-page legal-document">
       <header className="surface seo-quran-hero">
