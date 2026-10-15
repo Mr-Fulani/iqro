@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import QuranPage from "../../quran/page";
+import QuranPage from "../../../components/QuranPage";
 import { isLocale } from "../../../lib/i18n";
 import { createPageMetadata } from "../../../lib/seo";
 

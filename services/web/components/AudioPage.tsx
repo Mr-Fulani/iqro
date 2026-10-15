@@ -1,34 +1,34 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   AudioTrack,
   Recitation,
   Reciter,
-} from "../../lib/api";
-import type { Surah } from "../../lib/api";
-import { ReciterAvatar } from "../../components/ReciterAvatar";
-import type { AudioPlaybackRequest } from "../../components/SegmentedAudioPlayer";
-import { reciterName as localizedReciterName } from "../../lib/audio-content";
-import { useAudioPlayer } from "../../lib/audio-player-context";
-import { useI18n } from "../../lib/i18n-context";
+} from "../lib/api";
+import type { Surah } from "../lib/api";
+import { ReciterAvatar } from "./ReciterAvatar";
+import type { AudioPlaybackRequest } from "./SegmentedAudioPlayer";
+import { reciterName as localizedReciterName } from "../lib/audio-content";
+import { useAudioPlayer } from "../lib/audio-player-context";
+import { useI18n } from "../lib/i18n-context";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
   reciterPersonKey,
   reciterSourcesForPerson,
-} from "../../lib/reciter-catalog";
-import { reciterPortraitUrl } from "../../lib/reciter-portraits";
+} from "../lib/reciter-catalog";
+import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import {
   loadReciterPreference,
   preferredRecitation,
   preferredReciter,
   rememberReciterPreference,
-} from "../../lib/reciter-preference";
+} from "../lib/reciter-preference";
 
-export default function AudioPage() {
+function AudioContent() {
   const searchParams = useSearchParams();
   const requestedReciterId = searchParams.get("reciter");
   const { locale, t, formatNumber } = useI18n();
@@ -512,5 +512,32 @@ export default function AudioPage() {
       </section>
 
     </div>
+  );
+}
+
+// useSearchParams() makes the reader client-only inside this boundary; the
+// fallback keeps the page heading in the prerendered HTML.
+function AudioPageHeading() {
+  const { t } = useI18n();
+  return (
+    <div className="audio-page">
+      <section className="surface audio-controls">
+        <div className="surface-head">
+          <div>
+            <p className="eyebrow">{t("audio.eyebrow")}</p>
+            <h1 className="surface-title">{t("audio.title")}</h1>
+            <p className="surface-subtitle">{t("audio.description")}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default function AudioPage() {
+  return (
+    <Suspense fallback={<AudioPageHeading />}>
+      <AudioContent />
+    </Suspense>
   );
 }

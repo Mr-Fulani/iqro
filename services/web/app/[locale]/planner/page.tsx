@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import PlannerPage from "../../planner/page";
+import PlannerPage from "../../../components/PlannerPage";
 import { isLocale } from "../../../lib/i18n";
 import { createPageMetadata } from "../../../lib/seo";
 

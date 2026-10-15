@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import LoginPage from "../../login/page";
+import LoginPage from "../../../components/LoginPage";
 import { isLocale } from "../../../lib/i18n";
 import { createPageMetadata } from "../../../lib/seo";
 

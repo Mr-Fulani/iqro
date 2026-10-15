@@ -1,6 +1,6 @@
 "use client";
 
-import { MemorizationWorkspace } from "../../components/MemorizationWorkspace";
+import { MemorizationWorkspace } from "./MemorizationWorkspace";
 
 export default function MemorizationPage() {
   return <MemorizationWorkspace />;

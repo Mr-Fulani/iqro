@@ -8,17 +8,17 @@ import {
   PrayerCalculationResponse,
   PrayerMethod,
   PrayerProfile,
-} from "../../lib/api";
-import { useAuth } from "../../lib/auth-context";
-import { useI18n } from "../../lib/i18n-context";
-import { MessageKey } from "../../lib/i18n";
-import { ReminderManager } from "../../components/ReminderManager";
+} from "../lib/api";
+import { useAuth } from "../lib/auth-context";
+import { useI18n } from "../lib/i18n-context";
+import { MessageKey } from "../lib/i18n";
+import { ReminderManager } from "./ReminderManager";
 import {
   dateInTimezone,
   DEFAULT_PRAYER_LOCATION,
   loadPrayerLocationPreference,
   savePrayerLocationPreference,
-} from "../../lib/prayer-location";
+} from "../lib/prayer-location";
 
 const PRESET_CITIES = [
   { label: "prayer.city.makkah" as MessageKey, lat: DEFAULT_PRAYER_LOCATION.latitude, lng: DEFAULT_PRAYER_LOCATION.longitude, tz: DEFAULT_PRAYER_LOCATION.timezone },

@@ -311,6 +311,13 @@ endpoint, чтобы Celery повторил событие. В S0 web cache у�
 можно первым перенести на отдельный evictable endpoint: эти записи не являются источником
 истины. Не переносите вместе с ним throttle или broker без отдельной процедуры из 3.3.
 
+Публичные страницы под `app/[locale]` отдаются через ISR, поэтому в этот кэш попадает и
+HTML/RSC целиком. Ключи страниц и route-ответов содержат `BUILD_ID`: новый deployment не отдаёт
+HTML со ссылками на static assets прошлой сборки, а старые записи уходят по TTL. Fetch entries
+общие для всех сборок. Ответы 404 не кэшируются. Обход краулером десятков тысяч страниц аятов
+на каждую локаль заполнит общий Redis с `noeviction`, поэтому перед production-релизом ISR
+переведите `WEB_CACHE_REDIS_URL` на отдельный endpoint с `allkeys-lru`.
+
 Перед второй web-репликой дополнительно обеспечьте load balancing и одинаковые
 `WEB_CACHE_KEY_PREFIX`, `WEB_CONTENT_REVALIDATION_SECRET`, build/image version на всех
 инстансах. Gateway public JSON cache уже очищается тем же publication event через защищённый

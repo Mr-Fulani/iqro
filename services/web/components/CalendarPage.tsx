@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api } from "../lib/api";
 import {
   calendarCopy,
   calendarEventsForDay,
@@ -9,9 +9,9 @@ import {
   sourceHref,
   type CalendarEvent,
   type CalendarMonth,
-} from "../../lib/calendar";
-import { useI18n } from "../../lib/i18n-context";
-import styles from "./page.module.css";
+} from "../lib/calendar";
+import { useI18n } from "../lib/i18n-context";
+import styles from "./CalendarPage.module.css";
 
 const preferenceKey = "iqro_hijri_adjustment_v1";
 
