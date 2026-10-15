@@ -703,6 +703,64 @@ void main() {
     },
   );
 
+  test('audio presentation is stable across position ticks', () {
+    final playing = const IqroAudioState().copyWith(
+      track: _playbackTrack,
+      reciter: _reciter,
+      surahName: 'Audio Al-Fatiha',
+      playing: true,
+      position: const Duration(seconds: 1),
+    );
+
+    // Home and the mini player select this presentation; equality across
+    // position ticks is what keeps them from rebuilding during playback.
+    expect(
+      iqroAudioPresentation(
+        playing.copyWith(position: const Duration(seconds: 2), activeAyah: 2),
+      ),
+      iqroAudioPresentation(playing),
+    );
+    expect(
+      iqroAudioPresentation(playing.copyWith(playing: false)),
+      isNot(iqroAudioPresentation(playing)),
+    );
+  });
+
+  test(
+    'listening position is saved while position ticks keep arriving',
+    () async {
+      final database = await _audioStoreDatabase();
+      addTearDown(database.close);
+      final store = AudioPlaybackStore(database);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        playbackStore: store,
+        persistenceDelay: const Duration(milliseconds: 40),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Audio Al-Fatiha',
+        autoplay: false,
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+
+      // Ticks arrive far more often than the persistence delay, as they do from
+      // just_audio during playback; a debounce would never save the position.
+      for (var tick = 1; tick <= 20; tick += 1) {
+        engine.emitPosition(Duration(milliseconds: tick * 500));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+
+      final saved = await store.read();
+      expect(saved?.playback.track.id, _playback.track.id);
+      expect(saved!.position, greaterThan(Duration.zero));
+    },
+  );
+
   test(
     'leaving memorization restores the paused regular audio track',
     () async {
@@ -1261,6 +1319,7 @@ const _memorizationReciter = Reciter(
 
 class _FakeAudioEngine implements IqroAudioEngine {
   final _playerStates = StreamController<PlayerState>.broadcast(sync: true);
+  final _positions = StreamController<Duration>.broadcast(sync: true);
   final sources = <AudioSource>[];
   final seekCalls = <Duration>[];
   var speed = 1.0;
@@ -1303,6 +1362,8 @@ class _FakeAudioEngine implements IqroAudioEngine {
     _playerStates.add(state);
   }
 
+  void emitPosition(Duration position) => _positions.add(position);
+
   @override
   Stream<Duration?> get durationStream => const Stream<Duration?>.empty();
   @override
@@ -1311,7 +1372,7 @@ class _FakeAudioEngine implements IqroAudioEngine {
   @override
   Stream<PlayerState> get playerStateStream => _playerStates.stream;
   @override
-  Stream<Duration> get positionStream => const Stream<Duration>.empty();
+  Stream<Duration> get positionStream => _positions.stream;
   @override
   bool playing = false;
   @override
@@ -1329,6 +1390,7 @@ class _FakeAudioEngine implements IqroAudioEngine {
     disposed = true;
     releaseBlockedSource();
     await _playerStates.close();
+    await _positions.close();
   }
 
   @override

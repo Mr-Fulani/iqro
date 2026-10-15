@@ -9,6 +9,9 @@ from unittest.mock import patch
 
 import pytest
 from django.core import mail
+from django.core.mail import mailers
+from django.core.mail.backends.smtp import EmailBackend as SMTPEmailBackend
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -28,6 +31,7 @@ from quran_backend.modules.dua.models import DuaCollection, DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackChannel, FeedbackTicket
 from quran_backend.modules.reading.models import Bookmark, ReadingPosition, SyncChange
 from quran_backend.modules.reminders.models import ReminderRule, ReminderType
+from quran_backend.settings import base as base_settings
 
 pytestmark = pytest.mark.django_db
 
@@ -392,3 +396,11 @@ def test_consumed_challenge_rejects_a_different_idempotency_key(api_client: APIC
     assert first.status_code == 200
     assert second.status_code == 400
     assert second.json()["code"] == "email_challenge_invalid"
+
+
+def test_smtp_mailer_has_bounded_timeout() -> None:
+    with override_settings(MAILERS=base_settings.MAILERS):
+        backend = mailers["default"]
+
+    assert isinstance(backend, SMTPEmailBackend)
+    assert backend.timeout == 10

@@ -123,17 +123,22 @@ class _StartupVideoState extends State<StartupVideo>
     if (controller == null || !controller.value.isInitialized || _finished) {
       return const SizedBox.shrink();
     }
-    return ExcludeSemantics(
-      child: ColoredBox(
-        color: const Color(0xFFE6D8BF),
-        child: SizedBox.expand(
-          child: FittedBox(
-            fit: BoxFit.cover,
-            clipBehavior: Clip.hardEdge,
-            child: SizedBox(
-              width: controller.value.size.width,
-              height: controller.value.size.height,
-              child: VideoPlayer(controller),
+    return GestureDetector(
+      key: const ValueKey('startup-video-skip'),
+      behavior: HitTestBehavior.opaque,
+      onTap: _finish,
+      child: ExcludeSemantics(
+        child: ColoredBox(
+          color: const Color(0xFFE6D8BF),
+          child: SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: controller.value.size.width,
+                height: controller.value.size.height,
+                child: VideoPlayer(controller),
+              ),
             ),
           ),
         ),

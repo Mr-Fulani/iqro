@@ -29,6 +29,10 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   StreamSubscription<String>? _notificationRoutes;
   StreamSubscription<String>? _widgetRoutes;
   final _maintenance = AccountScopedMaintenanceCoordinator();
+  // Built once: fresh ThemeData on every root build forces an app-wide
+  // theme transition and rebuild.
+  final _lightTheme = IqroTheme.light();
+  final _darkTheme = IqroTheme.dark();
   late Uri _previousAudioUri;
   var _backgroundWorkRequested = false;
 
@@ -184,9 +188,13 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final preferences = ref.watch(appPreferencesProvider);
-    ref.watch(sessionProvider);
-    ref.watch(reminderProvider);
+    final (themeMode, locale) = ref.watch(
+      appPreferencesProvider.select((value) => (value.themeMode, value.locale)),
+    );
+    // Keep session and reminders alive without rebuilding the whole app on
+    // every token refresh or reminder state change.
+    ref.listen(sessionProvider, (_, _) {});
+    ref.listen(reminderProvider, (_, _) {});
     ref.listen<AccountScopeKey?>(activeAccountScopeKeyProvider, (
       previous,
       next,
@@ -212,10 +220,10 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
-      theme: IqroTheme.light(),
-      darkTheme: IqroTheme.dark(),
-      themeMode: preferences.themeMode,
-      locale: Locale(preferences.locale),
+      theme: _lightTheme,
+      darkTheme: _darkTheme,
+      themeMode: themeMode,
+      locale: Locale(locale),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
         AppLocalizations.delegate,

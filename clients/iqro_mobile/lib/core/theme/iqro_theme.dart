@@ -54,6 +54,21 @@ class IqroColors extends ThemeExtension<IqroColors> {
       line: Color.lerp(line, other.line, t)!,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is IqroColors &&
+      other.ink == ink &&
+      other.inkSoft == inkSoft &&
+      other.sand == sand &&
+      other.lavender == lavender &&
+      other.gold == gold &&
+      other.panelSoft == panelSoft &&
+      other.line == line;
+
+  @override
+  int get hashCode =>
+      Object.hash(ink, inkSoft, sand, lavender, gold, panelSoft, line);
 }
 
 class IqroTheme {

@@ -418,6 +418,8 @@ MAILERS = {
             "username": os.getenv("DJANGO_EMAIL_HOST_USER", ""),
             "password": os.getenv("DJANGO_EMAIL_HOST_PASSWORD", ""),
             "use_tls": env_bool("DJANGO_EMAIL_USE_TLS", True),
+            # Email is sent inside API requests; a hung SMTP socket must not hold a worker slot.
+            "timeout": positive_env_int("DJANGO_EMAIL_TIMEOUT_SECONDS", 10),
         },
     }
 }

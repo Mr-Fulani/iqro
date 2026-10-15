@@ -10,6 +10,8 @@ class StartupGate<T extends Object> extends StatefulWidget {
     required this.initialize,
     required this.readyBuilder,
     this.introBuilder,
+    this.shouldPlayIntro,
+    this.onIntroFinished,
     super.key,
   });
 
@@ -17,16 +19,45 @@ class StartupGate<T extends Object> extends StatefulWidget {
   final Widget Function(T dependencies) readyBuilder;
   final StartupIntroBuilder? introBuilder;
 
+  /// Decides whether the intro plays; without it the intro always plays.
+  /// A failed decision skips the intro rather than delaying startup.
+  final Future<bool> Function()? shouldPlayIntro;
+
+  /// Called once after the intro has played or the user skipped it.
+  final VoidCallback? onIntroFinished;
+
   @override
   State<StartupGate<T>> createState() => _StartupGateState<T>();
 }
 
 class _StartupGateState<T extends Object> extends State<StartupGate<T>> {
   late Future<T> _dependencies = widget.initialize();
+  late bool? _playIntro = widget.shouldPlayIntro == null ? true : null;
   var _introFinished = false;
 
+  @override
+  void initState() {
+    super.initState();
+    final shouldPlayIntro = widget.shouldPlayIntro;
+    if (shouldPlayIntro == null) return;
+    shouldPlayIntro().then(
+      _decideIntro,
+      onError: (Object _) => _decideIntro(false),
+    );
+  }
+
+  void _decideIntro(bool play) {
+    if (!mounted) return;
+    setState(() {
+      _playIntro = play;
+      if (!play) _introFinished = true;
+    });
+  }
+
   void _finishIntro() {
-    if (mounted && !_introFinished) setState(() => _introFinished = true);
+    if (!mounted || _introFinished) return;
+    setState(() => _introFinished = true);
+    widget.onIntroFinished?.call();
   }
 
   void _retry() {
@@ -49,6 +80,10 @@ class _StartupGateState<T extends Object> extends State<StartupGate<T>> {
         onRetry: _retry,
         intro: _introFinished || snapshot.hasError
             ? null
+            // Undecided for a few milliseconds: keep the splash without a
+            // spinner flash.
+            : _playIntro == null
+            ? const SizedBox.shrink()
             : widget.introBuilder?.call(_finishIntro) ??
                   StartupVideo(onFinished: _finishIntro),
       );

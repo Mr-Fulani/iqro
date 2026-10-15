@@ -84,6 +84,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a seen intro opens the app as soon as it is ready', (
+    tester,
+  ) async {
+    final decision = Completer<bool>();
+    var introBuilds = 0;
+    var introFinishes = 0;
+    await tester.pumpWidget(
+      StartupGate<String>(
+        initialize: () async => 'ready app',
+        readyBuilder: (value) => MaterialApp(home: Text(value)),
+        introBuilder: (_) {
+          introBuilds++;
+          return const Text('intro');
+        },
+        shouldPlayIntro: () => decision.future,
+        onIntroFinished: () => introFinishes++,
+      ),
+    );
+    await tester.pump();
+    // Still deciding: no intro yet and no spinner flash.
+    expect(find.text('ready app'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    decision.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.text('ready app'), findsOneWidget);
+    expect(introBuilds, 0);
+    expect(introFinishes, 0);
+  });
+
+  testWidgets('first launch plays the intro and reports it once', (
+    tester,
+  ) async {
+    late VoidCallback finishIntro;
+    var introFinishes = 0;
+    await tester.pumpWidget(
+      StartupGate<String>(
+        initialize: () async => 'ready app',
+        readyBuilder: (value) => MaterialApp(home: Text(value)),
+        introBuilder: (finish) {
+          finishIntro = finish;
+          return const Text('intro');
+        },
+        shouldPlayIntro: () async => true,
+        onIntroFinished: () => introFinishes++,
+      ),
+    );
+    await tester.pump();
+    expect(find.text('intro'), findsOneWidget);
+    finishIntro();
+    finishIntro();
+    await tester.pumpAndSettle();
+    expect(find.text('ready app'), findsOneWidget);
+    expect(introFinishes, 1);
+  });
+
+  testWidgets('a failed intro decision does not block startup', (tester) async {
+    await tester.pumpWidget(
+      StartupGate<String>(
+        initialize: () async => 'ready app',
+        readyBuilder: (value) => MaterialApp(home: Text(value)),
+        introBuilder: (_) => const Text('intro'),
+        shouldPlayIntro: () async => throw StateError('preferences failed'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('intro'), findsNothing);
+    expect(find.text('ready app'), findsOneWidget);
+  });
+
   testWidgets('reduced motion skips video without initializing a decoder', (
     tester,
   ) async {

@@ -35,11 +35,15 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final current = ref.watch(audioControllerProvider);
     final controller = ref.read(audioControllerProvider.notifier);
-    final player = widget.mushafControls
-        ? iqroAudioPresentation(current)
-        : controller.listeningPresentation(current);
+    // The mini player shows no progress, so position ticks must not rebuild it.
+    final player = ref.watch(
+      audioControllerProvider.select(
+        widget.mushafControls
+            ? iqroAudioPresentation
+            : controller.listeningPresentation,
+      ),
+    );
     final standalone = player.standalone;
     if (!identical(_visibleController, controller)) {
       _visibleController = controller;

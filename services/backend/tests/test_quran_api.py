@@ -4,10 +4,18 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from quran_backend.modules.quran.models import AyahPageRegion, QuranEdition
+from quran_backend.modules.quran.models import (
+    Ayah,
+    AyahPageMapping,
+    AyahPageRegion,
+    MushafPage,
+    QuranEdition,
+)
 
 
 @pytest.mark.django_db
@@ -106,6 +114,51 @@ def test_ayah_pages_do_not_repeat_for_multiline_regions(
 
     assert response.status_code == 200
     assert response.json()["pages"] == [1]
+
+
+@pytest.mark.django_db
+def test_ayah_list_page_numbers_do_not_query_per_ayah(
+    api_client: APIClient,
+    quran_dataset: dict[str, Any],
+) -> None:
+    url = reverse("quran:ayah-list", kwargs={"edition": "madani-hafs", "surah": 1})
+    with CaptureQueriesContext(connection) as baseline:
+        assert api_client.get(url).status_code == 200
+
+    first_ayah = quran_dataset["first_ayah"]
+    second_page = MushafPage.objects.create(
+        edition_version=quran_dataset["page"].edition_version,
+        number=2,
+        image_width=1024,
+        image_height=1536,
+        checksum_sha256="c" * 64,
+    )
+    extra_ayahs = [
+        Ayah.objects.create(
+            surah=first_ayah.surah,
+            number=number,
+            text_uthmani="ٱلرَّحْمَٰنِ",
+            text_search="الرحمن",
+            juz_number=1,
+            hizb_number=1,
+            rub_el_hizb_number=1,
+        )
+        for number in range(3, 8)
+    ]
+    AyahPageMapping.objects.bulk_create(
+        [AyahPageMapping(page=second_page, ayah=ayah) for ayah in extra_ayahs]
+        + [AyahPageMapping(page=second_page, ayah=first_ayah)]
+    )
+
+    with CaptureQueriesContext(connection) as expanded:
+        response = api_client.get(url)
+
+    assert response.status_code == 200
+    pages = {item["number"]: item["pages"] for item in response.json()}
+    assert pages[1] == [1, 2]
+    assert pages[2] == [1]
+    assert pages[7] == [2]
+    assert len(expanded) == len(baseline)
 
 
 @pytest.mark.django_db

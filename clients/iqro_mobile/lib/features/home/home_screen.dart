@@ -45,8 +45,10 @@ class HomeScreen extends ConsumerWidget {
     final duaState = ref.watch(duaEntriesProvider);
     final session = ref.watch(sessionProvider).valueOrNull;
     final audioController = ref.read(audioControllerProvider.notifier);
-    final player = audioController.listeningPresentation(
-      ref.watch(audioControllerProvider),
+    // Select the presentation only: position ticks during playback must not
+    // rebuild the whole dashboard.
+    final player = ref.watch(
+      audioControllerProvider.select(audioController.listeningPresentation),
     );
     final locale = Localizations.localeOf(context).languageCode;
     final clock =

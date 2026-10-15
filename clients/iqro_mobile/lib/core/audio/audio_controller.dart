@@ -422,9 +422,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
     IqroAudioEngine? engine,
     AudioPlaybackStore? playbackStore,
     ListeningMediaService? mediaService,
+    Duration persistenceDelay = const Duration(seconds: 5),
   }) : assert(player == null || engine == null),
        _player = engine ?? JustAudioEngine(player),
        _playbackStore = playbackStore,
+       _persistenceDelay = persistenceDelay,
        _mediaService = mediaService ?? ListeningMediaService.current,
        super(const IqroAudioState()) {
     _subscriptions.add(
@@ -585,6 +587,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       <StreamSubscription<Object?>>[];
   Timer? _sleepTimer;
   Timer? _persistenceTimer;
+  final Duration _persistenceDelay;
   var _disposed = false;
   var _restoreStarted = false;
   var _restoring = false;
@@ -1984,13 +1987,18 @@ class AudioController extends StateNotifier<IqroAudioState> {
         state.channel != AudioPlaybackChannel.listening) {
       return;
     }
-    _persistenceTimer?.cancel();
     if (immediate) {
+      _persistenceTimer?.cancel();
+      _persistenceTimer = null;
       unawaited(_persistCurrent());
       return;
     }
+    // Throttle, not debounce: position ticks arrive every 16-200 ms while
+    // playing, so restarting the timer on each tick would never save anything.
+    // The pending write reads the latest state when it fires.
+    if (_persistenceTimer?.isActive ?? false) return;
     _persistenceTimer = Timer(
-      const Duration(seconds: 2),
+      _persistenceDelay,
       () => unawaited(_persistCurrent()),
     );
   }

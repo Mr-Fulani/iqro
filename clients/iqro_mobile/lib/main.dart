@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
@@ -20,6 +23,23 @@ Future<AppDependencies> _initialize() async {
   );
 }
 
+// The brand intro plays on the first launch only; later cold starts open as
+// soon as dependencies are ready.
+const _startupIntroSeenKey = 'startup_intro_seen_v1';
+
+Future<bool> _shouldPlayIntro() async {
+  final preferences = await SharedPreferences.getInstance();
+  return preferences.getBool(_startupIntroSeenKey) != true;
+}
+
+void _markIntroSeen() {
+  unawaited(
+    SharedPreferences.getInstance()
+        .then((preferences) => preferences.setBool(_startupIntroSeenKey, true))
+        .catchError((Object _) => false),
+  );
+}
+
 Future<void> _initializeAudioPlatform() async {
   await ListeningMediaService.initialize();
   final audioSession = await AudioSession.instance;
@@ -32,6 +52,8 @@ class _IqroBootstrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) => StartupGate<AppDependencies>(
     initialize: _initialize,
+    shouldPlayIntro: _shouldPlayIntro,
+    onIntroFinished: _markIntroSeen,
     readyBuilder: (dependencies) => ProviderScope(
       overrides: dependencies.overrides,
       child: const IqroApp(),
