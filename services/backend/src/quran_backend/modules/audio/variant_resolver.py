@@ -257,7 +257,7 @@ def _parse_quran_foundation_ayah_variant_id(
     try:
         source_id = int(raw_source_id)
         version_id = uuid.UUID(raw_version_id)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     if source_id <= 0:
         return None
@@ -300,7 +300,7 @@ class RecitationEditionAudioAdapter:
     def _get(self, variant_id: str) -> RecitationEdition | None:
         try:
             parsed = uuid.UUID(variant_id)
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return None
         return self._queryset().filter(pk=parsed).first()
 
@@ -523,7 +523,7 @@ class QuranFoundationAyahAudioAdapter:
             try:
                 ayah_number = int(item["ayah_number"])
                 url = str(item["url"])
-            except (KeyError, TypeError, ValueError):
+            except KeyError, TypeError, ValueError:
                 continue
             if ayah_number <= 0 or not url:
                 continue

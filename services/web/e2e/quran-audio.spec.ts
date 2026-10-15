@@ -1044,7 +1044,10 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
 
   await page.locator(".dua-category-chip").click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
+  await expect(page).toHaveURL("/ru/dua/topics/sleep");
+  // Topic pages list duas; playback controls live on the individual dua page.
+  await page.getByRole("link", { name: /Слова поминания при пробуждении ото сна · #1/ }).click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
   const duaAudio = page.locator(".dua-audio-panel audio");
   const duaButton = page.locator(".dua-entry-tools .dua-icon-action").first();
   await duaButton.click();

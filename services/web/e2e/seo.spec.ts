@@ -164,9 +164,7 @@ test("published Dua catalog renders topic cards and provenance on the server", a
   expect(html).not.toContain("الْحَمْدُ للَّهِ");
   expect(html).toContain("Молитвы из Корана и Сунны");
   expect(html).toContain("https://islamhouse.com/ru/books/888254");
-  expect(html).toContain(
-    'href="/ru/dua/hisn-al-muslim/categories/waking-up"',
-  );
+  expect(html).toContain('href="/ru/dua/topics/sleep"');
 });
 
 test("published Dua topic route is localized, indexable, and server rendered", async ({ page, request }) => {
@@ -176,7 +174,9 @@ test("published Dua topic route is localized, indexable, and server rendered", a
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain("Слова поминания при пробуждении ото сна");
-  expect(html).toContain("الْحَمْدُ للَّهِ");
+  // Category pages list summaries that link to each dua; the Arabic text is
+  // asserted on the canonical entry route below.
+  expect(html).toContain('href="/ru/dua/hisn-al-muslim/1"');
   expect(html).toContain('"@type":"BreadcrumbList"');
 
   await page.goto(topicPath);
@@ -190,7 +190,7 @@ test("published Dua topic route is localized, indexable, and server rendered", a
     `${siteUrl}/en/dua/hisn-al-muslim/categories/waking-up`,
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
-  await expect(page.locator(".dua-entry-card")).toHaveCount(1);
+  await expect(page.locator(".dua-summary-row")).toHaveCount(1);
   expect((await request.get("/ru/dua/not-a-published-topic")).status()).toBe(404);
 });
 
@@ -331,7 +331,7 @@ test("legal and contact pages are localized, canonical, and linked from the foot
   await expect(page.locator('.app-footer a[href="/ru/data-rights"]')).toBeVisible();
   await expect(page.locator('.app-footer a[href="/ru/security"]')).toBeVisible();
   await expect(page.locator('.app-footer a[href="/ru/sources"]')).toBeVisible();
-  await expect(page.locator(".footer-brand")).toContainText("IQRO — Исламский форум");
+  await expect(page.locator(".footer-brand")).toContainText("IQRO — Коран, аудио чтецов");
   await expect(page.locator(".footer-bottom")).toContainText(
     "© 2026 IQRO — Исламский форум",
   );
@@ -499,8 +499,8 @@ test("web manifest and generated share assets are available", async ({ request }
   const manifestResponse = await request.get("/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);
   expect(await manifestResponse.json()).toMatchObject({
-    name: "Quran Platform",
-    short_name: "Quran",
+    name: "IQRO",
+    short_name: "IQRO",
     display: "standalone",
     theme_color: "#065f46",
   });

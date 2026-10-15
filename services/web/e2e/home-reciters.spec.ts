@@ -384,7 +384,7 @@ test("home prayer preview reuses the saved prayer location and profile", async (
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
-  await page.route("**/api/v1/reciters", (route) =>
+  await page.route("**/api/v1/reciters?*", (route) =>
     route.fulfill({ json: { next: null, previous: null, results: reciters } }),
   );
   await page.route("**/api/v1/recitations?*", (route) =>
@@ -459,7 +459,7 @@ test("one reciter exposes multiple reading styles without duplicate person optio
   );
 
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
-  await page.route("**/api/v1/reciters", (route) =>
+  await page.route("**/api/v1/reciters?*", (route) =>
     route.fulfill({ json: { next: null, previous: null, results: reciters } }),
   );
   await page.route("**/api/v1/recitations?*", (route) => {
