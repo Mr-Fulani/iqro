@@ -107,7 +107,9 @@ services:
     logging: *default-logging
 
   redis:
-    image: redis:7.4.11-alpine3.21
+    image: ${REDIS_IMAGE:-quran-platform-redis:${APP_VERSION:-local}}
+    build:
+      context: ./ops/redis
     restart: unless-stopped
     init: true
     # Shared cache+broker S0: keep maxmemory below mem_limit (headroom for AOF
