@@ -77,7 +77,9 @@ class ReadyHealthView(APIView):
     @staticmethod
     def _cache_ready(alias: str) -> bool:
         role_cache = caches[alias]
-        key = f"health:ready:{alias}"
+        # A per-probe key: concurrent probes sharing one key delete each other's
+        # value and report a healthy cache as unavailable.
+        key = f"health:ready:{alias}:{secrets.token_hex(8)}"
         try:
             role_cache.set(key, "ok", timeout=5)
             ready = role_cache.get(key) == "ok"

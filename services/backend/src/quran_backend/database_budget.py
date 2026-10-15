@@ -38,6 +38,7 @@ class DatabaseConnectionBudget:
     api_replicas: int
     api_processes_per_replica: int
     api_max_concurrent_requests_per_process: int
+    api_pool_max_size_per_process: int
     worker_replicas: int
     worker_connections_per_replica: int
     beat_connections: int
@@ -89,6 +90,12 @@ class DatabaseConnectionBudget:
                 5,
                 minimum=1,
             ),
+            api_pool_max_size_per_process=_integer(
+                environ,
+                "DATABASE_API_POOL_MAX_SIZE",
+                0,
+                minimum=0,
+            ),
             worker_replicas=_integer(environ, "DATABASE_WORKER_REPLICAS", 1, minimum=0),
             worker_connections_per_replica=_integer(
                 environ,
@@ -118,8 +125,19 @@ class DatabaseConnectionBudget:
         return self.postgres_max_connections - self.postgres_reserved_connections
 
     @property
+    def api_connections_per_process(self) -> int:
+        # A pooled API process never holds more than its pool; requests beyond it
+        # wait for a free connection instead of opening another one.
+        if self.api_pool_max_size_per_process:
+            return min(
+                self.api_pool_max_size_per_process,
+                self.api_max_concurrent_requests_per_process,
+            )
+        return self.api_max_concurrent_requests_per_process
+
+    @property
     def api_connections_per_replica(self) -> int:
-        return self.api_processes_per_replica * self.api_max_concurrent_requests_per_process
+        return self.api_processes_per_replica * self.api_connections_per_process
 
     @property
     def projected_client_connections(self) -> int:
@@ -149,6 +167,11 @@ class DatabaseConnectionBudget:
                 "DATABASE_POSTGRES_RESERVED_CONNECTIONS must be smaller than "
                 "DATABASE_POSTGRES_MAX_CONNECTIONS"
             )
+        if self.pool_mode == "transaction" and self.api_pool_max_size_per_process:
+            raise DatabaseBudgetError(
+                "DATABASE_API_POOL_MAX_SIZE must be 0 with transaction pooling; "
+                "PgBouncer already pools server connections"
+            )
         if self.pool_mode == "direct":
             if self.projected_client_connections > self.postgres_available_connections:
                 raise DatabaseBudgetError(
@@ -174,6 +197,7 @@ class DatabaseConnectionBudget:
         report: dict[str, int | str] = asdict(self)
         report.update(
             {
+                "api_connections_per_process": self.api_connections_per_process,
                 "api_connections_per_replica": self.api_connections_per_replica,
                 "postgres_available_connections": self.postgres_available_connections,
                 "projected_client_connections": self.projected_client_connections,

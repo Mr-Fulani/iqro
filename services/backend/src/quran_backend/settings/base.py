@@ -331,6 +331,18 @@ DATABASE_OPTIONS: dict[str, object] = {
 }
 if DATABASE_POOL_MODE == "transaction":
     DATABASE_OPTIONS["prepare_threshold"] = None
+# Only the API service enables the pool; Celery prefork children and one-off
+# commands keep short-lived connections so they stay within their own budget.
+DATABASE_POOL_ENABLED = env_bool("DATABASE_POOL_ENABLED", False)
+if DATABASE_POOL_ENABLED:
+    pool_max_size = DATABASE_CONNECTION_BUDGET.api_pool_max_size_per_process
+    if pool_max_size == 0:
+        raise ImproperlyConfigured("DATABASE_POOL_ENABLED requires DATABASE_API_POOL_MAX_SIZE")
+    DATABASE_OPTIONS["pool"] = {
+        "min_size": min(2, pool_max_size),
+        "max_size": pool_max_size,
+        "timeout": positive_env_int("DATABASE_POOL_TIMEOUT_SECONDS", 10),
+    }
 
 DATABASES = {
     "default": {

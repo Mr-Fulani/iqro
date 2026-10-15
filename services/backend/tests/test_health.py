@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from django.core.cache import caches
 from django.urls import reverse
 from rest_framework.test import APIClient
+
+from quran_backend.modules.core.api import ReadyHealthView
 
 
 def test_live_health_is_public_and_not_cacheable(api_client: APIClient) -> None:
@@ -27,6 +30,26 @@ def test_ready_health_checks_database_and_cache(api_client: APIClient) -> None:
         "components": {"database": True, "cache": True, "throttling": True},
     }
     assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_concurrent_cache_probes_do_not_clobber_each_other(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    role_cache = caches["default"]
+    original_get = role_cache.get
+    interleaved = False
+
+    def get_after_concurrent_probe(*args: object, **kwargs: object) -> object:
+        nonlocal interleaved
+        if not interleaved:
+            interleaved = True
+            # Another request's probe runs (and deletes its key) between our set and get.
+            assert ReadyHealthView._cache_ready("default")
+        return original_get(*args, **kwargs)
+
+    monkeypatch.setattr(role_cache, "get", get_after_concurrent_probe)
+
+    assert ReadyHealthView._cache_ready("default")
 
 
 def test_request_id_is_preserved_when_valid(api_client: APIClient) -> None:

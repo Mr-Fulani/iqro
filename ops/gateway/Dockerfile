@@ -2,7 +2,10 @@ FROM alpine:3.23.5
 
 RUN apk add --no-cache nginx nginx-mod-http-cache-purge \
         'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' \
-    && mkdir -p /var/cache/nginx/public-api
+    && mkdir -p /var/cache/nginx/public-api \
+    # The container is capped at half a CPU; `auto` would start one worker per host core.
+    && sed -i 's/^worker_processes auto;/worker_processes 2;/' /etc/nginx/nginx.conf \
+    && grep -q '^worker_processes 2;' /etc/nginx/nginx.conf
 
 COPY default.conf /etc/nginx/http.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/quran-security-headers.conf

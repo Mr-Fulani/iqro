@@ -37,6 +37,20 @@ def test_transaction_budget_separates_clients_from_postgres_connections() -> Non
     assert budget.report()["postgres_connection_headroom"] == 40
 
 
+def test_pooled_api_holds_at_most_its_pool_regardless_of_request_slots() -> None:
+    budget = DatabaseConnectionBudget.from_environ(
+        {
+            "GUNICORN_WORKERS": "2",
+            "API_MAX_CONCURRENT_REQUESTS_PER_WORKER": "32",
+            "DATABASE_API_POOL_MAX_SIZE": "8",
+        }
+    )
+
+    assert budget.api_connections_per_process == 8
+    assert budget.api_connections_per_replica == 16
+    assert budget.projected_client_connections == 25
+
+
 @pytest.mark.parametrize(
     ("environ", "message"),
     [
@@ -64,6 +78,10 @@ def test_transaction_budget_separates_clients_from_postgres_connections() -> Non
             "DATABASE_PGBOUNCER_CLIENT_CONNECTIONS",
         ),
         ({"GUNICORN_WORKERS": "many"}, "GUNICORN_WORKERS"),
+        (
+            {"DATABASE_POOL_MODE": "transaction", "DATABASE_API_POOL_MAX_SIZE": "8"},
+            "DATABASE_API_POOL_MAX_SIZE must be 0",
+        ),
     ],
 )
 def test_unsafe_budget_is_rejected(environ: dict[str, str], message: str) -> None:
