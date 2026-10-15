@@ -36,7 +36,7 @@
     "script": 450,
     "stylesheet": 150,
     "image": 400,
-    "font": 250
+    "font": 300
   },
   "resourceCounts": {
     "total": 60,
