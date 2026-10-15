@@ -20,23 +20,24 @@ class AudioRepository {
   final AudioOfflineRepository _offline;
   final String Function() _preferredQuality;
   final Map<String, List<Recitation>> _recitationMemory = {};
+  // Backend max_page_size for /reciters and /recitations.
+  static const _catalogPageSize = 100;
+  static const _maxCatalogPages = 50;
   final Map<String, SurahPlayback> _playbackMemory = {};
 
   void clearPlaybackCache() => _playbackMemory.clear();
 
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async {
-    // Bump the local catalog cache after portrait metadata was introduced.
-    // Existing devices otherwise retain a stale list for up to twelve hours.
-    const key = 'audio:reciters:v2';
+    // v3 drops caches that held only the first cursor page of the catalog.
+    const key = 'audio:reciters:v3';
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
       return parseReciters(cached!.value);
     }
     try {
-      final payload = await _api.get(
+      final payload = await _getAllPages(
         '/reciters',
-        query: const <String, Object?>{'page_size': 100},
-        public: true,
+        const <String, Object?>{},
       );
       await _database.writeCache(
         key,
@@ -96,7 +97,7 @@ class AudioRepository {
   }) async {
     final suffix = reciterId == null ? 'all' : 'reciter:$reciterId';
     // Keep recitation availability in sync with the refreshed reciter catalog.
-    final key = 'audio:recitations:v2:madani-hafs:$suffix';
+    final key = 'audio:recitations:v3:madani-hafs:$suffix';
     if (!forceRefresh) {
       final memory = _recitationMemory[key];
       if (memory != null) return memory;
@@ -106,15 +107,10 @@ class AudioRepository {
       return _recitationMemory[key] = _parseRecitations(cached!.value);
     }
     try {
-      final payload = await _api.get(
-        '/recitations',
-        query: <String, Object?>{
-          'reciter_id': ?reciterId,
-          'quran_edition': 'madani-hafs',
-          'page_size': 100,
-        },
-        public: true,
-      );
+      final payload = await _getAllPages('/recitations', <String, Object?>{
+        'reciter_id': ?reciterId,
+        'quran_edition': 'madani-hafs',
+      });
       await _database.writeCache(
         key,
         payload,
@@ -127,6 +123,48 @@ class AudioRepository {
       }
       rethrow;
     }
+  }
+
+  /// Follows the cursor so catalogs larger than one page are not truncated.
+  /// The merged payload keeps the paginated shape for the cache parsers.
+  Future<Map<String, Object?>> _getAllPages(
+    String path,
+    Map<String, Object?> query,
+  ) async {
+    final results = <Object?>[];
+    final cursors = <String>{};
+    String? cursor;
+    for (var page = 0; page < _maxCatalogPages; page += 1) {
+      final payload = await _api.get(
+        path,
+        query: <String, Object?>{
+          ...query,
+          'page_size': _catalogPageSize,
+          'cursor': ?cursor,
+        },
+        public: true,
+      );
+      results.addAll(jsonResults(payload));
+      final next = payload is Map ? payload['next'] : null;
+      if (next == null) {
+        return <String, Object?>{
+          'next': null,
+          'previous': null,
+          'results': results,
+        };
+      }
+      final nextCursor = next is String
+          ? Uri.tryParse(next)?.queryParameters['cursor']
+          : null;
+      if (nextCursor == null || nextCursor.isEmpty) {
+        throw FormatException('Audio pagination link is invalid: $path');
+      }
+      if (!cursors.add(nextCursor)) {
+        throw FormatException('Audio pagination cursor repeated: $path');
+      }
+      cursor = nextCursor;
+    }
+    throw FormatException('Audio pagination exceeds the safe limit: $path');
   }
 
   Future<AudioTrack?> track({

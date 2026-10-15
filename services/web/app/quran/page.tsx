@@ -46,6 +46,7 @@ import {
   type AyahTranslation,
   type PrayerReadingPrayer,
 } from "../../lib/api";
+import { indexAyahBookmarks } from "../../lib/ayah-bookmarks";
 import { useAuth } from "../../lib/auth-context";
 import { useI18n } from "../../lib/i18n-context";
 
@@ -880,18 +881,10 @@ function QuranContent() {
     setBookmarkStateReady(false);
     let cancelled = false;
     void api
-      .getBookmarks()
-      .then((snapshot) => {
+      .getAllBookmarks()
+      .then((bookmarks) => {
         if (cancelled) return;
-        setSavedAyahBookmarks(
-          Object.fromEntries(
-            snapshot.results.flatMap((bookmark) =>
-              bookmark.ayah && !bookmark.deleted_at
-                ? [[`${bookmark.ayah.surah_number}:${bookmark.ayah.ayah_number}`, bookmark]]
-                : [],
-            ),
-          ),
-        );
+        setSavedAyahBookmarks(indexAyahBookmarks(bookmarks));
         setBookmarkStateReady(true);
       })
       .catch(() => {

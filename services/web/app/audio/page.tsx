@@ -63,9 +63,8 @@ export default function AudioPage() {
   useEffect(() => {
     setLoading(true);
     api
-      .getReciters()
-      .then((res) => {
-        const availableReciters = res.results || [];
+      .getAllReciters()
+      .then((availableReciters) => {
         const people = groupRecitersByPerson(availableReciters);
         setReciterSources(availableReciters);
         setReciters(people);
@@ -97,13 +96,10 @@ export default function AudioPage() {
     const sources = reciterSourcesForPerson(reciterSources, selected);
     let cancelled = false;
     setLoading(true);
-    Promise.all(sources.map((source) => api.getRecitations({ reciter_id: source.id })))
+    Promise.all(sources.map((source) => api.getAllRecitations({ reciter_id: source.id })))
       .then((responses) => {
         if (cancelled) return;
-        const available = latestRecitationsByVariant(
-          responses.flatMap((response) => response.results || []),
-          "listen",
-        );
+        const available = latestRecitationsByVariant(responses.flat(), "listen");
         setRecitations(available);
         if (available.length > 0) {
           const selectedRecitation =

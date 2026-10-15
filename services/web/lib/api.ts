@@ -17,6 +17,11 @@ import {
   setSyncCursor,
 } from "./sync-state";
 import { Locale, MessageKey, translate } from "./i18n";
+import { collectCursorPages } from "./cursor-pagination";
+
+// Backend max_page_size: audio catalogs 100, bookmarks 200.
+const AUDIO_CATALOG_PAGE_SIZE = 100;
+const BOOKMARKS_PAGE_SIZE = 200;
 
 export type RequestState<T = unknown> = {
   loading?: boolean;
@@ -1773,9 +1778,10 @@ export class ApiClient {
   // -------------------------------------------------------------------------
   // Audio Catalog & Playback
   // -------------------------------------------------------------------------
-  public async getReciters(cursor?: string): Promise<PaginatedResponse<Reciter>> {
+  public async getReciters(cursor?: string, pageSize?: number): Promise<PaginatedResponse<Reciter>> {
     const params = new URLSearchParams();
     if (cursor) params.set("cursor", cursor);
+    if (pageSize) params.set("page_size", String(pageSize));
     const qs = params.toString() ? `?${params.toString()}` : "";
     return this.request<PaginatedResponse<Reciter>>(`/api/v1/reciters${qs}`);
   }
@@ -1784,12 +1790,17 @@ export class ApiClient {
     return this.request<Reciter>(`/api/v1/reciters/${reciterId}`);
   }
 
-  public async getRecitations(params: { reciter_id?: string; quran_edition?: string; style?: string; cursor?: string } = {}): Promise<PaginatedResponse<Recitation>> {
+  public async getAllReciters(): Promise<Reciter[]> {
+    return collectCursorPages((cursor) => this.getReciters(cursor, AUDIO_CATALOG_PAGE_SIZE));
+  }
+
+  public async getRecitations(params: { reciter_id?: string; quran_edition?: string; style?: string; cursor?: string; page_size?: number } = {}): Promise<PaginatedResponse<Recitation>> {
     const query = new URLSearchParams();
     if (params.reciter_id) query.set("reciter_id", params.reciter_id);
     if (params.quran_edition) query.set("quran_edition", params.quran_edition);
     if (params.style) query.set("style", params.style);
     if (params.cursor) query.set("cursor", params.cursor);
+    if (params.page_size) query.set("page_size", String(params.page_size));
     const qs = query.toString() ? `?${query.toString()}` : "";
     return this.request<PaginatedResponse<Recitation>>(`/api/v1/recitations${qs}`);
   }
@@ -1797,16 +1808,9 @@ export class ApiClient {
   public async getAllRecitations(
     params: { reciter_id?: string; quran_edition?: string; style?: string } = {},
   ): Promise<Recitation[]> {
-    const results: Recitation[] = [];
-    let cursor: string | undefined;
-    for (let pageNumber = 0; pageNumber < 20; pageNumber += 1) {
-      const page = await this.getRecitations({ ...params, cursor });
-      results.push(...(page.results || []));
-      if (!page.next) break;
-      cursor = new URL(page.next, "http://api.local").searchParams.get("cursor") || undefined;
-      if (!cursor) break;
-    }
-    return results;
+    return collectCursorPages((cursor) =>
+      this.getRecitations({ ...params, cursor, page_size: AUDIO_CATALOG_PAGE_SIZE }),
+    );
   }
 
   public async getTracks(recitationId: string, params: { scope?: string; cursor?: string; page_size?: number } = {}): Promise<PaginatedResponse<AudioTrack>> {
@@ -2182,10 +2186,14 @@ export class ApiClient {
     }
   }
 
-  public async getBookmarks(cursor?: string): Promise<PaginatedResponse<Bookmark>> {
-    const params = new URLSearchParams({ page_size: "50" });
+  public async getBookmarks(cursor?: string, pageSize = 50): Promise<PaginatedResponse<Bookmark>> {
+    const params = new URLSearchParams({ page_size: String(pageSize) });
     if (cursor) params.set("cursor", cursor);
     return this.request<PaginatedResponse<Bookmark>>(`/api/v1/me/bookmarks?${params.toString()}`);
+  }
+
+  public async getAllBookmarks(): Promise<Bookmark[]> {
+    return collectCursorPages((cursor) => this.getBookmarks(cursor, BOOKMARKS_PAGE_SIZE));
   }
 
   public async getBookmark(bookmarkId: string): Promise<Bookmark> {

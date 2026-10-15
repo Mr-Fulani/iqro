@@ -69,8 +69,8 @@ export default function HomePage() {
       .catch(() => {});
 
     api
-      .getReciters()
-      .then((res) => setFeaturedReciters(selectHomePopularReciters(res.results || [])))
+      .getAllReciters()
+      .then((res) => setFeaturedReciters(selectHomePopularReciters(res)))
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 
