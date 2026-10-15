@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/public_asset_uri.dart';
+import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_package_items.dart';
 import '../../core/storage/offline_package_queries.dart';
@@ -304,6 +305,9 @@ class MushafOfflineRepository {
       p.join(support.path, 'offline_packages', 'mushaf', manifest.packageId),
     );
     await packageDirectory.create(recursive: true);
+    await BackupExclusion.exclude(
+      Directory(p.join(support.path, 'offline_packages')),
+    );
     await _preparePackage(manifest, packageDirectory);
 
     var completedPages = 0;

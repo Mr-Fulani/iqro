@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/storage/offline_package_items.dart';
 import '../../core/storage/offline_package_queries.dart';
@@ -437,6 +438,9 @@ class AudioOfflineRepository {
       p.join(support.path, 'offline_packages', 'audio', manifest.packageId),
     );
     await packageDirectory.create(recursive: true);
+    await BackupExclusion.exclude(
+      Directory(p.join(support.path, 'offline_packages')),
+    );
     await _preparePackage(manifest, packageDirectory);
 
     var completedTracks = 0;

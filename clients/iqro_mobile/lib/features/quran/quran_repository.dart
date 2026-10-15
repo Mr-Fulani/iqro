@@ -12,6 +12,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/public_asset_uri.dart';
+import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -649,6 +650,7 @@ class QuranRepository {
       ),
     );
     await file.parent.create(recursive: true);
+    await BackupExclusion.exclude(file.parent);
     final temporary = File('${file.path}.${_uuid.v4()}.partial');
     await temporary.writeAsBytes(bytes, flush: true);
     await temporary.rename(file.path);
@@ -729,6 +731,9 @@ class QuranRepository {
       p.join(supportDirectory.path, 'mushaf_pages', mushaf.code, safeVersion),
     );
     await directory.create(recursive: true);
+    await BackupExclusion.exclude(
+      Directory(p.join(supportDirectory.path, 'mushaf_pages')),
+    );
     final file = File(
       p.join(
         directory.path,
