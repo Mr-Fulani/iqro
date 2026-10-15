@@ -134,3 +134,20 @@ private struct PrayerClockSky: View {
     }.accessibilityHidden(true)
   }
 }
+
+/// Mirrors PrayerTimesWidgetSchedule.kt: shows the entry for the next prayer that
+/// has not begun yet, so a late or exhausted timeline never counts down to a past one.
+/// After Isha this is still today's entry, aiming at tomorrow's Fajr.
+enum PrayerTimesSchedule {
+  static func activeValues(_ entries: [(date: Date, values: [String: Any])], at date: Date) -> [String: Any] {
+    func target(_ values: [String: Any]) -> Date? {
+      guard let raw = values["nextEpoch"] as? String, let millis = Double(raw) else { return nil }
+      return Date(timeIntervalSince1970: millis / 1000)
+    }
+    guard let next = entries.compactMap({ target($0.values) }).filter({ $0 > date }).min() else {
+      return entries.last(where: { $0.date <= date })?.values ?? [:]
+    }
+    let candidates = entries.filter { target($0.values) == next }
+    return (candidates.last(where: { $0.date <= date }) ?? candidates.first)?.values ?? [:]
+  }
+}

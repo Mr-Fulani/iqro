@@ -24,8 +24,14 @@ Future<void> main() async {
   final swiftView = File(
     'home_widget/native/prayer_times_view.swift',
   ).readAsStringSync();
+  const timedLookup = 'activeTimedValues(timedEntries';
+  if (!swiftSource.contains(timedLookup)) {
+    throw StateError('Swift timed data lookup changed');
+  }
+  // Pick the next prayer that has not begun, like the Android widget.
   swift.writeAsStringSync(
-    '${swiftSource.substring(0, start)}$swiftView\n${swiftSource.substring(end)}',
+    '${swiftSource.substring(0, start)}$swiftView\n${swiftSource.substring(end)}'
+        .replaceFirst(timedLookup, 'PrayerTimesSchedule.activeValues(timedEntries'),
   );
 
   swift.writeAsStringSync(

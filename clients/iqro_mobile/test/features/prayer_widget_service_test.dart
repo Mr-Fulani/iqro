@@ -57,6 +57,29 @@ void main() {
     );
   });
 
+  test('every published entry counts down to a prayer that has not begun', () {
+    final zone = tz.getLocation('Europe/Istanbul');
+    final schedules = List<PrayerSchedule>.generate(
+      prayerWidgetVisibleDays + 1,
+      (index) => _schedule(DateTime(2026, 10, 14 + index), zone),
+    );
+    final timeline = buildPrayerWidgetTimeline(
+      schedules: schedules,
+      locationName: 'İstanbul',
+      copy: PrayerWidgetCopy.forLocale('ru'),
+      now: DateTime.utc(2026, 10, 14),
+    );
+
+    for (final entry in timeline.entries) {
+      final target = int.parse(entry.value.nextEpoch);
+      expect(
+        target,
+        greaterThan(entry.key.millisecondsSinceEpoch),
+        reason: 'entry starting at ${entry.key} must not count down',
+      );
+    }
+  });
+
   test(
     'partial horizon keeps valid days without indexing beyond available data',
     () {
