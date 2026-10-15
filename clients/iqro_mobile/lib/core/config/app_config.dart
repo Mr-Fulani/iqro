@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
@@ -7,18 +8,37 @@ class AppConfig {
     required this.environment,
   });
 
-  factory AppConfig.fromEnvironment() {
+  static Future<AppConfig> fromEnvironment({
+    Future<bool> Function() isPhysicalAndroidDevice = _isPhysicalAndroidDevice,
+  }) async {
+    const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+    const releaseMode = kReleaseMode || kProfileMode;
+    var androidEmulator = false;
+    // Only the debug local default depends on the device: an emulator reaches
+    // the host via 10.0.2.2, a USB phone via `adb reverse` on 127.0.0.1.
+    if (!releaseMode &&
+        apiBaseUrl.trim().isEmpty &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        androidEmulator = !await isPhysicalAndroidDevice();
+      } on Object {
+        androidEmulator = true;
+      }
+    }
     return AppConfig.validate(
-      apiBaseUrl: const String.fromEnvironment('API_BASE_URL'),
+      apiBaseUrl: apiBaseUrl,
       fallbackDownloadUrl: const String.fromEnvironment(
         'APP_DOWNLOAD_URL',
         defaultValue: 'https://iqro.forum',
       ),
       environment: const String.fromEnvironment('APP_ENV'),
-      releaseMode: kReleaseMode || kProfileMode,
-      androidEmulator: defaultTargetPlatform == TargetPlatform.android,
+      releaseMode: releaseMode,
+      androidEmulator: androidEmulator,
     );
   }
+
+  static Future<bool> _isPhysicalAndroidDevice() async =>
+      (await DeviceInfoPlugin().androidInfo).isPhysicalDevice;
 
   factory AppConfig.validate({
     required String apiBaseUrl,

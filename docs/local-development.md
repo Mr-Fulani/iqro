@@ -119,7 +119,7 @@ docker compose --env-file services/backend/.env exec backend python manage.py \
 | Android Emulator | `http://10.0.2.2:8000` (автоматически) |
 | iOS Simulator | `http://127.0.0.1:8000` (автоматически) |
 | Физический телефон в Wi-Fi | `http://<LAN-IP-компьютера>:8000` |
-| Android по USB с `adb reverse tcp:8000 tcp:8000` | `http://127.0.0.1:8000` |
+| Android по USB с `adb reverse tcp:8000 tcp:8000` | `http://127.0.0.1:8000` (автоматически) |
 
 ```bash
 make mobile-run MOBILE_ARGS="--dart-define=API_BASE_URL=http://192.168.1.20:8000"

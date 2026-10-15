@@ -74,7 +74,7 @@ class AppDependencies {
   final BackgroundMaintenanceService maintenance;
 
   static Future<AppDependencies> initialize() async {
-    final config = AppConfig.fromEnvironment();
+    final config = await AppConfig.fromEnvironment();
     final sharedPreferences = await SharedPreferences.getInstance();
     final preferences = PreferencesStore(sharedPreferences);
     final accountScope = AccountScope();
