@@ -193,8 +193,10 @@ API не должен предполагать, что запрос пришёл
 
 ### Redis
 
-- На старте один экземпляр может обслуживать backend cache, throttle, Celery и web cache:
-  пять role URL указывают на один endpoint, но роли изолированы alias/key prefix.
+- На старте один экземпляр (`noeviction`) обслуживает backend cache, throttle и Celery:
+  четыре role URL указывают на один endpoint, но роли изолированы alias/key prefix. Next.js
+  web cache работает в отдельном `web-cache` с `volatile-lru` и без persistence, чтобы ISR-страницы
+  не могли заполнить Redis broker'а.
 - `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`, `CELERY_BROKER_URL` и
   `CELERY_RESULT_BACKEND` конфигурируются отдельно в backend, `WEB_CACHE_REDIS_URL` — в web,
   поэтому роли разделяются без изменения бизнес-кода; legacy `REDIS_URL` остаётся fallback

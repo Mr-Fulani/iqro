@@ -22,6 +22,7 @@ LONG_RUNNING_SERVICES = frozenset(
     {
         "postgres",
         "redis",
+        "web-cache",
         "backend",
         "worker",
         "beat",

@@ -10,8 +10,8 @@
 запрет индексации и тестовую почту. Непроверенный staging нельзя заменять прямым первым запуском
 production.
 
-`compose.production.yaml` запускает отдельный production-стек: PostgreSQL, Redis,
-одноразовую миграцию, Django/Gunicorn, Celery worker/beat, Next.js standalone и Nginx
+`compose.production.yaml` запускает отдельный production-стек: PostgreSQL, Redis, отдельный
+Redis `web-cache` для Next.js, одноразовую миграцию, Django/Gunicorn, Celery worker/beat, Next.js standalone и Nginx
 gateway. Исходный код не монтируется в контейнеры, наружу публикуется только gateway,
 а миграция должна успешно завершиться до запуска приложения. Managed media не монтируется
 и не раздаётся с application host: публичные URL ведут в отдельный CDN/object storage.
@@ -49,8 +49,9 @@ chmod 600 services/backend/.env.production
 - `DJANGO_ALLOWED_HOSTS`, CSRF/CORS origins и публичные HTTPS URL;
 - `SITE_URL`: один канонический HTTPS origin web-приложения без path/query/hash;
 - пароль PostgreSQL и все Django/Quran hash keys;
-- пять Redis role URL, включая `WEB_CACHE_REDIS_URL`; для S0 они могут указывать на один
-  внутренний Redis endpoint;
+- четыре backend Redis role URL; для S0 они могут указывать на один внутренний Redis endpoint.
+  `WEB_CACHE_REDIS_URL` задавать не нужно: Compose направляет web в отдельный `web-cache`
+  (см. 3.5), а старое значение в env-файле игнорируется;
 - `QURAN_OPERATIONS_TOKEN`;
 - независимый `GRAFANA_ADMIN_PASSWORD`, месячный денежный и origin-egress budget; alert webhook
   можно оставить пустым только для локальной проверки dashboard;
@@ -138,13 +139,15 @@ python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
   официального entrypoint;
 - контейнеры приложения имеют read-only root filesystem, `no-new-privileges`,
   ограничение процессов, CPU и RAM;
-- healthchecks проверяют PostgreSQL, Redis, Django readiness, Next.js и gateway;
+- healthchecks проверяют PostgreSQL, оба Redis (`redis` и `web-cache`), Django readiness,
+  Next.js и gateway;
 - логи Docker ротируются по размеру и количеству файлов;
 - только успешная `migrate --noinput` открывает запуск backend/worker/beat;
 - Nginx раздаёт только собранный Django `/static/`, проксирует `/api/` в backend и держит
   bounded 24 MiB cache только для allowlisted public catalog JSON; `/media/` локально
   отсутствует, чтобы потеря application-host не уничтожала канонические assets;
-- данные PostgreSQL/Redis и собранная статика находятся в именованных volumes.
+- данные PostgreSQL/Redis и собранная статика находятся в именованных volumes; `web-cache`
+  ничего не сохраняет на диск.
 
 Лимиты ресурсов задаются в `compose.production.yaml`. Перед размещением на маленьком
 сервере сравните их сумму с доступной RAM; Docker применяет лимит каждому сервису
@@ -239,12 +242,13 @@ uv run python manage.py database_connection_budget
 
 ### 3.3. Redis roles
 
-Production явно требует пять URL: `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`,
-`CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` и `WEB_CACHE_REDIS_URL`. В S0 они указывают на
-один Redis, поэтому дополнительные серверы не нужны. При росте каждый URL можно перевести на
-отдельный database, instance или managed endpoint без изменения приложения. Обычный cache,
-web cache и security-critical throttling используют разные aliases/key prefixes; backend
-readiness проверяет первые два backend aliases, web cache контролируется отдельно.
+Production явно требует четыре backend URL: `REDIS_CACHE_URL`, `REDIS_THROTTLE_URL`,
+`CELERY_BROKER_URL` и `CELERY_RESULT_BACKEND`. В S0 они указывают на один Redis (`redis`,
+`noeviction`), поэтому отдельные серверы для них не нужны. При росте каждый URL можно перевести
+на отдельный database, instance или managed endpoint без изменения приложения. Обычный cache и
+security-critical throttling используют разные aliases/key prefixes; backend readiness
+проверяет оба alias. Next.js web cache уже работает в отдельном evictable Redis `web-cache`
+(3.5) и контролируется отдельно.
 
 До deploy проверьте разрешённые endpoints без вывода credentials:
 
@@ -292,9 +296,10 @@ workers, затем запустите один Beat с новым broker URL. �
 ### 3.5. Общий Next.js cache
 
 Web использует custom `cacheHandler` для fetch/ISR/route entries и отдельный Next.js handler
-для tag coordination. Оба работают через `WEB_CACHE_REDIS_URL`; production Compose передаёт
-`WEB_CACHE_REQUIRED=true`, поэтому отсутствующий URL отклоняется при создании handler. Build и
-локальная разработка без URL используют только process-local memory fallback.
+для tag coordination. Оба работают через `WEB_CACHE_REDIS_URL`; production Compose фиксирует его
+как `redis://web-cache:6379/0` и передаёт `WEB_CACHE_REQUIRED=true`, поэтому отсутствующий URL
+отклоняется при создании handler. Build и локальная разработка без URL используют только
+process-local memory fallback.
 
 `WEB_CACHE_KEY_PREFIX=quran-platform:web-cache:v1` изолирует keyspace. Все реплики одного
 deployment используют одинаковый prefix; разные environments на общем Redis — разные prefixes.
@@ -307,16 +312,33 @@ deployment используют одинаковый prefix; разные enviro
 
 Redis read error превращается в cache miss, write error не ломает пользовательский ответ.
 Ошибка записи invalidation timestamp, напротив, возвращает 5xx из внутреннего revalidation
-endpoint, чтобы Celery повторил событие. В S0 web cache указывает на тот же Redis. При росте его
-можно первым перенести на отдельный evictable endpoint: эти записи не являются источником
-истины. Не переносите вместе с ним throttle или broker без отдельной процедуры из 3.3.
+endpoint, чтобы Celery повторил событие.
 
 Публичные страницы под `app/[locale]` отдаются через ISR, поэтому в этот кэш попадает и
 HTML/RSC целиком. Ключи страниц и route-ответов содержат `BUILD_ID`: новый deployment не отдаёт
 HTML со ссылками на static assets прошлой сборки, а старые записи уходят по TTL. Fetch entries
-общие для всех сборок. Ответы 404 не кэшируются. Обход краулером десятков тысяч страниц аятов
-на каждую локаль заполнит общий Redis с `noeviction`, поэтому перед production-релизом ISR
-переведите `WEB_CACHE_REDIS_URL` на отдельный endpoint с `allkeys-lru`.
+общие для всех сборок. Ответы 404 не кэшируются.
+
+Поэтому web cache живёт в отдельном сервисе `web-cache`, а не в общем `redis` с Celery broker:
+обход краулером десятков тысяч страниц аятов на каждую локаль заполнит любой лимит, а в общем
+Redis с `noeviction` это остановило бы запись broker keys и очередь задач.
+`web-cache` использует тот же образ `quran-platform-redis`, но без persistence (`--save ""`,
+`--appendonly no`, `/data` на tmpfs) и с `--maxmemory 256mb --maxmemory-policy volatile-lru`
+при `mem_limit: 320m` (budget staging: 64mb/96m). Заполненный cache вытесняет давно не
+читавшиеся entries, а не отказывает в записи; эти записи не являются источником истины.
+Перезапуск `web-cache` или первый rollout начинаются с холодного cache: web временно чаще
+читает backend.
+
+Политика именно `volatile-lru`, а не `allkeys-lru`. Все entries пишутся с TTL, а sorted set
+tag timestamps (`<prefix>:tags`) — без TTL, поэтому Redis вытесняет только entries и никогда
+не теряет invalidation timestamps. С `allkeys-lru` сплошной поток cache misses (тот же обход
+роботом) вытеснял этот ключ: misses его не читают. Тогда записи, сделанные до
+`revalidateTag`, снова считались бы свежими до конца своего TTL. Размер set ограничен: каждое
+обновление удаляет timestamps старше `WEB_CACHE_TAG_TTL_SECONDS`.
+
+После перехода старые web-cache keys в общем `redis` больше не читаются и исчезают сами по
+entry/tag TTL (не дольше 48 часов). Ручная очистка не нужна. Throttle и broker вместе с
+web cache не переносите: для них действует отдельная процедура из 3.3.
 
 Перед второй web-репликой дополнительно обеспечьте load balancing и одинаковые
 `WEB_CACHE_KEY_PREFIX`, `WEB_CONTENT_REVALIDATION_SECRET`, build/image version на всех

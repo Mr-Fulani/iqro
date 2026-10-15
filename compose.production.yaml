@@ -140,6 +140,41 @@ services:
     pids_limit: 128
     logging: *default-logging
 
+  web-cache:
+    # Same image as redis, built by that service. Next.js entries are disposable:
+    # no persistence, and LRU eviction instead of rejecting writes, so a crawl of
+    # ISR pages can never fill the shared broker Redis. volatile-lru (not allkeys)
+    # evicts only TTL-bearing entries; the TTL-less tag invalidation set survives.
+    image: ${REDIS_IMAGE:-quran-platform-redis:${APP_VERSION:-local}}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - volatile-lru
+    tmpfs:
+      # Replaces the image's /data volume: nothing is persisted to disk.
+      - /data:size=8m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.5
+    mem_limit: 320m
+    pids_limit: 128
+    logging: *default-logging
+
   migrate:
     <<: *backend-service
     restart: "no"
@@ -262,7 +297,9 @@ services:
       ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS: ${ANDROID_APP_LINK_SHA256_CERT_FINGERPRINTS:-}
       APPLE_APP_LINK_APPLICATION_IDENTIFIERS: ${APPLE_APP_LINK_APPLICATION_IDENTIFIERS:-}
       WEB_CACHE_REQUIRED: "true"
-      WEB_CACHE_REDIS_URL: ${WEB_CACHE_REDIS_URL:?Set WEB_CACHE_REDIS_URL in the production env file}
+      # Pinned to the evictable web-cache service, never the noeviction broker Redis;
+      # a legacy WEB_CACHE_REDIS_URL in the env file is ignored.
+      WEB_CACHE_REDIS_URL: redis://web-cache:6379/0
       WEB_CACHE_KEY_PREFIX: ${WEB_CACHE_KEY_PREFIX:-quran-platform:web-cache:v1}
       WEB_CACHE_ENTRY_TTL_SECONDS: ${WEB_CACHE_ENTRY_TTL_SECONDS:-86400}
       WEB_CACHE_TAG_TTL_SECONDS: ${WEB_CACHE_TAG_TTL_SECONDS:-172800}
@@ -282,7 +319,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      redis:
+      web-cache:
         condition: service_healthy
     stop_grace_period: 30s
     healthcheck:

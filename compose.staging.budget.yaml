@@ -21,6 +21,20 @@ services:
       - --maxmemory-policy
       - noeviction
 
+  web-cache:
+    cpus: 0.10
+    mem_limit: 96m
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - volatile-lru
+
   migrate:
     cpus: 0.40
     mem_limit: 384m

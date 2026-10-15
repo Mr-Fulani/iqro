@@ -17,6 +17,7 @@ def test_budget_overlay_contains_expected_long_running_services() -> None:
     assert limits["backend"] == ResourceLimits(650_000_000, 512 * 1024**2)
     assert limits["web"] == ResourceLimits(500_000_000, 448 * 1024**2)
     assert limits["postgres"] == ResourceLimits(750_000_000, 640 * 1024**2)
+    assert limits["web-cache"] == ResourceLimits(100_000_000, 96 * 1024**2)
     assert limits["tls-proxy"] == ResourceLimits(100_000_000, 64 * 1024**2)
 
 
