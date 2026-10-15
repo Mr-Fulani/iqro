@@ -54,9 +54,28 @@ class IqroColors extends ThemeExtension<IqroColors> {
       line: Color.lerp(line, other.line, t)!,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is IqroColors &&
+      other.ink == ink &&
+      other.inkSoft == inkSoft &&
+      other.sand == sand &&
+      other.lavender == lavender &&
+      other.gold == gold &&
+      other.panelSoft == panelSoft &&
+      other.line == line;
+
+  @override
+  int get hashCode =>
+      Object.hash(ink, inkSoft, sand, lavender, gold, panelSoft, line);
 }
 
 class IqroTheme {
+  /// Bundled font for Arabic Quran and dua text; the system serif fonts
+  /// misplace Uthmani marks such as U+06E1 and U+08F0.
+  static const arabicFontFamily = 'Amiri Quran';
+
   static const _emerald = Color(0xFF0B5D4A);
   static const _emeraldDark = Color(0xFF073E34);
   static const _cream = Color(0xFFF7F4EC);
@@ -137,12 +156,14 @@ class IqroTheme {
     final textTheme = base.textTheme.copyWith(
       displaySmall: base.textTheme.displaySmall?.copyWith(
         fontFamily: 'serif',
+        fontFamilyFallback: const <String>[arabicFontFamily],
         fontSize: 36,
         fontWeight: FontWeight.w600,
         height: 1.1,
       ),
       headlineMedium: base.textTheme.headlineMedium?.copyWith(
         fontFamily: 'serif',
+        fontFamilyFallback: const <String>[arabicFontFamily],
         fontSize: 28,
         fontWeight: FontWeight.w600,
         height: 1.15,

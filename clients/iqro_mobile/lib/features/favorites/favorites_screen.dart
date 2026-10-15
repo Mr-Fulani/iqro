@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -153,7 +154,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                     },
                                     child: ListTile(
                                       contentPadding: EdgeInsets.zero,
-                                      leading: const Icon(
+                                      leading: const IqroIcon(
                                         Icons.menu_book_outlined,
                                       ),
                                       title: Text(

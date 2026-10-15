@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { api, type DuaEntry } from "../lib/api";
+import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
@@ -46,6 +47,7 @@ export function DuaEntryList({
   const { isLoading: authLoading, loginGuest, session } = useAuth();
   const { formatNumber, locale, t } = useI18n();
   const EntryHeading = headingLevel === 3 ? "h3" : "h2";
+  const [audioPlayerId] = useState(() => Symbol("dua-audio-player"));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
   const [favoriteBusyKeys, setFavoriteBusyKeys] = useState<Set<string>>(new Set());
@@ -53,6 +55,16 @@ export function DuaEntryList({
   const [activeAudioKey, setActiveAudioKey] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState("");
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || activeAudioKey === null) return;
+    return registerAudioPlayer(audioPlayerId, () => {
+      audio.pause();
+      setAudioPlaying(false);
+    });
+  }, [activeAudioKey, audioPlayerId]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -133,16 +145,42 @@ export function DuaEntryList({
   const toggleAudio = (entry: DuaEntry) => {
     const key = entryKey(entry);
     if (activeAudioKey !== key) {
+      claimAudioFocus(audioPlayerId);
       setAudioError(null);
       setAudioPlaying(false);
       setActiveAudioKey(key);
       return;
     }
     if (!audioRef.current) return;
-    if (audioRef.current.paused) {
+    if (!audioPlaying) {
+      claimAudioFocus(audioPlayerId);
       void audioRef.current.play().catch(() => setAudioError(t("dua.audioError")));
     } else {
       audioRef.current.pause();
+    }
+  };
+
+  const shareEntry = async (entry: DuaEntry) => {
+    const url = new URL(localizedPath(locale, `/dua/${entry.collection}/${entry.source_number}`), window.location.origin).href;
+    const text = [
+      `${entry.category.title} · #${entry.source_number}`,
+      entry.arabic_text,
+      entry.translation?.meaning_text,
+      entry.source?.title,
+      ...entry.evidence.map((evidence) => evidence.source_reference),
+    ].filter(Boolean).join("\n\n");
+    setShareStatus("");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: entry.category.title, text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n\n${url}`);
+        setShareStatus(t("dua.shareCopied"));
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setShareStatus(t("dua.shareError"));
+      }
     }
   };
 
@@ -157,6 +195,7 @@ export function DuaEntryList({
 
   return (
     <div className={`dua-entry-list${compact ? " is-compact" : ""}`}>
+      {shareStatus ? <p role="status">{shareStatus}</p> : null}
       {entries.map((entry) => {
         const key = entryKey(entry);
         const audio = entry.audio?.[0];
@@ -179,7 +218,7 @@ export function DuaEntryList({
                     className="dua-entry-title-link"
                     href={localizedPath(
                       locale,
-                      `/dua/${entry.collection}/categories/${entry.category.slug}#${entryAnchor(entry)}`,
+                      `/dua/${entry.collection}/${entry.source_number}`,
                     )}
                   >
                     {entry.category.title}
@@ -188,6 +227,9 @@ export function DuaEntryList({
               </div>
               <div className="dua-entry-tools">
                 <div className="dua-entry-actions">
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={() => void shareEntry(entry)}>
+                    {t("dua.share")}
+                  </button>
                   {audio ? (
                     <button
                       type="button"
@@ -249,7 +291,10 @@ export function DuaEntryList({
                   autoPlay
                   preload="none"
                   controlsList="nodownload"
-                  onPlay={() => setAudioPlaying(true)}
+                  onPlay={() => {
+                    claimAudioFocus(audioPlayerId);
+                    setAudioPlaying(true);
+                  }}
                   onPause={() => setAudioPlaying(false)}
                   onEnded={() => setAudioPlaying(false)}
                   onError={() => {

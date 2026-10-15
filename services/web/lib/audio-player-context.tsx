@@ -6,7 +6,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -14,8 +16,16 @@ import {
   SegmentedAudioPlayer,
 } from "../components/SegmentedAudioPlayer";
 import type { AudioPlaybackRequest } from "../components/SegmentedAudioPlayer";
+import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import { localizedPath, stripLocalePrefix } from "./routing";
+
+function sensitiveAudioSection(pathname: string): "quran" | "dua" | null {
+  const route = stripLocalePrefix(pathname);
+  if (route === "/quran" || route.startsWith("/quran/")) return "quran";
+  if (route === "/dua" || route.startsWith("/dua/")) return "dua";
+  return null;
+}
 
 type AudioPlayerContextValue = {
   request: AudioPlaybackRequest | null;
@@ -36,6 +46,7 @@ const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const previousAudioSection = useRef(sensitiveAudioSection(pathname));
   const { locale, t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,6 +66,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const setReciterControls = useCallback((controls: AudioPlayerReciterControls | null) => {
     setRegisteredReciterControls(controls);
   }, []);
+
+  useEffect(() => {
+    const nextSection = sensitiveAudioSection(pathname);
+    if (nextSection && nextSection !== previousAudioSection.current) {
+      pauseAllAudioPlayers("navigation");
+    }
+    previousAudioSection.current = nextSection;
+  }, [pathname]);
 
   const value = useMemo<AudioPlayerContextValue>(() => ({
     request,
@@ -120,7 +139,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
               request={request}
               className="audio-player-bar global-audio-player-bar"
               onPlayingChange={setIsPlaying}
-              pauseOnNavigationKey={pathname}
               compact={compact}
             />
             {compact && (

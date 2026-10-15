@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -35,7 +36,7 @@ export function Header() {
     <header className="app-header">
       <div className="brand-block">
         <Link href={localizedPath(locale, "/")} className="brand-link">
-          <span className="brand-mark">Q</span>
+          <Image src="/iqro-wax-seal.png" alt="" width={56} height={56} sizes="56px" className="brand-logo" preload />
           <div>
             <p className="eyebrow">IQRO</p>
             <p className="brand-title">{t("brand.subtitle")}</p>

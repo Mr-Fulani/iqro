@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -274,7 +275,7 @@ class _ReviewReminderCard extends ConsumerWidget {
               color: context.iqroColors.lavender,
               borderRadius: BorderRadius.circular(15),
             ),
-            child: const Icon(Icons.menu_book_outlined),
+            child: const IqroIcon(Icons.menu_book_outlined),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -447,7 +448,7 @@ class _ReminderEditorState extends ConsumerState<_ReminderEditor> {
                 : null,
             isExpanded: true,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.menu_book_outlined),
+              prefixIcon: const IqroIcon(Icons.menu_book_outlined),
               labelText: context.l10n.surah,
             ),
             items: surahs

@@ -6,6 +6,7 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any
 from urllib.parse import urlencode, urlparse
 from zoneinfo import ZoneInfo
@@ -23,6 +24,7 @@ from quran_backend.modules.accounts.models import Device, User
 from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.prayer_times.services import calculate_prayer_times
 from quran_backend.modules.prayer_times.timezones import get_prayer_timezone
+from quran_backend.modules.reading.habit_services import get_active_goal, prayer_reading_targets
 from quran_backend.modules.reading.models import PrayerReadingPlan
 from quran_backend.modules.reminders.models import (
     ReminderRule,
@@ -446,14 +448,31 @@ def _notification_payload(schedule: WebPushSchedule) -> dict[str, object]:
         if reminder.reminder_type == ReminderType.PRAYER
         else None
     )
+    goal = get_active_goal(reminder.user) if prayer_reading_plan is not None else None
+    reading_amount = prayer_reading_targets(goal).get(reminder.prayer_event or "", Decimal("0"))
     pages_after_prayer = (
-        prayer_reading_plan.pages_per_prayer if prayer_reading_plan is not None else None
+        int(reading_amount) if goal and goal.metric == "pages" and reading_amount else None
     )
     title, body = _localized_message(
         reminder,
         locale,
         pages_after_prayer=pages_after_prayer,
     )
+    if goal and goal.metric != "pages" and reading_amount:
+        units = {
+            "ru": {"minutes": "мин.", "ayahs": "аятов"},
+            "en": {"minutes": "min", "ayahs": "ayahs"},
+            "ar": {"minutes": "دقيقة", "ayahs": "آيات"},
+            "tr": {"minutes": "dk.", "ayahs": "ayet"},
+        }
+        prefixes = {
+            "ru": "Чтение после намаза",
+            "en": "Reading after prayer",
+            "ar": "القراءة بعد الصلاة",
+            "tr": "Namazdan sonra okuma",
+        }
+        language = locale if locale in units else "en"
+        body += f" {prefixes[language]}: {reading_amount:f} {units[language][goal.metric]}."
     return {
         "title": title,
         "body": body,
@@ -570,15 +589,20 @@ def _notification_url(
 ) -> str:
     if reminder.reminder_type == ReminderType.PRAYER:
         if prayer_reading_plan is not None and occurrence_at is not None:
+            goal = get_active_goal(reminder.user)
+            target = prayer_reading_targets(goal).get(reminder.prayer_event or "", 0)
+            if goal is None or not target:
+                return f"/{locale}/prayer"
             prayer_at = occurrence_at - timedelta(minutes=reminder.prayer_offset_minutes or 0)
-            prayer_date = prayer_at.astimezone(ZoneInfo(prayer_reading_plan.timezone_name)).date()
+            prayer_date = prayer_at.astimezone(ZoneInfo(goal.timezone_name)).date()
             query = urlencode(
                 {
                     "mode": "after-prayer",
                     "prayer": reminder.prayer_event,
                     "prayer_date": prayer_date.isoformat(),
-                    "prayer_timezone": prayer_reading_plan.timezone_name,
-                    "prayer_target": prayer_reading_plan.pages_per_prayer,
+                    "prayer_timezone": goal.timezone_name,
+                    "prayer_target": target,
+                    "prayer_metric": goal.metric,
                     "prayer_credited": 0,
                 }
             )

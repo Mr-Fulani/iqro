@@ -174,8 +174,7 @@ export default function ProfilePage() {
   const loadBookmarksData = async () => {
     setLoadingBookmarks(true);
     try {
-      const res = await api.getBookmarks();
-      setBookmarks(res.results || []);
+      setBookmarks(await api.getAllBookmarks());
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {

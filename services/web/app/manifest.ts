@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Quran Platform",
-    short_name: "Quran",
+    name: "IQRO",
+    short_name: "IQRO",
     description: "Read the Quran, listen to reciters, and calculate prayer times.",
     start_url: "/",
     display: "standalone",
@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "any",
     icons: [
       {
-        src: "/icon",
+        src: "/iqro-app-icon.png",
         sizes: "512x512",
         type: "image/png",
       },

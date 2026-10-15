@@ -39,8 +39,8 @@ function goalSnapshot() {
   };
 }
 
-function todaySnapshot(achieved: number, hasGoal: boolean) {
-  const goal = hasGoal ? goalSnapshot() : null;
+function todaySnapshot(achieved: number, hasGoal: boolean, metric = "pages", target = 3) {
+  const goal = hasGoal ? { ...goalSnapshot(), metric, target_amount: target.toFixed(2) } : null;
   return {
     local_date: "2026-08-28",
     timezone_name: "Europe/Istanbul",
@@ -50,12 +50,12 @@ function todaySnapshot(achieved: number, hasGoal: boolean) {
       ? {
           goal_id: goal.id,
           local_date: "2026-08-28",
-          metric: "pages",
-          target_amount: "3.00",
+          metric,
+          target_amount: target.toFixed(2),
           achieved_amount: achieved.toFixed(2),
-          remaining_amount: Math.max(0, 3 - achieved).toFixed(2),
-          is_completed: achieved >= 3,
-          completed_at: achieved >= 3 ? "2026-08-28T09:10:00Z" : null,
+          remaining_amount: Math.max(0, target - achieved).toFixed(2),
+          is_completed: achieved >= target,
+          completed_at: achieved >= target ? "2026-08-28T09:10:00Z" : null,
         }
       : null,
     streak: {
@@ -68,6 +68,8 @@ function todaySnapshot(achieved: number, hasGoal: boolean) {
 
 async function installReadingMocks(page: Page) {
   let hasGoal = false;
+  let goalMetric = "pages";
+  let goalTarget = 3;
   let achieved = 0;
   let prayerPlan: Record<string, unknown> | null = null;
   const prayerCheckIns: Record<string, Record<string, unknown>> = {};
@@ -125,7 +127,7 @@ async function installReadingMocks(page: Page) {
     if (url.pathname === "/api/v1/me/today" && request.method() === "GET") {
       return route.fulfill({
         headers: { "Cache-Control": "private, no-store" },
-        json: todaySnapshot(achieved, hasGoal),
+        json: todaySnapshot(achieved, hasGoal, goalMetric, goalTarget),
       });
     }
     if (url.pathname === "/api/v1/me/reading-planner" && request.method() === "GET") {
@@ -260,7 +262,9 @@ async function installReadingMocks(page: Page) {
       const payload = request.postDataJSON() as Record<string, unknown>;
       writes.push(payload);
       hasGoal = true;
-      return route.fulfill({ status: 201, json: goalSnapshot() });
+      goalMetric = String(payload.metric);
+      goalTarget = Number(payload.target_amount);
+      return route.fulfill({ status: 201, json: { ...goalSnapshot(), metric: goalMetric, target_amount: goalTarget.toFixed(2) } });
     }
     if (url.pathname === "/api/v1/me/reading-sessions/manual" && request.method() === "POST") {
       const payload = request.postDataJSON() as Record<string, unknown>;
@@ -299,6 +303,14 @@ async function installReadingMocks(page: Page) {
           local_date: "2026-08-28",
           timezone_name: String(prayerPlan?.timezone_name || "Europe/Istanbul"),
           plan: prayerPlan,
+          goal: todaySnapshot(achieved, hasGoal, goalMetric, goalTarget).goal,
+          target_amount: goalTarget.toFixed(2), achieved_amount: achieved.toFixed(2),
+          remaining_amount: Math.max(0, goalTarget - achieved).toFixed(2),
+          targets: Object.fromEntries(["fajr", "dhuhr", "asr", "maghrib", "isha"].map((prayer, index) => {
+            const scale = goalMetric === "minutes" ? 100 : 1;
+            const units = Math.round(goalTarget * scale);
+            return [prayer, ((Math.floor(units / 5) + (index < units % 5 ? 1 : 0)) / scale).toFixed(2)];
+          })),
           check_ins: checkIns,
           achieved_pages: checkIns.reduce((sum, item) => sum + Number(item.pages), 0),
           target_pages: prayerPlan ? pagesPerPrayer * 5 : 0,
@@ -328,13 +340,15 @@ async function installReadingMocks(page: Page) {
     if (url.pathname === "/api/v1/me/prayer-reading-check-ins" && request.method() === "POST") {
       const payload = request.postDataJSON() as Record<string, unknown>;
       writes.push(payload);
-      const pages = Number(payload.pages || prayerPlan?.pages_per_prayer || 2);
+      const amount = Number(payload.amount ?? payload.pages ?? 2);
+      const metric = String(payload.metric || "pages");
+      const pages = metric === "pages" ? amount : 0;
       const checkIn = {
         id: payload.id,
         prayer: payload.prayer,
         local_date: payload.local_date,
         timezone_name: payload.timezone_name,
-        pages,
+        pages, metric, amount: amount.toFixed(2),
         reading_session_id: payload.session_id,
         revision: 1,
         client_updated_at: payload.client_updated_at,
@@ -343,7 +357,7 @@ async function installReadingMocks(page: Page) {
         updated_at: "2026-08-28T09:10:00Z",
       };
       prayerCheckIns[String(payload.prayer)] = checkIn;
-      achieved += pages;
+      achieved += amount;
       return route.fulfill({ status: 201, json: checkIn });
     }
     if (
@@ -355,11 +369,14 @@ async function installReadingMocks(page: Page) {
       const checkInId = url.pathname.split("/").at(-1);
       const entry = Object.entries(prayerCheckIns).find(([, item]) => item.id === checkInId);
       if (!entry) return route.fulfill({ status: 404, json: { detail: "Not found" } });
-      const previousPages = Number(entry[1].pages);
-      entry[1].pages = Number(payload.pages);
+      const previousPages = Number(entry[1].amount);
+      const amount = Number(payload.amount ?? payload.pages);
+      entry[1].amount = amount.toFixed(2);
+      entry[1].metric = payload.metric || "pages";
+      entry[1].pages = entry[1].metric === "pages" ? amount : 0;
       entry[1].revision = Number(entry[1].revision) + 1;
       entry[1].client_updated_at = payload.client_updated_at;
-      achieved += Number(payload.pages) - previousPages;
+      achieved += amount - previousPages;
       return route.fulfill({ json: entry[1] });
     }
     if (
@@ -369,7 +386,7 @@ async function installReadingMocks(page: Page) {
       const checkInId = url.pathname.split("/").at(-1);
       const entry = Object.entries(prayerCheckIns).find(([, item]) => item.id === checkInId);
       if (entry) {
-        achieved -= Number(entry[1].pages);
+        achieved -= Number(entry[1].amount);
         delete prayerCheckIns[entry[0]];
       }
       return route.fulfill({ status: 204, body: "" });
@@ -407,73 +424,36 @@ test("Today creates a daily goal and adds paper Mushaf progress", async ({ page 
   expect(String(writes[1].id)).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-test("prayer reading plan keeps partial and extra pages honest for each prayer", async ({ page }) => {
-  const { writes } = await installReadingMocks(page);
-  await page.goto("/");
-
-  const plan = page.getByTestId("prayer-reading-plan");
-  await expect(plan.getByRole("heading", { name: "Чтение после намаза" })).toBeVisible();
-  await expect(plan.getByTestId("pages-per-prayer-value")).toHaveText("2");
-  await expect(plan.getByText("≈ 61")).toBeVisible();
-  await plan.getByRole("button", { name: "Сохранить план" }).click();
-
-  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
-  const readingNotifications = plan.getByRole("switch", {
-    name: "Уведомления о чтении после намаза",
+for (const [metric, target, first, unit] of [
+  ["pages", "7", "2", "стр."], ["minutes", "1.25", "0,25", "мин."], ["ayahs", "3", "1", "аятов"],
+] as const) {
+  test(`one daily goal distributes ${metric} and refreshes shared progress`, async ({ page }) => {
+    const { writes } = await installReadingMocks(page);
+    await page.goto("/ru/planner");
+    const today = page.getByTestId("today-reading");
+    const plan = page.getByTestId("prayer-reading-plan");
+    await today.getByLabel("Считать норму в").selectOption(metric);
+    await today.getByLabel("Норма на день").fill(target);
+    await today.getByRole("button", { name: "Создать норму" }).click();
+    await expect(plan.getByText(`0 / ${target.replace(".", ",")} ${unit}`)).toBeVisible();
+    await expect(plan.getByRole("button", { name: "Сохранить план" })).toHaveCount(0);
+    const fajr = plan.locator(".prayer-reading-slot").filter({ hasText: "Фаджр" });
+    await expect(fajr.getByText(`0 ${unit} · норма ${first} ${unit}`)).toBeVisible();
+    await fajr.getByRole("button", { name: "Добавить вручную" }).click();
+    await plan.getByLabel(`Сколько прочитано после намаза Фаджр — ${unit}`).fill(target);
+    await plan.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect(today.getByText("Норма на сегодня выполнена")).toBeVisible();
+    await expect(plan.getByText(`${target.replace(".", ",")} / ${target.replace(".", ",")} ${unit}`)).toBeVisible();
+    expect(writes.at(-1)).toMatchObject({ prayer: "fajr", metric, amount: Number(target) });
+    await fajr.getByRole("button", { name: "Изменить", exact: true }).click();
+    await plan.getByRole("button", { name: "Удалить отметку" }).click();
+    await expect(today.getByText(`0 / ${target.replace(".", ",")} ${unit}`)).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 760 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      await page.evaluate(() => document.documentElement.clientWidth),
+    );
   });
-  await expect(readingNotifications).toHaveAttribute("aria-checked", "true");
-  await readingNotifications.click();
-  await expect(readingNotifications).toHaveAttribute("aria-checked", "false");
-  const fajr = plan.locator(".prayer-reading-slot").filter({ hasText: "Фаджр" });
-  await expect(fajr.getByText("0 из 2 стр.")).toBeVisible();
-  await expect(fajr.getByRole("link", { name: "Открыть чтение после намаза Фаджр" }))
-    .toHaveAttribute("href", /mode=after-prayer.*prayer=fajr/);
-
-  await fajr.getByRole("button", { name: "Добавить вручную" }).click();
-  await plan.getByLabel("Сколько прочитано после намаза Фаджр").fill("1");
-  await plan.getByRole("button", { name: "Сохранить" }).click();
-
-  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
-  await expect(plan.getByText("1 / 10 стр.")).toBeVisible();
-  await expect(fajr.getByText("1 из 2 стр.")).toBeVisible();
-
-  await fajr.getByRole("button", { name: "Изменить" }).click();
-  await plan.getByLabel("Сколько прочитано после намаза Фаджр").fill("3");
-  await plan.getByRole("button", { name: "Сохранить" }).click();
-
-  await expect(plan.getByText("Сегодня выполнена норма после 1 из 5 намазов")).toBeVisible();
-  await expect(plan.getByText("3 / 10 стр.")).toBeVisible();
-  await expect(fajr.getByText("3 из 2 стр.")).toBeVisible();
-  expect(writes[0]).toMatchObject({
-    pages_per_prayer: 2,
-    notifications_enabled: true,
-    base_revision: 0,
-  });
-  expect(writes[1]).toMatchObject({
-    pages_per_prayer: 2,
-    notifications_enabled: false,
-    base_revision: 1,
-  });
-  expect(writes[2]).toMatchObject({ prayer: "fajr", local_date: "2026-08-28", pages: 1 });
-  expect(String(writes[2].id)).toMatch(/^[0-9a-f-]{36}$/);
-  expect(String(writes[2].session_id)).toMatch(/^[0-9a-f-]{36}$/);
-  expect(writes[3]).toMatchObject({ pages: 3, base_revision: 1 });
-
-  await fajr.getByRole("button", { name: "Изменить" }).click();
-  await plan.getByRole("button", { name: "Удалить отметку" }).click();
-  await expect(plan.getByText("Сегодня выполнена норма после 0 из 5 намазов")).toBeVisible();
-  await expect(plan.getByText("0 / 10 стр.")).toBeVisible();
-
-  await page.setViewportSize({ width: 320, height: 760 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-    await page.evaluate(() => document.documentElement.clientWidth),
-  );
-  expect(
-    await plan.locator(".prayer-reading-slots").evaluate((grid) =>
-      getComputedStyle(grid).gridTemplateColumns.split(" ").length,
-    ),
-  ).toBe(2);
-});
+}
 
 test("planner shows honest history and lets users correct manual entries", async ({ page }) => {
   const { plannerRanges, writes } = await installReadingMocks(page);
@@ -489,7 +469,7 @@ test("planner shows honest history and lets users correct manual entries", async
   await planner.locator(".planner-day.is-partial").click();
   const dayDetail = planner.getByTestId("planner-day-detail");
   await expect(dayDetail.getByText("1 / 3 стр.")).toBeVisible();
-  await expect(dayDetail.getByText("1 / 5 · 3 стр.")).toBeVisible();
+  await expect(dayDetail.getByText("1 / 5", { exact: true })).toBeVisible();
 
   const history = planner.getByTestId("reading-history");
   await expect(history.getByText("Добавлено вручную")).toBeVisible();

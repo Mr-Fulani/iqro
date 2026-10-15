@@ -166,4 +166,61 @@ void main() {
       expect(store.read().memorizationDefaultRecitationId, 'memorization-2');
     },
   );
+
+  test('recitation choices are isolated by account and role', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'reader_recitation_id': 'legacy-recitation',
+    });
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+
+    await store.migrateLegacyRecitationsForUser('user-a');
+    expect(
+      store.readForAccount('user-a').listeningRecitationId,
+      'legacy-recitation',
+    );
+    expect(store.readForAccount('user-b').listeningRecitationId, isNull);
+    expect(store.readForAccount(null).mushafRecitationId, isNull);
+
+    await store.writeAccountRecitation(
+      'user-a',
+      RecitationPreferenceRole.listening,
+      'audio-a',
+    );
+    await store.writeAccountRecitation(
+      'user-a',
+      RecitationPreferenceRole.mushaf,
+      'mushaf-a',
+    );
+    await store.writeAccountRecitation(
+      'user-a',
+      RecitationPreferenceRole.memorization,
+      'memory-a',
+    );
+    await store.writeAccountRecitation(
+      'user-b',
+      RecitationPreferenceRole.listening,
+      'audio-b',
+    );
+    await store.migrateLegacyRecitationsForUser('user-b');
+
+    final a = store.readForAccount('user-a');
+    final b = store.readForAccount('user-b');
+    expect(a.listeningRecitationId, 'audio-a');
+    expect(a.mushafRecitationId, 'mushaf-a');
+    expect(a.memorizationDefaultRecitationId, 'memory-a');
+    expect(b.listeningRecitationId, 'audio-b');
+    expect(b.mushafRecitationId, isNull);
+    expect(b.memorizationDefaultRecitationId, isNull);
+
+    await store.writeAccountRecitation(
+      'user-c',
+      RecitationPreferenceRole.listening,
+      'audio-c',
+    );
+    await store.transferAccountRecitations('user-a', 'user-c');
+    final c = store.readForAccount('user-c');
+    expect(c.listeningRecitationId, 'audio-c');
+    expect(c.mushafRecitationId, 'mushaf-a');
+    expect(c.memorizationDefaultRecitationId, 'memory-a');
+  });
 }

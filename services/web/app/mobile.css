@@ -96,6 +96,11 @@
     min-height: 44px;
   }
 
+  .app-header .brand-logo {
+    width: 44px;
+    height: 44px;
+  }
+
   .app-header .brand-link .eyebrow {
     color: var(--text-primary);
     font-size: 24px;

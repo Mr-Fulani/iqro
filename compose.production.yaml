@@ -107,10 +107,24 @@ services:
     logging: *default-logging
 
   redis:
-    image: redis:7.4.11-alpine3.21
+    image: ${REDIS_IMAGE:-quran-platform-redis:${APP_VERSION:-local}}
+    build:
+      context: ./ops/redis
     restart: unless-stopped
     init: true
-    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    # Shared cache+broker S0: keep maxmemory below mem_limit (headroom for AOF
+    # rewrite forks) and never evict, so broker/result keys are not dropped.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1"
+      - --maxmemory
+      - 288mb
+      - --maxmemory-policy
+      - noeviction
     volumes:
       - redis-data:/data
     healthcheck:

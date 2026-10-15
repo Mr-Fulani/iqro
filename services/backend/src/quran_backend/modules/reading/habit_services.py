@@ -31,6 +31,7 @@ MANUAL_BACKDATE_DAYS = 7
 RECALCULATION_VERSION = 2
 AMOUNT_QUANTUM = Decimal("0.01")
 PRAYERS_PER_DAY = 5
+PRAYER_ORDER = ("fajr", "dhuhr", "asr", "maghrib", "isha")
 
 
 class ReadingGoalNotFoundError(NotFound):
@@ -103,33 +104,53 @@ def get_prayer_reading_day(
     fallback_timezone_name: str | None = None,
 ) -> dict[str, Any]:
     plan = PrayerReadingPlan.objects.filter(user=user).select_related("device").first()
+    goal = get_active_goal(user)
     timezone_name = (
-        plan.timezone_name if plan is not None else fallback_timezone_name or user.timezone or "UTC"
+        goal.timezone_name if goal is not None else fallback_timezone_name or user.timezone or "UTC"
     )
     local_date = _local_date(timezone.now(), timezone_name)
-    check_ins = (
-        list(
-            PrayerReadingCheckIn.objects.filter(
-                user=user,
-                plan=plan,
-                local_date=local_date,
-            )
-            .select_related("reading_session", "device")
-            .order_by("created_at")
-        )
-        if plan is not None
-        else []
+    check_ins = list(
+        PrayerReadingCheckIn.objects.filter(user=user, local_date=local_date)
+        .select_related("reading_session", "device")
+        .order_by("created_at")
     )
     achieved_pages = sum(check_in.pages for check_in in check_ins)
-    target_pages = plan.pages_per_prayer * PRAYERS_PER_DAY if plan is not None else 0
+    targets = prayer_reading_targets(goal)
+    progress = (
+        GoalProgress.objects.filter(goal=goal, local_date=local_date).first()
+        if goal is not None
+        else None
+    )
+    achieved = progress.achieved_amount if progress is not None else Decimal("0")
+    target = goal.target_amount if goal is not None else Decimal("0")
     return {
         "local_date": local_date.isoformat(),
         "timezone_name": timezone_name,
         "plan": prayer_reading_plan_snapshot(plan) if plan is not None else None,
+        "goal": goal_snapshot(goal) if goal is not None else None,
+        "targets": {prayer: _amount_string(amount) for prayer, amount in targets.items()},
+        "achieved_amount": _amount_string(achieved),
+        "target_amount": _amount_string(target),
+        "remaining_amount": _amount_string(max(target - achieved, Decimal("0"))),
         "check_ins": [prayer_reading_check_in_snapshot(item) for item in check_ins],
         "achieved_pages": achieved_pages,
-        "target_pages": target_pages,
-        "remaining_pages": max(target_pages - achieved_pages, 0),
+        "target_pages": int(target) if goal and goal.metric == ReadingGoalMetric.PAGES else 0,
+        "remaining_pages": max(int(target) - achieved_pages, 0)
+        if goal and goal.metric == ReadingGoalMetric.PAGES
+        else 0,
+    }
+
+
+def prayer_reading_targets(goal: ReadingGoal | None) -> dict[str, Decimal]:
+    if goal is None:
+        return {prayer: Decimal("0") for prayer in PRAYER_ORDER}
+    # Distribute integer pages/ayahs and hundredths of a minute without rounding up the day.
+    quantum = AMOUNT_QUANTUM if goal.metric == ReadingGoalMetric.MINUTES else Decimal("1")
+    units = int(goal.target_amount / quantum)
+    quotient, remainder = divmod(units, PRAYERS_PER_DAY)
+    return {
+        prayer: Decimal(quotient + (index < remainder)) * quantum
+        for index, prayer in enumerate(PRAYER_ORDER)
     }
 
 
@@ -207,6 +228,8 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
     timezone_name: str,
     client_updated_at: datetime,
     pages: int | None = None,
+    metric: str | None = None,
+    amount: Decimal | None = None,
     device_id: uuid.UUID | None = None,
 ) -> tuple[PrayerReadingCheckIn, bool]:
     User.objects.select_for_update().only("id").get(id=user.id)
@@ -217,14 +240,34 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
             .get(user=user)
         )
     except PrayerReadingPlan.DoesNotExist as exc:
-        raise PrayerReadingPlanNotFoundError from exc
-    if timezone_name != plan.timezone_name:
+        if amount is None or get_active_goal(user) is None:
+            raise PrayerReadingPlanNotFoundError from exc
+        plan, _created = set_prayer_reading_plan(
+            user=user,
+            pages_per_prayer=1,
+            timezone_name=timezone_name,
+            base_revision=0,
+            client_updated_at=client_updated_at,
+            notifications_enabled=False,
+            device_id=device_id,
+        )
+    goal = _goal_for_date(user, local_date)
+    expected_timezone = goal.timezone_name if goal is not None else plan.timezone_name
+    if timezone_name != expected_timezone:
         raise ValidationError(
             {"timezone_name": "Timezone must match the active prayer reading plan."}
         )
     _validate_manual_date(local_date, timezone_name)
     device = _device_for_user(user, device_id)
-    actual_pages = pages if pages is not None else plan.pages_per_prayer
+    actual_metric = metric or ReadingGoalMetric.PAGES
+    actual_amount = (
+        amount
+        if amount is not None
+        else Decimal(pages if pages is not None else plan.pages_per_prayer)
+    )
+    if amount is not None and (goal is None or actual_metric != goal.metric):
+        raise ValidationError({"metric": "Use the daily goal's metric."})
+    actual_pages = int(actual_amount) if actual_metric == ReadingGoalMetric.PAGES else 0
 
     existing_by_id = (
         PrayerReadingCheckIn.objects.select_for_update(of=("self",))
@@ -242,6 +285,13 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
             timezone_name=timezone_name,
             session_id=session_id,
             pages=pages,
+        ) or (
+            amount is not None
+            and (
+                existing_by_id.reading_session is None
+                or existing_by_id.reading_session.manual_metric != actual_metric
+                or existing_by_id.reading_session.manual_amount != actual_amount
+            )
         ):
             raise PrayerReadingCheckInConflictError
         return existing_by_id, False
@@ -269,8 +319,8 @@ def record_prayer_reading_check_in(  # noqa: PLR0913
             "active_seconds": 0,
             "credited_pages": 0,
             "credited_ayahs": 0,
-            "manual_metric": ReadingGoalMetric.PAGES,
-            "manual_amount": Decimal(actual_pages),
+            "manual_metric": actual_metric,
+            "manual_amount": actual_amount,
             "client_updated_at": client_updated_at,
         },
     )
@@ -296,7 +346,9 @@ def update_prayer_reading_check_in(  # noqa: PLR0913
     *,
     user: User,
     check_in_id: uuid.UUID,
-    pages: int,
+    pages: int | None = None,
+    metric: str | None = None,
+    amount: Decimal | None = None,
     base_revision: int,
     client_updated_at: datetime,
     device_id: uuid.UUID | None = None,
@@ -314,27 +366,34 @@ def update_prayer_reading_check_in(  # noqa: PLR0913
         raise PrayerReadingCheckInConflictError
 
     device = _device_for_user(user, device_id)
-    if check_in.pages == pages and check_in.device_id == (
-        device.id if device is not None else None
-    ):
-        return check_in
-
     session = check_in.reading_session
     if session is None:
         raise PrayerReadingCheckInConflictError
+    actual_metric = metric or ReadingGoalMetric.PAGES
+    actual_amount = amount if amount is not None else Decimal(pages or 0)
+    if amount is not None and actual_metric != session.manual_metric:
+        raise ValidationError({"metric": "Keep the recorded entry's metric."})
+    actual_pages = int(actual_amount) if actual_metric == ReadingGoalMetric.PAGES else 0
+    if (
+        session.manual_metric == actual_metric
+        and session.manual_amount == actual_amount
+        and check_in.device_id == (device.id if device is not None else None)
+    ):
+        return check_in
+
     update_manual_session(
         user=user,
         session_id=session.id,
         base_revision=session.revision,
         timezone_name=check_in.timezone_name,
         local_date=check_in.local_date,
-        metric=ReadingGoalMetric.PAGES,
-        amount=Decimal(pages),
+        metric=actual_metric,
+        amount=actual_amount,
         client_updated_at=client_updated_at,
         device_id=device_id,
         allow_prayer_check_in=True,
     )
-    check_in.pages = pages
+    check_in.pages = actual_pages
     check_in.client_updated_at = client_updated_at
     check_in.device = device
     check_in.revision += 1
@@ -405,6 +464,13 @@ def prayer_reading_check_in_snapshot(check_in: PrayerReadingCheckIn) -> dict[str
         "local_date": check_in.local_date.isoformat(),
         "timezone_name": check_in.timezone_name,
         "pages": check_in.pages,
+        "metric": check_in.reading_session.manual_metric
+        if check_in.reading_session is not None
+        else ReadingGoalMetric.PAGES,
+        "amount": _amount_string(check_in.reading_session.manual_amount)
+        if check_in.reading_session is not None
+        and check_in.reading_session.manual_amount is not None
+        else str(check_in.pages),
         "reading_session_id": (
             str(check_in.reading_session_id) if check_in.reading_session_id else None
         ),

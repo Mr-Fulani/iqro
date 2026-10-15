@@ -31,6 +31,7 @@ from quran_backend.modules.accounts.models import (
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PRIVATE_NO_STORE_CACHE_CONTROL
 from quran_backend.modules.prayer_times.models import PrayerMethodConfig, PrayerProfile
+from quran_backend.modules.reading.habit_services import set_reading_goal
 from quran_backend.modules.reading.models import PrayerReadingPlan
 from quran_backend.modules.reminders.models import (
     ReminderRule,
@@ -437,6 +438,14 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
         timezone_name="UTC",
         client_updated_at=timezone.now(),
     )
+    set_reading_goal(
+        user=user,
+        metric="pages",
+        target_amount=Decimal("10"),
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=timezone.now(),
+    )
     occurrence = timezone.now() - timedelta(seconds=1)
     rule = ReminderRule.objects.create(
         user=user,
@@ -472,7 +481,7 @@ def test_prayer_notification_includes_the_after_prayer_reading_plan(
     assert payload["url"] == (
         "/ru/quran?mode=after-prayer&prayer=fajr"
         f"&prayer_date={expected_date}&prayer_timezone=UTC"
-        "&prayer_target=2&prayer_credited=0"
+        "&prayer_target=2&prayer_metric=pages&prayer_credited=0"
     )
 
     plan.notifications_enabled = False

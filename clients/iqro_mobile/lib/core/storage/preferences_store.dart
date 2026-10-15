@@ -5,6 +5,8 @@ enum ReaderMode { text, mushaf }
 
 enum DailyUnit { minutes, pages, ayahs }
 
+enum RecitationPreferenceRole { listening, mushaf, memorization }
+
 const defaultReaderArabicFontSize = 30.0;
 const minReaderArabicFontSize = 24.0;
 const maxReaderArabicFontSize = 40.0;
@@ -164,12 +166,28 @@ class PreferencesStore {
   static const supportedMushafVariants = <String>{defaultMushafVariant};
   final SharedPreferences _preferences;
 
-  AppPreferences read() {
+  AppPreferences read() => _read(recitationOwnerId: null, accountScoped: false);
+
+  /// Recitation choices belong to the active account. Other app settings are
+  /// still shared on this device.
+  AppPreferences readForAccount(String? ownerId) =>
+      _read(recitationOwnerId: ownerId, accountScoped: true);
+
+  AppPreferences _read({
+    required String? recitationOwnerId,
+    required bool accountScoped,
+  }) {
     final locale = _preferences.getString('locale') ?? 'ru';
-    final legacyRecitationId = _preferences.getString('reader_recitation_id');
-    final listeningRecitationId =
-        _preferences.getString('audio_listening_recitation_id') ??
-        legacyRecitationId;
+    final legacyRecitationId = accountScoped
+        ? null
+        : _preferences.getString('reader_recitation_id');
+    final listeningRecitationId = accountScoped
+        ? _accountRecitation(
+            recitationOwnerId,
+            RecitationPreferenceRole.listening,
+          )
+        : _preferences.getString('audio_listening_recitation_id') ??
+              legacyRecitationId;
     return AppPreferences(
       onboardingComplete: _preferences.getBool('onboarding_complete') ?? false,
       locale: supportedLocales.contains(locale) ? locale : 'ru',
@@ -215,18 +233,30 @@ class PreferencesStore {
       // as the fallback. Subsequent writes persist independent values.
       preferredRecitationId: listeningRecitationId,
       listeningRecitationId: listeningRecitationId,
-      mushafRecitationId:
-          _preferences.getString('mushaf_recitation_id') ?? legacyRecitationId,
-      memorizationDefaultRecitationId:
-          _preferences.getString('memorization_recitation_id') ??
-          legacyRecitationId,
+      mushafRecitationId: accountScoped
+          ? _accountRecitation(
+              recitationOwnerId,
+              RecitationPreferenceRole.mushaf,
+            )
+          : _preferences.getString('mushaf_recitation_id') ??
+                legacyRecitationId,
+      memorizationDefaultRecitationId: accountScoped
+          ? _accountRecitation(
+              recitationOwnerId,
+              RecitationPreferenceRole.memorization,
+            )
+          : _preferences.getString('memorization_recitation_id') ??
+                legacyRecitationId,
       preferredAudioQuality: _audioQuality(
         _preferences.getString('audio_quality'),
       ),
     );
   }
 
-  Future<void> write(AppPreferences value) async {
+  Future<void> write(
+    AppPreferences value, {
+    bool includeLegacyRecitations = true,
+  }) async {
     await Future.wait(<Future<bool>>[
       _preferences.setBool('onboarding_complete', value.onboardingComplete),
       _preferences.setString('locale', value.locale),
@@ -258,28 +288,104 @@ class PreferencesStore {
           'reader_tafsir_source_id',
           value.preferredTafsirSourceId!,
         ),
-      if (value.preferredRecitationId != null)
+      if (includeLegacyRecitations && value.preferredRecitationId != null)
         _preferences.setString(
           'reader_recitation_id',
           value.preferredRecitationId!,
         ),
-      if (value.listeningRecitationId != null)
+      if (includeLegacyRecitations && value.listeningRecitationId != null)
         _preferences.setString(
           'audio_listening_recitation_id',
           value.listeningRecitationId!,
         ),
-      if (value.mushafRecitationId != null)
+      if (includeLegacyRecitations && value.mushafRecitationId != null)
         _preferences.setString(
           'mushaf_recitation_id',
           value.mushafRecitationId!,
         ),
-      if (value.memorizationDefaultRecitationId != null)
+      if (includeLegacyRecitations &&
+          value.memorizationDefaultRecitationId != null)
         _preferences.setString(
           'memorization_recitation_id',
           value.memorizationDefaultRecitationId!,
         ),
       _preferences.setString('audio_quality', value.preferredAudioQuality),
     ]);
+  }
+
+  String? _accountRecitation(String? ownerId, RecitationPreferenceRole role) {
+    if (ownerId == null) return null;
+    return _preferences.getString(_accountRecitationKey(ownerId, role));
+  }
+
+  static String _accountRecitationKey(
+    String ownerId,
+    RecitationPreferenceRole role,
+  ) => 'account:${Uri.encodeComponent(ownerId)}:recitation_${role.name}_v1';
+
+  Future<void> writeAccountRecitation(
+    String ownerId,
+    RecitationPreferenceRole role,
+    String recitationId,
+  ) async {
+    await _preferences.setString(
+      _accountRecitationKey(ownerId, role),
+      recitationId,
+    );
+  }
+
+  Future<void> writeLegacyRecitation(
+    RecitationPreferenceRole role,
+    String recitationId,
+  ) async {
+    final key = switch (role) {
+      RecitationPreferenceRole.listening => 'audio_listening_recitation_id',
+      RecitationPreferenceRole.mushaf => 'mushaf_recitation_id',
+      RecitationPreferenceRole.memorization => 'memorization_recitation_id',
+    };
+    await _preferences.setString(key, recitationId);
+    if (role == RecitationPreferenceRole.listening) {
+      await _preferences.setString('reader_recitation_id', recitationId);
+    }
+  }
+
+  /// The old device-wide choice can be assigned only to the account that was
+  /// already cached during upgrade. Later accounts start with their own choice.
+  Future<void> migrateLegacyRecitationsForUser(String? ownerId) async {
+    if (ownerId == null || ownerId.trim().isEmpty) return;
+    const marker = 'account_recitation_legacy_owner_v1';
+    if (_preferences.getString(marker) != null) return;
+    final legacy = read();
+    final choices = <RecitationPreferenceRole, String?>{
+      RecitationPreferenceRole.listening: legacy.listeningRecitationId,
+      RecitationPreferenceRole.mushaf: legacy.mushafRecitationId,
+      RecitationPreferenceRole.memorization:
+          legacy.memorizationDefaultRecitationId,
+    };
+    for (final entry in choices.entries) {
+      final id = entry.value;
+      if (id != null &&
+          id.isNotEmpty &&
+          _accountRecitation(ownerId, entry.key) == null) {
+        await writeAccountRecitation(ownerId, entry.key, id);
+      }
+    }
+    await _preferences.setString(marker, ownerId);
+  }
+
+  /// Guest choices follow an explicitly confirmed account merge. Existing
+  /// choices on the destination account take precedence.
+  Future<void> transferAccountRecitations(
+    String sourceOwnerId,
+    String targetOwnerId,
+  ) async {
+    if (sourceOwnerId == targetOwnerId) return;
+    for (final role in RecitationPreferenceRole.values) {
+      final source = _accountRecitation(sourceOwnerId, role);
+      if (source != null && _accountRecitation(targetOwnerId, role) == null) {
+        await writeAccountRecitation(targetOwnerId, role, source);
+      }
+    }
   }
 
   static ThemeMode _themeFromName(String value) {

@@ -141,6 +141,40 @@ class BookmarkPayloadSerializer(serializers.Serializer[Any]):
         return attrs
 
 
+class AyahAnnotationPayloadSerializer(serializers.Serializer[Any]):
+    edition_code = serializers.SlugField(max_length=64, required=False)
+    page_number = serializers.IntegerField(
+        min_value=1,
+        max_value=604,
+        required=False,
+        allow_null=True,
+    )
+    surah_number = serializers.IntegerField(
+        min_value=1,
+        max_value=114,
+        required=False,
+        allow_null=True,
+    )
+    ayah_number = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    color_key = serializers.RegexField(
+        regex=r"^[a-z0-9][a-z0-9_-]{0,31}$",
+        required=False,
+        default="lime",
+    )
+    note = serializers.CharField(max_length=2000, required=False, allow_blank=True)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        has_surah = "surah_number" in attrs and attrs["surah_number"] is not None
+        has_ayah = "ayah_number" in attrs and attrs["ayah_number"] is not None
+        clears_surah = "surah_number" in attrs and attrs["surah_number"] is None
+        clears_ayah = "ayah_number" in attrs and attrs["ayah_number"] is None
+        if has_surah != has_ayah or clears_surah != clears_ayah:
+            raise serializers.ValidationError(
+                "surah_number and ayah_number must be set or cleared together."
+            )
+        return attrs
+
+
 class BookmarkCreateSerializer(BookmarkPayloadSerializer):
     id = UUIDv7Field(
         help_text=(
@@ -180,7 +214,8 @@ class SyncOperationInputSerializer(StrictFieldsSerializer):
     entity_type = serializers.ChoiceField(choices=SyncEntityType.choices)
     entity_id = serializers.UUIDField(
         help_text=(
-            "Bookmark and reminder entity_id values must be client-generated UUIDv7 identifiers."
+            "Bookmark, annotation, and reminder entity_id values must be client-generated "
+            "UUIDv7 identifiers."
         )
     )
     action = serializers.ChoiceField(choices=SyncAction.choices)
@@ -196,7 +231,12 @@ class SyncOperationInputSerializer(StrictFieldsSerializer):
         base_revision = attrs["base_revision"]
 
         if (
-            entity_type in {SyncEntityType.BOOKMARK, SyncEntityType.REMINDER}
+            entity_type
+            in {
+                SyncEntityType.BOOKMARK,
+                SyncEntityType.AYAH_ANNOTATION,
+                SyncEntityType.REMINDER,
+            }
             and attrs["entity_id"].version != 7
         ):
             raise serializers.ValidationError(
@@ -215,7 +255,14 @@ class SyncOperationInputSerializer(StrictFieldsSerializer):
             payload_serializer: serializers.Serializer[Any] = ReadingPositionPayloadSerializer(
                 data=payload
             )
-        elif entity_type == SyncEntityType.BOOKMARK and action == SyncAction.DELETE:
+        elif (
+            entity_type
+            in {
+                SyncEntityType.BOOKMARK,
+                SyncEntityType.AYAH_ANNOTATION,
+            }
+            and action == SyncAction.DELETE
+        ):
             if payload:
                 raise serializers.ValidationError(
                     {"payload": "Delete operations must have an empty payload."}
@@ -224,6 +271,11 @@ class SyncOperationInputSerializer(StrictFieldsSerializer):
             return attrs
         elif entity_type == SyncEntityType.BOOKMARK:
             payload_serializer = BookmarkPayloadSerializer(
+                data=payload,
+                partial=base_revision > 0,
+            )
+        elif entity_type == SyncEntityType.AYAH_ANNOTATION:
+            payload_serializer = AyahAnnotationPayloadSerializer(
                 data=payload,
                 partial=base_revision > 0,
             )
@@ -253,7 +305,14 @@ class SyncOperationInputSerializer(StrictFieldsSerializer):
 
         payload_serializer.is_valid(raise_exception=True)
         validated_payload = dict(payload_serializer.validated_data)
-        if entity_type == SyncEntityType.BOOKMARK and base_revision == 0:
+        if (
+            entity_type
+            in {
+                SyncEntityType.BOOKMARK,
+                SyncEntityType.AYAH_ANNOTATION,
+            }
+            and base_revision == 0
+        ):
             has_target = (
                 validated_payload.get("page_number") is not None
                 or validated_payload.get("ayah_number") is not None
@@ -342,6 +401,47 @@ class BookmarkSyncDeleteOperationSerializer(StrictFieldsSerializer):
     payload = EmptySyncPayloadSerializer(required=False)
 
 
+class AyahAnnotationSyncCreatePayloadSerializer(AyahAnnotationPayloadSerializer):
+    """New ayah-annotation payload; an ayah target is required."""
+
+    edition_code = serializers.SlugField(max_length=64)
+    surah_number = serializers.IntegerField(min_value=1, max_value=114)
+    ayah_number = serializers.IntegerField(min_value=1)
+
+
+class AyahAnnotationSyncCreateOperationSerializer(StrictFieldsSerializer):
+    operation_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.AYAH_ANNOTATION])
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=0, max_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = AyahAnnotationSyncCreatePayloadSerializer()
+
+
+class AyahAnnotationSyncPatchOperationSerializer(StrictFieldsSerializer):
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.AYAH_ANNOTATION])
+    operation_id = serializers.UUIDField()
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.UPSERT])
+    base_revision = serializers.IntegerField(min_value=1)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = AyahAnnotationPayloadSerializer(required=False)
+
+
+class AyahAnnotationSyncDeleteOperationSerializer(StrictFieldsSerializer):
+    entity_type = serializers.ChoiceField(choices=[SyncEntityType.AYAH_ANNOTATION])
+    operation_id = serializers.UUIDField()
+    entity_id = UUIDv7Field()
+    action = serializers.ChoiceField(choices=[SyncAction.DELETE])
+    base_revision = serializers.IntegerField(min_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+    payload = EmptySyncPayloadSerializer(required=False)
+
+
 class ReminderSyncCreateOperationSerializer(StrictFieldsSerializer):
     """Create a reminder with a complete functional payload."""
 
@@ -399,11 +499,22 @@ def _sync_operation_openapi_proxy() -> PolymorphicProxySerializer:
         resource_type_field_name=None,
         many=False,
     )
+    annotation = PolymorphicProxySerializer(
+        component_name="AyahAnnotationSyncOperation",
+        serializers=[
+            AyahAnnotationSyncCreateOperationSerializer,
+            AyahAnnotationSyncPatchOperationSerializer,
+            AyahAnnotationSyncDeleteOperationSerializer,
+        ],
+        resource_type_field_name=None,
+        many=False,
+    )
     return PolymorphicProxySerializer(
         component_name="SyncOperationInput",
         serializers={
             SyncEntityType.READING_POSITION.value: ReadingPositionSyncOperationSerializer,
             SyncEntityType.BOOKMARK.value: bookmark,
+            SyncEntityType.AYAH_ANNOTATION.value: annotation,
             SyncEntityType.REMINDER.value: reminder,
         },
         resource_type_field_name="entity_type",
@@ -500,6 +611,22 @@ class BookmarkOutputSerializer(serializers.Serializer[Any]):
     updated_at = serializers.DateTimeField()
 
 
+class AyahAnnotationOutputSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=["ayah_annotation"], read_only=True)
+    edition_code = serializers.CharField()
+    page_number = serializers.IntegerField(allow_null=True)
+    ayah = BookmarkAyahReferenceOutputSerializer(allow_null=True)
+    color_key = serializers.CharField()
+    note = serializers.CharField()
+    client_updated_at = serializers.DateTimeField()
+    revision = serializers.IntegerField()
+    deleted_at = serializers.DateTimeField(allow_null=True)
+    device_id = serializers.UUIDField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
 class BookmarkPageOutputSerializer(serializers.Serializer[Any]):
     next = serializers.URLField(allow_null=True)
     previous = serializers.URLField(allow_null=True)
@@ -518,6 +645,7 @@ class BookmarkListQuerySerializer(serializers.Serializer[Any]):
         serializers={
             "reading_position": ReadingPositionOutputSerializer,
             "bookmark": BookmarkOutputSerializer,
+            "ayah_annotation": AyahAnnotationOutputSerializer,
             "reminder": ReminderSyncOutputSerializer,
         },
         resource_type_field_name="entity_type",

@@ -1,0 +1,567 @@
+{
+  "after-prayer": [
+    {
+      "tag": "circle",
+      "cx": 48.0,
+      "cy": 27.0,
+      "r": 3,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "circle",
+      "cx": 43.314,
+      "cy": 38.314,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 32.0,
+      "cy": 43.0,
+      "r": 3,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "circle",
+      "cx": 20.686,
+      "cy": 38.314,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 16.0,
+      "cy": 27.0,
+      "r": 3,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "circle",
+      "cx": 20.686,
+      "cy": 15.686,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 32.0,
+      "cy": 11.0,
+      "r": 3,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "circle",
+      "cx": 43.314,
+      "cy": 15.686,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M32 43 L32 51 M27 57 L32 51 L37 57",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "sleep": [
+    {
+      "tag": "path",
+      "d": "M44 8 C35 8 32 17 37 23 C41 29 50 28 54 22 C45 24 41 15 44 8 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 9,
+      "y": 29,
+      "width": 46,
+      "height": 20,
+      "rx": 4,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "rect",
+      "x": 13,
+      "y": 32,
+      "width": 13,
+      "height": 6,
+      "rx": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M9 43 L55 43 M12 49 L12 55 M52 49 L52 55",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "prayer": [
+    {
+      "tag": "path",
+      "d": "M18 30 C18 18 28 16 32 9 C36 16 46 18 46 30 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 16,
+      "y": 30,
+      "width": 32,
+      "height": 24,
+      "rx": 3,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "rect",
+      "x": 27,
+      "y": 41,
+      "width": 10,
+      "height": 13,
+      "rx": 5,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M8 54 L8 18 M4 23 L12 23 M56 54 L56 18 M52 23 L60 23 M32 9 L32 5",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "purification": [
+    {
+      "tag": "path",
+      "d": "M32 8 C27 19 16 30 16 39 C16 60 48 60 48 39 C48 30 37 19 32 8 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M32 20 C29 27 24 33 24 39 C24 45 28 48 33 48",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 45,
+      "cy": 20,
+      "r": 4,
+      "fill": "#D5A34C"
+    }
+  ],
+  "home": [
+    {
+      "tag": "path",
+      "d": "M8 29 L32 9 L56 29 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 14,
+      "y": 29,
+      "width": 36,
+      "height": 26,
+      "rx": 3,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "rect",
+      "x": 27,
+      "y": 39,
+      "width": 11,
+      "height": 16,
+      "rx": 2,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "rect",
+      "x": 18,
+      "y": 34,
+      "width": 6,
+      "height": 6,
+      "rx": 1,
+      "fill": "#91B4A5"
+    }
+  ],
+  "food": [
+    {
+      "tag": "path",
+      "d": "M10 32 L54 32 C54 58 10 58 10 32 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M10 32 L54 32 M21 56 L43 56",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "rect",
+      "x": 17,
+      "y": 15,
+      "width": 9,
+      "height": 13,
+      "rx": 4,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 28,
+      "y": 13,
+      "width": 9,
+      "height": 15,
+      "rx": 4,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 39,
+      "y": 16,
+      "width": 9,
+      "height": 12,
+      "rx": 4,
+      "fill": "#D5A34C"
+    }
+  ],
+  "family": [
+    {
+      "tag": "circle",
+      "cx": 18,
+      "cy": 18,
+      "r": 7,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 46,
+      "cy": 18,
+      "r": 7,
+      "fill": "#91B4A5"
+    },
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 29,
+      "r": 6,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M7 49 L7 37 C7 25 27 25 27 37 L27 49 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M37 49 L37 37 C37 25 57 25 57 37 L57 49 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M21 54 L21 44 C21 33 43 33 43 44 L43 54 Z",
+      "fill": "#0B5D4A"
+    }
+  ],
+  "social": [
+    {
+      "tag": "path",
+      "d": "M29 25 L56 25 L56 45 L50 45 L50 52 L42 45 L29 45 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M7 10 L43 10 L43 34 L22 34 L13 42 L13 34 L7 34 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M15 19 L34 19 M15 26 L28 26",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "travel": [
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 32,
+      "r": 24,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M41 16 L37 37 L16 41 L27 27 Z",
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M41 16 L27 27 L37 37 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 32,
+      "r": 2,
+      "fill": "#FFFFFF"
+    }
+  ],
+  "hardship": [
+    {
+      "tag": "path",
+      "d": "M32 52 C21 43 8 35 8 23 C8 8 25 7 32 19 C39 7 56 8 56 23 C56 35 43 43 32 52 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M21 30 L28 36 L43 22",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 51,
+      "cy": 12,
+      "r": 5,
+      "fill": "#D5A34C"
+    }
+  ],
+  "protection": [
+    {
+      "tag": "path",
+      "d": "M32 8 L53 17 L53 33 C53 46 43 54 32 59 C21 54 11 46 11 33 L11 17 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M22 32 L29 39 L43 23",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 51,
+      "cy": 14,
+      "r": 5,
+      "fill": "#D5A34C"
+    }
+  ],
+  "health": [
+    {
+      "tag": "path",
+      "d": "M12 38 L38 12 C48 2 62 16 52 26 L26 52 C16 62 2 48 12 38 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M25 25 L39 39 M39 25 L25 39",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 17,
+      "cy": 43,
+      "r": 2,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 21,
+      "cy": 47,
+      "r": 2,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 43,
+      "cy": 17,
+      "r": 2,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 47,
+      "cy": 21,
+      "r": 2,
+      "fill": "#D5A34C"
+    }
+  ],
+  "loss": [
+    {
+      "tag": "path",
+      "d": "M32 55 L32 27",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "path",
+      "d": "M32 44 C13 43 11 31 11 31 C27 31 32 37 32 44 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M32 38 C47 38 53 27 53 27 C37 26 32 33 32 38 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M32 9 C18 15 18 28 32 30 C46 28 46 15 32 9 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M19 56 L45 56",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "nature": [
+    {
+      "tag": "circle",
+      "cx": 44,
+      "cy": 17,
+      "r": 9,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M15 39 C2 39 2 23 14 23 C17 7 39 7 42 24 C59 19 63 39 48 39 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M18 46 L14 54 M33 46 L29 54 M48 46 L44 54",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ],
+  "pilgrimage": [
+    {
+      "tag": "path",
+      "d": "M10 19 L32 10 L54 19 L32 28 Z",
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M10 19 L32 28 L32 56 L10 47 Z",
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M32 28 L54 19 L54 47 L32 56 Z",
+      "fill": "#17483D"
+    },
+    {
+      "tag": "path",
+      "d": "M10 25 L32 34 L54 25 L54 31 L32 40 L10 31 Z",
+      "fill": "#D5A34C"
+    }
+  ],
+  "remembrance": [
+    {
+      "tag": "path",
+      "d": "M8 21 C10 35 14 47 27 48 L27 30 C22 30 20 26 19 20 M56 21 C54 35 50 47 37 48 L37 30 C42 30 44 26 45 20",
+      "fill": "none",
+      "stroke": "#0B5D4A",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "path",
+      "d": "M14 51 L27 55 M50 51 L37 55",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 10,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 19,
+      "r": 3,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "circle",
+      "cx": 32,
+      "cy": 28,
+      "r": 3,
+      "fill": "#D5A34C"
+    }
+  ],
+  "quran": [
+    {
+      "tag": "rect",
+      "x": 13,
+      "y": 8,
+      "width": 38,
+      "height": 48,
+      "rx": 4,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "rect",
+      "x": 17,
+      "y": 8,
+      "width": 4,
+      "height": 48,
+      "rx": 1,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M31 20 L39 15 L47 20 L47 37 L39 42 L31 37 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M13 49 L51 49",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
+  ]
+}

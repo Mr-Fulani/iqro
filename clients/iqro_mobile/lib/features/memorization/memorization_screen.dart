@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/audio/audio_controller.dart';
@@ -128,8 +129,16 @@ class _MemorizationScreenBodyState
                   setState(() => _dailyRepetitions = value),
               onPauseSecondsChanged: (value) =>
                   setState(() => _pauseSeconds = value),
-              onRecitationChanged: (value) =>
-                  setState(() => _recitationId = value),
+              onRecitationChanged: (value) {
+                setState(() => _recitationId = value);
+                if (value != null) {
+                  unawaited(
+                    ref
+                        .read(appPreferencesProvider.notifier)
+                        .setMemorizationDefaultRecitation(value),
+                  );
+                }
+              },
               onSave: () => _savePlan(dashboard),
               onCancel: () => setState(() => _editing = false),
             )
@@ -680,7 +689,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Icon(
+                      child: IqroIcon(
                         Icons.menu_book_rounded,
                         color: context.iqroColors.gold,
                         size: 26,
@@ -699,7 +708,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
                           style: Theme.of(context).textTheme.displaySmall
                               ?.copyWith(
                                 color: Colors.white,
-                                fontFamily: 'serif',
+                                fontFamily: IqroTheme.arabicFontFamily,
                                 fontSize: 32,
                               ),
                         ),
@@ -962,7 +971,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontFamily: 'serif',
+                fontFamily: IqroTheme.arabicFontFamily,
                 height: 1.8,
               ),
             ),
@@ -1015,6 +1024,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
     }
 
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final current = ref.read(audioControllerProvider);
     final isActive =
         current.channel == AudioPlaybackChannel.memorization &&
@@ -1047,7 +1057,11 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
       final playback = await ref
           .read(audioRepositoryProvider)
           .playback(recitationId: recitation.id, surah: plan.startAyah.surah);
-      if (!mounted || request != _audioRequest) return;
+      if (!mounted ||
+          request != _audioRequest ||
+          controller.navigationEpoch != navigationEpoch) {
+        return;
+      }
       final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
       await controller.loadPlayback(
         playback: playback,

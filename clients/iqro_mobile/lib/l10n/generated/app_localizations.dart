@@ -138,6 +138,144 @@ abstract class AppLocalizations {
   /// **'Could not load bookmarks'**
   String get bookmarksLoadError;
 
+  /// No description provided for @notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get notes;
+
+  /// No description provided for @emptyNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes yet. Add a note to an ayah in the Mushaf.'**
+  String get emptyNotes;
+
+  /// No description provided for @addNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get addNote;
+
+  /// No description provided for @editNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit note'**
+  String get editNote;
+
+  /// No description provided for @noteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note about this ayah'**
+  String get noteHint;
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR NOTE'**
+  String get noteLabel;
+
+  /// No description provided for @noteWordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} word} other{{count} words}}'**
+  String noteWordCount(int count);
+
+  /// No description provided for @removeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove note'**
+  String get removeNote;
+
+  /// No description provided for @noteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Note saved'**
+  String get noteSaved;
+
+  /// No description provided for @noteRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Note removed'**
+  String get noteRemoved;
+
+  /// No description provided for @highlightAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight'**
+  String get highlightAyah;
+
+  /// No description provided for @chooseHighlightColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose highlight color'**
+  String get chooseHighlightColor;
+
+  /// No description provided for @highlightColorEmerald.
+  ///
+  /// In en, this message translates to:
+  /// **'Emerald'**
+  String get highlightColorEmerald;
+
+  /// No description provided for @highlightColorYellow.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get highlightColorYellow;
+
+  /// No description provided for @highlightColorPink.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink'**
+  String get highlightColorPink;
+
+  /// No description provided for @highlightColorLime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lime'**
+  String get highlightColorLime;
+
+  /// No description provided for @highlightColorBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get highlightColorBlue;
+
+  /// No description provided for @highlightColorLavender.
+  ///
+  /// In en, this message translates to:
+  /// **'Lavender'**
+  String get highlightColorLavender;
+
+  /// No description provided for @repeatSelectedAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat selected ayah'**
+  String get repeatSelectedAyah;
+
+  /// No description provided for @copyAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy ayah'**
+  String get copyAyah;
+
+  /// No description provided for @shareAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Share ayah'**
+  String get shareAyah;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Ayah copied'**
+  String get copied;
+
+  /// No description provided for @copyAyahFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t copy ayah'**
+  String get copyAyahFailed;
+
   /// No description provided for @mushafFitWidth.
   ///
   /// In en, this message translates to:

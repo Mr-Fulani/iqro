@@ -9,6 +9,17 @@ services:
   redis:
     cpus: 0.20
     mem_limit: 128m
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1"
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - noeviction
 
   migrate:
     cpus: 0.40

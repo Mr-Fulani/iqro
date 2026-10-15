@@ -74,12 +74,13 @@ class AppDependencies {
   final BackgroundMaintenanceService maintenance;
 
   static Future<AppDependencies> initialize() async {
-    final config = AppConfig.fromEnvironment();
+    final config = await AppConfig.fromEnvironment();
     final sharedPreferences = await SharedPreferences.getInstance();
     final preferences = PreferencesStore(sharedPreferences);
     final accountScope = AccountScope();
     final auth = AuthRepository(config: config, accountScope: accountScope);
     final legacyOwnerId = await auth.legacyOwnerIdForMigration();
+    await preferences.migrateLegacyRecitationsForUser(legacyOwnerId);
     final database = await LocalDatabase.open(
       accountScope: accountScope,
       legacyOwnerId: legacyOwnerId,
@@ -88,7 +89,13 @@ class AppDependencies {
       loader: () async {
         await auth.ensureSession(locale: preferences.read().locale);
       },
-      transfer: database.transferAccountData,
+      transfer: (sourceOwnerId, targetOwnerId) async {
+        await database.transferAccountData(sourceOwnerId, targetOwnerId);
+        await preferences.transferAccountRecitations(
+          sourceOwnerId,
+          targetOwnerId,
+        );
+      },
       finalizeTransfer: database.finalizeAccountTransfer,
     );
     await auth.loadCachedSession();

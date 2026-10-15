@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../features/audio/audio_models.dart';
 import 'audio_playback_store.dart';
+import 'listening_media_service.dart';
 
 abstract interface class IqroAudioEngine {
   Stream<PlayerState> get playerStateStream;
@@ -380,26 +381,53 @@ typedef IqroAudioPresentation = ({
   String surahName,
   bool playing,
   bool buffering,
+  IqroStandaloneAudioPresentation? standalone,
 });
 
-IqroAudioPresentation iqroAudioPresentation(IqroAudioState state) => (
-  track: state.track,
-  reciter: state.reciter,
-  source: state.source,
-  channel: state.channel,
-  surahName: state.surahName,
-  playing: state.playing,
-  buffering: state.buffering,
-);
+typedef IqroStandaloneAudioPresentation = ({
+  String id,
+  String title,
+  String? artist,
+  String? album,
+  String contentType,
+});
+
+IqroAudioPresentation iqroAudioPresentation(IqroAudioState state) {
+  final standalone = state.standalone;
+  return (
+    track: state.track,
+    reciter: state.reciter,
+    source: state.source,
+    channel: state.channel,
+    surahName: state.surahName,
+    playing: standalone?.playing ?? state.playing,
+    buffering: standalone?.loading ?? state.buffering,
+    standalone: standalone == null
+        ? null
+        : (
+            id: standalone.mediaItem.id,
+            title: standalone.mediaItem.title,
+            artist: standalone.mediaItem.artist,
+            album: standalone.mediaItem.album,
+            contentType:
+                standalone.mediaItem.extras?['content_type']?.toString() ??
+                'standalone',
+          ),
+  );
+}
 
 class AudioController extends StateNotifier<IqroAudioState> {
   AudioController({
     AudioPlayer? player,
     IqroAudioEngine? engine,
     AudioPlaybackStore? playbackStore,
+    ListeningMediaService? mediaService,
+    Duration persistenceDelay = const Duration(seconds: 5),
   }) : assert(player == null || engine == null),
        _player = engine ?? JustAudioEngine(player),
        _playbackStore = playbackStore,
+       _persistenceDelay = persistenceDelay,
+       _mediaService = mediaService ?? ListeningMediaService.current,
        super(const IqroAudioState()) {
     _subscriptions.add(
       _player.playerStateStream.listen((playerState) {
@@ -520,6 +548,18 @@ class AudioController extends StateNotifier<IqroAudioState> {
         );
       }),
     );
+    _mediaService?.bind(
+      this,
+      play: () async {
+        await activateListening();
+      },
+      pause: pauseListening,
+      seek: seekListening,
+    );
+    _removeMediaListener = addListener(
+      (_) => _publishListeningMedia(),
+      fireImmediately: true,
+    );
   }
 
   AudioSegment? _segmentAt(List<AudioSegment> segments, Duration position) {
@@ -541,10 +581,13 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   final IqroAudioEngine _player;
   final AudioPlaybackStore? _playbackStore;
+  final ListeningMediaService? _mediaService;
+  void Function()? _removeMediaListener;
   final List<StreamSubscription<Object?>> _subscriptions =
       <StreamSubscription<Object?>>[];
   Timer? _sleepTimer;
   Timer? _persistenceTimer;
+  final Duration _persistenceDelay;
   var _disposed = false;
   var _restoreStarted = false;
   var _restoring = false;
@@ -557,7 +600,117 @@ class AudioController extends StateNotifier<IqroAudioState> {
   _StandaloneRequest? _standaloneRequest;
   var _memorizationSessionActive = false;
   AudioPlaybackSnapshot? _listeningSnapshotBeforeMemorization;
+  AudioPlaybackSnapshot? _lastListeningSnapshot;
   AudioPlaybackSnapshot? _pendingRestoreSnapshot;
+  var _navigationEpoch = 0;
+
+  /// Invalidates an Audio-tab request that was waiting on the network when a
+  /// route with its own sound took focus.
+  int get navigationEpoch => _navigationEpoch;
+
+  bool get hasListeningPlayback =>
+      (state.channel == AudioPlaybackChannel.listening &&
+          state.track != null &&
+          state.standalone == null) ||
+      _lastListeningSnapshot != null;
+
+  int? get listeningSurah =>
+      state.channel == AudioPlaybackChannel.listening &&
+          state.standalone == null &&
+          state.track != null
+      ? state.track?.surah
+      : _lastListeningSnapshot?.playback.track.surah;
+
+  String? get listeningSurahName =>
+      state.channel == AudioPlaybackChannel.listening &&
+          state.standalone == null &&
+          state.track != null
+      ? state.surahName
+      : _lastListeningSnapshot?.surahName;
+
+  Reciter? get listeningReciter =>
+      state.channel == AudioPlaybackChannel.listening &&
+          state.standalone == null &&
+          state.track != null
+      ? state.reciter
+      : _lastListeningSnapshot?.reciter;
+
+  /// The Audio tab's widget keeps its own identity while another section owns
+  /// the shared decoder. The saved session is deliberately shown as paused.
+  IqroAudioPresentation listeningPresentation(IqroAudioState current) {
+    if (current.channel == AudioPlaybackChannel.listening &&
+        current.standalone == null &&
+        current.track != null) {
+      return iqroAudioPresentation(current);
+    }
+    final snapshot = _lastListeningSnapshot;
+    return (
+      track: snapshot?.playback.track,
+      reciter: snapshot?.reciter,
+      source: AudioPlaybackSource.audio,
+      channel: AudioPlaybackChannel.listening,
+      surahName: snapshot?.surahName ?? '',
+      playing: false,
+      buffering: false,
+      standalone: null,
+    );
+  }
+
+  void _publishListeningMedia() {
+    final service = _mediaService;
+    if (service == null) return;
+    final listening =
+        state.channel == AudioPlaybackChannel.listening &&
+        state.standalone == null &&
+        state.track != null &&
+        state.reciter != null;
+    final snapshot = _lastListeningSnapshot;
+    final track = listening ? state.track : snapshot?.playback.track;
+    final reciter = listening ? state.reciter : snapshot?.reciter;
+    if (track == null || reciter == null) {
+      service.publish(item: null);
+      return;
+    }
+    service.publish(
+      item: _mediaItemFor(
+        track: track,
+        reciter: reciter,
+        surahName: listening ? state.surahName : snapshot!.surahName,
+        startAyah: listening ? state.rangeStartAyah : snapshot?.rangeStartAyah,
+        endAyah: listening ? state.rangeEndAyah : snapshot?.rangeEndAyah,
+      ),
+      playing: listening && state.playing,
+      buffering: listening && state.buffering,
+      position: listening ? state.position : snapshot!.position,
+      speed: listening ? state.speed : snapshot!.speed,
+    );
+  }
+
+  Future<void> pauseListening() {
+    if (state.channel != AudioPlaybackChannel.listening ||
+        state.standalone != null ||
+        state.track == null) {
+      return Future<void>.value();
+    }
+    final generation = _sourceGeneration;
+    final trackId = state.track!.id;
+    return _serializeSource(() async {
+      if (!_ownsQuran(generation, trackId)) return;
+      await _player.pause();
+      if (!_ownsQuran(generation, trackId)) return;
+      state = state.copyWith(playing: false, buffering: false);
+      _schedulePersistence(immediate: true);
+    });
+  }
+
+  Future<void> seekListening(Duration position) async {
+    if (state.channel != AudioPlaybackChannel.listening ||
+        state.standalone != null ||
+        state.track == null) {
+      if (!await activateListening(play: false)) return;
+    }
+    await seek(position);
+  }
 
   ({int intent, Future<void> interruption}) _beginSourceIntent({
     String? standaloneMediaId,
@@ -654,7 +807,47 @@ class AudioController extends StateNotifier<IqroAudioState> {
   }
 
   Future<void> restoreLatestIfIdle() async {
+    if (state.anyAudioActive &&
+        state.channel != AudioPlaybackChannel.listening) {
+      return;
+    }
     await _restoreFromStore(force: true);
+  }
+
+  /// A deliberate play action in the Audio tab hands the shared decoder back
+  /// to the saved Listening session, without changing the other role choices.
+  Future<bool> activateListening({bool play = true}) async {
+    if (_disposed) return false;
+    final navigationEpoch = _navigationEpoch;
+    if (state.channel == AudioPlaybackChannel.listening &&
+        state.track != null &&
+        state.standalone == null) {
+      if (play && !state.playing) await toggle();
+      return state.channel == AudioPlaybackChannel.listening &&
+          state.track != null;
+    }
+    final snapshot = _lastListeningSnapshot ?? await _playbackStore?.read();
+    if (_disposed || navigationEpoch != _navigationEpoch || snapshot == null) {
+      return false;
+    }
+    await _stopCurrentSource();
+    if (_disposed || navigationEpoch != _navigationEpoch) return false;
+    _restoredSavedAt = null;
+    _pendingRestoreSnapshot = snapshot;
+    try {
+      await restoreLatestIfIdle();
+    } finally {
+      _pendingRestoreSnapshot = null;
+    }
+    if (_disposed ||
+        navigationEpoch != _navigationEpoch ||
+        state.channel != AudioPlaybackChannel.listening ||
+        state.track == null) {
+      return false;
+    }
+    if (play) await toggle();
+    return state.channel == AudioPlaybackChannel.listening &&
+        state.track != null;
   }
 
   Future<void> restoreAudioAfterMemorization() async {
@@ -710,6 +903,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         return;
       }
       final playback = snapshot.playback.normalized();
+      _lastListeningSnapshot = snapshot;
       final restoredRange = _validatedRestoredRange(snapshot, playback);
       snapshotValidated = true;
       state = state.copyWith(
@@ -867,6 +1061,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     int? endAyah,
     bool autoplay = true,
   }) {
+    final navigationEpoch = _navigationEpoch;
     final normalizedPlayback = playback.normalized();
     if (endAyah != null && startAyah == null) {
       throw ArgumentError('An end ayah requires a start ayah');
@@ -915,6 +1110,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         startSegment: startSegment,
         endSegment: endSegment,
         autoplay: autoplay,
+        navigationEpoch: navigationEpoch,
         intent: sourceIntent.intent,
         interruption: sourceIntent.interruption,
       ),
@@ -930,10 +1126,17 @@ class AudioController extends StateNotifier<IqroAudioState> {
     AudioSegment? startSegment,
     AudioSegment? endSegment,
     required bool autoplay,
+    int? navigationEpoch,
     required int intent,
     Future<void>? interruption,
   }) async {
-    if (_disposed || intent != _sourceIntent) return;
+    if (_disposed ||
+        intent != _sourceIntent ||
+        (channel != AudioPlaybackChannel.listening &&
+            navigationEpoch != null &&
+            navigationEpoch != _navigationEpoch)) {
+      return;
+    }
     final generation = ++_sourceGeneration;
     final track = playback.track;
     _sourceTransitionActive = true;
@@ -942,7 +1145,10 @@ class AudioController extends StateNotifier<IqroAudioState> {
       if (interruption != null) await interruption;
       if (_disposed ||
           intent != _sourceIntent ||
-          generation != _sourceGeneration) {
+          generation != _sourceGeneration ||
+          (channel != AudioPlaybackChannel.listening &&
+              navigationEpoch != null &&
+              navigationEpoch != _navigationEpoch)) {
         return;
       }
       final mediaItem = _mediaItemFor(
@@ -994,6 +1200,15 @@ class AudioController extends StateNotifier<IqroAudioState> {
       );
       if (!_ownsQuran(generation, track.id)) return;
       _schedulePersistence(immediate: true);
+      if (channel != AudioPlaybackChannel.listening &&
+          navigationEpoch != null &&
+          navigationEpoch != _navigationEpoch) {
+        await _player.pause();
+        if (_ownsQuran(generation, track.id)) {
+          state = state.copyWith(playing: false, buffering: false);
+        }
+        return;
+      }
       if (autoplay) _startQuranPlayback(generation, track.id);
     } on Object catch (error) {
       if (_disposed || intent != _sourceIntent) return;
@@ -1036,6 +1251,129 @@ class AudioController extends StateNotifier<IqroAudioState> {
     });
   }
 
+  Future<void> pauseForQuranEntry() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation(preserveMushaf: true);
+  }
+
+  Future<void> pauseForDuaEntry() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation(preserveDua: true);
+  }
+
+  Future<void> pauseForMemorizationEntry() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation();
+  }
+
+  Future<void> pauseForQuranExit() => _pauseContextOnExit(
+    (current) =>
+        current.standalone == null &&
+        current.channel == AudioPlaybackChannel.mushaf &&
+        current.track != null,
+  );
+
+  Future<void> pauseForDuaExit() => _pauseContextOnExit(
+    (current) => current.standalone?.mediaItem.extras?['content_type'] == 'dua',
+  );
+
+  Future<void> pauseForMemorizationExit() => _pauseContextOnExit(
+    (current) =>
+        current.standalone == null &&
+        current.channel == AudioPlaybackChannel.memorization &&
+        current.track != null,
+  );
+
+  Future<void> _pauseContextOnExit(bool Function(IqroAudioState) owns) {
+    _navigationEpoch += 1;
+    if (_disposed || !owns(state)) return Future<void>.value();
+    final intent = _sourceIntent;
+    final generation = _sourceGeneration;
+    final standalone = state.standalone;
+    state = standalone == null
+        ? state.copyWith(playing: false, buffering: false)
+        : state.copyWith(
+            standalone: standalone.copyWith(playing: false, loading: false),
+          );
+    // Pause the decoder now; a queued source load may still be awaiting the
+    // network and must not delay the user's exit action.
+    final immediatePause = _player.pause();
+    return _serializeSource(() async {
+      try {
+        await immediatePause;
+      } on Object {
+        // Retry below when the decoder finishes its pending source change.
+      }
+      if (_disposed ||
+          intent != _sourceIntent ||
+          generation != _sourceGeneration ||
+          !owns(state)) {
+        return;
+      }
+      if (_player.playing) await _player.pause();
+      if (_disposed ||
+          intent != _sourceIntent ||
+          generation != _sourceGeneration ||
+          !owns(state)) {
+        return;
+      }
+      final currentStandalone = state.standalone;
+      state = currentStandalone == null
+          ? state.copyWith(playing: false, buffering: false)
+          : state.copyWith(
+              standalone: currentStandalone.copyWith(
+                playing: false,
+                loading: false,
+              ),
+            );
+    });
+  }
+
+  Future<void> _pauseForNavigation({
+    bool preserveDua = false,
+    bool preserveMushaf = false,
+  }) {
+    final intent = _sourceIntent;
+    return _serializeSource(() async {
+      if (_disposed || intent != _sourceIntent) return;
+      final generation = _sourceGeneration;
+      final standalone = state.standalone;
+      if (preserveMushaf &&
+          standalone == null &&
+          state.channel == AudioPlaybackChannel.mushaf) {
+        return;
+      }
+      if (standalone != null) {
+        if (preserveDua &&
+            standalone.mediaItem.extras?['content_type'] == 'dua') {
+          return;
+        }
+        final mediaId = standalone.mediaItem.id;
+        if (!_ownsStandalone(generation, mediaId)) return;
+        if (!_player.playing && !standalone.playing && !standalone.loading) {
+          return;
+        }
+        await _player.pause();
+        if (!_ownsStandalone(generation, mediaId)) return;
+        state = state.copyWith(
+          standalone: state.standalone!.copyWith(
+            playing: false,
+            loading: false,
+          ),
+        );
+        return;
+      }
+
+      final trackId = state.track?.id;
+      if (trackId == null || !_ownsQuran(generation, trackId)) return;
+      if (!_player.playing && !state.playing && !state.buffering) return;
+      await _player.pause();
+      if (!_ownsQuran(generation, trackId)) return;
+      state = state.copyWith(playing: false, buffering: false);
+      _schedulePersistence(immediate: true);
+    });
+  }
+
   void _startQuranPlayback(int generation, String trackId) {
     if (!_ownsQuran(generation, trackId)) return;
     unawaited(
@@ -1070,6 +1408,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     bool autoplay = true,
     Object? owner,
   }) {
+    final navigationEpoch = _navigationEpoch;
     final uri = validateIqroStreamingAudioUrl(url);
     final mediaItem = buildIqroStandaloneMediaItem(
       id: id,
@@ -1086,7 +1425,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
       standaloneOwner: owner,
     );
     return _serializeSource(() async {
-      if (_disposed || sourceIntent.intent != _sourceIntent) return;
+      if (_disposed ||
+          sourceIntent.intent != _sourceIntent ||
+          navigationEpoch != _navigationEpoch) {
+        return;
+      }
       final generation = ++_sourceGeneration;
       _sourceTransitionActive = true;
       final repeatEnabled = state.standalone?.repeatEnabled ?? false;
@@ -1141,6 +1484,18 @@ class AudioController extends StateNotifier<IqroAudioState> {
             clearError: true,
           ),
         );
+        if (navigationEpoch != _navigationEpoch) {
+          await _player.pause();
+          if (_ownsStandalone(generation, mediaItem.id)) {
+            state = state.copyWith(
+              standalone: state.standalone!.copyWith(
+                loading: false,
+                playing: false,
+              ),
+            );
+          }
+          return;
+        }
         if (autoplay) _startStandalonePlayback(generation, mediaItem.id);
       } on Object catch (error) {
         if (_disposed || sourceIntent.intent != _sourceIntent) return;
@@ -1210,6 +1565,19 @@ class AudioController extends StateNotifier<IqroAudioState> {
         );
       }
     });
+  }
+
+  /// Lets the app-shell player control the current standalone item without
+  /// giving route-owned UI access to another route's owner token.
+  Future<void> toggleStandaloneFromGlobalPlayer(String mediaId) {
+    final request = _standaloneRequest;
+    if (request == null ||
+        request.mediaId != mediaId ||
+        request.intent != _sourceIntent ||
+        state.standalone?.mediaItem.id != mediaId) {
+      return Future<void>.value();
+    }
+    return toggleStandalone(mediaId, owner: request.owner);
   }
 
   Future<void> toggleStandaloneRepeat(String mediaId, {Object? owner}) {
@@ -1584,6 +1952,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
     }
     final clearStoredPlayback =
         !preserveMemorizationSession &&
+        state.standalone == null &&
+        state.track != null &&
         state.channel == AudioPlaybackChannel.listening;
     final intent = ++_sourceIntent;
     ++_sourceGeneration;
@@ -1601,7 +1971,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state = const IqroAudioState();
       _activeSourceIntent = -1;
       _standaloneRequest = null;
-      if (clearStoredPlayback) await _playbackStore?.clear();
+      if (clearStoredPlayback) {
+        _lastListeningSnapshot = null;
+        await _playbackStore?.clear();
+        _publishListeningMedia();
+      }
     });
   }
 
@@ -1613,13 +1987,18 @@ class AudioController extends StateNotifier<IqroAudioState> {
         state.channel != AudioPlaybackChannel.listening) {
       return;
     }
-    _persistenceTimer?.cancel();
     if (immediate) {
+      _persistenceTimer?.cancel();
+      _persistenceTimer = null;
       unawaited(_persistCurrent());
       return;
     }
+    // Throttle, not debounce: position ticks arrive every 16-200 ms while
+    // playing, so restarting the timer on each tick would never save anything.
+    // The pending write reads the latest state when it fires.
+    if (_persistenceTimer?.isActive ?? false) return;
     _persistenceTimer = Timer(
-      const Duration(seconds: 2),
+      _persistenceDelay,
       () => unawaited(_persistCurrent()),
     );
   }
@@ -1628,8 +2007,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     final store = _playbackStore;
     final track = state.track;
     final reciter = state.reciter;
-    if (store == null ||
-        track == null ||
+    if (track == null ||
         reciter == null ||
         state.channel != AudioPlaybackChannel.listening) {
       return;
@@ -1645,6 +2023,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
       rangeEndAyah: state.rangeEndAyah,
       savedAt: DateTime.now().toUtc(),
     );
+    _lastListeningSnapshot = snapshot;
+    if (store == null) return;
     try {
       await store.write(snapshot);
     } on Object {
@@ -1658,6 +2038,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
     _persistenceTimer?.cancel();
     final persistence = _persistCurrent();
     _disposed = true;
+    _removeMediaListener?.call();
+    _mediaService?.unbind(this);
     ++_sourceGeneration;
     ++_sourceIntent;
     _sleepTimer?.cancel();

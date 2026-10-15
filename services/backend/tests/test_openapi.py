@@ -42,11 +42,13 @@ def test_openapi_contract_is_31_and_matches_bookmark_concurrency_api() -> None:
     assert schema["components"]["schemas"]["ReadingSyncEntity"]["discriminator"]["mapping"] == {
         "reading_position": "#/components/schemas/ReadingPositionOutput",
         "bookmark": "#/components/schemas/BookmarkOutput",
+        "ayah_annotation": "#/components/schemas/AyahAnnotationOutput",
         "reminder": "#/components/schemas/ReminderSyncOutput",
     }
     assert schema["components"]["schemas"]["SyncEntityTypeEnum"]["enum"] == [
         "reading_position",
         "bookmark",
+        "ayah_annotation",
         "reminder",
     ]
     reminder_sync_schema = schema["components"]["schemas"]["ReminderSyncOutput"]
@@ -87,12 +89,13 @@ def test_sync_push_openapi_is_a_strict_discriminated_request_union() -> None:
     operation_union = schema["components"]["schemas"][
         operation_items["$ref"].rsplit("/", maxsplit=1)[-1]
     ]
-    assert len(operation_union["oneOf"]) == 3
+    assert len(operation_union["oneOf"]) == 4
     assert operation_union["discriminator"] == {
         "propertyName": "entity_type",
         "mapping": {
             "reading_position": "#/components/schemas/ReadingPositionSyncOperationRequest",
             "bookmark": "#/components/schemas/BookmarkSyncOperationRequest",
+            "ayah_annotation": "#/components/schemas/AyahAnnotationSyncOperationRequest",
             "reminder": "#/components/schemas/ReminderSyncOperationRequest",
         },
     }

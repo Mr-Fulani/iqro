@@ -99,6 +99,27 @@ void main() {
     },
   );
 
+  test('ayah annotation survives an independent bookmark tombstone', () async {
+    await store.applyRemoteEntity(_ayahAnnotation(revision: 1));
+    await store.applyRemoteEntity(
+      _bookmark(id: '01994f46-5fa6-7a20-b9ab-2a7bbcc70002', revision: 1),
+    );
+    await store.applyRemoteEntity(
+      _bookmark(
+        id: '01994f46-5fa6-7a20-b9ab-2a7bbcc70002',
+        revision: 2,
+        deleted: true,
+      ),
+    );
+
+    final annotations = await database.query('ayah_annotations');
+    final bookmarks = await database.query('bookmarks');
+    expect(annotations, hasLength(1));
+    expect(annotations.single['note'], 'Remember this ayah');
+    expect(annotations.single['color_key'], 'yellow');
+    expect(bookmarks.single['is_deleted'], 1);
+  });
+
   test('unusable offline create is remapped without losing intent', () async {
     await _insertBookmarkOperation(database, baseRevision: 0);
     final original = (await store.pendingEntities()).single;
@@ -387,6 +408,22 @@ Future<void> _createSchema(Database database) async {
     )
   ''');
   await database.execute('''
+    CREATE TABLE ayah_annotations (
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      edition TEXT NOT NULL,
+      surah INTEGER NOT NULL,
+      ayah INTEGER NOT NULL,
+      page INTEGER,
+      color_key TEXT NOT NULL DEFAULT 'lime',
+      note TEXT NOT NULL DEFAULT '',
+      server_revision INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, id)
+    )
+  ''');
+  await database.execute('''
     CREATE TABLE reminders (
       owner_id TEXT NOT NULL,
       id TEXT NOT NULL,
@@ -602,6 +639,20 @@ Map<String, Object?> _bookmark({
   'deleted_at': deleted ? '2026-09-01T11:00:00Z' : null,
   'updated_at': '2026-09-01T11:00:00Z',
 };
+
+Map<String, Object?> _ayahAnnotation({required int revision}) =>
+    <String, Object?>{
+      'id': '01994f46-5fa6-7a20-b9ab-2a7bbcc70004',
+      'entity_type': 'ayah_annotation',
+      'edition_code': 'madani-hafs',
+      'page_number': 1,
+      'ayah': const <String, Object?>{'surah_number': 1, 'ayah_number': 1},
+      'color_key': 'yellow',
+      'note': 'Remember this ayah',
+      'revision': revision,
+      'deleted_at': null,
+      'updated_at': '2026-09-01T11:00:00Z',
+    };
 
 Map<String, Object?> _reminder({
   required int revision,

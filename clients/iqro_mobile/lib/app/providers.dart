@@ -20,6 +20,7 @@ import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/dua/dua_repository.dart';
+import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
 import '../features/feedback/feedback_repository.dart';
 import '../features/memorization/memorization_repository.dart';
@@ -113,13 +114,59 @@ final offlinePackagesProvider =
     );
 
 class AppPreferencesController extends StateNotifier<AppPreferences> {
-  AppPreferencesController(this._store, this._plan) : super(_store.read());
+  AppPreferencesController(
+    this._store,
+    this._plan, {
+    AccountScope? accountScope,
+  }) : _accountScope = accountScope,
+       _boundScope = accountScope?.current,
+       super(
+         accountScope == null
+             ? _store.read()
+             : _store.readForAccount(accountScope.current?.userId),
+       );
   final PreferencesStore _store;
   final PlanRepository _plan;
+  final AccountScope? _accountScope;
+  final AccountScopeSnapshot? _boundScope;
+
+  bool get _canWrite {
+    final accountScope = _accountScope;
+    if (accountScope == null) return true;
+    final boundScope = _boundScope;
+    return boundScope == null
+        ? accountScope.current == null
+        : accountScope.isCurrent(boundScope);
+  }
 
   Future<void> _set(AppPreferences value) async {
+    if (!_canWrite) return;
     state = value;
-    await _store.write(value);
+    await _store.write(value, includeLegacyRecitations: _accountScope == null);
+  }
+
+  Future<void> _setRecitation(
+    RecitationPreferenceRole role,
+    String recitationId,
+  ) async {
+    if (!_canWrite || (_accountScope != null && _boundScope == null)) return;
+    state = switch (role) {
+      RecitationPreferenceRole.listening => state.copyWith(
+        listeningRecitationId: recitationId,
+      ),
+      RecitationPreferenceRole.mushaf => state.copyWith(
+        mushafRecitationId: recitationId,
+      ),
+      RecitationPreferenceRole.memorization => state.copyWith(
+        memorizationDefaultRecitationId: recitationId,
+      ),
+    };
+    final ownerId = _boundScope?.userId;
+    if (ownerId == null) {
+      await _store.writeLegacyRecitation(role, recitationId);
+    } else {
+      await _store.writeAccountRecitation(ownerId, role, recitationId);
+    }
   }
 
   Future<void> completeOnboarding({
@@ -186,13 +233,13 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
       _set(state.copyWith(preferredTafsirSourceId: sourceId));
 
   Future<void> setListeningRecitation(String recitationId) =>
-      _set(state.copyWith(listeningRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.listening, recitationId);
 
   Future<void> setMushafRecitation(String recitationId) =>
-      _set(state.copyWith(mushafRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.mushaf, recitationId);
 
   Future<void> setMemorizationDefaultRecitation(String recitationId) =>
-      _set(state.copyWith(memorizationDefaultRecitationId: recitationId));
+      _setRecitation(RecitationPreferenceRole.memorization, recitationId);
 
   /// Compatibility entry point for code that still represents the old
   /// single-reciter preference. It now changes only the Listening role.
@@ -215,9 +262,11 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
 
 final appPreferencesProvider =
     StateNotifierProvider<AppPreferencesController, AppPreferences>((ref) {
+      ref.watch(_accountScopeEpochProvider);
       return AppPreferencesController(
         ref.watch(preferencesStoreProvider),
         ref.watch(planRepositoryProvider),
+        accountScope: ref.watch(localDatabaseProvider).accountScope,
       );
     });
 
@@ -426,6 +475,25 @@ final ayahBookmarkProvider = FutureProvider.autoDispose
         throw const AccountScopeChanged();
       }
       return bookmarked;
+    });
+
+final ayahAnnotationsProvider = FutureProvider.autoDispose
+    .family<List<Map<String, Object?>>, AccountScopeKey>((ref, key) async {
+      if (ref.watch(activeAccountScopeKeyProvider) != key) {
+        throw const AccountScopeChanged();
+      }
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (scope == null || accountScopeKey(scope) != key) {
+        throw const AccountScopeChanged();
+      }
+      final annotations = await ref
+          .watch(quranRepositoryProvider)
+          .ayahAnnotations(accountScope: scope);
+      if (!database.accountScope.isCurrent(scope)) {
+        throw const AccountScopeChanged();
+      }
+      return annotations;
     });
 
 final readingPositionProvider = FutureProvider.autoDispose
@@ -704,6 +772,25 @@ final duaEntriesByCategoryProvider =
     });
 
 typedef DuaSearchQuery = ({String query, String? collection, String? category});
+
+final duaEntriesByTopicProvider = FutureProvider.family<List<DuaEntry>, String>(
+  (ref, id) async {
+    final topic = duaTopics.singleWhere((item) => item.id == id);
+    final categories = await ref.watch(duaCategoriesProvider.future);
+    final members =
+        categories.where(topic.includesCategory).toList(growable: false)..sort(
+          (left, right) => left.sourceNumber.compareTo(right.sourceNumber),
+        );
+    final pages = await Future.wait([
+      for (final category in members)
+        ref.watch(duaEntriesByCategoryProvider(category.identity).future),
+    ]);
+    return pages
+        .expand((entries) => entries)
+        .where(topic.includesEntry)
+        .toList(growable: false);
+  },
+);
 
 final duaSearchProvider = FutureProvider.autoDispose
     .family<List<DuaEntry>, DuaSearchQuery>((ref, request) {

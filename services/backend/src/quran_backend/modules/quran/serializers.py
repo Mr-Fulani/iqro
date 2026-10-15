@@ -106,11 +106,8 @@ class AyahSerializer(serializers.ModelSerializer[Ayah]):
         )
 
     def get_pages(self, obj: Ayah) -> list[int]:
-        return list(
-            obj.page_mappings.order_by("page__number")
-            .values_list("page__number", flat=True)
-            .distinct()
-        )
+        # Read through the prefetched mappings; a queryset here costs one query per ayah.
+        return sorted({mapping.page.number for mapping in obj.page_mappings.all()})
 
 
 class AyahReferenceSerializer(serializers.ModelSerializer[Ayah]):

@@ -26,6 +26,7 @@ from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.reading.change_log import append_sync_change
 from quran_backend.modules.reading.habit_services import recalculate_reading_streak
 from quran_backend.modules.reading.models import (
+    AyahAnnotation,
     Bookmark,
     GoalProgress,
     PrayerReadingCheckIn,
@@ -43,7 +44,11 @@ from quran_backend.modules.reading.models import (
     SyncOperation,
     UserSyncCursor,
 )
-from quran_backend.modules.reading.services import bookmark_snapshot, reading_position_snapshot
+from quran_backend.modules.reading.services import (
+    ayah_annotation_snapshot,
+    bookmark_snapshot,
+    reading_position_snapshot,
+)
 from quran_backend.modules.reminders.models import ReminderRule, RetiredReminderId
 from quran_backend.modules.reminders.services import reminder_sync_snapshot
 
@@ -182,6 +187,7 @@ def _merge_reading_state(*, source: User, target: User, counts: dict[str, int]) 
     counts["reading_positions"] = len(positions)
 
     counts["bookmarks"] = Bookmark.objects.filter(user=source).update(user=target)
+    counts["ayah_annotations"] = AyahAnnotation.objects.filter(user=source).update(user=target)
 
     retired_count = 0
     for retired in RetiredBookmarkId.objects.select_for_update().filter(user=source).order_by("id"):
@@ -614,6 +620,26 @@ def _rebuild_target_sync_feed(*, source: User, target: User) -> None:
             action=SyncAction.DELETE if bookmark.deleted_at else SyncAction.UPSERT,
             revision=bookmark.revision,
             snapshot=bookmark_snapshot(bookmark),
+        )
+
+    annotations = (
+        AyahAnnotation.objects.filter(user=target)
+        .select_related(
+            "edition",
+            "page__edition_version",
+            "ayah__surah__edition_version",
+            "device",
+        )
+        .order_by("id")
+    )
+    for annotation in annotations:
+        append_sync_change(
+            user=target,
+            entity_type=SyncEntityType.AYAH_ANNOTATION,
+            entity_id=annotation.id,
+            action=SyncAction.DELETE if annotation.deleted_at else SyncAction.UPSERT,
+            revision=annotation.revision,
+            snapshot=ayah_annotation_snapshot(annotation),
         )
 
     reminders = (

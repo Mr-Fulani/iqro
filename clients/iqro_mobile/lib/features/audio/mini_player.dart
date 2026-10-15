@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
@@ -13,10 +14,15 @@ import 'reciter_portraits.dart';
 final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => true);
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
-  const IqroMiniPlayer({this.allowCollapse = true, super.key});
+  const IqroMiniPlayer({
+    this.allowCollapse = true,
+    this.mushafControls = false,
+    super.key,
+  });
 
   /// Mushaf has its own reader controls, so its inline player stays expanded.
   final bool allowCollapse;
+  final bool mushafControls;
 
   @override
   ConsumerState<IqroMiniPlayer> createState() => _IqroMiniPlayerState();
@@ -29,16 +35,16 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(
-      audioControllerProvider.select(iqroAudioPresentation),
-    );
-    // The app-shell player is Listening-only. Contextual surfaces such as
-    // Mushaf render the same control in expanded mode for their own channel.
-    if (widget.allowCollapse &&
-        player.channel != AudioPlaybackChannel.listening) {
-      return const SizedBox.shrink();
-    }
     final controller = ref.read(audioControllerProvider.notifier);
+    // The mini player shows no progress, so position ticks must not rebuild it.
+    final player = ref.watch(
+      audioControllerProvider.select(
+        widget.mushafControls
+            ? iqroAudioPresentation
+            : controller.listeningPresentation,
+      ),
+    );
+    final standalone = player.standalone;
     if (!identical(_visibleController, controller)) {
       _visibleController = controller;
       _changeRequest += 1;
@@ -56,9 +62,36 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
             reciters: catalog,
           );
     final controlsEnabled =
-        player.track != null && !player.buffering && !_changingSurah;
+        (player.track != null || standalone != null) &&
+        !player.buffering &&
+        !_changingSurah;
     final collapsed =
         widget.allowCollapse && ref.watch(miniPlayerCollapsedProvider);
+    final artwork = standalone == null
+        ? PremiumReciterPortrait(
+            url: portraitUrl,
+            size: 44,
+            initials: reciter?.initials,
+          )
+        : Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF163C33),
+              shape: BoxShape.circle,
+            ),
+            child: const IqroIcon(
+              Icons.menu_book_rounded,
+              color: Color(0xFFB6E8D9),
+              size: 24,
+            ),
+          );
+    final title =
+        standalone?.title ??
+        (player.track == null ? context.l10n.audioTitle : player.surahName);
+    final subtitle = standalone == null
+        ? reciter?.nameFor(locale) ?? context.l10n.chooseReciter
+        : standalone.artist ?? standalone.album ?? context.l10n.audioTitle;
     void setCollapsed(bool value) {
       ref.read(miniPlayerCollapsedProvider.notifier).state = value;
     }
@@ -93,11 +126,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                         width: 96,
                         child: Row(
                           children: <Widget>[
-                            PremiumReciterPortrait(
-                              url: portraitUrl,
-                              size: 44,
-                              initials: reciter?.initials,
-                            ),
+                            artwork,
                             const SizedBox(width: 4),
                             IconButton(
                               key: const ValueKey('mini-player-collapse'),
@@ -125,15 +154,9 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                           ],
                         ),
                       )
-                    : PremiumReciterPortrait(
-                        url: portraitUrl,
-                        size: 44,
-                        initials: reciter?.initials,
-                      ),
+                    : artwork,
                 title: Text(
-                  player.track == null
-                      ? context.l10n.audioTitle
-                      : player.surahName,
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -142,7 +165,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                   ),
                 ),
                 subtitle: Text(
-                  reciter?.nameFor(locale) ?? context.l10n.chooseReciter,
+                  subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white.withValues(alpha: .68)),
@@ -175,9 +198,9 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                         onPressed: player.track == null
                             ? () => context.push('/app?tab=3')
                             : controlsEnabled
-                            ? () => ref
-                                  .read(audioControllerProvider.notifier)
-                                  .toggle()
+                            ? widget.mushafControls
+                                  ? controller.toggle
+                                  : _toggleListening
                             : null,
                       ),
                       _MiniPlayerControl(
@@ -193,9 +216,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                     ],
                   ),
                 ),
-                onTap: () => context.push(
-                  player.track == null ? '/app?tab=3' : '/player',
-                ),
+                onTap: widget.mushafControls ? null : _openListeningPlayer,
               ),
             ),
           ),
@@ -204,14 +225,49 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     );
   }
 
+  Future<void> _toggleListening() async {
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    if (current.channel == AudioPlaybackChannel.listening &&
+        current.standalone == null &&
+        current.track != null) {
+      await controller.toggle();
+    } else {
+      await controller.activateListening();
+    }
+  }
+
+  Future<void> _openListeningPlayer() async {
+    final controller = ref.read(audioControllerProvider.notifier);
+    if (!controller.hasListeningPlayback) {
+      context.push('/app?tab=3');
+      return;
+    }
+    final current = ref.read(audioControllerProvider);
+    if (current.channel != AudioPlaybackChannel.listening ||
+        current.standalone != null ||
+        current.track == null) {
+      if (!await controller.activateListening(play: false)) return;
+    }
+    if (mounted &&
+        identical(controller, ref.read(audioControllerProvider.notifier))) {
+      context.push('/player');
+    }
+  }
+
   Future<void> _changeSurah(int direction) async {
     if (_changingSurah) return;
     final database = ref.read(localDatabaseProvider);
     final accountScope = database.accountScope.current;
     if (accountScope == null) return;
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
+    final source = ref.read(audioControllerProvider);
     final request = ++_changeRequest;
-    final player = ref.read(audioControllerProvider);
+    final current = ref.read(audioControllerProvider);
+    final player = widget.mushafControls
+        ? iqroAudioPresentation(current)
+        : controller.listeningPresentation(current);
     final reciter = player.reciter;
     final recitationId = player.track?.recitationId;
     final currentSurah = player.track?.surah;
@@ -241,6 +297,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         accountScope: accountScope,
         controller: controller,
         request: request,
+        navigationEpoch: navigationEpoch,
+        source: source,
       )) {
         return;
       }
@@ -257,6 +315,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         accountScope: accountScope,
         controller: controller,
         request: request,
+        navigationEpoch: navigationEpoch,
+        source: source,
       )) {
         return;
       }
@@ -275,10 +335,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     required AccountScopeSnapshot accountScope,
     required AudioController controller,
     required int request,
+    required int navigationEpoch,
+    required IqroAudioState source,
   }) {
     if (!mounted || request != _changeRequest) return false;
     if (!database.accountScope.isCurrent(accountScope)) return false;
-    return identical(controller, ref.read(audioControllerProvider.notifier));
+    if (!identical(controller, ref.read(audioControllerProvider.notifier)) ||
+        controller.navigationEpoch != navigationEpoch) {
+      return false;
+    }
+    final current = ref.read(audioControllerProvider);
+    return current.channel == source.channel &&
+        current.track?.id == source.track?.id &&
+        current.standalone?.mediaItem.id == source.standalone?.mediaItem.id;
   }
 
   @override

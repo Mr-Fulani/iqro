@@ -1,6 +1,10 @@
 package forum.iqro.app
 
+import android.app.Notification
+import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
 import android.media.AudioAttributes
 import android.os.Build
 import android.os.SystemClock
@@ -16,6 +20,7 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        refreshNotificationIcons()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/reader_haptics")
             .setMethodCallHandler { call, result ->
                 if (call.method != "pageTick") {
@@ -28,6 +33,36 @@ class MainActivity : AudioServiceActivity() {
                     }
                 }
             }
+    }
+
+    private fun refreshNotificationIcons() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Already posted notifications survive APK updates. Preserve their text,
+        // actions and pending intents while replacing the previous branding.
+        for (active in manager.activeNotifications) {
+            val notification = active.notification
+            val reminder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                notification.channelId?.startsWith("iqro_reminders_") == true
+            } else {
+                notification.category == Notification.CATEGORY_REMINDER
+            }
+            val audio = notification.category == Notification.CATEGORY_TRANSPORT
+            if (!reminder && !audio) continue
+            @Suppress("DEPRECATION")
+            val previousAppInfo = notification.extras.getParcelable<ApplicationInfo>("android.appInfo")
+            if (notification.smallIcon?.resId == R.drawable.iqro_status_icon &&
+                previousAppInfo?.icon == applicationInfo.icon &&
+                (!reminder || notification.getLargeIcon() == null)) continue
+            val builder = Notification.Builder.recoverBuilder(this, notification)
+                .setSmallIcon(R.drawable.iqro_status_icon)
+                .setOnlyAlertOnce(true)
+            if (reminder) builder.setLargeIcon(null as Bitmap?)
+            try {
+                manager.notify(active.tag, active.id, builder.build())
+            } catch (_: SecurityException) {
+                // Notification permission may have been revoked in Settings.
+            }
+        }
     }
 
     @Suppress("DEPRECATION")

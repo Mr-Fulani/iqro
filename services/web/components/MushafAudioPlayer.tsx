@@ -106,10 +106,10 @@ export function MushafAudioPlayer({
     setCatalogLoading(true);
     setError(null);
     api
-      .getRecitations({ quran_edition: editionCode })
-      .then((response) => {
+      .getAllRecitations({ quran_edition: editionCode })
+      .then((catalog) => {
         if (cancelled) return;
-        const available = latestRecitationsByVariant(response.results || [], "ayah_playback");
+        const available = latestRecitationsByVariant(catalog, "ayah_playback");
         setRecitations(available);
         const remembered = preferredRecitation(available, loadReciterPreference("mushaf"));
         const fallback = available

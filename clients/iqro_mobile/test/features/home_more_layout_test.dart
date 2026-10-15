@@ -159,6 +159,10 @@ void main() {
                   builder: (_, _) =>
                       const Scaffold(body: Text('calendar-opened')),
                 ),
+                GoRoute(
+                  path: '/notes',
+                  builder: (_, _) => const Scaffold(body: Text('notes-opened')),
+                ),
               ],
             );
             addTearDown(router.dispose);
@@ -179,9 +183,20 @@ void main() {
             );
             await tester.pumpAndSettle();
             final context = tester.element(find.byType(MoreToolsGrid));
-            await tester.tap(
-              find.text(AppLocalizations.of(context).hijriCalendar),
-            );
+            final l10n = AppLocalizations.of(context);
+            expect(find.text(l10n.notes), findsOneWidget);
+            final notes = find.text(l10n.notes);
+            await tester.ensureVisible(notes);
+            await tester.pumpAndSettle();
+            await tester.tap(notes);
+            await tester.pumpAndSettle();
+            expect(find.text('notes-opened'), findsOneWidget);
+            router.go('/');
+            await tester.pumpAndSettle();
+            final calendar = find.text(l10n.hijriCalendar);
+            await tester.ensureVisible(calendar);
+            await tester.pumpAndSettle();
+            await tester.tap(calendar);
             await tester.pumpAndSettle();
             expect(find.text('calendar-opened'), findsOneWidget);
             expect(tester.takeException(), isNull);

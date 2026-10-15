@@ -63,6 +63,7 @@ dependencies:
   timezone: ^0.11.1
   workmanager: ^0.10.9
   home_widget: 0.9.4
+  video_player: 2.11.1
 
 dev_dependencies:
   flutter_test:
@@ -92,7 +93,17 @@ flutter:
   uses-material-design: true
   assets:
     - assets/calendar/events-v1.json
-    - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+    - assets/brand/iqro-logo.png
+    - assets/brand/iqro-media-logo.png
+    - assets/brand/startup.mp4
+    - assets/fonts/AmiriQuran-OFL.txt
+
+  # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
+  # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.
+  fonts:
+    - family: Amiri Quran
+      fonts:
+        - asset: assets/fonts/AmiriQuran-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

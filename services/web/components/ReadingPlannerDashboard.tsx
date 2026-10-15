@@ -422,15 +422,14 @@ export function ReadingPlannerDashboard() {
             <article className="planner-detail-card">
               <strong>{t("planner.afterPrayer")}</strong>
               <span>
-                {formatNumber(selectedDay.prayer_count)} / 5 · {formatNumber(selectedDay.prayer_pages)}{" "}
-                {t("reading.unit.pages")}
+                {formatNumber(selectedDay.prayer_count)} / 5
               </span>
               <div className="planner-prayer-badges">
                 {PRAYERS.map(([code, label]) => {
                   const checkIn = selectedDay.prayer_check_ins.find((item) => item.prayer === code);
                   return (
                     <span key={code} className={checkIn ? "is-complete" : ""}>
-                      {t(label)} · {formatNumber(checkIn?.pages || 0)}
+                      {t(label)} · {formatNumber(Number(checkIn?.amount ?? checkIn?.pages ?? 0))} {checkIn && t(`reading.unit.${checkIn.metric || "pages"}`)}
                     </span>
                   );
                 })}

@@ -56,9 +56,19 @@ void main() {
             sourceNumber: 1,
           ),
         ],
+        entries: (identity) async => [
+          _entry(
+            categoryTitle: longTitle,
+            arabicText: 'دعاء',
+            meaning: longTitle,
+          ),
+        ],
       );
 
-      expect(find.text(longTitle), findsOneWidget);
+      expect(find.text('Сон и пробуждение'), findsOneWidget);
+      await tester.tap(find.text('Сон и пробуждение'));
+      await tester.pumpAndSettle();
+      expect(find.text(longTitle), findsWidgets);
       expect(find.byType(ListView), findsOneWidget);
       expect(find.byType(GridView), findsNothing);
       expect(tester.takeException(), isNull);
@@ -91,13 +101,12 @@ void main() {
         },
       );
 
+      await tester.tap(find.text('النوم والاستيقاظ'));
+      await tester.pumpAndSettle();
       expect(
         Directionality.of(tester.element(find.text(category.title))),
         TextDirection.rtl,
       );
-
-      await tester.tap(find.text(category.title));
-      await tester.pumpAndSettle();
 
       final arabic = tester.widget<Text>(find.text(entry.arabicText));
       expect(arabic.textDirection, TextDirection.rtl);
@@ -105,6 +114,48 @@ void main() {
         Directionality.of(tester.element(find.text(entry.arabicText))),
         TextDirection.rtl,
       );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('daily cards open source-based subsets and return to topics', (
+      tester,
+    ) async {
+      const category = DuaCategory(
+        id: 'daily',
+        slug: '027-words-of-remembrance-for-morning-and-evening',
+        title: 'Утром и вечером',
+        entryCount: 24,
+        collection: 'hisn-al-muslim',
+        sourceNumber: 27,
+      );
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => [category],
+        entries: (identity) async {
+          expect(identity, category.identity);
+          return [
+            for (var number = 75; number <= 98; number++)
+              _entry(
+                id: 'entry-$number',
+                sourceNumber: number,
+                categoryTitle: category.title,
+                meaning: 'Meaning $number',
+                arabicText: 'نص $number',
+              ),
+          ];
+        },
+      );
+      await tester.tap(find.byKey(const ValueKey('dua-topic-morning')));
+      await tester.pumpAndSettle();
+      expect(find.text('Утренние азкары'), findsWidgets);
+      expect(find.text('Meaning 75'), findsOneWidget);
+      await tester.tap(find.byTooltip('Назад'));
+      await tester.pumpAndSettle();
+      expect(find.text('Вечерние азкары'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('dua-topic-evening')));
+      await tester.pumpAndSettle();
+      expect(find.text('Вечерние азкары'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
 
@@ -150,7 +201,7 @@ void main() {
       expect(requests.single.category, isNull);
 
       await tester.pumpAndSettle();
-      expect(find.text('الرحمة'), findsOneWidget);
+      expect(find.text('Server-only result'), findsOneWidget);
       expect(find.text('Server category'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -187,7 +238,7 @@ void main() {
 
       expect(requestedIdentity, category.identity);
       expect(find.text(category.title), findsWidgets);
-      expect(find.text(entry.arabicText), findsOneWidget);
+      expect(find.text(entry.meaning), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -519,13 +570,15 @@ class _TestApp extends StatelessWidget {
 }
 
 DuaEntry _entry({
+  String id = '0194f11e-972b-7b07-a772-5b7651ab78ea',
+  int sourceNumber = 1,
   required String categoryTitle,
   required String arabicText,
   required String meaning,
   List<DuaAudioAsset> audio = const <DuaAudioAsset>[],
 }) => DuaEntry(
-  id: '0194f11e-972b-7b07-a772-5b7651ab78ea',
-  sourceNumber: 1,
+  id: id,
+  sourceNumber: sourceNumber,
   collection: 'hisn-al-muslim',
   collectionVersion: '2026-09',
   categoryTitle: categoryTitle,

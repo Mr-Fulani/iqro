@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'iqro_icon.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../theme/iqro_theme.dart';
 
@@ -213,7 +214,10 @@ class IqroStatusBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, color: Theme.of(context).colorScheme.onPrimaryContainer),
+          IqroIcon(
+            icon,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -331,7 +335,7 @@ class IqroListTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        child: IqroIcon(icon, color: Theme.of(context).colorScheme.primary),
       ),
       title: Text(title, style: Theme.of(context).textTheme.titleSmall),
       subtitle: subtitle == null ? null : Text(subtitle!),

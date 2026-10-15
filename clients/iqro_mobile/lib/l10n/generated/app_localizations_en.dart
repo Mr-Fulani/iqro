@@ -30,6 +30,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookmarksLoadError => 'Could not load bookmarks';
 
   @override
+  String get notes => 'Notes';
+
+  @override
+  String get emptyNotes => 'No notes yet. Add a note to an ayah in the Mushaf.';
+
+  @override
+  String get addNote => 'Add note';
+
+  @override
+  String get editNote => 'Edit note';
+
+  @override
+  String get noteHint => 'Write a note about this ayah';
+
+  @override
+  String get noteLabel => 'YOUR NOTE';
+
+  @override
+  String noteWordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count words',
+      one: '$count word',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get removeNote => 'Remove note';
+
+  @override
+  String get noteSaved => 'Note saved';
+
+  @override
+  String get noteRemoved => 'Note removed';
+
+  @override
+  String get highlightAyah => 'Highlight';
+
+  @override
+  String get chooseHighlightColor => 'Choose highlight color';
+
+  @override
+  String get highlightColorEmerald => 'Emerald';
+
+  @override
+  String get highlightColorYellow => 'Yellow';
+
+  @override
+  String get highlightColorPink => 'Pink';
+
+  @override
+  String get highlightColorLime => 'Lime';
+
+  @override
+  String get highlightColorBlue => 'Blue';
+
+  @override
+  String get highlightColorLavender => 'Lavender';
+
+  @override
+  String get repeatSelectedAyah => 'Repeat selected ayah';
+
+  @override
+  String get copyAyah => 'Copy ayah';
+
+  @override
+  String get shareAyah => 'Share ayah';
+
+  @override
+  String get copied => 'Ayah copied';
+
+  @override
+  String get copyAyahFailed => 'Couldn\'t copy ayah';
+
+  @override
   String get mushafFitWidth => 'Fit width';
 
   @override

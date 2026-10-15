@@ -4,12 +4,14 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'quran_models.dart';
 
@@ -106,6 +108,7 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
     required this.onSelect,
     required this.onOpen,
     required this.onBackgroundTap,
+    this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
     super.key,
@@ -116,6 +119,7 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
   final ValueChanged<QuranAyahReference> onSelect;
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
+  final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
   @override
@@ -186,6 +190,7 @@ class _FoundationContentState
         resources: snapshot.data!,
         selected: widget.selected,
         playing: widget.playing,
+        highlightColors: widget.highlightColors,
         onSelect: widget.onSelect,
         onOpen: widget.onOpen,
         onBackgroundTap: widget.onBackgroundTap,
@@ -207,6 +212,7 @@ class FoundationPageCanvas extends StatefulWidget {
     required this.onSelect,
     required this.onOpen,
     required this.onBackgroundTap,
+    this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
     super.key,
@@ -218,6 +224,7 @@ class FoundationPageCanvas extends StatefulWidget {
   final ValueChanged<QuranAyahReference> onSelect;
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
+  final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
   @override
@@ -281,6 +288,7 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
             layout,
             null,
             null,
+            highlightColors: widget.highlightColors,
             onlyAyah: widget.selected,
             top: top,
           ),
@@ -310,6 +318,7 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
             layout,
             widget.selected,
             widget.playing,
+            highlightColors: widget.highlightColors,
           ),
         ),
       );
@@ -566,12 +575,14 @@ class FoundationPagePainter extends CustomPainter {
     this.layout,
     this.selected,
     this.playing, {
+    this.highlightColors = const <QuranAyahReference, String>{},
     this.onlyAyah,
     this.top = 0,
   });
   final FoundationPageLayout layout;
   final QuranAyahReference? selected;
   final QuranAyahReference? playing;
+  final Map<QuranAyahReference, String> highlightColors;
   final QuranAyahReference? onlyAyah;
   final double top;
   @override
@@ -581,17 +592,39 @@ class FoundationPagePainter extends CustomPainter {
     canvas.translate(0, -top);
     for (final word in layout.words) {
       if (onlyAyah != null && word.reference != onlyAyah) continue;
-      if (word.reference == selected || word.reference == playing) {
+      final highlightColor = highlightColors[word.reference];
+      final wordHighlight = RRect.fromRectAndRadius(
+        word.rect.inflate(1.5),
+        const Radius.circular(3),
+      );
+      if (highlightColor != null) {
         canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            word.rect.inflate(1.5),
-            const Radius.circular(3),
-          ),
+          wordHighlight,
           Paint()
-            ..color = word.reference == playing
-                ? const Color(0x40459B73)
-                : const Color(0x30857154),
+            ..color = ayahHighlightColor(highlightColor).withValues(alpha: .4),
         );
+      }
+      if (word.reference == selected || word.reference == playing) {
+        final activeColor = word.reference == playing
+            ? const Color(0xC20B6B57)
+            : const Color(0x99857154);
+        if (highlightColor == null) {
+          canvas.drawRRect(
+            wordHighlight,
+            Paint()
+              ..color = word.reference == playing
+                  ? const Color(0x40459B73)
+                  : const Color(0x30857154),
+          );
+        } else {
+          canvas.drawRRect(
+            wordHighlight,
+            Paint()
+              ..color = activeColor
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1,
+          );
+        }
       }
       if (word.image != null) {
         canvas.drawImageRect(
@@ -626,6 +659,7 @@ class FoundationPagePainter extends CustomPainter {
       layout != oldDelegate.layout ||
       selected != oldDelegate.selected ||
       playing != oldDelegate.playing ||
+      !mapEquals(oldDelegate.highlightColors, highlightColors) ||
       onlyAyah != oldDelegate.onlyAyah ||
       top != oldDelegate.top;
 }

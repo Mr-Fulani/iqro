@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
@@ -13,6 +14,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
+import 'ayah_annotations.dart';
 import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 
@@ -141,6 +143,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       // Never paint or persist the previous account's route-derived location.
       return const Scaffold(body: IqroLoading());
     }
+    final annotationRows = activeAccount == null
+        ? const <Map<String, Object?>>[]
+        : ref.watch(ayahAnnotationsProvider(activeAccount)).valueOrNull ??
+              const <Map<String, Object?>>[];
+    final annotationColors = ayahHighlightColorsFromRows(annotationRows);
+    final highlightColors = <int, String>{
+      for (final entry in annotationColors.entries)
+        if (entry.key.surah == widget.surah) entry.key.ayah: entry.value,
+    };
     final ayahs = ref.watch(ayahsProvider(widget.surah));
     final catalog = ref.watch(quranCatalogProvider).valueOrNull;
     final presentation = ref.watch(
@@ -229,7 +240,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                 ),
               ),
             Expanded(
-              child: _readerList(items, surah, title, audio, presentation),
+              child: _readerList(
+                items,
+                surah,
+                title,
+                audio,
+                highlightColors,
+                presentation,
+              ),
             ),
           ],
         ),
@@ -242,6 +260,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     Surah? surah,
     String title,
     ({int? surah, int? ayah, bool playing, bool active}) audio,
+    Map<int, String> highlightColors,
     ({double fontSize, double lineHeight, double ayahSpacing, bool focusMode})
     presentation,
   ) {
@@ -278,6 +297,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
             child: _AyahCard(
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
+              highlightColorKey: highlightColors[ayah.number],
               audioActive: audioActive,
               audioPlaying: audioActive && audio.playing,
               audioLoading: _audioLoadingAyah == ayah.number,
@@ -511,8 +531,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     final scope = database.accountScope.current;
     if (scope == null) return;
     final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
-    final activeReciterId = ref.read(audioControllerProvider).reciter?.id;
+    final currentAudio = ref.read(audioControllerProvider);
+    final activeReciterId = currentAudio.channel == AudioPlaybackChannel.mushaf
+        ? currentAudio.reciter?.id
+        : null;
     final preferredRecitationId = ref
         .read(appPreferencesProvider)
         .mushafRecitationId;
@@ -522,7 +546,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       final recitations = await repository.recitationsForRole(
         AudioRecitationRole.ayahPlayback,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       final recitation =
           recitations
               .where((item) => item.id == preferredRecitationId)
@@ -539,7 +570,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         recitationId: recitation.id,
         surah: ayah.surahNumber,
       );
-      if (!_isCurrentAudioRequest(scope, controller, request)) return;
+      if (!_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
+        return;
+      }
       await controller.loadPlayback(
         playback: playback,
         reciter: reciterWithPersonPortrait(
@@ -552,10 +590,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         startAyah: ayah.number,
         endAyah: ayah.number,
       );
+      if (_isCurrentAudioRequest(
+            scope,
+            controller,
+            request,
+            navigationEpoch: navigationEpoch,
+          ) &&
+          ref.read(appPreferencesProvider).mushafRecitationId !=
+              recitation.id) {
+        unawaited(
+          ref
+              .read(appPreferencesProvider.notifier)
+              .setMushafRecitation(recitation.id),
+        );
+      }
     } on AccountScopeChanged {
       return;
     } on Object {
-      if (_isCurrentAudioRequest(scope, controller, request)) {
+      if (_isCurrentAudioRequest(
+        scope,
+        controller,
+        request,
+        navigationEpoch: navigationEpoch,
+      )) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -571,10 +628,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   bool _isCurrentAudioRequest(
     AccountScopeSnapshot scope,
     AudioController controller,
-    int request,
-  ) {
+    int request, {
+    int? navigationEpoch,
+  }) {
     return mounted &&
         request == _audioRequest &&
+        (navigationEpoch == null ||
+            controller.navigationEpoch == navigationEpoch) &&
         ref.read(localDatabaseProvider).accountScope.isCurrent(scope) &&
         identical(ref.read(audioControllerProvider.notifier), controller);
   }
@@ -976,7 +1036,7 @@ class _ReaderIntro extends StatelessWidget {
             textDirection: TextDirection.rtl,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
-              fontFamily: 'serif',
+              fontFamily: IqroTheme.arabicFontFamily,
             ),
           ),
           const SizedBox(height: 6),
@@ -996,6 +1056,7 @@ class _AyahCard extends StatelessWidget {
   const _AyahCard({
     required this.ayah,
     required this.selected,
+    required this.highlightColorKey,
     required this.audioActive,
     required this.audioPlaying,
     required this.audioLoading,
@@ -1013,6 +1074,7 @@ class _AyahCard extends StatelessWidget {
   });
   final QuranAyah ayah;
   final bool selected;
+  final String? highlightColorKey;
   final bool audioActive;
   final bool audioPlaying;
   final bool audioLoading;
@@ -1034,6 +1096,9 @@ class _AyahCard extends StatelessWidget {
       selected: selected || audioActive,
       child: IqroCard(
         onTap: onSelected,
+        color: highlightColorKey == null
+            ? null
+            : ayahHighlightCardColor(context, highlightColorKey),
         borderColor: audioActive
             ? Theme.of(context).colorScheme.tertiary
             : selected
@@ -1084,7 +1149,8 @@ class _AyahCard extends StatelessWidget {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontFamily: 'serif',
+                fontFamily: IqroTheme.arabicFontFamily,
+                fontWeight: FontWeight.normal,
                 fontSize: arabicFontSize,
                 height: arabicLineHeight,
               ),
@@ -1144,7 +1210,7 @@ class _ReaderContentBlock extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(icon, size: 18),
+              IqroIcon(icon, size: 18),
               const SizedBox(width: 8),
               Text(title, style: Theme.of(context).textTheme.titleSmall),
               if (loading) ...<Widget>[

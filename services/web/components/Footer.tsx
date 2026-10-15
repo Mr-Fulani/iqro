@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { SocialProfile } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
@@ -13,15 +14,46 @@ type FooterProps = {
 
 export function Footer({ socialProfiles = [] }: FooterProps) {
   const { locale, t } = useI18n();
+  const appDownloadUrl = process.env.NEXT_PUBLIC_ANDROID_APP_DOWNLOAD_URL?.trim();
+  const appStoreUrl = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL?.trim();
+  const playStoreUrl = process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim();
+  const stores = [
+    { name: "App Store", url: appStoreUrl, soon: t("footer.iosSoon") },
+    { name: "Google Play", url: playStoreUrl, soon: t("footer.androidSoon") },
+  ];
   return (
     <footer className="app-footer">
       <MobileDisclosure title={t("footer.aboutLinks")} className="mobile-footer-details">
         <div className="footer-content">
           <div className="footer-brand">
-            <span className="brand-mark sm">Q</span>
+            <Image src="/iqro-wax-seal.png" alt="" width={40} height={40} sizes="40px" className="brand-logo brand-logo-sm" />
             <p>
-              <strong>IQRO</strong> — {t("brand.subtitle")}. {t("footer.description")}
+              <strong>IQRO</strong> — {t("footer.description")}
             </p>
+            <section className="footer-mobile-app" aria-labelledby="footer-mobile-app-title">
+              <h2 id="footer-mobile-app-title" className="sr-only">{t("footer.mobileAppTitle")}</h2>
+              <div className="footer-app-stores">
+                {stores.map((store) => store.url ? (
+                  <a key={store.name} className="footer-store-badge" href={store.url}>
+                    <span>{t("footer.storeDownload")}</span>
+                    <strong>{store.name}</strong>
+                  </a>
+                ) : (
+                  <div key={store.name} className="footer-store-badge">
+                    <span>{store.soon}</span>
+                    <strong>{store.name}</strong>
+                  </div>
+                ))}
+              </div>
+              {appDownloadUrl && !playStoreUrl ? (
+                <a className="btn btn-primary footer-app-download" href={appDownloadUrl}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
+                  </svg>
+                  {t("footer.mobileAppDownload")}
+                </a>
+              ) : null}
+            </section>
           </div>
 
           <div className="footer-links">

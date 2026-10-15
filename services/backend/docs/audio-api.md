@@ -26,6 +26,8 @@ Django Admin, но не создают дубли чтецов и не дают 
 - `GET /api/v1/recitations/{uuid}/tracks?scope=surah`
 - `GET /api/v1/recitations/{uuid}/surahs/{surah}`
 - `GET /api/v1/recitations/{uuid}/ayahs/{surah}/{ayah}`
+- `GET /api/v1/variants/{variant_id}/surahs/{surah}`
+- `GET /api/v1/variants/{variant_id}/surahs/{surah}/ayahs/{ayah}`
 - `GET /api/v1/quran-foundation/ayah-recitations`
 - `GET /api/v1/quran-foundation/ayah-recitations/{source_id}/surahs/{surah}`
 
@@ -34,6 +36,21 @@ Django Admin, но не создают дубли чтецов и не дают 
 `RecitationEdition.id` is the stable identifier of a concrete audio variant. A
 `Reciter` is only the person profile; clients must persist and send the variant
 ID when selecting playback.
+
+The provider-neutral variant resolver accepts the native UUID directly and uses a
+namespaced ID for ayah-by-ayah providers:
+
+```text
+<recitation-edition-uuid>
+qf-ayah:<environment>:<source_id>:<quran-edition-version-uuid>
+```
+
+Both generic variant endpoints return the same typed delivery contract. A surah
+track may have one full-file URL plus optional timed ayah ranges; an ayah-by-ayah
+variant returns one external URL per ayah with `start_ms` and `end_ms` set to
+`null`. Untimed and partial variants remain resolvable for ordinary listening
+when a track exists, but the role-aware resolver rejects them for ayah playback
+and memorization unless the advertised capability is available.
 
 The recitation catalog is additive and returns role capabilities alongside the
 legacy `timings` fields:

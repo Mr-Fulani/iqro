@@ -80,6 +80,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           preferencesStoreProvider.overrideWithValue(store),
+          localDatabaseProvider.overrideWithValue(_Cache()),
           planRepositoryProvider.overrideWithValue(_Plan()),
           mushafRenditionsProvider.overrideWith((ref) async => const []),
           cachedMushafRenditionsProvider.overrideWith((ref) async => const []),
@@ -177,6 +178,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           preferencesStoreProvider.overrideWithValue(store),
+          localDatabaseProvider.overrideWithValue(_Cache()),
           planRepositoryProvider.overrideWithValue(_Plan()),
           appConfigProvider.overrideWithValue(
             const AppConfig(
@@ -313,6 +315,8 @@ class _Plan implements PlanRepository {
 }
 
 class _Cache implements LocalDatabase {
+  @override
+  final accountScope = AccountScope.forTesting();
   final entries = <String, CachedValue>{};
   @override
   Future<CachedValue?> readCache(String key) async => entries[key];

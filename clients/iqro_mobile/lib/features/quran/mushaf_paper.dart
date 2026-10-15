@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/iqro_theme.dart';
+
 const mushafPaperColor = Color(0xFFFFFCF7);
 const mushafInkColor = Color(0xFF392D20);
 const mushafAccentColor = Color(0xFF857154);
@@ -34,7 +36,7 @@ class MushafAyahText extends StatelessWidget {
             textDirection: TextDirection.rtl,
             style: const TextStyle(
               color: mushafInkColor,
-              fontFamily: 'serif',
+              fontFamily: IqroTheme.arabicFontFamily,
               fontSize: 30,
               fontWeight: FontWeight.normal,
               height: 1.85,

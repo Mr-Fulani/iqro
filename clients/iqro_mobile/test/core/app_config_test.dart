@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 
@@ -13,6 +14,42 @@ void main() {
     expect(config.environment, 'local');
     expect(config.apiBaseUrl, 'http://127.0.0.1:8000');
     expect(config.apiV1, 'http://127.0.0.1:8000/api/v1');
+  });
+
+  group('local default follows the device type', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('Android emulator reaches the host through 10.0.2.2', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final config = await AppConfig.fromEnvironment(
+        isPhysicalAndroidDevice: () async => false,
+      );
+      expect(config.apiBaseUrl, 'http://10.0.2.2:8000');
+    });
+
+    test('physical Android phone uses adb reverse on 127.0.0.1', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final config = await AppConfig.fromEnvironment(
+        isPhysicalAndroidDevice: () async => true,
+      );
+      expect(config.apiBaseUrl, 'http://127.0.0.1:8000');
+    });
+
+    test('unknown Android device keeps the emulator default', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final config = await AppConfig.fromEnvironment(
+        isPhysicalAndroidDevice: () async => throw StateError('no plugin'),
+      );
+      expect(config.apiBaseUrl, 'http://10.0.2.2:8000');
+    });
+
+    test('iOS does not query Android device info', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      final config = await AppConfig.fromEnvironment(
+        isPhysicalAndroidDevice: () async => fail('must not be called'),
+      );
+      expect(config.apiBaseUrl, 'http://127.0.0.1:8000');
+    });
   });
 
   test(

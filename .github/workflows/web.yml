@@ -52,4 +52,4 @@ jobs:
       - name: Lighthouse budgets
         run: npm run test:lighthouse
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high

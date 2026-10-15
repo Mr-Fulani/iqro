@@ -44,8 +44,11 @@ class HomeScreen extends ConsumerWidget {
     final memorizationState = ref.watch(memorizationProvider);
     final duaState = ref.watch(duaEntriesProvider);
     final session = ref.watch(sessionProvider).valueOrNull;
+    final audioController = ref.read(audioControllerProvider.notifier);
+    // Select the presentation only: position ticks during playback must not
+    // rebuild the whole dashboard.
     final player = ref.watch(
-      audioControllerProvider.select(iqroAudioPresentation),
+      audioControllerProvider.select(audioController.listeningPresentation),
     );
     final locale = Localizations.localeOf(context).languageCode;
     final clock =
@@ -87,7 +90,6 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: IqroTopBar(
         title: 'IQRO',
-        subtitle: context.l10n.greeting,
         leading: const Padding(
           padding: EdgeInsetsDirectional.only(start: 10, end: 8),
           child: Center(child: IqroAnimatedLogo(size: 36)),
@@ -183,9 +185,7 @@ class HomeScreen extends ConsumerWidget {
                   title: context.l10n.navAudio,
                   subtitle:
                       reciter?.nameFor(locale) ?? context.l10n.allReciters,
-                  onTap: () => player.track != null
-                      ? context.push('/player')
-                      : context.go('/app?tab=3'),
+                  onTap: () => context.go('/app?tab=3'),
                   action: player.track == null
                       ? null
                       : IconButton.filledTonal(
@@ -194,9 +194,14 @@ class HomeScreen extends ConsumerWidget {
                               : context.l10n.play,
                           onPressed: player.buffering
                               ? null
-                              : ref
-                                    .read(audioControllerProvider.notifier)
-                                    .toggle,
+                              : ref.read(audioControllerProvider).channel ==
+                                        AudioPlaybackChannel.listening &&
+                                    ref
+                                            .read(audioControllerProvider)
+                                            .standalone ==
+                                        null
+                              ? audioController.toggle
+                              : audioController.activateListening,
                           icon: player.buffering
                               ? const SizedBox.square(
                                   dimension: 18,

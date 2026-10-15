@@ -980,7 +980,7 @@ test("switching the reciter stops the old source and prepares the same surah for
   await expect(player.getByText("Готово к воспроизведению", { exact: true })).toBeVisible();
 });
 
-test("audio widget survives route navigation and pauses at the current position", async ({ page }) => {
+test("audio keeps playing on ordinary navigation and pauses when opening Quran", async ({ page }) => {
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
 
@@ -1003,9 +1003,20 @@ test("audio widget survives route navigation and pauses at the current position"
   const compactPlayerBox = await player.boundingBox();
   expect(compactPlayerBox).not.toBeNull();
   expect(compactPlayerBox!.height).toBeLessThan(130);
-  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
   expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await page.locator('.app-menu a[href="/ru/quran"]').click();
+  await expect(page).toHaveURL("/ru/quran");
+  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await page.locator('.brand-link[href="/ru"]').click();
+  await expect(page).toHaveURL("/ru");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 
   await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
   await expect(player.getByLabel("Режим повтора")).toBeVisible();
@@ -1016,9 +1027,46 @@ test("audio widget survives route navigation and pauses at the current position"
   await expect.poll(async () => (await player.boundingBox())!.height).toBeLessThan(130);
   await expect(player.getByRole("link", { name: "Открыть аудио", exact: true })).toBeVisible();
 
-  await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
-  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+});
+
+test("global recitation and Dua audio take turns without overlapping", async ({ page }) => {
+  await page.route("**/audio/ar/1.mp3", (route) =>
+    route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
+  );
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await page.locator('.app-menu a[href="/ru/dua"]').click();
+  await expect(page).toHaveURL("/ru/dua");
+  await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
+
+  await page.locator(".dua-category-chip").click();
+  await expect(page).toHaveURL("/ru/dua/topics/sleep");
+  // Topic pages list duas; playback controls live on the individual dua page.
+  await page.getByRole("link", { name: /Слова поминания при пробуждении ото сна · #1/ }).click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
+  const duaAudio = page.locator(".dua-audio-panel audio");
+  const duaButton = page.locator(".dua-entry-tools .dua-icon-action").first();
+  await duaButton.click();
+  await expect(duaAudio).toHaveAttribute(
+    "src",
+    "https://www.hisnmuslim.com/audio/ar/1.mp3",
+  );
+  await duaAudio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
+
+  const globalAudio = player.locator("audio");
+  await globalAudio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await expect(duaButton).toHaveAttribute("aria-pressed", "false");
+
+  await duaButton.click();
+  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 
 test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
@@ -1198,7 +1246,8 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
         prayer: checkInPayload.prayer,
         local_date: checkInPayload.local_date,
         timezone_name: checkInPayload.timezone_name,
-        pages: checkInPayload.pages,
+        pages: checkInPayload.amount,
+        metric: checkInPayload.metric, amount: String(checkInPayload.amount),
         reading_session_id: checkInPayload.session_id,
         revision: 1,
         client_updated_at: checkInPayload.client_updated_at,
@@ -1213,7 +1262,8 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     return route.fulfill({ status: 201, json: {} });
   });
 
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-08-28T09:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-08-28T09:00:01Z"));
   await page.goto(
     "/quran?surah=6&mode=after-prayer&prayer=fajr&prayer_date=2026-08-28"
       + "&prayer_timezone=Europe%2FIstanbul&prayer_target=2&prayer_credited=0",
@@ -1222,12 +1272,12 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
   const guided = page.getByTestId("prayer-reading-session");
   await expect(guided.getByRole("heading", { name: "После намаза Фаджр" })).toBeVisible();
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
-  await expect(guided.getByLabel("Фактически прочитано — страниц")).toHaveValue("1");
+  await expect(guided.getByLabel("Прочитано — стр.")).toHaveValue("1");
   await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("0:00");
   await page.clock.runFor(60_000);
   await expect(guided.getByTestId("prayer-reading-active-time")).toContainText("1:00");
-  await expect.poll(() => automaticSessionPayloads.length).toBe(1);
-  await guided.getByLabel("Фактически прочитано — страниц").fill("3");
+  expect(automaticSessionPayloads).toHaveLength(0);
+  await guided.getByLabel("Прочитано — стр.").fill("3");
   await guided.getByRole("button", { name: "Завершить и сохранить" }).click();
 
   await expect(guided.getByText("Сохранено: 3 стр. после намаза Фаджр.")).toBeVisible();
@@ -1235,17 +1285,11 @@ test("after-prayer reader resumes the Mushaf and saves the actual page count onc
     prayer: "fajr",
     local_date: "2026-08-28",
     timezone_name: "Europe/Istanbul",
-    pages: 3,
+    metric: "pages", amount: 3,
   });
-  expect(automaticSessionPayloads).toHaveLength(1);
-  expect(automaticSessionPayloads[0]).toMatchObject({
-    timezone_name: "Europe/Istanbul",
-    active_seconds: 60,
-    credited_pages: 0,
-    credited_ayahs: 0,
-  });
+  expect(automaticSessionPayloads).toHaveLength(0);
   await page.clock.runFor(60_000);
-  expect(automaticSessionPayloads).toHaveLength(1);
+  expect(automaticSessionPayloads).toHaveLength(0);
 
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

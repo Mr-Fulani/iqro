@@ -128,7 +128,7 @@ class NotificationGateway {
     } else {
       await _plugin.initialize(
         settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('iqro_status_icon'),
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,
@@ -556,6 +556,7 @@ class NotificationGateway {
           ReminderSignal.silent => 'IQRO silent reminders',
         },
         channelDescription: 'Prayer and Quran reminders',
+        icon: 'iqro_status_icon',
         importance: Importance.high,
         priority: Priority.high,
         category: AndroidNotificationCategory.reminder,

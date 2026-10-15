@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -7,6 +8,14 @@ CONFIG = Path(__file__).with_name("default.conf")
 DOCKERFILE = Path(__file__).with_name("Dockerfile")
 SECURITY_HEADERS = Path(__file__).with_name("security-headers.conf")
 PRODUCTION_COMPOSE = CONFIG.parents[2] / "compose.production.yaml"
+NEXT_CONFIG = CONFIG.parents[2] / "services" / "web" / "next.config.mjs"
+
+
+def _font_sources(policy: str) -> set[str]:
+    match = re.search(r"font-src ([^;\"]+)", policy)
+    if match is None:
+        raise AssertionError("font-src directive is missing")
+    return set(match.group(1).split())
 
 
 class GatewayConfigTests(unittest.TestCase):
@@ -79,9 +88,40 @@ class GatewayConfigTests(unittest.TestCase):
     def test_quran_foundation_fonts_are_allowed_by_gateway_csp(self) -> None:
         security_headers = SECURITY_HEADERS.read_text(encoding="utf-8")
         self.assertIn(
-            "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
+            "font-src 'self' data: https://verses.quran.foundation",
             security_headers,
         )
+
+    def test_gateway_font_sources_match_next_csp(self) -> None:
+        # The gateway replaces the Next.js CSP, so every font host the web
+        # client loads (including the Nastaleeq CDN) must be listed here too.
+        gateway_sources = _font_sources(SECURITY_HEADERS.read_text(encoding="utf-8"))
+        next_sources = _font_sources(NEXT_CONFIG.read_text(encoding="utf-8"))
+        self.assertEqual(gateway_sources, next_sources)
+        self.assertIn("https://static-cdn.tarteel.ai", gateway_sources)
+
+    def test_text_responses_are_compressed(self) -> None:
+        self.assertIn("gzip on;", self.config)
+        self.assertIn("gzip_proxied any;", self.config)
+        self.assertIn("gzip_vary on;", self.config)
+        gzip_types = self.config.split("gzip_types ", maxsplit=1)[1].split(";", maxsplit=1)[0]
+        for media_type in ("application/json", "application/problem+json", "text/css"):
+            self.assertIn(media_type, gzip_types.split())
+
+    def test_api_and_web_are_rate_limited_per_forwarded_client(self) -> None:
+        self.assertIn("map $http_x_forwarded_for $quran_client_address {", self.config)
+        self.assertIn("limit_req_zone $quran_client_address zone=quran_api_rate:", self.config)
+        self.assertIn("limit_req_zone $quran_client_address zone=quran_web_rate:", self.config)
+        self.assertIn("limit_req_status 429;", self.config)
+        for location in (
+            "location ~ ^/api/v1/",
+            "location /api/web-auth/ {",
+            "location /api/ {",
+        ):
+            block = self.config.split(location, maxsplit=1)[1].split("location ", maxsplit=1)[0]
+            self.assertIn("limit_req zone=quran_api_rate ", block, location)
+        site = self.config.split("    location / {", maxsplit=1)[1]
+        self.assertIn("limit_req zone=quran_web_rate ", site)
 
 
 if __name__ == "__main__":
