@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useI18n } from "../lib/i18n-context";
@@ -47,10 +47,10 @@ export function MobileNavigation() {
   return (
     <nav className="mobile-navigation" aria-label={t("nav.aria")}>
       {tabs.map((tab) => (
-        <Link key={tab.href} href={localizedPath(locale, tab.href)} className="mobile-tab" aria-current={active(tab.href) ? "page" : undefined}>
+        <IntentPrefetchLink key={tab.href} href={localizedPath(locale, tab.href)} className="mobile-tab" aria-current={active(tab.href) ? "page" : undefined}>
           <span className="mobile-tab-icon"><NavigationIcon name={tab.icon} /></span>
           <span>{tab.label}</span>
-        </Link>
+        </IntentPrefetchLink>
       ))}
       <details key={pathname} className="mobile-more" onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -67,11 +67,11 @@ export function MobileNavigation() {
           <h2>{t("nav.more")}</h2>
           <div className="mobile-more-links">
             {more.map((item) => (
-              <Link key={item.href} href={localizedPath(locale, item.href)} aria-current={active(item.href) ? "page" : undefined}>
+              <IntentPrefetchLink key={item.href} href={localizedPath(locale, item.href)} aria-current={active(item.href) ? "page" : undefined}>
                 <span className="mobile-more-icon"><NavigationIcon name={item.icon} /></span>
                 <span>{item.label}</span>
                 <span className="mobile-more-chevron" aria-hidden="true">›</span>
-              </Link>
+              </IntentPrefetchLink>
             ))}
           </div>
           <LanguageSwitcher variant="menu" />

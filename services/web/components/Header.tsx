@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
@@ -35,13 +35,13 @@ export function Header() {
   return (
     <header className="app-header">
       <div className="brand-block">
-        <Link href={localizedPath(locale, "/")} className="brand-link">
+        <IntentPrefetchLink href={localizedPath(locale, "/")} className="brand-link">
           <Image src="/iqro-wax-seal.png" alt="" width={56} height={56} sizes="56px" className="brand-logo" preload />
           <div>
             <p className="eyebrow">IQRO</p>
             <p className="brand-title">{t("brand.subtitle")}</p>
           </div>
-        </Link>
+        </IntentPrefetchLink>
       </div>
 
       <nav className="app-menu" aria-label={t("nav.aria")}>
@@ -49,7 +49,7 @@ export function Header() {
           const isActive = routePathname === item.href
             || (item.href !== "/" && routePathname.startsWith(item.href));
           return (
-            <Link
+            <IntentPrefetchLink
               key={item.href}
               href={localizedPath(locale, item.href)}
               className={`menu-link ${isActive ? "menu-link-active" : ""}`}
@@ -58,7 +58,7 @@ export function Header() {
             >
               <span className="menu-icon">{item.icon}</span>
               <span className="menu-label">{item.label}</span>
-            </Link>
+            </IntentPrefetchLink>
           );
         })}
       </nav>

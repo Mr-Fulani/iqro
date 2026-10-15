@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 import { ReciterAvatar } from "./ReciterAvatar";
@@ -169,18 +169,18 @@ export default function HomePage() {
           <h1>{t("home.title")}</h1>
           <p>{t("home.description")}</p>
           <div className="hero-actions">
-            <Link href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg hero-primary-action">
+            <IntentPrefetchLink href={localizedPath(locale, "/quran")} className="btn btn-primary btn-lg hero-primary-action">
               {t("home.readQuran")}
-            </Link>
-            <Link href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+            </IntentPrefetchLink>
+            <IntentPrefetchLink href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-lg hero-secondary-action">
               {t("home.listenQuran")}
-            </Link>
-            <Link href={localizedPath(locale, "/dua")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+            </IntentPrefetchLink>
+            <IntentPrefetchLink href={localizedPath(locale, "/dua")} className="btn btn-outline-primary btn-lg hero-secondary-action">
               {t("home.openDua")}
-            </Link>
-            <Link href={localizedPath(locale, "/prayer")} className="btn btn-outline-primary btn-lg hero-secondary-action">
+            </IntentPrefetchLink>
+            <IntentPrefetchLink href={localizedPath(locale, "/prayer")} className="btn btn-outline-primary btn-lg hero-secondary-action">
               {t("home.prayerTimes")}
-            </Link>
+            </IntentPrefetchLink>
           </div>
         </div>
 
@@ -224,9 +224,9 @@ export default function HomePage() {
             <h2 className="surface-title">{t("planner.homeTitle")}</h2>
             <p className="surface-subtitle">{t("planner.homeDescription")}</p>
           </div>
-          <Link href={localizedPath(locale, "/planner")} className="btn btn-primary">
+          <IntentPrefetchLink href={localizedPath(locale, "/planner")} className="btn btn-primary">
             {t("planner.open")}
-          </Link>
+          </IntentPrefetchLink>
         </div>
       </section>
 
@@ -270,9 +270,9 @@ export default function HomePage() {
               <p className="surface-subtitle">{t("home.upgradeDescription")}</p>
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href={localizedPath(locale, "/login")} className="btn btn-primary">
+              <IntentPrefetchLink href={localizedPath(locale, "/login")} className="btn btn-primary">
                 {t("auth.emailLogin")}
-              </Link>
+              </IntentPrefetchLink>
             </div>
           </div>
         </section>
@@ -286,9 +286,9 @@ export default function HomePage() {
             <h3 className="surface-title">{t("home.recitersTitle")}</h3>
             <p className="surface-subtitle">{t("home.recitersDescription")}</p>
           </div>
-          <Link href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-sm">
+          <IntentPrefetchLink href={localizedPath(locale, "/audio")} className="btn btn-outline-primary btn-sm">
             {t("home.allReciters")}
-          </Link>
+          </IntentPrefetchLink>
         </div>
 
         {featuredReciters.length > 0 ? (
@@ -296,7 +296,7 @@ export default function HomePage() {
             {featuredReciters.map((reciter, index) => {
               const name = reciterName(reciter);
               return (
-                <Link
+                <IntentPrefetchLink
                   key={reciter.id}
                   href={localizedPath(locale, `/audio?reciter=${encodeURIComponent(reciter.id)}`)}
                   className="reciter-card"
@@ -315,7 +315,7 @@ export default function HomePage() {
                       {reciterSecondaryName(reciter)}
                     </span>
                   </span>
-                </Link>
+                </IntentPrefetchLink>
               );
             })}
           </div>
@@ -340,9 +340,9 @@ export default function HomePage() {
                 <span className="status-chip ok">
                   {t("prayer.timezoneValue", { timezone: todayPrayer.timezone })}
                 </span>
-                <Link href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
+                <IntentPrefetchLink href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
                   {t("home.configurePrayer")}
-                </Link>
+                </IntentPrefetchLink>
               </div>
             </div>
 
@@ -389,7 +389,7 @@ export default function HomePage() {
             <p className="eyebrow">{t("home.surahCatalog")}</p>
             <h3 className="surface-title">{t("home.surahTitle")}</h3>
           </div>
-          <Link
+          <IntentPrefetchLink
             href={localizedPath(
               locale,
               editions[0] ? quranEditionPath(editions[0].code) : "/quran",
@@ -397,13 +397,13 @@ export default function HomePage() {
             className="btn btn-outline-primary btn-sm"
           >
             {t("home.allSurahs")}
-          </Link>
+          </IntentPrefetchLink>
         </div>
 
         <div className="home-surah-list">
           {featuredSurahs.length > 0 ? (
             featuredSurahs.map((surah) => (
-              <Link
+              <IntentPrefetchLink
                 key={surah.id}
                 href={localizedPath(
                   locale,
@@ -424,7 +424,7 @@ export default function HomePage() {
                 <span className="quran-arabic-text" style={{ fontSize: 20 }}>
                   {surah.name_ar}
                 </span>
-              </Link>
+              </IntentPrefetchLink>
             ))
           ) : (
             <div className="kpi-desc" style={{ padding: 16 }}>
