@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { preload } from "react-dom";
 import { ReciterAvatar } from "../components/ReciterAvatar";
 import { TodayReadingCard } from "../components/TodayReadingCard";
 import { PrayerReadingPlanCard } from "../components/PrayerReadingPlanCard";
@@ -31,6 +32,9 @@ const HERO_SLIDES = [
 ];
 
 export default function HomePage() {
+  // The first hero slide is the LCP element; as a CSS background it would
+  // otherwise be fetched late and at low priority.
+  preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high" });
   const { session, isLoggedIn, isLoading: authLoading } = useAuth();
   const { locale, t, formatDate } = useI18n();
   const isActiveAccount = session?.user.status === "active";
