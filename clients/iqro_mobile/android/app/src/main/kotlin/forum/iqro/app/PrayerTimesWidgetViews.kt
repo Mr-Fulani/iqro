@@ -39,7 +39,7 @@ internal object PrayerTimesWidgetViews {
             else -> "Откройте IQRO и выберите местоположение"
         }
         views.setTextViewText(R.id.prayer_empty, data.dateLocation?.takeIf { it.isNotEmpty() } ?: setupMessage)
-        val remaining = ((target ?: 0L) - System.currentTimeMillis()).coerceAtLeast(0L)
+        val remaining = PrayerTimesWidgetSchedule.remainingMillis(target, System.currentTimeMillis())
         views.setBoolean(R.id.prayer_countdown, "setCountDown", true)
         views.setChronometer(R.id.prayer_countdown, SystemClock.elapsedRealtime() + remaining,
             null, hasSchedule && remaining > 0L)
