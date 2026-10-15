@@ -163,7 +163,6 @@ def build_overrides(
         "REDIS_THROTTLE_URL": "redis://redis:6379/0",
         "CELERY_BROKER_URL": "redis://redis:6379/0",
         "CELERY_RESULT_BACKEND": "redis://redis:6379/0",
-        "WEB_CACHE_REDIS_URL": "redis://redis:6379/0",
         "WEB_CACHE_KEY_PREFIX": "quran-staging:web-cache:v1",
         "PUBLIC_MEDIA_BASE_URL": f"https://{media_host}/",
         "PUBLIC_AUDIO_BASE_URL": f"https://{media_host}/",

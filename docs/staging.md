@@ -68,6 +68,7 @@ flowchart LR
     U[Web / Mobile / Telegram Mini App] -->|HTTPS API/HTML| C[Caddy :443]
     C --> G[Nginx gateway]
     G --> W[Next.js web]
+    W --> WC[(web-cache Redis)]
     G --> A[Django API]
     A --> P[(PostgreSQL)]
     A --> R[(Redis)]

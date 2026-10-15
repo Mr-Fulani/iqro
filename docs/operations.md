@@ -164,6 +164,8 @@ media/FinOps telemetry. Порог — сигнал расследования, 
 задайте managed plan limit либо явный `maxmemory` ниже container/cgroup limit. Для общего
 cache+broker S0 используйте `noeviction`; смена eviction policy или разделение ролей требует
 отдельного load/failure теста, потому что broker/result keys нельзя терять как обычный cache.
+Next.js web cache уже вынесен в отдельный `web-cache` с `volatile-lru` (`production.md` 3.5):
+evictions там — штатный режим, а не инцидент. Текущий `redis-exporter` его не опрашивает.
 S0 exporter читает `REDIS_CACHE_URL`, поскольку все role URL указывают на один endpoint. После
 физического разделения запускайте отдельный scrape target/exporter на каждый уникальный
 cache/throttle/broker/result/web-cache endpoint с bounded `role` label; один зелёный cache
@@ -321,7 +323,9 @@ timestamp каждого invalidated tag. `updateTags` пишет timestamp, `ge
 сверяют его без обхода keyspace; `refreshTags` не делает сетевой `SCAN`, потому что локального
 tag manifest нет. `WEB_CACHE_TAG_TTL_SECONDS` обязан быть не короче
 `WEB_CACHE_ENTRY_TTL_SECONDS`, иначе старая запись могла бы снова стать доступной после
-исчезновения tag marker. Одинаковые URL/key prefix обязательны для всех web-реплик.
+исчезновения tag marker. Сам tag set хранится без key TTL, а `web-cache` вытесняет только
+ключи с TTL (`volatile-lru`), поэтому LRU не может удалить marker раньше entries. Одинаковые
+URL/key prefix обязательны для всех web-реплик.
 
 При недоступности web-cache Redis чтение становится cache miss и страница получает свежие
 данные из backend; неуспешная cache write только логируется. Неуспешная запись invalidation

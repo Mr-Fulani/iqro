@@ -224,12 +224,14 @@ class SharedCacheStore {
         this.tagsKey(),
         uniqueTags.map((tag) => ({ score: timestamp, value: hash(tag) })),
       );
+      // Pruning by score bounds the set. It deliberately has no key TTL: the web-cache
+      // Redis evicts volatile-lru, so only TTL-bearing entries are evictable and a crawl
+      // can never drop invalidation timestamps and revive stale entries.
       transaction.zRemRangeByScore(
         this.tagsKey(),
         0,
         timestamp - this.tagTtlSeconds * 1_000,
       );
-      transaction.expire(this.tagsKey(), this.tagTtlSeconds);
       await transaction.exec();
       return;
     }
