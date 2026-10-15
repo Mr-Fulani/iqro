@@ -1031,9 +1031,10 @@ test("audio keeps playing on ordinary navigation and pauses when opening Quran",
 });
 
 test("global recitation and Dua audio take turns without overlapping", async ({ page }) => {
-  await page.route("**/audio/ar/1.mp3", (route) =>
-    route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
-  );
+  // Keep the Dua media request pending: an empty or aborted body makes Chromium
+  // fire a trusted media error right after the mocked play(), which resets the
+  // Dua button and races the aria-pressed assertions below.
+  await page.route("**/audio/ar/1.mp3", () => {});
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
 
