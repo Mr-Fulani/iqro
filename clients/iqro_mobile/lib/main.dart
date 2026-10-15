@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +15,11 @@ import 'core/audio/listening_media_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(const <String>[
+      'Amiri Quran',
+    ], await rootBundle.loadString('assets/fonts/AmiriQuran-OFL.txt'));
+  });
   runApp(const _IqroBootstrap());
 }
 

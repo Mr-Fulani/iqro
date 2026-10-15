@@ -768,7 +768,8 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
                 textAlign: TextAlign.right,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
-                  fontFamily: 'serif',
+                  fontFamily: IqroTheme.arabicFontFamily,
+                  fontWeight: FontWeight.normal,
                   height: 1.9,
                 ),
               ),

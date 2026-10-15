@@ -1036,7 +1036,7 @@ class _ReaderIntro extends StatelessWidget {
             textDirection: TextDirection.rtl,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
-              fontFamily: 'serif',
+              fontFamily: IqroTheme.arabicFontFamily,
             ),
           ),
           const SizedBox(height: 6),
@@ -1149,7 +1149,8 @@ class _AyahCard extends StatelessWidget {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontFamily: 'serif',
+                fontFamily: IqroTheme.arabicFontFamily,
+                fontWeight: FontWeight.normal,
                 fontSize: arabicFontSize,
                 height: arabicLineHeight,
               ),

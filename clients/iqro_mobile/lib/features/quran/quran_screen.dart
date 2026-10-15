@@ -694,7 +694,7 @@ class _SurahRow extends StatelessWidget {
         surah.nameAr,
         textDirection: TextDirection.rtl,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontFamily: 'serif',
+          fontFamily: IqroTheme.arabicFontFamily,
           color: Theme.of(context).colorScheme.primary,
         ),
       ),

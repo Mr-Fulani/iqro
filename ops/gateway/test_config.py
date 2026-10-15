@@ -88,7 +88,7 @@ class GatewayConfigTests(unittest.TestCase):
     def test_quran_foundation_fonts_are_allowed_by_gateway_csp(self) -> None:
         security_headers = SECURITY_HEADERS.read_text(encoding="utf-8")
         self.assertIn(
-            "font-src 'self' data: https://fonts.gstatic.com https://verses.quran.foundation",
+            "font-src 'self' data: https://verses.quran.foundation",
             security_headers,
         )
 

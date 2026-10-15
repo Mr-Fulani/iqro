@@ -708,7 +708,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
                           style: Theme.of(context).textTheme.displaySmall
                               ?.copyWith(
                                 color: Colors.white,
-                                fontFamily: 'serif',
+                                fontFamily: IqroTheme.arabicFontFamily,
                                 fontSize: 32,
                               ),
                         ),
@@ -971,7 +971,7 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontFamily: 'serif',
+                fontFamily: IqroTheme.arabicFontFamily,
                 height: 1.8,
               ),
             ),

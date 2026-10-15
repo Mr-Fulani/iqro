@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Amiri, Inter } from "next/font/google";
 import "./globals.css";
 import "./mobile.css";
 import "./mushaf-reader.css";
@@ -13,6 +14,19 @@ import { requestLocale } from "../lib/server-locale";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../lib/seo";
 import { serializeJsonLd } from "../lib/json-ld";
 import { getPublishedSocialProfilesOrEmpty } from "../lib/public-content";
+
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
+const amiri = Amiri({
+  weight: ["400", "700"],
+  subsets: ["arabic", "latin"],
+  display: "swap",
+  variable: "--font-amiri",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -54,11 +68,12 @@ export default async function RootLayout({
       : {}),
   });
   return (
-    <html lang={locale} dir={directionFor(locale)} suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
+    <html
+      lang={locale}
+      dir={directionFor(locale)}
+      className={`${inter.variable} ${amiri.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJson }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJson }} />
