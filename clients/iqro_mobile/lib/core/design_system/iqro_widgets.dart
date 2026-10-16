@@ -18,6 +18,9 @@ EdgeInsetsDirectional iqroRootTabPadding({
   playerActive && !playerCollapsed ? 148 : 76,
 );
 
+/// Widest a page's content grows in landscape, padding included.
+const iqroLandscapeContentWidth = 640.0;
+
 class IqroPage extends StatelessWidget {
   const IqroPage({
     required this.child,
@@ -32,15 +35,34 @@ class IqroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Padding(padding: padding, child: child);
+    final landscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
     return SafeArea(
       bottom: false,
-      child: scrollable
-          ? SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: content,
-            )
-          : content,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // A phone in landscape is wide but short: full-width cards ran
+          // under the mini player's floating button at the end edge. The
+          // centered column keeps that edge free and lines readable.
+          final gutter = landscape
+              ? ((constraints.maxWidth - iqroLandscapeContentWidth) / 2).clamp(
+                  0.0,
+                  double.infinity,
+                )
+              : 0.0;
+          final content = Padding(
+            padding: EdgeInsets.symmetric(horizontal: gutter),
+            child: Padding(padding: padding, child: child),
+          );
+          return scrollable
+              ? SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: content,
+                )
+              : content;
+        },
+      ),
     );
   }
 }
