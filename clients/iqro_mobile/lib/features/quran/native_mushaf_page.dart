@@ -75,6 +75,7 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const <Surah>[],
     this.divisions = const <QuranDivision>[],
+    this.showPageLabels = true,
     super.key,
   });
 
@@ -89,6 +90,11 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final List<QuranDivision> divisions;
+
+  /// Whether the surah, juz and page labels are shown. The reader hides them
+  /// under its controls, which show the same information; they keep their
+  /// space so the page does not reflow.
+  final bool showPageLabels;
 
   @override
   ConsumerState<NativeMushafPage> createState() => _NativeMushafPageState();
@@ -236,7 +242,8 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
       child: Column(
         children: <Widget>[
           if (portrait)
-            Padding(
+            _pageLabel(
+              key: const ValueKey('mushaf-page-header'),
               padding: const EdgeInsetsDirectional.fromSTEB(12, 16, 12, 6),
               child: Row(
                 children: <Widget>[
@@ -269,7 +276,8 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             child: _buildRaster(pageData),
           ),
           if (portrait)
-            Padding(
+            _pageLabel(
+              key: const ValueKey('mushaf-page-footer'),
               padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 12, 14),
               child: Align(
                 alignment: AlignmentDirectional.centerEnd,
@@ -309,6 +317,19 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _pageLabel({
+    required Key key,
+    required EdgeInsetsGeometry padding,
+    required Widget child,
+  }) {
+    return AnimatedOpacity(
+      key: key,
+      opacity: widget.showPageLabels ? 1 : 0,
+      duration: const Duration(milliseconds: 180),
+      child: Padding(padding: padding, child: child),
     );
   }
 

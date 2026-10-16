@@ -284,6 +284,25 @@ void main() {
     expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
     expect(find.text('Аят 5:85'), findsOneWidget);
   });
+
+  testWidgets('page labels give way to the reader controls', (tester) async {
+    await _pump(tester);
+    // Every built page (the current one and its neighbours) follows suit.
+    Set<double> opacity(String key) => tester
+        .widgetList<AnimatedOpacity>(find.byKey(ValueKey(key)))
+        .map((label) => label.opacity)
+        .toSet();
+
+    await _tapAyah(tester, .35);
+    expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+    expect(opacity('mushaf-page-header'), {0.0});
+    expect(opacity('mushaf-page-footer'), {0.0});
+
+    await _tapAyah(tester, .35);
+    expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
+    expect(opacity('mushaf-page-header'), {1.0});
+    expect(opacity('mushaf-page-footer'), {1.0});
+  });
 }
 
 Future<void> _tapAyah(WidgetTester tester, double y) async {
