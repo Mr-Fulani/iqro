@@ -52,6 +52,56 @@ void main() {
     },
   );
 
+  testWidgets('a swipe reuses the data of the ±2 page window', (tester) async {
+    final pageBuilds = <int, int>{};
+    await _pump(tester, pageBuilds: pageBuilds);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      pageBuilds.keys.toSet(),
+      containsAll(<int>{120, 121, 122, 123, 124}),
+    );
+
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1500);
+    for (var frame = 0; frame < 20; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    final current = pageBuilds.keys.contains(125) ? 123 : 121;
+    for (var page = current - 2; page <= current + 2; page++) {
+      expect(pageBuilds[page], 1, reason: 'page $page was rebuilt');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a fast swipe turns the page instead of feeding the zoom', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    final before = controller.page!.round();
+
+    // A fast flick's first sample already passes both the drag slop and
+    // InteractiveViewer's pan slop (36 px), which decides the gesture arena.
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(PageView)),
+    );
+    await gesture.moveBy(const Offset(60, 0));
+    for (var step = 0; step < 4; step++) {
+      await tester.pump(const Duration(milliseconds: 8));
+      await gesture.moveBy(const Offset(60, 0));
+    }
+    await gesture.up();
+    for (var frame = 0; frame < 20; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(controller.page!.round(), isNot(before));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('empty bookmarks explain how to save an ayah', (tester) async {
     await _pump(tester);
     await _tapAyah(tester, .35);
@@ -256,6 +306,7 @@ Future<void> _tapAyah(WidgetTester tester, double y) async {
 Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   WidgetTester tester, {
   Set<String> bookmarks = const {},
+  Map<int, int>? pageBuilds,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
@@ -287,7 +338,10 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         ),
         planRepositoryProvider.overrideWithValue(plan),
         quranRepositoryProvider.overrideWithValue(quran),
-        mushafPageProvider.overrideWith((ref, page) async => _page(page)),
+        mushafPageProvider.overrideWith((ref, page) async {
+          pageBuilds?.update(page, (count) => count + 1, ifAbsent: () => 1);
+          return _page(page);
+        }),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(surahs: <Surah>[], fromCache: true),
         ),

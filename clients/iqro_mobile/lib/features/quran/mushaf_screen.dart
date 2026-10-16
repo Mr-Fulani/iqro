@@ -61,6 +61,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   int _initialNavigationGeneration = 0;
   int get _pageCount => ref.read(selectedMushafPageCountProvider);
   final _zoomControllers = <int, NativeMushafPageController>{};
+  // Keeps the autoDispose page data of the ±2 window alive between swipes.
+  final _pageKeepAlive =
+      <int, ProviderSubscription<AsyncValue<MushafPageData>>>{};
   var _currentPage = 1;
   var _controlsVisible = false;
   var _zoom = 1.0;
@@ -180,6 +183,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     _positionSaves.close(discardPending: false);
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_readingSession?.finish());
+    for (final subscription in _pageKeepAlive.values) {
+      subscription.close();
+    }
     _pageController.dispose();
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
@@ -305,6 +311,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             SafeArea(
               child: PageView.builder(
                 controller: _pageController,
+                // Builds the neighbouring pages so a swipe reveals a laid-out,
+                // decoded page instead of a spinner.
+                allowImplicitScrolling: true,
                 reverse: true,
                 physics: _zoom > 1.01
                     ? const NeverScrollableScrollPhysics()
@@ -924,20 +933,42 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     _prefetchAdjacentPages(page);
   }
 
+  static const _prefetchRadius = 2;
+
   void _prefetchAdjacentPages(int page) {
+    final window = <int>{
+      for (
+        var candidate = page - _prefetchRadius;
+        candidate <= page + _prefetchRadius;
+        candidate++
+      )
+        if (candidate >= 1 && candidate <= _pageCount) candidate,
+    };
+    _pageKeepAlive.removeWhere((candidate, subscription) {
+      if (window.contains(candidate)) return false;
+      subscription.close();
+      return true;
+    });
     final logicalWidth = MediaQuery.sizeOf(context).width;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final repository = ref.read(selectedMushafRepositoryProvider);
-    for (final candidate in <int>[page - 1, page + 1]) {
-      if (candidate < 1 || candidate > _pageCount) continue;
+    for (final candidate in window) {
+      _pageKeepAlive.putIfAbsent(
+        candidate,
+        () => ref.listenManual(mushafPageProvider(candidate), (_, _) {}),
+      );
+      if (candidate == page) continue;
       final pageFuture = ref.read(mushafPageProvider(candidate).future);
       unawaited(() async {
         try {
           final pageData = await pageFuture;
           final asset = pageData.bestAssetFor(logicalWidth, pixelRatio);
-          if (asset != null) {
-            await repository.cachedMushafPageAsset(pageData, asset);
-          }
+          if (asset == null) return;
+          final file = await repository.cachedMushafPageAsset(pageData, asset);
+          if (!mounted || !_pageKeepAlive.containsKey(candidate)) return;
+          // Same provider and key MushafRaster resolves, so the swipe finds
+          // the frame already decoded in the ImageCache.
+          await precacheImage(FileImage(file), context);
         } on Object {
           // Prefetch is opportunistic; the visible page owns retry feedback.
         }

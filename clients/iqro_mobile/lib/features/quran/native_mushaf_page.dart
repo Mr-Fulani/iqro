@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/gestures.dart' show DeviceGestureSettings;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -311,6 +312,44 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     );
   }
 
+  // InteractiveViewer's scale recognizer also claims a one-finger drag past the
+  // pan slop, even with panning disabled. Being deeper than the PageView it
+  // sees the first move first, so a fast swipe was swallowed and the page did
+  // not turn. While panning is off, raise its one-finger slop so swipes reach
+  // the PageView; pinch zoom uses the separate scale slop and is unaffected.
+  static const _pinchOnlyTouchSlop = 1e4;
+
+  Widget _withPageSwipePriority({
+    required bool panEnabled,
+    required Widget child,
+  }) {
+    // Always wrap, so toggling panning (zoom, rotation) only changes the data
+    // and never remounts the page subtree with its decoded frame.
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: panEnabled
+          ? media
+          : media.copyWith(
+              gestureSettings: const DeviceGestureSettings(
+                touchSlop: _pinchOnlyTouchSlop,
+              ),
+            ),
+      child: child,
+    );
+  }
+
+  /// Page content keeps normal slops, so a drag still cancels an ayah tap.
+  /// This State's context sits above the override and still has them.
+  Widget _restoreGestureSettings(Widget child) {
+    final pageSettings = MediaQuery.gestureSettingsOf(context);
+    return Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(gestureSettings: pageSettings),
+        child: child,
+      ),
+    );
+  }
+
   Widget _buildRaster(MushafPageData pageData) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -325,49 +364,54 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
         if (pageData.foundation != null) {
           return ClipRect(
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              constrained: false,
-              // Zoom matrices use viewport coordinates. Center the page inside
-              // that viewport, not around the Transform's alignment origin.
-              alignment: Alignment.topLeft,
-              minScale: 1,
-              maxScale: 3,
+            child: _withPageSwipePriority(
               panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
-              panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
-                  ? PanAxis.vertical
-                  : PanAxis.free,
-              onInteractionEnd: (_) {
-                final scale = _transformationController.value
-                    .getMaxScaleOnAxis();
-                setState(() => _scale = scale);
-                widget.onScale(scale);
-              },
-              child: SizedBox(
-                width: _viewportSize.width,
-                height: math.max(_viewportSize.height, layout.height),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: widget.onBackgroundTap,
-                  child: Align(
-                    alignment: layout.fillsLandscapeWidth
-                        ? Alignment.topCenter
-                        : Alignment.center,
-                    child: SizedBox(
-                      width: layout.width,
-                      height: layout.height,
-                      child: FoundationMushafPageContent(
-                        key: ValueKey(
-                          '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                constrained: false,
+                // Zoom matrices use viewport coordinates. Center the page inside
+                // that viewport, not around the Transform's alignment origin.
+                alignment: Alignment.topLeft,
+                minScale: 1,
+                maxScale: 3,
+                panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
+                panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
+                    ? PanAxis.vertical
+                    : PanAxis.free,
+                onInteractionEnd: (_) {
+                  final scale = _transformationController.value
+                      .getMaxScaleOnAxis();
+                  setState(() => _scale = scale);
+                  widget.onScale(scale);
+                },
+                child: _restoreGestureSettings(
+                  SizedBox(
+                    width: _viewportSize.width,
+                    height: math.max(_viewportSize.height, layout.height),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.onBackgroundTap,
+                      child: Align(
+                        alignment: layout.fillsLandscapeWidth
+                            ? Alignment.topCenter
+                            : Alignment.center,
+                        child: SizedBox(
+                          width: layout.width,
+                          height: layout.height,
+                          child: FoundationMushafPageContent(
+                            key: ValueKey(
+                              '${pageData.editionCode}:${pageData.contentVersion}:${pageData.number}',
+                            ),
+                            page: pageData.foundation!,
+                            selected: widget.selectedAyah,
+                            playing: widget.playingAyah,
+                            highlightColors: widget.highlightColors,
+                            onSelect: widget.onSelectAyah,
+                            onOpen: widget.onOpenAyah,
+                            onBackgroundTap: widget.onBackgroundTap,
+                            surahs: widget.surahs,
+                          ),
                         ),
-                        page: pageData.foundation!,
-                        selected: widget.selectedAyah,
-                        playing: widget.playingAyah,
-                        highlightColors: widget.highlightColors,
-                        onSelect: widget.onSelectAyah,
-                        onOpen: widget.onOpenAyah,
-                        onBackgroundTap: widget.onBackgroundTap,
-                        surahs: widget.surahs,
                       ),
                     ),
                   ),
@@ -411,114 +455,119 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onBackgroundTap,
           child: ClipRect(
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              constrained: false,
-              alignment: layout.fillsLandscapeWidth
-                  ? Alignment.topCenter
-                  : Alignment.center,
-              minScale: 1,
-              maxScale: 3,
+            child: _withPageSwipePriority(
               panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
-              panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
-                  ? PanAxis.vertical
-                  : PanAxis.free,
-              scaleEnabled: true,
-              clipBehavior: Clip.none,
-              onInteractionEnd: (_) {
-                final scale = _transformationController.value
-                    .getMaxScaleOnAxis();
-                setState(() => _scale = scale);
-                widget.onScale(scale);
-              },
-              child: Transform.translate(
-                offset: Offset(
-                  layout.fillsLandscapeWidth ? layout.horizontalOffset : 0,
-                  0,
-                ),
-                child: SizedBox(
-                  width: rasterLayout.size.width,
-                  height: rasterLayout.size.height,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: (details) {
-                      final point = rasterLayout.sourcePointAt(
-                        details.localPosition,
-                      );
-                      final ayah = point == null
-                          ? null
-                          : pageData.ayahAt(point.dx, point.dy);
-                      if (ayah == null) {
-                        widget.onBackgroundTap();
-                      } else {
-                        widget.onSelectAyah(ayah);
-                      }
-                    },
-                    onLongPressStart: (details) {
-                      final point = rasterLayout.sourcePointAt(
-                        details.localPosition,
-                      );
-                      final ayah = point == null
-                          ? null
-                          : pageData.ayahAt(point.dx, point.dy);
-                      if (ayah != null) widget.onOpenAyah(ayah);
-                    },
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        FutureBuilder<File>(
-                          // Never retain a previous edition/page's file while
-                          // loading new content, even when geometry is similar.
-                          key: ValueKey(rasterIdentity),
-                          future: _assetFile,
-                          builder: (context, snapshot) {
-                            final file = snapshot.data;
-                            if (file != null) {
-                              return RepaintBoundary(
-                                child: Semantics(
-                                  label:
-                                      '${context.l10n.mushafMode}, ${context.l10n.page} ${widget.page}',
-                                  image: true,
-                                  child: MushafRaster(
-                                    file: file,
-                                    continuityKey: rasterIdentity,
-                                    builder: (image) => CustomPaint(
-                                      painter: MushafRasterPainter(
-                                        image: image,
-                                        layout: rasterLayout,
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                constrained: false,
+                alignment: layout.fillsLandscapeWidth
+                    ? Alignment.topCenter
+                    : Alignment.center,
+                minScale: 1,
+                maxScale: 3,
+                panEnabled: _scale > 1.01 || layout.fillsLandscapeWidth,
+                panAxis: layout.fillsLandscapeWidth && _scale <= 1.01
+                    ? PanAxis.vertical
+                    : PanAxis.free,
+                scaleEnabled: true,
+                clipBehavior: Clip.none,
+                onInteractionEnd: (_) {
+                  final scale = _transformationController.value
+                      .getMaxScaleOnAxis();
+                  setState(() => _scale = scale);
+                  widget.onScale(scale);
+                },
+                child: _restoreGestureSettings(
+                  Transform.translate(
+                    offset: Offset(
+                      layout.fillsLandscapeWidth ? layout.horizontalOffset : 0,
+                      0,
+                    ),
+                    child: SizedBox(
+                      width: rasterLayout.size.width,
+                      height: rasterLayout.size.height,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapUp: (details) {
+                          final point = rasterLayout.sourcePointAt(
+                            details.localPosition,
+                          );
+                          final ayah = point == null
+                              ? null
+                              : pageData.ayahAt(point.dx, point.dy);
+                          if (ayah == null) {
+                            widget.onBackgroundTap();
+                          } else {
+                            widget.onSelectAyah(ayah);
+                          }
+                        },
+                        onLongPressStart: (details) {
+                          final point = rasterLayout.sourcePointAt(
+                            details.localPosition,
+                          );
+                          final ayah = point == null
+                              ? null
+                              : pageData.ayahAt(point.dx, point.dy);
+                          if (ayah != null) widget.onOpenAyah(ayah);
+                        },
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: <Widget>[
+                            FutureBuilder<File>(
+                              // Never retain a previous edition/page's file while
+                              // loading new content, even when geometry is similar.
+                              key: ValueKey(rasterIdentity),
+                              future: _assetFile,
+                              builder: (context, snapshot) {
+                                final file = snapshot.data;
+                                if (file != null) {
+                                  return RepaintBoundary(
+                                    child: Semantics(
+                                      label:
+                                          '${context.l10n.mushafMode}, ${context.l10n.page} ${widget.page}',
+                                      image: true,
+                                      child: MushafRaster(
+                                        file: file,
+                                        continuityKey: rasterIdentity,
+                                        builder: (image) => CustomPaint(
+                                          painter: MushafRasterPainter(
+                                            image: image,
+                                            layout: rasterLayout,
+                                          ),
+                                        ),
+                                        fallback: IqroAsyncError(
+                                          title: context.l10n.noQuranData,
+                                          onRetry: () =>
+                                              _retryAsset(pageData, asset),
+                                        ),
                                       ),
                                     ),
-                                    fallback: IqroAsyncError(
-                                      title: context.l10n.noQuranData,
-                                      onRetry: () =>
-                                          _retryAsset(pageData, asset),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            if (snapshot.hasError) {
-                              return IqroAsyncError(
-                                title: context.l10n.noQuranData,
-                                message: context.l10n.networkError,
-                                onRetry: () => _retryAsset(pageData, asset),
-                              );
-                            }
-                            return const IqroLoading();
-                          },
-                        ),
-                        RepaintBoundary(
-                          child: CustomPaint(
-                            painter: _AyahRegionPainter(
-                              regions: pageData.regions,
-                              selectedAyah: widget.selectedAyah,
-                              playingAyah: widget.playingAyah,
-                              highlightColors: widget.highlightColors,
-                              layout: rasterLayout,
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  return IqroAsyncError(
+                                    title: context.l10n.noQuranData,
+                                    message: context.l10n.networkError,
+                                    onRetry: () => _retryAsset(pageData, asset),
+                                  );
+                                }
+                                return const IqroLoading();
+                              },
                             ),
-                          ),
+                            RepaintBoundary(
+                              child: CustomPaint(
+                                painter: _AyahRegionPainter(
+                                  regions: pageData.regions,
+                                  selectedAyah: widget.selectedAyah,
+                                  playingAyah: widget.playingAyah,
+                                  highlightColors: widget.highlightColors,
+                                  layout: rasterLayout,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
