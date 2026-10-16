@@ -22,13 +22,25 @@ SURAH_HEADER_FONT_SHA256 = "de261a309bdd42262e1a268d5ead56b6ea8366cd59124baedea3
 FIRST_SURAH_GLYPH_ID = 4
 
 
-def surah_header(verse_mapping: dict[str, str]) -> dict[str, Any] | None:
-    """Heading glyphs for the surahs whose first ayah is on this page."""
-    surahs = sorted(
+def surah_header(
+    verse_mapping: dict[str, str],
+    layout: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Heading glyphs for every surah title drawn on this page.
+
+    That is each surah whose first ayah is here, plus any title row of the page
+    layout: printed Mushafs often end a page with the next surah's title while
+    its first ayah opens the following page.
+    """
+    titled = {
         int(surah)
         for surah, ranges in verse_mapping.items()
-        if str(ranges).split("-")[0].strip() == "1" and 1 <= int(surah) <= 114
-    )
+        if str(ranges).split("-")[0].strip() == "1"
+    }
+    for row in (layout or {}).get("lines") or []:
+        if row.get("line_type") == "surah_name" and row.get("surah_number"):
+            titled.add(int(row["surah_number"]))
+    surahs = sorted(surah for surah in titled if 1 <= surah <= 114)
     if not surahs:
         return None
     return {

@@ -473,7 +473,7 @@ class QuranRepository {
     bool forceRefresh = false,
   }) async {
     final key =
-        '${mushaf.pageCacheKey(page)}${foundationVersion.isEmpty ? '' : ':$foundationVersion'}${mushaf.isFoundation ? ':qul-layout-v1:surah-header-v1' : ''}';
+        '${mushaf.pageCacheKey(page)}${foundationVersion.isEmpty ? '' : ':$foundationVersion'}${mushaf.isFoundation ? ':qul-layout-v1:surah-header-v2' : ''}';
     final cached = await _database.readCache(key);
     MushafPageData? previous;
     if (cached != null) {
