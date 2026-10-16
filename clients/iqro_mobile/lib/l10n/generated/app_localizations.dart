@@ -246,6 +246,24 @@ abstract class AppLocalizations {
   /// **'Lavender'**
   String get highlightColorLavender;
 
+  /// No description provided for @removeHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove highlight'**
+  String get removeHighlight;
+
+  /// No description provided for @removeHighlightWithNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This ayah\'s note will be removed too.'**
+  String get removeHighlightWithNote;
+
+  /// No description provided for @highlightRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight removed'**
+  String get highlightRemoved;
+
   /// No description provided for @repeatSelectedAyah.
   ///
   /// In en, this message translates to:

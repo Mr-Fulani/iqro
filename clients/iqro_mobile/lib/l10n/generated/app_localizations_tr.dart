@@ -86,6 +86,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get highlightColorLavender => 'Lavanta';
 
   @override
+  String get removeHighlight => 'Vurguyu kaldır';
+
+  @override
+  String get removeHighlightWithNote => 'Bu ayetin notu da silinecek.';
+
+  @override
+  String get highlightRemoved => 'Vurgu kaldırıldı';
+
+  @override
   String get repeatSelectedAyah => 'Seçili ayeti tekrarla';
 
   @override

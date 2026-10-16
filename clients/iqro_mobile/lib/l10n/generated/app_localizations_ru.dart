@@ -95,6 +95,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get highlightColorLavender => 'Лавандовый';
 
   @override
+  String get removeHighlight => 'Убрать выделение';
+
+  @override
+  String get removeHighlightWithNote =>
+      'Заметка к этому аяту тоже будет удалена.';
+
+  @override
+  String get highlightRemoved => 'Выделение убрано';
+
+  @override
   String get repeatSelectedAyah => 'Повторять выбранный аят';
 
   @override

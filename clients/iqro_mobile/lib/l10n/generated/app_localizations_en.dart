@@ -92,6 +92,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get highlightColorLavender => 'Lavender';
 
   @override
+  String get removeHighlight => 'Remove highlight';
+
+  @override
+  String get removeHighlightWithNote =>
+      'This ayah\'s note will be removed too.';
+
+  @override
+  String get highlightRemoved => 'Highlight removed';
+
+  @override
   String get repeatSelectedAyah => 'Repeat selected ayah';
 
   @override

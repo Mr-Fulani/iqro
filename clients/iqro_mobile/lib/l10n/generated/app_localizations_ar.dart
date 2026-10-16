@@ -86,6 +86,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get highlightColorLavender => 'لافندر';
 
   @override
+  String get removeHighlight => 'إزالة التمييز';
+
+  @override
+  String get removeHighlightWithNote => 'ستُحذف ملاحظة هذه الآية أيضًا.';
+
+  @override
+  String get highlightRemoved => 'أُزيل التمييز';
+
+  @override
   String get repeatSelectedAyah => 'تكرار الآية المحددة';
 
   @override
