@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 
+from django.core.cache import cache
 from django.db.models import (
     Case,
     Count,
@@ -111,6 +113,53 @@ def public_recitations() -> QuerySet[RecitationEdition]:
         )
         .order_by("code", "version", "id")
     )
+
+
+RECITATION_SUMMARY_FIELDS = (
+    "track_count",
+    "surah_track_count",
+    "timing_segment_count",
+    "expected_ayah_count",
+    "timed_ayah_count",
+)
+RECITATION_SUMMARY_CACHE_KEY = "audio:public-recitation-summaries:v1"
+# Matches the public API's max-age, so cached summaries are never staler than
+# what clients and the gateway edge cache already serve.
+RECITATION_SUMMARY_TTL_SECONDS = 300
+
+
+def _recitation_summaries(ids: list[uuid.UUID] | None = None) -> dict[str, dict[str, int]]:
+    recitations = public_recitations()
+    if ids is not None:
+        recitations = recitations.filter(id__in=ids)
+    return {
+        str(row["id"]): {field: int(row[field] or 0) for field in RECITATION_SUMMARY_FIELDS}
+        for row in recitations.values("id", *RECITATION_SUMMARY_FIELDS)
+    }
+
+
+def attach_recitation_summaries(recitations: Iterable[RecitationEdition]) -> None:
+    """Set the catalog summary attributes that public_recitations() annotates.
+
+    The annotations aggregate over every track and segment (about a second on
+    a realistic catalog), so all public summaries are computed in one query and
+    cached; recitations missing from the cache, such as one just published, are
+    computed on the spot and added.
+    """
+    items = list(recitations)
+    if not items:
+        return
+    summaries: dict[str, dict[str, int]] | None = cache.get(RECITATION_SUMMARY_CACHE_KEY)
+    if summaries is None:
+        summaries = _recitation_summaries()
+        cache.set(RECITATION_SUMMARY_CACHE_KEY, summaries, RECITATION_SUMMARY_TTL_SECONDS)
+    missing = [item.id for item in items if str(item.id) not in summaries]
+    if missing:
+        summaries = {**summaries, **_recitation_summaries(missing)}
+        cache.set(RECITATION_SUMMARY_CACHE_KEY, summaries, RECITATION_SUMMARY_TTL_SECONDS)
+    for item in items:
+        for field, value in summaries.get(str(item.id), {}).items():
+            setattr(item, field, value)
 
 
 def public_reciters() -> QuerySet[Reciter]:
