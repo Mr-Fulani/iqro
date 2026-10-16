@@ -13,6 +13,7 @@ import '../core/background/background_maintenance_service.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/notifications/notification_gateway.dart';
+import '../core/storage/cache_maintenance.dart';
 import '../core/storage/local_database.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
@@ -107,6 +108,9 @@ final backgroundMaintenanceProvider = Provider<BackgroundMaintenanceService>(
 );
 final offlineStorageRepositoryProvider = Provider<OfflineStorageRepository>(
   (ref) => OfflineStorageRepository(database: ref.watch(localDatabaseProvider)),
+);
+final cacheMaintenanceProvider = Provider<CacheMaintenance>(
+  (ref) => CacheMaintenance(database: ref.watch(localDatabaseProvider)),
 );
 final offlinePackagesProvider =
     FutureProvider.autoDispose<List<OfflinePackageSummary>>(
