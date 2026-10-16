@@ -644,6 +644,9 @@ class FoundationMushafPage {
       ? const {}
       : jsonMap(value['layout']);
   bool get hasQulLayout => layout['version'] == 1;
+  late final Map<String, Object?> surahHeader = value['surah_header'] == null
+      ? const {}
+      : jsonMap(value['surah_header']);
   late final List<Map<String, Object?>> layoutLines =
       (layout['lines'] as List? ?? [])
           .whereType<Map>()

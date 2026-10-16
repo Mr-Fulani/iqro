@@ -14,6 +14,8 @@ import '../../core/design_system/iqro_widgets.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'quran_models.dart';
+import 'surah_header_frame.dart';
+import 'truetype_glyph.dart';
 
 final _fontLoads = <String, Future<void>>{};
 
@@ -22,10 +24,14 @@ class FoundationPageResources {
     this.fontFamily,
     this.decorationFontFamily,
     this.images = const {},
+    this.surahHeaders = const {},
   });
   final String? fontFamily;
   final String? decorationFontFamily;
   final Map<int, ui.Image> images;
+
+  /// Printed heading outlines from the source's surah-header font, by surah.
+  final Map<int, GlyphOutline> surahHeaders;
   void dispose() {
     for (final image in images.values) {
       image.dispose();
@@ -58,13 +64,40 @@ Future<FoundationPageResources> loadFoundationPageResources(
     return family;
   }
 
+  // An unavailable or changed heading font keeps IQRO's drawn cartouche.
+  Future<Map<int, GlyphOutline>> loadSurahHeaders() async {
+    final header = page.surahHeader;
+    if (header.isEmpty) return const {};
+    try {
+      final checksum = header['font_sha256'] as String;
+      final bytes = await (await asset(
+        Uri.parse(header['font_url'] as String),
+        checksum,
+      )).readAsBytes();
+      if (sha256.convert(bytes).toString() != checksum) return const {};
+      final font = ByteData.sublistView(bytes);
+      return {
+        for (final MapEntry(:key, :value)
+            in (header['glyph_ids'] as Map).entries)
+          int.parse(key.toString()): ?readTrueTypeGlyph(
+            font,
+            (value as num).toInt(),
+          ),
+      };
+    } on Object {
+      return const {};
+    }
+  }
+
   final decorationFamily = page.hasQulLayout
       ? await loadFont(page.layout['native_decoration_font_url'] as String)
       : null;
+  final surahHeaders = await loadSurahHeaders();
   if (page.rendering['mode'] != 'word-images') {
     return FoundationPageResources(
       fontFamily: await loadFont(page.rendering['native_font_url'] as String),
       decorationFontFamily: decorationFamily,
+      surahHeaders: surahHeaders,
     );
   }
   final images = <int, ui.Image>{};
@@ -91,6 +124,7 @@ Future<FoundationPageResources> loadFoundationPageResources(
     return FoundationPageResources(
       images: images,
       decorationFontFamily: decorationFamily,
+      surahHeaders: surahHeaders,
     );
   } on Object {
     for (final image in images.values) {
@@ -345,7 +379,7 @@ class FoundationPageLayout {
     FoundationPageResources resources,
     this.size,
     List<Surah> surahs,
-  ) {
+  ) : _surahHeaders = resources.surahHeaders {
     final lines = <int, List<_WordPaint>>{};
     for (final word in page.words) {
       final key = (word['verse_key'] as String).split(':');
@@ -477,11 +511,15 @@ class FoundationPageLayout {
       for (final row in page.layoutLines) {
         final kind = row['line_type'];
         if (kind == 'ayah') continue;
-        final name = surahs
-            .where((s) => s.number == row['surah_number'])
-            .firstOrNull
-            ?.nameAr;
-        if (kind == 'surah_name' && name == null) continue;
+        final surah = kind == 'surah_name'
+            ? (row['surah_number'] as num?)?.toInt()
+            : null;
+        final name = surahs.where((s) => s.number == surah).firstOrNull?.nameAr;
+        if (kind == 'surah_name' &&
+            name == null &&
+            !_surahHeaders.containsKey(surah)) {
+          continue;
+        }
         _decoration(
           kind == 'basmallah'
               ? 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
@@ -491,6 +529,7 @@ class FoundationPageLayout {
           paddingY,
           size.width * (kind == 'basmallah' ? .045 : .038),
           fontFamily: resources.decorationFontFamily,
+          surah: surah,
         );
       }
       return;
@@ -515,7 +554,7 @@ class FoundationPageLayout {
           size.width * .045,
         );
       }
-      if (name != null &&
+      if ((name != null || _surahHeaders.containsKey(reference.surah)) &&
           reference.surah > 2 &&
           line > 2 &&
           !lines.containsKey(line - 2)) {
@@ -525,6 +564,7 @@ class FoundationPageLayout {
           rowHeight,
           paddingY,
           size.width * .038,
+          surah: reference.surah,
         );
       }
     }
@@ -532,6 +572,11 @@ class FoundationPageLayout {
   final Size size;
   final words = <_WordPaint>[];
   final decorations = <(TextPainter, Offset)>[];
+  final frames = <Rect>[];
+  final headers = <(GlyphOutline, Rect)>[];
+  final Map<int, GlyphOutline> _surahHeaders;
+
+  /// Adds a basmala, or the title of [surah] in its printed heading.
   void _decoration(
     String value,
     double line,
@@ -539,7 +584,41 @@ class FoundationPageLayout {
     double top,
     double fontSize, {
     String? fontFamily,
+    int? surah,
   }) {
+    final centerY = top + (line - .5) * height;
+    final heading = _surahHeaders[surah];
+    if (heading != null) {
+      // The source heading already contains the cartouche and the name; fit
+      // it to the text block and the row reserved for it.
+      final bounds = heading.bounds;
+      final scale = math.min(
+        size.width * .88 / bounds.width,
+        height * .92 / bounds.height,
+      );
+      headers.add((
+        heading,
+        Rect.fromCenter(
+          center: Offset(size.width / 2, centerY),
+          width: bounds.width * scale,
+          height: bounds.height * scale,
+        ),
+      ));
+      return;
+    }
+    if (surah != null) {
+      // The printed cartouche spans the text block and the row reserved for
+      // the surah name; the title shrinks only when a short row needs it.
+      final frameHeight = math.min(height * .92, fontSize * 2.4);
+      fontSize = frameHeight / 2.4;
+      frames.add(
+        Rect.fromCenter(
+          center: Offset(size.width / 2, centerY),
+          width: size.width * .88,
+          height: frameHeight,
+        ),
+      );
+    }
     final text = TextPainter(
       text: TextSpan(
         text: value,
@@ -553,10 +632,7 @@ class FoundationPageLayout {
     )..layout(maxWidth: size.width * .9);
     decorations.add((
       text,
-      Offset(
-        (size.width - text.width) / 2,
-        top + (line - .5) * height - text.height / 2,
-      ),
+      Offset((size.width - text.width) / 2, centerY - text.height / 2),
     ));
   }
 
@@ -647,6 +723,18 @@ class FoundationPagePainter extends CustomPainter {
       }
     }
     if (onlyAyah == null) {
+      for (final frame in layout.frames) {
+        paintSurahHeaderFrame(canvas, frame);
+      }
+      for (final (heading, rect) in layout.headers) {
+        canvas
+          ..save()
+          ..translate(rect.left, rect.top)
+          ..scale(rect.width / heading.bounds.width)
+          ..translate(-heading.bounds.left, -heading.bounds.top)
+          ..drawPath(heading.path, Paint()..color = mushafInkColor)
+          ..restore();
+      }
       for (final decoration in layout.decorations) {
         decoration.$1.paint(canvas, decoration.$2);
       }

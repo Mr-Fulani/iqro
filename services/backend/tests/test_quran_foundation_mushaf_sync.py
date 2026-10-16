@@ -421,6 +421,7 @@ def test_public_mushaf_catalog_and_page_api(api_client: APIClient) -> None:
     assert page.json()["font_name"] == "v2"
     assert page.json()["rendering"]["font_url"].endswith("/p1.woff2")
     assert [word["text"] for word in page.json()["words"]] == ["ﱁ", "ﱂ"]
+    assert page.json()["surah_header"]["glyph_ids"] == {"1": 4}
 
 
 @pytest.mark.parametrize(

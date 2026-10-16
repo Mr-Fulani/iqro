@@ -498,6 +498,12 @@ export type QuranFoundationMushafPage = {
       surah_number: number | null;
     }[];
   } | null;
+  /** Printed headings from the source's surah-header font, by surah number. */
+  surah_header?: {
+    font_url: string;
+    font_sha256: string;
+    glyph_ids: Record<string, number>;
+  } | null;
   page_number: number;
   pages_count?: number;
   lines_per_page?: number;
