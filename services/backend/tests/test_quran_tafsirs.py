@@ -4,7 +4,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from quran_backend.modules.audio.quran_foundation import (
@@ -291,7 +293,8 @@ def test_public_tafsir_catalog_and_surah_api(api_client: APIClient) -> None:
     )
 
     catalog = api_client.get("/api/v1/quran/tafsirs?language=ar")
-    surah = api_client.get("/api/v1/quran/tafsirs/16/surahs/1")
+    with CaptureQueriesContext(connection) as queries:
+        surah = api_client.get("/api/v1/quran/tafsirs/16/surahs/1")
 
     assert catalog.status_code == 200
     assert catalog.json()[0]["source_id"] == 16
@@ -301,3 +304,5 @@ def test_public_tafsir_catalog_and_surah_api(api_client: APIClient) -> None:
     assert surah.json()[0]["verse_key"] == "1:1"
     assert surah.json()[0]["end_verse_key"] == "1:2"
     assert "source_text" not in surah.json()[0]
+    # The provider HTML is never serialized, so it is not read from the database.
+    assert not any("source_text" in query["sql"] for query in queries.captured_queries)

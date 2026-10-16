@@ -578,6 +578,10 @@ FEEDBACK_MAX_OPEN_TICKETS_PER_USER = int(
 )
 FEEDBACK_MAX_MESSAGES_PER_TICKET = int(os.getenv("QURAN_FEEDBACK_MAX_MESSAGES_PER_TICKET", "100"))
 
+# The schema is public and takes 0.3-0.8 s of CPU to generate (about 300 KB);
+# it only changes with a deploy. Local settings turn the cache off.
+OPENAPI_SCHEMA_CACHE_SECONDS = non_negative_env_int("OPENAPI_SCHEMA_CACHE_SECONDS", 3600)
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "Quran Platform API",
     "DESCRIPTION": "Backend API for Quran Platform clients.",

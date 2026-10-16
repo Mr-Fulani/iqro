@@ -28,11 +28,15 @@ def published_surah_translation(
     source_id: int,
     surah_number: int,
 ) -> QuerySet[AyahTranslation]:
-    return AyahTranslation.objects.filter(
-        edition_version__edition__environment=environment,
-        edition_version__edition__source_id=source_id,
-        edition_version__edition__is_available=True,
-        edition_version__edition__active_version=models.F("edition_version"),
-        edition_version__status="published",
-        surah_number=surah_number,
-    ).order_by("ayah_number")
+    return (
+        AyahTranslation.objects.filter(
+            edition_version__edition__environment=environment,
+            edition_version__edition__source_id=source_id,
+            edition_version__edition__is_available=True,
+            edition_version__edition__active_version=models.F("edition_version"),
+            edition_version__status="published",
+            surah_number=surah_number,
+        )
+        .defer("source_text")
+        .order_by("ayah_number")
+    )  # provider HTML, never serialized
