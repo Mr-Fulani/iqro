@@ -4,6 +4,7 @@ import logging
 import secrets
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from celery.beat import Scheduler
@@ -99,6 +100,13 @@ class RedisLease:
         self.client.close()
 
 
+def _touch_heartbeat() -> None:
+    """Mark this Beat as alive for the container healthcheck (lease held and renewed)."""
+    path = settings.CELERY_BEAT_HEARTBEAT_FILE
+    if path:
+        Path(path).touch()
+
+
 class SingletonRedisScheduler(Scheduler):  # type: ignore[misc]
     """In-memory Celery scheduler protected by a renewable Redis singleton lease."""
 
@@ -138,6 +146,7 @@ class SingletonRedisScheduler(Scheduler):  # type: ignore[misc]
 
         self._lease = lease
         self._next_renew_at = self._monotonic() + self._renew_interval_seconds
+        _touch_heartbeat()
         logger.info("Acquired Celery Beat singleton lease", extra={"lease_key": lease.key})
 
     def tick(self, *args: Any, **kwargs: Any) -> float:
@@ -157,6 +166,7 @@ class SingletonRedisScheduler(Scheduler):  # type: ignore[misc]
             now = self._monotonic()
             next_renew_at = now + self._renew_interval_seconds
             self._next_renew_at = next_renew_at
+            _touch_heartbeat()
 
         delay = cast(float, super().tick(*args, **kwargs))
         return min(delay, max(0.0, next_renew_at - self._monotonic()))

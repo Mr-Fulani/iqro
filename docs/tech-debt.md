@@ -91,12 +91,10 @@ staging и сверить 5xx, p95/p99 и запас соединений Postgr
   - добавить в кэшируемые пути `variants/`, `dua/`, `calendar/` и `site/`;
   - вынести кэш на volume 256–512 МБ;
   - убрать `Vary: Accept-Language` из публичных ответов `/api/`.
-- PostgreSQL: `shared_buffers` под лимит контейнера, `pg_stat_statements`,
-  `log_min_duration_statement`.
 - Healthcheck:
   - у web — лёгкий endpoint вместо полного SSR лендинга;
-  - добавить healthcheck для `worker` и `beat`;
-  - перезапускать unhealthy-контейнеры.
+  - перезапускать unhealthy-контейнеры (Docker сам этого не делает; worker и beat уже
+    отмечаются unhealthy).
 - Собирать образы в CI и тянуть их из registry, а не собирать на production-хосте
   (`make production-build`).
 - Кэшировать `/_next/static` на gateway.

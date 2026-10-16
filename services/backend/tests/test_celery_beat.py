@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -136,4 +138,26 @@ def test_scheduler_exits_fail_closed_after_lease_loss(monkeypatch: pytest.Monkey
     with pytest.raises(BeatLeaseLostError, match="was lost"):
         scheduler.tick()
 
+    scheduler.close()
+
+
+def test_scheduler_heartbeat_tracks_lease_renewals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, settings: Any
+) -> None:
+    heartbeat = tmp_path / "beat.heartbeat"
+    settings.CELERY_BEAT_HEARTBEAT_FILE = str(heartbeat)
+    client = FakeRedis()
+    lease = make_lease(client, token="owner")
+    clock = [0.0]
+    monkeypatch.setattr(RedisLease, "from_url", lambda **_kwargs: lease)
+
+    scheduler = SingletonRedisScheduler(app=make_app(), monotonic=lambda: clock[0])
+    assert heartbeat.exists()
+
+    os.utime(heartbeat, (0, 0))
+    clock[0] = 20.0
+    scheduler.tick()
+
+    assert client.renewals == 1
+    assert heartbeat.stat().st_mtime > 0
     scheduler.close()

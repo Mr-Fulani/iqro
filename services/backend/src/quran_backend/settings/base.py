@@ -649,6 +649,8 @@ CELERY_BEAT_LOCK_KEY = os.getenv("CELERY_BEAT_LOCK_KEY", "quran-platform:celery-
 if not CELERY_BEAT_LOCK_KEY:
     raise ImproperlyConfigured("CELERY_BEAT_LOCK_KEY must not be empty")
 CELERY_BEAT_LOCK_TTL_SECONDS = positive_env_int("CELERY_BEAT_LOCK_TTL_SECONDS", 60)
+# Touched on every lease acquire/renewal; the Beat container healthcheck reads its age.
+CELERY_BEAT_HEARTBEAT_FILE = os.getenv("CELERY_BEAT_HEARTBEAT_FILE", "").strip()
 CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS = positive_env_int(
     "CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS",
     20,

@@ -91,6 +91,28 @@ services:
       context: ./ops/postgres
     restart: unless-stopped
     init: true
+    # Sized for mem_limit 1536m: shared_buffers ~25%, the rest is OS page cache.
+    # pg_stat_statements and the slow-statement log are for tuning and incidents.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-384MB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-1GB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-8MB}
+      - -c
+      - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-128MB}
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=top
+      - -c
+      - log_min_duration_statement=${POSTGRES_LOG_MIN_DURATION_MS:-500}
+      - -c
+      - track_io_timing=on
+    # Let PostgreSQL finish a fast shutdown instead of being killed after 10 s.
+    stop_grace_period: 60s
     environment:
       POSTGRES_DB: ${DATABASE_NAME:?Set DATABASE_NAME in the production env file}
       POSTGRES_USER: ${DATABASE_USER:?Set DATABASE_USER in the production env file}
@@ -256,6 +278,13 @@ services:
       - --loglevel=INFO
       - --concurrency=${CELERY_WORKER_CONCURRENCY:-4}
     stop_grace_period: 60s
+    healthcheck:
+      # The worker answers a broker round-trip addressed to its own node.
+      test: ["CMD-SHELL", "celery -A quran_backend.celery inspect ping --destination celery@$$HOSTNAME --timeout 10 >/dev/null"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -279,6 +308,16 @@ services:
       - --scheduler=quran_backend.celery_beat.SingletonRedisScheduler
       - --max-interval=${CELERY_BEAT_MAX_LOOP_INTERVAL_SECONDS:-5}
     stop_grace_period: 60s
+    environment:
+      <<: *backend-environment
+      CELERY_BEAT_HEARTBEAT_FILE: /tmp/celery-beat.heartbeat
+    healthcheck:
+      # Touched on every lease renewal (every CELERY_BEAT_LOCK_RENEW_INTERVAL_SECONDS).
+      test: ["CMD", "python", "-c", "import os, sys, time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/celery-beat.heartbeat') < 90 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
