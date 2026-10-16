@@ -15,7 +15,7 @@ SURAH_HEADER_FONT_URL = (
     "https://static-cdn.tarteel.ai/qul/fonts/surah-names/surah-header/"
     "QCF_SurahHeader_COLOR-Regular.ttf"
 )
-# Version 1.000, 8 September 2025. A different file falls back to IQRO's frame
+# Version 1.000, 8 September 2025. A different file falls back to the text title
 # instead of trusting glyph ids that might point at another surah.
 SURAH_HEADER_FONT_SHA256 = "de261a309bdd42262e1a268d5ead56b6ea8366cd59124baedea3903561d7370b"
 # Glyphs follow .notdef, uni0000, uni0009 and space in surah order.

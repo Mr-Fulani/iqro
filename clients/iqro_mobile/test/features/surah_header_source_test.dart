@@ -132,7 +132,7 @@ void main() {
     expect(changed.surahHeaders, isEmpty);
   });
 
-  test('a source heading replaces the drawn cartouche and title', () {
+  test('a source heading replaces the text title', () {
     const size = Size(360, 552);
     final layout = FoundationPageLayout(
       _page(),
@@ -141,7 +141,6 @@ void main() {
       const [],
     );
     addTearDown(layout.dispose);
-    expect(layout.frames, isEmpty);
     expect(layout.decorations, isEmpty);
     final (_, rect) = layout.headers.single;
     const rowHeight = 552 * .93 / 15;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
-import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 
 const _size = Size(360, 552);
@@ -58,24 +57,23 @@ FoundationPageLayout _layout(FoundationMushafPage page) {
   return layout;
 }
 
-void _expectPrintedCartouche(FoundationPageLayout layout, double row) {
-  expect(layout.frames, hasLength(1));
-  final frame = layout.frames.single;
-  // The cartouche spans the text block and stays inside its reserved row.
-  expect(frame.left, closeTo(_size.width * .06, .001));
-  expect(frame.right, closeTo(_size.width * .94, .001));
-  final rowTop = _size.height * .035 + (row - 1) * _rowHeight;
-  expect(frame.top, greaterThanOrEqualTo(rowTop));
-  expect(frame.bottom, lessThanOrEqualTo(rowTop + _rowHeight));
+/// Without the source heading font the title stays plain text, centred on
+/// its reserved row at the size it had before source headings existed.
+void _expectPlainTitle(FoundationPageLayout layout, double row) {
+  expect(layout.headers, isEmpty);
   final title = layout.decorations.firstWhere(
     (decoration) => decoration.$1.plainText.startsWith('سُورَةُ'),
   );
-  expect((title.$2 & title.$1.size).center.dy, closeTo(frame.center.dy, .001));
-  expect(title.$1.width, lessThan(frame.width / 2));
+  final rowTop = _size.height * .035 + (row - 1) * _rowHeight;
+  expect(
+    (title.$2 & title.$1.size).center.dy,
+    closeTo(rowTop + _rowHeight / 2, .001),
+  );
+  expect(title.$1.text!.style!.fontSize, closeTo(_size.width * .038, .001));
 }
 
 void main() {
-  test('QUL surah_name rows get the cartouche, basmala rows do not', () {
+  test('QUL surah_name rows keep a plain title above the basmala', () {
     final layout = _layout(
       _page(
         pageNumber: 106,
@@ -90,10 +88,10 @@ void main() {
       ),
     );
     expect(layout.decorations, hasLength(2));
-    _expectPrintedCartouche(layout, 7);
+    _expectPlainTitle(layout, 7);
   });
 
-  test('QUL opening page frames Al-Fatihah in its centred block', () {
+  test('QUL opening page titles Al-Fatihah in its centred block', () {
     final layout = _layout(
       _page(
         pageNumber: 1,
@@ -108,22 +106,22 @@ void main() {
     );
     expect(layout.decorations, hasLength(1));
     // Page 1 centres its four source rows: (15 - 4) / 2 rows of offset.
-    _expectPrintedCartouche(layout, 2 + 5.5);
+    _expectPlainTitle(layout, 2 + 5.5);
   });
 
-  test('fallback rows frame At-Tawbah, which has no basmala', () {
+  test('fallback rows title At-Tawbah, which has no basmala', () {
     final layout = _layout(_page(pageNumber: 187, surah: 9, firstLine: 3));
     expect(layout.decorations.map((d) => d.$1.plainText), ['سُورَةُ التوبة']);
-    _expectPrintedCartouche(layout, 1);
+    _expectPlainTitle(layout, 1);
   });
 
-  test('fallback rows frame the title above the basmala', () {
+  test('fallback rows title the surah above the basmala', () {
     final layout = _layout(_page(pageNumber: 106, surah: 5, firstLine: 3));
     expect(layout.decorations, hasLength(2));
-    _expectPrintedCartouche(layout, 1);
+    _expectPlainTitle(layout, 1);
   });
 
-  testWidgets('page canvas paints the cartouche beneath the surah title', (
+  testWidgets('page canvas paints only text without a source heading', (
     tester,
   ) async {
     final page = _page(
@@ -156,24 +154,12 @@ void main() {
         ),
       ),
     );
-    // Paint keeps 8-bit channels, so compare packed colors.
-    final band = mushafAccentColor.withValues(alpha: .2).toARGB32();
-    bool Function(Symbol, List<dynamic>) banded(Symbol draw) =>
-        (method, arguments) =>
-            method == draw && (arguments[1] as Paint).color.toARGB32() == band;
-    expect(
-      find.descendant(
-        of: find.byType(FoundationPageCanvas),
-        matching: find.byType(CustomPaint),
-      ),
-      paints
-        // Left end cap, patterned middle band, mirrored right end cap…
-        ..something(banded(#drawPath))
-        ..something(banded(#drawRect))
-        ..something(banded(#drawPath))
-        // …then the title text on top of the frame.
-        ..paragraph(),
+    final canvas = find.descendant(
+      of: find.byType(FoundationPageCanvas),
+      matching: find.byType(CustomPaint),
     );
+    expect(canvas, paints..paragraph());
+    expect(canvas, isNot(paints..path()));
     expect(tester.takeException(), isNull);
   });
 }
