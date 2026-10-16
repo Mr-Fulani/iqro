@@ -15,7 +15,8 @@
       "locale": "ar",
       "direction": "rtl",
       "template": "published-surah"
-    }
+    },
+    { "path": "/ru/quran", "locale": "ru", "direction": "ltr", "template": "quran-reader" }
   ],
   "categories": {
     "performance": 0.75,

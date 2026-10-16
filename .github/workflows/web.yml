@@ -41,6 +41,10 @@ jobs:
         run: npm run typecheck
       - name: Shared cache handler tests
         run: npm run test:cache
+      - name: Public contract unit tests
+        run: npm run test:public-contracts
+      - name: Mushaf unit tests
+        run: npm run test:mushaf
       - name: Production build
         run: npm run build
       - name: Install Chromium
