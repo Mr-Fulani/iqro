@@ -207,14 +207,26 @@ Budget staging overlay на CX23 намеренно остаётся с одно
 
 Стартовый S0 работает напрямую с PostgreSQL (`DATABASE_POOL_MODE=direct`) и объявляет максимум
 100 соединений, из которых 20 зарезервированы для администратора, мониторинга и аварийных
-операций. Текущая topology оценивается в 19 application clients: API ограничен как
-`GUNICORN_WORKERS=2` × `API_MAX_CONCURRENT_REQUESTS_PER_WORKER=5`, Celery —
-`CELERY_WORKER_CONCURRENCY=4`, ещё один client выделен Beat и по два — release-job и
-operations. Production ASGI всегда требует `DATABASE_CONN_MAX_AGE=0`.
+операций. Текущая topology оценивается в 25 application clients: API — это
+`GUNICORN_WORKERS=2` процесса, каждый держит пул не больше `DATABASE_API_POOL_MAX_SIZE=8`
+соединений (Django/psycopg pool, `DATABASE_POOL_ENABLED=true` только у сервиса `backend`);
+Celery — `CELERY_WORKER_CONCURRENCY=4`, ещё один client выделен Beat и по два — release-job и
+operations. Production ASGI всегда требует `DATABASE_CONN_MAX_AGE=0`; пул с этим совместим и
+возвращает соединение в конце каждого запроса.
+
+`API_MAX_CONCURRENT_REQUESTS_PER_WORKER=32` — это лимит uvicorn, а не число соединений с БД:
+запросы сверх пула ждут свободное соединение до `DATABASE_POOL_TIMEOUT_SECONDS`. Uvicorn
+засчитывает в этот лимит и простаивающие keep-alive соединения, поэтому gateway держит
+`worker_processes 2` × `keepalive 8` и закрывает их через 4 с, раньше uvicorn (5 с);
+`ops/gateway/test_config.py` проверяет, что простаивающие соединения занимают не больше половины
+слотов API. Замер на dev-стенде (`/api/v1/health/ready`, 2 процесса): при прежних 2 × 5 уже
+16 keep-alive клиентов получали 94% ответов 503; при 2 × 32 с пулом 8 — 0 ошибок, около 230 RPS
+и p95 ≈ 200 мс при 32 клиентах, 16 соединений с PostgreSQL.
 
 Перед добавлением реплик направьте `DATABASE_HOST`/`DATABASE_PORT` на PgBouncer и установите
-`DATABASE_POOL_MODE=transaction`. Настройки автоматически отключат server-side cursors и
-автоматические prepared statements. У PgBouncer настройте тот же бюджет:
+`DATABASE_POOL_MODE=transaction` и `DATABASE_API_POOL_MAX_SIZE=0` (с PgBouncer клиентский пул
+не нужен, и настройки откажутся стартовать с обоими). Настройки автоматически отключат
+server-side cursors и автоматические prepared statements. У PgBouncer настройте тот же бюджет:
 
 ```ini
 [pgbouncer]

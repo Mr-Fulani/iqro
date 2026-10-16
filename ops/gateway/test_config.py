@@ -30,6 +30,21 @@ class GatewayConfigTests(unittest.TestCase):
         self.assertIn("zone quran_web 64k;", self.config)
         self.assertIn("server web:3000 resolve;", self.config)
 
+    def test_idle_upstream_connections_fit_api_slots_and_close_first(self) -> None:
+        dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+        compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")
+        workers = int(re.search(r"worker_processes (\d+);", dockerfile).group(1))
+        keepalive = int(re.search(r"upstream quran_backend \{[^}]*keepalive (\d+);", self.config).group(1))
+        api_workers = int(re.search(r"GUNICORN_WORKERS: \$\{GUNICORN_WORKERS:-(\d+)\}", compose).group(1))
+        api_slots = int(
+            re.search(
+                r"API_MAX_CONCURRENT_REQUESTS_PER_WORKER: \$\{API_MAX_CONCURRENT_REQUESTS_PER_WORKER:-(\d+)\}",
+                compose,
+            ).group(1)
+        )
+        self.assertLessEqual(workers * keepalive, api_workers * api_slots // 2)
+        self.assertEqual(self.config.count("keepalive_timeout 4s;"), 2)
+
     def test_public_cache_is_bounded_and_varies_by_cors_and_representation(self) -> None:
         self.assertIn("keys_zone=quran_public_api:4m", self.config)
         self.assertIn("max_size=24m", self.config)
