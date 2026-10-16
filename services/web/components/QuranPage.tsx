@@ -2186,7 +2186,7 @@ function QuranContent() {
 export default function QuranPage() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<div style={{ padding: 32, textAlign: "center" }}>{t("quran.loading")}</div>}>
+    <Suspense fallback={<div className="quran-reader-boot">{t("quran.loading")}</div>}>
       <QuranContent />
     </Suspense>
   );

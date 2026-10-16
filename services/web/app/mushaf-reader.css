@@ -1,5 +1,39 @@
 /* The reader fills the visual viewport without changing the current page.
    Portrait contains the page; landscape keeps it wide and scrolls vertically. */
+/* Server HTML and the first paint show this placeholder until the client-only
+   reader mounts. It takes the reader's footprint so the swap does not shift the
+   page: a viewport-tall block on desktop and, where the reader opens immersive,
+   the same fixed sheet with the site chrome hidden. Keep the query in sync with
+   MOBILE_READER_QUERY in MushafReaderLayout.tsx. */
+.quran-reader-boot {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px), (hover: none) and (pointer: coarse), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  .quran-reader-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    background: #fffdf8;
+  }
+
+  body:has(.quran-reader-boot) {
+    overflow: hidden;
+  }
+
+  body:has(.quran-reader-boot) .app-header,
+  body:has(.quran-reader-boot) .mobile-navigation,
+  body:has(.quran-reader-boot) .global-audio-player-dock {
+    display: none;
+  }
+}
+
 html:has(.quran-page-layout) {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -40,7 +74,8 @@ body:has(.is-reader-immersive) .app-container > main {
 body:has(.is-reader-immersive) .app-header,
 body:has(.is-reader-immersive) .app-footer,
 body:has(.is-reader-immersive) .mobile-navigation,
-body:has(.is-reader-immersive) .global-audio-player-dock {
+body:has(.is-reader-immersive) .global-audio-player-dock,
+body:has(.quran-reader-boot) .app-footer {
   display: none;
 }
 

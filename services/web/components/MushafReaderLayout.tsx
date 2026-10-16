@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { useI18n } from "../lib/i18n-context";
 import { MobileDisclosure } from "./MobileDisclosure";
 
@@ -15,6 +15,18 @@ const ReaderContext = createContext<{
 } | null>(null);
 
 export function useMushafReader() { return useContext(ReaderContext); }
+
+function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
 
 function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" }) {
   const paths: Record<typeof name, ReactNode> = {
@@ -45,8 +57,13 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   const { t, formatNumber } = useI18n();
   const root = useRef<HTMLDivElement>(null);
   const panelTrigger = useRef<HTMLButtonElement | null>(null);
-  const [compact, setCompact] = useState(false);
-  const [landscape, setLandscape] = useState(false);
+  // Read the viewport during render rather than in an effect: in production the
+  // reader mounts on the client only (QuranPage suspends on search params), so
+  // phones open straight in the immersive layout instead of switching to it
+  // after the first paint (a layout shift above 1.0). When it is hydrated (dev
+  // renders it on the server), React reconciles from the `false` server value.
+  const compact = useMediaQuery(MOBILE_READER_QUERY);
+  const landscape = useMediaQuery("(orientation: landscape)");
   const [focused, setFocused] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -69,23 +86,10 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   }, [immersive, fullscreen, settingsTarget]);
 
   useEffect(() => {
-    const mobile = window.matchMedia(MOBILE_READER_QUERY);
-    const orientation = window.matchMedia("(orientation: landscape)");
-    const update = () => {
-      setCompact(mobile.matches);
-      setLandscape(orientation.matches);
-    };
     const updateFullscreen = () => setFullscreen(document.fullscreenElement === root.current);
-    update();
     setCanFullscreen(Boolean(document.fullscreenEnabled && root.current?.requestFullscreen));
-    mobile.addEventListener("change", update);
-    orientation.addEventListener("change", update);
     document.addEventListener("fullscreenchange", updateFullscreen);
-    return () => {
-      mobile.removeEventListener("change", update);
-      orientation.removeEventListener("change", update);
-      document.removeEventListener("fullscreenchange", updateFullscreen);
-    };
+    return () => document.removeEventListener("fullscreenchange", updateFullscreen);
   }, []);
 
   useEffect(() => {
