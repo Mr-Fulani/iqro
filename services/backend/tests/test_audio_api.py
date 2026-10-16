@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 from django.test import override_settings
@@ -1297,9 +1298,16 @@ def test_recitation_list_is_free_of_serializer_n_plus_one_queries(
         version="2.0.0",
     )
 
-    with CaptureQueriesContext(connection) as captured:
+    cache.clear()
+    with CaptureQueriesContext(connection) as cold:
         response = api_client.get(reverse("audio:recitation-list"))
+    with CaptureQueriesContext(connection) as warm:
+        cached = api_client.get(reverse("audio:recitation-list"))
 
     assert response.status_code == 200
     assert len(response.json()["results"]) == 2
-    assert len(captured) == 1
+    # The page itself, plus one query for every public recitation's summary.
+    assert len(cold) == 2
+    # Summaries come from the cache: only the page is queried.
+    assert len(warm) == 1
+    assert cached.json() == response.json()

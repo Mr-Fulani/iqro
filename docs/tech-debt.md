@@ -106,9 +106,9 @@ staging и сверить 5xx, p95/p99 и запас соединений Postgr
 
 ### API (аудит 2.2–2.5)
 
-- Хранить готовую сводку в `RecitationEdition` (`track_count`, `timed_ayah_count`,
-  `timings_complete`, `delivery`) и пересчитывать её при publish/sync, вместо трёх
-  `COUNT(DISTINCT)` на запрос.
+- Сводка каталога записей (`track_count`, `timed_ayah_count` и т. д.) теперь кэшируется на
+  5 минут. Осталось то же для `variant-ayah` и `variant-track`: по 8 запросов на вызов, а
+  `resolve_ayah` грузит всю суру ради одного аята (аудит 2.2).
 - HTTP-кэш:
   - для версионированного контента `max-age=31536000, immutable`;
   - ETag для остального считать заранее из checksum, а не после сериализации;

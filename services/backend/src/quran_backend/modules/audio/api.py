@@ -25,11 +25,11 @@ from quran_backend.modules.audio.models import (
     Reciter,
 )
 from quran_backend.modules.audio.selectors import (
+    attach_recitation_summaries,
     public_ayah_segments,
     public_quran_foundation_ayah_chapters,
     public_quran_foundation_ayah_recitations,
     public_recitation_base,
-    public_recitations,
     public_reciters,
     public_surah_tracks,
     public_tracks,
@@ -135,7 +135,7 @@ class RecitationListView(PublicReadOnlyViewMixin, generics.ListAPIView[Recitatio
     def get_queryset(self) -> QuerySet[RecitationEdition]:
         query = RecitationListQuerySerializer(data=self.request.query_params)
         query.is_valid(raise_exception=True)
-        recitations = public_recitations()
+        recitations = public_recitation_base()
         reciter_id = query.validated_data.get("reciter_id")
         if reciter_id is not None:
             recitations = recitations.filter(reciter_id=reciter_id)
@@ -147,6 +147,11 @@ class RecitationListView(PublicReadOnlyViewMixin, generics.ListAPIView[Recitatio
             recitations = recitations.filter(style=style)
         return recitations
 
+    def get_serializer(self, *args: Any, **kwargs: Any) -> RecitationEditionSerializer:
+        if args and isinstance(args[0], list):
+            attach_recitation_summaries(args[0])
+        return super().get_serializer(*args, **kwargs)  # type: ignore[return-value]
+
 
 @extend_schema(tags=["audio"])
 class RecitationDetailView(PublicReadOnlyViewMixin, generics.RetrieveAPIView[RecitationEdition]):
@@ -154,7 +159,12 @@ class RecitationDetailView(PublicReadOnlyViewMixin, generics.RetrieveAPIView[Rec
     lookup_url_kwarg = "recitation_id"
 
     def get_queryset(self) -> QuerySet[RecitationEdition]:
-        return public_recitations()
+        return public_recitation_base()
+
+    def get_object(self) -> RecitationEdition:
+        recitation = super().get_object()
+        attach_recitation_summaries([recitation])
+        return recitation
 
 
 @extend_schema(tags=["audio"])
