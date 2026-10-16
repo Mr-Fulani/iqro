@@ -1,112 +1,23 @@
 import { devices, expect, Locator, Page, test as base } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import {
+  alternateReciter,
+  alternateRecitation,
+  alternateTracks,
+  paginated,
+  recitation,
+  recitationsMatching,
+  reciter,
+  reciterPeopleCount,
+  reciters,
+  surahPlayback,
+  tracks,
+  tracksFor,
+} from "./fixtures/audio";
 import { syntheticHeadingFont } from "./truetype-fixture";
 
 const test = base.extend<{ nativeMedia: boolean }>({ nativeMedia: [false, { option: true }] });
-
-const reciter = {
-  id: "00000000-0000-7000-8000-000000000159",
-  slug: "qf-159-maher-al-muaiqly",
-  name_ar: "ماهر المعيقلي",
-  name_en: "Maher al-Muaiqly",
-  name_ru: "Махер аль-Муайкли",
-  country_code: "SA",
-};
-
-const recitation = {
-  id: "00000000-0000-7000-8000-000000001159",
-  code: "qf-159-murattal",
-  version: "2026.08.23-production",
-  style: "murattal",
-  reciter,
-  quran_edition: {
-    id: "00000000-0000-7000-8000-000000000001",
-    code: "madani-hafs",
-    content_version: "1.0.0",
-    riwayah: "Hafs 'an Asim",
-  },
-  rights: { stream: true, offline_download: false },
-  coverage: {
-    track_count: 114,
-    surah_count: 114,
-    expected_ayahs: 6236,
-    timed_ayahs: 6236,
-    complete: true,
-    timings_complete: true,
-  },
-  timings: { available: true, segment_count: 6236, complete: true },
-  capabilities: {
-    listen: true,
-    ayah_playback: true,
-    memorization: true,
-    offline: false,
-  },
-};
-
-const alternateReciter = {
-  id: "00000000-0000-7000-8000-000000000006",
-  slug: "qf-6-mahmoud-khaleel-al-husary",
-  name_ar: "محمود خليل الحصري",
-  name_en: "Mahmoud Khaleel Al-Husary",
-  name_ru: "Махмуд Халиль Аль-Хусари",
-  country_code: "EG",
-};
-
-const alternateRecitation = {
-  ...recitation,
-  id: "00000000-0000-7000-8000-000000001006",
-  code: "qf-6-murattal",
-  reciter: alternateReciter,
-};
-
-const tracks = Array.from({ length: 114 }, (_, index) => {
-  const surah = index + 1;
-  const asset = {
-    url: `https://audio.example.test/${String(surah).padStart(3, "0")}.mp3`,
-    content_type: "audio/mpeg",
-    codec: "mp3",
-    bitrate_kbps: 96,
-    bytes: 720_000,
-    sha256: null,
-    etag: null,
-    range_supported: false,
-    immutable: false,
-  };
-  return {
-    id: `00000000-0000-7000-8100-${String(surah).padStart(12, "0")}`,
-    recitation_id: recitation.id,
-    scope: "surah",
-    surah_number: surah,
-    juz_number: null,
-    duration_ms: 60_000,
-    offline_download_allowed: false,
-    asset,
-    renditions: [
-      {
-        id: `00000000-0000-7000-8200-${String(surah).padStart(12, "0")}`,
-        quality: "standard",
-        is_default: true,
-        asset,
-      },
-    ],
-  };
-});
-
-const alternateTracks = tracks.map((track, index) => {
-  const surahNumber = index + 1;
-  const asset = {
-    ...track.asset,
-    url: `https://audio.example.test/husary/${String(surahNumber).padStart(3, "0")}.mp3`,
-  };
-  return {
-    ...track,
-    id: `00000000-0000-7000-8300-${String(surahNumber).padStart(12, "0")}`,
-    recitation_id: alternateRecitation.id,
-    asset,
-    renditions: track.renditions.map((rendition) => ({ ...rendition, asset })),
-  };
-});
 
 const edition = {
   id: "00000000-0000-7000-8000-000000000001",
@@ -456,10 +367,6 @@ function foundationPage(sourceId: number, pageNumber: number) {
   };
 }
 
-function paginated<T>(results: T[]) {
-  return { next: null, previous: null, results };
-}
-
 async function installApiMocks(page: Page, nativeMedia = false) {
   const testFont = await readFile(
     new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
@@ -525,48 +432,17 @@ async function installApiMocks(page: Page, nativeMedia = false) {
     const url = new URL(route.request().url());
     const path = url.pathname;
 
+    const recitationPath = /^\/api\/v1\/recitations\/([^/]+)\/(tracks|surahs\/(\d+))$/.exec(path);
+    const playback = recitationPath?.[3] ? surahPlayback(recitationPath[1], Number(recitationPath[3])) : undefined;
+
     if (path === "/api/v1/reciters") {
-      await route.fulfill({ json: paginated([reciter, alternateReciter]) });
+      await route.fulfill({ json: paginated(reciters) });
     } else if (path === "/api/v1/recitations") {
-      const requestedReciterId = url.searchParams.get("reciter_id");
-      const availableRecitations = [recitation, alternateRecitation].filter(
-        (item) => !requestedReciterId || item.reciter.id === requestedReciterId,
-      );
-      await route.fulfill({ json: paginated(availableRecitations) });
-    } else if (path === `/api/v1/recitations/${recitation.id}/tracks`) {
-      await route.fulfill({ json: paginated(tracks) });
-    } else if (path === `/api/v1/recitations/${alternateRecitation.id}/tracks`) {
-      await route.fulfill({ json: paginated(alternateTracks) });
-    } else if (path.startsWith(`/api/v1/recitations/${recitation.id}/surahs/`)) {
-      const surahNumber = Number(path.split("/").at(-1));
-      const track = tracks[surahNumber - 1];
-      await route.fulfill({
-        json: {
-          track,
-          segments: [1, 2].map((ayahNumber) => ({
-            ayah_id: `00000000-0000-7000-8500-${String(surahNumber * 10 + ayahNumber).padStart(12, "0")}`,
-            surah_number: surahNumber,
-            ayah_number: ayahNumber,
-            start_ms: (ayahNumber - 1) * 1_000,
-            end_ms: ayahNumber * 1_000,
-          })),
-        },
-      });
-    } else if (path.startsWith(`/api/v1/recitations/${alternateRecitation.id}/surahs/`)) {
-      const surahNumber = Number(path.split("/").at(-1));
-      const track = alternateTracks[surahNumber - 1];
-      await route.fulfill({
-        json: {
-          track,
-          segments: [1, 2].map((ayahNumber) => ({
-            ayah_id: `00000000-0000-7000-8600-${String(surahNumber * 10 + ayahNumber).padStart(12, "0")}`,
-            surah_number: surahNumber,
-            ayah_number: ayahNumber,
-            start_ms: (ayahNumber - 1) * 1_000,
-            end_ms: ayahNumber * 1_000,
-          })),
-        },
-      });
+      await route.fulfill({ json: paginated(recitationsMatching(url.searchParams)) });
+    } else if (recitationPath?.[2] === "tracks") {
+      await route.fulfill({ json: paginated(tracksFor(recitationPath[1])) });
+    } else if (playback) {
+      await route.fulfill({ json: playback });
     } else if (path === `/api/v1/recitations/${recitation.id}/ayahs/6/2`) {
       await route.fulfill({
         json: {
@@ -913,7 +789,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await expect(page.getByRole("heading", { name: "Популярные чтецы" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Расширенный аудиоплеер" })).toHaveCount(0);
   const reciterCards = page.getByTestId("audio-reciter");
-  await expect(reciterCards).toHaveCount(2);
+  await expect(reciterCards).toHaveCount(reciterPeopleCount);
   await expect(reciterCards.first()).toHaveAttribute("aria-pressed", "true");
   await expect(reciterCards.first().getByTestId("reciter-avatar")).toBeVisible();
   const player = page.getByTestId("global-audio-player");

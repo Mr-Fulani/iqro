@@ -89,6 +89,67 @@ void main() {
       }
     },
   );
+  test('an ayah highlight is one shape across word gaps and lines', () {
+    final source = FoundationMushafPage.fromJson({
+      ...page(),
+      'layout': {
+        'version': 1,
+        'lines': [
+          for (var line = 14; line <= 16; line++)
+            {'line_number': line, 'line_type': 'ayah', 'is_centered': false},
+        ],
+      },
+      'words': [
+        for (var line = 14; line <= 16; line++)
+          for (var index = 1; index <= 3; index++)
+            {
+              'id': line * 3 + index,
+              'verse_key': line == 14 && index < 3 ? '114:5' : '114:6',
+              'text': 'نَصّ',
+              'line_number': line,
+              'position_in_page': line * 3 + index,
+            },
+      ],
+    }, fromCache: false);
+    final layout = FoundationPageLayout(
+      source,
+      FoundationPageResources(),
+      const Size(320, 320 * 1380 / 900),
+      const [],
+    );
+    addTearDown(layout.dispose);
+    const ayah = QuranAyahReference(id: '', surah: 114, ayah: 6);
+    final path = layout.highlightPath(ayah);
+    expect(path.computeMetrics().length, 1);
+    final words = layout.words.where((word) => word.reference == ayah).toList();
+    // Between two words of one row, and between two rows of the ayah.
+    expect(
+      path.contains(
+        Offset(
+          (words[1].rect.left + words[2].rect.right) / 2,
+          words[1].rect.center.dy,
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      path.contains(
+        Offset(
+          words[1].rect.center.dx,
+          (words[1].rect.bottom + words[4].rect.top) / 2,
+        ),
+      ),
+      isTrue,
+    );
+    // Neighbouring ayahs touch without a double-painted overlap.
+    final previous = layout.highlightPath(
+      const QuranAyahReference(id: '', surah: 114, ayah: 5),
+    );
+    expect(
+      Path.combine(PathOperation.intersect, path, previous).getBounds().isEmpty,
+      isTrue,
+    );
+  });
   test('all 13 source identities retain their own page counts and version', () {
     for (final id in [1, 2, 4, 5, 6, 7, 10, 11, 12, 14, 15, 16, 19]) {
       final count = [6, 14].contains(id)

@@ -612,12 +612,26 @@ class _AyahRegionPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
+    // Per-line regions of one ayah are joined, so the fill and outline do not
+    // show seams between lines.
+    final paths = <QuranAyahReference, Path>{};
     for (final region in regions) {
-      final highlightColor = highlightColors[region.ayah];
-      final selected = region.ayah == selectedAyah;
-      final playing = region.ayah == playingAyah;
-      if (highlightColor == null && !selected && !playing) continue;
+      if (!highlightColors.containsKey(region.ayah) &&
+          region.ayah != selectedAyah &&
+          region.ayah != playingAyah) {
+        continue;
+      }
       final path = layout.regionPath(region);
+      paths.update(
+        region.ayah,
+        (joined) => Path.combine(PathOperation.union, joined, path),
+        ifAbsent: () => path,
+      );
+    }
+    for (final MapEntry(key: ayah, value: path) in paths.entries) {
+      final highlightColor = highlightColors[ayah];
+      final selected = ayah == selectedAyah;
+      final playing = ayah == playingAyah;
       if (highlightColor != null) {
         canvas.drawPath(
           path,
