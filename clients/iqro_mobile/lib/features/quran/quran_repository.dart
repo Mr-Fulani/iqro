@@ -473,7 +473,7 @@ class QuranRepository {
     bool forceRefresh = false,
   }) async {
     final key =
-        '${mushaf.pageCacheKey(page)}${foundationVersion.isEmpty ? '' : ':$foundationVersion'}${mushaf.isFoundation ? ':qul-layout-v1' : ''}';
+        '${mushaf.pageCacheKey(page)}${foundationVersion.isEmpty ? '' : ':$foundationVersion'}${mushaf.isFoundation ? ':qul-layout-v1:surah-header-v1' : ''}';
     final cached = await _database.readCache(key);
     MushafPageData? previous;
     if (cached != null) {
@@ -602,8 +602,10 @@ class QuranRepository {
                 uri.path.startsWith('/fonts/quran/') &&
                 uri.path.endsWith('.ttf')) ||
             (uri.host == 'static-cdn.tarteel.ai' &&
-                uri.path ==
-                    '/qul/fonts/nastaleeq/KFGQPCNastaleeq-Regular.ttf'));
+                const {
+                  '/qul/fonts/nastaleeq/KFGQPCNastaleeq-Regular.ttf',
+                  '/qul/fonts/surah-names/surah-header/QCF_SurahHeader_COLOR-Regular.ttf',
+                }.contains(uri.path)));
     final allowedImage =
         uri.origin == 'https://static.qurancdn.com' &&
         uri.userInfo.isEmpty &&

@@ -10,6 +10,12 @@ import type {
 import { useI18n } from "../lib/i18n-context";
 import { isAllowedQuranWordImageUrl, isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 import { fitMushafLines, qulGridRow } from "../lib/mushaf-line-layout";
+import {
+  loadedSurahHeaderGlyphs,
+  loadSurahHeaderGlyphs,
+  type SurahHeaderGlyph,
+  type SurahHeaderSource,
+} from "../lib/surah-header";
 
 type FontState = "loading" | "ready" | "error";
 type SurahIdentity = Pick<Surah, "number" | "name_ar">;
@@ -19,6 +25,25 @@ type AyahFragment = {
   ayahKey?: string;
   words: QuranFoundationMushafWord[];
 };
+
+type SurahHeaders = ReadonlyMap<number, SurahHeaderGlyph> | "loading" | null;
+
+function ChapterTitle({ surah, name, headers }: { surah: number | null; name?: string; headers: SurahHeaders }) {
+  const heading = headers instanceof Map && surah !== null ? headers.get(surah) : undefined;
+  if (heading) {
+    return (
+      <div className="qf-mushaf-chapter-title has-source-header" role="img" aria-label={`سُورَةُ ${name ?? ""}`.trim()}>
+        <svg viewBox={heading.viewBox} aria-hidden="true" focusable="false"><path d={heading.d} /></svg>
+      </div>
+    );
+  }
+  // Until the source heading arrives, reserve its place instead of flashing IQRO's frame.
+  return (
+    <div className={`qf-mushaf-chapter-title${headers === "loading" ? " is-header-loading" : ""}`}>
+      سُورَةُ {name}
+    </div>
+  );
+}
 
 type ChapterIntro = {
   surah: SurahIdentity;
@@ -208,6 +233,23 @@ export function QuranFoundationMushafPageView({
     () => layout ? [] : chapterIntros(page, lines, verseKeys, surahs),
     [layout, lines, page, surahs, verseKeys],
   );
+  const [loadedHeaders, setLoadedHeaders] = useState<{
+    source: SurahHeaderSource;
+    glyphs: ReadonlyMap<number, SurahHeaderGlyph> | null;
+  }>();
+  const headerSource = page.surah_header ?? null;
+  const surahHeaders: SurahHeaders = !headerSource ? null
+    : loadedHeaders?.source === headerSource ? loadedHeaders.glyphs
+      : loadedSurahHeaderGlyphs(headerSource) ?? "loading";
+
+  useEffect(() => {
+    if (!headerSource) return;
+    let cancelled = false;
+    void loadSurahHeaderGlyphs(headerSource).catch(() => null).then((glyphs) => {
+      if (!cancelled) setLoadedHeaders({ source: headerSource, glyphs });
+    });
+    return () => { cancelled = true; };
+  }, [headerSource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -334,7 +376,11 @@ export function QuranFoundationMushafPageView({
               {row.line_type === "basmallah" ? (
                 <div className="qf-mushaf-bismillah">{BISMILLAH}</div>
               ) : (
-                <div className="qf-mushaf-chapter-title">سُورَةُ {surahs.find((surah) => surah.number === row.surah_number)?.name_ar}</div>
+                <ChapterTitle
+                  surah={row.surah_number}
+                  name={surahs.find((surah) => surah.number === row.surah_number)?.name_ar}
+                  headers={surahHeaders}
+                />
               )}
             </div>
           ))}
@@ -353,9 +399,7 @@ export function QuranFoundationMushafPageView({
               data-surah-number={intro.surah.number}
             >
               {intro.showTitle && (
-                <div className="qf-mushaf-chapter-title">
-                  سُورَةُ {intro.surah.name_ar}
-                </div>
+                <ChapterTitle surah={intro.surah.number} name={intro.surah.name_ar} headers={surahHeaders} />
               )}
               {intro.showBismillah && (
                 <div className="qf-mushaf-bismillah">{BISMILLAH}</div>

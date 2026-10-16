@@ -26,6 +26,7 @@ from quran_backend.modules.quran.quran_foundation_rendering import (
     renderable_words,
     verse_keys_from_mapping,
 )
+from quran_backend.modules.quran.surah_header import surah_header
 
 
 class QuranEditionVersionSerializer(serializers.ModelSerializer[QuranEditionVersion]):
@@ -192,6 +193,7 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
     native_assets = serializers.SerializerMethodField()
     words = serializers.SerializerMethodField()
     layout = serializers.SerializerMethodField()
+    surah_header = serializers.SerializerMethodField()
     verse_keys = serializers.SerializerMethodField()
     pages_count = serializers.IntegerField(source="mushaf.pages_count", read_only=True)
     lines_per_page = serializers.IntegerField(source="mushaf.lines_per_page", read_only=True)
@@ -221,6 +223,7 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
             "verses_count",
             "words",
             "layout",
+            "surah_header",
         )
 
     def get_words(self, obj: QuranFoundationMushafPage) -> list[dict[str, Any]]:
@@ -229,6 +232,9 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
 
     def get_layout(self, obj: QuranFoundationMushafPage) -> dict[str, Any] | None:
         return apply_qul_layout(obj.mushaf.source_id, obj.page_number, obj.words)[1]
+
+    def get_surah_header(self, obj: QuranFoundationMushafPage) -> dict[str, Any] | None:
+        return surah_header(obj.verse_mapping)
 
     def get_verse_keys(self, obj: QuranFoundationMushafPage) -> list[str]:
         return verse_keys_from_mapping(obj.verse_mapping)
