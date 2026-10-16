@@ -234,7 +234,7 @@ class QuranFoundationMushafPageSerializer(serializers.ModelSerializer[QuranFound
         return apply_qul_layout(obj.mushaf.source_id, obj.page_number, obj.words)[1]
 
     def get_surah_header(self, obj: QuranFoundationMushafPage) -> dict[str, Any] | None:
-        return surah_header(obj.verse_mapping)
+        return surah_header(obj.verse_mapping, self.get_layout(obj))
 
     def get_verse_keys(self, obj: QuranFoundationMushafPage) -> list[str]:
         return verse_keys_from_mapping(obj.verse_mapping)

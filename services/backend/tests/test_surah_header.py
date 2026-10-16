@@ -16,6 +16,19 @@ def test_only_surahs_starting_on_the_page_get_heading_glyphs() -> None:
     }
 
 
+def test_a_title_ending_the_page_gets_its_heading_glyph() -> None:
+    # QCF page 76: An-Nisa's title is line 15; its first ayah opens page 77.
+    layout = {
+        "lines": [
+            {"line_number": 14, "line_type": "ayah", "surah_number": None},
+            {"line_number": 15, "line_type": "surah_name", "surah_number": 4},
+        ]
+    }
+    header = surah_header({"3": "190-200"}, layout)
+    assert header is not None
+    assert header["glyph_ids"] == {"4": 7}
+
+
 def test_pages_without_a_surah_opening_have_no_heading() -> None:
     assert surah_header({"2": "6-16"}) is None
     assert surah_header({}) is None
