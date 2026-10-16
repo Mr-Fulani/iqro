@@ -34,6 +34,20 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Tabs switch with `go`, so the system back button found nothing to pop and
+    // closed the app from any tab. Back from another tab now returns Home;
+    // from Home it exits as before. Screens pushed over the shell pop first.
+    final backToHome = widget.child == null && _index != 0;
+    return PopScope(
+      canPop: !backToHome,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && backToHome) context.go('/app?tab=0');
+      },
+      child: _buildShell(context),
+    );
+  }
+
+  Widget _buildShell(BuildContext context) {
     return Scaffold(
       extendBody: true,
       body: Stack(

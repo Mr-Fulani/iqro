@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:iqro_mobile/app/app_shell.dart';
 import 'package:iqro_mobile/app/providers.dart';
@@ -109,6 +110,58 @@ void main() {
       }
     });
   }
+
+  testWidgets('system back from another tab returns Home instead of exiting', (
+    tester,
+  ) async {
+    // Home itself is a stand-in: this checks AppShell's back decision, not
+    // HomeScreen, which needs the full app's providers to build.
+    final router = GoRouter(
+      initialLocation: '/app?tab=2',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/app',
+          builder: (context, state) {
+            final tab = int.parse(state.uri.queryParameters['tab'] ?? '0');
+            return tab == 0
+                ? const Scaffold(body: Text('home-tab'))
+                : AppShell(initialIndex: tab);
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sessionProvider.overrideWith((ref) => _SignedOut()),
+          audioControllerProvider.overrideWith((ref) => _IdleAudio()),
+          localDatabaseProvider.overrideWithValue(_Database()),
+          activeAccountScopeKeyProvider.overrideWithValue(null),
+          planProvider.overrideWith((ref) => _UnavailablePlan()),
+          prayerMethodsProvider.overrideWith((ref) async => []),
+        ],
+        child: MaterialApp.router(
+          theme: IqroTheme.light(),
+          routerConfig: router,
+          locale: const Locale('ru'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PlanScreen), findsOneWidget);
+
+    // The back button is handled (the app stays open) and lands on Home.
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.toString(), '/app?tab=0');
+    expect(find.text('home-tab'), findsOneWidget);
+
+    // On Home, back is left to the system, which closes the app.
+    expect(await tester.binding.handlePopRoute(), isFalse);
+  });
 }
 
 Future<void> _platformLink(WidgetTester tester, String uri) async {
