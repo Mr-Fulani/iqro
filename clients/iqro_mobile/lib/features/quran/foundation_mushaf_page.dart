@@ -366,6 +366,9 @@ class _WordPaint {
   final TextPainter? painter;
   final ui.Image? image;
   late Rect rect;
+
+  /// The word's share of its row: full row height and half of each gap.
+  late Rect cell;
   double get width => painter?.width ?? image!.width.toDouble();
   double get height => painter?.height ?? image!.height.toDouble();
   double get baseline =>
@@ -504,6 +507,12 @@ class FoundationPageLayout {
           width,
           height,
         );
+        word.cell = Rect.fromLTRB(
+          word.rect.left - lineGap * scale / 2,
+          centerY - rowHeight / 2,
+          word.rect.right + lineGap * scale / 2,
+          centerY + rowHeight / 2,
+        );
         right -= width + lineGap * scale;
       }
     }
@@ -575,6 +584,22 @@ class FoundationPageLayout {
   final frames = <Rect>[];
   final headers = <(GlyphOutline, Rect)>[];
   final Map<int, GlyphOutline> _surahHeaders;
+  final _highlights = <QuranAyahReference, Path>{};
+
+  /// One shape per ayah: adjacent word cells touch across gaps and rows, so a
+  /// translucent fill has no seams or double-painted overlaps.
+  Path highlightPath(QuranAyahReference ayah) =>
+      _highlights.putIfAbsent(ayah, () {
+        var path = Path();
+        for (final word in words.where((word) => word.reference == ayah)) {
+          path = Path.combine(
+            PathOperation.union,
+            path,
+            Path()..addRect(word.cell),
+          );
+        }
+        return path;
+      });
 
   /// Adds a basmala, or the title of [surah] in its printed heading.
   void _decoration(
@@ -666,35 +691,36 @@ class FoundationPagePainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.translate(0, -top);
-    for (final word in layout.words) {
-      if (onlyAyah != null && word.reference != onlyAyah) continue;
-      final highlightColor = highlightColors[word.reference];
-      final wordHighlight = RRect.fromRectAndRadius(
-        word.rect.inflate(1.5),
-        const Radius.circular(3),
-      );
+    final ayahs = <QuranAyahReference>{
+      ...highlightColors.keys,
+      ?selected,
+      ?playing,
+    }.where((ayah) => onlyAyah == null || ayah == onlyAyah);
+    for (final ayah in ayahs) {
+      final highlightColor = highlightColors[ayah];
+      final ayahHighlight = layout.highlightPath(ayah);
       if (highlightColor != null) {
-        canvas.drawRRect(
-          wordHighlight,
+        canvas.drawPath(
+          ayahHighlight,
           Paint()
             ..color = ayahHighlightColor(highlightColor).withValues(alpha: .4),
         );
       }
-      if (word.reference == selected || word.reference == playing) {
-        final activeColor = word.reference == playing
+      if (ayah == selected || ayah == playing) {
+        final activeColor = ayah == playing
             ? const Color(0xC20B6B57)
             : const Color(0x99857154);
         if (highlightColor == null) {
-          canvas.drawRRect(
-            wordHighlight,
+          canvas.drawPath(
+            ayahHighlight,
             Paint()
-              ..color = word.reference == playing
+              ..color = ayah == playing
                   ? const Color(0x40459B73)
                   : const Color(0x30857154),
           );
         } else {
-          canvas.drawRRect(
-            wordHighlight,
+          canvas.drawPath(
+            ayahHighlight,
             Paint()
               ..color = activeColor
               ..style = PaintingStyle.stroke
@@ -702,6 +728,9 @@ class FoundationPagePainter extends CustomPainter {
           );
         }
       }
+    }
+    for (final word in layout.words) {
+      if (onlyAyah != null && word.reference != onlyAyah) continue;
       if (word.image != null) {
         canvas.drawImageRect(
           word.image!,
