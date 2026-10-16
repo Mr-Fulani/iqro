@@ -9,6 +9,7 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.database_budget import DatabaseBudgetError, DatabaseConnectionBudget
+from quran_backend.error_reporting import init_error_reporting
 from quran_backend.redis_roles import RedisRoleConfig, RedisRoleConfigError
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -700,3 +701,6 @@ LOGGING = {
         "quran_backend": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
     },
 }
+
+# Crash reporting to Sentry (EU region); off unless SENTRY_DSN is set.
+init_error_reporting(os.environ, release=APP_VERSION)

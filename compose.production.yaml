@@ -17,6 +17,9 @@ x-app-security: &app-security
 x-backend-environment: &backend-environment
   DJANGO_SETTINGS_MODULE: quran_backend.settings.production
   APP_VERSION: ${APP_VERSION:-0.1.0}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+  SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
   DATABASE_NAME: ${DATABASE_NAME:?Set DATABASE_NAME in the production env file}
   DATABASE_USER: ${DATABASE_USER:?Set DATABASE_USER in the production env file}
   DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in the production env file}
@@ -293,9 +296,15 @@ services:
       target: runner
       args:
         BACKEND_INTERNAL_URL: http://backend:8000
+        # The web project's DSN; may be the same Sentry organisation as the API.
+        NEXT_PUBLIC_SENTRY_DSN: ${WEB_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+        NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${WEB_SENTRY_TRACES_SAMPLE_RATE:-0.1}
+        NEXT_PUBLIC_APP_VERSION: ${APP_VERSION:-0.1.0}
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       SITE_URL: ${SITE_URL:?Set SITE_URL in the production env file}
