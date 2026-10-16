@@ -332,6 +332,17 @@ DATABASE_OPTIONS: dict[str, object] = {
 }
 if DATABASE_POOL_MODE == "transaction":
     DATABASE_OPTIONS["prepare_threshold"] = None
+# Server-side cap per SQL statement, so a runaway query does not keep running
+# (and holding a pooled connection) after the client has given up. Set for the
+# API only; workers and migrations keep long statements.
+DATABASE_STATEMENT_TIMEOUT_MS = non_negative_env_int("DATABASE_STATEMENT_TIMEOUT_MS", 0)
+if DATABASE_STATEMENT_TIMEOUT_MS:
+    if DATABASE_POOL_MODE == "transaction":
+        raise ImproperlyConfigured(
+            "DATABASE_STATEMENT_TIMEOUT_MS cannot use connection options with PgBouncer "
+            "transaction pooling; set statement_timeout on the database role instead"
+        )
+    DATABASE_OPTIONS["options"] = f"-c statement_timeout={DATABASE_STATEMENT_TIMEOUT_MS}"
 # Only the API service enables the pool; Celery prefork children and one-off
 # commands keep short-lived connections so they stay within their own budget.
 DATABASE_POOL_ENABLED = env_bool("DATABASE_POOL_ENABLED", False)
@@ -609,6 +620,22 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_ACKS_LATE = True
+# With late acks a task that outlives the Redis visibility timeout is handed to a
+# second worker and runs twice, so the hard limit must stay below it. Quran
+# Foundation syncs take minutes; the limits only stop a task that is stuck.
+CELERY_TASK_SOFT_TIME_LIMIT = positive_env_int("CELERY_TASK_SOFT_TIME_LIMIT_SECONDS", 1500)
+CELERY_TASK_TIME_LIMIT = positive_env_int("CELERY_TASK_TIME_LIMIT_SECONDS", 1800)
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": positive_env_int("CELERY_VISIBILITY_TIMEOUT_SECONDS", 3600),
+}
+if not (
+    CELERY_TASK_SOFT_TIME_LIMIT
+    < CELERY_TASK_TIME_LIMIT
+    < CELERY_BROKER_TRANSPORT_OPTIONS["visibility_timeout"]
+):
+    raise ImproperlyConfigured(
+        "Celery limits must satisfy soft time limit < time limit < visibility timeout"
+    )
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = positive_env_int("CELERY_WORKER_PREFETCH_MULTIPLIER", 1)

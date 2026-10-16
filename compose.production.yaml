@@ -217,6 +217,8 @@ services:
       <<: *backend-environment
       # Only the API holds a connection pool; see DATABASE_API_POOL_MAX_SIZE.
       DATABASE_POOL_ENABLED: "true"
+      # Cancel API statements still running after 30 s; workers and migrations keep no cap.
+      DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-30000}
     restart: unless-stopped
     depends_on:
       postgres:

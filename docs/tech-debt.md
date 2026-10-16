@@ -91,8 +91,6 @@ staging и сверить 5xx, p95/p99 и запас соединений Postgr
   - добавить в кэшируемые пути `variants/`, `dua/`, `calendar/` и `site/`;
   - вынести кэш на volume 256–512 МБ;
   - убрать `Vary: Accept-Language` из публичных ответов `/api/`.
-- Логи gateway писать в stdout в JSON с `$request_time`, `$upstream_cache_status` и
-  request-id. Сейчас они пишутся в файлы на tmpfs 8 МБ, и логирование молча остановится.
 - PostgreSQL: `shared_buffers` под лимит контейнера, `pg_stat_statements`,
   `log_min_duration_statement`.
 - Healthcheck:
@@ -115,10 +113,8 @@ staging и сверить 5xx, p95/p99 и запас соединений Postgr
   - офлайн-манифесты собирать при publish.
 - Отправку писем перенести в Celery (таймаут SMTP уже задан).
 - Схему OpenAPI собирать при сборке или закрыть в production.
-- Задать `statement_timeout` для запросов к базе.
-- Celery:
-  - отдельная очередь для синхронизаций QF;
-  - `task_time_limit`, `visibility_timeout`, `ignore_result`.
+- Celery: отдельная очередь для синхронизаций QF и `ignore_result` (лимиты времени и
+  `visibility_timeout` уже заданы).
 - Синхронизация: убрать `select_for_update` и `count()` на каждую операцию батча, а pull
   делать без `FOR UPDATE`.
 - QF-мусхафы:
