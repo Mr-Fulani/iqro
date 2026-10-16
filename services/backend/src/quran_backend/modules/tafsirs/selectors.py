@@ -50,5 +50,9 @@ def published_surah_tafsir(
                 output_field=models.TextField(),
             )
         )
+        # Clients get resolved_text only. Loading `text` and the provider HTML in
+        # `source_text` as well tripled the bytes read (3.4 MB -> 1.2 MB for
+        # Al-Baqarah).
+        .defer("text", "source_text")
         .order_by("ayah_number")
     )

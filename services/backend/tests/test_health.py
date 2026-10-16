@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from django.core.cache import caches
+from django.core.cache import cache, caches
 from django.urls import reverse
+from drf_spectacular.generators import SchemaGenerator
 from rest_framework.test import APIClient
 
 from quran_backend.modules.core.api import ReadyHealthView
@@ -66,3 +67,25 @@ def test_invalid_request_id_is_replaced(api_client: APIClient) -> None:
 
     assert response.headers["X-Request-ID"] != "invalid request id with spaces"
     assert len(response.headers["X-Request-ID"]) == 36
+
+
+@pytest.mark.django_db
+def test_openapi_schema_is_generated_once_then_served_from_cache(
+    api_client: APIClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache.clear()
+    calls = 0
+    original = SchemaGenerator.get_schema
+
+    def counting_get_schema(self: SchemaGenerator, *args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(SchemaGenerator, "get_schema", counting_get_schema)
+    first = api_client.get(reverse("openapi-schema"), headers={"Accept": "application/json"})
+    second = api_client.get(reverse("openapi-schema"), headers={"Accept": "application/json"})
+
+    assert first.status_code == second.status_code == 200
+    assert second.content == first.content
+    assert calls == 1
