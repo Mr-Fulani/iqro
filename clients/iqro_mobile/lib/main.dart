@@ -9,12 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
+import 'core/observability/error_reporting.dart';
 import 'core/startup/startup_tasks.dart';
 import 'core/startup/startup_gate.dart';
 import 'core/audio/listening_media_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  startErrorReporting();
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(const <String>[
       'Amiri Quran',

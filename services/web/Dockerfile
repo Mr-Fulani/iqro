@@ -17,8 +17,18 @@ CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
 
 FROM base AS builder
 ARG BACKEND_INTERNAL_URL=http://backend:8000
+# Error reporting (Sentry, EU region). NEXT_PUBLIC_* values are inlined at build
+# time; an empty DSN builds the site without any Sentry code on the page.
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0
+ARG NEXT_PUBLIC_APP_VERSION=
 ENV NODE_ENV=production \
-    BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
+    BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL} \
+    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT} \
+    NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=${NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE} \
+    NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public && npm run build
