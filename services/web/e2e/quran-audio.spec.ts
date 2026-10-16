@@ -1,4 +1,4 @@
-import { devices, expect, Page, test as base } from "@playwright/test";
+import { devices, expect, Locator, Page, test as base } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const test = base.extend<{ nativeMedia: boolean }>({ nativeMedia: [false, { option: true }] });
@@ -1351,6 +1351,69 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
   await expect(page.getByLabel("Вариант Мусхафа")).toHaveValue("5");
   await page.getByRole("button", { name: /Мусхаф/ }).click();
   await expect(page.locator(".qf-mushaf-view")).toBeVisible();
+});
+
+async function expectSurahCartouche(title: Locator) {
+  const frame = await title.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const box = element.getBoundingClientRect();
+    const intro = element.parentElement!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const text = range.getBoundingClientRect();
+    return {
+      source: style.borderImageSource,
+      slice: style.borderImageSlice,
+      repeat: style.borderImageRepeat,
+      capWidth: parseFloat(style.borderImageWidth.split(" ")[1]),
+      box: { left: box.left, right: box.right, top: box.top, bottom: box.bottom, height: box.height },
+      intro: { left: intro.left, right: intro.right, top: intro.top, bottom: intro.bottom },
+      text: { left: text.left, right: text.right },
+    };
+  });
+  expect(frame.source).toContain("/mushaf/surah-frame.svg");
+  expect(frame.slice).toBe("30 72 fill");
+  expect(frame.repeat).toBe("round");
+  // The cartouche spans the whole line and stays inside the reserved row…
+  expect(Math.abs(frame.box.left - frame.intro.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(frame.box.right - frame.intro.right)).toBeLessThanOrEqual(1);
+  expect(frame.box.top).toBeGreaterThanOrEqual(frame.intro.top - 1);
+  expect(frame.box.bottom).toBeLessThanOrEqual(frame.intro.bottom + 1);
+  // …its end caps keep the SVG's 72:60 proportions…
+  expect(frame.capWidth / frame.box.height).toBeGreaterThan(1.1);
+  expect(frame.capWidth / frame.box.height).toBeLessThan(1.3);
+  // …and the surah name sits between them.
+  expect(frame.text.left).toBeGreaterThan(frame.box.left + frame.capWidth);
+  expect(frame.text.right).toBeLessThan(frame.box.right - frame.capWidth);
+}
+
+test("surah titles sit in a printed-Mushaf cartouche across the line", async ({ page }) => {
+  const svg = await page.request.get("/mushaf/surah-frame.svg");
+  expect(svg.ok()).toBe(true);
+  expect(svg.headers()["content-type"]).toContain("image/svg+xml");
+
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 320, height: 760 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    if (viewport.width < 768) await expect(layout).toHaveClass(/is-reader-immersive/);
+    const view = layout.locator(".qf-mushaf-view").filter({ visible: true });
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const title = view.locator(".qf-mushaf-chapter-title");
+    await expect(title).toHaveText("سُورَةُ الأنعام");
+    await expectSurahCartouche(title);
+  }
+
+  // With a single free row the title and basmala share it as a compact intro.
+  const compactPage = foundationPage(5, 128);
+  compactPage.words = compactPage.words.map((word) => ({ ...word, line_number: Number(word.line_number) - 1 }));
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/128", (route) => route.fulfill({ json: compactPage }));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/quran?surah=6");
+  const intro = page.locator(".qf-mushaf-chapter-intro.is-compact").filter({ visible: true });
+  await expect(intro.locator(".qf-mushaf-chapter-title")).toHaveText("سُورَةُ الأنعام");
+  await expect(intro.locator(".qf-mushaf-bismillah")).toBeVisible();
+  await expectSurahCartouche(intro.locator(".qf-mushaf-chapter-title"));
 });
 
 test("Quran favorite uses an animated bookmark and toggles the saved ayah", async ({ page }) => {

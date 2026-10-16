@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="156" height="60" viewBox="0 0 156 60">
+  <!-- IQRO surah-header cartouche. A nine-slice image: 72-unit end caps keep
+       their proportions while the 12-unit middle tile repeats across the line
+       (CSS border-image "30 72 fill / … round"). The mobile app paints the same
+       geometry in clients/iqro_mobile/lib/features/quran/surah_header_frame.dart.
+       Colors: mushafInkColor #392D20, mushafAccentColor #857154, paper #FFFCF7. -->
+  <defs>
+    <g id="cap">
+      <path fill="#857154" fill-opacity=".2" d="M2 2H72V12H12V48H72V58H2Z"/>
+      <path fill="#857154" fill-opacity=".09" d="M12 12H72V16H56C50 16 46 24 40 30C46 36 50 44 56 44H72V48H12Z"/>
+      <path fill="none" stroke="#392D20" stroke-width="1.6" d="M72 2H6Q2 2 2 6V54Q2 58 6 58H72"/>
+      <path fill="none" stroke="#857154" stroke-width=".9" d="M72 12H12V48H72"/>
+      <path fill="none" stroke="#392D20" stroke-width="1" d="M72 16H56C50 16 46 24 40 30C46 36 50 44 56 44H72"/>
+      <path fill="#857154" fill-opacity=".6" d="M18 4L21 7L18 10L15 7ZM30 4L33 7L30 10L27 7ZM42 4L45 7L42 10L39 7ZM54 4L57 7L54 10L51 7ZM66 4L69 7L66 10L63 7ZM18 50L21 53L18 56L15 53ZM30 50L33 53L30 56L27 53ZM42 50L45 53L42 56L39 53ZM54 50L57 53L54 56L51 53ZM66 50L69 53L66 56L63 53ZM7 15L10 18L7 21L4 18ZM7 27L10 30L7 33L4 30ZM7 39L10 42L7 45L4 42Z"/>
+      <circle cx="7" cy="7" r="2.2" fill="#392D20"/>
+      <circle cx="7" cy="53" r="2.2" fill="#392D20"/>
+      <path fill="#FFFCF7" stroke="#857154" stroke-width=".9" d="M14 30L26 16L38 30L26 44Z"/>
+      <path fill="#857154" fill-opacity=".45" d="M19 30L26 23L33 30L26 37Z"/>
+      <circle cx="26" cy="30" r="2.2" fill="#FFFCF7"/>
+    </g>
+  </defs>
+  <use xlink:href="#cap" href="#cap"/>
+  <path fill="#857154" fill-opacity=".2" d="M72 2H84V12H72ZM72 48H84V58H72Z"/>
+  <path fill="#857154" fill-opacity=".09" d="M72 12H84V16H72ZM72 44H84V48H72Z"/>
+  <path fill="none" stroke="#392D20" stroke-width="1.6" d="M72 2H84M72 58H84"/>
+  <path fill="none" stroke="#857154" stroke-width=".9" d="M72 12H84M72 48H84"/>
+  <path fill="none" stroke="#392D20" stroke-width="1" d="M72 16H84M72 44H84"/>
+  <path fill="#857154" fill-opacity=".6" d="M78 4L81 7L78 10L75 7ZM78 50L81 53L78 56L75 53Z"/>
+  <use xlink:href="#cap" href="#cap" transform="matrix(-1 0 0 1 156 0)"/>
+</svg>

@@ -14,6 +14,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'quran_models.dart';
+import 'surah_header_frame.dart';
 
 final _fontLoads = <String, Future<void>>{};
 
@@ -491,6 +492,7 @@ class FoundationPageLayout {
           paddingY,
           size.width * (kind == 'basmallah' ? .045 : .038),
           fontFamily: resources.decorationFontFamily,
+          framed: kind == 'surah_name',
         );
       }
       return;
@@ -525,6 +527,7 @@ class FoundationPageLayout {
           rowHeight,
           paddingY,
           size.width * .038,
+          framed: true,
         );
       }
     }
@@ -532,6 +535,7 @@ class FoundationPageLayout {
   final Size size;
   final words = <_WordPaint>[];
   final decorations = <(TextPainter, Offset)>[];
+  final frames = <Rect>[];
   void _decoration(
     String value,
     double line,
@@ -539,7 +543,22 @@ class FoundationPageLayout {
     double top,
     double fontSize, {
     String? fontFamily,
+    bool framed = false,
   }) {
+    final centerY = top + (line - .5) * height;
+    if (framed) {
+      // The printed cartouche spans the text block and the row reserved for
+      // the surah name; the title shrinks only when a short row needs it.
+      final frameHeight = math.min(height * .92, fontSize * 2.4);
+      fontSize = frameHeight / 2.4;
+      frames.add(
+        Rect.fromCenter(
+          center: Offset(size.width / 2, centerY),
+          width: size.width * .88,
+          height: frameHeight,
+        ),
+      );
+    }
     final text = TextPainter(
       text: TextSpan(
         text: value,
@@ -553,10 +572,7 @@ class FoundationPageLayout {
     )..layout(maxWidth: size.width * .9);
     decorations.add((
       text,
-      Offset(
-        (size.width - text.width) / 2,
-        top + (line - .5) * height - text.height / 2,
-      ),
+      Offset((size.width - text.width) / 2, centerY - text.height / 2),
     ));
   }
 
@@ -647,6 +663,9 @@ class FoundationPagePainter extends CustomPainter {
       }
     }
     if (onlyAyah == null) {
+      for (final frame in layout.frames) {
+        paintSurahHeaderFrame(canvas, frame);
+      }
       for (final decoration in layout.decorations) {
         decoration.$1.paint(canvas, decoration.$2);
       }
