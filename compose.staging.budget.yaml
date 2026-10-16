@@ -4,6 +4,25 @@ services:
   postgres:
     cpus: 0.75
     mem_limit: 640m
+    # Production tuning (compose.production.yaml) scaled to the 640m budget.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=160MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=top
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - track_io_timing=on
     shm_size: 128m
 
   redis:
