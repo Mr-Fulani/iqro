@@ -35,6 +35,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   final _darkTheme = IqroTheme.dark();
   late Uri _previousAudioUri;
   var _backgroundWorkRequested = false;
+  Timer? _cacheMaintenance;
 
   @override
   void initState() {
@@ -63,6 +64,31 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       if (route != null) _router.go(route);
       _requestBackgroundWork();
       _requestMaintenance();
+      _scheduleCacheMaintenance();
+    });
+  }
+
+  // Delayed past the first screens: the sweep reads large cache rows and
+  // walks file trees, which should not compete with opening the app.
+  void _scheduleCacheMaintenance() {
+    _cacheMaintenance = Timer(const Duration(seconds: 20), () {
+      unawaited(
+        ref
+            .read(cacheMaintenanceProvider)
+            .run()
+            .then<void>(
+              (_) {},
+              onError: (Object error, StackTrace stackTrace) {
+                FlutterError.reportError(
+                  FlutterErrorDetails(
+                    exception: error,
+                    stack: stackTrace,
+                    library: 'IQRO cache maintenance',
+                  ),
+                );
+              },
+            ),
+      );
     });
   }
 
@@ -178,6 +204,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _cacheMaintenance?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _router.routerDelegate.removeListener(_handleAudioNavigation);
     _notificationRoutes?.cancel();

@@ -13,6 +13,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/public_asset_uri.dart';
 import '../../core/platform/backup_exclusion.dart';
+import '../../core/storage/cache_maintenance.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
@@ -627,6 +628,7 @@ class QuranRepository {
         if (await file.length() == value['bytes'] &&
             (await sha256.bind(file.openRead()).first).toString() ==
                 value['sha256']) {
+          await touchCachedFile(file);
           return file;
         }
       } on FileSystemException {
@@ -660,6 +662,8 @@ class QuranRepository {
       'path': file.path,
       'sha256': checksum,
       'bytes': bytes.length,
+      // Lets cache maintenance drop assets of a retired edition version.
+      if (foundationVersion.isNotEmpty) 'content_version': foundationVersion,
     }, maxAge: const Duration(days: 30));
     return file;
   }
@@ -722,28 +726,25 @@ class QuranRepository {
     final offline = await _activeOfflineMushafPage(page, checksum);
     if (offline != null) return offline;
     final supportDirectory = await getApplicationSupportDirectory();
-    final safeVersion = page.contentVersion.replaceAll(
-      RegExp('[^a-zA-Z0-9._-]'),
-      '_',
+    final file = File(
+      p.join(
+        supportDirectory.path,
+        'mushaf_pages',
+        mushafPageCachePath(mushaf.code, page, asset),
+      ),
     );
-    final checksumPrefix = checksum.length >= 16
-        ? checksum.substring(0, 16)
-        : 'unversioned';
-    final directory = Directory(
-      p.join(supportDirectory.path, 'mushaf_pages', mushaf.code, safeVersion),
-    );
-    await directory.create(recursive: true);
+    await file.parent.create(recursive: true);
     await BackupExclusion.exclude(
       Directory(p.join(supportDirectory.path, 'mushaf_pages')),
     );
-    final file = File(
-      p.join(
-        directory.path,
-        'page-${page.number.toString().padLeft(3, '0')}'
-        '-w${asset.width}-$checksumPrefix.webp',
-      ),
-    );
     if (await _validCachedPage(file, checksum, expectedBytes: asset.bytes)) {
+      if (await touchCachedFile(file)) {
+        await _pageAssetVerifier.rememberVerified(
+          file,
+          checksum,
+          expectedBytes: asset.bytes,
+        );
+      }
       return file;
     }
     final downloaded = await _downloadMushafPageAsset(
