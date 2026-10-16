@@ -45,6 +45,18 @@ class GatewayConfigTests(unittest.TestCase):
         self.assertLessEqual(workers * keepalive, api_workers * api_slots // 2)
         self.assertEqual(self.config.count("keepalive_timeout 4s;"), 2)
 
+    def test_logs_go_to_docker_as_json_with_a_shared_request_id(self) -> None:
+        dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+        self.assertIn("access_log /dev/stdout quran_json;", self.config)
+        self.assertIn("log_format quran_json escape=json", self.config)
+        for field in ("$request_time", "$upstream_cache_status", "$quran_request_id"):
+            self.assertIn(field, self.config)
+        self.assertIn("error_log /dev/stderr warn;", dockerfile)
+        self.assertEqual(
+            self.config.count("proxy_set_header X-Request-ID $quran_request_id;"),
+            self.config.count("proxy_set_header Host $host;"),
+        )
+
     def test_public_cache_is_bounded_and_varies_by_cors_and_representation(self) -> None:
         self.assertIn("keys_zone=quran_public_api:4m", self.config)
         self.assertIn("max_size=24m", self.config)
