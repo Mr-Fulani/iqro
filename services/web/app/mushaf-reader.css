@@ -34,6 +34,52 @@
   }
 }
 
+/* With published data the placeholder carries page 1 and the surah links. */
+.quran-reader-preview {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  text-align: start;
+}
+
+.quran-reader-preview .eyebrow,
+.quran-reader-preview .surface-title,
+.quran-reader-preview .surface-subtitle {
+  margin: 0;
+}
+
+/* A system face: the placeholder is replaced by the reader's Mushaf fonts, and
+   waiting for Amiri would delay the first paint of the page text. */
+.quran-reader-preview-page {
+  margin: 8px 0;
+  font-family: "Scheherazade New", "Traditional Arabic", serif;
+  text-align: center;
+}
+
+.quran-reader-preview-surahs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 14px;
+}
+
+.quran-reader-preview-surahs a {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px), (hover: none) and (pointer: coarse), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  .quran-reader-preview {
+    display: grid;
+    place-items: initial;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+
+  .quran-reader-preview-page {
+    font-size: 24px;
+  }
+}
+
 html:has(.quran-page-layout) {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;

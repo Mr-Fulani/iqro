@@ -8,12 +8,14 @@ import { TodayReadingCard } from "./TodayReadingCard";
 import { PrayerReadingPlanCard } from "./PrayerReadingPlanCard";
 import { MemorizationPlannerCard } from "./MemorizationPlannerCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
+import type { PublishedHomeInitialData } from "../lib/public-content";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { selectHomePopularReciters } from "../lib/reciter-catalog";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { rememberReciterPreference } from "../lib/reciter-preference";
+import { useHydrated } from "../lib/use-hydrated";
 import { localizedPath } from "../lib/routing";
 import { quranEditionPath, quranSurahPath } from "../lib/quran-content";
 import {
@@ -31,19 +33,24 @@ const HERO_SLIDES = [
   { src: "/images/home/hero-quba-mosque.webp", label: "home.heroQubaMosque" as const },
 ];
 
-export default function HomePage() {
+export default function HomePage({ initialData }: { initialData?: PublishedHomeInitialData }) {
   // The first hero slide is the LCP element; as a CSS background it would
   // otherwise be fetched late and at low priority.
   preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high" });
   const { session, isLoggedIn, isLoading: authLoading } = useAuth();
   const { locale, t, formatDate } = useI18n();
+  // Arabic names are shown after hydration so their Amiri faces do not compete
+  // with the server-rendered first screen.
+  const hydrated = useHydrated();
   const isActiveAccount = session?.user.status === "active";
   const sessionUserId = session?.user.id;
 
-  const [editions, setEditions] = useState<QuranEdition[]>([]);
-  const [featuredSurahs, setFeaturedSurahs] = useState<Surah[]>([]);
-  const [featuredReciters, setFeaturedReciters] = useState<Reciter[]>([]);
-  const [recitersLoading, setRecitersLoading] = useState(true);
+  const [editions, setEditions] = useState<QuranEdition[]>(initialData?.editions ?? []);
+  const [featuredSurahs, setFeaturedSurahs] = useState<Surah[]>(initialData?.featuredSurahs ?? []);
+  const [featuredReciters, setFeaturedReciters] = useState<Reciter[]>(
+    initialData?.featuredReciters ?? [],
+  );
+  const [recitersLoading, setRecitersLoading] = useState(!initialData);
   const [todayPrayer, setTodayPrayer] = useState<PrayerCalculationResponse | null>(null);
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
@@ -60,6 +67,7 @@ export default function HomePage() {
   }, [heroPaused]);
 
   useEffect(() => {
+    if (initialData) return;
     // Load initial Quran editions
     api
       .getEditions()
@@ -78,7 +86,7 @@ export default function HomePage() {
       .catch(() => setFeaturedReciters([]))
       .finally(() => setRecitersLoading(false));
 
-  }, []);
+  }, [initialData]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -312,7 +320,7 @@ export default function HomePage() {
                   <span className="reciter-card-copy">
                     <strong>{name || reciter.name_en}</strong>
                     <span lang={locale === "ar" ? "en" : "ar"} dir={locale === "ar" ? "ltr" : "rtl"}>
-                      {reciterSecondaryName(reciter)}
+                      {hydrated && reciterSecondaryName(reciter)}
                     </span>
                   </span>
                 </IntentPrefetchLink>
@@ -422,7 +430,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <span className="quran-arabic-text" style={{ fontSize: 20 }}>
-                  {surah.name_ar}
+                  {hydrated && surah.name_ar}
                 </span>
               </IntentPrefetchLink>
             ))

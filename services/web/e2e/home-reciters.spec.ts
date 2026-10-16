@@ -3,6 +3,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { groupRecitersByPerson, selectHomePopularReciters } from "../lib/reciter-catalog";
 import { RECITER_PORTRAITS } from "../lib/reciter-portraits";
+import { abdulBaset, abdulBasetMujawwad, mishari, reciterPeopleCount, reciters, sudais } from "./fixtures/audio";
 
 const productionReciterSlugs = [
   "qf-1-abdulbaset-abdulsamad-mujawwad",
@@ -25,145 +26,6 @@ const productionReciterSlugs = [
   "qf-176-ahmed-tahoun",
 ];
 
-const reciters = [
-  {
-    id: "00000000-0000-7000-8000-000000000002",
-    slug: "qf-2-abdul-baset-abdul-samad",
-    name_ar: "عبد الباسط عبد الصمد",
-    name_en: "Abdul Baset Abdul Samad",
-    name_ru: "Абдуль-Басит Абдус-Самад",
-    country_code: "EG",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000001",
-    slug: "qf-1-abdulbaset-abdulsamad-mujawwad",
-    name_ar: "عبد الباسط عبد الصمد - مجود",
-    name_en: "AbdulBaset AbdulSamad [Mujawwad]",
-    name_ru: "Абдуль-Басит Абдус-Самад",
-    country_code: "EG",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000158",
-    slug: "qf-158-abdullah-ali-jabir",
-    name_ar: "عبدالله علي جابر",
-    name_en: "Abdullah Ali Jabir",
-    name_ru: "Абдуллах Али Джабир",
-    country_code: "SA",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000175",
-    slug: "qf-175-abdullah-hamad-abu-sharida",
-    name_ar: "عبدالله حمد أبو شريدة",
-    name_en: "Abdullah Hamad Abu Sharida",
-    name_ru: "Абдуллах Хамад Абу Шарида",
-    country_code: "SA",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000003",
-    slug: "qf-3-abdur-rahman-as-sudais",
-    name_ar: "عبدالرحمن السديس",
-    name_en: "Abdur-Rahman as-Sudais",
-    name_ru: "Абдур-Рахман ас-Судайс",
-    country_code: "SA",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000004",
-    slug: "qf-4-abu-bakr-al-shatri",
-    name_ar: "أبو بكر الشاطري",
-    name_en: "Abu Bakr al-Shatri",
-    name_ru: "Абу Бакр аш-Шатри",
-    country_code: "SA",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000005",
-    slug: "qf-5-hani-ar-rifai",
-    name_ar: "هاني الرفاعي",
-    name_en: "Hani ar-Rifai",
-    name_ru: "Хани ар-Рифаи",
-    country_code: "SA",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000006",
-    slug: "qf-6-mahmoud-khaleel-al-husary",
-    name_ar: "محمود خليل الحصري",
-    name_en: "Mahmoud Khaleel Al-Husary",
-    name_ru: "Махмуд Халиль аль-Хусари",
-    country_code: "EG",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000007",
-    slug: "qf-7-mishari-rashid-al-afasy",
-    name_ar: "مشاري راشد العفاسي",
-    name_en: "Mishari Rashid al-Afasy",
-    name_ru: "Мишари Рашид аль-Афаси",
-    country_code: "KW",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000009",
-    slug: "qf-9-muhammad-siddiq-al-minshawi",
-    name_ar: "محمد صديق المنشاوي",
-    name_en: "Muhammad Siddiq al-Minshawi",
-    name_ru: "Мухаммад Сиддик аль-Миншави",
-    country_code: "EG",
-    portrait_url: null,
-  },
-  {
-    id: "00000000-0000-7000-8000-000000000010",
-    slug: "qf-10-saud-ash-shuraym",
-    name_ar: "سعود الشريم",
-    name_en: "Saud ash-Shuraym",
-    name_ru: "Сауд аш-Шурайм",
-    country_code: "SA",
-    portrait_url: null,
-  },
-];
-
-function recitation(
-  id: string,
-  reciter: (typeof reciters)[number],
-  style: "mujawwad" | "murattal",
-  publishedAt: string,
-) {
-  return {
-    id,
-    code: `${reciter.slug}-${style}`,
-    version: publishedAt.slice(0, 10),
-    style,
-    reciter,
-    quran_edition: {
-      id: "00000000-0000-7000-8000-000000000999",
-      code: "madani-hafs",
-      content_version: "1.0.1",
-      riwayah: "Hafs 'an Asim",
-    },
-    coverage: {
-      track_count: 114,
-      surah_count: 114,
-      expected_ayahs: 6236,
-      timed_ayahs: 6236,
-      complete: true,
-      timings_complete: true,
-    },
-    timings: { available: true, segment_count: 6236, complete: true },
-    capabilities: {
-      listen: true,
-      ayah_playback: true,
-      memorization: true,
-      offline: false,
-    },
-    published_at: publishedAt,
-  };
-}
-
 test("portrait manifest covers the full production reciter catalog", async () => {
   expect(Object.keys(RECITER_PORTRAITS).sort()).toEqual([...productionReciterSlugs].sort());
   expect(new Set(Object.values(RECITER_PORTRAITS)).size).toBe(16);
@@ -174,9 +36,9 @@ test("portrait manifest covers the full production reciter catalog", async () =>
   }
 
   const people = groupRecitersByPerson(reciters);
-  expect(people).toHaveLength(10);
+  expect(people).toHaveLength(reciterPeopleCount);
   expect(people.filter((reciter) => reciter.slug.includes("abdul-baset"))).toHaveLength(1);
-  expect(people[0].slug).toBe("qf-2-abdul-baset-abdul-samad");
+  expect(people[1].slug).toBe("qf-2-abdul-baset-abdul-samad");
 
   const uploadedPortrait = "https://media.example.test/abdul-baset.png";
   const peopleWithVariantPortrait = groupRecitersByPerson(
@@ -186,7 +48,7 @@ test("portrait manifest covers the full production reciter catalog", async () =>
         : reciter,
     ),
   );
-  expect(peopleWithVariantPortrait[0]).toMatchObject({
+  expect(peopleWithVariantPortrait[1]).toMatchObject({
     slug: "qf-2-abdul-baset-abdul-samad",
     portrait_url: uploadedPortrait,
   });
@@ -198,7 +60,7 @@ test("portrait manifest covers the full production reciter catalog", async () =>
     "qf-2-abdul-baset-abdul-samad",
     "qf-9-muhammad-siddiq-al-minshawi",
     "qf-6-mahmoud-khaleel-al-husary",
-    "qf-10-saud-ash-shuraym",
+    "qf-159-maher-al-muaiqly",
   ]);
 });
 
@@ -384,12 +246,6 @@ test("home prayer preview reuses the saved prayer location and profile", async (
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
-  await page.route("**/api/v1/reciters?*", (route) =>
-    route.fulfill({ json: { next: null, previous: null, results: reciters } }),
-  );
-  await page.route("**/api/v1/recitations?*", (route) =>
-    route.fulfill({ json: { next: null, previous: null, results: [] } }),
-  );
 
   await page.goto("/");
 
@@ -428,58 +284,26 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
 
   await section.getByRole("link", { name: "Слушать чтение: Абдур-Рахман ас-Судайс" }).click();
 
-  await expect(page).toHaveURL(`/ru/audio?reciter=${reciters[4].id}`, { timeout: 15_000 });
-  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[4].id);
+  await expect(page).toHaveURL(`/ru/audio?reciter=${sudais.id}`, { timeout: 15_000 });
+  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(sudais.id);
 
   await page.goto("/ru/audio");
-  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[4].id);
-  await page.getByLabel("Чтец (Кари)").selectOption(reciters[8].id);
+  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(sudais.id);
+  await page.getByLabel("Чтец (Кари)").selectOption(mishari.id);
   await page.reload();
-  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(reciters[8].id);
+  await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(mishari.id);
 });
 
 test("one reciter exposes multiple reading styles without duplicate person options", async ({ page }) => {
-  const murattalOld = recitation(
-    "00000000-0000-7000-8000-000000001001",
-    reciters[0],
-    "murattal",
-    "2026-08-20T00:00:00Z",
-  );
-  const murattalCurrent = recitation(
-    "00000000-0000-7000-8000-000000001002",
-    reciters[0],
-    "murattal",
-    "2026-08-25T00:00:00Z",
-  );
-  const mujawwad = recitation(
-    "00000000-0000-7000-8000-000000001003",
-    reciters[1],
-    "mujawwad",
-    "2026-08-25T00:00:00Z",
-  );
-
+  // The shared catalog publishes two murattal versions and a mujawwad from
+  // the person's second source.
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
-  await page.route("**/api/v1/reciters?*", (route) =>
-    route.fulfill({ json: { next: null, previous: null, results: reciters } }),
-  );
-  await page.route("**/api/v1/recitations?*", (route) => {
-    const reciterId = new URL(route.request().url()).searchParams.get("reciter_id");
-    const results = reciterId === reciters[0].id
-      ? [murattalOld, murattalCurrent]
-      : reciterId === reciters[1].id
-        ? [mujawwad]
-        : [];
-    return route.fulfill({ json: { next: null, previous: null, results } });
-  });
-  await page.route("**/api/v1/recitations/*/tracks?*", (route) =>
-    route.fulfill({ json: { next: null, previous: null, results: [] } }),
-  );
 
-  await page.goto(`/audio?reciter=${reciters[1].id}`);
+  await page.goto(`/audio?reciter=${abdulBasetMujawwad.id}`);
 
   const reciterSelect = page.getByLabel("Чтец (Кари)");
-  await expect(reciterSelect.locator("option")).toHaveCount(10);
-  await expect(reciterSelect).toHaveValue(reciters[0].id);
+  await expect(reciterSelect.locator("option")).toHaveCount(reciterPeopleCount);
+  await expect(reciterSelect).toHaveValue(abdulBaset.id);
 
   const readingSelect = page.getByLabel("Издание и стиль чтения");
   await expect(readingSelect.locator("option")).toHaveCount(2);
