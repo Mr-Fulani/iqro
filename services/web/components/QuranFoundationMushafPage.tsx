@@ -37,7 +37,7 @@ function ChapterTitle({ surah, name, headers }: { surah: number | null; name?: s
       </div>
     );
   }
-  // Until the source heading arrives, reserve its place instead of flashing IQRO's frame.
+  // Until the source heading arrives, reserve its place instead of flashing the text title.
   return (
     <div className={`qf-mushaf-chapter-title${headers === "loading" ? " is-header-loading" : ""}`}>
       سُورَةُ {name}

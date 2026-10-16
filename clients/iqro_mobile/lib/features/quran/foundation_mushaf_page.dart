@@ -14,7 +14,6 @@ import '../../core/design_system/iqro_widgets.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'quran_models.dart';
-import 'surah_header_frame.dart';
 import 'truetype_glyph.dart';
 
 final _fontLoads = <String, Future<void>>{};
@@ -64,7 +63,7 @@ Future<FoundationPageResources> loadFoundationPageResources(
     return family;
   }
 
-  // An unavailable or changed heading font keeps IQRO's drawn cartouche.
+  // An unavailable or changed heading font keeps the plain text title.
   Future<Map<int, GlyphOutline>> loadSurahHeaders() async {
     final header = page.surahHeader;
     if (header.isEmpty) return const {};
@@ -581,7 +580,6 @@ class FoundationPageLayout {
   final Size size;
   final words = <_WordPaint>[];
   final decorations = <(TextPainter, Offset)>[];
-  final frames = <Rect>[];
   final headers = <(GlyphOutline, Rect)>[];
   final Map<int, GlyphOutline> _surahHeaders;
   final _highlights = <QuranAyahReference, Path>{};
@@ -630,19 +628,6 @@ class FoundationPageLayout {
         ),
       ));
       return;
-    }
-    if (surah != null) {
-      // The printed cartouche spans the text block and the row reserved for
-      // the surah name; the title shrinks only when a short row needs it.
-      final frameHeight = math.min(height * .92, fontSize * 2.4);
-      fontSize = frameHeight / 2.4;
-      frames.add(
-        Rect.fromCenter(
-          center: Offset(size.width / 2, centerY),
-          width: size.width * .88,
-          height: frameHeight,
-        ),
-      );
     }
     final text = TextPainter(
       text: TextSpan(
@@ -752,9 +737,6 @@ class FoundationPagePainter extends CustomPainter {
       }
     }
     if (onlyAyah == null) {
-      for (final frame in layout.frames) {
-        paintSurahHeaderFrame(canvas, frame);
-      }
       for (final (heading, rect) in layout.headers) {
         canvas
           ..save()

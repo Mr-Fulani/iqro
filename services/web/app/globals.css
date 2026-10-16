@@ -3233,16 +3233,6 @@ input:focus, select:focus, textarea:focus {
 
 .qf-mushaf-chapter-title {
   align-self: center;
-  box-sizing: border-box;
-  width: 100%;
-  /* Printed-Mushaf cartouche across the line: a nine-slice SVG whose 72-unit
-     end caps keep the 60-unit height's proportions (2.4em × 72/60) while the
-     patterned band repeats. The mobile app paints the same geometry. */
-  height: 2.4em;
-  max-height: 100%;
-  border: 0 solid transparent;
-  border-image: url("/mushaf/surah-frame.svg") 30 72 fill / 50% 2.88em round;
-  color: #392d20;
   font-size: clamp(15px, 2.5vw, 27px);
   font-weight: 700;
 }
@@ -3251,11 +3241,10 @@ input:focus, select:focus, textarea:focus {
   font-size: clamp(17px, 2.9vw, 32px);
 }
 
-/* The source heading glyph already holds the printed cartouche and name. */
+/* The source heading glyph already holds the printed frame and name. */
 .qf-mushaf-chapter-title.has-source-header {
+  width: 100%;
   height: 92%;
-  max-height: none;
-  border-image-source: none;
 }
 
 .qf-mushaf-chapter-title.has-source-header svg {
