@@ -52,6 +52,211 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     final playerActive = ref.watch(
       audioControllerProvider.select((value) => value.active),
     );
+    // Landscape leaves too little height to stack the cards above the list,
+    // so they scroll in their own column beside it.
+    final landscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final offlineBanner = IqroStatusBanner(
+      icon: Icons.cloud_off_outlined,
+      title: context.l10n.offlineUsingCache,
+    );
+    final header = <Widget>[
+      IqroCard(
+        onTap: () => _showMushafPicker(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ReaderMode>(
+                segments: <ButtonSegment<ReaderMode>>[
+                  ButtonSegment(
+                    value: ReaderMode.text,
+                    icon: const Icon(Icons.format_list_bulleted),
+                    label: Text(context.l10n.textMode),
+                  ),
+                  ButtonSegment(
+                    value: ReaderMode.mushaf,
+                    icon: const IqroIcon(Icons.menu_book_outlined),
+                    label: Text(context.l10n.mushafMode),
+                  ),
+                ],
+                selected: <ReaderMode>{preferences.readerMode},
+                showSelectedIcon: false,
+                onSelectionChanged: (values) {
+                  ref
+                      .read(appPreferencesProvider.notifier)
+                      .setReaderMode(values.first);
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        context.l10n.selectedMushaf,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        rendition?.nameFor(locale) ??
+                            context.l10n.mushafCatalogEmpty,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        context.l10n.mushafPublishedDescription,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const _MushafOfflineIndicator(),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      IqroCard(
+        color: context.iqroColors.ink,
+        borderColor: Colors.transparent,
+        onTap: position == null
+            ? null
+            : () => _openPosition(
+                preferences.readerMode,
+                position.surah,
+                position.ayah,
+                position.page,
+              ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white.withValues(alpha: .25)),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: IqroIcon(
+                preferences.readerMode == ReaderMode.text
+                    ? Icons.format_list_bulleted
+                    : Icons.menu_book_outlined,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    context.l10n.continueSaved,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: .7),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    position == null
+                        ? context.l10n.loading
+                        : '${positionSurah?.nameFor(locale) ?? '${context.l10n.surah} ${position.surah}'}'
+                              ' · ${context.l10n.ayah} ${position.ayah}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      SearchBar(
+        controller: _searchController,
+        hintText:
+            '${context.l10n.surah}, ${context.l10n.ayah}, ${context.l10n.juz}…',
+        leading: const Icon(Icons.search),
+        trailing: _query.isEmpty
+            ? null
+            : <Widget>[
+                IconButton(
+                  tooltip: context.l10n.close,
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+        onChanged: (value) =>
+            setState(() => _query = value.trim().toLowerCase()),
+      ),
+      if (landscape && catalog.valueOrNull?.fromCache == true) ...<Widget>[
+        const SizedBox(height: 12),
+        offlineBanner,
+      ],
+    ];
+    final surahList = catalog.when(
+      loading: () => const IqroLoading(),
+      error: (error, stack) => IqroAsyncError(
+        title: context.l10n.noQuranData,
+        message: context.l10n.networkError,
+        onRetry: () => ref.invalidate(quranCatalogProvider),
+      ),
+      data: (data) {
+        final filtered = data.surahs
+            .where((surah) {
+              if (_query.isEmpty) return true;
+              return '${surah.number} ${surah.nameAr} ${surah.nameEn} ${surah.nameRu}'
+                  .toLowerCase()
+                  .contains(_query);
+            })
+            .toList(growable: false);
+        return Column(
+          children: <Widget>[
+            if (data.fromCache && !landscape)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: offlineBanner,
+              ),
+            Expanded(
+              child: IqroCard(
+                padding: EdgeInsets.zero,
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: filtered.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final surah = filtered[index];
+                    return _SurahRow(
+                      surah: surah,
+                      locale: locale,
+                      onTap: () => _openPosition(
+                        preferences.readerMode,
+                        surah.number,
+                        1,
+                        surah.firstPage ?? 1,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.navQuran,
@@ -71,209 +276,26 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
           playerActive: playerActive,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
         ),
-        child: Column(
-          children: <Widget>[
-            IqroCard(
-              onTap: () => _showMushafPicker(context),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: landscape
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<ReaderMode>(
-                      segments: <ButtonSegment<ReaderMode>>[
-                        ButtonSegment(
-                          value: ReaderMode.text,
-                          icon: const Icon(Icons.format_list_bulleted),
-                          label: Text(context.l10n.textMode),
-                        ),
-                        ButtonSegment(
-                          value: ReaderMode.mushaf,
-                          icon: const IqroIcon(Icons.menu_book_outlined),
-                          label: Text(context.l10n.mushafMode),
-                        ),
-                      ],
-                      selected: <ReaderMode>{preferences.readerMode},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (values) {
-                        ref
-                            .read(appPreferencesProvider.notifier)
-                            .setReaderMode(values.first);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              context.l10n.selectedMushaf,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              rendition?.nameFor(locale) ??
-                                  context.l10n.mushafCatalogEmpty,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              context.l10n.mushafPublishedDescription,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _MushafOfflineIndicator(),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            IqroCard(
-              color: context.iqroColors.ink,
-              borderColor: Colors.transparent,
-              onTap: position == null
-                  ? null
-                  : () => _openPosition(
-                      preferences.readerMode,
-                      position.surah,
-                      position.ayah,
-                      position.page,
-                    ),
-              child: Row(
-                children: <Widget>[
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: .25),
-                      ),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: IqroIcon(
-                      preferences.readerMode == ReaderMode.text
-                          ? Icons.format_list_bulleted
-                          : Icons.menu_book_outlined,
-                      color: Colors.white,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(children: header),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          context.l10n.continueSaved,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: .7),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          position == null
-                              ? context.l10n.loading
-                              : '${positionSurah?.nameFor(locale) ?? '${context.l10n.surah} ${position.surah}'}'
-                                    ' · ${context.l10n.ayah} ${position.ayah}',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleSmall?.copyWith(color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: Colors.white),
+                  Expanded(child: surahList),
+                ],
+              )
+            : Column(
+                children: <Widget>[
+                  ...header,
+                  const SizedBox(height: 12),
+                  Expanded(child: surahList),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            SearchBar(
-              controller: _searchController,
-              hintText:
-                  '${context.l10n.surah}, ${context.l10n.ayah}, ${context.l10n.juz}…',
-              leading: const Icon(Icons.search),
-              trailing: _query.isEmpty
-                  ? null
-                  : <Widget>[
-                      IconButton(
-                        tooltip: context.l10n.close,
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-              onChanged: (value) =>
-                  setState(() => _query = value.trim().toLowerCase()),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: catalog.when(
-                loading: () => const IqroLoading(),
-                error: (error, stack) => IqroAsyncError(
-                  title: context.l10n.noQuranData,
-                  message: context.l10n.networkError,
-                  onRetry: () => ref.invalidate(quranCatalogProvider),
-                ),
-                data: (data) {
-                  final filtered = data.surahs
-                      .where((surah) {
-                        if (_query.isEmpty) return true;
-                        return '${surah.number} ${surah.nameAr} ${surah.nameEn} ${surah.nameRu}'
-                            .toLowerCase()
-                            .contains(_query);
-                      })
-                      .toList(growable: false);
-                  return Column(
-                    children: <Widget>[
-                      if (data.fromCache)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: IqroStatusBanner(
-                            icon: Icons.cloud_off_outlined,
-                            title: context.l10n.offlineUsingCache,
-                          ),
-                        ),
-                      Expanded(
-                        child: IqroCard(
-                          padding: EdgeInsets.zero,
-                          child: ListView.separated(
-                            padding: EdgeInsets.zero,
-                            itemCount: filtered.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final surah = filtered[index];
-                              return _SurahRow(
-                                surah: surah,
-                                locale: locale,
-                                onTap: () => _openPosition(
-                                  preferences.readerMode,
-                                  surah.number,
-                                  1,
-                                  surah.firstPage ?? 1,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

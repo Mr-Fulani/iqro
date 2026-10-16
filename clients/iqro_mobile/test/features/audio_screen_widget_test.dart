@@ -115,6 +115,31 @@ void main() {
     expect(harness.controller.state.reciter?.id, _reciter.id);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('landscape keeps the page in a centered column', (tester) async {
+    // Redmi Note 7 turned to landscape: 851x393 logical pixels.
+    tester.view.physicalSize = const Size(2340, 1080);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await _pumpAudioScreen(tester);
+
+    expect(tester.takeException(), isNull);
+    const width = 2340 / 2.75;
+    final texts = find.descendant(
+      of: find.byType(SingleChildScrollView),
+      matching: find.byType(Text),
+    );
+    expect(texts, findsWidgets);
+    for (var index = 0; index < texts.evaluate().length; index++) {
+      final rect = tester.getRect(texts.at(index));
+      expect(rect.left, greaterThanOrEqualTo((width - 640) / 2));
+      expect(rect.right, lessThanOrEqualTo((width + 640) / 2));
+    }
+    await tester.ensureVisible(find.text('Тестовый чтец'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Тестовый чтец'));
+    await tester.pumpAndSettle();
+    expect(find.text('PLAYER'), findsOneWidget);
+  });
 }
 
 Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
