@@ -336,6 +336,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     highlightColors: highlightColors,
                     surahs: catalog?.surahs ?? const <Surah>[],
                     divisions: divisions,
+                    showPageLabels: !_controlsVisible,
                     onSelectAyah: _selectAyah,
                     onOpenAyah: _openAyah,
                     onBackgroundTap: () => _setControls(!_controlsVisible),
