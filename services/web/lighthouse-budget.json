@@ -4,6 +4,8 @@
     { "path": "/en", "locale": "en", "direction": "ltr", "template": "landing" },
     { "path": "/ar", "locale": "ar", "direction": "rtl", "template": "landing" },
     { "path": "/tr", "locale": "tr", "direction": "ltr", "template": "landing" },
+    { "path": "/ru/quran", "locale": "ru", "direction": "ltr", "template": "quran-reader" },
+    { "path": "/ru/audio", "locale": "ru", "direction": "ltr", "template": "audio-catalog" },
     {
       "path": "/ru/quran/madani-hafs/surah/1",
       "locale": "ru",

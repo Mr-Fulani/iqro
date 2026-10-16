@@ -2057,6 +2057,15 @@ input:focus, select:focus, textarea:focus {
   gap: 16px;
 }
 
+/* Server-rendered home catalogs far below the first screen: skip their layout
+   until the reader scrolls near, so their portraits and Arabic faces do not
+   compete with the first paint. */
+.home-page > .reciter-showcase,
+.home-surah-list {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 640px;
+}
+
 .reciter-showcase .reciter-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
@@ -2269,6 +2278,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .reciter-card-copy span {
+  min-height: 1.4em;
   color: var(--text-muted);
   font-family: var(--font-arabic);
   font-size: 17px;

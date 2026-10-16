@@ -14,7 +14,13 @@ import type {
   SupportedLocale,
   Surah,
 } from "./api";
-import { latestRecitationsByVariant, reciterPersonKey } from "./reciter-catalog";
+import {
+  groupRecitersByPerson,
+  latestRecitationsByVariant,
+  reciterPersonKey,
+  reciterSourcesForPerson,
+  selectHomePopularReciters,
+} from "./reciter-catalog";
 
 export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
@@ -281,6 +287,95 @@ export const getPublishedSurahTracks = cache(
     );
   },
 );
+
+export type PublishedAudioInitialData = {
+  /** Every published reciter source; the page groups them by person. */
+  reciters: Reciter[];
+  /** The default person and the first of its listening recitations. */
+  reciterId: string;
+  recitations: Recitation[];
+  recitationId: string;
+  tracks: AudioTrack[];
+  editionCode: string;
+  surahs: Surah[];
+};
+
+export const getPublishedAudioInitialData = cache(
+  async (): Promise<PublishedAudioInitialData> => {
+    const reciters = await getPublishedReciters();
+    const person = groupRecitersByPerson(reciters)[0];
+    const recitations = person
+      ? latestRecitationsByVariant(
+          (
+            await Promise.all(
+              reciterSourcesForPerson(reciters, person).map((source) =>
+                getPublishedRecitations(source.id),
+              ),
+            )
+          ).flat(),
+          "listen",
+        )
+      : [];
+    const recitation = recitations[0];
+    const [tracks, surahs] = recitation
+      ? await Promise.all([
+          getPublishedSurahTracks(recitation.id),
+          getPublishedSurahs(recitation.quran_edition.code),
+        ])
+      : [[], []];
+    return {
+      reciters,
+      reciterId: person?.id ?? "",
+      recitations,
+      recitationId: recitation?.id ?? "",
+      tracks,
+      editionCode: recitation?.quran_edition.code ?? "",
+      surahs,
+    };
+  },
+);
+
+export type PublishedQuranReaderPreview = {
+  edition: QuranEdition;
+  surahs: Surah[];
+  /** The canonical text of Mushaf page 1, shown until the reader mounts. */
+  firstPageAyahs: Ayah[];
+};
+
+export const getPublishedQuranReaderPreview = cache(
+  async (): Promise<PublishedQuranReaderPreview | null> => {
+    const editions = await getPublishedEditions();
+    const edition = editions.find((item) => item.code === "madani-hafs") ?? editions[0];
+    if (!edition) return null;
+    const surahs = await getPublishedSurahs(edition.code);
+    const firstPageAyahs = (
+      await Promise.all(
+        surahs
+          .filter((surah) => surah.first_page === 1)
+          .map((surah) => getPublishedAyahs(edition.code, surah.number)),
+      )
+    )
+      .flat()
+      .filter((ayah) => ayah.pages.includes(1));
+    return { edition, surahs, firstPageAyahs };
+  },
+);
+
+export type PublishedHomeInitialData = {
+  editions: QuranEdition[];
+  featuredSurahs: Surah[];
+  featuredReciters: Reciter[];
+};
+
+export const getPublishedHomeInitialData = cache(async (): Promise<PublishedHomeInitialData> => {
+  const [editions, reciters] = await Promise.all([getPublishedEditions(), getPublishedReciters()]);
+  const surahs = editions[0] ? await getPublishedSurahs(editions[0].code) : [];
+  return {
+    editions,
+    featuredSurahs: surahs.slice(0, 6),
+    featuredReciters: selectHomePopularReciters(reciters),
+  };
+});
 
 export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[]> => {
   const profiles = await fetchPublishedJson<unknown>("/api/v1/site/social-profiles", [

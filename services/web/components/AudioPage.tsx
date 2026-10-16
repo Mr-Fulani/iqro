@@ -9,6 +9,7 @@ import {
   Reciter,
 } from "../lib/api";
 import type { Surah } from "../lib/api";
+import type { PublishedAudioInitialData } from "../lib/public-content";
 import { ReciterAvatar } from "./ReciterAvatar";
 import type { AudioPlaybackRequest } from "./SegmentedAudioPlayer";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
@@ -27,10 +28,21 @@ import {
   preferredReciter,
   rememberReciterPreference,
 } from "../lib/reciter-preference";
+import { useHydrated } from "../lib/use-hydrated";
 
-function AudioContent() {
-  const searchParams = useSearchParams();
-  const requestedReciterId = searchParams.get("reciter");
+// useSearchParams() renders its subtree in the browser only, so it stays out of
+// the server-rendered catalog and reports the requested reciter after hydration.
+function RequestedReciter({ onChange }: { onChange: (reciterId: string | null) => void }) {
+  const reciterId = useSearchParams().get("reciter");
+  useEffect(() => onChange(reciterId), [onChange, reciterId]);
+  return null;
+}
+
+export default function AudioPage({ initialData }: { initialData?: PublishedAudioInitialData }) {
+  // Server HTML already lists the tracks; a click before hydration would be lost.
+  const hydrated = useHydrated();
+  // undefined until the browser has read the query string.
+  const [requestedReciterId, setRequestedReciterId] = useState<string | null>();
   const { locale, t, formatNumber } = useI18n();
   const {
     request: playerRequest,
@@ -39,14 +51,19 @@ function AudioContent() {
     clearPlayback,
     setReciterControls,
   } = useAudioPlayer();
-  const [reciterSources, setReciterSources] = useState<Reciter[]>([]);
-  const [reciters, setReciters] = useState<Reciter[]>([]);
-  const [selectedReciterId, setSelectedReciterId] = useState<string>("");
-  const [recitations, setRecitations] = useState<Recitation[]>([]);
-  const [selectedRecitationId, setSelectedRecitationId] = useState<string>("");
-  const [tracks, setTracks] = useState<AudioTrack[]>([]);
-  const [surahs, setSurahs] = useState<Surah[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [reciterSources, setReciterSources] = useState<Reciter[]>(initialData?.reciters ?? []);
+  const [reciters, setReciters] = useState<Reciter[]>(
+    () => groupRecitersByPerson(initialData?.reciters ?? []),
+  );
+  const [selectedReciterId, setSelectedReciterId] = useState<string>(initialData?.reciterId ?? "");
+  const [selectionReady, setSelectionReady] = useState(false);
+  const [recitations, setRecitations] = useState<Recitation[]>(initialData?.recitations ?? []);
+  const [selectedRecitationId, setSelectedRecitationId] = useState<string>(
+    initialData?.recitationId ?? "",
+  );
+  const [tracks, setTracks] = useState<AudioTrack[]>(initialData?.tracks ?? []);
+  const [surahs, setSurahs] = useState<Surah[]>(initialData?.surahs ?? []);
+  const [loading, setLoading] = useState<boolean>(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
@@ -59,61 +76,107 @@ function AudioContent() {
     endAyah?: number;
   } | null>(null);
 
-  // Load reciters on mount
+  // Choose the reciter once the query string and the saved preference are known.
   useEffect(() => {
+    if (requestedReciterId === undefined) return;
+    let cancelled = false;
+    const applyCatalog = (availableReciters: Reciter[]) => {
+      const people = groupRecitersByPerson(availableReciters);
+      setReciterSources(availableReciters);
+      setReciters(people);
+      if (people.length > 0) {
+        const requestedSource = availableReciters.find((item) => item.id === requestedReciterId);
+        const requestedPerson = requestedSource
+          ? people.find((item) => reciterPersonKey(item) === reciterPersonKey(requestedSource))
+          : undefined;
+        const selected =
+          requestedPerson ||
+          preferredReciter(people, loadReciterPreference("listening")) ||
+          people[0];
+        setSelectedReciterId(selected.id);
+        rememberReciterPreference(selected, null, "listening");
+      }
+      setSelectionReady(true);
+      setLoading(false);
+    };
+    if (initialData) {
+      applyCatalog(initialData.reciters);
+      return;
+    }
     setLoading(true);
     api
       .getAllReciters()
       .then((availableReciters) => {
-        const people = groupRecitersByPerson(availableReciters);
-        setReciterSources(availableReciters);
-        setReciters(people);
-        if (people.length > 0) {
-          const requestedSource = availableReciters.find((item) => item.id === requestedReciterId);
-          const requestedPerson = requestedSource
-            ? people.find((item) => reciterPersonKey(item) === reciterPersonKey(requestedSource))
-            : undefined;
-          const selected =
-            requestedPerson ||
-            preferredReciter(people, loadReciterPreference("listening")) ||
-            people[0];
-          setSelectedReciterId(selected.id);
-          rememberReciterPreference(selected, null, "listening");
-        }
-        setLoading(false);
+        if (!cancelled) applyCatalog(availableReciters);
       })
       .catch((err) => {
+        if (cancelled) return;
         setError(api.normalizeError(err));
         setLoading(false);
       });
-  }, [requestedReciterId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData, requestedReciterId]);
 
   // Load recitations when reciter changes
   useEffect(() => {
-    if (!selectedReciterId) return;
+    if (!selectionReady || !selectedReciterId) return;
     const selected = reciters.find((reciter) => reciter.id === selectedReciterId);
     if (!selected) return;
-    const sources = reciterSourcesForPerson(reciterSources, selected);
     let cancelled = false;
+    const applyRecitations = (available: Recitation[]) => {
+      setRecitations(available);
+      if (available.length > 0) {
+        const selectedRecitation =
+          preferredRecitation(available, loadReciterPreference("listening")) || available[0];
+        setSelectedRecitationId(selectedRecitation.id);
+        rememberReciterPreference(
+          selectedRecitation.reciter,
+          selectedRecitation,
+          "listening",
+        );
+      } else {
+        setSelectedRecitationId("");
+        setTracks([]);
+      }
+      setLoading(false);
+    };
+    if (initialData && selectedReciterId === initialData.reciterId) {
+      applyRecitations(initialData.recitations);
+      return;
+    }
+    const sources = reciterSourcesForPerson(reciterSources, selected);
     setLoading(true);
     Promise.all(sources.map((source) => api.getAllRecitations({ reciter_id: source.id })))
       .then((responses) => {
+        if (!cancelled) applyRecitations(latestRecitationsByVariant(responses.flat(), "listen"));
+      })
+      .catch((err) => {
         if (cancelled) return;
-        const available = latestRecitationsByVariant(responses.flat(), "listen");
-        setRecitations(available);
-        if (available.length > 0) {
-          const selectedRecitation =
-            preferredRecitation(available, loadReciterPreference("listening")) || available[0];
-          setSelectedRecitationId(selectedRecitation.id);
-          rememberReciterPreference(
-            selectedRecitation.reciter,
-            selectedRecitation,
-            "listening",
-          );
-        } else {
-          setSelectedRecitationId("");
-          setTracks([]);
-        }
+        setError(api.normalizeError(err));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData, reciterSources, reciters, selectedReciterId, selectionReady]);
+
+  // Load tracks when recitation changes
+  useEffect(() => {
+    if (!selectedRecitationId) return;
+    if (initialData && selectedRecitationId === initialData.recitationId) {
+      setTracks(initialData.tracks);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    api
+      .getTracks(selectedRecitationId, { scope: "surah", page_size: 114 })
+      .then((res) => {
+        if (cancelled) return;
+        setTracks(res.results || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -124,23 +187,7 @@ function AudioContent() {
     return () => {
       cancelled = true;
     };
-  }, [reciterSources, reciters, selectedReciterId]);
-
-  // Load tracks when recitation changes
-  useEffect(() => {
-    if (!selectedRecitationId) return;
-    setLoading(true);
-    api
-      .getTracks(selectedRecitationId, { scope: "surah", page_size: 114 })
-      .then((res) => {
-        setTracks(res.results || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(api.normalizeError(err));
-        setLoading(false);
-      });
-  }, [selectedRecitationId]);
+  }, [initialData, selectedRecitationId]);
 
   const selectedReciter = reciters.find((r) => r.id === selectedReciterId);
   const selectedRecitation = recitations.find((r) => r.id === selectedRecitationId);
@@ -210,6 +257,10 @@ function AudioContent() {
       setSurahs([]);
       return;
     }
+    if (initialData && editionCode === initialData.editionCode) {
+      setSurahs(initialData.surahs);
+      return;
+    }
     let cancelled = false;
     api.getSurahs(editionCode)
       .then((items) => {
@@ -221,7 +272,7 @@ function AudioContent() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRecitation?.quran_edition.code]);
+  }, [initialData, selectedRecitation?.quran_edition.code]);
 
   useEffect(() => {
     const pending = pendingReciterPlaybackRef.current;
@@ -310,6 +361,9 @@ function AudioContent() {
 
   return (
     <div className="audio-page">
+      <Suspense fallback={null}>
+        <RequestedReciter onChange={setRequestedReciterId} />
+      </Suspense>
       {/* Header Controls */}
       <section className="surface audio-controls">
         <div className="surface-head">
@@ -329,7 +383,7 @@ function AudioContent() {
               id="audio-reciter-select"
               value={selectedReciterId}
               onChange={(e) => selectReciter(e.target.value)}
-              disabled={reciters.length === 0}
+              disabled={!hydrated || reciters.length === 0}
             >
               {reciters.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -345,7 +399,7 @@ function AudioContent() {
               id="audio-recitation-select"
               value={selectedRecitationId}
               onChange={(e) => selectRecitation(e.target.value)}
-              disabled={recitations.length === 0}
+              disabled={!hydrated || recitations.length === 0}
             >
               {recitations.map((rec) => (
                 <option key={rec.id} value={rec.id}>
@@ -398,6 +452,7 @@ function AudioContent() {
                   type="button"
                   key={reciter.id}
                   onClick={() => selectReciter(reciter.id)}
+                  disabled={!hydrated}
                   aria-label={t("home.listenReciter", { name })}
                   aria-pressed={isSelected}
                   data-testid="audio-reciter"
@@ -413,7 +468,10 @@ function AudioContent() {
                       lang={locale === "ar" ? "en" : "ar"}
                       dir={locale === "ar" ? "ltr" : "rtl"}
                     >
-                      {reciterSecondaryName(reciter)}
+                      {/* Arabic names are shown after hydration: near the first
+                          screen their Amiri faces would compete with the
+                          server-rendered text. */}
+                      {hydrated && reciterSecondaryName(reciter)}
                     </span>
                   </span>
                 </button>
@@ -467,7 +525,7 @@ function AudioContent() {
                         {formatDuration(track.duration_ms)}
                       </p>
                     </div>
-                    {trackSurah?.name_ar && (
+                    {hydrated && trackSurah?.name_ar && (
                       <span className="track-surah-name-ar" lang="ar" dir="rtl">
                         {trackSurah.name_ar}
                       </span>
@@ -478,7 +536,7 @@ function AudioContent() {
                     <button
                       className={`btn ${isSelected && isPlaying ? "btn-primary" : "btn-secondary"} btn-sm`}
                       onClick={() => void handlePlayTrack(track)}
-                      disabled={loadingTrackId === track.id}
+                      disabled={!hydrated || loadingTrackId === track.id}
                     >
                       {loadingTrackId === track.id
                         ? t("audio.trackLoading")
@@ -512,32 +570,5 @@ function AudioContent() {
       </section>
 
     </div>
-  );
-}
-
-// useSearchParams() makes the reader client-only inside this boundary; the
-// fallback keeps the page heading in the prerendered HTML.
-function AudioPageHeading() {
-  const { t } = useI18n();
-  return (
-    <div className="audio-page">
-      <section className="surface audio-controls">
-        <div className="surface-head">
-          <div>
-            <p className="eyebrow">{t("audio.eyebrow")}</p>
-            <h1 className="surface-title">{t("audio.title")}</h1>
-            <p className="surface-subtitle">{t("audio.description")}</p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-export default function AudioPage() {
-  return (
-    <Suspense fallback={<AudioPageHeading />}>
-      <AudioContent />
-    </Suspense>
   );
 }

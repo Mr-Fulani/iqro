@@ -49,6 +49,13 @@ import {
 import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
+import type { PublishedQuranReaderPreview } from "../lib/public-content";
+import {
+  editionName as localizedEditionName,
+  quranSurahPath,
+  surahName as localizedSurahName,
+} from "../lib/quran-content";
+import { localizedPath } from "../lib/routing";
 
 function positiveInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
@@ -2183,10 +2190,48 @@ function QuranContent() {
   );
 }
 
-export default function QuranPage() {
-  const { t } = useI18n();
+const arabicNumber = new Intl.NumberFormat("ar-EG");
+
+// The reader reads the query string and the saved position, so it renders in
+// the browser only. Until it mounts, the server HTML shows the canonical text of
+// the first Mushaf page and links to every surah.
+function QuranReaderPreview({ preview }: { preview?: PublishedQuranReaderPreview | null }) {
+  const { locale, t } = useI18n();
+  if (!preview) return <div className="quran-reader-boot">{t("quran.loading")}</div>;
+  const { edition, surahs, firstPageAyahs } = preview;
+  const firstSurah = surahs.find((surah) => surah.number === firstPageAyahs[0]?.surah_number);
   return (
-    <Suspense fallback={<div className="quran-reader-boot">{t("quran.loading")}</div>}>
+    <div className="quran-reader-boot quran-reader-preview" aria-busy="true">
+      <p className="eyebrow">{t("quran.eyebrow")}</p>
+      <h1 className="surface-title">
+        {firstSurah
+          ? `${firstSurah.number}. ${localizedSurahName(firstSurah, locale)} (${firstSurah.name_ar})`
+          : t("nav.quran")}
+      </h1>
+      <p className="surface-subtitle">
+        {localizedEditionName(edition, locale)} · {t("quran.loading")}
+      </p>
+      {firstPageAyahs.length > 0 && (
+        <p className="quran-arabic-text quran-reader-preview-page" lang="ar" dir="rtl">
+          {firstPageAyahs
+            .map((ayah) => `${ayah.text_uthmani} \uFD3F${arabicNumber.format(ayah.number)}\uFD3E`)
+            .join(" ")}
+        </p>
+      )}
+      <nav className="quran-reader-preview-surahs" aria-label={t("home.surahCatalog")}>
+        {surahs.map((surah) => (
+          <a key={surah.id} href={localizedPath(locale, quranSurahPath(edition.code, surah.number))}>
+            {surah.number}. {localizedSurahName(surah, locale)}
+          </a>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+export default function QuranPage({ preview }: { preview?: PublishedQuranReaderPreview | null }) {
+  return (
+    <Suspense fallback={<QuranReaderPreview preview={preview} />}>
       <QuranContent />
     </Suspense>
   );

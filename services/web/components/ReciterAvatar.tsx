@@ -2,6 +2,7 @@
 
 import Image, { ImageLoaderProps } from "next/image";
 import { useEffect, useState } from "react";
+import { useHydrated } from "../lib/use-hydrated";
 
 const passthroughLoader = ({ src }: ImageLoaderProps) => src;
 
@@ -26,6 +27,9 @@ export function ReciterAvatar({
   tone: number;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
+  // Portraits are decorative: request them after hydration so they do not
+  // compete with the server-rendered text on slow connections.
+  const hydrated = useHydrated();
 
   useEffect(() => setImageFailed(false), [portraitUrl]);
 
@@ -38,7 +42,7 @@ export function ReciterAvatar({
       {(!portraitUrl || imageFailed) && (
         <span className="reciter-avatar-initials">{initials(name)}</span>
       )}
-      {portraitUrl && !imageFailed && (
+      {portraitUrl && !imageFailed && hydrated && (
         <Image
           loader={passthroughLoader}
           unoptimized
