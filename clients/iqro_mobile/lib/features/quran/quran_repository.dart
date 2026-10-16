@@ -1206,6 +1206,77 @@ class QuranRepository {
     _database.ensureCurrent(scope);
   }
 
+  /// Removes the ayah's highlight together with its note.
+  Future<void> deleteAyahAnnotation(
+    int surah,
+    int ayah, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final rows = await _database.database.query(
+      'ayah_annotations',
+      where:
+          'owner_id = ? AND edition = ? AND surah = ? AND ayah = ? '
+          'AND is_deleted = 0',
+      whereArgs: <Object?>[scope.userId, edition, surah, ayah],
+    );
+    _database.ensureCurrent(scope);
+    if (rows.isEmpty) return;
+    final now = DateTime.now().toUtc();
+    await _database.database.transaction((transaction) async {
+      _database.ensureCurrent(scope);
+      for (final row in rows) {
+        final id = row['id']! as String;
+        final revision = (row['server_revision'] as num?)?.toInt() ?? 0;
+        await transaction.delete(
+          'outbox',
+          where: 'owner_id = ? AND entity_type = ? AND entity_id = ?',
+          whereArgs: <Object?>[scope.userId, 'ayah_annotation', id],
+        );
+        if (revision == 0) {
+          await transaction.delete(
+            'ayah_annotations',
+            where: 'owner_id = ? AND id = ?',
+            whereArgs: <Object?>[scope.userId, id],
+          );
+          continue;
+        }
+        await transaction.update(
+          'ayah_annotations',
+          <String, Object?>{
+            'is_deleted': 1,
+            'updated_at': now.toIso8601String(),
+          },
+          where: 'owner_id = ? AND id = ?',
+          whereArgs: <Object?>[scope.userId, id],
+        );
+        final operationId = _uuid.v4();
+        await transaction.insert(
+          'outbox',
+          _outboxRow(
+            operationId: operationId,
+            entityId: id,
+            ownerId: scope.userId,
+            now: now,
+            entityType: 'ayah_annotation',
+            body: <String, Object?>{
+              'operation_id': operationId,
+              'entity_type': 'ayah_annotation',
+              'entity_id': id,
+              'action': 'delete',
+              'base_revision': revision,
+              'client_updated_at': now.toIso8601String(),
+              'payload': const <String, Object?>{},
+            },
+          ),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+    _database.ensureCurrent(scope);
+  }
+
   Future<List<Map<String, Object?>>> bookmarks({
     AccountScopeSnapshot? accountScope,
   }) async {

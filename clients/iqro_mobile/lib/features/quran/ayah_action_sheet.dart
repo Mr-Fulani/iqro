@@ -45,6 +45,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   var _copyFeedback = _CopyAyahFeedback.idle;
   var _bookmarked = false;
   var _highlightColor = 'lime';
+  var _highlighted = false;
   var _note = '';
   int? _translationSourceId;
   int? _tafsirSourceId;
@@ -96,6 +97,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
       _detailsSaving = false;
       _bookmarked = false;
       _highlightColor = 'lime';
+      _highlighted = false;
       _note = '';
       _recitationId = null;
       if (ownerId != null) {
@@ -270,7 +272,9 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                     dimension: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : _HighlightDots(colorKey: _highlightColor),
+                : _HighlightDots(
+                    colorKey: _highlighted ? _highlightColor : null,
+                  ),
             onTap: _detailsSaving ? null : _chooseHighlightColor,
           ),
           const Divider(height: 1),
@@ -522,6 +526,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         _highlightColor = normalizeAyahHighlightColor(
           annotation?['color_key']?.toString(),
         );
+        _highlighted = annotation != null;
         _note = annotation?['note']?.toString() ?? '';
         _details = _AyahDetails(
           ayah: ayahs
@@ -681,20 +686,87 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           children: <Widget>[
             for (final key in ayahHighlightColorKeys)
               _colorChoice(context, key, _highlightColorLabel(context, key)),
+            if (_highlighted)
+              ListTile(
+                leading: const Icon(Icons.format_color_reset_outlined),
+                title: Text(context.l10n.removeHighlight),
+                onTap: () => Navigator.pop(context, _removeHighlightChoice),
+              ),
             const SizedBox(height: 12),
           ],
         ),
       ),
     );
     if (selected == null || !mounted) return;
+    if (selected == _removeHighlightChoice) {
+      await _removeHighlight();
+      return;
+    }
     await _saveAyahAnnotation(note: _note, colorKey: selected);
+  }
+
+  static const _removeHighlightChoice = '';
+
+  // The highlight and the note are one annotation, and any annotation is
+  // highlighted, so removing the highlight removes the note as well.
+  Future<void> _removeHighlight() async {
+    if (_note.trim().isNotEmpty) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.removeHighlight),
+          content: Text(context.l10n.removeHighlightWithNote),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(context.l10n.cancel),
+            ),
+            FilledButton.tonal(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(context.l10n.delete),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope) || _detailsSaving) return;
+    setState(() => _detailsSaving = true);
+    try {
+      await ref
+          .read(quranRepositoryProvider)
+          .deleteAyahAnnotation(
+            widget.reference.surah,
+            widget.reference.ayah,
+            accountScope: scope,
+          );
+      if (!_isCurrentAccount(scope) || !mounted) return;
+      setState(() {
+        _highlighted = false;
+        _highlightColor = 'lime';
+        _note = '';
+      });
+      ref.invalidate(ayahAnnotationsProvider(accountScopeKey(scope)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.highlightRemoved)));
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (mounted) _showContentError();
+    } finally {
+      if (mounted) setState(() => _detailsSaving = false);
+    }
   }
 
   Widget _colorChoice(BuildContext context, String key, String label) {
     return ListTile(
       leading: _ColorDot(color: ayahHighlightColor(key)),
       title: Text(label),
-      trailing: key == _highlightColor ? const Icon(Icons.check_rounded) : null,
+      trailing: _highlighted && key == _highlightColor
+          ? const Icon(Icons.check_rounded)
+          : null,
       onTap: () => Navigator.pop(context, key),
     );
   }
@@ -754,6 +826,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
       setState(() {
         _note = normalizedNote;
         _highlightColor = normalizedColor;
+        _highlighted = true;
       });
       ref.invalidate(ayahAnnotationsProvider(accountScopeKey(scope)));
       return true;
@@ -1399,7 +1472,8 @@ class _ActionTile extends StatelessWidget {
 class _HighlightDots extends StatelessWidget {
   const _HighlightDots({required this.colorKey});
 
-  final String colorKey;
+  /// The ayah's colour, or null when it is not highlighted.
+  final String? colorKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1409,7 +1483,9 @@ class _HighlightDots extends StatelessWidget {
         for (final key in ayahHighlightColorKeys) ...<Widget>[
           _ColorDot(
             color: ayahHighlightColor(key),
-            selected: key == normalizeAyahHighlightColor(colorKey),
+            selected:
+                colorKey != null &&
+                key == normalizeAyahHighlightColor(colorKey),
           ),
           if (key != ayahHighlightColorKeys.last) const SizedBox(width: 5),
         ],
