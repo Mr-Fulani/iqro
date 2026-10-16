@@ -93,6 +93,8 @@ Production Compose без hot reload и bind-mount исходников опис
 [пошаговом staging runbook](docs/staging.md).
 Актуальное соответствие утверждённому P0/MVP и приоритетный backlog зафиксированы в
 [P0/MVP gap audit](docs/mvp-gap-audit.md).
+Отложенные задачи (что нужно до выкладки, производительность, UX, контент, CI)
+собраны в [списке технического долга](docs/tech-debt.md).
 Правила расширения функций и мощности до 100 000 DAU описаны в
 [архитектуре расширения и масштабирования](docs/architecture-and-scaling.md), а порядок
 реализации — в [плане и roadmap](docs/roadmap.md).
