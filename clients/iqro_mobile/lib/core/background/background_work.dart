@@ -4,7 +4,6 @@ import 'package:workmanager/workmanager.dart';
 
 const iqroMaintenanceUniqueName = 'forum.iqro.app.periodic-maintenance-v1';
 const iqroMaintenanceTaskName = 'iqro-periodic-maintenance';
-const iqroMaintenanceFrequency = Duration(hours: 6);
 
 @pragma('vm:entry-point')
 void iqroBackgroundDispatcher() {
@@ -31,31 +30,11 @@ Future<void> initializeBackgroundWork() async {
   if (!supportsIqroBackgroundWork(isAndroid: isAndroid, isIOS: isIOS)) return;
   final workmanager = Workmanager();
   await workmanager.initialize(iqroBackgroundDispatcher);
-  if (isIOS) {
-    await workmanager.registerPeriodicTask(
-      iqroMaintenanceUniqueName,
-      iqroMaintenanceTaskName,
-      frequency: iqroMaintenanceFrequency,
-      initialDelay: iqroMaintenanceFrequency,
-    );
-    return;
-  }
-  await workmanager.registerPeriodicTask(
-    iqroMaintenanceUniqueName,
-    iqroMaintenanceTaskName,
-    frequency: iqroMaintenanceFrequency,
-    flexInterval: const Duration(hours: 1),
-    initialDelay: const Duration(minutes: 15),
-    constraints: Constraints(
-      networkType: NetworkType.notRequired,
-      requiresBatteryNotLow: true,
-      requiresStorageNotLow: true,
-    ),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    backoffPolicy: BackoffPolicy.exponential,
-    backoffPolicyDelay: const Duration(minutes: 15),
-    tag: 'iqro-maintenance',
-  );
+  // The maintenance callback deliberately does nothing yet (see the dispatcher),
+  // so nothing is scheduled: an empty job every 6 hours only woke the app and
+  // cost battery. Earlier releases scheduled it, so drop that registration too.
+  // Scheduling returns once the cross-isolate account fence exists.
+  await workmanager.cancelByUniqueName(iqroMaintenanceUniqueName);
 }
 
 bool supportsIqroBackgroundWork({

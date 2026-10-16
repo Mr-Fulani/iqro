@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.decorators.cache import cache_page
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from quran_backend.admin_localization import configure_russian_admin
@@ -30,7 +31,13 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.reading.urls")),
     path("api/v1/", include("quran_backend.modules.memorization.urls")),
     path("api/v1/", include("quran_backend.modules.reminders.urls")),
-    path("api/schema", SpectacularAPIView.as_view(), name="openapi-schema"),
+    path(
+        "api/schema",
+        cache_page(settings.OPENAPI_SCHEMA_CACHE_SECONDS)(SpectacularAPIView.as_view())
+        if settings.OPENAPI_SCHEMA_CACHE_SECONDS
+        else SpectacularAPIView.as_view(),
+        name="openapi-schema",
+    ),
     path(
         "api/docs",
         SpectacularSwaggerView.as_view(url_name="openapi-schema"),

@@ -4,6 +4,7 @@ from quran_backend.settings.base import *  # noqa: F403
 from quran_backend.settings.base import env_list
 
 DEBUG = True
+OPENAPI_SCHEMA_CACHE_SECONDS = 0  # regenerate on every request while developing
 LOCAL_DEVELOPMENT = True
 MUSHAF_STAGING_PREVIEWS = True
 # Local content is prepared explicitly by dev-data. Do not start production-size

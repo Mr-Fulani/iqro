@@ -154,6 +154,10 @@ class Bookmark(BaseModel):
         ]
         indexes = [
             models.Index(fields=["user", "deleted_at"], name="reading_bookmark_user_del_idx"),
+            # Cursor pagination of a user's bookmarks (ordering -updated_at, -id).
+            models.Index(
+                fields=["user", "-updated_at", "-id"], name="reading_bookmark_user_cur_idx"
+            ),
             models.Index(fields=["user", "edition"], name="reading_bookmark_user_ed_idx"),
         ]
 
