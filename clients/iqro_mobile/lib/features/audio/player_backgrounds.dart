@@ -16,6 +16,7 @@ class PlayerBackground {
     this.assetPath,
     this.imageUrl,
     this.videoAssetPath,
+    this.videoUrl,
   });
 
   final String id;
@@ -23,8 +24,13 @@ class PlayerBackground {
   final String? assetPath;
   final String? imageUrl;
 
-  /// Plays over [assetPath], which stays as the poster and the picker tile.
+  /// Plays over the image, which stays as the poster and the picker tile.
   final String? videoAssetPath;
+
+  /// An admin video, downloaded once and then played from the cache.
+  final String? videoUrl;
+
+  bool get hasVideo => videoAssetPath != null || videoUrl != null;
 
   bool get hasImage => assetPath != null || imageUrl != null;
 
@@ -113,12 +119,19 @@ List<PlayerBackground> parsePlayerBackgrounds(
     final url = json['image_url']?.toString().trim() ?? '';
     final uri = Uri.tryParse(url);
     if (id.isEmpty || uri == null || url.isEmpty) continue;
+    final video = json['video_url']?.toString().trim() ?? '';
+    final videoUri = video.isEmpty ? null : Uri.tryParse(video);
     result.add(
       PlayerBackground(
         id: 'remote:$id',
         imageUrl: uri.hasScheme
             ? url
             : resolvePublicAssetUri(url, base).toString(),
+        videoUrl: videoUri == null
+            ? null
+            : videoUri.hasScheme
+            ? video
+            : resolvePublicAssetUri(video, base).toString(),
         titles: <String, String>{
           for (final code in const <String>['ru', 'en', 'tr', 'ar'])
             if (json['title_$code'] != null) code: '${json['title_$code']}',
@@ -154,7 +167,8 @@ class PlayerBackgroundRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final String _apiBaseUrl;
-  static const _cacheKey = 'audio:player-backgrounds:v1';
+  // v2: rows carry video_url; a v1 copy would hide admin videos for 12 hours.
+  static const _cacheKey = 'audio:player-backgrounds:v2';
 
   Future<List<PlayerBackground>> remote() async {
     final cached = await _database.readCache(_cacheKey);

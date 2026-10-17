@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -1796,9 +1797,10 @@ class _PlayerBackdrop extends StatelessWidget {
                   key: ValueKey<String>(background.id),
                   fit: StackFit.expand,
                   children: <Widget>[
-                    if (background.videoAssetPath != null && !reduceMotion)
+                    if (background.hasVideo && !reduceMotion)
                       _PlayerBackgroundVideo(
-                        asset: background.videoAssetPath!,
+                        asset: background.videoAssetPath,
+                        url: background.videoUrl,
                         poster: _PlayerBackgroundImage(
                           background: background,
                           decodeWidth: decodeWidth,
@@ -1864,12 +1866,14 @@ class _PlayerBackgroundImage extends StatelessWidget {
   }
 }
 
-/// A silent looping video over its poster. The poster stays if the video
-/// cannot be decoded; recitation audio keeps its focus.
+/// A silent looping video over its poster: bundled, or an admin video that is
+/// downloaded once and then played from the cache. The poster stays while it
+/// loads or if it cannot be decoded; recitation audio keeps its focus.
 class _PlayerBackgroundVideo extends StatefulWidget {
-  const _PlayerBackgroundVideo({required this.asset, required this.poster});
+  const _PlayerBackgroundVideo({this.asset, this.url, required this.poster});
 
-  final String asset;
+  final String? asset;
+  final String? url;
   final Widget poster;
 
   @override
@@ -1877,10 +1881,7 @@ class _PlayerBackgroundVideo extends StatefulWidget {
 }
 
 class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
-  late final _controller = VideoPlayerController.asset(
-    widget.asset,
-    videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-  );
+  VideoPlayerController? _controller;
   var _ready = false;
 
   @override
@@ -1891,11 +1892,28 @@ class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
 
   Future<void> _start() async {
     try {
-      await _controller.initialize();
-      await _controller.setVolume(0);
-      await _controller.setLooping(true);
+      final options = VideoPlayerOptions(mixWithOthers: true);
+      final asset = widget.asset;
+      final VideoPlayerController controller;
+      if (asset != null) {
+        controller = VideoPlayerController.asset(
+          asset,
+          videoPlayerOptions: options,
+        );
+      } else {
+        final file = await DefaultCacheManager().getSingleFile(widget.url!);
+        if (!mounted) return;
+        controller = VideoPlayerController.file(
+          file,
+          videoPlayerOptions: options,
+        );
+      }
+      _controller = controller;
+      await controller.initialize();
+      await controller.setVolume(0);
+      await controller.setLooping(true);
       if (!mounted) return;
-      await _controller.play();
+      await controller.play();
       if (mounted) setState(() => _ready = true);
     } on Object {
       // The poster stays.
@@ -1904,26 +1922,27 @@ class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
 
   @override
   void dispose() {
-    unawaited(_controller.dispose());
+    final controller = _controller;
+    if (controller != null) unawaited(controller.dispose());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = _controller.value.size;
+    final controller = _controller;
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
         widget.poster,
-        if (_ready)
+        if (_ready && controller != null)
           ExcludeSemantics(
             child: FittedBox(
               fit: BoxFit.cover,
               clipBehavior: Clip.hardEdge,
               child: SizedBox(
-                width: size.width,
-                height: size.height,
-                child: VideoPlayer(_controller),
+                width: controller.value.size.width,
+                height: controller.value.size.height,
+                child: VideoPlayer(controller),
               ),
             ),
           ),
@@ -2072,7 +2091,7 @@ class _PlayerBackgroundTile extends StatelessWidget {
                         Icons.format_color_fill_rounded,
                         color: Color(0xFFB6E8D9),
                       ),
-                    if (background.videoAssetPath != null)
+                    if (background.hasVideo)
                       const PositionedDirectional(
                         start: 6,
                         bottom: 6,

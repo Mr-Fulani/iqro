@@ -85,6 +85,35 @@ void main() {
     expect(parsed.first.titleFor('ru'), 'Горы');
   });
 
+  test('an admin video background keeps its image as the poster', () {
+    final parsed = parsePlayerBackgrounds(<Map<String, Object?>>[
+      <String, Object?>{
+        'id': 'clip',
+        'title_en': 'Reciter',
+        'image_url': '/media/audio/player-backgrounds/clip.jpg',
+        'video_url': '/media/audio/player-backgrounds/clip.mp4',
+      },
+      <String, Object?>{
+        'id': 'still',
+        'title_en': 'Still',
+        'image_url': '/media/audio/player-backgrounds/still.jpg',
+        'video_url': null,
+      },
+    ], apiBaseUrl: _config.apiBaseUrl);
+
+    expect(
+      parsed.first.videoUrl,
+      'https://iqro.forum/media/audio/player-backgrounds/clip.mp4',
+    );
+    expect(
+      parsed.first.imageUrl,
+      'https://iqro.forum/media/audio/player-backgrounds/clip.jpg',
+    );
+    expect(parsed.first.hasVideo, isTrue);
+    expect(parsed.last.videoUrl, isNull);
+    expect(parsed.last.hasVideo, isFalse);
+  });
+
   test('an unknown or removed background falls back to the default', () {
     final resolved = resolvePlayerBackground(
       'remote:deleted',
@@ -142,7 +171,7 @@ void main() {
 
   test('stale cache is used when the refresh fails', () async {
     final cache = _Cache()
-      ..values['audio:player-backgrounds:v1'] = CachedValue(
+      ..values['audio:player-backgrounds:v2'] = CachedValue(
         value: _payload,
         updatedAt: DateTime.utc(2026),
         expiresAt: DateTime.utc(2026),

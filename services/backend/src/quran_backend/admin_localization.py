@@ -435,6 +435,7 @@ FIELD_LABELS: dict[str, str] = {
     "polygon": "Полигон",
     "portrait_object_key": "Ключ портрета",
     "image_object_key": "Ключ изображения",
+    "video_object_key": "Ключ видео",
     "prayer_event": "Намаз",
     "prayer_offset_minutes": "Смещение от намаза, минуты",
     "preferred_locale": "Предпочитаемый язык",

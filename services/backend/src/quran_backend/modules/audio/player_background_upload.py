@@ -58,16 +58,7 @@ def upload_player_background(
         checksum = digest.hexdigest()
         object_key = f"audio/player-backgrounds/{checksum[:20]}.{extension}"
         temporary.flush()
-        actual_uploader = uploader or (
-            LocalMediaUploader()
-            if (
-                settings.DEBUG
-                and getattr(settings, "LOCAL_DEVELOPMENT", False)
-                and not settings.MEDIA_OBJECT_STORAGE_ENABLED
-                and not settings.MEDIA_OBJECT_STORAGE_REQUIRED
-            )
-            else configured_object_uploader()
-        )
+        actual_uploader = uploader or player_background_uploader()
         stored = actual_uploader.upload_path(
             Path(temporary.name),
             ImmutableObjectSpec(
@@ -83,6 +74,18 @@ def upload_player_background(
         etag=stored.etag,
         created=stored.created,
     )
+
+
+def player_background_uploader() -> ObjectUploader:
+    """Local media in development without object storage, else the configured bucket."""
+    if (
+        settings.DEBUG
+        and getattr(settings, "LOCAL_DEVELOPMENT", False)
+        and not settings.MEDIA_OBJECT_STORAGE_ENABLED
+        and not settings.MEDIA_OBJECT_STORAGE_REQUIRED
+    ):
+        return LocalMediaUploader()
+    return configured_object_uploader()
 
 
 def _image_format(header: bytes) -> tuple[str, str]:
