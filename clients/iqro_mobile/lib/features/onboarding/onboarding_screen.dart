@@ -328,7 +328,7 @@ class _GoalStep extends StatelessWidget {
       ('reading', Icons.menu_book_outlined, context.l10n.goalReading),
       ('memorization', Icons.repeat, context.l10n.goalMemorization),
       ('prayer', Icons.mosque_outlined, context.l10n.goalPrayer),
-      ('dua', Icons.auto_awesome_outlined, context.l10n.goalDua),
+      ('dua', iqroDuaIcon, context.l10n.goalDua),
     ];
     return _StepFrame(
       icon: Icons.explore_outlined,

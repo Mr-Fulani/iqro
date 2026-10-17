@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/iqro_launcher_background" />
+    <!-- The IQRO seal while the process and Flutter start; the Flutter
+         startup screen draws it at the same size and place. -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_seal" />
+    </item>
 </layer-list>
