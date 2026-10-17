@@ -16,8 +16,17 @@ import {
   SegmentedAudioPlayer,
 } from "../components/SegmentedAudioPlayer";
 import type { AudioPlaybackRequest } from "../components/SegmentedAudioPlayer";
+import { PlayerBackdrop, PlayerBackgroundPicker } from "../components/PlayerBackground";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
+import {
+  loadPlayerBackgroundId,
+  playerBackgroundOptions,
+  rememberPlayerBackgroundId,
+  resolvePlayerBackground,
+} from "./player-backgrounds";
+import type { PlayerBackground } from "./player-backgrounds";
+import { useHydrated } from "./use-hydrated";
 import { localizedPath, stripLocalePrefix } from "./routing";
 
 function sensitiveAudioSection(pathname: string): "quran" | "dua" | null {
@@ -43,8 +52,15 @@ export type AudioPlayerReciterControls = {
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
+const NO_REMOTE_BACKGROUNDS: PlayerBackground[] = [];
 
-export function AudioPlayerProvider({ children }: { children: ReactNode }) {
+export function AudioPlayerProvider({
+  children,
+  playerBackgrounds = NO_REMOTE_BACKGROUNDS,
+}: {
+  children: ReactNode;
+  playerBackgrounds?: PlayerBackground[];
+}) {
   const pathname = usePathname();
   const previousAudioSection = useRef(sensitiveAudioSection(pathname));
   const { locale, t } = useI18n();
@@ -53,6 +69,22 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
   const [reciterControls, setRegisteredReciterControls] =
     useState<AudioPlayerReciterControls | null>(null);
+  const hydrated = useHydrated();
+  const storedBackgroundId = useMemo(() => (hydrated ? loadPlayerBackgroundId() : null), [hydrated]);
+  const [chosenBackgroundId, setChosenBackgroundId] = useState<string | null>(null);
+  const backgroundOptions = useMemo(
+    () => playerBackgroundOptions(playerBackgrounds),
+    [playerBackgrounds],
+  );
+  const background = resolvePlayerBackground(
+    chosenBackgroundId ?? storedBackgroundId,
+    backgroundOptions,
+  );
+
+  const chooseBackground = useCallback((id: string) => {
+    setChosenBackgroundId(id);
+    rememberPlayerBackgroundId(id);
+  }, []);
 
   const startPlayback = useCallback((nextRequest: AudioPlaybackRequest) => {
     setRequest(nextRequest);
@@ -87,6 +119,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
   const showReciterControls = Boolean(reciterControls?.options.length);
+  const showBackground = expanded && background.image !== null;
   const modeActionLabel = expanded
     ? t("player.collapseWidget")
     : t("player.expandWidget");
@@ -101,72 +134,83 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             aria-hidden="true"
           />
           <aside
-            className={`global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}`}
+            className={`global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${showBackground ? " has-player-background" : ""}`}
             aria-label={t("player.dockAria")}
             data-testid="global-audio-player"
+            data-player-background={expanded ? background.id : undefined}
           >
-            {(showReciterControls || expanded) && (
-              <div className="global-audio-player-head">
-                {showReciterControls && reciterControls && (
-                  <select
-                    className="global-audio-player-reciter-select"
-                    value={reciterControls.value}
-                    onChange={(event) => reciterControls.onChange(event.target.value)}
-                    disabled={reciterControls.disabled}
-                    aria-label={t("player.reciterSwitch")}
-                  >
-                    {reciterControls.options.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                )}
-                {expanded && (
+            {showBackground && <PlayerBackdrop background={background} />}
+            <div className="global-audio-player-body">
+              {(showReciterControls || expanded) && (
+                <div className="global-audio-player-head">
+                  {showReciterControls && reciterControls && (
+                    <select
+                      className="global-audio-player-reciter-select"
+                      value={reciterControls.value}
+                      onChange={(event) => reciterControls.onChange(event.target.value)}
+                      disabled={reciterControls.disabled}
+                      aria-label={t("player.reciterSwitch")}
+                    >
+                      {reciterControls.options.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  )}
+                  {expanded && (
+                    <PlayerBackgroundPicker
+                      options={backgroundOptions}
+                      value={background.id}
+                      onChange={chooseBackground}
+                    />
+                  )}
+                  {expanded && (
+                    <button
+                      className="btn btn-secondary btn-sm global-audio-player-size-toggle"
+                      type="button"
+                      aria-expanded="true"
+                      aria-label={modeActionLabel}
+                      title={modeActionLabel}
+                      onClick={() => setExpanded(false)}
+                    >
+                      <span aria-hidden="true">▾</span>
+                      <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              <SegmentedAudioPlayer
+                request={request}
+                className="audio-player-bar global-audio-player-bar"
+                onPlayingChange={setIsPlaying}
+                compact={compact}
+              />
+              {compact && (
+                <div className="global-audio-player-actions">
                   <button
                     className="btn btn-secondary btn-sm global-audio-player-size-toggle"
                     type="button"
-                    aria-expanded="true"
+                    aria-expanded="false"
                     aria-label={modeActionLabel}
                     title={modeActionLabel}
-                    onClick={() => setExpanded(false)}
+                    onClick={() => setExpanded(true)}
                   >
-                    <span aria-hidden="true">▾</span>
+                    <span aria-hidden="true">⤢</span>
                     <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
                   </button>
-                )}
-              </div>
-            )}
-            <SegmentedAudioPlayer
-              request={request}
-              className="audio-player-bar global-audio-player-bar"
-              onPlayingChange={setIsPlaying}
-              compact={compact}
-            />
-            {compact && (
-              <div className="global-audio-player-actions">
-                <button
-                  className="btn btn-secondary btn-sm global-audio-player-size-toggle"
-                  type="button"
-                  aria-expanded="false"
-                  aria-label={modeActionLabel}
-                  title={modeActionLabel}
-                  onClick={() => setExpanded(true)}
-                >
-                  <span aria-hidden="true">⤢</span>
-                  <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
-                </button>
-                {!isAudioPage && (
-                  <Link
-                    href={localizedPath(locale, "/audio")}
-                    className="btn btn-secondary btn-sm global-audio-player-link"
-                    aria-label={t("player.openAudio")}
-                    title={t("player.openAudio")}
-                  >
-                    <span aria-hidden="true">🎵</span>
-                    <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
-                  </Link>
-                )}
-              </div>
-            )}
+                  {!isAudioPage && (
+                    <Link
+                      href={localizedPath(locale, "/audio")}
+                      className="btn btn-secondary btn-sm global-audio-player-link"
+                      aria-label={t("player.openAudio")}
+                      title={t("player.openAudio")}
+                    >
+                      <span aria-hidden="true">🎵</span>
+                      <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
           </aside>
         </>
       )}

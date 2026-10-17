@@ -950,6 +950,7 @@ export const MESSAGES = {
   "player.expandWidget": message("Развернуть плеер", "Expand player", "توسيع المشغل", "Oynatıcıyı genişlet"),
   "player.collapseWidget": message("Свернуть плеер", "Collapse player", "طي المشغل", "Oynatıcıyı daralt"),
   "player.openAudio": message("Открыть аудио", "Open audio", "فتح الصوت", "Sesi aç"),
+  "player.background": message("Фон плеера", "Player background", "خلفية المشغل", "Oynatıcı arka planı"),
   "mushafAudio.reciter": message("Чтец Quran.Foundation", "Quran.Foundation reciter", "قارئ Quran.Foundation", "Quran.Foundation kârisi"),
   "mushafAudio.coverage": message("{count}/114 сур", "{count}/114 surahs", "{count}/114 سورة", "{count}/114 sure"),
   "mushafAudio.chooseAyah": message("Выберите аят", "Choose an ayah", "اختر آية", "Bir ayet seçin"),
