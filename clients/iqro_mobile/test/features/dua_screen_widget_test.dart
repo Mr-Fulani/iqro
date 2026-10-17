@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/design_system/iqro_widgets.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
@@ -282,6 +283,53 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Сон и пробуждение'), findsWidgets);
       expect(find.text('Chapter entry'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a du\'a reads as one card: centred Arabic, then meaning', (
+      tester,
+    ) async {
+      final entry = _entry(
+        categoryTitle: 'Слова поминания при пробуждении',
+        arabicText: 'الحمد لله الذي أحيانا',
+        meaning: 'Хвала Аллаху, Который оживил нас',
+      );
+      await _pumpDetail(tester, load: (_) async => entry);
+
+      expect(find.text('Слова поминания при пробуждении'), findsOneWidget);
+      final arabic = tester.widget<Text>(
+        find.byKey(const ValueKey('dua-arabic')),
+      );
+      expect(arabic.textAlign, TextAlign.center);
+      expect(arabic.textDirection, TextDirection.rtl);
+      final meaning = tester.widget<Text>(
+        find.byKey(const ValueKey('dua-meaning')),
+      );
+      final context = tester.element(find.byKey(const ValueKey('dua-meaning')));
+      expect(meaning.style?.color, Theme.of(context).colorScheme.primary);
+
+      // Copy, favourite and share sit at the foot of the card, not in the bar.
+      final card = find.ancestor(
+        of: find.byKey(const ValueKey('dua-arabic')),
+        matching: find.byType(IqroCard),
+      );
+      for (final tooltip in <String>[
+        'Копировать текст',
+        'Избранное',
+        'Поделиться ду’а',
+      ]) {
+        expect(
+          find.descendant(of: card, matching: find.byTooltip(tooltip)),
+          findsOneWidget,
+        );
+      }
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(IconButton),
+        ),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     });
 

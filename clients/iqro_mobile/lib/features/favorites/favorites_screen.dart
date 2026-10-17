@@ -6,6 +6,7 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_repository.dart';
 
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -157,8 +158,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                       leading: const IqroIcon(
                                         Icons.menu_book_outlined,
                                       ),
-                                      title: Text(
-                                        '${context.l10n.surah} ${item['surah']} · ${context.l10n.ayah} ${item['ayah']}',
+                                      title: AyahFavoriteTitle(
+                                        surah: (item['surah']! as num).toInt(),
+                                        ayah: (item['ayah']! as num).toInt(),
                                       ),
                                       trailing: const Icon(Icons.chevron_right),
                                     ),
@@ -243,5 +245,45 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     }
     if (!_isCurrent(scope, key, locale)) return;
     _reload(scope, key, locale);
+  }
+}
+
+/// «Сура 2 · البقرة · Аят 255»: the Arabic name sits between the numbers once
+/// the surah catalog is loaded.
+class AyahFavoriteTitle extends ConsumerWidget {
+  const AyahFavoriteTitle({required this.surah, required this.ayah, super.key});
+  final int surah;
+  final int ayah;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref
+        .watch(quranCatalogProvider)
+        .valueOrNull
+        ?.surahs
+        .where((item) => item.number == surah)
+        .firstOrNull
+        ?.nameAr;
+    final style = DefaultTextStyle.of(context).style;
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(text: '${context.l10n.surah} $surah · '),
+          if (name != null && name.isNotEmpty) ...<InlineSpan>[
+            // Isolated so the right-to-left name does not reorder the numbers.
+            TextSpan(
+              text: '\u2068$name\u2069',
+              style: TextStyle(
+                fontFamily: IqroTheme.arabicFontFamily,
+                fontSize: (style.fontSize ?? 16) * 1.25,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const TextSpan(text: ' · '),
+          ],
+          TextSpan(text: '${context.l10n.ayah} $ayah'),
+        ],
+      ),
+    );
   }
 }

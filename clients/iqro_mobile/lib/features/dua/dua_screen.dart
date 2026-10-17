@@ -852,27 +852,7 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
       completed: _completedRepetitions,
     );
     return Scaffold(
-      appBar: IqroTopBar(
-        title: entry.categoryTitle,
-        subtitle: '#${entry.sourceNumber}',
-        actions: <Widget>[
-          Builder(
-            builder: (buttonContext) => IconButton(
-              tooltip: context.l10n.shareDua,
-              icon: const Icon(Icons.ios_share_outlined),
-              onPressed: () => unawaited(_share(buttonContext)),
-            ),
-          ),
-          IconButton(
-            tooltip: context.l10n.favorites,
-            isSelected: _favorite,
-            selectedIcon: const Icon(Icons.bookmark),
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: _favoriteBusy ? null : _toggle,
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
+      appBar: IqroTopBar(title: context.l10n.dua),
       body: IqroPage(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -888,49 +868,32 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
               ),
               const SizedBox(height: 14),
             ],
-            IqroCard(
-              color: context.iqroColors.ink,
-              borderColor: Colors.transparent,
-              padding: const EdgeInsets.all(22),
-              child: Text(
-                entry.arabicText,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontFamily: IqroTheme.arabicFontFamily,
-                  fontWeight: FontWeight.normal,
-                  height: 1.9,
+            _DuaChapterBanner(title: entry.categoryTitle),
+            const SizedBox(height: 14),
+            _DuaTextCard(
+              entry: entry,
+              actions: <Widget>[
+                IconButton(
+                  tooltip: context.l10n.copyText,
+                  onPressed: _copy,
+                  icon: const Icon(Icons.copy_outlined),
                 ),
-              ),
+                IconButton(
+                  tooltip: context.l10n.favorites,
+                  isSelected: _favorite,
+                  selectedIcon: const Icon(Icons.bookmark),
+                  icon: const Icon(Icons.bookmark_border),
+                  onPressed: _favoriteBusy ? null : _toggle,
+                ),
+                Builder(
+                  builder: (buttonContext) => IconButton(
+                    tooltip: context.l10n.shareDua,
+                    icon: const Icon(Icons.ios_share_outlined),
+                    onPressed: () => unawaited(_share(buttonContext)),
+                  ),
+                ),
+              ],
             ),
-            if (entry.transliteration.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              IqroCard(
-                child: Text(
-                  entry.transliteration,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
-            ],
-            if (entry.meaning.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              IqroCard(
-                color: context.iqroColors.sand,
-                borderColor: Colors.transparent,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    IqroEyebrow(context.l10n.translation),
-                    const SizedBox(height: 8),
-                    Text(
-                      entry.meaning,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ],
             if (widget.audioEnabled && entry.audio.isNotEmpty) ...<Widget>[
               const SizedBox(height: 14),
               _DuaAudioCard(
@@ -957,28 +920,6 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
             ],
             const SizedBox(height: 14),
             _DuaSourceCard(entry: entry),
-            const SizedBox(height: 14),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _copy,
-                    icon: const Icon(Icons.copy_outlined),
-                    label: Text(context.l10n.copyText),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Builder(
-                    builder: (buttonContext) => FilledButton.icon(
-                      onPressed: () => unawaited(_share(buttonContext)),
-                      icon: const Icon(Icons.ios_share_outlined),
-                      label: Text(context.l10n.shareDua),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -1237,6 +1178,117 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
         title: context.l10n.shareDua,
         text: _shareText(),
         sharePositionOrigin: origin,
+      ),
+    );
+  }
+}
+
+/// The chapter the du'a belongs to, as a ribbon above the text.
+class _DuaChapterBanner extends StatelessWidget {
+  const _DuaChapterBanner({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.iqroColors.sand,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurface,
+            height: 1.35,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The du'a itself: Arabic centred with room between the lines, then the
+/// transliteration and the meaning, and the actions at the foot of the card.
+class _DuaTextCard extends StatelessWidget {
+  const _DuaTextCard({required this.entry, required this.actions});
+  final DuaEntry entry;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return IqroCard(
+      padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            entry.arabicText,
+            key: const ValueKey('dua-arabic'),
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: scheme.onSurface,
+              fontFamily: IqroTheme.arabicFontFamily,
+              fontWeight: FontWeight.normal,
+              fontSize: 28,
+              height: 2.05,
+            ),
+          ),
+          if (entry.transliteration.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            Text(
+              entry.transliteration,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+                height: 1.5,
+              ),
+            ),
+          ],
+          if (entry.meaning.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 18),
+            Text(
+              entry.meaning,
+              key: const ValueKey('dua-meaning'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.primary,
+                height: 1.55,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Text(
+            '${entry.sourceLabel} · #${entry.sourceNumber}',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 18),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: .7),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: IconButtonTheme(
+              data: IconButtonThemeData(
+                style: IconButton.styleFrom(foregroundColor: scheme.primary),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: actions,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
