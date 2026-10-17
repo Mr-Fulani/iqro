@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
+import '../quran/surah_name_art.dart';
 import 'audio_models.dart';
 import 'player_backgrounds.dart';
 import 'reciter_catalog.dart';
@@ -1532,7 +1534,7 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
     super.initState();
     _searchController = TextEditingController();
     _scrollController = ScrollController(
-      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * 68.0,
+      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * _surahRowExtent,
     );
   }
 
@@ -1612,38 +1614,144 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
         Expanded(
           child: ListView.builder(
             controller: normalizedQuery.isEmpty ? _scrollController : null,
-            itemExtent: 68,
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            itemExtent: _surahRowExtent,
             itemCount: filtered.length,
             itemBuilder: (context, index) {
               final surah = filtered[index];
-              final selected = surah.number == widget.currentSurah;
-              final primaryName = surah.nameFor(locale);
-              final secondaryName = locale == 'ar'
-                  ? surah.nameEn
-                  : surah.nameAr;
-              return ListTile(
-                selected: selected,
-                leading: CircleAvatar(child: Text('${surah.number}')),
-                title: Text(
-                  primaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  secondaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: locale == 'ar'
-                      ? TextDirection.ltr
-                      : TextDirection.rtl,
-                ),
-                trailing: selected ? const Icon(Icons.check_rounded) : null,
+              return _SurahPickerRow(
+                key: ValueKey<int>(surah.number),
+                surah: surah,
+                locale: locale,
+                selected: surah.number == widget.currentSurah,
                 onTap: () => Navigator.pop(context, surah.number),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+const _surahRowExtent = 76.0;
+
+/// A surah as a row of the picker: its number in an eight-pointed star, the
+/// name in the reader's language with its length and place of revelation,
+/// and the Arabic name as the Mushaf prints it.
+class _SurahPickerRow extends StatelessWidget {
+  const _SurahPickerRow({
+    required this.surah,
+    required this.locale,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final Surah surah;
+  final String locale;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = selected
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: selected ? colorScheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Semantics(
+            selected: selected,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 12, 0),
+              child: Row(
+                children: <Widget>[
+                  _SurahNumberStar(number: surah.number, color: accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          surah.nameFor(locale),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${surah.ayahCount} ${context.l10n.ayahs} · '
+                          '${surah.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SurahNameArt(
+                    surah: surah.number,
+                    fallback: surah.nameAr,
+                    height: 36,
+                    width: 112,
+                    color: accent,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurahNumberStar extends StatelessWidget {
+  const _SurahNumberStar({required this.number, required this.color});
+
+  final int number;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final square = DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: color.withValues(alpha: .55), width: 1.2),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: const SizedBox.square(dimension: 30),
+    );
+    return SizedBox.square(
+      dimension: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          square,
+          Transform.rotate(angle: math.pi / 4, child: square),
+          Text(
+            '$number',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

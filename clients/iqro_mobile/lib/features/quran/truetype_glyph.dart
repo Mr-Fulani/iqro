@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -13,7 +14,14 @@ class GlyphOutline {
 /// The QUL surah-header glyphs have thousands of points that Skia's glyph
 /// rasterizer partly drops; filling the same outline as a path is exact.
 /// Returns null for empty or composite glyphs; malformed data throws.
-GlyphOutline? readTrueTypeGlyph(ByteData font, int glyphId) {
+///
+/// With [keep], only contours whose bounds it accepts are drawn, and the
+/// outline's bounds are theirs; null when it accepts none.
+GlyphOutline? readTrueTypeGlyph(
+  ByteData font,
+  int glyphId, {
+  bool Function(Rect contour)? keep,
+}) {
   final tables = <String, int>{};
   for (var index = 0; index < font.getUint16(4); index++) {
     final record = 12 + index * 16;
@@ -76,9 +84,26 @@ GlyphOutline? readTrueTypeGlyph(ByteData font, int glyphId) {
   final xs = coordinates(2, 16);
   final ys = coordinates(4, 32);
   final path = Path();
+  Rect? kept;
   var first = 0;
   for (final last in ends) {
     final count = last - first + 1;
+    if (keep != null) {
+      var left = double.infinity, top = double.infinity;
+      var right = double.negativeInfinity, bottom = double.negativeInfinity;
+      for (var index = first; index <= last; index++) {
+        left = math.min(left, xs[index]);
+        right = math.max(right, xs[index]);
+        top = math.min(top, -ys[index]);
+        bottom = math.max(bottom, -ys[index]);
+      }
+      final bounds = Rect.fromLTRB(left, top, right, bottom);
+      if (!keep(bounds)) {
+        first = last + 1;
+        continue;
+      }
+      kept = kept?.expandToInclude(bounds) ?? bounds;
+    }
     Offset at(int index) =>
         Offset(xs[first + index % count], -ys[first + index % count]);
     bool onCurve(int index) => flags[first + index % count] & 1 != 0;
@@ -114,6 +139,7 @@ GlyphOutline? readTrueTypeGlyph(ByteData font, int glyphId) {
     path.close();
     first = last + 1;
   }
+  if (keep != null) return kept == null ? null : GlyphOutline(path, kept);
   return GlyphOutline(
     path,
     Rect.fromLTRB(

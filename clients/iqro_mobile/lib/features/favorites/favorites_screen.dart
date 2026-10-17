@@ -6,8 +6,8 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
-import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_repository.dart';
+import '../quran/surah_name_art.dart';
 
 class FavoritesScreen extends ConsumerStatefulWidget {
   const FavoritesScreen({super.key});
@@ -249,8 +249,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 }
 
-/// «Сура 2 · البقرة · Аят 255»: the Arabic name sits between the numbers once
-/// the surah catalog is loaded.
+/// «Аль-Бакара», «Сура 2 · Аят 255», and the Arabic name as the Mushaf
+/// prints it, once the surah catalog is loaded.
 class AyahFavoriteTitle extends ConsumerWidget {
   const AyahFavoriteTitle({required this.surah, required this.ayah, super.key});
   final int surah;
@@ -258,33 +258,53 @@ class AyahFavoriteTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name = ref
+    final model = ref
         .watch(quranCatalogProvider)
         .valueOrNull
         ?.surahs
         .where((item) => item.number == surah)
-        .firstOrNull
-        ?.nameAr;
-    final style = DefaultTextStyle.of(context).style;
-    return Text.rich(
-      TextSpan(
-        children: <InlineSpan>[
-          TextSpan(text: '${context.l10n.surah} $surah · '),
-          if (name != null && name.isNotEmpty) ...<InlineSpan>[
-            // Isolated so the right-to-left name does not reorder the numbers.
-            TextSpan(
-              text: '\u2068$name\u2069',
-              style: TextStyle(
-                fontFamily: IqroTheme.arabicFontFamily,
-                fontSize: (style.fontSize ?? 16) * 1.25,
-                color: Theme.of(context).colorScheme.primary,
+        .firstOrNull;
+    final locale = Localizations.localeOf(context).languageCode;
+    final textTheme = Theme.of(context).textTheme;
+    final numbers = '${context.l10n.surah} $surah · ${context.l10n.ayah} $ayah';
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                model?.nameFor(locale) ?? numbers,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const TextSpan(text: ' · '),
-          ],
-          TextSpan(text: '${context.l10n.ayah} $ayah'),
+              if (model != null)
+                Text(
+                  numbers,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (model != null && model.nameAr.isNotEmpty) ...<Widget>[
+          const SizedBox(width: 10),
+          SurahNameArt(
+            surah: surah,
+            fallback: model.nameAr,
+            height: 34,
+            width: 104,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ],
-      ),
+      ],
     );
   }
 }

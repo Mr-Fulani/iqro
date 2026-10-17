@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/iqro_widgets.dart';
 import 'quran_models.dart';
+import 'surah_name_art.dart';
 
 class MushafBookmarksSheet extends StatefulWidget {
   const MushafBookmarksSheet({
@@ -132,7 +133,20 @@ class _MushafBookmarksSheetState extends State<MushafBookmarksSheet> {
                         subtitle: Text(
                           '${l10n.ayah} ${bookmark.surah}:${bookmark.ayah}',
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (surah != null && surah.nameAr.isNotEmpty)
+                              SurahNameArt(
+                                surah: surah.number,
+                                fallback: surah.nameAr,
+                                height: 30,
+                                width: 96,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
                         onTap: () => Navigator.pop(context, bookmark),
                       );
                     },

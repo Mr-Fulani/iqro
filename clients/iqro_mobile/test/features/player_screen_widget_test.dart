@@ -16,6 +16,7 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/audio/player_backgrounds.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/features/audio/player_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -192,6 +193,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the surah list shows the length and the Mushaf name', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+
+    await tester.tap(find.text('Аль-Бакара').first);
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const ValueKey<int>(2));
+    expect(row, findsOneWidget);
+    for (final text in <String>['Аль-Бакара', '286 аятов · Мединская']) {
+      expect(
+        find.descendant(of: row, matching: find.text(text)),
+        findsOneWidget,
+      );
+    }
+    // Without the source font (as in tests) the name is set as text.
+    expect(
+      find.descendant(
+        of: find.descendant(of: row, matching: find.byType(SurahNameArt)),
+        matching: find.text('البقرة'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a tap on empty space leaves only the background', (
     tester,
   ) async {
@@ -341,6 +369,7 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
         playerBackgroundsProvider.overrideWith(
           (ref) async => bundledPlayerBackgrounds,
         ),
+        surahHeaderFontProvider.overrideWith((ref) async => null),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(
             surahs: <Surah>[

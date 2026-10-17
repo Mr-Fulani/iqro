@@ -5,6 +5,7 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/favorites/favorites_screen.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -16,6 +17,7 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           quranCatalogProvider.overrideWith((ref) => catalog()),
+          surahHeaderFontProvider.overrideWith((ref) async => null),
         ],
         child: MaterialApp(
           locale: const Locale('ru'),
@@ -28,17 +30,17 @@ void main() {
     );
     await tester.pump();
     return tester
-        .widget<RichText>(
+        .widgetList<RichText>(
           find.descendant(
             of: find.byType(AyahFavoriteTitle),
             matching: find.byType(RichText),
           ),
         )
-        .text
-        .toPlainText();
+        .map((text) => text.text.toPlainText())
+        .join(' | ');
   }
 
-  testWidgets('the Arabic surah name sits between surah and ayah', (
+  testWidgets('the name, the numbers and the Mushaf\'s Arabic name', (
     tester,
   ) async {
     final text = await pumpTitle(
@@ -59,7 +61,7 @@ void main() {
       ),
     );
 
-    expect(text, 'Сура 2 · \u2068البقرة\u2069 · Аят 255');
+    expect(text, 'Аль-Бакара | Сура 2 · Аят 255 | البقرة');
   });
 
   testWidgets('without the catalog the numbers still show', (tester) async {
