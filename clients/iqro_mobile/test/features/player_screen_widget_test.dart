@@ -192,6 +192,60 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a tap on empty space leaves only the background', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+    double opacity() => tester
+        .widget<AnimatedOpacity>(
+          find.descendant(
+            of: find.byKey(const ValueKey('player-controls-toggle')),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .opacity;
+
+    // The side margin holds no control.
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(opacity(), 0);
+    expect(find.text('Фон плеера').hitTestable(), findsNothing);
+    // Nothing is left to read, so the scrim lifts off the background.
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DecoratedBox &&
+                    widget.decoration ==
+                        const BoxDecoration(gradient: playerBackgroundScrim),
+              ),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity,
+      0,
+    );
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(opacity(), 1);
+
+    // A control still acts and keeps the controls on screen.
+    await tester.ensureVisible(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    expect(find.text('Классический'), findsOneWidget);
+    expect(opacity(), 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the video background shows its poster under the video', (
     tester,
   ) async {

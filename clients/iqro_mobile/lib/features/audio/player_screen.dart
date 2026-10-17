@@ -129,6 +129,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
   var _changingReciter = false;
   var _changingQuality = false;
+  var _controlsHidden = false;
   String? _ownerId;
   var _surahRequest = 0;
   var _reciterRequest = 0;
@@ -335,11 +336,28 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
+    // A tap on empty space hides everything but the background; the next tap
+    // brings the controls back. Not with a screen reader, which taps to act.
+    final canHide = !MediaQuery.accessibleNavigationOf(context);
+    final hidden = _controlsHidden && canHide;
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        _PlayerBackdrop(background: background),
-        scaffold,
+        _PlayerBackdrop(background: background, dimmed: !hidden),
+        GestureDetector(
+          key: const ValueKey('player-controls-toggle'),
+          behavior: HitTestBehavior.opaque,
+          onTap: canHide
+              ? () => setState(() => _controlsHidden = !_controlsHidden)
+              : null,
+          child: AnimatedOpacity(
+            opacity: hidden ? 0 : 1,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 250),
+            child: IgnorePointer(ignoring: hidden, child: scaffold),
+          ),
+        ),
       ],
     );
   }
@@ -1643,9 +1661,12 @@ const playerBackgroundScrim = LinearGradient(
 );
 
 class _PlayerBackdrop extends StatelessWidget {
-  const _PlayerBackdrop({required this.background});
+  const _PlayerBackdrop({required this.background, this.dimmed = true});
 
   final PlayerBackground background;
+
+  /// The scrim is there for the controls' text; without them it lifts.
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
@@ -1680,9 +1701,15 @@ class _PlayerBackdrop extends StatelessWidget {
                         background: background,
                         decodeWidth: decodeWidth,
                       ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: playerBackgroundScrim,
+                    AnimatedOpacity(
+                      opacity: dimmed ? 1 : 0,
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 250),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: playerBackgroundScrim,
+                        ),
                       ),
                     ),
                   ],
