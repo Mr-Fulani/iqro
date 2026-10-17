@@ -14,6 +14,7 @@ import '../audio/mini_player.dart';
 import 'mushaf_offline_repository.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
+import 'surah_name_art.dart';
 
 class QuranScreen extends ConsumerStatefulWidget {
   const QuranScreen({super.key});
@@ -712,13 +713,12 @@ class _SurahRow extends StatelessWidget {
       subtitle: Text(
         '${surah.ayahCount} ${context.l10n.ayahs} · ${surah.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
       ),
-      trailing: Text(
-        surah.nameAr,
-        textDirection: TextDirection.rtl,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontFamily: IqroTheme.arabicFontFamily,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+      trailing: SurahNameArt(
+        surah: surah.number,
+        fallback: surah.nameAr,
+        height: 32,
+        width: 92,
+        color: Theme.of(context).colorScheme.primary,
       ),
       onTap: onTap,
     );
