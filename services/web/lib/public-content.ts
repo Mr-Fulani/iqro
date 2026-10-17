@@ -14,6 +14,8 @@ import type {
   SupportedLocale,
   Surah,
 } from "./api";
+import { parsePlayerBackgrounds } from "./player-backgrounds";
+import type { PlayerBackground } from "./player-backgrounds";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
@@ -384,6 +386,13 @@ export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[
   return assertSocialProfiles(profiles);
 });
 
+export const getPublishedPlayerBackgrounds = cache(async (): Promise<PlayerBackground[]> => {
+  const backgrounds = await fetchPublishedJson<unknown>("/api/v1/player-backgrounds", [
+    "audio:player-backgrounds",
+  ]);
+  return parsePlayerBackgrounds(assertArray(backgrounds as unknown[], "player background list"));
+});
+
 export type PublishedDuaInitialData = {
   collections: DuaCollection[];
   categories: DuaCategory[];
@@ -513,6 +522,18 @@ export async function getPublishedSocialProfilesOrEmpty(): Promise<SocialProfile
     return await getPublishedSocialProfiles();
   } catch (error) {
     console.error("Social profiles are temporarily unavailable", error);
+    return [];
+  }
+}
+
+export async function getPublishedPlayerBackgroundsOrEmpty(): Promise<PlayerBackground[]> {
+  try {
+    return await getPublishedPlayerBackgrounds();
+  } catch (error) {
+    // The bundled backgrounds keep the player usable while the catalog is unavailable.
+    if (!(error instanceof PublicContentNotFoundError)) {
+      console.error("Player backgrounds are temporarily unavailable", error);
+    }
     return [];
   }
 }
