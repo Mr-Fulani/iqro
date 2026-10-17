@@ -11,6 +11,7 @@ import '../../core/storage/offline_storage_quota.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/mini_player.dart';
+import 'mushaf_edition_picker.dart';
 import 'mushaf_offline_repository.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
@@ -94,6 +95,13 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
             const SizedBox(height: 14),
             Row(
               children: <Widget>[
+                if (rendition != null) ...<Widget>[
+                  SizedBox(
+                    width: 44,
+                    child: MushafEditionThumbnail(edition: rendition),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,12 +298,23 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                   Expanded(child: surahList),
                 ],
               )
-            : Column(
-                children: <Widget>[
-                  ...header,
-                  const SizedBox(height: 12),
-                  Expanded(child: surahList),
-                ],
+            // Large text can make the cards taller than the screen; they
+            // then scroll on their own and the surah list keeps its share.
+            : LayoutBuilder(
+                builder: (context, constraints) => Column(
+                  children: <Widget>[
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: constraints.maxHeight * .6,
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(children: header),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(child: surahList),
+                  ],
+                ),
               ),
       ),
     );
@@ -313,25 +332,34 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     ref.invalidate(mushafRenditionsProvider);
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (context) => Consumer(
-        builder: (context, sheetRef, _) {
-          final current = sheetRef.watch(selectedMushafIdentityProvider);
-          final catalog = sheetRef.watch(mushafRenditionsProvider);
-          final locale = Localizations.localeOf(context).languageCode;
-          return RadioGroup<String>(
-            groupValue: current.preference,
-            onChanged: (value) => _selectMushaf(context, value),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 20),
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .9,
+        minChildSize: .5,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, sheetRef, _) {
+            final current = sheetRef.watch(selectedMushafIdentityProvider);
+            final catalog = sheetRef.watch(mushafRenditionsProvider);
+            final isProduction = sheetRef.read(appConfigProvider).isProduction;
+            return ListView(
+              controller: scrollController,
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 20),
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 12),
+                  padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 4, 4),
                   child: Text(
                     context.l10n.chooseMushaf,
                     style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 16),
+                  child: Text(
+                    context.l10n.mushafPickerHint,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
                 ...catalog.when(
@@ -352,42 +380,35 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                       ),
                     ),
                   ],
-                  data: (editions) => <Widget>[
-                    if (!editions.any(
-                      (edition) => edition.availableIn(
-                        isProduction: sheetRef
-                            .read(appConfigProvider)
-                            .isProduction,
-                      ),
-                    ))
-                      ListTile(title: Text(context.l10n.mushafCatalogEmpty)),
-                    for (final edition in editions)
-                      if (edition.availableIn(
-                        isProduction: sheetRef
-                            .read(appConfigProvider)
-                            .isProduction,
-                      ))
-                        RadioListTile<String>(
-                          value: edition.identity.preference,
-                          title: Text(edition.nameFor(locale)),
-                          subtitle: Text(
-                            edition.stagingOnly
-                                ? context.l10n.mushafPreviewDescription
-                                : context.l10n.mushafPublishedDescription,
-                          ),
-                          secondary: const IqroIcon(
-                            Icons.auto_stories_outlined,
+                  data: (editions) {
+                    final available = editions
+                        .where(
+                          (edition) =>
+                              edition.availableIn(isProduction: isProduction),
+                        )
+                        .toList();
+                    return <Widget>[
+                      if (available.isEmpty)
+                        ListTile(title: Text(context.l10n.mushafCatalogEmpty))
+                      else
+                        MushafEditionGrid(
+                          editions: available,
+                          selected: current,
+                          onSelect: (edition) => _selectMushaf(
+                            context,
+                            edition.identity.preference,
                           ),
                         ),
-                  ],
+                    ];
+                  },
                 ),
                 const Divider(height: 28),
                 const OfflineMushafCard(),
                 const SizedBox(height: 12),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -547,7 +547,10 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   final preference = ref.watch(
     appPreferencesProvider.select((p) => p.mushafVariant),
   );
-  final identity = MushafIdentity.fromPreference(preference);
+  // Readers who never chose an edition get the colour-coded Tajweed Mushaf.
+  final identity = preference == defaultMushafVariant
+      ? MushafIdentity.defaultEdition
+      : MushafIdentity.fromPreference(preference);
   final catalog = ref.watch(availableMushafRenditionsProvider);
   return availableMushafIdentity(
     identity,
@@ -555,20 +558,25 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
     isProduction: ref.watch(appConfigProvider).isProduction,
   );
 });
+final mushafRepositoryProvider =
+    Provider.family<QuranRepository, MushafIdentity>((ref, identity) {
+      final repository = ref.watch(quranRepositoryProvider);
+      final version =
+          ref
+              .watch(availableMushafRenditionsProvider)
+              .where((edition) => edition.identity == identity)
+              .firstOrNull
+              ?.sourceChecksum ??
+          '';
+      final selected = repository.forMushaf(identity);
+      return identity.isFoundation
+          ? selected.withFoundationVersion(version)
+          : selected;
+    });
 final selectedMushafRepositoryProvider = Provider<QuranRepository>((ref) {
-  final identity = ref.watch(selectedMushafIdentityProvider);
-  final repository = ref.watch(quranRepositoryProvider);
-  final version =
-      ref
-          .watch(availableMushafRenditionsProvider)
-          .where((edition) => edition.identity == identity)
-          .firstOrNull
-          ?.sourceChecksum ??
-      '';
-  final selected = repository.forMushaf(identity);
-  return identity.isFoundation
-      ? selected.withFoundationVersion(version)
-      : selected;
+  return ref.watch(
+    mushafRepositoryProvider(ref.watch(selectedMushafIdentityProvider)),
+  );
 });
 final selectedMushafPageCountProvider = Provider<int>((ref) {
   final identity = ref.watch(selectedMushafIdentityProvider);

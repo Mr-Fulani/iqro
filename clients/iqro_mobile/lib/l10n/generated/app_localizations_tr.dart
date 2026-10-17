@@ -384,6 +384,15 @@ class AppLocalizationsTr extends AppLocalizations {
       'Hafs · çevrimiçi ve çevrimdışı okuma';
 
   @override
+  String get mushafPickerHint => 'Yakından bakmak için sayfaya dokunun';
+
+  @override
+  String get mushafMakePrimary => 'Ana Mushaf yap';
+
+  @override
+  String get mushafIsPrimary => 'Ana Mushaf';
+
+  @override
   String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
 
   @override
