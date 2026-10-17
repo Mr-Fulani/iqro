@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api, SurahPlayback } from "../lib/api";
+import { api, AyahAudioSegment, SurahPlayback } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
   repeatLimit: number;
   pauseSeconds: number;
   onCycleComplete: () => void;
+  onAyahChange: (ayahNumber: number | null) => void;
 };
 
 export function MemorizationAudioLoop({
@@ -22,17 +23,31 @@ export function MemorizationAudioLoop({
   repeatLimit,
   pauseSeconds,
   onCycleComplete,
+  onAyahChange,
 }: Props) {
   const { formatNumber, t } = useI18n();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackRef = useRef<SurahPlayback | null>(null);
   const boundaryRef = useRef({ startMs: 0, endMs: 0 });
+  const segmentsRef = useRef<AyahAudioSegment[]>([]);
+  const ayahRef = useRef<number | null>(null);
+  const onAyahChangeRef = useRef(onAyahChange);
   const cycleRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [completedCycles, setCompletedCycles] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onAyahChangeRef.current = onAyahChange;
+  }, [onAyahChange]);
+
+  const reportAyah = (ayahNumber: number | null) => {
+    if (ayahRef.current === ayahNumber) return;
+    ayahRef.current = ayahNumber;
+    onAyahChangeRef.current(ayahNumber);
+  };
 
   const clearTimer = () => {
     if (timerRef.current !== null) {
@@ -43,9 +58,11 @@ export function MemorizationAudioLoop({
 
   useEffect(() => {
     const audio = audioRef.current;
+    const onAyahChangeOnUnmount = onAyahChangeRef;
     return () => {
       clearTimer();
       audio?.pause();
+      onAyahChangeOnUnmount.current(null);
     };
   }, []);
 
@@ -55,6 +72,8 @@ export function MemorizationAudioLoop({
     cycleRef.current = 0;
     setCompletedCycles(0);
     setPlaying(false);
+    ayahRef.current = null;
+    onAyahChangeRef.current(null);
     audioRef.current?.pause();
   }, [endAyah, recitationId, startAyah, surahNumber]);
 
@@ -65,6 +84,7 @@ export function MemorizationAudioLoop({
     try {
       await audio.play();
       setPlaying(true);
+      reportAyah(segmentsRef.current[0]?.ayah_number ?? null);
     } catch {
       setPlaying(false);
       setError(t("memorization.audioBlocked"));
@@ -86,6 +106,7 @@ export function MemorizationAudioLoop({
       );
       if (selected.length === 0) throw new Error(t("memorization.audioUnavailable"));
       playbackRef.current = playback;
+      segmentsRef.current = selected;
       boundaryRef.current = {
         startMs: selected[0].start_ms,
         endMs: selected[selected.length - 1].end_ms,
@@ -117,13 +138,21 @@ export function MemorizationAudioLoop({
     clearTimer();
     audioRef.current?.pause();
     setPlaying(false);
+    reportAyah(null);
   };
 
   const handleTimeUpdate = () => {
     const audio = audioRef.current;
-    if (!audio || !playing || audio.currentTime * 1000 < boundaryRef.current.endMs) return;
+    if (!audio || !playing) return;
+    const positionMs = audio.currentTime * 1000;
+    if (positionMs < boundaryRef.current.endMs) {
+      const segment = segmentsRef.current.findLast((item) => item.start_ms <= positionMs);
+      if (segment) reportAyah(segment.ayah_number);
+      return;
+    }
     audio.pause();
     setPlaying(false);
+    reportAyah(null);
     cycleRef.current += 1;
     setCompletedCycles(cycleRef.current);
     onCycleComplete();
