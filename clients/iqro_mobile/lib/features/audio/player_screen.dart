@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
 import 'audio_models.dart';
+import 'player_backgrounds.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
@@ -160,6 +162,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final preferredQuality = ref.watch(
       appPreferencesProvider.select((value) => value.preferredAudioQuality),
     );
+    final backgroundId = ref.watch(
+      appPreferencesProvider.select((value) => value.playerBackgroundId),
+    );
+    final loadedBackgrounds = ref.watch(playerBackgroundsProvider).valueOrNull;
+    final backgrounds = loadedBackgrounds ?? bundledPlayerBackgrounds;
+    // Avoid flashing the default while a remembered admin background loads.
+    final background =
+        loadedBackgrounds == null && backgroundId.startsWith('remote:')
+        ? bundledPlayerBackgrounds.first
+        : resolvePlayerBackground(backgroundId, backgrounds);
     final currentAyah = state.displayedAyah;
     final reciter = state.reciter;
     final portraitUrl = reciter == null
@@ -169,8 +181,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
             reciters: reciters,
           );
-    return Scaffold(
-      backgroundColor: const Color(0xFF061D18),
+    final scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
@@ -309,6 +321,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           )
                         : null,
                   ),
+                  _PlayerOption(
+                    icon: Icons.wallpaper_outlined,
+                    title: context.l10n.playerBackground,
+                    value: background.titleFor(locale),
+                    onTap: () => _chooseBackground(backgrounds, background.id),
+                  ),
                 ],
               ),
             ],
@@ -316,6 +334,35 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        _PlayerBackdrop(background: background),
+        scaffold,
+      ],
+    );
+  }
+
+  Future<void> _chooseBackground(
+    List<PlayerBackground> backgrounds,
+    String currentId,
+  ) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .72,
+        child: _PlayerBackgroundSheet(
+          backgrounds: backgrounds,
+          currentId: currentId,
+        ),
+      ),
+    );
+    if (selected == null || selected == currentId || !mounted) return;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setPlayerBackground(selected);
   }
 
   Recitation? _recitationById(List<Recitation>? recitations, String? id) {
@@ -1578,6 +1625,269 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+const _playerBaseColor = Color(0xFF061D18);
+
+/// Darkens any image enough for white player text: over a pure white image
+/// white text stays above WCAG AA (4.5:1), and on the bundled images so does
+/// the 60% white secondary text at their brightest pixel.
+const playerBackgroundScrim = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: <Color>[Color(0xAD061D18), Color(0xC4061D18), Color(0xDB061D18)],
+  stops: <double>[0, .45, 1],
+);
+
+class _PlayerBackdrop extends StatelessWidget {
+  const _PlayerBackdrop({required this.background});
+
+  final PlayerBackground background;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final size = MediaQuery.sizeOf(context);
+    // Decode no larger than the screen; ResizeImage never upscales.
+    final decodeWidth = (size.width * MediaQuery.devicePixelRatioOf(context))
+        .clamp(1, 1080)
+        .round();
+    return ColoredBox(
+      color: _playerBaseColor,
+      child: RepaintBoundary(
+        child: AnimatedSwitcher(
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 350),
+          child: background.hasImage
+              ? Stack(
+                  key: ValueKey<String>(background.id),
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    _PlayerBackgroundImage(
+                      background: background,
+                      decodeWidth: decodeWidth,
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: playerBackgroundScrim,
+                      ),
+                    ),
+                  ],
+                )
+              : SizedBox.expand(key: ValueKey<String>(background.id)),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerBackgroundImage extends StatelessWidget {
+  const _PlayerBackgroundImage({
+    required this.background,
+    required this.decodeWidth,
+  });
+
+  final PlayerBackground background;
+  final int decodeWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    const empty = SizedBox.expand();
+    final assetPath = background.assetPath;
+    if (assetPath != null) {
+      return Image(
+        image: ResizeImage(AssetImage(assetPath), width: decodeWidth),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        excludeFromSemantics: true,
+        errorBuilder: (context, error, stackTrace) => empty,
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: background.imageUrl!,
+      fit: BoxFit.cover,
+      memCacheWidth: decodeWidth,
+      fadeInDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 250),
+      placeholder: (context, url) => empty,
+      errorWidget: (context, url, error) => empty,
+    );
+  }
+}
+
+class _PlayerBackgroundSheet extends StatelessWidget {
+  const _PlayerBackgroundSheet({
+    required this.backgrounds,
+    required this.currentId,
+  });
+
+  final List<PlayerBackground> backgrounds;
+  final String currentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 10),
+        Container(
+          width: 42,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(context).dividerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 8),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  context.l10n.playerBackground,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth < 700 ? 3 : 5;
+              final tileWidth =
+                  (constraints.maxWidth - 32 - 10 * (columns - 1)) / columns;
+              final thumbnailWidth =
+                  (tileWidth * MediaQuery.devicePixelRatioOf(context)).round();
+              final labelStyle = Theme.of(context).textTheme.labelMedium;
+              // Two label lines keep every thumbnail the same height.
+              final labelHeight =
+                  MediaQuery.textScalerOf(
+                    context,
+                  ).scale(labelStyle?.fontSize ?? 12) *
+                  (labelStyle?.height ?? 1.4) *
+                  2;
+              return GridView.builder(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 20),
+                itemCount: backgrounds.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 12,
+                  mainAxisExtent: tileWidth * 16 / 9 + 6 + labelHeight + 2,
+                ),
+                itemBuilder: (context, index) {
+                  final background = backgrounds[index];
+                  return _PlayerBackgroundTile(
+                    background: background,
+                    title: background.titleFor(locale),
+                    selected: background.id == currentId,
+                    decodeWidth: thumbnailWidth,
+                    onTap: () => Navigator.pop(context, background.id),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerBackgroundTile extends StatelessWidget {
+  const _PlayerBackgroundTile({
+    required this.background,
+    required this.title,
+    required this.selected,
+    required this.decodeWidth,
+    required this.onTap,
+  });
+
+  final PlayerBackground background;
+  final String title;
+  final bool selected;
+  final int decodeWidth;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: title,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: <Widget>[
+            AspectRatio(
+              aspectRatio: 9 / 16,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: _playerBaseColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.outlineVariant,
+                    width: selected ? 3 : 1,
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (background.hasImage)
+                      _PlayerBackgroundImage(
+                        background: background,
+                        decodeWidth: decodeWidth,
+                      )
+                    else
+                      const Icon(
+                        Icons.format_color_fill_rounded,
+                        color: Color(0xFFB6E8D9),
+                      ),
+                    if (selected)
+                      PositionedDirectional(
+                        top: 6,
+                        end: 6,
+                        child: CircleAvatar(
+                          radius: 11,
+                          backgroundColor: colorScheme.primary,
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 15,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

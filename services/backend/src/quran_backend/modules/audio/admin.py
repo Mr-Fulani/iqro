@@ -17,12 +17,18 @@ from quran_backend.modules.audio.models import (
     AudioTimingVersion,
     AudioTrack,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     QuranFoundationSyncState,
     RecitationEdition,
     RecitationPublicationStatus,
     Reciter,
+)
+from quran_backend.modules.audio.player_background_upload import (
+    MAX_PLAYER_BACKGROUND_KIB,
+    PlayerBackgroundUploadError,
+    upload_player_background,
 )
 from quran_backend.modules.audio.portrait_upload import (
     MAX_RECITER_PORTRAIT_MIB,
@@ -146,6 +152,72 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         return instance
 
 
+class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    image_upload = forms.FileField(
+        required=False,
+        label="Загрузить изображение",
+        help_text=(
+            f"WebP или JPEG до {MAX_PLAYER_BACKGROUND_KIB} КБ, вертикальное, около 1080×1920. "
+            "Только природа, архитектура или орнамент: без людей, лиц и животных."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg"}),
+    )
+
+    class Meta:
+        model = PlayerBackground
+        fields = (
+            "title_ru",
+            "title_en",
+            "title_ar",
+            "title_tr",
+            "sort_order",
+            "is_active",
+        )
+        labels: ClassVar[dict[str, str]] = {
+            "title_ru": "Название на русском",
+            "title_en": "Название на английском",
+            "title_ar": "Название на арабском",
+            "title_tr": "Название на турецком",
+            "sort_order": "Порядок вывода",
+            "is_active": "Показывать в приложении",
+        }
+        help_texts: ClassVar[dict[str, str]] = {
+            "title_tr": "Если не заполнено, турецкий интерфейс покажет английское название.",
+        }
+
+    _uploaded_image_key: str | None = None
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        uploaded = cleaned.get("image_upload")
+        if not uploaded and not self.instance.image_object_key:
+            self.add_error("image_upload", "Загрузите изображение фона.")
+            return cleaned
+        if uploaded and not self.errors:
+            try:
+                result = upload_player_background(uploaded)
+            except PlayerBackgroundUploadError as exc:
+                self.add_error("image_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Player background upload failed")
+                self.add_error(
+                    "image_upload",
+                    "Не удалось загрузить фон в media-хранилище. Повторите позже.",
+                )
+            else:
+                self._uploaded_image_key = result.object_key
+        return cleaned
+
+    def save(self, commit: bool = True) -> PlayerBackground:
+        instance = cast("PlayerBackground", super().save(commit=False))
+        if self._uploaded_image_key is not None:
+            instance.image_object_key = self._uploaded_image_key
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
+
+
 class QuranFoundationReadOnlyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     actions = None
 
@@ -238,6 +310,59 @@ class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         _obj: QuranFoundationSyncState | None = None,
     ) -> bool:
         return False
+
+
+@admin.register(PlayerBackground)
+class PlayerBackgroundAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    form = PlayerBackgroundAdminForm
+    list_display = ("image_thumbnail", "title_ru", "title_en", "sort_order", "is_active")
+    list_display_links = ("image_thumbnail", "title_ru")
+    list_editable = ("sort_order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("title_ru", "title_en", "title_ar", "title_tr")
+    ordering = ("sort_order", "created_at")
+    readonly_fields = ("image_preview", "image_storage_key", "id", "created_at", "updated_at")
+    fieldsets = (
+        ("Названия", {"fields": ("title_ru", "title_en", "title_ar", "title_tr")}),
+        ("Изображение", {"fields": ("image_preview", "image_upload")}),
+        ("Публикация", {"fields": ("is_active", "sort_order")}),
+        (
+            "Служебная информация",
+            {
+                "classes": ("collapse",),
+                "fields": ("image_storage_key", "id", "created_at", "updated_at"),
+            },
+        ),
+    )
+
+    @admin.display(description="Фон")
+    def image_thumbnail(self, obj: PlayerBackground) -> str:
+        if not obj.image_object_key:
+            return "—"
+        return format_html(
+            '<img src="{}" alt="" width="36" height="64" '
+            'style="object-fit:cover;border-radius:6px" />',
+            public_audio_url(obj.image_object_key),
+        )
+
+    @admin.display(description="Текущее изображение")
+    def image_preview(self, obj: PlayerBackground | None) -> str:
+        if obj is None or not obj.image_object_key:
+            return "Изображение ещё не загружено"
+        url = public_audio_url(obj.image_object_key)
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener noreferrer">'
+            '<img src="{}" alt="" width="135" height="240" '
+            'style="object-fit:cover;border-radius:14px" /></a>',
+            url,
+            url,
+        )
+
+    @admin.display(description="Адрес файла в хранилище (служебное поле)")
+    def image_storage_key(self, obj: PlayerBackground | None) -> str:
+        if obj is None or not obj.image_object_key:
+            return "—"
+        return obj.image_object_key
 
 
 @admin.register(Reciter)

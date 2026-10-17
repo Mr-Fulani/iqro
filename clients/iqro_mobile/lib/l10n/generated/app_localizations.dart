@@ -1128,6 +1128,12 @@ abstract class AppLocalizations {
   /// **'Audio quality'**
   String get audioQuality;
 
+  /// No description provided for @playerBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Player background'**
+  String get playerBackground;
+
   /// No description provided for @qualityAutomatic.
   ///
   /// In en, this message translates to:

@@ -95,6 +95,7 @@ flutter:
     - assets/brand/iqro-logo.png
     - assets/brand/iqro-media-logo.png
     - assets/brand/startup.mp4
+    - assets/player_backgrounds/
     - assets/fonts/AmiriQuran-OFL.txt
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to

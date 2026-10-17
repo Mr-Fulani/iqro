@@ -14,6 +14,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -74,6 +75,26 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
             "biography_tr",
             "portrait_url",
         )
+
+
+class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlayerBackground
+        fields = (
+            "id",
+            "title_ar",
+            "title_en",
+            "title_ru",
+            "title_tr",
+            "image_url",
+            "sort_order",
+        )
+
+    @extend_schema_field(serializers.URLField())
+    def get_image_url(self, obj: PlayerBackground) -> str:
+        return public_audio_url(obj.image_object_key)
 
 
 class QuranEditionAudioReferenceSerializer(serializers.ModelSerializer[QuranEditionVersion]):

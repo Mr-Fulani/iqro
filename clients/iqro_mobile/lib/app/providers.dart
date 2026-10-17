@@ -20,6 +20,7 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
+import '../features/audio/player_backgrounds.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
@@ -257,6 +258,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
           : defaultPreferredAudioQuality,
     ),
   );
+
+  Future<void> setPlayerBackground(String id) =>
+      _set(state.copyWith(playerBackgroundId: id));
 
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
@@ -677,6 +681,26 @@ final mushafDownloadProvider = Provider<MushafDownloadSnapshot>((ref) {
 });
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
+});
+final playerBackgroundRepositoryProvider = Provider<PlayerBackgroundRepository>(
+  (ref) => PlayerBackgroundRepository(
+    api: ref.watch(apiClientProvider),
+    database: ref.watch(localDatabaseProvider),
+    apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+  ),
+);
+
+/// Bundled backgrounds always come first, so the picker works offline and
+/// before the admin has published anything.
+final playerBackgroundsProvider = FutureProvider<List<PlayerBackground>>((
+  ref,
+) async {
+  try {
+    final remote = await ref.watch(playerBackgroundRepositoryProvider).remote();
+    return <PlayerBackground>[...bundledPlayerBackgrounds, ...remote];
+  } on Object {
+    return bundledPlayerBackgrounds;
+  }
 });
 final audioRecitationsProvider = FutureProvider<List<Recitation>>((ref) {
   return ref.watch(audioRepositoryProvider).recitations();

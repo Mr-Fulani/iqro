@@ -24,6 +24,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -168,6 +169,18 @@ def public_reciters() -> QuerySet[Reciter]:
         Reciter.objects.alias(has_public_recitation=Exists(public_recitation))
         .filter(is_active=True, has_public_recitation=True)
         .order_by("name_en", "code", "id")
+    )
+
+
+# The picker is a short curated strip; bound the payload regardless of admin data.
+MAX_PUBLIC_PLAYER_BACKGROUNDS = 24
+
+
+def public_player_backgrounds() -> QuerySet[PlayerBackground]:
+    return (
+        PlayerBackground.objects.filter(is_active=True)
+        .exclude(image_object_key="")
+        .order_by("sort_order", "created_at", "id")[:MAX_PUBLIC_PLAYER_BACKGROUNDS]
     )
 
 
