@@ -498,6 +498,55 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('many matched chapters scroll with the du\'a, no overflow', (
+      tester,
+    ) async {
+      // A short window, as with the keyboard open.
+      tester.view
+        ..physicalSize = const Size(360, 420)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final chapters = <DuaCategory>[
+        for (final number in <int>[16, 26, 63, 129])
+          DuaCategory(
+            id: 'chapter-$number',
+            slug: 'chapter-$number',
+            title: 'ИСТИНА СЛОВ ГЛАВЫ $number',
+            entryCount: 1,
+            collection: 'hisn-al-muslim',
+            sourceNumber: number,
+          ),
+      ];
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => chapters,
+        search: (request) async => <DuaEntry>[
+          _entry(
+            categoryTitle: 'Мольбы',
+            arabicText: 'رَبِّ اغْفِرْ لِي',
+            meaning: 'Найденная мольба',
+          ),
+        ],
+      );
+
+      await tester.enterText(find.byType(EditableText), 'исти');
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const ValueKey('dua-chapter-match-16')),
+        findsOneWidget,
+      );
+
+      await tester.dragUntilVisible(
+        find.text('Найденная мольба'),
+        find.byType(Scrollable).last,
+        const Offset(0, -200),
+      );
+      expect(find.text('Найденная мольба'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('resolves a unique legacy category link across collections', (
       tester,
     ) async {

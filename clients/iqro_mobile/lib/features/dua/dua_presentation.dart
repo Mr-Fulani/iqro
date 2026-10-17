@@ -109,12 +109,14 @@ final _caseWords = RegExp(
 final _firstLetter = RegExp(r'\p{L}', unicode: true);
 
 /// Titles some sources print in capitals, in sentence case. The names that
-/// keep a capital — Allah, the Quran, the Prophet — get it back; titles with
-/// mixed case or in scripts without case stay as they are.
+/// keep a capital — Allah, the Quran, the Prophet — get it back; titles in
+/// ordinary case or in scripts without case stay as they are.
 String duaDisplayTitle(String title) {
-  if (title.toUpperCase() != title || title.toLowerCase() == title) {
-    return title;
-  }
+  // Capitals with a lowercase gloss, «… МОЛИТВЫ (ду'ау-ль-истифтах)», count
+  // as capitals too.
+  final upper = RegExp(r'\p{Lu}', unicode: true).allMatches(title).length;
+  final small = RegExp(r'\p{Ll}', unicode: true).allMatches(title).length;
+  if (upper <= small) return title;
   final lower = title.toLowerCase().replaceAllMapped(
     _caseWords,
     (match) =>

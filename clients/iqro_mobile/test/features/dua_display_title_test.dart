@@ -11,6 +11,10 @@ void main() {
       duaDisplayTitle('WHAT TO SAY WHEN READING THE QURAN'),
       'What to say when reading the Quran',
     );
+    expect(
+      duaDisplayTitle("СЛОВА МОЛЬБЫ В НАЧАЛЕ МОЛИТВЫ (ду'ау-ль-истифтах)"),
+      "Слова мольбы в начале молитвы (ду'ау-ль-истифтах)",
+    );
   });
 
   test('mixed case and Arabic titles stay as they are', () {

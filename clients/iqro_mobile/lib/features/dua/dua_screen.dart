@@ -407,37 +407,31 @@ extension on _DuaCatalog {
                   topic.description(locale).toLowerCase().contains(needle)),
         )
         .toList(growable: false);
-    final entries = searchPending || searchResults == null
-        ? const IqroLoading()
-        : _AsyncDuaEntries(
-            entries: searchResults!,
-            query: '',
-            onRetry: onSearchRetry,
-            showEmpty: matches.isEmpty && chapters.isEmpty,
-          );
-    if (matches.isEmpty && chapters.isEmpty) return entries;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (final chapter in chapters) ...<Widget>[
-          _DuaChapterRow(
-            key: ValueKey('dua-chapter-match-${chapter.sourceNumber}'),
-            chapter: chapter,
-            onTap: () => onOpen(chapter),
-          ),
-          const SizedBox(height: 10),
-        ],
-        for (final topic in matches) ...<Widget>[
-          _DuaTopicTile(
-            topic: topic,
-            locale: locale,
-            count: topic.entryCount(items),
-            onTap: () => onOpenTopic(topic),
-          ),
-          const SizedBox(height: 10),
-        ],
-        Expanded(child: entries),
-      ],
+    // Chapters, topics and du'a scroll together: in a fixed column the
+    // rows above the list overflowed once the keyboard took the space.
+    final leading = <Widget>[
+      for (final chapter in chapters)
+        _DuaChapterRow(
+          key: ValueKey('dua-chapter-match-${chapter.sourceNumber}'),
+          chapter: chapter,
+          onTap: () => onOpen(chapter),
+        ),
+      for (final topic in matches)
+        _DuaTopicTile(
+          topic: topic,
+          locale: locale,
+          count: topic.entryCount(items),
+          onTap: () => onOpenTopic(topic),
+        ),
+    ];
+    return _AsyncDuaEntries(
+      entries: searchPending || searchResults == null
+          ? const AsyncValue<List<DuaEntry>>.loading()
+          : searchResults!,
+      query: '',
+      onRetry: onSearchRetry,
+      showEmpty: leading.isEmpty,
+      leading: leading,
     );
   }
 }
@@ -667,6 +661,7 @@ class _AsyncDuaEntries extends StatelessWidget {
     required this.query,
     required this.onRetry,
     this.showEmpty = true,
+    this.leading = const <Widget>[],
   });
 
   final AsyncValue<List<DuaEntry>> entries;
@@ -676,12 +671,30 @@ class _AsyncDuaEntries extends StatelessWidget {
   /// False when something else on screen already answers the search.
   final bool showEmpty;
 
+  /// Rows scrolled above the du'a, such as matching chapters and topics.
+  final List<Widget> leading;
+
+  // The state below the leading rows, which scroll with it.
+  Widget _withLeading(Widget state) => leading.isEmpty
+      ? state
+      : ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          children: <Widget>[
+            for (final row in leading) ...<Widget>[
+              row,
+              const SizedBox(height: 10),
+            ],
+            Padding(padding: const EdgeInsets.only(top: 12), child: state),
+          ],
+        );
+
   @override
   Widget build(BuildContext context) {
     return entries.when(
-      loading: () => const IqroLoading(),
-      error: (error, stack) =>
-          IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      loading: () => _withLeading(const IqroLoading()),
+      error: (error, stack) => _withLeading(
+        IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      ),
       data: (items) {
         final normalizedQuery = query.toLowerCase();
         final visible = items
@@ -695,15 +708,20 @@ class _AsyncDuaEntries extends StatelessWidget {
             })
             .toList(growable: false);
         if (visible.isEmpty) {
-          return showEmpty
-              ? _DuaEmpty(message: context.l10n.noDuaFound)
-              : const SizedBox.shrink();
+          return _withLeading(
+            showEmpty
+                ? _DuaEmpty(message: context.l10n.noDuaFound)
+                : const SizedBox.shrink(),
+          );
         }
+        final lead = leading.length;
         return ListView.separated(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          itemCount: visible.length,
+          itemCount: lead + visible.length,
           separatorBuilder: (context, index) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
+          itemBuilder: (context, position) {
+            if (position < lead) return leading[position];
+            final index = position - lead;
             final entry = visible[index];
             final startsChapter =
                 index == 0 ||
