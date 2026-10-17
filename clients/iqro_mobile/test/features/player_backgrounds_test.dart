@@ -48,6 +48,8 @@ void main() {
     for (final background in bundledPlayerBackgrounds) {
       for (final locale in const <String>['ru', 'en', 'tr', 'ar']) {
         expect(background.titles[locale], isNotEmpty);
+        // A video is marked by the camera icon, not in its name.
+        expect(background.titles[locale], isNot(contains('(')));
       }
       final asset = background.assetPath;
       if (asset == null) continue;

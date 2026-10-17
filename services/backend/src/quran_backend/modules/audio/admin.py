@@ -203,6 +203,10 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "is_active": "Показывать в приложении",
         }
         help_texts: ClassVar[dict[str, str]] = {
+            "title_ru": (
+                "Так фон подписан в приложении. Помечать видео не нужно: "
+                "приложение само покажет значок камеры."
+            ),
             "title_tr": "Если не заполнено, турецкий интерфейс покажет английское название.",
         }
 

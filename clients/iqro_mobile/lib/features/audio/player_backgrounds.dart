@@ -98,10 +98,10 @@ const bundledPlayerBackgrounds = <PlayerBackground>[
     assetPath: 'assets/player_backgrounds/reciter-hood.webp',
     videoAssetPath: 'assets/player_backgrounds/reciter-hood.mp4',
     titles: <String, String>{
-      'ru': 'Чтец (видео)',
-      'en': 'Reciter (video)',
-      'tr': 'Kâri (video)',
-      'ar': 'القارئ (فيديو)',
+      'ru': 'Чтец',
+      'en': 'Reciter',
+      'tr': 'Kâri',
+      'ar': 'القارئ',
     },
   ),
 ];
