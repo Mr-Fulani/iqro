@@ -239,7 +239,8 @@ void main() {
       tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
     );
     await tester.tapAt(empty);
-    await tester.pumpAndSettle();
+    // The equalizer sways while it plays, so the screen never settles.
+    await tester.pump(const Duration(milliseconds: 500));
     expect(opacity(), 0);
     expect(find.text('Фон плеера').hitTestable(), findsNothing);
     // Nothing is left to read, so the scrim lifts off the background.
@@ -271,6 +272,68 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Классический'), findsOneWidget);
     expect(opacity(), 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer plays only over the bare background', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+    final equalizer = find.byKey(const ValueKey('player-equalizer'));
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    double equalizerOpacity() => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: equalizer, matching: find.byType(AnimatedOpacity)),
+        )
+        .opacity;
+
+    // Controls on screen: no bars, and nothing ticks.
+    expect(equalizer, findsNothing);
+
+    await tester.tapAt(empty);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+    expect(equalizerOpacity(), 1);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    // It never takes the tap that brings the controls back.
+    expect(equalizer.hitTestable(), findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isFalse);
+    expect(equalizer, findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(equalizer, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer rests when animations are disabled', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await _pumpPlayer(tester);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    // Static bars: the screen settles while they show.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
     expect(tester.takeException(), isNull);
   });
 

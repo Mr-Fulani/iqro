@@ -347,6 +347,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       fit: StackFit.expand,
       children: <Widget>[
         _PlayerBackdrop(background: background, dimmed: !hidden),
+        _PlayerEqualizer(visible: hidden && state.playing && !state.buffering),
         GestureDetector(
           key: const ValueKey('player-controls-toggle'),
           behavior: HitTestBehavior.opaque,
@@ -1844,6 +1845,142 @@ class _PlayerBackdrop extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Sound bars like the audio quality icon, swaying over the bare background
+/// while the recitation plays. Calm static bars when motion is reduced; the
+/// ticker runs only while they are on screen.
+class _PlayerEqualizer extends StatefulWidget {
+  const _PlayerEqualizer({required this.visible});
+
+  final bool visible;
+
+  @override
+  State<_PlayerEqualizer> createState() => _PlayerEqualizerState();
+}
+
+class _PlayerEqualizerState extends State<_PlayerEqualizer>
+    with SingleTickerProviderStateMixin {
+  late final _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3600),
+  );
+  late var _shown = widget.visible;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncWave();
+  }
+
+  @override
+  void didUpdateWidget(_PlayerEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible) _shown = true;
+    _syncWave();
+  }
+
+  // Runs while visible and through the fade-out; stops once faded.
+  void _syncWave() {
+    final animate = _shown && !MediaQuery.disableAnimationsOf(context);
+    if (animate && !_wave.isAnimating) {
+      _wave.repeat();
+    } else if (!animate && _wave.isAnimating) {
+      _wave.stop();
+    }
+  }
+
+  void _faded() {
+    if (widget.visible || !_shown) return;
+    setState(() => _shown = false);
+    _syncWave();
+  }
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: AnimatedOpacity(
+          opacity: widget.visible ? 1 : 0,
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          onEnd: _faded,
+          child: !_shown && !widget.visible
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: const Alignment(0, .62),
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      key: const ValueKey('player-equalizer'),
+                      size: const Size(208, 84),
+                      painter: _EqualizerPainter(reduceMotion ? null : _wave),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EqualizerPainter extends CustomPainter {
+  _EqualizerPainter(this.wave) : super(repaint: wave);
+
+  /// Null paints the bars at rest.
+  final Animation<double>? wave;
+
+  // Taller in the middle, like Icons.graphic_eq_rounded.
+  static const _envelope = <double>[.44, .64, .84, .7, 1, .7, .84, .64, .44];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final count = _envelope.length;
+    final slot = size.width / count;
+    final barWidth = slot * .46;
+    final minHeight = barWidth;
+    final t = (wave?.value ?? 0) * 2 * math.pi;
+    final shadow = Paint()
+      ..color = const Color(0x59000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final bar = Paint()..color = const Color(0xEBFFFFFF);
+    final centreY = size.height / 2;
+    for (var i = 0; i < count; i++) {
+      // Whole cycles per loop keep the repeat seamless.
+      final level = wave == null
+          ? .62
+          : .64 +
+                .22 * math.sin(t * 3 + i * 1.7) +
+                .1 * math.sin(t * 5 - i * 2.3) +
+                .04 * math.sin(t * 8 + i * .9);
+      final height = math.max(
+        minHeight,
+        size.height * _envelope[i] * level.clamp(.28, 1),
+      );
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(slot * (i + .5), centreY),
+          width: barWidth,
+          height: height,
+        ),
+        Radius.circular(barWidth / 2),
+      );
+      canvas
+        ..drawRRect(rect.shift(const Offset(0, 1.5)), shadow)
+        ..drawRRect(rect, bar);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EqualizerPainter oldDelegate) => oldDelegate.wave != wave;
 }
 
 class _PlayerBackgroundImage extends StatelessWidget {
