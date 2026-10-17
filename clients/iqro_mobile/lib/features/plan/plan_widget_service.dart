@@ -11,6 +11,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/storage/local_database.dart';
 import '../../l10n/generated/app_localizations.dart';
+import 'palm_growth.dart';
 import 'plan_repository.dart';
 
 const planWidgetDataKey = 'home_widget.ReadingPlan.snapshot';
@@ -147,6 +148,7 @@ Map<String, Object?> buildPlanWidgetSnapshot({
     copy.isha,
   ];
   const codes = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  final palm = palmGrowthFor(plan).stage;
   result.addAll({
     'isCurrent': true,
     'validUntil': tz.TZDateTime(
@@ -161,6 +163,9 @@ Map<String, Object?> buildPlanWidgetSnapshot({
     'remainingLabel': remaining == 0 ? copy.completed : copy.remaining,
     'remaining': number.format(remaining),
     'progress': ((achieved / plan.target).clamp(0.0, 1.0) * 100).round(),
+    // Static art per stage: home-screen widgets cannot run the animation.
+    'palmStage': palm.index,
+    'palmLabel': palmStageLabel(copy, palm),
     'rows': [
       for (var i = 0; i < codes.length; i++)
         {

@@ -3144,6 +3144,96 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} day in a row} other{{count} days in a row}}'**
   String planStreak(num count);
 
+  /// No description provided for @palmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your date palm'**
+  String get palmTitle;
+
+  /// No description provided for @palmStageSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Date seed'**
+  String get palmStageSeed;
+
+  /// No description provided for @palmStageSprout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sprout'**
+  String get palmStageSprout;
+
+  /// No description provided for @palmStageSeedling.
+  ///
+  /// In en, this message translates to:
+  /// **'Seedling'**
+  String get palmStageSeedling;
+
+  /// No description provided for @palmStageYoungPalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Young palm'**
+  String get palmStageYoungPalm;
+
+  /// No description provided for @palmStagePalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Palm tree'**
+  String get palmStagePalm;
+
+  /// No description provided for @palmStageFruitingPalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Palm with dates'**
+  String get palmStageFruitingPalm;
+
+  /// No description provided for @palmMoodPlanting.
+  ///
+  /// In en, this message translates to:
+  /// **'Plant the seed: read your first page'**
+  String get palmMoodPlanting;
+
+  /// No description provided for @palmMoodFlourishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s goal is done — the palm reaches for the sun'**
+  String get palmMoodFlourishing;
+
+  /// No description provided for @palmMoodGrowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s reading is already nourishing your palm'**
+  String get palmMoodGrowing;
+
+  /// No description provided for @palmMoodWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your palm is waiting for today\'s reading'**
+  String get palmMoodWaiting;
+
+  /// No description provided for @palmMoodResting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your palm is resting in the shade. Even one page will make it glad'**
+  String get palmMoodResting;
+
+  /// No description provided for @palmNextStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {stage}'**
+  String palmNextStage(String stage);
+
+  /// No description provided for @palmFullyGrown.
+  ///
+  /// In en, this message translates to:
+  /// **'Fully grown — may it keep bearing fruit'**
+  String get palmFullyGrown;
+
+  /// No description provided for @palmHowItGrows.
+  ///
+  /// In en, this message translates to:
+  /// **'A day of reading is +1, a completed goal +2. Missed days never harm the palm — it simply rests.'**
+  String get palmHowItGrows;
+
   /// No description provided for @planSummaryTitle.
   ///
   /// In en, this message translates to:

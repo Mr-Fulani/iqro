@@ -1727,6 +1727,57 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Your date palm';
+
+  @override
+  String get palmStageSeed => 'Date seed';
+
+  @override
+  String get palmStageSprout => 'Sprout';
+
+  @override
+  String get palmStageSeedling => 'Seedling';
+
+  @override
+  String get palmStageYoungPalm => 'Young palm';
+
+  @override
+  String get palmStagePalm => 'Palm tree';
+
+  @override
+  String get palmStageFruitingPalm => 'Palm with dates';
+
+  @override
+  String get palmMoodPlanting => 'Plant the seed: read your first page';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Today\'s goal is done — the palm reaches for the sun';
+
+  @override
+  String get palmMoodGrowing =>
+      'Today\'s reading is already nourishing your palm';
+
+  @override
+  String get palmMoodWaiting => 'Your palm is waiting for today\'s reading';
+
+  @override
+  String get palmMoodResting =>
+      'Your palm is resting in the shade. Even one page will make it glad';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Next: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Fully grown — may it keep bearing fruit';
+
+  @override
+  String get palmHowItGrows =>
+      'A day of reading is +1, a completed goal +2. Missed days never harm the palm — it simply rests.';
+
+  @override
   String get planSummaryTitle => 'Progress summary';
 
   @override

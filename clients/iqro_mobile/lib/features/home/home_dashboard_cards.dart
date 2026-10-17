@@ -4,6 +4,8 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../core/design_system/iqro_icon.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../plan/palm_growth.dart';
+import '../plan/palm_growth_view.dart';
 import '../plan/plan_repository.dart';
 import '../prayer/prayer_repository.dart';
 import 'home_view_data.dart';
@@ -261,6 +263,7 @@ class HomePlanCard extends StatelessWidget {
     required this.loading,
     required this.error,
     required this.onTap,
+    this.palm,
     super.key,
   });
   final num achieved;
@@ -269,6 +272,9 @@ class HomePlanCard extends StatelessWidget {
   final bool loading;
   final bool error;
   final VoidCallback onTap;
+
+  /// Shown instead of the target icon once the plan has loaded.
+  final PalmGrowth? palm;
 
   @override
   Widget build(BuildContext context) {
@@ -284,11 +290,24 @@ class HomePlanCard extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(
-            Icons.track_changes_rounded,
-            size: 32,
-            color: theme.colorScheme.primary,
-          ),
+          if (palm case final palm?)
+            Semantics(
+              image: true,
+              label: palmStageLabel(context.l10n, palm.stage),
+              child: ExcludeSemantics(
+                child: PalmGrowthArt(
+                  stage: palm.stage,
+                  mood: palm.mood,
+                  size: 44,
+                ),
+              ),
+            )
+          else
+            Icon(
+              Icons.track_changes_rounded,
+              size: 32,
+              color: theme.colorScheme.primary,
+            ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

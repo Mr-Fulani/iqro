@@ -13,6 +13,7 @@ import '../calendar/hijri_calendar_service.dart';
 import '../calendar/calendar_catalog.dart';
 import '../dua/dua_repository.dart';
 import '../memorization/memorization_repository.dart';
+import '../plan/palm_growth.dart';
 import '../prayer/prayer_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
@@ -153,6 +154,7 @@ class HomeScreen extends ConsumerWidget {
               metric: planMetric,
               loading: planLoading,
               error: planState.hasError && plan == null,
+              palm: plan == null ? null : palmGrowthFor(plan),
               onTap: () => context.go('/app?tab=2'),
             ),
             const SizedBox(height: 16),
