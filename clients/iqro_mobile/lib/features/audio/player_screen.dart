@@ -1024,10 +1024,19 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Text(
-                _duration(Duration(milliseconds: positionMs.round())),
+                playerTimeLabel(
+                  Duration(milliseconds: positionMs.round()),
+                  total: state.effectiveDuration,
+                ),
                 style: _metaStyle,
               ),
-              Text(_duration(state.effectiveDuration), style: _metaStyle),
+              Text(
+                playerTimeLabel(
+                  state.effectiveDuration,
+                  total: state.effectiveDuration,
+                ),
+                style: _metaStyle,
+              ),
             ],
           ),
         ),
@@ -1099,12 +1108,6 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
         ),
       ],
     );
-  }
-
-  static String _duration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }
 
@@ -1633,6 +1636,18 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
       ],
     );
   }
+}
+
+/// «04:54», or «0:50:59» on a timeline of an hour or more: Al Imran's
+/// 1:09:32 used to read «09:32» because the hours were dropped. Both ends of
+/// a timeline share the form so they line up.
+String playerTimeLabel(Duration value, {required Duration total}) {
+  String two(int number) => number.toString().padLeft(2, '0');
+  final minutes = two(value.inMinutes.remainder(60));
+  final seconds = two(value.inSeconds.remainder(60));
+  return total.inHours > 0
+      ? '${value.inHours}:$minutes:$seconds'
+      : '$minutes:$seconds';
 }
 
 const _surahRowExtent = 76.0;
