@@ -820,6 +820,30 @@ final duaEntriesByTopicProvider = FutureProvider.family<List<DuaEntry>, String>(
   },
 );
 
+/// The account's favourite du'a, newest first. Pulls the server copy when
+/// online and falls back to the local list offline.
+final duaFavoritesProvider = FutureProvider.autoDispose
+    .family<List<DuaEntry>, AccountScopeKey>((ref, key) async {
+      if (ref.watch(activeAccountScopeKeyProvider) != key) {
+        throw const AccountScopeChanged();
+      }
+      final database = ref.watch(localDatabaseProvider);
+      final scope = database.accountScope.current;
+      if (scope == null || accountScopeKey(scope) != key) {
+        throw const AccountScopeChanged();
+      }
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      final favorites = await ref
+          .watch(duaRepositoryProvider)
+          .favorites(locale: locale, accountScope: scope);
+      if (!database.accountScope.isCurrent(scope)) {
+        throw const AccountScopeChanged();
+      }
+      return favorites;
+    });
+
 final duaSearchProvider = FutureProvider.autoDispose
     .family<List<DuaEntry>, DuaSearchQuery>((ref, request) {
       final locale = ref.watch(

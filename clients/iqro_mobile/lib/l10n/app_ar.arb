@@ -288,6 +288,7 @@
   "resetConfirm": "هل تريد مسح نتيجة تكرارات اليوم فقط؟",
   "dua": "الدعاء",
   "duaSubtitle": "أدعية وأذكار من مصادر قابلة للتتبع",
+  "duaFavoritesSubtitle": "الأدعية المحفوظة",
   "duaCount": "عدد الأدعية: {count}",
   "@duaCount": {"placeholders": {"count": {"type": "int"}}},
   "noDuaCategories": "لا توجد فئات أدعية متاحة بعد",

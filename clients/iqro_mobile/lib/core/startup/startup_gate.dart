@@ -116,37 +116,52 @@ class _StartupScreen extends StatelessWidget {
         body: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            if (hasError || intro == null)
+            if (hasError)
               SafeArea(
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      if (!hasError)
-                        const SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(
-                            color: accent,
-                            strokeWidth: 3,
-                          ),
-                        )
-                      else ...<Widget>[
-                        Text(
-                          _startupMessage(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: accent),
-                        ),
-                        const SizedBox(height: 16),
-                        OutlinedButton(
-                          onPressed: onRetry,
-                          child: Text(_retryLabel()),
-                        ),
-                      ],
+                      Text(
+                        _startupMessage(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: accent),
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton(
+                        onPressed: onRetry,
+                        child: Text(_retryLabel()),
+                      ),
                     ],
                   ),
                 ),
+              )
+            else ...<Widget>[
+              // The native launch screen shows this seal at the same size in
+              // the centre of the whole screen, so Flutter taking over is not
+              // visible. The logo asset has narrower margins than the launch
+              // image, hence 93 for the launch image's 108.
+              Center(
+                child: Image.asset(
+                  'assets/brand/iqro-logo.png',
+                  key: const ValueKey('startup-seal'),
+                  width: 93,
+                  excludeFromSemantics: true,
+                ),
               ),
+              if (intro == null)
+                const Align(
+                  alignment: Alignment(0, .28),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: accent,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+            ],
             ?intro,
           ],
         ),

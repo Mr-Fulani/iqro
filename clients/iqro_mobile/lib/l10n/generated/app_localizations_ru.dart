@@ -935,6 +935,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaSubtitle => 'Ду’а и азкары из проверяемых источников';
 
   @override
+  String get duaFavoritesSubtitle => 'Сохранённые ду’а';
+
+  @override
   String duaCount(int count) {
     return 'Ду’а: $count';
   }

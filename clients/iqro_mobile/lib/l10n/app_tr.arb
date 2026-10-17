@@ -288,6 +288,7 @@
   "resetConfirm": "Yalnızca bugünkü tekrar sonucu silinsin mi?",
   "dua": "Dua",
   "duaSubtitle": "Kaynağı izlenebilir dua ve zikirler",
+  "duaFavoritesSubtitle": "Kaydedilen dualar",
   "duaCount": "{count} dua",
   "@duaCount": {"placeholders": {"count": {"type": "int"}}},
   "noDuaCategories": "Henüz dua kategorisi yok",
