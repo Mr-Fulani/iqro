@@ -186,9 +186,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                         : null,
                                     child: ListTile(
                                       contentPadding: EdgeInsets.zero,
-                                      leading: const Icon(
-                                        Icons.auto_awesome_outlined,
-                                      ),
+                                      leading: const IqroIcon(iqroDuaIcon),
                                       title: Text(
                                         entry.available
                                             ? entry.categoryTitle

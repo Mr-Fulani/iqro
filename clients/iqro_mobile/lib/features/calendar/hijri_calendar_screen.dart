@@ -146,7 +146,7 @@ class _HijriCalendarScreenState extends ConsumerState<HijriCalendarScreen> {
                   for (final event in events)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.auto_awesome_outlined),
+                      leading: const Icon(Icons.nightlight_outlined),
                       title: Text(event.title(locale)),
                       trailing: const Icon(Icons.info_outline),
                       onTap: () => showCalendarSources(context, [event]),
