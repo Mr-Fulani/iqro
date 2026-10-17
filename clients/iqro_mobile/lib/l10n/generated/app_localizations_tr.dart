@@ -1691,6 +1691,56 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Hurma ağacınız';
+
+  @override
+  String get palmStageSeed => 'Hurma çekirdeği';
+
+  @override
+  String get palmStageSprout => 'Filiz';
+
+  @override
+  String get palmStageSeedling => 'Fidan';
+
+  @override
+  String get palmStageYoungPalm => 'Genç hurma';
+
+  @override
+  String get palmStagePalm => 'Hurma ağacı';
+
+  @override
+  String get palmStageFruitingPalm => 'Meyve veren hurma';
+
+  @override
+  String get palmMoodPlanting => 'Çekirdeği ekin: ilk sayfanızı okuyun';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Bugünkü hedef tamam — hurma güneşe uzanıyor';
+
+  @override
+  String get palmMoodGrowing => 'Bugünkü okumanız hurmanızı besliyor';
+
+  @override
+  String get palmMoodWaiting => 'Hurmanız bugünkü okumanızı bekliyor';
+
+  @override
+  String get palmMoodResting =>
+      'Hurmanız gölgede dinleniyor. Tek bir sayfa bile onu sevindirir';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Sıradaki: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Tamamen büyüdü — bereketle meyve versin';
+
+  @override
+  String get palmHowItGrows =>
+      'Okuma günü +1, tamamlanan hedef +2. Kaçırılan günler hurmaya zarar vermez, sadece dinlenir.';
+
+  @override
   String get planSummaryTitle => 'İlerleme özeti';
 
   @override

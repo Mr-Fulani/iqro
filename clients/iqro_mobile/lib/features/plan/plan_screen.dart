@@ -11,6 +11,8 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/mini_player.dart';
+import 'palm_growth.dart';
+import 'palm_growth_view.dart';
 import 'plan_repository.dart';
 
 class PlanScreen extends ConsumerStatefulWidget {
@@ -92,6 +94,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
+                PalmGrowthCard(growth: palmGrowthFor(value)),
+                const SizedBox(height: 12),
                 _PlanSummary(
                   stats: stats,
                   streak: value.streak,
