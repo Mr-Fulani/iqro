@@ -50,6 +50,30 @@ void main() {
     expect(widget, contains('.supportedFamilies([.systemMedium])'));
     expect(widget, contains('iqro://open/prayer?homeWidget'));
     expect(project, contains('PrayerTimesHomeWidget.appex'));
+    // The reading plan widget shows the palm stage art from its own catalog.
+    expect(
+      project,
+      contains(
+        '5E3B9D72C8F14A06B2D7E931 /* Assets.xcassets */,\n\t\t\t);\n'
+        '\t\t\tpath = PrayerTimesHomeWidget;',
+      ),
+    );
+    expect(
+      project,
+      contains('4D2A8C61B7E03F95A1C6D820 /* Assets.xcassets in Resources */,'),
+    );
+    expect(widget, contains(r'Image("reading_plan_palm_\(data.palmStage)")'));
+    for (var stage = 0; stage <= 5; stage++) {
+      final art = 'reading_plan_palm_$stage';
+      expect(
+        File(
+          'ios/PrayerTimesHomeWidget/Assets.xcassets/$art.imageset/$art.png',
+        ).readAsBytesSync(),
+        File(
+          'android/app/src/main/res/drawable-nodpi/$art.png',
+        ).readAsBytesSync(),
+      );
+    }
     expect(
       RegExp(
         r'PRODUCT_BUNDLE_IDENTIFIER = forum\.iqro\.app\.PrayerTimesHomeWidget;',

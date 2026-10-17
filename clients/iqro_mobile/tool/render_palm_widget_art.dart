@@ -1,5 +1,5 @@
-// Renders the palm stages for the Android home-screen widget from the same
-// PalmPainter the app uses, so both always show the same art.
+// Renders the palm stages for the Android and iOS home-screen widgets from the
+// same PalmPainter the app uses, so all of them always show the same art.
 //
 //   flutter test tool/render_palm_widget_art.dart
 //
@@ -19,12 +19,11 @@ void main() {
     await tester.runAsync(() async {
       for (final stage in PalmStage.values) {
         // The home widget has no moods: today's state is shown in numbers.
-        await _write(
-          'android/app/src/main/res/drawable-nodpi/'
-          'reading_plan_palm_${stage.index}.png',
-          stage,
-          PalmMood.growing,
-          celestial: false,
+        final name = 'reading_plan_palm_${stage.index}';
+        final android = 'android/app/src/main/res/drawable-nodpi/$name.png';
+        await _write(android, stage, PalmMood.growing, celestial: false);
+        File(android).copySync(
+          'ios/PrayerTimesHomeWidget/Assets.xcassets/$name.imageset/$name.png',
         );
       }
       final preview = Platform.environment['PALM_PREVIEW'];
