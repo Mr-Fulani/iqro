@@ -124,7 +124,7 @@ class MoreToolsGrid extends StatelessWidget {
         onTap: () => context.push('/memorization'),
       ),
       _ToolCard(
-        icon: Icons.auto_awesome_outlined,
+        icon: iqroDuaIcon,
         title: context.l10n.dua,
         color: Theme.of(context).colorScheme.primaryContainer,
         onTap: () => context.push('/dua'),
@@ -175,7 +175,7 @@ class _ToolCard extends StatelessWidget {
               ).colorScheme.surface.withValues(alpha: .65),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+            child: IqroIcon(icon, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(height: 20),
           Text(title, style: Theme.of(context).textTheme.titleMedium),

@@ -103,35 +103,91 @@
   "prayer": [
     {
       "tag": "path",
-      "d": "M18 30 C18 18 28 16 32 9 C36 16 46 18 46 30 Z",
-      "fill": "#D5A34C"
+      "d": "M6 55 L58 55",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
     },
     {
       "tag": "rect",
-      "x": 16,
-      "y": 30,
-      "width": 32,
-      "height": 24,
-      "rx": 3,
-      "fill": "#D6E5DA"
-    },
-    {
-      "tag": "rect",
-      "x": 27,
-      "y": 41,
-      "width": 10,
-      "height": 13,
-      "rx": 5,
+      "x": 8,
+      "y": 27,
+      "width": 6,
+      "height": 27,
+      "rx": 1.5,
       "fill": "#0B5D4A"
     },
     {
       "tag": "path",
-      "d": "M8 54 L8 18 M4 23 L12 23 M56 54 L56 18 M52 23 L60 23 M32 9 L32 5",
+      "d": "M8 27 L11 18 L14 27 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 7,
+      "y": 33,
+      "width": 8,
+      "height": 2.5,
+      "rx": 1.25,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 50,
+      "y": 27,
+      "width": 6,
+      "height": 27,
+      "rx": 1.5,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M50 27 L53 18 L56 27 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 49,
+      "y": 33,
+      "width": 8,
+      "height": 2.5,
+      "rx": 1.25,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "rect",
+      "x": 18,
+      "y": 33,
+      "width": 28,
+      "height": 21,
+      "rx": 3,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "path",
+      "d": "M20 34 C20 24 26 20 32 17 C38 20 44 24 44 34 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M32 17 L32 13",
       "fill": "none",
       "stroke": "#0B5D4A",
       "strokeWidth": 2,
       "strokeLinecap": "round",
       "strokeLinejoin": "round"
+    },
+    {
+      "tag": "path",
+      "d": "M33.3 6.300000000000001 C27.8 5.700000000000001 27.8 12.9 33.3 12.3 C30.3 11.100000000000001 30.3 7.500000000000001 33.3 6.300000000000001 Z",
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M27 54 L27 46 Q32 38 37 46 L37 54 Z",
+      "fill": "#0B5D4A"
     }
   ],
   "purification": [
@@ -373,12 +429,8 @@
     },
     {
       "tag": "path",
-      "d": "M25 25 L39 39 M39 25 L25 39",
-      "fill": "none",
-      "stroke": "#0B5D4A",
-      "strokeWidth": 2,
-      "strokeLinecap": "round",
-      "strokeLinejoin": "round"
+      "d": "M32 22 Q33 22 34 23 L41 30 Q42 32 41 34 L34 41 Q32 42 30 41 L23 34 Q22 32 23 30 L30 23 Q31 22 32 22 Z",
+      "fill": "#91B4A5"
     },
     {
       "tag": "circle",

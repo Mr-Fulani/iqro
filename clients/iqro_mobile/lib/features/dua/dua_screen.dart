@@ -540,8 +540,8 @@ class _DuaEmpty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              Icons.auto_awesome_outlined,
+            IqroIcon(
+              iqroDuaIcon,
               size: 42,
               color: Theme.of(context).colorScheme.primary,
             ),
