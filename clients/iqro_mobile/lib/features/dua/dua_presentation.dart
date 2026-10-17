@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'dua_repository.dart';
+import '../../core/share/content_share.dart';
 
 const int _maxPracticeStage = 1000;
 const int _maxPracticeTotal = 10000;
@@ -60,32 +61,19 @@ class DuaPracticeProgress {
   int get stageTarget => stages[stageIndex];
 }
 
-String duaShareText(
+/// The du'a as shared: its chapter, the Arabic, the meaning, how many times
+/// it is said, its sources and a link to it on the site.
+ContentShare duaContentShare(
   DuaEntry entry, {
-  required String translationLabel,
+  required String locale,
   required String repetitionLabel,
-  required String sourceLabel,
-  String? canonicalUrl,
+  required String readInIqro,
 }) {
-  final blocks = <String>[
-    '${entry.categoryTitle} · #${entry.sourceNumber}',
-    entry.arabicText.trim(),
-  ];
-  if (entry.transliteration.trim().isNotEmpty) {
-    blocks.add(entry.transliteration.trim());
-  }
-  if (entry.meaning.trim().isNotEmpty) {
-    blocks.add('$translationLabel:\n${entry.meaning.trim()}');
-  }
   final repetition = entry.repetitionLabel.trim().isNotEmpty
       ? entry.repetitionLabel.trim()
       : entry.repetitions > 1
       ? entry.repetitions.toString()
       : '';
-  if (repetition.isNotEmpty) {
-    blocks.add('$repetitionLabel: $repetition');
-  }
-
   final provenance = <String>[];
   if (entry.sourceLabel.trim().isNotEmpty) {
     provenance.add(entry.sourceLabel.trim());
@@ -96,13 +84,15 @@ String duaShareText(
       provenance.add(reference);
     }
   }
-  if (provenance.isNotEmpty) {
-    blocks.add('$sourceLabel: ${provenance.join(' · ')}');
-  }
-  if (canonicalUrl?.trim().isNotEmpty == true) {
-    blocks.add(canonicalUrl!.trim());
-  }
-  return blocks.where((block) => block.isNotEmpty).join('\n\n');
+  return ContentShare(
+    title: '${duaDisplayTitle(entry.categoryTitle)} · #${entry.sourceNumber}',
+    arabic: entry.arabicText,
+    translation: entry.meaning,
+    note: repetition.isEmpty ? '' : '$repetitionLabel: $repetition',
+    reference: provenance.join(' · '),
+    url: duaShareUrl(locale, entry.collection, entry.sourceNumber),
+    readInIqro: readInIqro,
+  );
 }
 
 String duaAudioPlaybackId(DuaEntry entry, DuaAudioAsset asset, int assetIndex) {

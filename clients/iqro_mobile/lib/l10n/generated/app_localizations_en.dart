@@ -1004,6 +1004,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareDua => 'Share dua';
 
   @override
+  String get shareReadInIqro => 'Read in IQRO';
+
+  @override
   String get duaReader => 'Reader';
 
   @override

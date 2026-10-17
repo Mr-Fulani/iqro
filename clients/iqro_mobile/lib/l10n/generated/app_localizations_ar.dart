@@ -991,6 +991,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareDua => 'مشاركة الدعاء';
 
   @override
+  String get shareReadInIqro => 'اقرأ في IQRO';
+
+  @override
   String get duaReader => 'القارئ';
 
   @override

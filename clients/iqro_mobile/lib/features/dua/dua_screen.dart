@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
+import '../../core/share/content_share.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'dua_arabic.dart';
 import 'dua_presentation.dart';
@@ -1002,7 +1003,7 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         .where((item) => item.isNotEmpty)
         .firstOrNull;
     final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
-      color: scheme.onSurface,
+      color: IqroTheme.arabicInk(context),
       fontFamily: IqroTheme.arabicFontFamily,
       fontWeight: FontWeight.normal,
       fontSize: 28,
@@ -1139,7 +1140,7 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
                               )
                             : null,
                         child: Text(
-                          '${_speedLabel(owned ? current.speed : 1)}×',
+                          '${playbackSpeedLabel(owned ? current.speed : 1)}×',
                           semanticsLabel: context.l10n.speed,
                         ),
                       ),
@@ -1192,11 +1193,6 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
     );
   }
 
-  static const _speeds = <double>[1, 1.25, 1.5, 0.75];
-
-  static String _speedLabel(double speed) =>
-      speed == speed.roundToDouble() ? '${speed.toInt()}' : '$speed';
-
   Future<void> _cycleAudioSpeed(String id, double speed) {
     final scope = _accountScope;
     final generation = _accountGeneration;
@@ -1207,9 +1203,11 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         !_isCurrentAudioBinding(scope, generation, controller, owner)) {
       return Future<void>.value();
     }
-    final index = _speeds.indexOf(speed);
-    final next = _speeds[(index + 1) % _speeds.length];
-    return controller.setStandaloneSpeed(id, next, owner: owner);
+    return controller.setStandaloneSpeed(
+      id,
+      nextPlaybackSpeed(speed),
+      owner: owner,
+    );
   }
 
   Future<void> _showSource(BuildContext context) => showModalBottomSheet<void>(
@@ -1417,27 +1415,20 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
     }
   }
 
-  String _shareText() => duaShareText(
-    widget.entry,
-    translationLabel: context.l10n.translation,
-    repetitionLabel: context.l10n.repetitionTarget,
-    sourceLabel: context.l10n.sourceAndVerification,
-    canonicalUrl:
-        '${ref.read(appConfigProvider).apiBaseUrl}${duaEntryRoute(widget.entry)}',
-  );
-
   Future<void> _share(BuildContext buttonContext) async {
     final box = buttonContext.findRenderObject();
     final origin = box is RenderBox
         ? box.localToGlobal(Offset.zero) & box.size
         : null;
-    await SharePlus.instance.share(
-      ShareParams(
-        subject: widget.entry.categoryTitle,
-        title: context.l10n.shareDua,
-        text: _shareText(),
-        sharePositionOrigin: origin,
+    await shareContent(
+      context,
+      duaContentShare(
+        widget.entry,
+        locale: Localizations.localeOf(context).languageCode,
+        repetitionLabel: context.l10n.repetitionTarget,
+        readInIqro: context.l10n.shareReadInIqro,
       ),
+      origin: origin,
     );
   }
 }

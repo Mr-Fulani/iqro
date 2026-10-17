@@ -17,6 +17,10 @@ import '../plan/plan_repository.dart';
 import 'ayah_annotations.dart';
 import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
+import '../../core/audio/playback_speed.dart';
+import 'ayah_share.dart';
+import '../dua/dua_arabic.dart';
+import '../../core/share/content_share.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
@@ -180,6 +184,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           ayah: value.activeAyah,
           playing: value.playing,
           active: value.channel == AudioPlaybackChannel.mushaf,
+          repeat: value.repeatEnabled,
+          speed: value.speed,
         ),
       ),
     );
@@ -269,7 +275,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     List<QuranAyah> items,
     Surah? surah,
     String title,
-    ({int? surah, int? ayah, bool playing, bool active}) audio,
+    ({
+      int? surah,
+      int? ayah,
+      bool playing,
+      bool active,
+      bool repeat,
+      double speed,
+    })
+    audio,
     Map<int, String> highlightColors,
     ({double fontSize, double lineHeight, double ayahSpacing, bool focusMode})
     presentation,
@@ -304,7 +318,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           return Padding(
             key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
             padding: EdgeInsets.only(bottom: presentation.ayahSpacing),
-            child: _AyahCard(
+            child: ReaderAyahCard(
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
               highlightColorKey: highlightColors[ayah.number],
@@ -319,11 +333,27 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
               contentLoading: _contentLoading,
               arabicFontSize: presentation.fontSize,
               arabicLineHeight: presentation.lineHeight,
+              ayahCount: surah?.ayahCount ?? items.length,
+              repeatEnabled: audioActive && audio.repeat,
+              speed: audioActive ? audio.speed : 1,
               onSelected: () => _select(ayah),
               onBookmark: () => _toggleBookmark(ayah),
               onPlay: () => audioActive
                   ? ref.read(audioControllerProvider.notifier).toggle()
                   : _play(ayah, title),
+              onToggleRepeat: audioActive
+                  ? () => unawaited(
+                      ref.read(audioControllerProvider.notifier).toggleRepeat(),
+                    )
+                  : null,
+              onCycleSpeed: audioActive
+                  ? () => unawaited(
+                      ref
+                          .read(audioControllerProvider.notifier)
+                          .setSpeed(nextPlaybackSpeed(audio.speed)),
+                    )
+                  : null,
+              onShare: (origin) => _share(ayah, title, origin),
             ),
           );
         },
@@ -541,6 +571,30 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   AccountScopeKey? _currentAccountKey() {
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     return scope == null ? null : accountScopeKey(scope);
+  }
+
+  Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) {
+    final edition = _translationEditions
+        .where((item) => item.sourceId == _translationSourceId)
+        .firstOrNull;
+    return shareContent(
+      context,
+      ayahContentShare(
+        locale: Localizations.localeOf(context).languageCode,
+        surahName: surahName,
+        surah: ayah.surahNumber,
+        ayah: ayah.number,
+        arabic: ayah.textUthmani,
+        translation: _translations[ayah.number]?.text ?? '',
+        translator: edition == null
+            ? ''
+            : edition.authorName.trim().isEmpty
+            ? edition.name
+            : edition.authorName,
+        readInIqro: context.l10n.shareReadInIqro,
+      ),
+      origin: origin,
+    );
   }
 
   Future<void> _play(QuranAyah ayah, String surahName) async {
@@ -1070,8 +1124,11 @@ class _ReaderIntro extends StatelessWidget {
   }
 }
 
-class _AyahCard extends StatelessWidget {
-  const _AyahCard({
+/// One ayah in the text reader: the Arabic, its meaning and the actions —
+/// listen, repeat, speed, favourite, share — with its place in the surah.
+class ReaderAyahCard extends StatelessWidget {
+  const ReaderAyahCard({
+    super.key,
     required this.ayah,
     required this.selected,
     required this.highlightColorKey,
@@ -1086,9 +1143,15 @@ class _AyahCard extends StatelessWidget {
     required this.contentLoading,
     required this.arabicFontSize,
     required this.arabicLineHeight,
+    required this.ayahCount,
+    required this.repeatEnabled,
+    required this.speed,
     required this.onSelected,
     required this.onBookmark,
     required this.onPlay,
+    required this.onToggleRepeat,
+    required this.onCycleSpeed,
+    required this.onShare,
   });
   final QuranAyah ayah;
   final bool selected;
@@ -1104,87 +1167,97 @@ class _AyahCard extends StatelessWidget {
   final bool contentLoading;
   final double arabicFontSize;
   final double arabicLineHeight;
+  final int ayahCount;
+  final bool repeatEnabled;
+  final double speed;
   final VoidCallback onSelected;
   final VoidCallback onBookmark;
   final VoidCallback onPlay;
 
+  /// Null while another ayah, or nothing, is playing.
+  final VoidCallback? onToggleRepeat;
+  final VoidCallback? onCycleSpeed;
+  final ValueChanged<Rect?> onShare;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
+      color: IqroTheme.arabicInk(context),
+      fontFamily: IqroTheme.arabicFontFamily,
+      fontWeight: FontWeight.normal,
+      fontSize: arabicFontSize,
+      height: arabicLineHeight,
+    );
+    // Every surah but al-Fatiha and at-Tawba opens with the basmala, which
+    // is not counted as its first ayah: it stands on its own line.
+    final parts =
+        ayah.number == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9
+        ? splitDuaArabic(ayah.textUthmani)
+        : <DuaArabicPart>[DuaArabicPart(ayah.textUthmani)];
+    final translationText = translation?.text.trim() ?? '';
     return Semantics(
       selected: selected || audioActive,
       child: IqroCard(
         onTap: onSelected,
+        padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
         color: highlightColorKey == null
             ? null
             : ayahHighlightCardColor(context, highlightColorKey),
         borderColor: audioActive
-            ? Theme.of(context).colorScheme.tertiary
+            ? scheme.tertiary
             : selected
-            ? Theme.of(context).colorScheme.primary
+            ? scheme.primary
             : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${ayah.surahNumber}:${ayah.number}',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: context.l10n.listen,
-                  onPressed: audioLoading ? null : onPlay,
-                  icon: audioLoading
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(audioPlaying ? Icons.pause : Icons.play_arrow),
-                ),
-                IconButton(
-                  tooltip: context.l10n.favorites,
-                  isSelected: bookmarked,
-                  onPressed: onBookmark,
-                  selectedIcon: const Icon(Icons.bookmark),
-                  icon: const Icon(Icons.bookmark_border),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '${ayah.textUthmani}  ﴿${ayah.number}﴾',
-              textAlign: TextAlign.right,
-              textDirection: TextDirection.rtl,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontFamily: IqroTheme.arabicFontFamily,
-                fontWeight: FontWeight.normal,
-                fontSize: arabicFontSize,
-                height: arabicLineHeight,
-              ),
-            ),
-            if (showTranslation) ...<Widget>[
-              const Divider(height: 28),
-              _ReaderContentBlock(
-                icon: Icons.translate,
-                title: context.l10n.translation,
-                text: translation?.text,
-                loading: contentLoading,
-                unavailable: context.l10n.translationUnavailable,
+            for (final (index, part) in parts.indexed) ...<Widget>[
+              if (index > 0) const SizedBox(height: 10),
+              Text(
+                part == parts.last
+                    ? '${part.text}  ﴿${ayah.number}﴾'
+                    : part.text,
+                key: part == parts.last
+                    ? ValueKey('reader-ayah-${ayah.number}')
+                    : null,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: part.opening
+                    ? arabicStyle?.copyWith(
+                        fontSize: arabicFontSize * .8,
+                        color: scheme.primary,
+                      )
+                    : arabicStyle,
               ),
             ],
+            if (showTranslation) ...<Widget>[
+              const SizedBox(height: 16),
+              if (contentLoading && translationText.isEmpty)
+                const Center(
+                  child: SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                Text(
+                  translationText.isEmpty
+                      ? context.l10n.translationUnavailable
+                      : translationText,
+                  key: ValueKey('reader-translation-${ayah.number}'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: translationText.isEmpty
+                        ? scheme.onSurfaceVariant
+                        : scheme.primary,
+                    height: 1.55,
+                  ),
+                ),
+            ],
             if (showTafsir) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               _ReaderContentBlock(
                 icon: Icons.auto_stories_outlined,
                 title: context.l10n.tafsir,
@@ -1193,6 +1266,104 @@ class _AyahCard extends StatelessWidget {
                 unavailable: context.l10n.tafsirUnavailable,
               ),
             ],
+            const SizedBox(height: 16),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: .7),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: IconButtonTheme(
+                data: IconButtonThemeData(
+                  style: IconButton.styleFrom(foregroundColor: scheme.primary),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: audioLoading
+                          ? const Center(
+                              child: SizedBox.square(
+                                dimension: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              tooltip: audioPlaying
+                                  ? context.l10n.pause
+                                  : context.l10n.listen,
+                              onPressed: onPlay,
+                              icon: Icon(
+                                audioPlaying ? Icons.pause : Icons.play_arrow,
+                              ),
+                            ),
+                    ),
+                    Expanded(
+                      child: IconButton(
+                        tooltip: context.l10n.repeat,
+                        isSelected: repeatEnabled,
+                        onPressed: onToggleRepeat,
+                        selectedIcon: const Icon(Icons.repeat_one),
+                        icon: const Icon(Icons.repeat),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: onCycleSpeed,
+                        child: Text(
+                          '${playbackSpeedLabel(speed)}×',
+                          semanticsLabel: context.l10n.speed,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: IconButton(
+                        tooltip: context.l10n.favorites,
+                        isSelected: bookmarked,
+                        onPressed: onBookmark,
+                        selectedIcon: const Icon(Icons.bookmark),
+                        icon: const Icon(Icons.bookmark_border),
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (buttonContext) => IconButton(
+                          tooltip: context.l10n.shareAyah,
+                          icon: const Icon(Icons.ios_share_outlined),
+                          onPressed: () {
+                            final box = buttonContext.findRenderObject();
+                            onShare(
+                              box is RenderBox
+                                  ? box.localToGlobal(Offset.zero) & box.size
+                                  : null,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surface.withValues(alpha: .7),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            '${ayah.number}/$ayahCount',
+                            style: theme.textTheme.labelLarge,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

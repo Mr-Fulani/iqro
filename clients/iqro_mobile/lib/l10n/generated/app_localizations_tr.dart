@@ -997,6 +997,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareDua => 'Duayı paylaş';
 
   @override
+  String get shareReadInIqro => 'IQRO\'da oku';
+
+  @override
   String get duaReader => 'Okuyucu';
 
   @override

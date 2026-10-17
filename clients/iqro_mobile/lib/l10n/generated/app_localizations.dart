@@ -1914,6 +1914,12 @@ abstract class AppLocalizations {
   /// **'Share dua'**
   String get shareDua;
 
+  /// No description provided for @shareReadInIqro.
+  ///
+  /// In en, this message translates to:
+  /// **'Read in IQRO'**
+  String get shareReadInIqro;
+
   /// No description provided for @duaReader.
   ///
   /// In en, this message translates to:

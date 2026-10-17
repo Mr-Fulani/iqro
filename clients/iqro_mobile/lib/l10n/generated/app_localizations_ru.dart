@@ -1010,6 +1010,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareDua => 'Поделиться ду’а';
 
   @override
+  String get shareReadInIqro => 'Читать в IQRO';
+
+  @override
   String get duaReader => 'Чтец';
 
   @override
