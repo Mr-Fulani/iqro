@@ -15,6 +15,7 @@ import '../../core/design_system/iqro_action_grid.dart';
 import '../../core/share/content_share.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'dua_arabic.dart';
+import 'dua_search.dart';
 import 'dua_presentation.dart';
 import 'dua_repository.dart';
 import 'dua_topics.dart';
@@ -397,6 +398,7 @@ extension on _DuaCatalog {
     final locale = Localizations.localeOf(context).languageCode;
     final needle = query.toLowerCase();
     final items = categories.valueOrNull ?? const <DuaCategory>[];
+    final chapters = duaChaptersMatching(query, items);
     final matches = duaTopics
         .where(
           (topic) =>
@@ -411,12 +413,20 @@ extension on _DuaCatalog {
             entries: searchResults!,
             query: '',
             onRetry: onSearchRetry,
-            showEmpty: matches.isEmpty,
+            showEmpty: matches.isEmpty && chapters.isEmpty,
           );
-    if (matches.isEmpty) return entries;
+    if (matches.isEmpty && chapters.isEmpty) return entries;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        for (final chapter in chapters) ...<Widget>[
+          _DuaChapterRow(
+            key: ValueKey('dua-chapter-match-${chapter.sourceNumber}'),
+            chapter: chapter,
+            onTap: () => onOpen(chapter),
+          ),
+          const SizedBox(height: 10),
+        ],
         for (final topic in matches) ...<Widget>[
           _DuaTopicTile(
             topic: topic,
@@ -558,46 +568,59 @@ class _DuaChapterList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListView.separated(
       itemCount: chapters.length,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final chapter = chapters[index];
-        return IqroCard(
-          key: ValueKey('dua-chapter-${chapter.collection}-${chapter.slug}'),
-          onTap: () => onOpen(chapter),
-          child: Row(
-            children: <Widget>[
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: IqroIcon(iqroDuaIcon, color: theme.colorScheme.primary),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      context.l10n.duaChapterNumber(chapter.sourceNumber),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      duaDisplayTitle(chapter.title),
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        );
+        return _DuaChapterRow(chapter: chapter, onTap: () => onOpen(chapter));
       },
+    );
+  }
+}
+
+/// One chapter as a row: «Глава N» and its title.
+class _DuaChapterRow extends StatelessWidget {
+  const _DuaChapterRow({required this.chapter, required this.onTap, super.key});
+
+  final DuaCategory chapter;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IqroCard(
+      key: ValueKey('dua-chapter-${chapter.collection}-${chapter.slug}'),
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            child: IqroIcon(iqroDuaIcon, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  context.l10n.duaChapterNumber(chapter.sourceNumber),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  duaDisplayTitle(chapter.title),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
     );
   }
 }

@@ -21,6 +21,7 @@ import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
 import '../dua/dua_arabic.dart';
 import '../../core/share/content_share.dart';
+import '../../core/text/arabic_digits.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
@@ -1217,7 +1218,7 @@ class ReaderAyahCard extends StatelessWidget {
               if (index > 0) const SizedBox(height: 10),
               Text(
                 part == parts.last
-                    ? '${part.text}  ﴿${ayah.number}﴾'
+                    ? '${part.text}  ﴿${arabicIndicDigits(ayah.number)}﴾'
                     : part.text,
                 key: part == parts.last
                     ? ValueKey('reader-ayah-${ayah.number}')

@@ -460,6 +460,44 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('searching «истихара» offers its chapter', (tester) async {
+      const istikhara = DuaCategory(
+        id: 'istikhara',
+        slug: '026-istikharah-seeking-allah-s-counsel',
+        title:
+            'СЛОВА МОЛЬБЫ, ПРОИЗНОСИМЫЕ ВО ВРЕМЯ МОЛИТВЫ ИСПРАШИВАНИЯ ПОМОЩИ',
+        entryCount: 1,
+        collection: 'hisn-al-muslim',
+        sourceNumber: 26,
+      );
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[istikhara],
+        entries: (identity) async => <DuaEntry>[
+          _entry(
+            categoryTitle: istikhara.title,
+            arabicText: 'اللَّهُمَّ إِنِّي أَسْتَخِيرُكَ بِعِلْمِكَ',
+            meaning: 'О Аллах, я прошу Тебя помочь мне выбрать',
+          ),
+        ],
+      );
+
+      await tester.enterText(find.byType(EditableText), 'истихара');
+      await tester.pumpAndSettle();
+      final row = find.byKey(const ValueKey('dua-chapter-match-26'));
+      expect(row, findsOneWidget);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Глава 26'), findsOneWidget);
+      expect(
+        find.text('О Аллах, я прошу Тебя помочь мне выбрать'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('resolves a unique legacy category link across collections', (
       tester,
     ) async {

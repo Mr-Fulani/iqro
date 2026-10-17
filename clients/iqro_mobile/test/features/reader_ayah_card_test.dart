@@ -82,7 +82,7 @@ void main() {
     );
 
     expect(find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'), findsOneWidget);
-    expect(find.text('الٓمٓ  ﴿1﴾'), findsOneWidget);
+    expect(find.text('الٓمٓ  ﴿١﴾'), findsOneWidget);
     expect(find.text('Алиф. Лям. Мим.'), findsOneWidget);
   });
 
@@ -94,7 +94,7 @@ void main() {
     );
 
     expect(
-      find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ  ﴿1﴾'),
+      find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ  ﴿١﴾'),
       findsOneWidget,
     );
   });
