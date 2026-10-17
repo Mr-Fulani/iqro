@@ -77,6 +77,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('intro'), findsNothing);
+    expect(find.byKey(const ValueKey('startup-seal')), findsNothing);
     await tester.tap(find.byType(OutlinedButton));
     await tester.pumpAndSettle();
     expect(find.text('ready app'), findsOneWidget);
@@ -112,6 +113,37 @@ void main() {
     expect(find.text('ready app'), findsOneWidget);
     expect(introBuilds, 0);
     expect(introFinishes, 0);
+  });
+
+  testWidgets('the IQRO seal holds the launch screen until the app opens', (
+    tester,
+  ) async {
+    final ready = Completer<String>();
+    final decision = Completer<bool>();
+    await tester.pumpWidget(
+      StartupGate<String>(
+        initialize: () => ready.future,
+        readyBuilder: (value) => MaterialApp(home: Text(value)),
+        introBuilder: (_) => const Text('intro'),
+        shouldPlayIntro: () => decision.future,
+      ),
+    );
+    await tester.pump();
+    final seal = find.byKey(const ValueKey('startup-seal'));
+    // Where the native launch screen draws it: the centre of the screen.
+    expect(seal, findsOneWidget);
+    expect(tester.getCenter(seal), tester.getCenter(find.byType(Scaffold)));
+
+    decision.complete(false);
+    await tester.pump();
+    await tester.pump();
+    expect(seal, findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    ready.complete('ready app');
+    await tester.pumpAndSettle();
+    expect(seal, findsNothing);
+    expect(find.text('ready app'), findsOneWidget);
   });
 
   testWidgets('first launch plays the intro and reports it once', (
