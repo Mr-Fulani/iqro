@@ -7,6 +7,8 @@ private struct ReadingPlanData {
   func isCurrent(at date: Date) -> Bool { values["isCurrent"] as? Bool == true && validUntil > date }
   var rows: [[String: String]] { values["rows"] as? [[String: String]] ?? [] }
   var progress: Double { min(100, max(0, (values["progress"] as? NSNumber)?.doubleValue ?? 0)) / 100 }
+  // Rendered from the app's PalmPainter by tool/render_palm_widget_art.dart.
+  var palmStage: Int { min(5, max(0, (values["palmStage"] as? NSNumber)?.intValue ?? 0)) }
   var emptyLabel: String { values["emptyLabel"] as? String ?? NSLocalizedString("home_widget_reading_plan_open", comment: "") }
   static func load() -> ReadingPlanData {
     let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
@@ -53,10 +55,15 @@ private struct ReadingPlanView: View {
             Image(systemName: "book.fill").font(.system(size: 54))
               .foregroundColor(gold.opacity(0.24)).accessibilityHidden(true)
             VStack(spacing: 3) {
+              Image("reading_plan_palm_\(data.palmStage)").resizable().scaledToFit()
+                // The number yields first so the stage stays visible on the smallest widgets.
+                .frame(height: min(30, max(18, geo.size.height - 91)))
+                .accessibilityLabel(Text(data.text("palmLabel")))
               Text(data.text("achieved"))
                 .font(.system(size: 48, weight: .light).monospacedDigit())
-                .lineLimit(1).minimumScaleFactor(0.45)
+                .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(-1)
               Text(data.text("targetLine")).font(.system(size: 17).monospacedDigit())
+                .lineLimit(1).minimumScaleFactor(0.7)
                 .environment(\.layoutDirection, .leftToRight)
               Text(data.text("unit")).font(.system(size: 11))
                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -65,7 +72,7 @@ private struct ReadingPlanView: View {
                   Capsule().fill(gold.opacity(0.22))
                   Capsule().fill(gold).frame(width: bar.size.width * data.progress)
                 }
-              }.frame(height: 3).padding(.top, 7)
+              }.frame(height: 3).padding(.top, 5)
             }.padding(8)
           }.frame(width: geo.size.width * 0.255)
           VStack(spacing: 3) {
