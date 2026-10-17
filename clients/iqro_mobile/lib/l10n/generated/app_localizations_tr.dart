@@ -926,6 +926,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Kaydedilen dualar';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Bölüm $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return '$count kaldı';
+  }
+
+  @override
+  String get duaAudioFailed => 'Ses oynatılamadı';
+
+  @override
   String duaCount(int count) {
     return '$count dua';
   }
@@ -951,9 +964,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'Dinlemek için internet bağlantısı gerekir';
-
-  @override
-  String get duaAudioFailed => 'Ses oynatılamadı';
 
   @override
   String get duaPractice => 'Tekrar pratiği';

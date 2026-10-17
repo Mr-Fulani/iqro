@@ -111,3 +111,26 @@ String duaAudioPlaybackId(DuaEntry entry, DuaAudioAsset asset, int assetIndex) {
       ? 'dua:$assetId'
       : '${entry.favoriteKey}:audio:$assetIndex';
 }
+
+final _caseWords = RegExp(
+  r'(^|[\s«"(\[])(аллах|allah|коран|quran|пророк|мухаммад|muhammad|ислам)',
+  unicode: true,
+);
+final _firstLetter = RegExp(r'\p{L}', unicode: true);
+
+/// Titles some sources print in capitals, in sentence case. The names that
+/// keep a capital — Allah, the Quran, the Prophet — get it back; titles with
+/// mixed case or in scripts without case stay as they are.
+String duaDisplayTitle(String title) {
+  if (title.toUpperCase() != title || title.toLowerCase() == title) {
+    return title;
+  }
+  final lower = title.toLowerCase().replaceAllMapped(
+    _caseWords,
+    (match) =>
+        '${match[1]}${match[2]![0].toUpperCase()}${match[2]!.substring(1)}',
+  );
+  final first = _firstLetter.firstMatch(lower);
+  if (first == null) return lower;
+  return lower.replaceRange(first.start, first.end, first[0]!.toUpperCase());
+}

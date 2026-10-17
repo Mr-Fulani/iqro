@@ -920,6 +920,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'الأدعية المحفوظة';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'الباب $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return 'المتبقي: $count';
+  }
+
+  @override
+  String get duaAudioFailed => 'تعذر تشغيل الصوت';
+
+  @override
   String duaCount(int count) {
     return 'عدد الأدعية: $count';
   }
@@ -945,9 +958,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'يلزم الاتصال بالإنترنت للاستماع';
-
-  @override
-  String get duaAudioFailed => 'تعذر تشغيل الصوت';
 
   @override
   String get duaPractice => 'تدريب التكرار';

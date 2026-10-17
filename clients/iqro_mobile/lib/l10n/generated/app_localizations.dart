@@ -1788,6 +1788,24 @@ abstract class AppLocalizations {
   /// **'Saved duas'**
   String get duaFavoritesSubtitle;
 
+  /// No description provided for @duaChapterNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Chapter {number}'**
+  String duaChapterNumber(int number);
+
+  /// No description provided for @duaCounterRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String duaCounterRemaining(int count);
+
+  /// No description provided for @duaAudioFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The audio could not be played'**
+  String get duaAudioFailed;
+
   /// No description provided for @duaCount.
   ///
   /// In en, this message translates to:
@@ -1835,12 +1853,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An internet connection is required to listen'**
   String get duaAudioStreaming;
-
-  /// No description provided for @duaAudioFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The audio could not be played'**
-  String get duaAudioFailed;
 
   /// No description provided for @duaPractice.
   ///

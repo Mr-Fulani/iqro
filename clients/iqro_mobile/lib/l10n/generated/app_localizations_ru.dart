@@ -938,6 +938,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Сохранённые ду’а';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Глава $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return 'Осталось: $count';
+  }
+
+  @override
+  String get duaAudioFailed => 'Не удалось воспроизвести аудио';
+
+  @override
   String duaCount(int count) {
     return 'Ду’а: $count';
   }
@@ -964,9 +977,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get duaAudioStreaming =>
       'Для прослушивания нужно подключение к интернету';
-
-  @override
-  String get duaAudioFailed => 'Не удалось воспроизвести аудио';
 
   @override
   String get duaPractice => 'Практика повторения';
