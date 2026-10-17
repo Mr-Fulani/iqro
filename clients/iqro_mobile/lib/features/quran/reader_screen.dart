@@ -19,9 +19,18 @@ import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
-  const ReaderScreen({required this.surah, this.initialAyah = 1, super.key});
+  const ReaderScreen({
+    required this.surah,
+    this.initialAyah = 1,
+    this.savesReadingPlace = true,
+    super.key,
+  });
   final int surah;
   final int initialAyah;
+
+  /// False when opened from a bookmark or favourite: reading there still
+  /// counts for the plan, but it does not move the saved reading place.
+  final bool savesReadingPlace;
 
   @override
   ConsumerState<ReaderScreen> createState() => _ReaderScreenState();
@@ -234,7 +243,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                         .setReaderMode(ReaderMode.mushaf);
                     if (!context.mounted) return;
                     context.push(
-                      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah',
+                      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah'
+                      '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
                     );
                   },
                 ),
@@ -432,6 +442,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     if (scope == null || !_isCurrentAccount(scope)) return;
     final previousAyah = _lastPersistedAyah;
     _lastPersistedAyah = ayah.number;
+    if (!widget.savesReadingPlace) {
+      _readingSession?.observe(
+        surah: ayah.surahNumber,
+        ayah: ayah.number,
+        page: ayah.pages.firstOrNull ?? 1,
+      );
+      return;
+    }
     try {
       await ref
           .read(quranRepositoryProvider)

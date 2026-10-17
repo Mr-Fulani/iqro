@@ -32,6 +32,11 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final plan = ref.watch(planProvider);
     final database = ref.watch(localDatabaseProvider);
     final accountKey = ref.watch(activeAccountScopeKeyProvider);
+    // The same reading place as Home: the local position the reader saves.
+    // The server's copy lags until the next sync, so it is only a fallback.
+    final localPosition = accountKey == null
+        ? null
+        : ref.watch(readingPositionProvider(accountKey)).valueOrNull;
     final scope = database.accountScope.current;
     final controller = ref.read(planProvider.notifier);
     final canMutate =
@@ -102,11 +107,18 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   rangeDays: _rangeDays,
                 ),
                 const SizedBox(height: 12),
-                if (value.continueReading != null) ...<Widget>[
+                if ((localPosition == null
+                        ? value.continueReading
+                        : ReadingPositionSummary(
+                            editionCode: localPosition.edition,
+                            page: localPosition.page,
+                            surah: localPosition.surah,
+                            ayah: localPosition.ayah,
+                          ))
+                    case final position?) ...<Widget>[
                   _ContinueReadingCard(
-                    position: value.continueReading!,
-                    onTap: () =>
-                        _openContinueReading(context, value.continueReading!),
+                    position: position,
+                    onTap: () => _openContinueReading(context, position),
                   ),
                   const SizedBox(height: 22),
                 ],

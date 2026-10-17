@@ -275,6 +275,19 @@ void main() {
     },
   );
 
+  testWidgets('opened from a bookmark it keeps the saved reading place', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, savesReadingPlace: false);
+    await tester.pump(const Duration(milliseconds: 600));
+    await _tapAyah(tester, .35);
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('Аят 5:85'), findsOneWidget);
+    expect(harness.quran.saved, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('same-ayah second tap hides controls but keeps selection', (
     tester,
   ) async {
@@ -326,6 +339,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   WidgetTester tester, {
   Set<String> bookmarks = const {},
   Map<int, int>? pageBuilds,
+  bool savesReadingPlace = true,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
@@ -374,7 +388,12 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         locale: const Locale('ru'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const MushafScreen(initialPage: 122, surah: 5, ayah: 84),
+        home: MushafScreen(
+          initialPage: 122,
+          surah: 5,
+          ayah: 84,
+          savesReadingPlace: savesReadingPlace,
+        ),
       ),
     ),
   );

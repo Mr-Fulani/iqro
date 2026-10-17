@@ -41,6 +41,7 @@ class MushafScreen extends ConsumerStatefulWidget {
     required this.surah,
     required this.ayah,
     this.initialPageIsPhysical = false,
+    this.savesReadingPlace = true,
     super.key,
   });
 
@@ -48,6 +49,10 @@ class MushafScreen extends ConsumerStatefulWidget {
   final int surah;
   final int ayah;
   final bool initialPageIsPhysical;
+
+  /// False when opened from a bookmark or favourite: reading there still
+  /// counts for the plan, but it does not move the saved reading place.
+  final bool savesReadingPlace;
 
   @override
   ConsumerState<MushafScreen> createState() => _MushafScreenState();
@@ -742,7 +747,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         .setReaderMode(ReaderMode.text);
     if (mounted) {
       context.pushReplacement(
-        '/reader/${reference?.surah ?? widget.surah}?ayah=${reference?.ayah ?? widget.ayah}',
+        '/reader/${reference?.surah ?? widget.surah}?ayah=${reference?.ayah ?? widget.ayah}'
+        '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
       );
     }
   }
@@ -1170,12 +1176,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             .first;
         if (!_isCurrentPositionRequest(scope, request, page)) return;
       }
-      await repository.savePosition(
-        surah: reference?.surah ?? current.surah,
-        ayah: reference?.ayah ?? current.ayah,
-        page: canonicalPage,
-        accountScope: scope,
-      );
+      if (widget.savesReadingPlace) {
+        await repository.savePosition(
+          surah: reference?.surah ?? current.surah,
+          ayah: reference?.ayah ?? current.ayah,
+          page: canonicalPage,
+          accountScope: scope,
+        );
+      }
       if (mounted) {
         _readingSession?.observe(
           surah: reference?.surah ?? current.surah,
@@ -1191,12 +1199,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         return;
       }
       try {
-        await repository.savePosition(
-          surah: preferredReference?.surah ?? current.surah,
-          ayah: preferredReference?.ayah ?? current.ayah,
-          page: page,
-          accountScope: scope,
-        );
+        if (widget.savesReadingPlace) {
+          await repository.savePosition(
+            surah: preferredReference?.surah ?? current.surah,
+            ayah: preferredReference?.ayah ?? current.ayah,
+            page: page,
+            accountScope: scope,
+          );
+        }
         if (mounted) {
           _readingSession?.observe(
             surah: preferredReference?.surah ?? current.surah,

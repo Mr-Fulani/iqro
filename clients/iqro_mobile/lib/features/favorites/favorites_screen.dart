@@ -150,7 +150,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                         return;
                                       }
                                       context.push(
-                                        '/reader/${item['surah']}?ayah=${item['ayah']}',
+                                        '/reader/${item['surah']}?ayah=${item['ayah']}'
+                                        '&from=bookmark',
                                       );
                                     },
                                     child: ListTile(
