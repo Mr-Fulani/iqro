@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ splash icon: a 288dp box without an icon background. The
+     108dp seal sits in its centre, as on older versions and in Flutter. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_seal"
+    android:inset="90dp" />
