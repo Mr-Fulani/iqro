@@ -6,6 +6,7 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../dua/dua_presentation.dart';
 import '../dua/dua_repository.dart';
 import '../quran/surah_name_art.dart';
 
@@ -192,7 +193,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                       leading: const IqroIcon(iqroDuaIcon),
                                       title: Text(
                                         entry.available
-                                            ? entry.categoryTitle
+                                            ? duaDisplayTitle(
+                                                entry.categoryTitle,
+                                              )
                                             : context.l10n.duaUnavailable,
                                       ),
                                       subtitle: Text(
