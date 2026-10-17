@@ -571,6 +571,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get audioQuality => 'جودة الصوت';
 
   @override
+  String get playerBackground => 'خلفية المشغل';
+
+  @override
   String get qualityAutomatic => 'تلقائي';
 
   @override

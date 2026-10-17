@@ -1269,3 +1269,49 @@ class QuranFoundationAyahRecitationChapter(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.recitation}: surah {self.chapter_number}"
+
+
+class PlayerBackground(BaseModel):
+    """Admin-curated still image shown behind the mobile player while audio plays."""
+
+    title_ar = models.CharField(max_length=80)
+    title_en = models.CharField(max_length=80)
+    title_ru = models.CharField(max_length=80)
+    title_tr = models.CharField(max_length=80, blank=True)
+    image_object_key = models.CharField(
+        max_length=512,
+        blank=True,
+        validators=[validate_relative_object_key],
+    )
+    sort_order = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Меньшее число выводится раньше.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Фон без изображения всегда скрыт, даже если этот флаг включён.",
+    )
+
+    class Meta:
+        db_table = "audio_player_background"
+        ordering = ("sort_order", "created_at")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(is_active=False) | ~models.Q(image_object_key=""),
+                name="audio_player_bg_active_image",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("is_active", "sort_order"),
+                name="audio_player_bg_public_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.title_ru or self.title_en
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self.image_object_key:
+            self.is_active = False
+        super().save(*args, **kwargs)

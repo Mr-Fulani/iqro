@@ -15,6 +15,7 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
+import 'package:iqro_mobile/features/audio/player_backgrounds.dart';
 import 'package:iqro_mobile/features/audio/player_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -163,6 +164,55 @@ void main() {
     expect(harness.engine.playCalls, 2);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('chooses a player background and remembers it', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final harness = await _pumpPlayer(tester);
+
+    expect(
+      harness.preferences.state.playerBackgroundId,
+      defaultPlayerBackgroundId,
+    );
+    expect(find.text('Ночная пустыня'), findsOneWidget);
+    await tester.ensureVisible(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Классический'), findsOneWidget);
+    await tester.tap(find.text('Море на рассвете'));
+    await tester.pumpAndSettle();
+
+    expect(harness.preferences.state.playerBackgroundId, 'bundled:sea-dawn');
+    expect(find.text('Море на рассвете'), findsOneWidget);
+    expect(harness.engine.playCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('background swap is instant when animations are disabled', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final harness = await _pumpPlayer(tester);
+
+    await harness.preferences.setPlayerBackground(classicPlayerBackgroundId);
+    await tester.pump();
+
+    // No cross-fade: the previous image is gone on the very next frame.
+    expect(find.byType(AnimatedSwitcher), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AnimatedSwitcher),
+        matching: find.byType(Image),
+      ),
+      findsNothing,
+    );
+  });
 }
 
 Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
@@ -212,6 +262,9 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
         appPreferencesProvider.overrideWith((ref) => preferences),
         audioRepositoryProvider.overrideWithValue(repository),
         audioControllerProvider.overrideWith((ref) => controller),
+        playerBackgroundsProvider.overrideWith(
+          (ref) async => bundledPlayerBackgrounds,
+        ),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(
             surahs: <Surah>[
@@ -239,15 +292,21 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
-  return _PlayerHarness(repository, engine, controller);
+  return _PlayerHarness(repository, engine, controller, preferences);
 }
 
 class _PlayerHarness {
-  const _PlayerHarness(this.repository, this.engine, this.controller);
+  const _PlayerHarness(
+    this.repository,
+    this.engine,
+    this.controller,
+    this.preferences,
+  );
 
   final _AudioRepositoryFake repository;
   final _RecordingAudioEngine engine;
   final AudioController controller;
+  final AppPreferencesController preferences;
 }
 
 const _config = AppConfig(

@@ -580,6 +580,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioQuality => 'Audio quality';
 
   @override
+  String get playerBackground => 'Player background';
+
+  @override
   String get qualityAutomatic => 'Automatic';
 
   @override

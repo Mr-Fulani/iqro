@@ -19,6 +19,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -27,6 +28,7 @@ from quran_backend.modules.audio.models import (
 from quran_backend.modules.audio.selectors import (
     attach_recitation_summaries,
     public_ayah_segments,
+    public_player_backgrounds,
     public_quran_foundation_ayah_chapters,
     public_quran_foundation_ayah_recitations,
     public_recitation_base,
@@ -43,6 +45,7 @@ from quran_backend.modules.audio.serializers import (
     AyahPlaybackSerializer,
     OfflineAudioManifestQuerySerializer,
     OfflineAudioManifestSerializer,
+    PlayerBackgroundSerializer,
     PublicCatalogPageQuerySerializer,
     QuranFoundationAyahChapterSerializer,
     QuranFoundationAyahRecitationSerializer,
@@ -112,6 +115,15 @@ class ReciterListView(PublicReadOnlyViewMixin, generics.ListAPIView[Reciter]):
         query = PublicCatalogPageQuerySerializer(data=self.request.query_params)
         query.is_valid(raise_exception=True)
         return public_reciters()
+
+
+@extend_schema(tags=["audio"])
+class PlayerBackgroundListView(PublicReadOnlyViewMixin, generics.ListAPIView[PlayerBackground]):
+    serializer_class = PlayerBackgroundSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[PlayerBackground]:
+        return public_player_backgrounds()
 
 
 @extend_schema(tags=["audio"])

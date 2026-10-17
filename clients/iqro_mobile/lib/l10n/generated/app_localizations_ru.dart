@@ -585,6 +585,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get audioQuality => 'Качество аудио';
 
   @override
+  String get playerBackground => 'Фон плеера';
+
+  @override
   String get qualityAutomatic => 'Автоматически';
 
   @override

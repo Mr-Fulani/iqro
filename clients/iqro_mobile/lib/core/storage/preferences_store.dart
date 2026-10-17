@@ -17,6 +17,7 @@ const defaultReaderAyahSpacing = 10.0;
 const minReaderAyahSpacing = 4.0;
 const maxReaderAyahSpacing = 20.0;
 const defaultPreferredAudioQuality = 'auto';
+const defaultPlayerBackgroundId = 'bundled:desert-night';
 const supportedAudioQualityPreferences = <String>{
   defaultPreferredAudioQuality,
   'economy',
@@ -47,6 +48,7 @@ class AppPreferences {
     this.mushafRecitationId,
     this.memorizationDefaultRecitationId,
     this.preferredAudioQuality = defaultPreferredAudioQuality,
+    this.playerBackgroundId = defaultPlayerBackgroundId,
   });
 
   const AppPreferences.defaults()
@@ -70,7 +72,8 @@ class AppPreferences {
       listeningRecitationId = null,
       mushafRecitationId = null,
       memorizationDefaultRecitationId = null,
-      preferredAudioQuality = defaultPreferredAudioQuality;
+      preferredAudioQuality = defaultPreferredAudioQuality,
+      playerBackgroundId = defaultPlayerBackgroundId;
 
   final bool onboardingComplete;
   final String locale;
@@ -98,6 +101,7 @@ class AppPreferences {
   final String? mushafRecitationId;
   final String? memorizationDefaultRecitationId;
   final String preferredAudioQuality;
+  final String playerBackgroundId;
 
   AppPreferences copyWith({
     bool? onboardingComplete,
@@ -121,6 +125,7 @@ class AppPreferences {
     String? mushafRecitationId,
     String? memorizationDefaultRecitationId,
     String? preferredAudioQuality,
+    String? playerBackgroundId,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -153,6 +158,7 @@ class AppPreferences {
           this.memorizationDefaultRecitationId,
       preferredAudioQuality:
           preferredAudioQuality ?? this.preferredAudioQuality,
+      playerBackgroundId: playerBackgroundId ?? this.playerBackgroundId,
     );
   }
 }
@@ -250,6 +256,9 @@ class PreferencesStore {
       preferredAudioQuality: _audioQuality(
         _preferences.getString('audio_quality'),
       ),
+      playerBackgroundId: _playerBackground(
+        _preferences.getString('player_background_id'),
+      ),
     );
   }
 
@@ -310,6 +319,7 @@ class PreferencesStore {
           value.memorizationDefaultRecitationId!,
         ),
       _preferences.setString('audio_quality', value.preferredAudioQuality),
+      _preferences.setString('player_background_id', value.playerBackgroundId),
     ]);
   }
 
@@ -420,6 +430,14 @@ class PreferencesStore {
                 RegExp(r'^native:[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value))
         ? value!
         : defaultMushafVariant;
+  }
+
+  static String _playerBackground(String? value) {
+    return value != null &&
+            value.length <= 80 &&
+            RegExp(r'^(bundled|remote):[A-Za-z0-9-]+$').hasMatch(value)
+        ? value
+        : defaultPlayerBackgroundId;
   }
 
   static String _audioQuality(String? value) {

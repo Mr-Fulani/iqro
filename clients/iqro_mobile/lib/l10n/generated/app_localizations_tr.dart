@@ -574,6 +574,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get audioQuality => 'Ses kalitesi';
 
   @override
+  String get playerBackground => 'Oynatıcı arka planı';
+
+  @override
   String get qualityAutomatic => 'Otomatik';
 
   @override
