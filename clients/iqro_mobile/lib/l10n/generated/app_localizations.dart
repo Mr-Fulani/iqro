@@ -1776,6 +1776,12 @@ abstract class AppLocalizations {
   /// **'Duas and adhkar from traceable sources'**
   String get duaSubtitle;
 
+  /// No description provided for @duaFavoritesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved duas'**
+  String get duaFavoritesSubtitle;
+
   /// No description provided for @duaCount.
   ///
   /// In en, this message translates to:

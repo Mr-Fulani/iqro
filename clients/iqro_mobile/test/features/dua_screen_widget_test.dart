@@ -206,6 +206,85 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('topics are cards only, without a chapter drop-down', (
+      tester,
+    ) async {
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[_sleepCategory],
+      );
+
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      expect(find.byKey(const ValueKey('dua-topic-sleep')), findsOneWidget);
+      expect(find.byType(SearchBar), findsOneWidget);
+      expect(find.byKey(const ValueKey('dua-favorites')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a favourites card lists the saved du\'a and comes back', (
+      tester,
+    ) async {
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[_sleepCategory],
+        favorites: <DuaEntry>[
+          _entry(
+            categoryTitle: 'Перед сном',
+            arabicText: 'باسمك اللهم',
+            meaning: 'Saved before sleep',
+          ),
+        ],
+      );
+
+      final card = find.byKey(const ValueKey('dua-favorites'));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.text('Ду’а: 1')),
+        findsOneWidget,
+      );
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(find.text('Saved before sleep'), findsOneWidget);
+      expect(find.text('Сохранённые ду’а'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Назад'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('dua-topic-sleep')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('search also offers the topics whose name matches', (
+      tester,
+    ) async {
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[_sleepCategory],
+        entries: (identity) async => <DuaEntry>[
+          _entry(
+            categoryTitle: 'Перед сном',
+            arabicText: 'باسمك اللهم',
+            meaning: 'Chapter entry',
+          ),
+        ],
+      );
+
+      await tester.enterText(find.byType(EditableText), 'сон');
+      await tester.pumpAndSettle();
+      final match = find.byKey(const ValueKey('dua-topic-match-sleep'));
+      expect(match, findsOneWidget);
+      // The server found nothing, but the topic answers the search.
+      expect(find.text('Подходящие ду’а не найдены'), findsNothing);
+
+      await tester.tap(match);
+      await tester.pumpAndSettle();
+      expect(find.text('Сон и пробуждение'), findsWidgets);
+      expect(find.text('Chapter entry'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('resolves a unique legacy category link across collections', (
       tester,
     ) async {
@@ -487,10 +566,13 @@ Future<void> _pumpCatalog(
   Widget home = const DuaScreen(),
   Future<List<DuaEntry>> Function(DuaCategoryIdentity identity)? entries,
   Future<List<DuaEntry>> Function(DuaSearchQuery request)? search,
+  List<DuaEntry> favorites = const <DuaEntry>[],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        activeAccountScopeKeyProvider.overrideWithValue(_reader),
+        duaFavoritesProvider.overrideWith((ref, key) async => favorites),
         duaCategoriesProvider.overrideWith((ref) => categories()),
         duaEntriesByCategoryProvider.overrideWith(
           (ref, identity) =>
@@ -568,6 +650,17 @@ class _TestApp extends StatelessWidget {
     );
   }
 }
+
+const AccountScopeKey _reader = (userId: 'reader', epoch: 1);
+
+const _sleepCategory = DuaCategory(
+  id: 'sleep',
+  slug: '028-what-to-say-before-sleeping',
+  title: 'Перед сном',
+  entryCount: 14,
+  collection: 'hisn-al-muslim',
+  sourceNumber: 28,
+);
 
 DuaEntry _entry({
   String id = '0194f11e-972b-7b07-a772-5b7651ab78ea',

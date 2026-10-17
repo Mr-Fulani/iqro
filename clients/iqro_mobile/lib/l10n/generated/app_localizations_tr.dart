@@ -920,6 +920,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaSubtitle => 'Kaynağı izlenebilir dua ve zikirler';
 
   @override
+  String get duaFavoritesSubtitle => 'Kaydedilen dualar';
+
+  @override
   String duaCount(int count) {
     return '$count dua';
   }
