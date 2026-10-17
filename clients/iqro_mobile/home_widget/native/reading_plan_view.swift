@@ -7,7 +7,7 @@ private struct ReadingPlanData {
   func isCurrent(at date: Date) -> Bool { values["isCurrent"] as? Bool == true && validUntil > date }
   var rows: [[String: String]] { values["rows"] as? [[String: String]] ?? [] }
   var progress: Double { min(100, max(0, (values["progress"] as? NSNumber)?.doubleValue ?? 0)) / 100 }
-  // Rendered from the app's PalmPainter by tool/render_palm_widget_art.dart.
+  // Selects the photograph of the palm stage behind the daily figures.
   var palmStage: Int { min(5, max(0, (values["palmStage"] as? NSNumber)?.intValue ?? 0)) }
   var emptyLabel: String { values["emptyLabel"] as? String ?? NSLocalizedString("home_widget_reading_plan_open", comment: "") }
   static func load() -> ReadingPlanData {
@@ -50,15 +50,16 @@ private struct ReadingPlanView: View {
       if data.isCurrent(at: entry.date) {
         HStack(spacing: 10) {
           ZStack {
-            RoundedRectangle(cornerRadius: 23, style: .continuous)
-              .fill(Color(red: 0.20, green: 0.17, blue: 0.10))
-            Image(systemName: "book.fill").font(.system(size: 54))
-              .foregroundColor(gold.opacity(0.24)).accessibilityHidden(true)
+            // The palm stage's photograph, darker below for the white figures.
+            Image("reading_plan_palm_bg_\(data.palmStage)").resizable().scaledToFill()
+              .frame(width: geo.size.width * 0.255, height: geo.size.height)
+              .clipped()
+              .accessibilityLabel(Text(data.text("palmLabel")))
+            LinearGradient(
+              colors: [Color.black.opacity(0.25), Color.black.opacity(0.7)],
+              startPoint: .top, endPoint: .bottom
+            ).accessibilityHidden(true)
             VStack(spacing: 3) {
-              Image("reading_plan_palm_\(data.palmStage)").resizable().scaledToFit()
-                // The number yields first so the stage stays visible on the smallest widgets.
-                .frame(height: min(30, max(18, geo.size.height - 91)))
-                .accessibilityLabel(Text(data.text("palmLabel")))
               Text(data.text("achieved"))
                 .font(.system(size: 48, weight: .light).monospacedDigit())
                 .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(-1)
@@ -73,8 +74,9 @@ private struct ReadingPlanView: View {
                   Capsule().fill(gold).frame(width: bar.size.width * data.progress)
                 }
               }.frame(height: 3).padding(.top, 5)
-            }.padding(8)
+            }.padding(8).shadow(color: .black.opacity(0.5), radius: 3)
           }.frame(width: geo.size.width * 0.255)
+            .clipShape(RoundedRectangle(cornerRadius: 23, style: .continuous))
           VStack(spacing: 3) {
             Text(data.text("title")).font(.system(size: 21))
               .lineLimit(2).minimumScaleFactor(0.65).multilineTextAlignment(.center)
