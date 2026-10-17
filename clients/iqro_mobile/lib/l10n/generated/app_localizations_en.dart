@@ -390,6 +390,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafPublishedDescription => 'Hafs · online and offline reading';
 
   @override
+  String get mushafPickerHint => 'Tap a page to see it up close';
+
+  @override
+  String get mushafMakePrimary => 'Make primary';
+
+  @override
+  String get mushafIsPrimary => 'Primary Mushaf';
+
+  @override
   String get mushafTextDescription => 'Crisp text adapted to your screen';
 
   @override

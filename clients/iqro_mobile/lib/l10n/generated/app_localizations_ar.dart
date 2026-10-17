@@ -383,6 +383,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafPublishedDescription => 'حفص · القراءة مع الإنترنت وبدونه';
 
   @override
+  String get mushafPickerHint => 'اضغط على الصفحة لمعاينتها عن قرب';
+
+  @override
+  String get mushafMakePrimary => 'اجعله المصحف الأساسي';
+
+  @override
+  String get mushafIsPrimary => 'المصحف الأساسي';
+
+  @override
   String get mushafTextDescription => 'نص واضح متكيف مع الشاشة';
 
   @override

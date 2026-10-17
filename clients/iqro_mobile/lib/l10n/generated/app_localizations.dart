@@ -762,6 +762,24 @@ abstract class AppLocalizations {
   /// **'Hafs · online and offline reading'**
   String get mushafPublishedDescription;
 
+  /// No description provided for @mushafPickerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a page to see it up close'**
+  String get mushafPickerHint;
+
+  /// No description provided for @mushafMakePrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Make primary'**
+  String get mushafMakePrimary;
+
+  /// No description provided for @mushafIsPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary Mushaf'**
+  String get mushafIsPrimary;
+
   /// No description provided for @mushafTextDescription.
   ///
   /// In en, this message translates to:

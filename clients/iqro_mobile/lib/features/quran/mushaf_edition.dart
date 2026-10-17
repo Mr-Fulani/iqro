@@ -3,6 +3,9 @@ class MushafIdentity {
   const MushafIdentity._(this.code);
   static const primary = MushafIdentity._('kfgqpc-hafs');
 
+  /// QCF V4 Tajweed from the Quran Foundation, for readers who never chose.
+  static const defaultEdition = MushafIdentity._('qf-19');
+
   factory MushafIdentity.fromPreference(String value) {
     if (!RegExp(r'^native:[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value) ||
         value.length > 71) {

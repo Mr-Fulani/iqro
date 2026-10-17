@@ -395,6 +395,15 @@ class AppLocalizationsRu extends AppLocalizations {
       'Хафс · чтение онлайн и без интернета';
 
   @override
+  String get mushafPickerHint => 'Нажмите на страницу, чтобы рассмотреть её';
+
+  @override
+  String get mushafMakePrimary => 'Сделать основным';
+
+  @override
+  String get mushafIsPrimary => 'Основной Мусхаф';
+
+  @override
   String get mushafTextDescription => 'Чёткий текст, адаптированный для экрана';
 
   @override
