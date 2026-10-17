@@ -55,6 +55,10 @@ void main() {
       expect(file.existsSync(), isTrue, reason: asset);
       // Keep the APK small and decoding cheap.
       expect(file.lengthSync(), lessThan(120 * 1024), reason: asset);
+      final video = background.videoAssetPath;
+      if (video == null) continue;
+      expect(File(video).existsSync(), isTrue, reason: video);
+      expect(File(video).lengthSync(), lessThan(200 * 1024), reason: video);
     }
   });
 

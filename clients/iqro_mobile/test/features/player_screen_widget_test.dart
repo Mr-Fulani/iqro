@@ -192,6 +192,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the video background shows its poster under the video', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+
+    await harness.preferences.setPlayerBackground('bundled:reciter-video');
+    await tester.pumpAndSettle();
+
+    // Without a video decoder (as in tests) the poster stays.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is ResizeImage &&
+            (widget.image as ResizeImage).imageProvider ==
+                const AssetImage('assets/player_backgrounds/reciter-hood.webp'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('background swap is instant when animations are disabled', (
     tester,
   ) async {

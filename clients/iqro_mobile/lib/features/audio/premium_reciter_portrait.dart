@@ -1,6 +1,24 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+// The frame's width around the photograph.
+double _frameInset(double size) => size >= 150 ? 7.0 : 3.0;
+
+/// The decoded photograph a portrait of [size] shows. Precaching this exact
+/// image lets a screen open with faces instead of initials.
+ImageProvider reciterPortraitImage(
+  String url, {
+  required double size,
+  required double devicePixelRatio,
+}) {
+  final pixels = ((size - _frameInset(size) * 2) * devicePixelRatio).ceil();
+  return ResizeImage.resizeIfNeeded(
+    pixels,
+    pixels,
+    CachedNetworkImageProvider(url),
+  );
+}
+
 /// Static polished frame only. The canonical/admin portrait URL is untouched;
 /// no colour filter or highlight is painted over the person's photograph.
 class PremiumReciterPortrait extends StatelessWidget {
@@ -19,7 +37,7 @@ class PremiumReciterPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inset = size >= 150 ? 7.0 : 3.0;
+    final inset = _frameInset(size);
     final pixels = ((size - inset * 2) * MediaQuery.devicePixelRatioOf(context))
         .ceil();
     final fallback = ColoredBox(
@@ -88,6 +106,10 @@ class PremiumReciterPortrait extends StatelessWidget {
                   fit: BoxFit.cover,
                   memCacheWidth: pixels,
                   memCacheHeight: pixels,
+                  // A cached photo replaces the initials at once; the
+                  // default 1.5 s cross-fade looked like the screen hanging.
+                  fadeOutDuration: Duration.zero,
+                  fadeInDuration: const Duration(milliseconds: 120),
                   placeholder: (context, url) => fallback,
                   errorWidget: (context, url, error) => fallback,
                 ),

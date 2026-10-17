@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,15 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   late var _index = widget.initialIndex.clamp(0, 4);
+
+  @override
+  void initState() {
+    super.initState();
+    // The Audio tab is built only when first opened; warm what it shows.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(warmAudioCatalog(context, ref));
+    });
+  }
 
   @override
   void didUpdateWidget(covariant AppShell oldWidget) {

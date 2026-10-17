@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
@@ -1666,10 +1667,19 @@ class _PlayerBackdrop extends StatelessWidget {
                   key: ValueKey<String>(background.id),
                   fit: StackFit.expand,
                   children: <Widget>[
-                    _PlayerBackgroundImage(
-                      background: background,
-                      decodeWidth: decodeWidth,
-                    ),
+                    if (background.videoAssetPath != null && !reduceMotion)
+                      _PlayerBackgroundVideo(
+                        asset: background.videoAssetPath!,
+                        poster: _PlayerBackgroundImage(
+                          background: background,
+                          decodeWidth: decodeWidth,
+                        ),
+                      )
+                    else
+                      _PlayerBackgroundImage(
+                        background: background,
+                        decodeWidth: decodeWidth,
+                      ),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: playerBackgroundScrim,
@@ -1715,6 +1725,74 @@ class _PlayerBackgroundImage extends StatelessWidget {
           : const Duration(milliseconds: 250),
       placeholder: (context, url) => empty,
       errorWidget: (context, url, error) => empty,
+    );
+  }
+}
+
+/// A silent looping video over its poster. The poster stays if the video
+/// cannot be decoded; recitation audio keeps its focus.
+class _PlayerBackgroundVideo extends StatefulWidget {
+  const _PlayerBackgroundVideo({required this.asset, required this.poster});
+
+  final String asset;
+  final Widget poster;
+
+  @override
+  State<_PlayerBackgroundVideo> createState() => _PlayerBackgroundVideoState();
+}
+
+class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
+  late final _controller = VideoPlayerController.asset(
+    widget.asset,
+    videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+  );
+  var _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_start());
+  }
+
+  Future<void> _start() async {
+    try {
+      await _controller.initialize();
+      await _controller.setVolume(0);
+      await _controller.setLooping(true);
+      if (!mounted) return;
+      await _controller.play();
+      if (mounted) setState(() => _ready = true);
+    } on Object {
+      // The poster stays.
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_controller.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _controller.value.size;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        widget.poster,
+        if (_ready)
+          ExcludeSemantics(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: VideoPlayer(_controller),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1858,6 +1936,16 @@ class _PlayerBackgroundTile extends StatelessWidget {
                       const Icon(
                         Icons.format_color_fill_rounded,
                         color: Color(0xFFB6E8D9),
+                      ),
+                    if (background.videoAssetPath != null)
+                      const PositionedDirectional(
+                        start: 6,
+                        bottom: 6,
+                        child: Icon(
+                          Icons.videocam_rounded,
+                          size: 18,
+                          color: Color(0xFFF5EAD5),
+                        ),
                       ),
                     if (selected)
                       PositionedDirectional(

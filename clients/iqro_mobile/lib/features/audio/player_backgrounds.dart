@@ -6,20 +6,25 @@ import '../../core/utils/json_helpers.dart';
 
 const classicPlayerBackgroundId = 'bundled:classic';
 
-/// A still image behind the full-screen player. Bundled entries work offline;
-/// admin entries come from `/player-backgrounds` and are decoded downscaled.
+/// A still image, or a silent looping video over its poster, behind the
+/// full-screen player. Bundled entries work offline; admin entries come from
+/// `/player-backgrounds` and are decoded downscaled.
 class PlayerBackground {
   const PlayerBackground({
     required this.id,
     required this.titles,
     this.assetPath,
     this.imageUrl,
+    this.videoAssetPath,
   });
 
   final String id;
   final Map<String, String> titles;
   final String? assetPath;
   final String? imageUrl;
+
+  /// Plays over [assetPath], which stays as the poster and the picker tile.
+  final String? videoAssetPath;
 
   bool get hasImage => assetPath != null || imageUrl != null;
 
@@ -80,6 +85,17 @@ const bundledPlayerBackgrounds = <PlayerBackground>[
       'en': 'Ornament',
       'tr': 'Süsleme',
       'ar': 'زخرفة',
+    },
+  ),
+  PlayerBackground(
+    id: 'bundled:reciter-video',
+    assetPath: 'assets/player_backgrounds/reciter-hood.webp',
+    videoAssetPath: 'assets/player_backgrounds/reciter-hood.mp4',
+    titles: <String, String>{
+      'ru': 'Чтец (видео)',
+      'en': 'Reciter (video)',
+      'tr': 'Kâri (video)',
+      'ar': 'القارئ (فيديو)',
     },
   ),
 ];
