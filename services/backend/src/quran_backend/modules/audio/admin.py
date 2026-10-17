@@ -191,6 +191,7 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "title_en",
             "title_ar",
             "title_tr",
+            "show_equalizer",
             "sort_order",
             "is_active",
         )
@@ -201,6 +202,7 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "title_tr": "Название на турецком",
             "sort_order": "Порядок вывода",
             "is_active": "Показывать в приложении",
+            "show_equalizer": "Показывать эквалайзер",
         }
         help_texts: ClassVar[dict[str, str]] = {
             "title_ru": (
@@ -365,9 +367,16 @@ class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(PlayerBackground)
 class PlayerBackgroundAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     form = PlayerBackgroundAdminForm
-    list_display = ("image_thumbnail", "title_ru", "title_en", "sort_order", "is_active")
+    list_display = (
+        "image_thumbnail",
+        "title_ru",
+        "title_en",
+        "sort_order",
+        "is_active",
+        "show_equalizer",
+    )
     list_display_links = ("image_thumbnail", "title_ru")
-    list_editable = ("sort_order", "is_active")
+    list_editable = ("sort_order", "is_active", "show_equalizer")
     list_filter = ("is_active",)
     search_fields = ("title_ru", "title_en", "title_ar", "title_tr")
     ordering = ("sort_order", "created_at")
@@ -384,7 +393,7 @@ class PlayerBackgroundAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         ("Названия", {"fields": ("title_ru", "title_en", "title_ar", "title_tr")}),
         ("Изображение", {"fields": ("image_preview", "image_upload")}),
         ("Видео", {"fields": ("video_preview", "video_upload", "remove_video")}),
-        ("Публикация", {"fields": ("is_active", "sort_order")}),
+        ("Публикация", {"fields": ("is_active", "show_equalizer", "sort_order")}),
         (
             "Служебная информация",
             {

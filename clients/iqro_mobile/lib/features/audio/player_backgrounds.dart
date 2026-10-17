@@ -17,6 +17,7 @@ class PlayerBackground {
     this.imageUrl,
     this.videoAssetPath,
     this.videoUrl,
+    this.showEqualizer = true,
   });
 
   final String id;
@@ -31,6 +32,10 @@ class PlayerBackground {
   final String? videoUrl;
 
   bool get hasVideo => videoAssetPath != null || videoUrl != null;
+
+  /// Whether the sound bars sway over it while the controls are hidden; set
+  /// per background in the admin.
+  final bool showEqualizer;
 
   bool get hasImage => assetPath != null || imageUrl != null;
 
@@ -132,6 +137,8 @@ List<PlayerBackground> parsePlayerBackgrounds(
             : videoUri.hasScheme
             ? video
             : resolvePublicAssetUri(video, base).toString(),
+        // Rows cached before the admin switch existed keep the bars.
+        showEqualizer: json['show_equalizer'] != false,
         titles: <String, String>{
           for (final code in const <String>['ru', 'en', 'tr', 'ar'])
             if (json['title_$code'] != null) code: '${json['title_$code']}',

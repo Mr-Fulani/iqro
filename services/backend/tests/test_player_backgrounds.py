@@ -144,6 +144,7 @@ def test_public_background_api_lists_active_rows_in_order_with_cache_validators(
         "title_tr": "",
         "image_url": "http://localhost:8000/media/audio/player-backgrounds/desert.webp",
         "video_url": None,
+        "show_equalizer": True,
         "sort_order": 10,
     }
     assert response["Cache-Control"] == "public, max-age=300, stale-while-revalidate=86400"
@@ -371,3 +372,24 @@ def test_public_background_api_gives_the_video_url(api_client: Any) -> None:
         "http://localhost:8000/media/audio/player-backgrounds/clip.mp4"
     )
     assert payload[0]["image_url"].endswith("/desert.webp")
+
+
+@pytest.mark.django_db
+def test_background_admin_switches_the_equalizer_per_background(api_client: Any) -> None:
+    background = _background()
+    data = {
+        "title_ru": background.title_ru,
+        "title_en": background.title_en,
+        "title_ar": background.title_ar,
+        "title_tr": "",
+        "sort_order": background.sort_order,
+        "is_active": True,
+    }
+    # An unticked checkbox is absent from the posted form.
+    form = PlayerBackgroundAdminForm(data=data, instance=background)
+    assert form.is_valid(), form.errors
+    assert form.save().show_equalizer is False
+
+    payload = api_client.get("/api/v1/player-backgrounds").json()
+    assert payload[0]["show_equalizer"] is False
+    assert "show_equalizer" in PlayerBackgroundAdmin.list_editable

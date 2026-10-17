@@ -116,6 +116,29 @@ void main() {
     expect(parsed.last.hasVideo, isFalse);
   });
 
+  test('the admin switches the equalizer per background', () {
+    final parsed = parsePlayerBackgrounds(<Map<String, Object?>>[
+      <String, Object?>{
+        'id': 'off',
+        'image_url': '/media/a.jpg',
+        'show_equalizer': false,
+      },
+      <String, Object?>{
+        'id': 'on',
+        'image_url': '/media/b.jpg',
+        'show_equalizer': true,
+      },
+      // A list cached before the switch existed.
+      <String, Object?>{'id': 'old', 'image_url': '/media/c.jpg'},
+    ], apiBaseUrl: _config.apiBaseUrl);
+
+    expect(parsed.map((item) => item.showEqualizer), <bool>[false, true, true]);
+    expect(
+      bundledPlayerBackgrounds.every((item) => item.showEqualizer),
+      isTrue,
+    );
+  });
+
   test('an unknown or removed background falls back to the default', () {
     final resolved = resolvePlayerBackground(
       'remote:deleted',

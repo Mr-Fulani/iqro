@@ -347,7 +347,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       fit: StackFit.expand,
       children: <Widget>[
         _PlayerBackdrop(background: background, dimmed: !hidden),
-        _PlayerEqualizer(visible: hidden && state.playing && !state.buffering),
+        _PlayerEqualizer(
+          visible:
+              background.showEqualizer &&
+              hidden &&
+              state.playing &&
+              !state.buffering,
+        ),
         GestureDetector(
           key: const ValueKey('player-controls-toggle'),
           behavior: HitTestBehavior.opaque,

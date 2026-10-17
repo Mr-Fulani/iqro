@@ -316,6 +316,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a background with the equalizer switched off stays bare', (
+    tester,
+  ) async {
+    const quiet = PlayerBackground(
+      id: 'remote:quiet',
+      titles: <String, String>{'ru': 'Тишина'},
+      assetPath: 'assets/player_backgrounds/sea-dawn.webp',
+      showEqualizer: false,
+    );
+    final harness = await _pumpPlayer(
+      tester,
+      backgrounds: <PlayerBackground>[...bundledPlayerBackgrounds, quiet],
+    );
+    await harness.preferences.setPlayerBackground(quiet.id);
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the equalizer rests when animations are disabled', (
     tester,
   ) async {
@@ -382,7 +410,10 @@ void main() {
   });
 }
 
-Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
+Future<_PlayerHarness> _pumpPlayer(
+  WidgetTester tester, {
+  List<PlayerBackground> backgrounds = bundledPlayerBackgrounds,
+}) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
   final accountScope = AccountScope.forTesting('owner');
@@ -429,9 +460,7 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
         appPreferencesProvider.overrideWith((ref) => preferences),
         audioRepositoryProvider.overrideWithValue(repository),
         audioControllerProvider.overrideWith((ref) => controller),
-        playerBackgroundsProvider.overrideWith(
-          (ref) async => bundledPlayerBackgrounds,
-        ),
+        playerBackgroundsProvider.overrideWith((ref) async => backgrounds),
         surahHeaderFontProvider.overrideWith((ref) async => null),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(

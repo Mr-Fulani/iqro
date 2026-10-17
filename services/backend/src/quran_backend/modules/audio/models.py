@@ -1290,6 +1290,10 @@ class PlayerBackground(BaseModel):
         validators=[validate_relative_object_key],
         help_text="Беззвучное видео поверх изображения; изображение служит постером.",
     )
+    show_equalizer = models.BooleanField(
+        default=True,
+        help_text=("Звуковые полосы поверх фона, когда идёт чтение и меню плеера скрыто тапом."),
+    )
     sort_order = models.PositiveSmallIntegerField(
         default=100,
         help_text="Меньшее число выводится раньше.",

@@ -91,6 +91,7 @@ class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):
             "title_tr",
             "image_url",
             "video_url",
+            "show_equalizer",
             "sort_order",
         )
 
