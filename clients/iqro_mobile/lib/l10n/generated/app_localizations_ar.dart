@@ -1720,6 +1720,54 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'نخلتك';
+
+  @override
+  String get palmStageSeed => 'نواة التمر';
+
+  @override
+  String get palmStageSprout => 'برعم';
+
+  @override
+  String get palmStageSeedling => 'فسيلة';
+
+  @override
+  String get palmStageYoungPalm => 'نخلة فتية';
+
+  @override
+  String get palmStagePalm => 'نخلة';
+
+  @override
+  String get palmStageFruitingPalm => 'نخلة مثمرة';
+
+  @override
+  String get palmMoodPlanting => 'ازرع النواة: اقرأ أول صفحة';
+
+  @override
+  String get palmMoodFlourishing => 'أتممت هدف اليوم — النخلة تمتدّ نحو الشمس';
+
+  @override
+  String get palmMoodGrowing => 'قراءة اليوم تسقي نخلتك';
+
+  @override
+  String get palmMoodWaiting => 'نخلتك تنتظر قراءة اليوم';
+
+  @override
+  String get palmMoodResting => 'نخلتك تستريح في الظل، وصفحة واحدة تُسعدها';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'التالي: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'اكتمل نموّها — بارك الله في ثمرها';
+
+  @override
+  String get palmHowItGrows =>
+      'يوم القراءة +1، وإتمام الهدف +2. الأيام الفائتة لا تضرّ النخلة، إنها تستريح فقط.';
+
+  @override
   String get planSummaryTitle => 'ملخص التقدم';
 
   @override

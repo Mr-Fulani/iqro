@@ -1737,6 +1737,57 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Ваша финиковая пальма';
+
+  @override
+  String get palmStageSeed => 'Косточка финика';
+
+  @override
+  String get palmStageSprout => 'Росток';
+
+  @override
+  String get palmStageSeedling => 'Саженец';
+
+  @override
+  String get palmStageYoungPalm => 'Молодая пальма';
+
+  @override
+  String get palmStagePalm => 'Пальма';
+
+  @override
+  String get palmStageFruitingPalm => 'Пальма с финиками';
+
+  @override
+  String get palmMoodPlanting =>
+      'Посадите косточку: прочитайте первую страницу';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Цель на сегодня выполнена — пальма тянется к солнцу';
+
+  @override
+  String get palmMoodGrowing => 'Сегодняшнее чтение уже питает пальму';
+
+  @override
+  String get palmMoodWaiting => 'Пальма ждёт сегодняшнего чтения';
+
+  @override
+  String get palmMoodResting =>
+      'Пальма отдыхает в тени и ждёт вас. Даже одна страница её порадует';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Дальше: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Пальма выросла — пусть приносит плоды';
+
+  @override
+  String get palmHowItGrows =>
+      'День чтения — +1, выполненная цель — +2. Пропуски не вредят пальме — она просто отдыхает.';
+
+  @override
   String get planSummaryTitle => 'Сводка прогресса';
 
   @override

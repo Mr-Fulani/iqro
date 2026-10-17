@@ -38,6 +38,12 @@ class ReadingPlanHomeWidget : GlanceAppWidget() {
 }
 
 internal object ReadingPlanWidgetViews {
+    // Rendered from the app's PalmPainter by tool/render_palm_widget_art.dart.
+    private val PALM_STAGES = intArrayOf(
+        R.drawable.reading_plan_palm_0, R.drawable.reading_plan_palm_1,
+        R.drawable.reading_plan_palm_2, R.drawable.reading_plan_palm_3,
+        R.drawable.reading_plan_palm_4, R.drawable.reading_plan_palm_5)
+
     fun create(context: Context, data: JSONObject): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.reading_plan_widget)
         views.setInt(R.id.plan_widget_root, "setLayoutDirection",
@@ -56,6 +62,9 @@ internal object ReadingPlanWidgetViews {
             R.id.plan_remaining_unit to "unit", R.id.plan_prayer_heading to "afterPrayerLabel",
             R.id.plan_page_unit to "pageUnit")
         texts.forEach { (id, key) -> views.setTextViewText(id, data.optString(key, "—")) }
+        val palm = PALM_STAGES[data.optInt("palmStage").coerceIn(0, PALM_STAGES.lastIndex)]
+        views.setImageViewResource(R.id.plan_palm, palm)
+        views.setContentDescription(R.id.plan_palm, data.optString("palmLabel"))
         views.setProgressBar(R.id.plan_progress, 100, data.optInt("progress").coerceIn(0,100), false)
         val labels = listOf(R.id.plan_fajr_name, R.id.plan_dhuhr_name, R.id.plan_asr_name, R.id.plan_maghrib_name, R.id.plan_isha_name)
         val values = listOf(R.id.plan_fajr_value, R.id.plan_dhuhr_value, R.id.plan_asr_value, R.id.plan_maghrib_value, R.id.plan_isha_value)
