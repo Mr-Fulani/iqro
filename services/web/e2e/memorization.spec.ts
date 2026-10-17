@@ -165,6 +165,17 @@ const tajweedPage = {
   })),
 };
 
+const surahPlayback = {
+  track: { asset: { url: "https://audio.example.test/memorization/001.mp3" } },
+  segments: ayahs.map((ayah, index) => ({
+    ayah_id: ayah.id,
+    surah_number: 1,
+    ayah_number: ayah.number,
+    start_ms: index * 1_000,
+    end_ms: (index + 1) * 1_000,
+  })),
+};
+
 function planSnapshot() {
   return {
     id: "00000000-0000-7000-8000-000000000920",
@@ -203,6 +214,9 @@ async function installMocks(page: Page) {
   let completed = 0;
   const writes: Array<Record<string, unknown>> = [];
 
+  await page.route("https://audio.example.test/**", (route) =>
+    route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
+  );
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: activeSession }));
   await page.route("https://verses.quran.foundation/fonts/**", (route) =>
     route.fulfill({ status: 200, contentType: "font/woff2", body: testFont }),
@@ -273,6 +287,9 @@ async function installMocks(page: Page) {
     if (url.pathname === "/api/v1/recitations") {
       return route.fulfill({ json: { next: null, previous: null, results: [recitation] } });
     }
+    if (url.pathname === `/api/v1/recitations/${recitation.id}/surahs/1`) {
+      return route.fulfill({ json: surahPlayback });
+    }
     if (url.pathname === "/api/v1/quran/foundation/mushafs") {
       return route.fulfill({ json: [tajweedMushaf] });
     }
@@ -320,4 +337,71 @@ test("creates a synced plan, tests recall, and records self-assessment", async (
     daily_repetitions: 5,
   });
   expect(writes[1]).toMatchObject({ completed_repetitions: 1, assessment: "memorized" });
+});
+
+test("highlights the recited ayah while the range plays and repeats", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, "play", {
+      configurable: true,
+      value(this: HTMLMediaElement) {
+        this.dispatchEvent(new Event("play"));
+        return Promise.resolve();
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, "pause", {
+      configurable: true,
+      value(this: HTMLMediaElement) {
+        this.dispatchEvent(new Event("pause"));
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, "load", {
+      configurable: true,
+      value(this: HTMLMediaElement) {
+        queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
+      },
+    });
+  });
+  await installMocks(page);
+
+  await page.goto("/ru/memorization");
+  await page.getByLabel("Чтец для повторения").selectOption(recitation.id);
+  await page.getByLabel("По аят").selectOption("2");
+  await page.getByRole("button", { name: "Сохранить план" }).click();
+  await page.getByRole("tab", { name: "Слушать" }).click();
+
+  const audio = page.getByTestId("memorization-audio-loop").locator("audio");
+  const cards = page.locator(".memorization-ayah-card");
+  const playing = page.locator(".memorization-ayah-card.is-playing");
+  const playAt = (seconds: number) => audio.evaluate((media, value) => {
+    (media as HTMLAudioElement).currentTime = value;
+    media.dispatchEvent(new Event("timeupdate"));
+  }, seconds);
+
+  await expect(cards).toHaveCount(2);
+  await expect(playing).toHaveCount(0);
+  await page.getByRole("button", { name: "Слушать по кругу" }).click();
+  await expect(cards.nth(0)).toHaveClass(/is-playing/);
+  await expect(playing).toHaveCount(1);
+
+  await playAt(1.5);
+  await expect(cards.nth(1)).toHaveClass(/is-playing/);
+  await expect(playing).toHaveCount(1);
+
+  // The cycle ends at the last ayah; the next repeat starts from the first.
+  await playAt(2);
+  await expect(playing).toHaveCount(0);
+  await expect(cards.nth(0)).toHaveClass(/is-playing/, { timeout: 5_000 });
+  await playAt(1.2);
+  await expect(cards.nth(1)).toHaveClass(/is-playing/);
+
+  await page.getByRole("button", { name: "Пауза" }).click();
+  await expect(playing).toHaveCount(0);
+
+  // Leaving the Listen tab mid-playback drops the highlight with the player.
+  await page.getByRole("button", { name: "Слушать по кругу" }).click();
+  await expect(cards.nth(0)).toHaveClass(/is-playing/);
+  await page.getByRole("tab", { name: "Читать" }).click();
+  await expect(playing).toHaveCount(0);
+  await page.getByRole("tab", { name: "Слушать" }).click();
+  await expect(playing).toHaveCount(0);
 });

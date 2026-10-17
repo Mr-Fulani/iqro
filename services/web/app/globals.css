@@ -1507,6 +1507,12 @@ input:focus, select:focus, textarea:focus {
   background: #fffdf8;
 }
 
+.memorization-ayah-card.is-playing {
+  border-color: rgba(4, 75, 52, 0.48);
+  background: rgba(20, 145, 104, 0.14);
+  box-shadow: 0 0 0 2px rgba(4, 75, 52, 0.32);
+}
+
 .memorization-ayah-number {
   position: absolute;
   inset-inline-start: 14px;
