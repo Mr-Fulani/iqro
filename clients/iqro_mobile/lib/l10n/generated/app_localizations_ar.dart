@@ -914,6 +914,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaSubtitle => 'أدعية وأذكار من مصادر قابلة للتتبع';
 
   @override
+  String get duaFavoritesSubtitle => 'الأدعية المحفوظة';
+
+  @override
   String duaCount(int count) {
     return 'عدد الأدعية: $count';
   }

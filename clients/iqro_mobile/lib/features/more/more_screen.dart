@@ -6,6 +6,7 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
+import '../dua/dua_thematic_icon.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/mini_player.dart';
 
@@ -106,37 +107,37 @@ class MoreToolsGrid extends StatelessWidget {
   Widget build(BuildContext context) => IqroActionGrid(
     children: <Widget>[
       _ToolCard(
-        icon: Icons.calendar_month_outlined,
+        art: 'hijri-calendar',
         title: context.l10n.hijriCalendar,
         color: context.iqroColors.sand,
         onTap: () => context.push('/calendar'),
       ),
       _ToolCard(
-        icon: Icons.mosque_outlined,
+        art: 'prayer',
         title: context.l10n.prayer,
         color: context.iqroColors.sand,
         onTap: () => context.push('/prayer'),
       ),
       _ToolCard(
-        icon: Icons.repeat,
+        art: 'memorization',
         title: context.l10n.memorization,
         color: context.iqroColors.lavender,
         onTap: () => context.push('/memorization'),
       ),
       _ToolCard(
-        icon: iqroDuaIcon,
+        art: 'dua',
         title: context.l10n.dua,
         color: Theme.of(context).colorScheme.primaryContainer,
         onTap: () => context.push('/dua'),
       ),
       _ToolCard(
-        icon: Icons.bookmarks_outlined,
+        art: 'favorites',
         title: context.l10n.favorites,
         color: context.iqroColors.panelSoft,
         onTap: () => context.push('/favorites'),
       ),
       _ToolCard(
-        icon: Icons.note_alt_outlined,
+        art: 'notes',
         title: context.l10n.notes,
         color: context.iqroColors.panelSoft,
         onTap: () => context.push('/notes'),
@@ -147,12 +148,14 @@ class MoreToolsGrid extends StatelessWidget {
 
 class _ToolCard extends StatelessWidget {
   const _ToolCard({
-    required this.icon,
+    required this.art,
     required this.title,
     required this.color,
     required this.onTap,
   });
-  final IconData icon;
+
+  /// A key of the shared topic illustrations (`dua-topic-icons.json`).
+  final String art;
   final String title;
   final Color color;
   final VoidCallback onTap;
@@ -166,18 +169,20 @@ class _ToolCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // The light tile keeps the mint of the art apart from tinted cards.
           Container(
-            width: 48,
-            height: 48,
+            width: 64,
+            height: 64,
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
-              ).colorScheme.surface.withValues(alpha: .65),
-              borderRadius: BorderRadius.circular(15),
+              ).colorScheme.surface.withValues(alpha: .8),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: IqroIcon(icon, color: Theme.of(context).colorScheme.primary),
+            child: FittedBox(child: DuaThematicIcon(topic: art)),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           const Icon(Icons.arrow_forward, size: 18),

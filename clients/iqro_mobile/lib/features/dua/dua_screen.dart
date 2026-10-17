@@ -33,6 +33,7 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
   DuaCategoryIdentity? _categoryIdentity;
   String? _legacyCategorySlug;
   DuaTopic? _topic;
+  var _favoritesOpen = false;
   var _query = '';
   var _submittedQuery = '';
   Timer? _searchDebounce;
@@ -79,41 +80,45 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
     final entries = _topic == null
         ? sourceEntries
         : ref.watch(duaEntriesByTopicProvider(_topic!.id));
-    final availableTopics = duaTopics;
+    final accountKey = ref.watch(activeAccountScopeKeyProvider);
+    final favorites = accountKey == null
+        ? null
+        : ref.watch(duaFavoritesProvider(accountKey));
+    final inCatalog =
+        activeCategoryIdentity == null && _topic == null && !_favoritesOpen;
     final locale = Localizations.localeOf(context).languageCode;
     final searchRequest = (
       query: _submittedQuery,
       collection: null as String?,
       category: null as String?,
     );
-    final searchResults =
-        activeCategoryIdentity == null &&
-            _topic == null &&
-            _submittedQuery.length >= 2
+    final searchResults = inCatalog && _submittedQuery.length >= 2
         ? ref.watch(duaSearchProvider(searchRequest))
         : null;
     return PopScope(
-      canPop: activeCategoryIdentity == null && _topic == null,
+      canPop: inCatalog,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) _goBack();
       },
       child: Scaffold(
         appBar: IqroTopBar(
-          title:
-              _topic != null &&
-                  (category == null || _topic!.entryNumbers != null)
+          title: _favoritesOpen
+              ? context.l10n.favorites
+              : _topic != null &&
+                    (category == null || _topic!.entryNumbers != null)
               ? _topic!.title(locale)
               : category?.title ?? context.l10n.dua,
-          subtitle:
-              _topic != null &&
-                  (category == null || _topic!.entryNumbers != null)
+          subtitle: _favoritesOpen
+              ? context.l10n.duaFavoritesSubtitle
+              : _topic != null &&
+                    (category == null || _topic!.entryNumbers != null)
               ? _topic!.description(locale)
               : category == null
               ? context.l10n.duaSubtitle
               : category.collectionTitle.isEmpty
               ? category.collection
               : category.collectionTitle,
-          leading: activeCategoryIdentity == null && _topic == null
+          leading: inCatalog
               ? null
               : IconButton(
                   tooltip: context.l10n.back,
@@ -125,39 +130,12 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
           scrollable: false,
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                key: ValueKey('dua-topic-selector-${_topic?.id ?? "all"}'),
-                initialValue: _topic?.id ?? '',
-                isExpanded: true,
-                decoration: InputDecoration(labelText: context.l10n.dua),
-                items: [
-                  DropdownMenuItem(value: '', child: Text(context.l10n.dua)),
-                  for (final topic in availableTopics)
-                    DropdownMenuItem(
-                      value: topic.id,
-                      child: Text(
-                        topic.title(locale),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  if (value.isEmpty) {
-                    _goBack();
-                  } else {
-                    _openTopic(
-                      duaTopics.singleWhere((topic) => topic.id == value),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
               Expanded(
-                child: activeCategoryIdentity == null && _topic == null
+                child: inCatalog
                     ? _DuaCatalog(
                         categories: categories,
+                        favoritesCount: favorites?.valueOrNull?.length ?? 0,
+                        onOpenFavorites: _openFavorites,
                         searchResults: searchResults,
                         searchPending:
                             _query.length >= 2 && _query != _submittedQuery,
@@ -172,13 +150,22 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
                             ref.invalidate(duaSearchProvider(searchRequest)),
                       )
                     : _EntryList(
-                        entries: entries!,
+                        entries: _favoritesOpen
+                            ? favorites ??
+                                  const AsyncValue<List<DuaEntry>>.data(
+                                    <DuaEntry>[],
+                                  )
+                            : entries!,
                         query: _query,
                         searchController: _searchController,
                         onQueryChanged: (value) =>
                             setState(() => _query = value.trim()),
                         onRetry: () {
-                          if (_topic == null) {
+                          if (_favoritesOpen) {
+                            if (accountKey != null) {
+                              ref.invalidate(duaFavoritesProvider(accountKey));
+                            }
+                          } else if (_topic == null) {
                             ref.invalidate(
                               duaEntriesByCategoryProvider(
                                 activeCategoryIdentity!,
@@ -208,12 +195,26 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
 
   void _goBack() {
     _openCategory(null);
-    setState(() => _topic = null);
+    setState(() {
+      _topic = null;
+      _favoritesOpen = false;
+    });
   }
 
   void _openTopic(DuaTopic topic) {
     _openCategory(null);
-    setState(() => _topic = topic);
+    setState(() {
+      _topic = topic;
+      _favoritesOpen = false;
+    });
+  }
+
+  void _openFavorites() {
+    _openCategory(null);
+    setState(() {
+      _topic = null;
+      _favoritesOpen = true;
+    });
   }
 
   void _openCategory(DuaCategory? category) {
@@ -245,6 +246,8 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
 class _DuaCatalog extends StatelessWidget {
   const _DuaCatalog({
     required this.categories,
+    required this.favoritesCount,
+    required this.onOpenFavorites,
     required this.searchResults,
     required this.searchPending,
     required this.query,
@@ -257,6 +260,8 @@ class _DuaCatalog extends StatelessWidget {
   });
 
   final AsyncValue<List<DuaCategory>> categories;
+  final int favoritesCount;
+  final VoidCallback onOpenFavorites;
   final AsyncValue<List<DuaEntry>>? searchResults;
   final bool searchPending;
   final String query;
@@ -283,13 +288,7 @@ class _DuaCatalog extends StatelessWidget {
           child: query.isNotEmpty
               ? query.length < 2
                     ? _DuaEmpty(message: context.l10n.duaSearchMinCharacters)
-                    : searchPending || searchResults == null
-                    ? const IqroLoading()
-                    : _AsyncDuaEntries(
-                        entries: searchResults!,
-                        query: '',
-                        onRetry: onSearchRetry,
-                      )
+                    : _searchResults(context)
               : categories.when(
                   loading: () => const IqroLoading(),
                   error: (error, stack) => IqroAsyncError(
@@ -318,6 +317,11 @@ class _DuaCatalog extends StatelessWidget {
                         children: [
                           IqroActionGrid(
                             children: [
+                              if (favoritesCount > 0)
+                                _DuaFavoritesCard(
+                                  count: favoritesCount,
+                                  onTap: onOpenFavorites,
+                                ),
                               for (final topic in topics)
                                 _DuaTopicCard(
                                   topic: topic,
@@ -343,6 +347,126 @@ class _DuaCatalog extends StatelessWidget {
       ],
     );
   }
+}
+
+extension on _DuaCatalog {
+  // The server matches the words of each du'a, so a query such as «сон»
+  // misses «сна». Topics whose name or description match are listed first,
+  // which leads to the whole chapter.
+  Widget _searchResults(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final needle = query.toLowerCase();
+    final items = categories.valueOrNull ?? const <DuaCategory>[];
+    final matches = duaTopics
+        .where(
+          (topic) =>
+              items.any(topic.includesCategory) &&
+              (topic.title(locale).toLowerCase().contains(needle) ||
+                  topic.description(locale).toLowerCase().contains(needle)),
+        )
+        .toList(growable: false);
+    final entries = searchPending || searchResults == null
+        ? const IqroLoading()
+        : _AsyncDuaEntries(
+            entries: searchResults!,
+            query: '',
+            onRetry: onSearchRetry,
+            showEmpty: matches.isEmpty,
+          );
+    if (matches.isEmpty) return entries;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (final topic in matches) ...<Widget>[
+          _DuaTopicTile(
+            topic: topic,
+            locale: locale,
+            count: topic.entryCount(items),
+            onTap: () => onOpenTopic(topic),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Expanded(child: entries),
+      ],
+    );
+  }
+}
+
+class _DuaTopicTile extends StatelessWidget {
+  const _DuaTopicTile({
+    required this.topic,
+    required this.locale,
+    required this.count,
+    required this.onTap,
+  });
+  final DuaTopic topic;
+  final String locale;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    key: ValueKey('dua-topic-match-${topic.id}'),
+    onTap: onTap,
+    child: Row(
+      children: <Widget>[
+        SizedBox.square(
+          dimension: 40,
+          child: FittedBox(child: DuaThematicIcon(topic: topic.id)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                topic.title(locale),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(
+                context.l10n.duaCount(count),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right),
+      ],
+    ),
+  );
+}
+
+class _DuaFavoritesCard extends StatelessWidget {
+  const _DuaFavoritesCard({required this.count, required this.onTap});
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IqroCard(
+    key: const ValueKey('dua-favorites'),
+    onTap: onTap,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const DuaThematicIcon(topic: 'favorites'),
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.favorites,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          context.l10n.duaFavoritesSubtitle,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.duaCount(count),
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+      ],
+    ),
+  );
 }
 
 class _DuaTopicCard extends StatelessWidget {
@@ -428,11 +552,15 @@ class _AsyncDuaEntries extends StatelessWidget {
     required this.entries,
     required this.query,
     required this.onRetry,
+    this.showEmpty = true,
   });
 
   final AsyncValue<List<DuaEntry>> entries;
   final String query;
   final VoidCallback onRetry;
+
+  /// False when something else on screen already answers the search.
+  final bool showEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -453,7 +581,9 @@ class _AsyncDuaEntries extends StatelessWidget {
             })
             .toList(growable: false);
         if (visible.isEmpty) {
-          return _DuaEmpty(message: context.l10n.noDuaFound);
+          return showEmpty
+              ? _DuaEmpty(message: context.l10n.noDuaFound)
+              : const SizedBox.shrink();
         }
         return ListView.separated(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -874,6 +1004,7 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
       }
       if (!mounted) return;
       setState(() => _favorite = active);
+      ref.invalidate(duaFavoritesProvider(accountScopeKey(scope)));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(active ? addedMessage : removedMessage)),
       );

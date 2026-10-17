@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Hands raised in du'a. No icon font has this glyph, so only [IqroIcon]
-/// draws it; a plain [Icon] shows nothing.
+/// Du'a: a mihrab with a hanging lamp. No icon font has this glyph, so only
+/// [IqroIcon] draws it; a plain [Icon] shows nothing.
 const iqroDuaIcon = IconData(0xF0001, fontFamily: 'IqroDrawn');
 
 /// Uses the approved IQRO seal wherever an open-book icon was displayed, and
@@ -38,7 +38,7 @@ class IqroIcon extends Icon {
           child: SizedBox.square(
             dimension: extent,
             child: CustomPaint(
-              painter: _DuaHandsPainter(
+              painter: _DuaMihrabPainter(
                 iconColor.withValues(alpha: iconColor.a * (theme.opacity ?? 1)),
               ),
             ),
@@ -61,43 +61,52 @@ class IqroIcon extends Icon {
   }
 }
 
-/// Two open palms on a 24-unit grid, stroked like Material's outlined icons.
-class _DuaHandsPainter extends CustomPainter {
-  const _DuaHandsPainter(this.color);
+/// A mihrab with a hanging lamp on a 24-unit grid, stroked like Material's
+/// outlined icons.
+class _DuaMihrabPainter extends CustomPainter {
+  const _DuaMihrabPainter(this.color);
   final Color color;
 
-  // The left hand; the right one is its mirror image.
-  static final _hand = Path()
-    ..moveTo(8.1, 21)
-    ..cubicTo(8.1, 18.5, 10.1, 17.5, 10.1, 15)
-    ..lineTo(10.1, 5.5)
-    ..cubicTo(10.1, 3.8, 7.6, 3.8, 7.6, 5.5)
-    ..lineTo(7.6, 10)
-    ..cubicTo(7.6, 8.6, 5.2, 8.6, 5.2, 10)
-    ..lineTo(5.2, 12.5)
-    ..cubicTo(5.2, 11.2, 3, 11.2, 3, 12.5)
-    ..lineTo(3, 15.5)
-    ..cubicTo(3, 18, 4.6, 19.5, 4.6, 21);
+  static final _arch = Path()
+    ..moveTo(4.5, 21.5)
+    ..lineTo(4.5, 11.5)
+    ..quadraticBezierTo(4.5, 5.5, 12, 2)
+    ..quadraticBezierTo(19.5, 5.5, 19.5, 11.5)
+    ..lineTo(19.5, 21.5)
+    ..close();
+  static final _lamp = Path()
+    ..moveTo(10.5, 8.2)
+    ..lineTo(13.5, 8.2)
+    ..lineTo(14.4, 9.6)
+    ..quadraticBezierTo(15.6, 12.3, 14.2, 15)
+    ..lineTo(9.8, 15)
+    ..quadraticBezierTo(8.4, 12.3, 9.6, 9.6)
+    ..close();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    final stroke = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
+    final thin = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
     canvas
       ..save()
       ..scale(size.width / 24, size.height / 24)
-      ..drawPath(_hand, paint)
-      ..translate(24, 0)
-      ..scale(-1, 1)
-      ..drawPath(_hand, paint)
+      ..drawPath(_arch, stroke)
+      ..drawLine(const Offset(12, 2), const Offset(12, 8), thin)
+      ..drawPath(_lamp, Paint()..color = color)
+      ..drawLine(const Offset(10.5, 16.2), const Offset(13.5, 16.2), thin)
       ..restore();
   }
 
   @override
-  bool shouldRepaint(_DuaHandsPainter oldDelegate) =>
+  bool shouldRepaint(_DuaMihrabPainter oldDelegate) =>
       oldDelegate.color != color;
 }

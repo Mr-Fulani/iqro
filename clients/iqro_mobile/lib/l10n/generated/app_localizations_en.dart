@@ -926,6 +926,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duaSubtitle => 'Duas and adhkar from traceable sources';
 
   @override
+  String get duaFavoritesSubtitle => 'Saved duas';
+
+  @override
   String duaCount(int count) {
     return '$count duas';
   }
