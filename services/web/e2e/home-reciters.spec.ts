@@ -308,7 +308,7 @@ test("one reciter exposes multiple reading styles without duplicate person optio
   const readingSelect = page.getByLabel("Издание и стиль чтения");
   await expect(readingSelect.locator("option")).toHaveCount(2);
   await expect(readingSelect.locator("option")).toHaveText([
-    "MUJAWWAD · Hafs 'an Asim (Треков: 114)",
-    "MURATTAL · Hafs 'an Asim (Треков: 114)",
+    "Муджаввад · Hafs 'an Asim (Треков: 114)",
+    "Мурратталь · Hafs 'an Asim (Треков: 114)",
   ]);
 });

@@ -378,6 +378,7 @@ def test_upload_rejects_a_surah_that_is_already_there(
         upload_surah_audio(listening.pk, 1, _mp3(tmp_path), uploader=_RecordingUploader())
 
 
+@needs_ffmpeg
 def test_upload_rejects_files_that_are_not_mp3(
     tmp_path: Path,
     listening: RecitationEdition,
@@ -626,3 +627,13 @@ def test_admin_pages_for_adding_a_reciter_and_a_recording_render(
     assert recitation_change.status_code == 200
     assert "data-surah-upload" in recitation_change.content.decode()
     assert "audio/admin/surah_upload.js" in recitation_change.content.decode()
+
+
+def test_upload_names_a_missing_ffprobe(tmp_path: Path, listening: RecitationEdition) -> None:
+    source = tmp_path / "surah.mp3"
+    source.write_bytes(b"x")
+
+    with pytest.raises(SurahUploadError, match="ffprobe"):
+        upload_surah_audio(
+            listening.pk, 2, source, uploader=_RecordingUploader(), ffprobe="no-such-ffprobe"
+        )

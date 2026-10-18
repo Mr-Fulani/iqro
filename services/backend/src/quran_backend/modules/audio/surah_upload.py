@@ -275,6 +275,8 @@ def _probe(ffprobe: str, path: Path, size_bytes: int) -> _Probe:
             timeout=FFPROBE_TIMEOUT_SECONDS,
         )
         report = json.loads(completed.stdout)
+    except FileNotFoundError as exc:
+        raise SurahUploadError("На сервере не установлен ffprobe (пакет ffmpeg).") from exc
     except subprocess.TimeoutExpired as exc:
         raise SurahUploadError("Файл проверялся слишком долго.") from exc
     except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
