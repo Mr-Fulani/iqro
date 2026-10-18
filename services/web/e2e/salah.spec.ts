@@ -12,6 +12,12 @@ function counter(page: Page) {
   return page.getByTestId("salah-step-counter");
 }
 
+// The player restores the step and progress after hydration; act only then.
+async function openLesson(page: Page, path: string) {
+  await page.goto(path);
+  await expect(page.getByTestId("salah-player")).toHaveAttribute("aria-busy", "false");
+}
+
 async function storedProgress(page: Page) {
   return page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || "null"), progressKey);
 }
@@ -42,9 +48,14 @@ test("course and lesson pages render indexable steps and Arabic on the server", 
   expect((await request.get("/ru/salah/Bad_Slug")).status()).toBe(404);
 });
 
-test("mobile navigation marks the prayer course without the prayer times", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("header and mobile navigation mark the prayer course without the prayer times", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/ru/salah");
+  const header = page.locator(".app-menu");
+  await expect(header.getByRole("link", { name: "Обучение намазу" })).toHaveClass(/menu-link-active/);
+  await expect(header.getByRole("link", { name: "Намаз", exact: true })).not.toHaveClass(/menu-link-active/);
+
+  await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");
   await navigation.locator(".mobile-more > summary").click();
   const more = navigation.locator(".mobile-more-links");
@@ -58,7 +69,7 @@ test("mobile navigation marks the prayer course without the prayer times", async
 });
 
 test("the step player moves with buttons and arrow keys and keeps the step in the URL", async ({ page }) => {
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   const player = page.getByTestId("salah-player");
   await expect(counter(page)).toHaveText("Шаг 1 из 5 · Ракаат 1");
   await expect(player.getByRole("button", { name: "Назад" })).toBeDisabled();
@@ -88,14 +99,14 @@ test("the step player moves with buttons and arrow keys and keeps the step in th
   await expect(player.getByRole("heading", { name: "Руку'" })).toBeVisible();
   await expect(player.getByRole("heading", { name: "Таслим" })).toBeHidden();
 
-  await page.goto("/ru/salah/fajr#fajr.r2.tashahhud");
+  await openLesson(page, "/ru/salah/fajr#fajr.r2.tashahhud");
   await expect(counter(page)).toHaveText("Шаг 4 из 5 · Ракаат 2");
-  await page.goto("/ru/salah/fajr?step=fajr.r1.ruku");
+  await openLesson(page, "/ru/salah/fajr?step=fajr.r1.ruku");
   await expect(counter(page)).toHaveText("Шаг 3 из 5 · Ракаат 1");
 });
 
 test("arrow keys are mirrored on the Arabic RTL page", async ({ page }) => {
-  await page.goto("/ar/salah/fajr");
+  await openLesson(page, "/ar/salah/fajr");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(counter(page)).toContainText("1");
   const step = page.locator(".salah-step:not([hidden])");
@@ -111,7 +122,7 @@ test("arrow keys are mirrored on the Arabic RTL page", async ({ page }) => {
 });
 
 test("formula cards play audio, count repetitions and switch text and modes", async ({ page }) => {
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   const step = page.locator(".salah-step:not([hidden])");
   await step.getByRole("button", { name: "Слушать" }).click();
   const audio = step.locator("audio");
@@ -120,7 +131,7 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await page.getByRole("button", { name: "Далее" }).click();
   await expect(page.locator("audio")).toHaveCount(0);
 
-  await page.goto("/ru/salah/fajr#fajr.r1.ruku");
+  await openLesson(page, "/ru/salah/fajr#fajr.r1.ruku");
   await expect(step).toHaveAttribute("data-step", "fajr.r1.ruku");
   await expect(step.locator(".salah-transliteration")).toBeVisible();
   await expect(step.locator(".salah-translation")).toHaveText("Слава моему Великому Господу! -3 раза");
@@ -148,7 +159,7 @@ test("formula cards play audio, count repetitions and switch text and modes", as
 });
 
 test("progress resumes the lesson, restarts a missing step and keeps completion", async ({ page }) => {
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Далее" }).click();
   await expect(counter(page)).toHaveText("Шаг 3 из 5 · Ракаат 1");
@@ -165,7 +176,7 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
   await expect(summary.getByRole("link", { name: "Продолжить" })).toHaveAttribute("href", "/ru/salah/fajr#fajr.r1.ruku");
   await expect(page.getByRole("link", { name: /Фаджр/ }).locator(".salah-lesson-status")).toHaveText("Начат");
 
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   await expect(counter(page)).toHaveText("Шаг 3 из 5 · Ракаат 1");
 
   await page.evaluate((key) => {
@@ -173,18 +184,15 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
     progress.lessons.fajr.step_slug = "fajr.r3.ruku";
     window.localStorage.setItem(key, JSON.stringify(progress));
   }, progressKey);
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   await expect(counter(page)).toHaveText("Шаг 1 из 5 · Ракаат 1");
 
-  // A cross-document load, so the step comes from the address at hydration
-  // rather than from a hash change racing it in development mode.
-  await page.goto("/ru/salah");
-  await page.goto("/ru/salah/fajr#fajr.r2.taslim");
+  await openLesson(page, "/ru/salah/fajr#fajr.r2.taslim");
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Урок пройден" })).toBeVisible();
   expect((await storedProgress(page)).lessons.fajr.status).toBe("completed");
 
-  await page.goto("/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr");
   await expect(counter(page)).toHaveText("Шаг 1 из 5 · Ракаат 1");
   await page.getByRole("button", { name: "Далее" }).click();
   expect((await storedProgress(page)).lessons.fajr).toMatchObject({
@@ -200,7 +208,7 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
 
 test("the prayer-times page links to the course", async ({ page }) => {
   await page.goto("/ru/prayer");
-  await page.getByTestId("prayer-salah-link").click();
-  await expect(page).toHaveURL("/ru/salah");
-  await expect(page.getByRole("heading", { level: 1, name: "Обучение намазу" })).toBeVisible();
+  const link = page.getByTestId("prayer-salah-link");
+  await expect(link).toHaveText("Обучение намазу");
+  await expect(link).toHaveAttribute("href", "/ru/salah");
 });

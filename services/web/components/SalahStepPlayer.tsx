@@ -143,8 +143,10 @@ export function SalahStepPlayer({
     setCompleted(progress.lessons[lesson.slug]?.status === "completed");
     setDisplay(readDisplay());
     setReady(true);
-    const onHashChange = () => {
-      const slug = stepSlugFromLocation(window.location.hash, "");
+    // The event's own URL: by the time it is dispatched, the router may already
+    // have rewritten the address with the step it had recorded.
+    const onHashChange = (event: HashChangeEvent) => {
+      const slug = stepSlugFromLocation(new URL(event.newURL).hash, "");
       const target = steps.findIndex((item) => item.slug === slug);
       if (target >= 0) setIndex(target);
     };
@@ -314,6 +316,7 @@ export function SalahStepPlayer({
     <section
       className={`surface salah-player${practice ? " is-practice" : ""}`}
       aria-label={lesson.title}
+      aria-busy={!ready}
       data-testid="salah-player"
     >
       <div className="salah-player-toolbar">
