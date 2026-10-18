@@ -113,6 +113,7 @@ class _OverviewCard extends StatelessWidget {
             value: total == 0 ? 0 : done / total,
             minHeight: 6,
             borderRadius: BorderRadius.circular(6),
+            backgroundColor: context.iqroColors.line,
           ),
           if (resume != null) ...<Widget>[
             const SizedBox(height: 14),

@@ -456,6 +456,7 @@ class _LessonHeader extends StatelessWidget {
                   value: (index + 1) / total,
                   minHeight: 4,
                   borderRadius: BorderRadius.circular(4),
+                  backgroundColor: context.iqroColors.line,
                 ),
               ],
             ),
