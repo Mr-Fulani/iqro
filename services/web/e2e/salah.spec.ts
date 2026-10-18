@@ -42,14 +42,9 @@ test("course and lesson pages render indexable steps and Arabic on the server", 
   expect((await request.get("/ru/salah/Bad_Slug")).status()).toBe(404);
 });
 
-test("header and mobile navigation mark the prayer course without the prayer times", async ({ page }) => {
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await page.goto("/ru/salah");
-  const header = page.locator(".app-menu");
-  await expect(header.getByRole("link", { name: "Обучение намазу" })).toHaveClass(/menu-link-active/);
-  await expect(header.getByRole("link", { name: "Намаз", exact: true })).not.toHaveClass(/menu-link-active/);
-
+test("mobile navigation marks the prayer course without the prayer times", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/salah");
   const navigation = page.locator(".mobile-navigation");
   await navigation.locator(".mobile-more > summary").click();
   const more = navigation.locator(".mobile-more-links");
@@ -181,6 +176,9 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
   await page.goto("/ru/salah/fajr");
   await expect(counter(page)).toHaveText("Шаг 1 из 5 · Ракаат 1");
 
+  // A cross-document load, so the step comes from the address at hydration
+  // rather than from a hash change racing it in development mode.
+  await page.goto("/ru/salah");
   await page.goto("/ru/salah/fajr#fajr.r2.taslim");
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Урок пройден" })).toBeVisible();
