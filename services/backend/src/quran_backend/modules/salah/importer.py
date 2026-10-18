@@ -62,12 +62,49 @@ def webp_size(data: bytes) -> tuple[int, int] | None:
     return None
 
 
+def store_media(
+    version: SalahCourseVersion,
+    key: str,
+    path: Path,
+    uploader: ObjectUploader,
+) -> SalahMediaAsset:
+    """Stores one file under an immutable key; a new file for the key replaces the old."""
+    data = path.read_bytes()
+    content_type = CONTENT_TYPES[path.suffix.lower()]
+    size = webp_size(data) if content_type == "image/webp" else None
+    checksum = hashlib.sha256(data).hexdigest()
+    folder = f"salah/{version.course.slug}/{version.version}"
+    stored = uploader.upload_path(
+        path,
+        ImmutableObjectSpec(
+            key=f"{folder}/{key}-{checksum[:12]}{path.suffix.lower()}",
+            content_type=content_type,
+            size_bytes=len(data),
+            checksum_sha256=checksum,
+        ),
+    )
+    asset, _ = SalahMediaAsset.objects.update_or_create(
+        version=version,
+        key=key,
+        defaults={
+            "object_key": stored.key,
+            "content_type": content_type,
+            "width": size[0] if size else None,
+            "height": size[1] if size else None,
+            "bytes": len(data),
+            "sha256": checksum,
+        },
+    )
+    return asset
+
+
 def _upload_media(
     version: SalahCourseVersion,
     snapshot: Mapping[str, Any],
     data_dir: Path,
     uploader: ObjectUploader,
 ) -> None:
+    """Uploads the media files present in git; missing ones are added later in the admin."""
     problems: list[str] = []
     for asset in snapshot.get("media", []):
         path = data_dir / asset["file"]
@@ -76,39 +113,16 @@ def _upload_media(
             problems.append(f"Медиа «{asset['key']}»: формат {path.suffix} не поддерживается.")
             continue
         if not path.is_file():
-            problems.append(f"Медиа «{asset['key']}»: нет файла {asset['file']}.")
             continue
         data = path.read_bytes()
         limit = MAX_IMAGE_BYTES if content_type.startswith("image/") else MAX_AUDIO_BYTES
         if len(data) > limit:
             problems.append(f"Медиа «{asset['key']}»: {len(data)} байт, допустимо до {limit}.")
             continue
-        size = webp_size(data) if content_type == "image/webp" else None
-        if content_type == "image/webp" and size is None:
+        if content_type == "image/webp" and webp_size(data) is None:
             problems.append(f"Медиа «{asset['key']}»: файл не WebP.")
             continue
-        checksum = hashlib.sha256(data).hexdigest()
-        folder = f"salah/{version.course.slug}/{version.version}"
-        object_key = f"{folder}/{asset['key']}-{checksum[:12]}{path.suffix.lower()}"
-        stored = uploader.upload_path(
-            path,
-            ImmutableObjectSpec(
-                key=object_key,
-                content_type=content_type,
-                size_bytes=len(data),
-                checksum_sha256=checksum,
-            ),
-        )
-        SalahMediaAsset.objects.create(
-            version=version,
-            key=asset["key"],
-            object_key=stored.key,
-            content_type=content_type,
-            width=size[0] if size else None,
-            height=size[1] if size else None,
-            bytes=len(data),
-            sha256=checksum,
-        )
+        store_media(version, asset["key"], path, uploader)
     if problems:
         raise SalahSnapshotError(problems)
 

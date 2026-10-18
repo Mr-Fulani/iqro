@@ -2,19 +2,34 @@
 
 Content is edited as a snapshot in git and imported with
 `manage.py import_salah_course`; here the owner reads the compiled course,
-signs off the religious content and publishes. Versions are read-only.
+uploads the illustrations of a draft, signs off the religious content and
+publishes. Versions are otherwise read-only.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.contrib import admin, messages
+from django.contrib.admin.utils import unquote
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.db.models import QuerySet
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils.html import format_html, format_html_join
 
+from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.salah.importer import compile_version, publish_salah_version
+from quran_backend.modules.salah.media_upload import (
+    IMAGE_SIDE,
+    MAX_SOURCE_MIB,
+    SalahMediaUploadError,
+    image_keys,
+    upload_salah_image,
+)
 from quran_backend.modules.salah.models import (
     SalahCompiledDocument,
     SalahCourse,
@@ -23,6 +38,8 @@ from quran_backend.modules.salah.models import (
 )
 from quran_backend.modules.salah.resolvers import SalahFormulaError
 from quran_backend.modules.salah.snapshot import SalahSnapshotError
+
+logger = logging.getLogger(__name__)
 
 RULING_LABELS = {"rukn": "ркн", "wajib": "ваджиб", "sunnah": "сунна"}
 
@@ -52,6 +69,7 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "reviewed_at",
         "review_note",
         "published_at",
+        "illustrations",
         "documents_summary",
         "review_preview",
     )
@@ -73,6 +91,95 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     @admin.display(boolean=True, description="Подписана")
     def signed(self, obj: SalahCourseVersion) -> bool:
         return obj.is_signed
+
+    @admin.display(description="Иллюстрации")
+    def illustrations(self, obj: SalahCourseVersion) -> str:
+        keys = {asset["key"] for asset in image_keys(obj)}
+        uploaded = obj.media.filter(key__in=keys).count()
+        return format_html(
+            '{} из {} загружено. <a class="button" href="{}">Открыть иллюстрации</a>',
+            uploaded,
+            len(keys),
+            reverse("admin:salah_salahcourseversion_media", args=[obj.pk]),
+        )
+
+    def get_urls(self) -> list[Any]:
+        return [
+            path(
+                "<path:object_id>/media/",
+                self.admin_site.admin_view(self.media_view),
+                name="salah_salahcourseversion_media",
+            ),
+            *super().get_urls(),
+        ]
+
+    def media_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """One row per illustration of the snapshot: preview, alt text and upload."""
+        version = self.get_object(request, unquote(object_id))
+        if version is None:
+            raise Http404
+        if not request.user.has_perm("salah.view_salahcourseversion"):
+            raise PermissionDenied
+        editable = version.status == SalahPublicationStatus.DRAFT and request.user.has_perm(
+            "salah.change_salahcourseversion"
+        )
+        if request.method == "POST":
+            if not editable:
+                raise PermissionDenied
+            self._upload_image(request, version)
+            return HttpResponseRedirect(request.path)
+        stored = {asset.key: asset for asset in version.media.all()}
+        rows = []
+        for asset in image_keys(version):
+            current = stored.get(str(asset["key"]))
+            alt = asset.get("alt", {})
+            rows.append(
+                {
+                    "key": asset["key"],
+                    "alt": alt.get("ru", "") if isinstance(alt, dict) else "",
+                    "url": public_audio_url(current.object_key) if current else "",
+                    "kib": round(current.bytes / 1024) if current else None,
+                }
+            )
+        return TemplateResponse(
+            request,
+            "admin/salah/salahcourseversion/media.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "original": version,
+                "title": f"Иллюстрации: {version}",
+                "rows": rows,
+                "editable": editable,
+                "image_side": IMAGE_SIDE,
+                "max_source_mib": MAX_SOURCE_MIB,
+            },
+        )
+
+    def _upload_image(self, request: HttpRequest, version: SalahCourseVersion) -> None:
+        key = str(request.POST.get("key") or "")
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            self.message_user(request, f"{key}: файл не выбран.", messages.ERROR)
+            return
+        try:
+            asset = upload_salah_image(version, key, uploaded)
+        except (SalahMediaUploadError, SalahFormulaError) as error:
+            self.message_user(request, f"{key}: {error}", messages.ERROR)
+        except ImproperlyConfigured, ObjectStorageError, OSError:
+            logger.exception("Salah illustration upload failed")
+            self.message_user(
+                request,
+                f"{key}: не удалось сохранить файл в хранилище. Повторите позже.",
+                messages.ERROR,
+            )
+        else:
+            self.log_change(request, version, f"Загружена иллюстрация {key}.")
+            self.message_user(
+                request,
+                f"{key}: загружено, {round(asset.bytes / 1024)} КБ. Документы пересобраны.",
+                messages.SUCCESS,
+            )
 
     @admin.display(description="Документы по языкам")
     def documents_summary(self, obj: SalahCourseVersion) -> str:

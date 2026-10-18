@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import struct
+import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
 from django.contrib import admin
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.core.object_storage import ImmutableObjectSpec, StoredObject
@@ -19,6 +22,7 @@ from quran_backend.modules.salah.importer import (
     publish_salah_version,
     webp_size,
 )
+from quran_backend.modules.salah.media_upload import SalahMediaUploadError, upload_salah_image
 from quran_backend.modules.salah.models import (
     SalahCompiledDocument,
     SalahCourseVersion,
@@ -33,6 +37,8 @@ from quran_backend.modules.salah.snapshot import (
 
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "salah"
 LANGUAGES = ("ru", "en", "ar", "tr")
+FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
+needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed")
 
 
 def _all(text: str) -> dict[str, str]:
@@ -365,6 +371,85 @@ def test_published_versions_are_read_only_in_the_admin(
     assert not model_admin.has_delete_permission(None, version)  # type: ignore[arg-type]
     assert "Начальный такбир" in model_admin.review_preview(version)
     assert SalahCompiledDocument.objects.filter(version=version).count() == 4
+
+
+@pytest.mark.django_db
+def test_import_without_media_files_leaves_illustrations_for_the_admin(tmp_path: Path) -> None:
+    uploader = FakeUploader()
+    with patch("quran_backend.modules.salah.importer.FormulaResolver", FakeResolver):
+        version = import_salah_snapshot(_example_snapshot(), data_dir=tmp_path, uploader=uploader)
+
+    assert uploader.calls == []
+    assert not version.media.exists()
+    assert version.documents.get(language="ru").payload["media"] == {}
+
+
+def _source_image(tmp_path: Path) -> SimpleUploadedFile:
+    source = tmp_path / "source.png"
+    subprocess.run(  # noqa: S603 - test fixture, fixed arguments
+        [
+            FFMPEG, "-nostdin", "-loglevel", "error", "-y",
+            "-f", "lavfi", "-i", "color=c=gray:s=1000x800", "-frames:v", "1", str(source),
+        ],
+        check=True,
+    )  # fmt: skip
+    return SimpleUploadedFile("qiyam.png", source.read_bytes(), content_type="image/png")
+
+
+@needs_ffmpeg
+@pytest.mark.django_db
+def test_admin_upload_converts_to_a_square_webp_and_recompiles(
+    imported: tuple[SalahCourseVersion, FakeUploader], tmp_path: Path
+) -> None:
+    version, uploader = imported
+    old = version.media.get(key="position-ruku")
+
+    with patch("quran_backend.modules.salah.importer.FormulaResolver", FakeResolver):
+        asset = upload_salah_image(
+            version, "position-ruku", _source_image(tmp_path), uploader=uploader
+        )
+
+    assert asset.pk == old.pk
+    assert (asset.width, asset.height) == (720, 720)
+    assert asset.content_type == "image/webp"
+    assert asset.bytes <= 60 * 1024
+    assert asset.object_key != old.object_key
+    payload = version.documents.get(language="ru").payload
+    assert payload["media"]["position-ruku"]["sha256"] == asset.sha256
+
+    with pytest.raises(SalahMediaUploadError, match="нет в снимке"):
+        upload_salah_image(version, "audio-takbir", _source_image(tmp_path), uploader=uploader)
+    version.status = SalahPublicationStatus.PUBLISHED
+    with pytest.raises(SalahMediaUploadError, match="только в черновике"):
+        upload_salah_image(version, "position-ruku", _source_image(tmp_path), uploader=uploader)
+
+
+@needs_ffmpeg
+@pytest.mark.django_db
+def test_admin_media_page_lists_and_uploads_illustrations(
+    imported: tuple[SalahCourseVersion, FakeUploader], tmp_path: Path, admin_client: Any
+) -> None:
+    version, uploader = imported
+    url = f"/admin/salah/salahcourseversion/{version.pk}/media/"
+
+    page = admin_client.get(url)
+    assert page.status_code == 200
+    content = page.content.decode()
+    assert "position-tashahhud" in content
+    assert "audio-takbir" not in content
+
+    with (
+        patch(
+            "quran_backend.modules.salah.media_upload.player_background_uploader",
+            return_value=uploader,
+        ),
+        patch("quran_backend.modules.salah.importer.FormulaResolver", FakeResolver),
+    ):
+        response = admin_client.post(
+            url, {"key": "position-takbir", "file": _source_image(tmp_path)}
+        )
+    assert response.status_code == 302
+    assert version.media.get(key="position-takbir").width == 720
 
 
 @pytest.mark.django_db

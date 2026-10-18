@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; Иллюстрации
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  {% if editable %}
+    <p class="help">
+      PNG, JPEG или WebP до {{ max_source_mib }} МБ. Сервер обрежет картинку по центру до
+      квадрата, уменьшит до {{ image_side }}×{{ image_side }} и сожмёт в WebP. Новый файл
+      заменяет прежний, документы курса пересобираются сразу.
+    </p>
+  {% else %}
+    <p class="help">Версия опубликована или отозвана: иллюстрации только для просмотра.</p>
+  {% endif %}
+  <table>
+    <thead>
+      <tr><th>Ключ</th><th>Что изображено</th><th>Сейчас</th>{% if editable %}<th>Загрузить</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><code>{{ row.key }}</code></td>
+          <td style="max-width:360px">{{ row.alt }}</td>
+          <td>
+            {% if row.url %}
+              <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">
+                <img src="{{ row.url }}" alt="" width="120" height="120" style="border-radius:8px">
+              </a><br>{{ row.kib }} КБ
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          {% if editable %}
+            <td>
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="key" value="{{ row.key }}">
+                <input type="file" name="file" accept="image/png,image/jpeg,image/webp" required>
+                <input type="submit" class="button" value="Загрузить">
+              </form>
+            </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
