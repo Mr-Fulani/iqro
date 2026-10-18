@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { SalahCourseProgress, SalahLessonStatusBadge } from "@/components/SalahCourseProgress";
 import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
@@ -52,6 +53,10 @@ function lessonMeta(locale: Locale, lesson: SalahLesson): string {
 }
 
 export default async function SalahCoursePage({ params }: { params: Promise<RouteParams> }) {
+  // Only the locale parametrises this page, so `next build` would prerender it
+  // without a backend (CI, Docker images). Render it per request instead; the
+  // course document itself still comes from the tagged fetch cache.
+  await connection();
   const locale = localeParam((await params).locale);
   const document = await publishedCourse(locale);
   const lessons = new Map(document.lessons.map((lesson) => [lesson.slug, lesson]));
