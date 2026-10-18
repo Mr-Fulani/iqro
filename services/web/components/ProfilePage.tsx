@@ -22,6 +22,7 @@ import { MessageKey } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
 import { DuaEntryList } from "./DuaEntryList";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
+import { SurahNameArt } from "./SurahNameArt";
 
 type FavoriteFilter = "all" | "dua" | "quran";
 
@@ -891,6 +892,13 @@ export default function ProfilePage() {
                               {bm.note ? ` · «${bm.note}»` : ""}
                             </span>
                           </span>
+                          {bm.ayah?.surah_name_ar && (
+                            <SurahNameArt
+                              surah={bm.ayah.surah_number}
+                              fallback={bm.ayah.surah_name_ar}
+                              className="profile-bookmark-surah"
+                            />
+                          )}
                           <span className="profile-bookmark-arrow" aria-hidden="true">→</span>
                         </Link>
 
