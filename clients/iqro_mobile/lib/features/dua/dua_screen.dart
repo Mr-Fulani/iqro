@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,6 +11,7 @@ import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
+import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/share/content_share.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'dua_arabic.dart';
@@ -1072,7 +1072,8 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
           if (repetitions > 1) ...<Widget>[
             const SizedBox(height: 18),
             Center(
-              child: _RepetitionCounter(
+              child: IqroRepetitionCounter(
+                key: const ValueKey('dua-counter'),
                 total: repetitions,
                 completed: _completedRepetitions,
                 onTap: _incrementPractice,
@@ -1441,19 +1442,12 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
       widget.entry.repetitions,
     );
     final target = stages.fold<int>(0, (sum, stage) => sum + stage);
-    if (_completedRepetitions >= target) {
-      // A finished count starts again on the next tap.
-      setState(() => _completedRepetitions = 0);
-      return;
-    }
-    final next = _completedRepetitions + 1;
-    setState(() => _completedRepetitions = next);
-    if (next == target) {
-      unawaited(HapticFeedback.heavyImpact());
-      unawaited(HapticFeedback.vibrate());
-    } else {
-      unawaited(HapticFeedback.lightImpact());
-    }
+    setState(
+      () => _completedRepetitions = advanceRepetitionCount(
+        _completedRepetitions,
+        target,
+      ),
+    );
   }
 
   Future<void> _share(BuildContext buttonContext) async {
@@ -1495,71 +1489,6 @@ class _DuaChapterBanner extends StatelessWidget {
           style: theme.textTheme.titleSmall?.copyWith(
             color: theme.colorScheme.onSurface,
             height: 1.35,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Counts down the repetitions of a du'a: tap after each one. It vibrates
-/// at the end and starts again on the next tap.
-class _RepetitionCounter extends StatelessWidget {
-  const _RepetitionCounter({
-    required this.total,
-    required this.completed,
-    required this.onTap,
-  });
-
-  final int total;
-  final int completed;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final remaining = (total - completed).clamp(0, total);
-    final done = remaining == 0;
-    return Semantics(
-      button: true,
-      label: done
-          ? context.l10n.done
-          : context.l10n.duaCounterRemaining(remaining),
-      excludeSemantics: true,
-      child: Material(
-        key: const ValueKey('dua-counter'),
-        color: done ? scheme.primary : scheme.primaryContainer,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox.square(
-            dimension: 112,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                SizedBox.square(
-                  dimension: 100,
-                  child: CircularProgressIndicator(
-                    value: total == 0 ? 0 : completed / total,
-                    strokeWidth: 3,
-                    color: done ? scheme.onPrimary : scheme.primary,
-                    backgroundColor: Colors.transparent,
-                  ),
-                ),
-                done
-                    ? Icon(
-                        Icons.check_rounded,
-                        size: 44,
-                        color: scheme.onPrimary,
-                      )
-                    : Text(
-                        '$remaining',
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(color: scheme.primary),
-                      ),
-              ],
-            ),
           ),
         ),
       ),

@@ -57,6 +57,34 @@ void main() {
     updateSection(() => section = AudioNavigationSection.memorization);
     await tester.pumpAndSettle();
     expect(audio.memorizationPauseRequests, 1);
+
+    updateSection(() => section = AudioNavigationSection.salah);
+    await tester.pumpAndSettle();
+    expect(audio.salahPauseRequests, 1);
+    expect(audio.memorizationPauseRequests, 1);
+  });
+
+  test('prayer lessons are their own audio section', () {
+    expect(
+      audioSectionForUri(Uri.parse('/salah')),
+      AudioNavigationSection.salah,
+    );
+    expect(
+      audioSectionForUri(Uri.parse('/salah/lesson/fajr/step/fajr.r1.ruku')),
+      AudioNavigationSection.salah,
+    );
+    expect(
+      audioSectionForUri(Uri.parse('/prayer')),
+      AudioNavigationSection.other,
+    );
+    expect(
+      exitsAudioSection(Uri.parse('/salah/lesson/fajr'), Uri.parse('/salah')),
+      isFalse,
+    );
+    expect(
+      exitsAudioSection(Uri.parse('/salah'), Uri.parse('/app?tab=4')),
+      isTrue,
+    );
   });
 
   testWidgets('direct entry into Quran applies its pause policy', (
@@ -89,6 +117,7 @@ class _RecordingAudioController extends StateNotifier<IqroAudioState>
   var quranPauseRequests = 0;
   var duaPauseRequests = 0;
   var memorizationPauseRequests = 0;
+  var salahPauseRequests = 0;
 
   @override
   Future<void> pauseForQuranEntry() async {
@@ -103,6 +132,11 @@ class _RecordingAudioController extends StateNotifier<IqroAudioState>
   @override
   Future<void> pauseForMemorizationEntry() async {
     memorizationPauseRequests += 1;
+  }
+
+  @override
+  Future<void> pauseForSalahEntry() async {
+    salahPauseRequests += 1;
   }
 
   @override

@@ -1262,7 +1262,12 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   Future<void> pauseForDuaEntry() {
     _navigationEpoch += 1;
-    return _pauseForNavigation(preserveDua: true);
+    return _pauseForNavigation(preserveStandaloneType: 'dua');
+  }
+
+  Future<void> pauseForSalahEntry() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation(preserveStandaloneType: 'salah');
   }
 
   Future<void> pauseForMemorizationEntry() {
@@ -1279,6 +1284,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   Future<void> pauseForDuaExit() => _pauseContextOnExit(
     (current) => current.standalone?.mediaItem.extras?['content_type'] == 'dua',
+  );
+
+  Future<void> pauseForSalahExit() => _pauseContextOnExit(
+    (current) =>
+        current.standalone?.mediaItem.extras?['content_type'] == 'salah',
   );
 
   Future<void> pauseForMemorizationExit() => _pauseContextOnExit(
@@ -1334,7 +1344,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
   }
 
   Future<void> _pauseForNavigation({
-    bool preserveDua = false,
+    String? preserveStandaloneType,
     bool preserveMushaf = false,
   }) {
     final intent = _sourceIntent;
@@ -1348,8 +1358,9 @@ class AudioController extends StateNotifier<IqroAudioState> {
         return;
       }
       if (standalone != null) {
-        if (preserveDua &&
-            standalone.mediaItem.extras?['content_type'] == 'dua') {
+        if (preserveStandaloneType != null &&
+            standalone.mediaItem.extras?['content_type'] ==
+                preserveStandaloneType) {
           return;
         }
         final mediaId = standalone.mediaItem.id;

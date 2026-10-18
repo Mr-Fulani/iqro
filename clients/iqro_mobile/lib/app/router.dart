@@ -22,6 +22,8 @@ import '../features/prayer/prayer_calendar_screen.dart';
 import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
+import '../features/salah/salah_home_screen.dart';
+import '../features/salah/salah_lesson_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/offline_storage_screen.dart';
 import '../features/share/share_screen.dart';
@@ -179,6 +181,32 @@ GoRouter createRouter({required bool onboardingComplete}) {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/salah',
+        builder: (context, state) => const AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahHomeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/salah/lesson/:slug',
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahLessonScreen(
+            lessonSlug: state.pathParameters['slug'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/salah/lesson/:slug/step/:step',
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahLessonScreen(
+            lessonSlug: state.pathParameters['slug'] ?? '',
+            stepSlug: state.pathParameters['step'],
+          ),
+        ),
       ),
       GoRoute(
         path: '/favorites',

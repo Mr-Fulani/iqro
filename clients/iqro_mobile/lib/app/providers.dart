@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,6 +38,10 @@ import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
 import '../features/reminders/reminder_repository.dart';
+import '../features/salah/salah_display.dart';
+import '../features/salah/salah_models.dart';
+import '../features/salah/salah_progress.dart';
+import '../features/salah/salah_repository.dart';
 import '../features/share/share_repository.dart';
 import '../features/settings/offline_storage_repository.dart';
 
@@ -94,6 +99,9 @@ final memorizationRepositoryProvider = Provider<MemorizationRepository>(
 );
 final duaRepositoryProvider = Provider<DuaRepository>(
   (ref) => _missing('DuaRepository'),
+);
+final salahRepositoryProvider = Provider<SalahRepository>(
+  (ref) => _missing('SalahRepository'),
 );
 final feedbackRepositoryProvider = Provider<FeedbackRepository>(
   (ref) => _missing('FeedbackRepository'),
@@ -889,6 +897,33 @@ final duaEntryByReferenceProvider = FutureProvider.autoDispose
             sourceNumber: identity.sourceNumber,
           );
     });
+final salahCourseProvider = FutureProvider.family<SalahCourseDocument, String>((
+  ref,
+  slug,
+) {
+  final locale = ref.watch(
+    appPreferencesProvider.select((value) => value.locale),
+  );
+  return ref.watch(salahRepositoryProvider).course(slug, locale);
+});
+final salahProgressStoreProvider = Provider<SalahProgressStore>(
+  (ref) => SalahProgressStore(ref.watch(localDatabaseProvider)),
+);
+final salahProgressProvider = FutureProvider.autoDispose
+    .family<SalahCourseProgress, String>((ref, course) {
+      // Progress belongs to the account; switching it reads the new owner's.
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(salahProgressStoreProvider).read(course);
+    });
+final salahDisplayProvider = StateProvider<SalahDisplay>(
+  (ref) => const SalahDisplay(),
+);
+
+/// Step illustrations, kept in the image disk cache after the first view.
+final salahImageProvider = Provider<ImageProvider Function(String url)>(
+  (ref) =>
+      (url) => CachedNetworkImageProvider(url),
+);
 final prayerScheduleProvider = FutureProvider.autoDispose
     .family<PrayerSchedule?, AccountScopeKey>((ref, key) {
       final database = ref.watch(localDatabaseProvider);

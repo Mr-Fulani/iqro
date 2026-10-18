@@ -107,6 +107,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       AudioNavigationSection.quran => audio.pauseForQuranExit(),
       AudioNavigationSection.dua => audio.pauseForDuaExit(),
       AudioNavigationSection.memorization => audio.pauseForMemorizationExit(),
+      AudioNavigationSection.salah => audio.pauseForSalahExit(),
       AudioNavigationSection.other => Future<void>.value(),
     };
     unawaited(

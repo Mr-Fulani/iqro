@@ -1,0 +1,720 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/providers.dart';
+import '../../core/design_system/iqro_repetition_counter.dart';
+import '../../core/design_system/iqro_widgets.dart';
+import '../../core/theme/iqro_theme.dart';
+import 'salah_display.dart';
+import 'salah_formula_card.dart';
+import 'salah_models.dart';
+import 'salah_progress.dart';
+import 'salah_repository.dart';
+
+/// One lesson, step by step. Opens on [stepSlug] when it is given and still
+/// exists, otherwise on the saved step.
+class SalahLessonScreen extends ConsumerStatefulWidget {
+  const SalahLessonScreen({
+    required this.lessonSlug,
+    this.stepSlug,
+    this.courseSlug = salahDefaultCourseSlug,
+    super.key,
+  });
+
+  final String courseSlug;
+  final String lessonSlug;
+  final String? stepSlug;
+
+  @override
+  ConsumerState<SalahLessonScreen> createState() => _SalahLessonScreenState();
+}
+
+class _SalahLessonScreenState extends ConsumerState<SalahLessonScreen> {
+  late Future<SalahCourseProgress> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _progress = _readProgress();
+  }
+
+  Future<SalahCourseProgress> _readProgress() async {
+    try {
+      return await ref.read(salahProgressStoreProvider).read(widget.courseSlug);
+    } on Object {
+      // Unreadable progress opens the lesson from its first step.
+      return const SalahCourseProgress();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final course = ref.watch(salahCourseProvider(widget.courseSlug));
+    final document = course.valueOrNull;
+    if (document == null) {
+      return Scaffold(
+        appBar: IqroTopBar(title: context.l10n.salahTitle),
+        body: course.hasError
+            ? IqroAsyncError(
+                title: context.l10n.salahUnavailable,
+                onRetry: () =>
+                    ref.invalidate(salahCourseProvider(widget.courseSlug)),
+              )
+            : const IqroLoading(),
+      );
+    }
+    final lesson = document.lesson(widget.lessonSlug);
+    if (lesson == null || lesson.steps.isEmpty) {
+      return Scaffold(
+        appBar: IqroTopBar(title: context.l10n.salahTitle),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              context.l10n.salahLessonNotFound,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+    return FutureBuilder<SalahCourseProgress>(
+      future: _progress,
+      builder: (context, snapshot) {
+        final progress = snapshot.data;
+        if (progress == null) {
+          return Scaffold(
+            appBar: IqroTopBar(title: lesson.title),
+            body: const IqroLoading(),
+          );
+        }
+        final requested = widget.stepSlug == null
+            ? -1
+            : lesson.indexOfStep(widget.stepSlug!);
+        return SalahStepPlayer(
+          // A new content version restarts the player on the right step.
+          key: ValueKey('${document.course.version}:${lesson.slug}'),
+          courseSlug: widget.courseSlug,
+          document: document,
+          lesson: lesson,
+          initialIndex: requested >= 0
+              ? requested
+              : progress.resumeStepIndex(lesson),
+        );
+      },
+    );
+  }
+}
+
+/// The steps of a lesson in a pager, with «Back» and «Next» always visible.
+class SalahStepPlayer extends ConsumerStatefulWidget {
+  const SalahStepPlayer({
+    required this.courseSlug,
+    required this.document,
+    required this.lesson,
+    required this.initialIndex,
+    super.key,
+  });
+
+  final String courseSlug;
+  final SalahCourseDocument document;
+  final SalahLesson lesson;
+  final int initialIndex;
+
+  @override
+  ConsumerState<SalahStepPlayer> createState() => _SalahStepPlayerState();
+}
+
+class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
+  late final PageController _pages;
+
+  // The header and the buttons follow the page; the pager itself is not
+  // rebuilt when it changes.
+  late final ValueNotifier<int> _index;
+  var _finishing = false;
+
+  List<SalahStep> get _steps => widget.lesson.steps;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialIndex.clamp(0, _steps.length - 1);
+    _pages = PageController(initialPage: initial);
+    _index = ValueNotifier<int>(initial);
+    unawaited(_record(initial));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _precache(initial);
+      _precache(initial + 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    _index.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    _index.value = index;
+    unawaited(_record(index));
+    _precache(index + 1);
+  }
+
+  /// Loads the next step's image ahead, so turning the page shows it at once.
+  void _precache(int index) {
+    if (index < 0 || index >= _steps.length) return;
+    final media = widget.document.stepMedia(_steps[index]);
+    if (media == null) return;
+    unawaited(
+      precacheImage(
+        ref.read(salahImageProvider)(media.url),
+        context,
+        onError: (error, stack) {},
+      ),
+    );
+  }
+
+  Future<void> _record(int index) async {
+    try {
+      await ref
+          .read(salahProgressStoreProvider)
+          .recordStep(
+            course: widget.courseSlug,
+            lesson: widget.lesson.slug,
+            stepSlug: _steps[index].slug,
+            contentVersion: widget.document.course.version,
+          );
+      if (mounted) ref.invalidate(salahProgressProvider(widget.courseSlug));
+    } on Object {
+      // Progress is a convenience: a failed write must not stop the lesson.
+    }
+  }
+
+  void _goTo(int index) {
+    if (index < 0 || index >= _steps.length || !_pages.hasClients) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pages.jumpToPage(index);
+    } else {
+      unawaited(
+        _pages.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
+  void _next() {
+    final index = _index.value;
+    if (index >= _steps.length - 1) {
+      unawaited(_finish());
+    } else {
+      _goTo(index + 1);
+    }
+  }
+
+  void _previous() => _goTo(_index.value - 1);
+
+  Future<void> _finish() async {
+    if (_finishing) return;
+    _finishing = true;
+    final message = context.l10n.salahLessonCompleted;
+    try {
+      await ref
+          .read(salahProgressStoreProvider)
+          .complete(
+            course: widget.courseSlug,
+            lesson: widget.lesson.slug,
+            stepSlug: _steps.last.slug,
+            contentVersion: widget.document.course.version,
+          );
+    } on Object {
+      // The lesson still closes; the next visit records it again.
+    }
+    if (!mounted) return;
+    ref.invalidate(salahProgressProvider(widget.courseSlug));
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/salah');
+    }
+    _finishing = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lesson = widget.lesson;
+    return Scaffold(
+      appBar: IqroTopBar(
+        title: lesson.title,
+        actions: const <Widget>[_DisplayMenu()],
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: _ModeSwitch(),
+            ),
+            ValueListenableBuilder<int>(
+              valueListenable: _index,
+              builder: (context, index, _) => _LessonHeader(
+                lesson: lesson,
+                step: _steps[index],
+                index: index,
+              ),
+            ),
+            Expanded(
+              child: Semantics(
+                key: const ValueKey('salah-step-actions'),
+                container: true,
+                customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+                  CustomSemanticsAction(label: context.l10n.salahNextStep):
+                      _next,
+                  CustomSemanticsAction(label: context.l10n.salahPreviousStep):
+                      _previous,
+                },
+                // PageView follows the reading direction: in RTL the next
+                // step comes from the left.
+                child: PageView.builder(
+                  key: const ValueKey('salah-steps'),
+                  controller: _pages,
+                  itemCount: _steps.length,
+                  onPageChanged: _onPageChanged,
+                  itemBuilder: (context, index) => _StepPage(
+                    key: ValueKey(_steps[index].slug),
+                    document: widget.document,
+                    lesson: lesson,
+                    step: _steps[index],
+                  ),
+                ),
+              ),
+            ),
+            ValueListenableBuilder<int>(
+              valueListenable: _index,
+              builder: (context, index, _) => _StepButtons(
+                isFirst: index == 0,
+                isLast: index == _steps.length - 1,
+                onBack: _previous,
+                onNext: _next,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeSwitch extends ConsumerWidget {
+  const _ModeSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(salahDisplayProvider.select((value) => value.mode));
+    Widget label(String text) =>
+        Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<SalahMode>(
+        showSelectedIcon: false,
+        segments: <ButtonSegment<SalahMode>>[
+          ButtonSegment<SalahMode>(
+            value: SalahMode.learn,
+            label: label(context.l10n.salahModeLearn),
+          ),
+          ButtonSegment<SalahMode>(
+            value: SalahMode.practice,
+            label: label(context.l10n.salahModePractice),
+          ),
+        ],
+        selected: <SalahMode>{mode},
+        onSelectionChanged: (selection) {
+          final notifier = ref.read(salahDisplayProvider.notifier);
+          notifier.state = notifier.state.copyWith(mode: selection.single);
+        },
+      ),
+    );
+  }
+}
+
+enum _DisplayOption { arabic, transliteration, translation }
+
+class _DisplayMenu extends ConsumerWidget {
+  const _DisplayMenu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final display = ref.watch(salahDisplayProvider);
+    return PopupMenuButton<_DisplayOption>(
+      key: const ValueKey('salah-display-menu'),
+      tooltip: context.l10n.salahDisplayOptions,
+      icon: const Icon(Icons.tune),
+      onSelected: (option) {
+        final notifier = ref.read(salahDisplayProvider.notifier);
+        final value = notifier.state;
+        notifier.state = switch (option) {
+          _DisplayOption.arabic => value.copyWith(
+            showArabic: !value.showArabic,
+          ),
+          _DisplayOption.transliteration => value.copyWith(
+            showTransliteration: !value.showTransliteration,
+          ),
+          _DisplayOption.translation => value.copyWith(
+            showTranslation: !value.showTranslation,
+          ),
+        };
+      },
+      itemBuilder: (context) => <PopupMenuEntry<_DisplayOption>>[
+        CheckedPopupMenuItem<_DisplayOption>(
+          value: _DisplayOption.arabic,
+          checked: display.showArabic,
+          child: Text(context.l10n.salahShowArabic),
+        ),
+        CheckedPopupMenuItem<_DisplayOption>(
+          value: _DisplayOption.transliteration,
+          checked: display.showTransliteration,
+          child: Text(context.l10n.salahShowTransliteration),
+        ),
+        CheckedPopupMenuItem<_DisplayOption>(
+          value: _DisplayOption.translation,
+          checked: display.showTranslation,
+          child: Text(context.l10n.salahShowTranslation),
+        ),
+      ],
+    );
+  }
+}
+
+/// «Step N of M», and for a prayer the rak'ah dots.
+class _LessonHeader extends StatelessWidget {
+  const _LessonHeader({
+    required this.lesson,
+    required this.step,
+    required this.index,
+  });
+
+  final SalahLesson lesson;
+  final SalahStep step;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final total = lesson.steps.length;
+    final rakats = lesson.prayer?.rakats ?? 0;
+    final rakat = step.rakat;
+    final stepLabel = Text(
+      context.l10n.salahStepOf(index + 1, total),
+      key: const ValueKey('salah-step-label'),
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: scheme.onSurfaceVariant,
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: rakats > 0 && rakat != null
+          ? Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
+              children: <Widget>[
+                Semantics(
+                  label: context.l10n.salahRakatOf(rakat, rakats),
+                  excludeSemantics: true,
+                  child: Row(
+                    key: const ValueKey('salah-rakat-dots'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (var number = 1; number <= rakats; number++)
+                        _RakatDot(state: (number - rakat).sign),
+                    ],
+                  ),
+                ),
+                stepLabel,
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                stepLabel,
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: (index + 1) / total,
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _RakatDot extends StatelessWidget {
+  const _RakatDot({required this.state});
+
+  /// Below zero for a finished rak'ah, zero for the current one.
+  final int state;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final current = state == 0;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsetsDirectional.only(end: 6),
+      width: current ? 26 : 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: state > 0
+            ? Colors.transparent
+            : scheme.primary.withValues(alpha: current ? 1 : .45),
+        border: Border.all(color: scheme.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+  }
+}
+
+class _StepButtons extends StatelessWidget {
+  const _StepButtons({
+    required this.isFirst,
+    required this.isLast,
+    required this.onBack,
+    required this.onNext,
+  });
+
+  final bool isFirst;
+  final bool isLast;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget label(String text) =>
+        Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const ValueKey('salah-back'),
+              onPressed: isFirst ? null : onBack,
+              icon: const Icon(Icons.arrow_back),
+              label: label(context.l10n.salahBack),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FilledButton.icon(
+              key: const ValueKey('salah-next'),
+              onPressed: onNext,
+              icon: Icon(isLast ? Icons.check : Icons.arrow_forward),
+              label: label(
+                isLast ? context.l10n.salahFinish : context.l10n.salahNext,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepPage extends ConsumerWidget {
+  const _StepPage({
+    required this.document,
+    required this.lesson,
+    required this.step,
+    super.key,
+  });
+
+  final SalahCourseDocument document;
+  final SalahLesson lesson;
+  final SalahStep step;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final display = ref.watch(salahDisplayProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final media = document.stepMedia(step);
+    final formulas = document.stepFormulas(step);
+    final repeat = step.repeat ?? 1;
+    final details = step.details;
+    final ruling = _rulingLabel(context, step.ruling);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (media != null) ...<Widget>[
+            _StepImage(media: media),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            step.title,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.start,
+          ),
+          if (display.learning) ...<Widget>[
+            if (ruling != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.iqroColors.sand,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    child: Text(ruling, style: theme.textTheme.labelMedium),
+                  ),
+                ),
+              ),
+            ],
+            if (step.instruction.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 10),
+              Text(
+                step.instruction,
+                key: ValueKey('salah-instruction-${step.slug}'),
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+              ),
+            ],
+            if (details != null) ...<Widget>[
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: .6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    details,
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ],
+          // A repeated action without a counted formula (washing the face
+          // three times) gets its own counter.
+          if (repeat > 1 &&
+              formulas.every((formula) => formula.repetitions <= 1)) ...[
+            const SizedBox(height: 16),
+            Center(child: _StepRepeatCounter(total: repeat)),
+          ],
+          for (final formula in formulas) ...<Widget>[
+            const SizedBox(height: 16),
+            SalahFormulaCard(
+              formula: formula,
+              display: display,
+              audioTitle: '${lesson.title} · ${step.title}',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String? _rulingLabel(BuildContext context, String? ruling) =>
+      switch (ruling) {
+        'rukn' => context.l10n.salahRulingRukn,
+        'wajib' => context.l10n.salahRulingWajib,
+        'sunnah' => context.l10n.salahRulingSunnah,
+        _ => null,
+      };
+}
+
+class _StepRepeatCounter extends StatefulWidget {
+  const _StepRepeatCounter({required this.total});
+
+  final int total;
+
+  @override
+  State<_StepRepeatCounter> createState() => _StepRepeatCounterState();
+}
+
+class _StepRepeatCounterState extends State<_StepRepeatCounter> {
+  var _completed = 0;
+
+  @override
+  Widget build(BuildContext context) => IqroRepetitionCounter(
+    key: const ValueKey('salah-step-counter'),
+    total: widget.total,
+    completed: _completed,
+    onTap: () => setState(
+      () => _completed = advanceRepetitionCount(_completed, widget.total),
+    ),
+  );
+}
+
+/// The step illustration in its declared proportions, never wider than its
+/// declared width and never taller than 40% of the screen.
+class _StepImage extends ConsumerWidget {
+  const _StepImage({required this.media});
+
+  final SalahMedia media;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final image = ref.watch(salahImageProvider)(media.url);
+    final maxHeight = MediaQuery.sizeOf(context).height * .4;
+    return Semantics(
+      image: true,
+      label: media.alt,
+      child: ExcludeSemantics(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: media.width > 0
+                  ? media.width.toDouble()
+                  : double.infinity,
+              maxHeight: maxHeight,
+            ),
+            child: AspectRatio(
+              key: ValueKey('salah-image-${media.key}'),
+              aspectRatio: media.aspectRatio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Image(
+                  image: image,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stack) => ColoredBox(
+                    color: context.iqroColors.sand,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: context.iqroColors.gold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

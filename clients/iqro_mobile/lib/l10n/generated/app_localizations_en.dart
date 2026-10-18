@@ -1895,4 +1895,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String planDays(num count) {
     return '$count days';
   }
+
+  @override
+  String get salahTitle => 'Learn to pray';
+
+  @override
+  String get salahHint => 'Step by step: wudu and the five prayers';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done of $total lessons';
+  }
+
+  @override
+  String get salahContinue => 'Continue';
+
+  @override
+  String get salahStart => 'Start';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Rak‘ah $current of $total';
+  }
+
+  @override
+  String get salahBack => 'Back';
+
+  @override
+  String get salahNext => 'Next';
+
+  @override
+  String get salahFinish => 'Finish';
+
+  @override
+  String get salahNextStep => 'Next step';
+
+  @override
+  String get salahPreviousStep => 'Previous step';
+
+  @override
+  String get salahModeLearn => 'Learn';
+
+  @override
+  String get salahModePractice => 'Practice';
+
+  @override
+  String get salahDisplayOptions => 'What to show';
+
+  @override
+  String get salahShowArabic => 'Arabic text';
+
+  @override
+  String get salahShowTransliteration => 'Transliteration';
+
+  @override
+  String get salahShowTranslation => 'Translation';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Lesson complete';
+
+  @override
+  String get salahStatusCompleted => 'Completed';
+
+  @override
+  String get salahStatusInProgress => 'In progress';
+
+  @override
+  String get salahUnavailable => 'The course is not available yet';
+
+  @override
+  String get salahLessonNotFound => 'This lesson is not in the course';
+
+  @override
+  String get salahRulingRukn => 'Pillar (rukn)';
+
+  @override
+  String get salahRulingWajib => 'Obligatory (wajib)';
+
+  @override
+  String get salahRulingSunnah => 'Sunnah';
 }

@@ -1858,4 +1858,93 @@ class AppLocalizationsTr extends AppLocalizations {
   String planDays(num count) {
     return '$count gün';
   }
+
+  @override
+  String get salahTitle => 'Namaz öğrenimi';
+
+  @override
+  String get salahHint => 'Adım adım: abdest ve beş vakit namaz';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$total dersten $done tamamlandı';
+  }
+
+  @override
+  String get salahContinue => 'Devam et';
+
+  @override
+  String get salahStart => 'Başla';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Adım $current/$total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Rekât $current/$total';
+  }
+
+  @override
+  String get salahBack => 'Geri';
+
+  @override
+  String get salahNext => 'İleri';
+
+  @override
+  String get salahFinish => 'Bitir';
+
+  @override
+  String get salahNextStep => 'Sonraki adım';
+
+  @override
+  String get salahPreviousStep => 'Önceki adım';
+
+  @override
+  String get salahModeLearn => 'Öğren';
+
+  @override
+  String get salahModePractice => 'Pratik';
+
+  @override
+  String get salahDisplayOptions => 'Gösterilecekler';
+
+  @override
+  String get salahShowArabic => 'Arapça metin';
+
+  @override
+  String get salahShowTransliteration => 'Okunuş';
+
+  @override
+  String get salahShowTranslation => 'Meal';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count dk';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Ders tamamlandı';
+
+  @override
+  String get salahStatusCompleted => 'Tamamlandı';
+
+  @override
+  String get salahStatusInProgress => 'Devam ediyor';
+
+  @override
+  String get salahUnavailable => 'Kurs henüz kullanılamıyor';
+
+  @override
+  String get salahLessonNotFound => 'Bu ders kursta yok';
+
+  @override
+  String get salahRulingRukn => 'Rükün';
+
+  @override
+  String get salahRulingWajib => 'Vacip';
+
+  @override
+  String get salahRulingSunnah => 'Sünnet';
 }
