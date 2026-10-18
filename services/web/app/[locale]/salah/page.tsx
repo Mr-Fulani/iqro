@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
 
 function lessonMeta(locale: Locale, lesson: SalahLesson): string {
   const format = new Intl.NumberFormat(localeTag(locale));
-  const count = lesson.prayer
+  const count = lesson.prayer?.rakats
     ? translate(locale, "salah.rakatCount", { count: format.format(lesson.prayer.rakats) })
     : translate(locale, "salah.stepCount", { count: format.format(lesson.steps.length) });
   return [

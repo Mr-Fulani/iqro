@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from quran_backend.modules.salah.snapshot import expand_lesson_steps
+from quran_backend.modules.salah.snapshot import expand_lesson_steps, template_counts_rakats
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -70,7 +70,11 @@ def compile_document(
                 "code": prayer["code"],
                 "kind": prayer["kind"],
                 "kind_title": _text(kind_titles[prayer["kind"]], language),
-                "rakats": len(prayer["rakat_rules"]),
+                "rakats": (
+                    len(prayer["rakat_rules"])
+                    if template_counts_rakats(templates[prayer["template"]])
+                    else 0
+                ),
             }
         lessons.append(entry)
 

@@ -186,6 +186,49 @@ def test_prayer_kinds_come_from_the_course_and_compile_with_their_title() -> Non
     assert document["lessons"][0]["prayer"]["kind_title"] == "Bayram"
 
 
+def test_funeral_prayer_unrolls_once_without_a_rakat_counter() -> None:
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    templates = {template["id"]: template for template in snapshot["templates"]}
+    janazah = next(lesson for lesson in snapshot["lessons"] if lesson["slug"] == "janazah-prayer")
+
+    steps = expand_lesson_steps(janazah, templates)
+
+    assert [step["slug"] for step in steps] == [
+        "janazah-prayer.intention",
+        "janazah-prayer.takbir-1",
+        "janazah-prayer.fatiha",
+        "janazah-prayer.takbir-2",
+        "janazah-prayer.takbir-3",
+        "janazah-prayer.takbir-4",
+        "janazah-prayer.taslim",
+    ]
+    assert all("rakat" not in step for step in steps)
+    two_rules = copy.deepcopy(janazah)
+    two_rules["prayer"]["rakat_rules"].append({"rakat": 2, "recitation": "sirr", "sitting": "none"})
+    broken = {**snapshot, "lessons": [*snapshot["lessons"], {**two_rules, "slug": "janazah-twice"}]}
+    broken["sections"] = [
+        *snapshot["sections"],
+        {**snapshot["sections"][0], "lessons": ["janazah-twice"]},
+    ]
+    with pytest.raises(SalahSnapshotError) as error:
+        validate_snapshot(broken)
+    assert "в молитве без ракаатов нужно ровно одно правило" in "\n".join(error.value.problems)
+
+
+def test_eid_prayer_has_six_and_five_extra_takbirs() -> None:
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    templates = {template["id"]: template for template in snapshot["templates"]}
+    eid = next(lesson for lesson in snapshot["lessons"] if lesson["slug"] == "eid-prayer")
+
+    extra = {
+        step["slug"]: step["repeat"]
+        for step in expand_lesson_steps(eid, templates)
+        if step["slug"].endswith("extra-takbirs")
+    }
+
+    assert extra == {"eid-prayer.r1.extra-takbirs": 6, "eid-prayer.r2.extra-takbirs": 5}
+
+
 def test_four_rakat_prayer_unrolls_with_a_middle_tashahhud() -> None:
     dhuhr = _prayer(
         "dhuhr",

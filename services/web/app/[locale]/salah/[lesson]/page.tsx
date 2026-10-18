@@ -78,7 +78,7 @@ export default async function SalahLessonPage({ params }: { params: Promise<Rout
           {translate(route.locale, "common.minutes", { count: format.format(lesson.minutes) })}
           {" · "}
           {lesson.prayer?.kind_title ? `${lesson.prayer.kind_title} · ` : null}
-          {lesson.prayer
+          {lesson.prayer?.rakats
             ? translate(route.locale, "salah.rakatCount", { count: format.format(lesson.prayer.rakats) })
             : translate(route.locale, "salah.stepCount", { count: format.format(lesson.steps.length) })}
         </p>

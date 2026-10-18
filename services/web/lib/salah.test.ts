@@ -63,6 +63,9 @@ test("prayer kinds and rulings from a newer course do not break the document", (
   };
   const newer = parseSalahCourseDocument({ ...example, lessons: [...lessons, eid] });
   assert.equal(findSalahLesson(newer, "eid")?.prayer?.kind_title, "Праздничный");
+  const janazah = { ...eid, slug: "janazah", prayer: { code: "janazah", kind: "janazah", rakats: 0 } };
+  const withJanazah = parseSalahCourseDocument({ ...example, lessons: [...lessons, janazah] });
+  assert.equal(findSalahLesson(withJanazah, "janazah")?.prayer?.rakats, 0);
   assert.equal(isSalahRuling("rukn"), true);
   assert.equal(isSalahRuling("mustahabb"), false);
   assert.equal(isSalahRuling(undefined), false);

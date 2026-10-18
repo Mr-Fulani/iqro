@@ -84,16 +84,25 @@ def expand_lesson_steps(
         return [{**step, "slug": f"{slug}.{step['slug']}"} for step in lesson.get("steps", [])]
     template = templates[prayer["template"]]
     rules = prayer["rakat_rules"]
+    counts_rakats = template_counts_rakats(template)
     steps: list[dict[str, Any]] = []
     for rule in rules:
         for step in template["steps"]:
             if not _rule_matches(step.get("when", {}), rule, rakats=len(rules)):
                 continue
             expanded = {key: value for key, value in step.items() if key != "when"}
-            expanded["slug"] = f"{slug}.r{rule['rakat']}.{step['slug']}"
-            expanded["rakat"] = int(rule["rakat"])
+            if counts_rakats:
+                expanded["slug"] = f"{slug}.r{rule['rakat']}.{step['slug']}"
+                expanded["rakat"] = int(rule["rakat"])
+            else:
+                expanded["slug"] = f"{slug}.{step['slug']}"
             steps.append(expanded)
     return steps
+
+
+def template_counts_rakats(template: Mapping[str, Any]) -> bool:
+    """False for a prayer without rak'ahs (the funeral prayer): one pass, no rak'ah counter."""
+    return template.get("counts_rakats", True) is not False
 
 
 def _localized(
@@ -199,6 +208,9 @@ def _check_prayer(
         problems.append(f"{where}: нет шаблона «{prayer.get('template')}».")
         return False
     rules = prayer.get("rakat_rules") or []
+    if not template_counts_rakats(templates[prayer["template"]]) and len(rules) != 1:
+        problems.append(f"{where}: в молитве без ракаатов нужно ровно одно правило.")
+        return False
     if [rule.get("rakat") for rule in rules] != list(range(1, len(rules) + 1)):
         problems.append(f"{where}: ракааты в rakat_rules должны идти 1..N.")
         return False

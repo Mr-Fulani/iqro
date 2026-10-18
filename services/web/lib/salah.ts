@@ -141,6 +141,13 @@ function requirePositiveInteger(value: unknown, path: string): number {
   return value;
 }
 
+function requireCount(value: unknown, path: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new SalahDocumentError(`${path} must be a non-negative integer`);
+  }
+  return value;
+}
+
 export function isSalahSlug(value: string): boolean {
   return value.length <= 64 && SLUG_PATTERN.test(value);
 }
@@ -195,7 +202,8 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
     }
     if (lesson.kind === "prayer") {
       if (!isRecord(lesson.prayer)) throw new SalahDocumentError(`lessons.${slug}.prayer is missing`);
-      requirePositiveInteger(lesson.prayer.rakats, `lessons.${slug}.prayer.rakats`);
+      // 0 for a prayer without rak'ahs, such as the funeral prayer.
+      requireCount(lesson.prayer.rakats, `lessons.${slug}.prayer.rakats`);
     }
     const stepSlugs = new Set<string>();
     const steps = (lesson.steps as unknown[]).map((step, stepIndex): SalahStep => {

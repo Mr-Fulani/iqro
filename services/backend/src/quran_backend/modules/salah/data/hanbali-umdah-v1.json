@@ -5,10 +5,10 @@
     "version": "2026-10-18",
     "methodology": "hanbali",
     "source_title": {
-      "ru": "Умдат аль-фикх (Ибн Кудама)",
-      "en": "Umdat al-Fiqh (Ibn Qudamah)",
-      "ar": "عمدة الفقه لابن قدامة",
-      "tr": "Umdetü'l-Fıkh (İbn Kudâme)"
+      "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
+      "en": "Umdat al-Fiqh (Ibn Qudamah), following the relied-upon Hanbali position",
+      "ar": "عمدة الفقه لابن قدامة على المعتمد في المذهب",
+      "tr": "Umdetü'l-Fıkh (İbn Kudâme), mezhebin mutemed görüşüne göre"
     }
   },
   "prayer_kinds": [
@@ -37,6 +37,51 @@
         "en": "Sunnah",
         "ar": "سنة",
         "tr": "Sünnet"
+      }
+    },
+    {
+      "code": "jumuah",
+      "title": {
+        "ru": "Джума",
+        "en": "Jumu'ah",
+        "ar": "جمعة",
+        "tr": "Cuma"
+      }
+    },
+    {
+      "code": "eid",
+      "title": {
+        "ru": "Праздничный",
+        "en": "Eid",
+        "ar": "عيد",
+        "tr": "Bayram"
+      }
+    },
+    {
+      "code": "janazah",
+      "title": {
+        "ru": "Джаназа",
+        "en": "Funeral",
+        "ar": "جنازة",
+        "tr": "Cenaze"
+      }
+    },
+    {
+      "code": "kusuf",
+      "title": {
+        "ru": "Затмение",
+        "en": "Eclipse",
+        "ar": "كسوف",
+        "tr": "Küsûf"
+      }
+    },
+    {
+      "code": "istisqa",
+      "title": {
+        "ru": "О дожде",
+        "en": "Rain prayer",
+        "ar": "استسقاء",
+        "tr": "Yağmur duası"
       }
     }
   ],
@@ -462,6 +507,122 @@
         "collection": "hisn-al-muslim",
         "source_number": 13
       }
+    },
+    {
+      "id": "ghashiya",
+      "source": {
+        "kind": "quran",
+        "surah": 88,
+        "ayah_from": 1,
+        "ayah_to": 26
+      }
+    },
+    {
+      "id": "eid-dhikr",
+      "source": {
+        "kind": "inline",
+        "arabic": "اللَّهُ أَكْبَرُ كَبِيرًا، وَالْحَمْدُ لِلَّهِ كَثِيرًا، وَسُبْحَانَ اللَّهِ بُكْرَةً وَأَصِيلًا، وَصَلَّى اللَّهُ عَلَى مُحَمَّدٍ النَّبِيِّ وَآلِهِ وَسَلَّمَ تَسْلِيمًا كَثِيرًا",
+        "repetitions": 1,
+        "translations": {
+          "ru": {
+            "meaning": "Аллах велик, премного велик; хвала Аллаху, обильная хвала; пречист Аллах утром и вечером; да благословит Аллах Мухаммада, Пророка, и его семью и да приветствует их многократно",
+            "transliteration": "Аллаху акбару кабиран, ва-ль-хамду ли-Лляхи касиран, ва субхана-Ллахи букратан ва асыля, ва салля-Ллаху 'аля Мухаммадин ан-набийи ва алихи ва салляма таслиман касира"
+          },
+          "en": {
+            "meaning": "Allah is the Greatest, greatly; much praise is for Allah; glory be to Allah morning and evening; may Allah bless Muhammad the Prophet and his family and grant them abundant peace",
+            "transliteration": "Allahu akbaru kabiran, wal-hamdu lillahi kathiran, wa subhana-llahi bukratan wa asila, wa salla-llahu 'ala Muhammadin an-nabiyyi wa alihi wa sallama taslima kathira"
+          },
+          "ar": {
+            "meaning": "تعظيمٌ لله وحمدٌ وتسبيحٌ في أول النهار وآخره، ثم الصلاة والسلام على النبيّ ﷺ وآله"
+          },
+          "tr": {
+            "meaning": "Allah en büyüktür, pek büyüktür; hamd Allah'adır, pek çok hamd; sabah akşam Allah'ı tesbih ederim; Allah Peygamber Muhammed'e ve ailesine salât ve bol selâm etsin",
+            "transliteration": "Allâhu ekber kebîrâ, ve'l-hamdü lillâhi kesîrâ, ve sübhânallâhi bükraten ve asîlâ, ve sallallâhu alâ Muhammedini'n-nebiyyi ve âlihî ve selleme teslîmen kesîrâ"
+          }
+        }
+      }
+    },
+    {
+      "id": "eid-takbir",
+      "source": {
+        "kind": "inline",
+        "arabic": "اللَّهُ أَكْبَرُ، اللَّهُ أَكْبَرُ، لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكْبَرُ، اللَّهُ أَكْبَرُ، وَلِلَّهِ الْحَمْدُ",
+        "repetitions": 1,
+        "translations": {
+          "ru": {
+            "meaning": "Аллах велик, Аллах велик, нет божества, кроме Аллаха; Аллах велик, Аллах велик, и Аллаху хвала",
+            "transliteration": "Аллаху акбар, Аллаху акбар, ля иляха илля-Ллах, ва-Ллаху акбар, Аллаху акбар, ва ли-Лляхи-ль-хамд"
+          },
+          "en": {
+            "meaning": "Allah is the Greatest, Allah is the Greatest, there is no god but Allah; Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise",
+            "transliteration": "Allahu akbar, Allahu akbar, la ilaha illa-llah, wa-llahu akbar, Allahu akbar, wa lillahi-l-hamd"
+          },
+          "ar": {
+            "meaning": "تكبيرُ الله وتوحيدُه وحمدُه في أيام العيد"
+          },
+          "tr": {
+            "meaning": "Allah en büyüktür, Allah en büyüktür, Allah'tan başka ilâh yoktur; Allah en büyüktür, Allah en büyüktür ve hamd Allah'adır",
+            "transliteration": "Allâhu ekber, Allâhu ekber, lâ ilâhe illallâh, vallâhu ekber, Allâhu ekber ve lillâhi'l-hamd"
+          }
+        }
+      }
+    },
+    {
+      "id": "janazah-dua",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 156
+      }
+    },
+    {
+      "id": "janazah-dua-general",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 157
+      }
+    },
+    {
+      "id": "janazah-dua-child",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 161
+      }
+    },
+    {
+      "id": "istisqa-dua",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 169
+      }
+    },
+    {
+      "id": "taslim-one",
+      "source": {
+        "kind": "inline",
+        "arabic": "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ",
+        "repetitions": 1,
+        "translations": {
+          "ru": {
+            "meaning": "Мир вам и милость Аллаха",
+            "transliteration": "Ас-саляму 'алейкум ва рахмату-Ллах"
+          },
+          "en": {
+            "meaning": "Peace be upon you and the mercy of Allah",
+            "transliteration": "As-salamu 'alaykum wa rahmatullah"
+          },
+          "ar": {
+            "meaning": "سلامٌ عليكم ورحمةٌ من الله"
+          },
+          "tr": {
+            "meaning": "Allah'ın selâmı ve rahmeti üzerinize olsun",
+            "transliteration": "Esselâmü aleyküm ve rahmetullâh"
+          }
+        }
+      }
     }
   ],
   "media": [
@@ -740,6 +901,30 @@
         "sunnah-two",
         "sahw",
         "behind-imam"
+      ]
+    },
+    {
+      "slug": "special",
+      "title": {
+        "ru": "Особые молитвы",
+        "en": "Special prayers",
+        "ar": "صلوات خاصّة",
+        "tr": "Özel namazlar"
+      },
+      "lessons": [
+        "jumuah",
+        "jumuah-prayer",
+        "eid",
+        "eid-prayer",
+        "janazah",
+        "janazah-prayer",
+        "kusuf",
+        "kusuf-prayer",
+        "istisqa",
+        "istisqa-prayer",
+        "travel",
+        "travel-prayer",
+        "fear"
       ]
     }
   ],
@@ -1387,7 +1572,7 @@
         {
           "slug": "basmala",
           "kind": "recitation",
-          "ruling": "sunnah",
+          "ruling": "wajib",
           "title": {
             "ru": "Бисмилля",
             "en": "Bismillah",
@@ -1401,10 +1586,10 @@
             "tr": "“Bismillâh” deyin."
           },
           "details": {
-            "ru": "В «Умдат аль-фикх» это сунна. В более поздних ханбалитских книгах — обязанность для того, кто о ней помнит.",
-            "en": "In “Umdat al-Fiqh” this is a sunnah. Later Hanbali works make it obligatory for whoever remembers it.",
-            "ar": "هي في «عمدة الفقه» سنّة، وفي متأخّري الحنابلة واجبةٌ مع الذِّكر.",
-            "tr": "“Umdetü'l-Fıkh”ta bu sünnettir. Sonraki Hanbelî eserlerinde ise hatırlayan için vâciptir."
+            "ru": "Обязательна для того, кто помнит о ней; если забыли — омовение действительно. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» это сунна.",
+            "en": "It is obligatory for whoever remembers it; if you forget, the ablution is still valid. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is a sunnah.",
+            "ar": "تجب مع الذِّكر وتسقط مع السهو، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» سنّة.",
+            "tr": "Hatırlayan için vâciptir; unutulursa abdest geçerlidir. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta sünnettir."
           },
           "media": "wudu-start",
           "formulas": [
@@ -1718,6 +1903,29 @@
             "en": "This Hanbali position rests on the hadith in which the Prophet ﷺ commanded ablution after camel meat.",
             "ar": "وهذا من مفردات المذهب، لحديث أمر النبيّ ﷺ بالوضوء من لحوم الإبل.",
             "tr": "Bu Hanbelî görüşü, Peygamber'in ﷺ deve etinden sonra abdest almayı emrettiği hadise dayanır."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "washing-dead",
+          "kind": "info",
+          "title": {
+            "ru": "Омывание покойного",
+            "en": "Washing the dead",
+            "ar": "تغسيل الميت",
+            "tr": "Ölü yıkamak"
+          },
+          "instruction": {
+            "ru": "Вуду нарушается у того, кто омывал покойного.",
+            "en": "Wudu is broken for whoever washed a dead person.",
+            "ar": "ينقض الوضوءَ تغسيلُ الميت.",
+            "tr": "Ölüyü yıkayanın abdesti bozulur."
+          },
+          "details": {
+            "ru": "Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» этого пункта нет.",
+            "en": "So in “Muntaha al-Iradat” and “al-Iqna'”; “Umdat al-Fiqh” does not list it.",
+            "ar": "كما في «المنتهى» و«الإقناع»، ولم يذكره في «عمدة الفقه».",
+            "tr": "“Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh” bunu saymaz."
           },
           "formulas": []
         },
@@ -2784,10 +2992,10 @@
             "tr": "Bir veya daha fazla rekâtı eksik bırakarak selâm verdiyseniz eksik kalanı tamamlayın, teşehhüdü okuyup selâm verin. Sonra iki sehiv secdesi yapın, teşehhüdü yeniden okuyup selâm verin."
           },
           "details": {
-            "ru": "Так же после таслима совершает поклоны имам, который при сомнении опирался на своё преобладающее мнение.",
-            "en": "An imam who, in doubt, acted on his strongest opinion also makes these prostrations after the taslim.",
-            "ar": "وكذلك الإمام إذا شكّ فبنى على غالب ظنّه سجد بعد السلام.",
-            "tr": "Şüphe edip güçlü kanaatine göre hareket eden imam da secdeleri selâmdan sonra yapar."
+            "ru": "Только в этом случае поклоны делают после таслима, во всех остальных — перед ним. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» после таслима совершает поклоны и имам, который при сомнении опирался на преобладающее мнение.",
+            "en": "Only in this case do the prostrations come after the taslim; in every other case they come before it. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” an imam who acted on his strongest opinion in doubt also makes them after the taslim.",
+            "ar": "ولا يكون السجود بعد السلام إلّا في هذه الصورة، وفيما عداها قبله، كما في «المنتهى» و«الإقناع»، وفي «عمدة الفقه» يسجد بعده أيضًا الإمامُ إذا بنى على غالب ظنّه.",
+            "tr": "Secdeler yalnızca bu durumda selâmdan sonra, diğer bütün durumlarda selâmdan önce yapılır. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta şüphede güçlü kanaatine göre hareket eden imam da selâmdan sonra secde eder."
           },
           "formulas": []
         },
@@ -3055,6 +3263,832 @@
             "en": "A latecomer makes the prostrations for his own mistake in the rak'ahs he makes up.",
             "ar": "والمسبوق يسجد لسهوه فيما يقضيه.",
             "tr": "Geç kalan, tamamladığı rekâtlardaki kendi hatası için secde eder."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "jumuah",
+      "kind": "article",
+      "title": {
+        "ru": "Пятничная молитва",
+        "en": "The Friday prayer",
+        "ar": "صلاة الجمعة",
+        "tr": "Cuma namazı"
+      },
+      "summary": {
+        "ru": "Кому обязательна, условия, хутба и сунны пятницы.",
+        "en": "Who must attend, conditions, the sermon and the sunnahs of Friday.",
+        "ar": "على من تجب، وشروطها، والخطبة، وسنن يوم الجمعة.",
+        "tr": "Kime farzdır, şartları, hutbe ve cuma günü sünnetleri."
+      },
+      "minutes": 5,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое джума",
+            "en": "What Jumu'ah is",
+            "ar": "ما الجمعة",
+            "tr": "Cuma nedir"
+          },
+          "instruction": {
+            "ru": "Джума — два ракаата вместо полуденной молитвы в пятницу. Она обязательна для свободного совершеннолетнего мужчины-мусульманина, который живёт в поселении и не в пути.",
+            "en": "Jumu'ah is two rak'ahs that replace the noon prayer on Friday. It is obligatory on every free, adult Muslim man who lives in a settlement and is not travelling.",
+            "ar": "الجمعة ركعتان تقوم مقام الظهر يوم الجمعة، وتجب على كلّ مسلمٍ ذكرٍ حرٍّ مكلَّفٍ مستوطنٍ غيرِ مسافر.",
+            "tr": "Cuma, cuma günü öğle namazının yerine kılınan iki rekâttır. Yerleşik olup yolcu olmayan, hür ve ergen her Müslüman erkeğe farzdır."
+          },
+          "details": {
+            "ru": "Женщине, путнику и больному она не обязательна; если они её совершили, Зухр с них снят. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "It is not obligatory on a woman, a traveller or a sick person; if they attend it, it replaces their Dhuhr. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ولا تجب على امرأةٍ ولا مسافرٍ ولا مريض، ومن حضرها منهم أجزأته عن الظهر. «المنتهى» و«الإقناع».",
+            "tr": "Kadına, yolcuya ve hastaya farz değildir; kılarlarsa öğle namazının yerine geçer. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "conditions",
+          "kind": "info",
+          "title": {
+            "ru": "Условия джумы",
+            "en": "Conditions of Jumu'ah",
+            "ar": "شروط صحّة الجمعة",
+            "tr": "Cumanın şartları"
+          },
+          "instruction": {
+            "ru": "Джума действительна при четырёх условиях: в её время, в постоянном поселении, при сорока присутствующих, на ком она обязательна, вместе с имамом, и после двух хутб.",
+            "en": "Jumu'ah is valid under four conditions: within its time, in a permanent settlement, with forty present on whom it is obligatory, the imam included, and after two sermons.",
+            "ar": "شروط صحّتها أربعة: الوقت، وأن تكون بقريةٍ مستوطنة، وحضور أربعين ممّن تجب عليهم بالإمام، وتقدّم خطبتين.",
+            "tr": "Cuma dört şartla geçerlidir: vaktinde, kalıcı bir yerleşim yerinde, imam dahil kendisine farz olan kırk kişinin bulunmasıyla ve iki hutbeden sonra."
+          },
+          "details": {
+            "ru": "Её время — от времени праздничной молитвы до конца времени Зухра; лучше — после полудня. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "Its time runs from the time of the Eid prayer to the end of the Dhuhr time; after noon is better. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ووقتها من أوّل وقت صلاة العيد إلى آخر وقت الظهر، وبعد الزوال أفضل. «المنتهى» و«الإقناع».",
+            "tr": "Vakti bayram namazı vaktinden öğle vaktinin sonuna kadardır; öğleden sonrası daha faziletlidir. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "khutbah",
+          "kind": "info",
+          "title": {
+            "ru": "Хутба",
+            "en": "The sermon",
+            "ar": "الخطبة",
+            "tr": "Hutbe"
+          },
+          "instruction": {
+            "ru": "Имам произносит две хутбы перед намазом и садится между ними. Во время хутбы молчите и слушайте: говорить в это время запрещено.",
+            "en": "The imam delivers two sermons before the prayer and sits between them. During the sermon keep silent and listen: talking then is forbidden.",
+            "ar": "يخطب الإمام خطبتين قبل الصلاة يجلس بينهما، ويحرم الكلام والإمام يخطب.",
+            "tr": "İmam namazdan önce iki hutbe okur ve aralarında oturur. Hutbe sırasında susup dinleyin: o sırada konuşmak haramdır."
+          },
+          "details": {
+            "ru": "Вошедший во время хутбы совершает два коротких ракаата приветствия мечети и садится.",
+            "en": "Whoever enters during the sermon prays two short rak'ahs to greet the mosque and sits down.",
+            "ar": "ومن دخل والإمام يخطب صلّى ركعتين خفيفتين ثم جلس.",
+            "tr": "Hutbe sırasında giren kişi iki kısa rekât tahiyyetü'l-mescid kılıp oturur."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "sunnahs",
+          "kind": "info",
+          "title": {
+            "ru": "Сунны пятницы",
+            "en": "Sunnahs of Friday",
+            "ar": "سنن يوم الجمعة",
+            "tr": "Cuma gününün sünnetleri"
+          },
+          "instruction": {
+            "ru": "Желательно совершить гусль, надеть лучшую одежду, умаститься благовониями, прийти пораньше, прочитать суру «Пещера» и больше читать салават Пророку ﷺ.",
+            "en": "It is recommended to take a ritual bath, wear your best clothes, apply perfume, come early, recite Surah al-Kahf and send many blessings on the Prophet ﷺ.",
+            "ar": "يُسنّ الغسل، ولبس أحسن الثياب، والتطيّب، والتبكير، وقراءة سورة الكهف، والإكثار من الصلاة على النبيّ ﷺ.",
+            "tr": "Gusül almak, en güzel elbiseyi giymek, güzel koku sürünmek, erken gitmek, Kehf sûresini okumak ve Peygamber'e ﷺ bolca salavat getirmek müstehaptır."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "late",
+          "kind": "info",
+          "title": {
+            "ru": "Если вы опоздали",
+            "en": "If you are late",
+            "ar": "إذا فاتك بعضها",
+            "tr": "Geç kalırsanız"
+          },
+          "instruction": {
+            "ru": "Если вы застали с имамом хотя бы один ракаат, восполните второй — это джума. Если застали меньше, после таслима имама совершите Зухр — четыре ракаата.",
+            "en": "If you caught at least one rak'ah with the imam, make up the second: that is Jumu'ah. If you caught less, after the imam's taslim pray Dhuhr: four rak'ahs.",
+            "ar": "من أدرك مع الإمام ركعةً أتمّها جمعة، ومن أدرك أقلّ من ذلك أتمّها ظهرًا.",
+            "tr": "İmamla en az bir rekâta yetiştiyseniz ikinciyi tamamlayın: bu cumadır. Daha azına yetiştiyseniz imamın selâmından sonra öğle namazını dört rekât kılın."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "jumuah-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Намаз джума",
+        "en": "The Jumu'ah prayer",
+        "ar": "صلاة الجمعة",
+        "tr": "Cuma namazı"
+      },
+      "summary": {
+        "ru": "2 ракаата вслух после двух хутб.",
+        "en": "2 rak'ahs aloud after the two sermons.",
+        "ar": "ركعتان جهريّتان بعد الخطبتين.",
+        "tr": "İki hutbeden sonra sesli okunan 2 rekât."
+      },
+      "minutes": 7,
+      "prayer": {
+        "code": "jumuah",
+        "kind": "jumuah",
+        "template": "fard",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "none"
+          },
+          {
+            "rakat": 2,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "eid",
+      "kind": "article",
+      "title": {
+        "ru": "Праздничная молитва",
+        "en": "The Eid prayer",
+        "ar": "صلاة العيدين",
+        "tr": "Bayram namazı"
+      },
+      "summary": {
+        "ru": "Время, порядок дня и праздничный такбир.",
+        "en": "Its time, the order of the day and the Eid takbir.",
+        "ar": "وقتها، وآداب اليوم، والتكبير.",
+        "tr": "Vakti, günün adabı ve bayram tekbiri."
+      },
+      "minutes": 4,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое праздничная молитва",
+            "en": "What the Eid prayer is",
+            "ar": "ما صلاة العيد",
+            "tr": "Bayram namazı nedir"
+          },
+          "instruction": {
+            "ru": "В праздник разговения и праздник жертвоприношения совершают два ракаата с дополнительными такбирами. Эта молитва — обязанность общины: если её совершили достаточно людей, с остальных она снята.",
+            "en": "On the feast of breaking the fast and the feast of sacrifice two rak'ahs with extra takbirs are prayed. It is a communal obligation: once enough people pray it, the rest are relieved of it.",
+            "ar": "يُصلّى في عيدَي الفطر والأضحى ركعتان بتكبيراتٍ زوائد، وهي فرض كفاية.",
+            "tr": "Ramazan ve Kurban bayramlarında ek tekbirlerle iki rekât kılınır. Bu namaz farz-ı kifâyedir: yeterli sayıda kişi kılınca diğerlerinden düşer."
+          },
+          "details": {
+            "ru": "Азана и икамы для неё нет. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "There is no adhan or iqamah for it. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ولا أذان لها ولا إقامة. «المنتهى» و«الإقناع».",
+            "tr": "Ezan ve kamet yoktur. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "time",
+          "kind": "info",
+          "title": {
+            "ru": "Время",
+            "en": "Its time",
+            "ar": "وقتها",
+            "tr": "Vakti"
+          },
+          "instruction": {
+            "ru": "От подъёма солнца на высоту копья и до полудня. Если о празднике узнали после полудня, молитву совершают на следующий день.",
+            "en": "From when the sun has risen a spear's length until noon. If the feast becomes known only after noon, the prayer is made the next day.",
+            "ar": "من ارتفاع الشمس قِيدَ رمحٍ إلى الزوال، فإن لم يُعلم بالعيد إلّا بعده صلَّوا من الغد.",
+            "tr": "Güneşin bir mızrak boyu yükselmesinden öğleye kadardır. Bayram öğleden sonra öğrenilirse namaz ertesi gün kılınır."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "day",
+          "kind": "info",
+          "title": {
+            "ru": "Порядок дня",
+            "en": "The order of the day",
+            "ar": "آداب اليوم",
+            "tr": "Günün adabı"
+          },
+          "instruction": {
+            "ru": "Желательно совершить гусль и надеть лучшее. В праздник разговения перед молитвой съешьте нечётное число фиников, а в праздник жертвоприношения не ешьте до молитвы. Идите одной дорогой, а возвращайтесь другой.",
+            "en": "Bathe and wear your best. On the feast of breaking the fast eat an odd number of dates before the prayer; on the feast of sacrifice do not eat until after it. Go by one way and return by another.",
+            "ar": "يُسنّ الغسل والتجمّل، والأكل قبل الخروج في الفطر تمراتٍ وترًا، والإمساك في الأضحى حتى يصلّي، ومخالفة الطريق.",
+            "tr": "Gusül alıp en güzel elbiseleri giyin. Ramazan bayramında namazdan önce tek sayıda hurma yiyin, Kurban bayramında namazdan sonraya kadar yemeyin. Bir yoldan gidip başka bir yoldan dönün."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "takbir",
+          "kind": "info",
+          "title": {
+            "ru": "Праздничный такбир",
+            "en": "The Eid takbir",
+            "ar": "التكبير",
+            "tr": "Bayram tekbiri"
+          },
+          "instruction": {
+            "ru": "Произносите праздничный такбир вслух: в праздник разговения — с ночи праздника до хутбы, в праздник жертвоприношения — также после каждой обязательной молитвы, совершённой в общине, с утра дня Арафа до Асра последнего дня ташрика.",
+            "en": "Say the Eid takbir aloud: for the feast of breaking the fast from the night of the feast until the sermon; for the feast of sacrifice also after every obligatory prayer prayed in congregation, from Fajr on the day of Arafah until Asr on the last day of tashriq.",
+            "ar": "يُجهر بالتكبير في الفطر من ليلة العيد إلى فراغ الخطبة، وفي الأضحى كذلك، ويكبّر فيه عقب كلّ فريضةٍ صلّاها في جماعة من فجر يوم عرفة إلى عصر آخر أيام التشريق.",
+            "tr": "Bayram tekbirini sesli söyleyin: Ramazan bayramında bayram gecesinden hutbenin sonuna kadar; Kurban bayramında ayrıca Arefe günü sabahından teşrik günlerinin son ikindisine kadar cemaatle kılınan her farzdan sonra."
+          },
+          "details": {
+            "ru": "«Мунтаха аль-Ирадат», «Икна'».",
+            "en": "“Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "«المنتهى» و«الإقناع».",
+            "tr": "“Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": [
+            "eid-takbir"
+          ]
+        },
+        {
+          "slug": "khutbah",
+          "kind": "info",
+          "title": {
+            "ru": "Хутба после молитвы",
+            "en": "The sermon after the prayer",
+            "ar": "الخطبة بعد الصلاة",
+            "tr": "Namazdan sonra hutbe"
+          },
+          "instruction": {
+            "ru": "После молитвы имам произносит две хутбы. Слушать их — сунна.",
+            "en": "After the prayer the imam delivers two sermons. Listening to them is a sunnah.",
+            "ar": "يخطب الإمام بعد الصلاة خطبتين، واستماعهما سنّة.",
+            "tr": "Namazdan sonra imam iki hutbe okur. Onları dinlemek sünnettir."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "eid-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Намаз праздника",
+        "en": "The Eid prayer",
+        "ar": "صلاة العيد",
+        "tr": "Bayram namazı"
+      },
+      "summary": {
+        "ru": "2 ракаата вслух: 6 дополнительных такбиров в первом и 5 во втором.",
+        "en": "2 rak'ahs aloud: 6 extra takbirs in the first and 5 in the second.",
+        "ar": "ركعتان جهريّتان: ستّ تكبيرات زوائد في الأولى وخمس في الثانية.",
+        "tr": "Sesli 2 rekât: birincide 6, ikincide 5 ek tekbir."
+      },
+      "minutes": 8,
+      "prayer": {
+        "code": "eid",
+        "kind": "eid",
+        "template": "eid",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "none"
+          },
+          {
+            "rakat": 2,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "janazah",
+      "kind": "article",
+      "title": {
+        "ru": "Молитва над покойным",
+        "en": "The funeral prayer",
+        "ar": "صلاة الجنازة",
+        "tr": "Cenaze namazı"
+      },
+      "summary": {
+        "ru": "Кто совершает, где встаёт имам и что делать опоздавшему.",
+        "en": "Who prays it, where the imam stands and what a latecomer does.",
+        "ar": "حكمها، وموقف الإمام، وما يفعل المسبوق.",
+        "tr": "Kim kılar, imam nerede durur ve geç kalan ne yapar."
+      },
+      "minutes": 4,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое джаназа",
+            "en": "What the funeral prayer is",
+            "ar": "ما صلاة الجنازة",
+            "tr": "Cenaze namazı nedir"
+          },
+          "instruction": {
+            "ru": "Молитва над умершим мусульманином — обязанность общины: если её совершил хотя бы один, с остальных она снята. В ней нет поясных и земных поклонов: только стояние и четыре такбира.",
+            "en": "Praying over a deceased Muslim is a communal obligation: once even one person prays it, the rest are relieved. It has no bowing or prostration: only standing and four takbirs.",
+            "ar": "الصلاة على الميت المسلم فرض كفاية، وليس فيها ركوعٌ ولا سجود، وإنّما قيامٌ وأربع تكبيرات.",
+            "tr": "Ölen Müslüman için namaz kılmak farz-ı kifâyedir: bir kişi bile kılarsa diğerlerinden düşer. Rükû ve secdesi yoktur; yalnızca kıyam ve dört tekbir vardır."
+          },
+          "details": {
+            "ru": "Для неё нужны те же условия, что и для других молитв: чистота, сокрытие аурата, кибла. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "It needs the same conditions as other prayers: purity, covering the 'awrah, facing the qibla. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ويُشترط لها ما يُشترط لسائر الصلوات من الطهارة والستر والاستقبال. «المنتهى» و«الإقناع».",
+            "tr": "Diğer namazların şartları bunda da gerekir: temizlik, avretin örtülmesi, kıbleye yönelmek. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "rows",
+          "kind": "info",
+          "title": {
+            "ru": "Ряды",
+            "en": "The rows",
+            "ar": "الصفوف",
+            "tr": "Saflar"
+          },
+          "instruction": {
+            "ru": "Желательно встать не менее чем в три ряда. Имам стоит напротив груди мужчины и середины тела женщины.",
+            "en": "It is recommended to stand in at least three rows. The imam stands at the chest of a man and the middle of a woman.",
+            "ar": "يُستحبّ ألّا تنقص الصفوف عن ثلاثة، ويقف الإمام عند صدر الرجل ووسط المرأة.",
+            "tr": "En az üç saf olmak müstehaptır. İmam erkeğin göğsü, kadının ortası hizasında durur."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "late",
+          "kind": "info",
+          "title": {
+            "ru": "Если вы опоздали",
+            "en": "If you are late",
+            "ar": "المسبوق",
+            "tr": "Geç kalırsanız"
+          },
+          "instruction": {
+            "ru": "Присоединитесь с такбиром и делайте то, что положено после вашего такбира. После таслима имама восполните пропущенные такбиры с тем, что после них положено.",
+            "en": "Join with a takbir and do what belongs after your takbir. After the imam's taslim make up the takbirs you missed with what belongs after them.",
+            "ar": "يدخل المسبوق مع الإمام ويقضي ما فاته من التكبيرات على صفتها بعد سلامه.",
+            "tr": "Tekbirle katılın ve tekbirinizden sonra yapılması gerekeni yapın. İmamın selâmından sonra kaçırdığınız tekbirleri, ardından gelenlerle birlikte tamamlayın."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "janazah-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Намаз джаназа",
+        "en": "Praying over the deceased",
+        "ar": "كيفيّة صلاة الجنازة",
+        "tr": "Cenaze namazının kılınışı"
+      },
+      "summary": {
+        "ru": "Четыре такбира стоя и один таслим.",
+        "en": "Four takbirs standing and one taslim.",
+        "ar": "أربع تكبيراتٍ قيامًا وتسليمة.",
+        "tr": "Ayakta dört tekbir ve bir selâm."
+      },
+      "minutes": 5,
+      "prayer": {
+        "code": "janazah",
+        "kind": "janazah",
+        "template": "janazah",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "sirr",
+            "sitting": "none"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "kusuf",
+      "kind": "article",
+      "title": {
+        "ru": "Молитва при затмении",
+        "en": "The eclipse prayer",
+        "ar": "صلاة الكسوف",
+        "tr": "Küsûf namazı"
+      },
+      "summary": {
+        "ru": "Когда её совершают и чем она отличается.",
+        "en": "When it is prayed and how it differs.",
+        "ar": "متى تُصلّى وبمَ تختلف.",
+        "tr": "Ne zaman kılınır ve farkı nedir."
+      },
+      "minutes": 3,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое молитва при затмении",
+            "en": "What the eclipse prayer is",
+            "ar": "ما صلاة الكسوف",
+            "tr": "Küsûf namazı nedir"
+          },
+          "instruction": {
+            "ru": "При солнечном или лунном затмении совершают два ракаата, в каждом из которых два чтения и два поясных поклона. Это подтверждённая сунна; её совершают в общине и поодиночке.",
+            "en": "During a solar or lunar eclipse two rak'ahs are prayed, each with two readings and two bows. It is an emphasised sunnah, prayed in congregation or alone.",
+            "ar": "إذا كسفت الشمس أو خسف القمر صُلّي ركعتان، في كلّ ركعةٍ قيامان وركوعان، وهي سنّةٌ مؤكّدة جماعةً وفرادى.",
+            "tr": "Güneş veya ay tutulmasında her birinde iki kıraat ve iki rükû bulunan iki rekât kılınır. Müekked sünnettir; cemaatle de tek başına da kılınır."
+          },
+          "details": {
+            "ru": "«Мунтаха аль-Ирадат», «Икна'».",
+            "en": "“Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "«المنتهى» و«الإقناع».",
+            "tr": "“Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "time",
+          "kind": "info",
+          "title": {
+            "ru": "Время",
+            "en": "Its time",
+            "ar": "وقتها",
+            "tr": "Vakti"
+          },
+          "instruction": {
+            "ru": "От начала затмения до его конца. Если затмение закончилось, молитву не совершают, а только поминают Аллаха и делают дуа.",
+            "en": "From the start of the eclipse to its end. Once it is over the prayer is not made; one only remembers Allah and supplicates.",
+            "ar": "وقتها من ابتداء الكسوف إلى التجلّي، فإن تجلّى لم تُقضَ، ويُكثَر من الذِّكر والدعاء.",
+            "tr": "Tutulmanın başlangıcından bitişine kadardır. Tutulma sona ererse namaz kılınmaz; yalnızca zikir ve dua edilir."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "reading",
+          "kind": "info",
+          "title": {
+            "ru": "Чтение",
+            "en": "The recitation",
+            "ar": "القراءة",
+            "tr": "Kıraat"
+          },
+          "instruction": {
+            "ru": "Чтение вслух даже днём. Первое чтение — долгое, каждое следующее стояние и поклон — короче предыдущих.",
+            "en": "The recitation is aloud even by day. The first reading is long; each following standing and bow is shorter than the one before.",
+            "ar": "يجهر بالقراءة ولو نهارًا، ويطيل القراءة الأولى، ويكون كلّ قيامٍ وركوعٍ أقصرَ ممّا قبله.",
+            "tr": "Gündüz bile sesli okunur. İlk kıraat uzun olur; sonraki her kıyam ve rükû bir öncekinden kısadır."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "kusuf-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Намаз при затмении",
+        "en": "The eclipse prayer",
+        "ar": "كيفيّة صلاة الكسوف",
+        "tr": "Küsûf namazının kılınışı"
+      },
+      "summary": {
+        "ru": "2 ракаата, в каждом два чтения и два поясных поклона.",
+        "en": "2 rak'ahs, each with two readings and two bows.",
+        "ar": "ركعتان، في كلّ ركعةٍ قيامان وركوعان.",
+        "tr": "Her birinde iki kıraat ve iki rükû bulunan 2 rekât."
+      },
+      "minutes": 12,
+      "prayer": {
+        "code": "kusuf",
+        "kind": "kusuf",
+        "template": "kusuf",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "none"
+          },
+          {
+            "rakat": 2,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "istisqa",
+      "kind": "article",
+      "title": {
+        "ru": "Молитва о дожде",
+        "en": "The prayer for rain",
+        "ar": "صلاة الاستسقاء",
+        "tr": "Yağmur namazı"
+      },
+      "summary": {
+        "ru": "Когда её совершают и что делают после.",
+        "en": "When it is prayed and what follows it.",
+        "ar": "متى تُصلّى وما يكون بعدها.",
+        "tr": "Ne zaman kılınır ve sonrasında ne yapılır."
+      },
+      "minutes": 3,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое молитва о дожде",
+            "en": "What the prayer for rain is",
+            "ar": "ما صلاة الاستسقاء",
+            "tr": "Yağmur namazı nedir"
+          },
+          "instruction": {
+            "ru": "При засухе и нехватке воды совершают молитву о дожде. Это подтверждённая сунна; её совершают так же, как праздничную: два ракаата с дополнительными такбирами.",
+            "en": "In drought and shortage of water the prayer for rain is made. It is an emphasised sunnah and is prayed like the Eid prayer: two rak'ahs with extra takbirs.",
+            "ar": "إذا أجدبت الأرض وقحط المطر شُرعت صلاة الاستسقاء، وهي سنّةٌ مؤكّدة، وصفتها في موضعها وأحكامها كصلاة العيد.",
+            "tr": "Kuraklık ve su kıtlığında yağmur namazı kılınır. Müekked sünnettir ve bayram namazı gibi kılınır: ek tekbirli iki rekât."
+          },
+          "details": {
+            "ru": "Перед ней желательно каяться, раздавать милостыню и выходить в смирении. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "Before it, it is recommended to repent, give charity and go out in humility. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ويُستحبّ قبلها التوبة والصدقة والخروج متواضعًا متخشّعًا. «المنتهى» و«الإقناع».",
+            "tr": "Öncesinde tövbe etmek, sadaka vermek ve tevazu içinde çıkmak müstehaptır. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "khutbah",
+          "kind": "info",
+          "title": {
+            "ru": "Хутба и дуа",
+            "en": "The sermon and supplication",
+            "ar": "الخطبة والدعاء",
+            "tr": "Hutbe ve dua"
+          },
+          "instruction": {
+            "ru": "После молитвы имам произносит одну хутбу, много просит прощения и делает дуа о дожде, высоко подняв руки. Затем он поворачивается к кибле и переворачивает накидку; люди делают так же.",
+            "en": "After the prayer the imam delivers one sermon, seeks forgiveness often and supplicates for rain with his hands raised high. Then he turns to the qibla and turns his cloak inside out; the people do the same.",
+            "ar": "يخطب بعد الصلاة خطبةً واحدة يُكثر فيها الاستغفار، ويدعو رافعًا يديه، ثم يستقبل القبلة ويحوّل رداءه ويفعل الناس كذلك.",
+            "tr": "Namazdan sonra imam bir hutbe okur, çokça istiğfar eder ve ellerini yükseğe kaldırarak yağmur için dua eder. Sonra kıbleye dönüp abasını ters çevirir; cemaat de aynısını yapar."
+          },
+          "formulas": [
+            "istisqa-dua"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "istisqa-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Намаз о дожде",
+        "en": "The rain prayer",
+        "ar": "كيفيّة صلاة الاستسقاء",
+        "tr": "Yağmur namazının kılınışı"
+      },
+      "summary": {
+        "ru": "2 ракаата вслух, как праздничная молитва.",
+        "en": "2 rak'ahs aloud, like the Eid prayer.",
+        "ar": "ركعتان جهريّتان كصلاة العيد.",
+        "tr": "Bayram namazı gibi sesli 2 rekât."
+      },
+      "minutes": 8,
+      "prayer": {
+        "code": "istisqa",
+        "kind": "istisqa",
+        "template": "eid",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "none"
+          },
+          {
+            "rakat": 2,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "travel",
+      "kind": "article",
+      "title": {
+        "ru": "Молитва в пути",
+        "en": "Prayer while travelling",
+        "ar": "صلاة المسافر",
+        "tr": "Yolcu namazı"
+      },
+      "summary": {
+        "ru": "Сокращение и объединение молитв.",
+        "en": "Shortening and combining prayers.",
+        "ar": "القصر والجمع.",
+        "tr": "Namazları kısaltmak ve birleştirmek."
+      },
+      "minutes": 4,
+      "steps": [
+        {
+          "slug": "qasr",
+          "kind": "info",
+          "title": {
+            "ru": "Сокращение",
+            "en": "Shortening",
+            "ar": "القصر",
+            "tr": "Kısaltma"
+          },
+          "instruction": {
+            "ru": "Путник сокращает четырёхракаатные молитвы — Зухр, Аср и Ишу — до двух ракаатов. Фаджр и Магриб не сокращаются. Сокращать лучше, чем совершать полностью.",
+            "en": "A traveller shortens the four-rak'ah prayers, Dhuhr, Asr and Isha, to two rak'ahs. Fajr and Maghrib are not shortened. Shortening is better than praying them in full.",
+            "ar": "يقصر المسافر الرباعيّة إلى ركعتين، ولا قصر في الفجر والمغرب، والقصر أفضل من الإتمام.",
+            "tr": "Yolcu dört rekâtlı namazları, yani öğle, ikindi ve yatsıyı iki rekâta indirir. Sabah ve akşam kısaltılmaz. Kısaltmak tam kılmaktan daha faziletlidir."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "conditions",
+          "kind": "info",
+          "title": {
+            "ru": "Когда можно сокращать",
+            "en": "When you may shorten",
+            "ar": "شروط القصر",
+            "tr": "Ne zaman kısaltılır"
+          },
+          "instruction": {
+            "ru": "Если путь дозволенный и не короче шестнадцати фарсахов, примерно восьмидесяти километров. Сокращать начинают, покинув дома своего поселения.",
+            "en": "If the journey is permitted and not shorter than sixteen farsakhs, about eighty kilometres. You begin shortening once you have left the houses of your settlement.",
+            "ar": "إذا كان سفرًا مباحًا يبلغ ستة عشر فرسخًا، ويبدأ القصر إذا فارق بيوت قريته.",
+            "tr": "Yolculuk mubah olup on altı fersahtan, yaklaşık seksen kilometreden kısa değilse. Yerleşim yerinizin evlerinden ayrılınca kısaltmaya başlarsınız."
+          },
+          "details": {
+            "ru": "Кто намерен остаться в одном месте дольше четырёх дней, совершает молитвы полностью. Если вы молитесь за имамом, который совершает полностью, — совершайте полностью. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "Whoever intends to stay in one place longer than four days prays in full. If you pray behind an imam who prays in full, pray in full. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "ومن نوى إقامةً أكثر من أربعة أيام أتمّ، ومن ائتمّ بمقيمٍ أتمّ. «المنتهى» و«الإقناع».",
+            "tr": "Bir yerde dört günden fazla kalmaya niyet eden tam kılar. Tam kılan bir imama uyarsanız tam kılın. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "jam",
+          "kind": "info",
+          "title": {
+            "ru": "Объединение",
+            "en": "Combining",
+            "ar": "الجمع",
+            "tr": "Birleştirme"
+          },
+          "instruction": {
+            "ru": "Путнику можно объединить Зухр с Асром и Магриб с Ишой — во время первой или второй из них. Объединять можно и больному, которому трудно молиться каждую в своё время, а Магриб с Ишой — также в дождь.",
+            "en": "A traveller may combine Dhuhr with Asr and Maghrib with Isha, in the time of the first or the second. A sick person for whom each prayer at its time is hard may also combine, and Maghrib with Isha may be combined in rain.",
+            "ar": "يجوز للمسافر الجمع بين الظهر والعصر وبين المغرب والعشاء في وقت إحداهما، وللمريض الذي يشقّ عليه، وبين العشاءين للمطر.",
+            "tr": "Yolcu öğleyle ikindiyi, akşamla yatsıyı bunlardan birinin vaktinde birleştirebilir. Her namazı vaktinde kılması zor olan hasta da birleştirebilir; akşam ile yatsı yağmurda da birleştirilir."
+          },
+          "details": {
+            "ru": "При объединении в первое время нужно намерение объединить при начале первой молитвы и не делать между ними перерыва.",
+            "en": "When combining in the first time you must intend to combine at the start of the first prayer and not leave a gap between them.",
+            "ar": "ويُشترط لجمع التقديم نيّته عند الإحرام بالأولى والموالاة بينهما.",
+            "tr": "İlk vakitte birleştirirken birinci namazın başında birleştirmeye niyet etmek ve aralarına ara koymamak gerekir."
+          },
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "travel-prayer",
+      "kind": "prayer",
+      "title": {
+        "ru": "Зухр в пути",
+        "en": "Dhuhr while travelling",
+        "ar": "الظهر في السفر",
+        "tr": "Yolculukta öğle namazı"
+      },
+      "summary": {
+        "ru": "2 ракаата вместо четырёх, чтение про себя.",
+        "en": "2 rak'ahs instead of four, recited silently.",
+        "ar": "ركعتان بدل أربع، والقراءة سرّيّة.",
+        "tr": "Dört yerine 2 rekât, gizli okunur."
+      },
+      "minutes": 6,
+      "prayer": {
+        "code": "dhuhr-qasr",
+        "kind": "fard",
+        "template": "fard",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "sirr",
+            "surah_after_fatiha": true,
+            "sitting": "none"
+          },
+          {
+            "rakat": 2,
+            "recitation": "sirr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "fear",
+      "kind": "article",
+      "title": {
+        "ru": "Молитва при опасности",
+        "en": "The fear prayer",
+        "ar": "صلاة الخوف",
+        "tr": "Korku namazı"
+      },
+      "summary": {
+        "ru": "Как молятся, когда нужно охранять друг друга.",
+        "en": "How to pray when you must guard one another.",
+        "ar": "كيف يُصلّى إذا احتيج إلى الحراسة.",
+        "tr": "Birbirini korumak gerektiğinde nasıl kılınır."
+      },
+      "minutes": 4,
+      "steps": [
+        {
+          "slug": "what",
+          "kind": "info",
+          "title": {
+            "ru": "Что такое молитва при опасности",
+            "en": "What the fear prayer is",
+            "ar": "ما صلاة الخوف",
+            "tr": "Korku namazı nedir"
+          },
+          "instruction": {
+            "ru": "Когда мусульманам в дозволенном сражении угрожает враг, они молятся в общине так, чтобы часть охраняла остальных. Имам Ахмад считал допустимыми все переданные от Пророка ﷺ способы.",
+            "en": "When Muslims in a permitted fight are threatened by an enemy, they pray in congregation so that some guard the others. Imam Ahmad held that every way reported from the Prophet ﷺ is permissible.",
+            "ar": "إذا خيف العدوّ في قتالٍ مباح صُلّيت جماعةً على وجهٍ تحرس فيه طائفةٌ الأخرى، وأجاز الإمام أحمد كلَّ صفةٍ صحّت عن النبيّ ﷺ.",
+            "tr": "Müslümanlar mubah bir savaşta düşman tehdidi altındayken bir kısmı diğerlerini koruyacak şekilde cemaatle kılarlar. İmam Ahmed, Peygamber'den ﷺ nakledilen bütün şekilleri caiz görmüştür."
+          },
+          "details": {
+            "ru": "«Мунтаха аль-Ирадат», «Икна'».",
+            "en": "“Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "«المنتهى» و«الإقناع».",
+            "tr": "“Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "dhat-riqa",
+          "kind": "info",
+          "title": {
+            "ru": "Способ Зату-р-рика'",
+            "en": "The Dhat ar-Riqa' way",
+            "ar": "صفة ذات الرقاع",
+            "tr": "Zâtü'r-Rikâ' şekli"
+          },
+          "instruction": {
+            "ru": "Имам совершает с первой группой один ракаат и остаётся стоять; они сами завершают молитву, делают таслим и уходят на охрану. Вторая группа приходит и совершает с имамом второй ракаат; имам сидит, пока они восполняют свой, и делает таслим вместе с ними.",
+            "en": "The imam prays one rak'ah with the first group and stays standing; they complete the prayer themselves, make the taslim and go to guard. The second group comes and prays the second rak'ah with the imam; he sits while they make up theirs and makes the taslim with them.",
+            "ar": "يصلّي الإمام بطائفةٍ ركعةً ثم يثبت قائمًا فيتمّون لأنفسهم ويسلّمون ويذهبون للحراسة، ثم تأتي الأخرى فيصلّي بهم الركعة الثانية، ثم يجلس حتى يتمّوا ويسلّم بهم.",
+            "tr": "İmam birinci grupla bir rekât kılar ve ayakta kalır; onlar namazı kendileri tamamlayıp selâm verir ve nöbete giderler. İkinci grup gelip imamla ikinci rekâtı kılar; imam onlar kendi rekâtlarını tamamlayana kadar oturur ve onlarla birlikte selâm verir."
+          },
+          "details": {
+            "ru": "Этот способ имам Ахмад предпочитал другим. В Магрибе с первой группой совершают два ракаата.",
+            "en": "Imam Ahmad preferred this way to the others. In Maghrib the first group prays two rak'ahs.",
+            "ar": "واختار الإمام أحمد هذه الصفة، ويصلّي في المغرب بالأولى ركعتين.",
+            "tr": "İmam Ahmed bu şekli diğerlerine tercih etmiştir. Akşam namazında birinci grupla iki rekât kılınır."
+          },
+          "formulas": []
+        },
+        {
+          "slug": "intense",
+          "kind": "info",
+          "title": {
+            "ru": "При сильной опасности",
+            "en": "In intense danger",
+            "ar": "عند اشتداد الخوف",
+            "tr": "Tehlike şiddetlenince"
+          },
+          "instruction": {
+            "ru": "Если опасность усилилась, молятся каждый сам — пешком или верхом, лицом к кибле или нет, делая поклоны кивком, насколько возможно.",
+            "en": "If the danger grows intense, each prays on his own, on foot or riding, facing the qibla or not, bowing with a nod as far as he can.",
+            "ar": "إذا اشتدّ الخوف صلّوا رجالًا وركبانًا إلى القبلة وغيرها، يومئون بالركوع والسجود حسب طاقتهم.",
+            "tr": "Tehlike şiddetlenirse herkes kendi başına, yaya veya binekli, kıbleye dönük ya da değil, gücü yettiğince ima ile rükû ve secde ederek kılar."
           },
           "formulas": []
         }
@@ -3874,7 +4908,7 @@
           },
           "kind": "recitation",
           "position": "tashahhud",
-          "ruling": "wajib",
+          "ruling": "rukn",
           "title": {
             "ru": "Салават Пророку ﷺ",
             "en": "Blessings on the Prophet ﷺ",
@@ -3888,10 +4922,10 @@
             "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
           },
           "details": {
-            "ru": "Салават в последнем ташаххуде — ваджиб.",
-            "en": "The salawat in the final tashahhud is obligatory (wajib).",
-            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير واجبة.",
-            "tr": "Son teşehhüdde salavat vâciptir."
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
           },
           "media": "position-tashahhud",
           "formulas": [
@@ -3909,7 +4943,7 @@
           },
           "kind": "recitation",
           "position": "tawarruk",
-          "ruling": "wajib",
+          "ruling": "rukn",
           "title": {
             "ru": "Салават Пророку ﷺ",
             "en": "Blessings on the Prophet ﷺ",
@@ -3923,10 +4957,10 @@
             "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
           },
           "details": {
-            "ru": "Салават в последнем ташаххуде — ваджиб.",
-            "en": "The salawat in the final tashahhud is obligatory (wajib).",
-            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير واجبة.",
-            "tr": "Son teşehhüdde salavat vâciptir."
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
           },
           "media": "position-tawarruk",
           "formulas": [
@@ -4024,10 +5058,10 @@
             "tr": "Başınızı sağa çevirip “Esselâmü aleyküm ve rahmetullâh” deyin, sonra sola çevirip aynısını söyleyin. Namaz tamamlandı."
           },
           "details": {
-            "ru": "Первый таслим — рукн, второй — ваджиб.",
-            "en": "The first taslim is a pillar; the second is obligatory (wajib).",
-            "ar": "التسليمة الأولى ركن، والثانية واجبة.",
-            "tr": "Birinci selâm rükün, ikincisi vâciptir."
+            "ru": "Оба таслима — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» второй таслим — ваджиб.",
+            "en": "Both taslims are pillars. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” the second taslim is obligatory (wajib).",
+            "ar": "التسليمتان ركن، كما في «المنتهى» و«الإقناع»، والثانية في «عمدة الفقه» واجبة.",
+            "tr": "Her iki selâm da rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta ikinci selâm vâciptir."
           },
           "media": "position-taslim",
           "formulas": [
@@ -4909,7 +5943,7 @@
           },
           "kind": "recitation",
           "position": "tashahhud",
-          "ruling": "wajib",
+          "ruling": "rukn",
           "title": {
             "ru": "Салават Пророку ﷺ",
             "en": "Blessings on the Prophet ﷺ",
@@ -4923,10 +5957,10 @@
             "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
           },
           "details": {
-            "ru": "Салават в последнем ташаххуде — ваджиб.",
-            "en": "The salawat in the final tashahhud is obligatory (wajib).",
-            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير واجبة.",
-            "tr": "Son teşehhüdde salavat vâciptir."
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
           },
           "media": "position-tashahhud",
           "formulas": [
@@ -4944,7 +5978,7 @@
           },
           "kind": "recitation",
           "position": "tawarruk",
-          "ruling": "wajib",
+          "ruling": "rukn",
           "title": {
             "ru": "Салават Пророку ﷺ",
             "en": "Blessings on the Prophet ﷺ",
@@ -4958,10 +5992,10 @@
             "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
           },
           "details": {
-            "ru": "Салават в последнем ташаххуде — ваджиб.",
-            "en": "The salawat in the final tashahhud is obligatory (wajib).",
-            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير واجبة.",
-            "tr": "Son teşehhüdde salavat vâciptir."
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
           },
           "media": "position-tawarruk",
           "formulas": [
@@ -5059,10 +6093,10 @@
             "tr": "Başınızı sağa çevirip “Esselâmü aleyküm ve rahmetullâh” deyin, sonra sola çevirip aynısını söyleyin. Namaz tamamlandı."
           },
           "details": {
-            "ru": "Первый таслим — рукн, второй — ваджиб.",
-            "en": "The first taslim is a pillar; the second is obligatory (wajib).",
-            "ar": "التسليمة الأولى ركن، والثانية واجبة.",
-            "tr": "Birinci selâm rükün, ikincisi vâciptir."
+            "ru": "Оба таслима — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» второй таслим — ваджиб.",
+            "en": "Both taslims are pillars. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” the second taslim is obligatory (wajib).",
+            "ar": "التسليمتان ركن، كما في «المنتهى» و«الإقناع»، والثانية في «عمدة الفقه» واجبة.",
+            "tr": "Her iki selâm da rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta ikinci selâm vâciptir."
           },
           "media": "position-taslim",
           "formulas": [
@@ -5097,6 +6131,1731 @@
           },
           "formulas": [
             "after-witr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eid",
+      "steps": [
+        {
+          "slug": "intention",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Намерение",
+            "en": "Intention",
+            "ar": "النيّة",
+            "tr": "Niyet"
+          },
+          "instruction": {
+            "ru": "Встаньте лицом к кибле и определите в сердце, какую молитву вы совершаете.",
+            "en": "Stand facing the qibla and settle in your heart which prayer you are performing.",
+            "ar": "قف مستقبل القبلة، وعيِّن بقلبك الصلاة التي تصلّيها.",
+            "tr": "Kıbleye dönerek ayakta durun ve hangi namazı kıldığınızı kalbinizde belirleyin."
+          },
+          "details": {
+            "ru": "Намерение — условие действительности намаза. Произносить его вслух не нужно.",
+            "en": "The intention is a condition of the prayer's validity. You do not need to say it aloud.",
+            "ar": "النيّة شرطٌ لصحّة الصلاة، ولا يُشرع التلفّظ بها.",
+            "tr": "Niyet, namazın geçerlilik şartıdır. Dille söylemeye gerek yoktur."
+          },
+          "media": "position-qiyam",
+          "formulas": [],
+          "ruling": "shart"
+        },
+        {
+          "slug": "takbir",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Начальный такбир",
+            "en": "Opening takbir",
+            "ar": "تكبيرة الإحرام",
+            "tr": "İftitah tekbiri"
+          },
+          "instruction": {
+            "ru": "Поднимите руки до плеч и скажите «Аллаху акбар». С этого момента вы в намазе.",
+            "en": "Raise your hands to your shoulders and say “Allahu akbar”. From now on you are in the prayer.",
+            "ar": "ارفع يديك حذو منكبيك وقل: الله أكبر، وبها تدخل في الصلاة.",
+            "tr": "Ellerinizi omuz hizasına kaldırıp “Allâhu ekber” deyin. Artık namazdasınız."
+          },
+          "details": {
+            "ru": "Поднимать руки — сунна. После такбира нельзя говорить постороннее и отворачиваться от киблы.",
+            "en": "Raising the hands is a sunnah. After the takbir you may not speak of other things or turn away from the qibla.",
+            "ar": "رفع اليدين سنّة، ولا يجوز بعد التكبير الكلام ولا الالتفات عن القبلة.",
+            "tr": "Elleri kaldırmak sünnettir. Tekbirden sonra başka söz söylemek ve kıbleden yüz çevirmek caiz değildir."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "istiftah",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Ду'а начала",
+            "en": "Opening supplication",
+            "ar": "دعاء الاستفتاح",
+            "tr": "Sübhâneke"
+          },
+          "instruction": {
+            "ru": "Положите правую руку на левую ниже пупка и тихо прочитайте ду'а начала, затем «А'узу би-Лляхи…».",
+            "en": "Place your right hand over the left below the navel and quietly recite the opening supplication, then “A'udhu billahi…”.",
+            "ar": "ضع يمينك على شمالك تحت سرّتك، واقرأ دعاء الاستفتاح سرًّا، ثم تعوّذ.",
+            "tr": "Sağ elinizi sol elinizin üzerine, göbeğinizin altına koyun ve açılış duasını sessizce okuyun, ardından “Eûzü billâhi…” deyin."
+          },
+          "details": {
+            "ru": "В праздничной молитве и молитве о дожде прибегание к защите Аллаха и басмала идут после дополнительных такбиров.",
+            "en": "In the Eid and rain prayers, seeking refuge and the basmala come after the extra takbirs.",
+            "ar": "وفي صلاة العيد والاستسقاء تكون الاستعاذة والبسملة بعد التكبيرات الزوائد.",
+            "tr": "Bayram ve yağmur namazında eûzü ve besmele ek tekbirlerden sonra gelir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "istiftah"
+          ]
+        },
+        {
+          "slug": "extra-takbirs",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Шесть дополнительных такбиров",
+            "en": "Six extra takbirs",
+            "ar": "التكبيرات الستّ الزوائد",
+            "tr": "Altı ek tekbir"
+          },
+          "instruction": {
+            "ru": "После вступительного дуа произнесите ещё шесть такбиров, поднимая руки с каждым. Между такбирами скажите: «Аллаху акбару кабиран…».",
+            "en": "After the opening supplication say six more takbirs, raising your hands with each. Between the takbirs say: “Allahu akbaru kabiran…”.",
+            "ar": "بعد الاستفتاح كبِّر ستَّ تكبيراتٍ ترفع يديك مع كلّ تكبيرة، وتقول بين كلّ تكبيرتين: الله أكبر كبيرًا…",
+            "tr": "Açılış duasından sonra her birinde ellerinizi kaldırarak altı tekbir daha getirin. Tekbirlerin arasında “Allâhu ekber kebîrâ…” deyin."
+          },
+          "details": {
+            "ru": "Вместе с начальным такбиром их семь. Дополнительные такбиры и слова между ними — сунна; кто их пропустил, намаз не теряет. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "With the opening takbir there are seven. The extra takbirs and the words between them are sunnah; leaving them does not spoil the prayer. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "وهي مع تكبيرة الإحرام سبع، والزوائد والذِّكر بينها سنّة لا تبطل الصلاة بتركها. «المنتهى» و«الإقناع».",
+            "tr": "Açılış tekbiriyle birlikte yedi olur. Ek tekbirler ve aralarındaki sözler sünnettir; terk edilmesi namazı bozmaz. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir",
+            "eid-dhikr"
+          ],
+          "repeat": 6
+        },
+        {
+          "slug": "refuge",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Прибегание к защите",
+            "en": "Seeking refuge",
+            "ar": "الاستعاذة",
+            "tr": "Eûzü"
+          },
+          "instruction": {
+            "ru": "Сложите руки и про себя скажите: «А'узу би-Лляхи мина-ш-шайтани-р-раджим».",
+            "en": "Fold your hands and say silently: “A'udhu billahi mina sh-shaytani r-rajim”.",
+            "ar": "ضع يديك واستعذ سرًّا.",
+            "tr": "Ellerinizi bağlayıp içinizden “Eûzü billâhi mine'ş-şeytâni'r-racîm” deyin."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "taawwudh"
+          ]
+        },
+        {
+          "slug": "extra-takbirs",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Пять дополнительных такбиров",
+            "en": "Five extra takbirs",
+            "ar": "التكبيرات الخمس الزوائد",
+            "tr": "Beş ek tekbir"
+          },
+          "instruction": {
+            "ru": "Встав во втором ракаате, перед чтением произнесите пять такбиров, поднимая руки с каждым и говоря между ними то же.",
+            "en": "Having stood up for the second rak'ah, before reciting say five takbirs, raising your hands with each and saying the same between them.",
+            "ar": "إذا قمت إلى الثانية فكبِّر قبل القراءة خمسَ تكبيرات ترفع يديك مع كلّ واحدة وتذكر بينها مثل ذلك.",
+            "tr": "İkinci rekâta kalkınca okumadan önce her birinde ellerinizi kaldırarak beş tekbir getirin ve aralarında aynı sözleri söyleyin."
+          },
+          "details": {
+            "ru": "Не считая такбира, с которым вы встали. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "Not counting the takbir you stood up with. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "سوى تكبيرة القيام. «المنتهى» و«الإقناع».",
+            "tr": "Kalkarken getirdiğiniz tekbir hariç. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir",
+            "eid-dhikr"
+          ],
+          "repeat": 5
+        },
+        {
+          "slug": "fatiha",
+          "when": {
+            "recitation": "jahr",
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Аль-Фатиха",
+            "en": "Al-Fatihah",
+            "ar": "الفاتحة",
+            "tr": "Fâtiha"
+          },
+          "instruction": {
+            "ru": "Тихо скажите «Бисмилляхи-р-Рахмани-р-Рахим», затем прочитайте Аль-Фатиху вслух и скажите «Амин».",
+            "en": "Quietly say “Bismillahi r-Rahmani r-Rahim”, then recite al-Fatihah aloud and say “Amin”.",
+            "ar": "قل سرًّا: بسم الله الرحمن الرحيم، ثم اقرأ الفاتحة جهرًا، وقل: آمين.",
+            "tr": "İçinizden “Bismillâhirrahmânirrahîm” deyin, sonra Fâtiha'yı sesli okuyun ve “Âmîn” deyin."
+          },
+          "details": {
+            "ru": "Чтение Фатихи — рукн в каждом ракаате. В этом ракаате имам читает вслух; молящийся один может читать вслух или про себя. Басмалу читают про себя, «Амин» — вслух.",
+            "en": "Reciting al-Fatihah is a pillar in every rak'ah. In this rak'ah the imam recites aloud; someone praying alone may recite aloud or silently. The basmala is said silently, “Amin” aloud.",
+            "ar": "قراءة الفاتحة ركنٌ في كلّ ركعة. وفي هذه الركعة يجهر الإمام، والمنفرد مخيّر بين الجهر والإسرار. وتُقال البسملة سرًّا، ويُجهر بآمين.",
+            "tr": "Fâtiha okumak her rekâtta rükündür. Bu rekâtta imam sesli okur; tek başına kılan sesli veya sessiz okuyabilir. Besmele sessiz, “Âmîn” sesli söylenir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "basmala",
+            "fatiha",
+            "amin"
+          ]
+        },
+        {
+          "slug": "fatiha",
+          "when": {
+            "recitation": "jahr",
+            "rakat": [
+              2,
+              3,
+              4
+            ]
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Аль-Фатиха",
+            "en": "Al-Fatihah",
+            "ar": "الفاتحة",
+            "tr": "Fâtiha"
+          },
+          "instruction": {
+            "ru": "Тихо скажите «Бисмилляхи-р-Рахмани-р-Рахим», затем прочитайте Аль-Фатиху вслух и скажите «Амин».",
+            "en": "Quietly say “Bismillahi r-Rahmani r-Rahim”, then recite al-Fatihah aloud and say “Amin”.",
+            "ar": "قل سرًّا: بسم الله الرحمن الرحيم، ثم اقرأ الفاتحة جهرًا، وقل: آمين.",
+            "tr": "İçinizden “Bismillâhirrahmânirrahîm” deyin, sonra Fâtiha'yı sesli okuyun ve “Âmîn” deyin."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "basmala",
+            "fatiha",
+            "amin"
+          ]
+        },
+        {
+          "slug": "surah",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Сура",
+            "en": "A surah",
+            "ar": "السورة",
+            "tr": "Sûre"
+          },
+          "instruction": {
+            "ru": "Вслух прочитайте суру «Высочайший» (87).",
+            "en": "Recite Surah al-A'la (87) aloud.",
+            "ar": "اقرأ جهرًا سورة الأعلى.",
+            "tr": "Sesli olarak A'lâ (87) sûresini okuyun."
+          },
+          "details": {
+            "ru": "Желательно читать «Высочайший» в первом ракаате и «Покрывающее» во втором; можно и другие суры.",
+            "en": "It is recommended to recite al-A'la in the first rak'ah and al-Ghashiyah in the second; other surahs are also allowed.",
+            "ar": "يُستحبّ أن يقرأ في الأولى بـ«سبّح» وفي الثانية بـ«الغاشية»، ويجوز غيرهما.",
+            "tr": "Birinci rekâtta A'lâ, ikincide Gâşiye okumak müstehaptır; başka sûreler de okunabilir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "ala"
+          ]
+        },
+        {
+          "slug": "surah",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Сура",
+            "en": "A surah",
+            "ar": "السورة",
+            "tr": "Sûre"
+          },
+          "instruction": {
+            "ru": "Вслух прочитайте суру «Покрывающее» (88).",
+            "en": "Recite Surah al-Ghashiyah (88) aloud.",
+            "ar": "اقرأ جهرًا سورة الغاشية.",
+            "tr": "Sesli olarak Gâşiye (88) sûresini okuyun."
+          },
+          "details": {
+            "ru": "Желательно читать «Высочайший» в первом ракаате и «Покрывающее» во втором; можно и другие суры.",
+            "en": "It is recommended to recite al-A'la in the first rak'ah and al-Ghashiyah in the second; other surahs are also allowed.",
+            "ar": "يُستحبّ أن يقرأ في الأولى بـ«سبّح» وفي الثانية بـ«الغاشية»، ويجوز غيرهما.",
+            "tr": "Birinci rekâtta A'lâ, ikincide Gâşiye okumak müstehaptır; başka sûreler de okunabilir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "ghashiya"
+          ]
+        },
+        {
+          "slug": "ruku",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», наклонитесь, положив ладони на колени, и произнесите тасбих три раза.",
+            "en": "Say “Allahu akbar”, bow with your palms on your knees and say the tasbih three times.",
+            "ar": "كبّر واركع واضعًا يديك على ركبتيك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” deyip avuçlarınız dizlerinizde olarak eğilin ve üç kez tesbih edin."
+          },
+          "details": {
+            "ru": "Такбир при переходе и тасбих один раз — ваджиб, три раза — сунна. Перед наклоном поднимите руки до плеч — это сунна. Спина ровная; задержитесь, пока тело не успокоится.",
+            "en": "The takbir of moving and saying the tasbih once are obligatory (wajib); three times is a sunnah. Raise your hands to your shoulders before bowing; this is a sunnah. Keep your back level and stay until your body is still.",
+            "ar": "تكبيرة الانتقال والتسبيح مرّةً واجبان، والثلاث سنّة، ورفع اليدين قبل الركوع سنّة. ومُدَّ ظهرك واطمئنّ.",
+            "tr": "Geçiş tekbiri ve bir kez tesbih vâciptir, üç kez sünnettir. Eğilmeden önce ellerinizi omuz hizasına kaldırmak sünnettir. Sırtınız düz olsun ve bedeniniz durgunlaşana kadar bekleyin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "ruku",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», наклонитесь, положив ладони на колени, и произнесите тасбих три раза.",
+            "en": "Say “Allahu akbar”, bow with your palms on your knees and say the tasbih three times.",
+            "ar": "كبّر واركع واضعًا يديك على ركبتيك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” deyip avuçlarınız dizlerinizde olarak eğilin ve üç kez tesbih edin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "itidal",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "itidal",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Выпрямление",
+            "en": "Rising from ruku'",
+            "ar": "الرفع من الركوع",
+            "tr": "Rükûdan doğrulma"
+          },
+          "instruction": {
+            "ru": "Выпрямитесь, говоря «Сами'а-Ллаху лиман хамидах», и поднимите руки до плеч. Встав ровно, скажите «Раббана ва лакаль-хамд».",
+            "en": "Rise saying “Sami'a Allahu liman hamidah” and raise your hands to your shoulders. Once upright, say “Rabbana wa lakal-hamd”.",
+            "ar": "ارفع رأسك قائلًا: سمع الله لمن حمده، رافعًا يديك، فإذا اعتدلت قائمًا فقل: ربّنا ولك الحمد.",
+            "tr": "“Semiallâhu limen hamideh” diyerek doğrulun ve ellerinizi omuz hizasına kaldırın. Dik durunca “Rabbenâ ve leke'l-hamd” deyin."
+          },
+          "details": {
+            "ru": "Обе формулы — ваджиб. Молящийся за имамом говорит только «Раббана ва лакаль-хамд».",
+            "en": "Both formulas are obligatory (wajib). Someone praying behind an imam says only “Rabbana wa lakal-hamd”.",
+            "ar": "التسميع والتحميد واجبان، ويقتصر المأموم على: ربّنا ولك الحمد.",
+            "tr": "Her iki söz de vâciptir. İmama uyan yalnızca “Rabbenâ ve leke'l-hamd” der."
+          },
+          "media": "position-itidal",
+          "formulas": [
+            "sami-allah",
+            "rabbana-hamd"
+          ]
+        },
+        {
+          "slug": "itidal",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "itidal",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Выпрямление",
+            "en": "Rising from ruku'",
+            "ar": "الرفع من الركوع",
+            "tr": "Rükûdan doğrulma"
+          },
+          "instruction": {
+            "ru": "Выпрямитесь, говоря «Сами'а-Ллаху лиман хамидах», и поднимите руки до плеч. Встав ровно, скажите «Раббана ва лакаль-хамд».",
+            "en": "Rise saying “Sami'a Allahu liman hamidah” and raise your hands to your shoulders. Once upright, say “Rabbana wa lakal-hamd”.",
+            "ar": "ارفع رأسك قائلًا: سمع الله لمن حمده، رافعًا يديك، فإذا اعتدلت قائمًا فقل: ربّنا ولك الحمد.",
+            "tr": "“Semiallâhu limen hamideh” diyerek doğrulun ve ellerinizi omuz hizasına kaldırın. Dik durunca “Rabbenâ ve leke'l-hamd” deyin."
+          },
+          "media": "position-itidal",
+          "formulas": [
+            "sami-allah",
+            "rabbana-hamd"
+          ]
+        },
+        {
+          "slug": "sujud-1",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Первый земной поклон",
+            "en": "First prostration",
+            "ar": "السجدة الأولى",
+            "tr": "Birinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» опуститесь в земной поклон: колени, ладони, затем лоб и нос. Произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, go down into prostration: knees, palms, then forehead and nose. Say the tasbih three times.",
+            "ar": "كبّر واسجد: ركبتيك ثم يديك ثم جبهتك وأنفك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek secdeye varın: önce dizler, sonra avuçlar, sonra alın ve burun. Üç kez tesbih edin."
+          },
+          "details": {
+            "ru": "Тасбих один раз — ваджиб, три раза — сунна. Руки при этом не поднимают. Земли касаются лоб с носом, ладони, колени и пальцы стоп.",
+            "en": "Saying the tasbih once is obligatory (wajib); three times is a sunnah. The hands are not raised here. The forehead with the nose, the palms, the knees and the toes touch the ground.",
+            "ar": "التسبيح مرّةً واجب، والثلاث سنّة، ولا ترفع يديك هنا. ويسجد على الجبهة مع الأنف واليدين والركبتين وأطراف القدمين.",
+            "tr": "Bir kez tesbih vâcip, üç kez sünnettir. Burada eller kaldırılmaz. Burunla birlikte alın, avuçlar, dizler ve ayak parmakları yere değer."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "sujud-1",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Первый земной поклон",
+            "en": "First prostration",
+            "ar": "السجدة الأولى",
+            "tr": "Birinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» опуститесь в земной поклон: колени, ладони, затем лоб и нос. Произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, go down into prostration: knees, palms, then forehead and nose. Say the tasbih three times.",
+            "ar": "كبّر واسجد: ركبتيك ثم يديك ثم جبهتك وأنفك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek secdeye varın: önce dizler, sonra avuçlar, sonra alın ve burun. Üç kez tesbih edin."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "jalsa",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "jalsa",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Сидение между поклонами",
+            "en": "Sitting between prostrations",
+            "ar": "الجلسة بين السجدتين",
+            "tr": "İki secde arası oturuş"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте на левую стопу, правую поставьте вертикально, и скажите «Рабби-гфир ли».",
+            "en": "Saying “Allahu akbar”, sit on your left foot with the right foot upright, and say “Rabbi ghfir li”.",
+            "ar": "كبّر واجلس مفترشًا، وقل: ربِّ اغفر لي.",
+            "tr": "“Allâhu ekber” diyerek sol ayağınızın üzerine oturun, sağ ayağınızı dik tutun ve “Rabbiğfir lî” deyin."
+          },
+          "details": {
+            "ru": "Произнести эти слова один раз — ваджиб. Посидите спокойно: сидение со спокойствием — рукн.",
+            "en": "Saying these words once is obligatory (wajib). Sit still: sitting with stillness is a pillar.",
+            "ar": "قولها مرّةً واجب، والجلوس مع الطمأنينة ركن.",
+            "tr": "Bu sözleri bir kez söylemek vâciptir. Sükûnetle oturun: sükûnetle oturmak rükündür."
+          },
+          "media": "position-jalsa",
+          "formulas": [
+            "between-sujud"
+          ]
+        },
+        {
+          "slug": "jalsa",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "jalsa",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Сидение между поклонами",
+            "en": "Sitting between prostrations",
+            "ar": "الجلسة بين السجدتين",
+            "tr": "İki secde arası oturuş"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте на левую стопу, правую поставьте вертикально, и скажите «Рабби-гфир ли».",
+            "en": "Saying “Allahu akbar”, sit on your left foot with the right foot upright, and say “Rabbi ghfir li”.",
+            "ar": "كبّر واجلس مفترشًا، وقل: ربِّ اغفر لي.",
+            "tr": "“Allâhu ekber” diyerek sol ayağınızın üzerine oturun, sağ ayağınızı dik tutun ve “Rabbiğfir lî” deyin."
+          },
+          "media": "position-jalsa",
+          "formulas": [
+            "between-sujud"
+          ]
+        },
+        {
+          "slug": "sujud-2",
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Второй земной поклон",
+            "en": "Second prostration",
+            "ar": "السجدة الثانية",
+            "tr": "İkinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» совершите второй земной поклон так же, как первый, и произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, make the second prostration just like the first and say the tasbih three times.",
+            "ar": "كبّر واسجد الثانية كالأولى، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek ikinci secdeyi birincisi gibi yapın ve üç kez tesbih edin."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "rise",
+          "when": {
+            "sitting": "none",
+            "rakat": 1
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Подъём на следующий ракаат",
+            "en": "Rising for the next rak'ah",
+            "ar": "النهوض للركعة التالية",
+            "tr": "Sonraki rekâta kalkış"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» встаньте на следующий ракаат, опираясь на колени.",
+            "en": "Saying “Allahu akbar”, stand up for the next rak'ah, pushing up from your knees.",
+            "ar": "انهض مكبّرًا للركعة التالية معتمدًا على ركبتيك.",
+            "tr": "“Allâhu ekber” diyerek dizlerinizden destek alıp sonraki rekâta kalkın."
+          },
+          "details": {
+            "ru": "Встают сразу после второго поклона, не присаживаясь. Если трудно, можно опереться руками о пол.",
+            "en": "You stand straight after the second prostration without sitting first. If that is hard, you may push up with your hands on the floor.",
+            "ar": "تنهض على صدور قدميك دون جلوس، فإن شقّ عليك فاعتمد بيديك على الأرض.",
+            "tr": "İkinci secdeden sonra oturmadan doğrudan kalkılır. Zor gelirse ellerle yerden destek alınabilir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "rise",
+          "when": {
+            "sitting": "none",
+            "rakat": 2
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Подъём на следующий ракаат",
+            "en": "Rising for the next rak'ah",
+            "ar": "النهوض للركعة التالية",
+            "tr": "Sonraki rekâta kalkış"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» встаньте на следующий ракаат, опираясь на колени.",
+            "en": "Saying “Allahu akbar”, stand up for the next rak'ah, pushing up from your knees.",
+            "ar": "انهض مكبّرًا للركعة التالية معتمدًا على ركبتيك.",
+            "tr": "“Allâhu ekber” diyerek dizlerinizden destek alıp sonraki rekâta kalkın."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "final-tashahhud",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Последний ташаххуд",
+            "en": "Final tashahhud",
+            "ar": "التشهّد الأخير",
+            "tr": "Son teşehhüd"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте, как между поклонами, и прочитайте ташаххуд.",
+            "en": "Saying “Allahu akbar”, sit as between the prostrations and recite the tashahhud.",
+            "ar": "كبّر واجلس مفترشًا واقرأ التشهّد.",
+            "tr": "“Allâhu ekber” diyerek iki secde arasındaki gibi oturun ve teşehhüdü okuyun."
+          },
+          "details": {
+            "ru": "Последний ташаххуд и сидение для него — рукн. Указательным пальцем правой руки указывайте при упоминании Аллаха.",
+            "en": "The final tashahhud and sitting for it are pillars. Point with your right index finger whenever Allah is mentioned.",
+            "ar": "التشهّد الأخير والجلوس له ركنان، وأشر بسبّابتك عند ذكر الله.",
+            "tr": "Son teşehhüd ve onun için oturmak rükündür. Allah anıldıkça sağ işaret parmağınızla işaret edin."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "tashahhud"
+          ]
+        },
+        {
+          "slug": "salawat",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Салават Пророку ﷺ",
+            "en": "Blessings on the Prophet ﷺ",
+            "ar": "الصلاة على النبيّ ﷺ",
+            "tr": "Salavat"
+          },
+          "instruction": {
+            "ru": "Оставаясь сидеть, прочитайте салават — благословение Пророку ﷺ.",
+            "en": "Still seated, recite the salawat: blessings on the Prophet ﷺ.",
+            "ar": "وأنت جالس صلِّ على النبيّ ﷺ.",
+            "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
+          },
+          "details": {
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "salawat"
+          ]
+        },
+        {
+          "slug": "dua",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Ду'а перед таслимом",
+            "en": "Supplication before the taslim",
+            "ar": "الدعاء قبل التسليم",
+            "tr": "Selâmdan önce dua"
+          },
+          "instruction": {
+            "ru": "Попросите Аллаха о защите от четырёх бед словами этого ду'а.",
+            "en": "Ask Allah for protection from four evils with the words of this supplication.",
+            "ar": "استعذ بالله من أربعٍ بهذا الدعاء.",
+            "tr": "Bu duanın sözleriyle dört kötülükten Allah'a sığının."
+          },
+          "details": {
+            "ru": "Это сунна. После него можно попросить Аллаха о любом благе.",
+            "en": "This is a sunnah. After it you may ask Allah for any good.",
+            "ar": "هذا سنّة، ولك بعده أن تدعو بما شئت من الخير.",
+            "tr": "Bu sünnettir. Ardından Allah'tan dilediğiniz hayrı isteyebilirsiniz."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "before-taslim"
+          ]
+        },
+        {
+          "slug": "taslim",
+          "when": {
+            "sitting": "final_tashahhud"
+          },
+          "kind": "recitation",
+          "position": "taslim",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Таслим",
+            "en": "Taslim",
+            "ar": "التسليم",
+            "tr": "Selâm"
+          },
+          "instruction": {
+            "ru": "Поверните голову направо и скажите «Ас-саляму 'алейкум ва рахмату-Ллах», затем налево и скажите то же. Намаз завершён.",
+            "en": "Turn your head to the right and say “As-salamu 'alaykum wa rahmatullah”, then to the left and say the same. The prayer is complete.",
+            "ar": "التفت عن يمينك وقل: السلام عليكم ورحمة الله، ثم عن يسارك كذلك، وبه تتمّ الصلاة.",
+            "tr": "Başınızı sağa çevirip “Esselâmü aleyküm ve rahmetullâh” deyin, sonra sola çevirip aynısını söyleyin. Namaz tamamlandı."
+          },
+          "details": {
+            "ru": "Оба таслима — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» второй таслим — ваджиб.",
+            "en": "Both taslims are pillars. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” the second taslim is obligatory (wajib).",
+            "ar": "التسليمتان ركن، كما في «المنتهى» و«الإقناع»، والثانية في «عمدة الفقه» واجبة.",
+            "tr": "Her iki selâm da rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta ikinci selâm vâciptir."
+          },
+          "media": "position-taslim",
+          "formulas": [
+            "taslim"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kusuf",
+      "steps": [
+        {
+          "slug": "intention",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Намерение",
+            "en": "Intention",
+            "ar": "النيّة",
+            "tr": "Niyet"
+          },
+          "instruction": {
+            "ru": "Встаньте лицом к кибле и определите в сердце, какую молитву вы совершаете.",
+            "en": "Stand facing the qibla and settle in your heart which prayer you are performing.",
+            "ar": "قف مستقبل القبلة، وعيِّن بقلبك الصلاة التي تصلّيها.",
+            "tr": "Kıbleye dönerek ayakta durun ve hangi namazı kıldığınızı kalbinizde belirleyin."
+          },
+          "details": {
+            "ru": "Намерение — условие действительности намаза. Произносить его вслух не нужно.",
+            "en": "The intention is a condition of the prayer's validity. You do not need to say it aloud.",
+            "ar": "النيّة شرطٌ لصحّة الصلاة، ولا يُشرع التلفّظ بها.",
+            "tr": "Niyet, namazın geçerlilik şartıdır. Dille söylemeye gerek yoktur."
+          },
+          "media": "position-qiyam",
+          "formulas": [],
+          "ruling": "shart"
+        },
+        {
+          "slug": "takbir",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Начальный такбир",
+            "en": "Opening takbir",
+            "ar": "تكبيرة الإحرام",
+            "tr": "İftitah tekbiri"
+          },
+          "instruction": {
+            "ru": "Поднимите руки до плеч и скажите «Аллаху акбар». С этого момента вы в намазе.",
+            "en": "Raise your hands to your shoulders and say “Allahu akbar”. From now on you are in the prayer.",
+            "ar": "ارفع يديك حذو منكبيك وقل: الله أكبر، وبها تدخل في الصلاة.",
+            "tr": "Ellerinizi omuz hizasına kaldırıp “Allâhu ekber” deyin. Artık namazdasınız."
+          },
+          "details": {
+            "ru": "Поднимать руки — сунна. После такбира нельзя говорить постороннее и отворачиваться от киблы.",
+            "en": "Raising the hands is a sunnah. After the takbir you may not speak of other things or turn away from the qibla.",
+            "ar": "رفع اليدين سنّة، ولا يجوز بعد التكبير الكلام ولا الالتفات عن القبلة.",
+            "tr": "Elleri kaldırmak sünnettir. Tekbirden sonra başka söz söylemek ve kıbleden yüz çevirmek caiz değildir."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "istiftah",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Ду'а начала",
+            "en": "Opening supplication",
+            "ar": "دعاء الاستفتاح",
+            "tr": "Sübhâneke"
+          },
+          "instruction": {
+            "ru": "Положите правую руку на левую ниже пупка и тихо прочитайте ду'а начала, затем «А'узу би-Лляхи…».",
+            "en": "Place your right hand over the left below the navel and quietly recite the opening supplication, then “A'udhu billahi…”.",
+            "ar": "ضع يمينك على شمالك تحت سرّتك، واقرأ دعاء الاستفتاح سرًّا، ثم تعوّذ.",
+            "tr": "Sağ elinizi sol elinizin üzerine, göbeğinizin altına koyun ve açılış duasını sessizce okuyun, ardından “Eûzü billâhi…” deyin."
+          },
+          "details": {
+            "ru": "Обе формулы — сунна, их читают про себя. Смотрите на место земного поклона.",
+            "en": "Both formulas are sunnah and are said silently. Look at the place of prostration.",
+            "ar": "كلاهما سنّة يُقرأ سرًّا، وانظر إلى موضع سجودك.",
+            "tr": "Her ikisi de sünnettir ve içinizden okunur. Secde yerine bakın."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "istiftah",
+            "taawwudh"
+          ]
+        },
+        {
+          "slug": "fatiha",
+          "when": {
+            "recitation": "jahr",
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Аль-Фатиха",
+            "en": "Al-Fatihah",
+            "ar": "الفاتحة",
+            "tr": "Fâtiha"
+          },
+          "instruction": {
+            "ru": "Тихо скажите «Бисмилляхи-р-Рахмани-р-Рахим», затем прочитайте Аль-Фатиху вслух и скажите «Амин».",
+            "en": "Quietly say “Bismillahi r-Rahmani r-Rahim”, then recite al-Fatihah aloud and say “Amin”.",
+            "ar": "قل سرًّا: بسم الله الرحمن الرحيم، ثم اقرأ الفاتحة جهرًا، وقل: آمين.",
+            "tr": "İçinizden “Bismillâhirrahmânirrahîm” deyin, sonra Fâtiha'yı sesli okuyun ve “Âmîn” deyin."
+          },
+          "details": {
+            "ru": "Чтение Фатихи — рукн в каждом ракаате. В этом ракаате имам читает вслух; молящийся один может читать вслух или про себя. Басмалу читают про себя, «Амин» — вслух.",
+            "en": "Reciting al-Fatihah is a pillar in every rak'ah. In this rak'ah the imam recites aloud; someone praying alone may recite aloud or silently. The basmala is said silently, “Amin” aloud.",
+            "ar": "قراءة الفاتحة ركنٌ في كلّ ركعة. وفي هذه الركعة يجهر الإمام، والمنفرد مخيّر بين الجهر والإسرار. وتُقال البسملة سرًّا، ويُجهر بآمين.",
+            "tr": "Fâtiha okumak her rekâtta rükündür. Bu rekâtta imam sesli okur; tek başına kılan sesli veya sessiz okuyabilir. Besmele sessiz, “Âmîn” sesli söylenir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "basmala",
+            "fatiha",
+            "amin"
+          ]
+        },
+        {
+          "slug": "fatiha",
+          "when": {
+            "recitation": "jahr",
+            "rakat": [
+              2,
+              3,
+              4
+            ]
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Аль-Фатиха",
+            "en": "Al-Fatihah",
+            "ar": "الفاتحة",
+            "tr": "Fâtiha"
+          },
+          "instruction": {
+            "ru": "Тихо скажите «Бисмилляхи-р-Рахмани-р-Рахим», затем прочитайте Аль-Фатиху вслух и скажите «Амин».",
+            "en": "Quietly say “Bismillahi r-Rahmani r-Rahim”, then recite al-Fatihah aloud and say “Amin”.",
+            "ar": "قل سرًّا: بسم الله الرحمن الرحيم، ثم اقرأ الفاتحة جهرًا، وقل: آمين.",
+            "tr": "İçinizden “Bismillâhirrahmânirrahîm” deyin, sonra Fâtiha'yı sesli okuyun ve “Âmîn” deyin."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "basmala",
+            "fatiha",
+            "amin"
+          ]
+        },
+        {
+          "slug": "surah",
+          "when": {
+            "surah_after_fatiha": true,
+            "recitation": "jahr",
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Сура",
+            "en": "A surah",
+            "ar": "السورة",
+            "tr": "Sûre"
+          },
+          "instruction": {
+            "ru": "Прочитайте вслух любую суру или несколько аятов. Ниже — короткие суры на выбор.",
+            "en": "Recite aloud any surah or a few verses. Short surahs to choose from are below.",
+            "ar": "اقرأ جهرًا سورةً أو آياتٍ، وهذه سورٌ قصيرة تختار منها.",
+            "tr": "Herhangi bir sûreyi veya birkaç âyeti sesli okuyun. Aşağıda seçebileceğiniz kısa sûreler var."
+          },
+          "details": {
+            "ru": "Чтение суры после Фатихи — сунна. Обычно второй ракаат короче первого.",
+            "en": "Reciting a surah after al-Fatihah is a sunnah. The second rak'ah is usually shorter than the first.",
+            "ar": "قراءة سورةٍ بعد الفاتحة سنّة، وتكون الركعة الثانية أقصر من الأولى.",
+            "tr": "Fâtiha'dan sonra sûre okumak sünnettir. İkinci rekât genellikle birinciden kısa olur."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "ikhlas",
+            "kawthar",
+            "asr",
+            "falaq",
+            "nas"
+          ]
+        },
+        {
+          "slug": "surah",
+          "when": {
+            "surah_after_fatiha": true,
+            "recitation": "jahr",
+            "rakat": [
+              2,
+              3,
+              4
+            ]
+          },
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Сура",
+            "en": "A surah",
+            "ar": "السورة",
+            "tr": "Sûre"
+          },
+          "instruction": {
+            "ru": "Прочитайте вслух любую суру или несколько аятов. Ниже — короткие суры на выбор.",
+            "en": "Recite aloud any surah or a few verses. Short surahs to choose from are below.",
+            "ar": "اقرأ جهرًا سورةً أو آياتٍ، وهذه سورٌ قصيرة تختار منها.",
+            "tr": "Herhangi bir sûreyi veya birkaç âyeti sesli okuyun. Aşağıda seçebileceğiniz kısa sûreler var."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "ikhlas",
+            "kawthar",
+            "asr",
+            "falaq",
+            "nas"
+          ]
+        },
+        {
+          "slug": "ruku",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», наклонитесь, положив ладони на колени, и произнесите тасбих три раза.",
+            "en": "Say “Allahu akbar”, bow with your palms on your knees and say the tasbih three times.",
+            "ar": "كبّر واركع واضعًا يديك على ركبتيك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” deyip avuçlarınız dizlerinizde olarak eğilin ve üç kez tesbih edin."
+          },
+          "details": {
+            "ru": "Такбир при переходе и тасбих один раз — ваджиб, три раза — сунна. Перед наклоном поднимите руки до плеч — это сунна. Спина ровная; задержитесь, пока тело не успокоится.",
+            "en": "The takbir of moving and saying the tasbih once are obligatory (wajib); three times is a sunnah. Raise your hands to your shoulders before bowing; this is a sunnah. Keep your back level and stay until your body is still.",
+            "ar": "تكبيرة الانتقال والتسبيح مرّةً واجبان، والثلاث سنّة، ورفع اليدين قبل الركوع سنّة. ومُدَّ ظهرك واطمئنّ.",
+            "tr": "Geçiş tekbiri ve bir kez tesbih vâciptir, üç kez sünnettir. Eğilmeden önce ellerinizi omuz hizasına kaldırmak sünnettir. Sırtınız düz olsun ve bedeniniz durgunlaşana kadar bekleyin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "ruku",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», наклонитесь, положив ладони на колени, и произнесите тасбих три раза.",
+            "en": "Say “Allahu akbar”, bow with your palms on your knees and say the tasbih three times.",
+            "ar": "كبّر واركع واضعًا يديك على ركبتيك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” deyip avuçlarınız dizlerinizde olarak eğilin ve üç kez tesbih edin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "itidal",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "itidal",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Выпрямление",
+            "en": "Rising from ruku'",
+            "ar": "الرفع من الركوع",
+            "tr": "Rükûdan doğrulma"
+          },
+          "instruction": {
+            "ru": "Выпрямитесь, говоря «Сами'а-Ллаху лиман хамидах», и поднимите руки до плеч. Встав ровно, скажите «Раббана ва лакаль-хамд».",
+            "en": "Rise saying “Sami'a Allahu liman hamidah” and raise your hands to your shoulders. Once upright, say “Rabbana wa lakal-hamd”.",
+            "ar": "ارفع رأسك قائلًا: سمع الله لمن حمده، رافعًا يديك، فإذا اعتدلت قائمًا فقل: ربّنا ولك الحمد.",
+            "tr": "“Semiallâhu limen hamideh” diyerek doğrulun ve ellerinizi omuz hizasına kaldırın. Dik durunca “Rabbenâ ve leke'l-hamd” deyin."
+          },
+          "details": {
+            "ru": "Обе формулы — ваджиб. Молящийся за имамом говорит только «Раббана ва лакаль-хамд».",
+            "en": "Both formulas are obligatory (wajib). Someone praying behind an imam says only “Rabbana wa lakal-hamd”.",
+            "ar": "التسميع والتحميد واجبان، ويقتصر المأموم على: ربّنا ولك الحمد.",
+            "tr": "Her iki söz de vâciptir. İmama uyan yalnızca “Rabbenâ ve leke'l-hamd” der."
+          },
+          "media": "position-itidal",
+          "formulas": [
+            "sami-allah",
+            "rabbana-hamd"
+          ]
+        },
+        {
+          "slug": "itidal",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "itidal",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Выпрямление",
+            "en": "Rising from ruku'",
+            "ar": "الرفع من الركوع",
+            "tr": "Rükûdan doğrulma"
+          },
+          "instruction": {
+            "ru": "Выпрямитесь, говоря «Сами'а-Ллаху лиман хамидах», и поднимите руки до плеч. Встав ровно, скажите «Раббана ва лакаль-хамд».",
+            "en": "Rise saying “Sami'a Allahu liman hamidah” and raise your hands to your shoulders. Once upright, say “Rabbana wa lakal-hamd”.",
+            "ar": "ارفع رأسك قائلًا: سمع الله لمن حمده، رافعًا يديك، فإذا اعتدلت قائمًا فقل: ربّنا ولك الحمد.",
+            "tr": "“Semiallâhu limen hamideh” diyerek doğrulun ve ellerinizi omuz hizasına kaldırın. Dik durunca “Rabbenâ ve leke'l-hamd” deyin."
+          },
+          "media": "position-itidal",
+          "formulas": [
+            "sami-allah",
+            "rabbana-hamd"
+          ]
+        },
+        {
+          "slug": "reading-2",
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Второе чтение",
+            "en": "The second reading",
+            "ar": "القراءة الثانية",
+            "tr": "İkinci kıraat"
+          },
+          "instruction": {
+            "ru": "Не опускаясь в земной поклон, снова вслух прочитайте Фатиху и суру — короче первой.",
+            "en": "Without going down to prostrate, recite al-Fatihah and a surah aloud again, shorter than the first.",
+            "ar": "لا تسجد، بل اقرأ الفاتحة وسورةً جهرًا، أقصرَ من الأولى.",
+            "tr": "Secdeye inmeden Fâtiha'yı ve ilkinden kısa bir sûreyi yeniden sesli okuyun."
+          },
+          "details": {
+            "ru": "В каждом ракаате два чтения и два поясных поклона; рукн ракаата — первые из них. Чтение вслух даже днём. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "Each rak'ah has two readings and two bows; the first of each is the pillar of the rak'ah. The recitation is aloud even by day. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "في كلّ ركعةٍ قيامان وركوعان، والركن منهما الأوّل، ويجهر بالقراءة ولو نهارًا. «المنتهى» و«الإقناع».",
+            "tr": "Her rekâtta iki kıraat ve iki rükû vardır; rekâtın rüknü ilkleridir. Gündüz bile sesli okunur. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "fatiha",
+            "ikhlas",
+            "kawthar",
+            "asr",
+            "falaq",
+            "nas"
+          ]
+        },
+        {
+          "slug": "ruku-2",
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», наклонитесь, положив ладони на колени, и произнесите тасбих три раза.",
+            "en": "Say “Allahu akbar”, bow with your palms on your knees and say the tasbih three times.",
+            "ar": "كبّر واركع واضعًا يديك على ركبتيك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” deyip avuçlarınız dizlerinizde olarak eğilin ve üç kez tesbih edin."
+          },
+          "details": {
+            "ru": "Такбир при переходе и тасбих один раз — ваджиб, три раза — сунна. Перед наклоном поднимите руки до плеч — это сунна. Спина ровная; задержитесь, пока тело не успокоится.",
+            "en": "The takbir of moving and saying the tasbih once are obligatory (wajib); three times is a sunnah. Raise your hands to your shoulders before bowing; this is a sunnah. Keep your back level and stay until your body is still.",
+            "ar": "تكبيرة الانتقال والتسبيح مرّةً واجبان، والثلاث سنّة، ورفع اليدين قبل الركوع سنّة. ومُدَّ ظهرك واطمئنّ.",
+            "tr": "Geçiş tekbiri ve bir kez tesbih vâciptir, üç kez sünnettir. Eğilmeden önce ellerinizi omuz hizasına kaldırmak sünnettir. Sırtınız düz olsun ve bedeniniz durgunlaşana kadar bekleyin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "itidal-2",
+          "kind": "recitation",
+          "position": "itidal",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Выпрямление",
+            "en": "Rising from ruku'",
+            "ar": "الرفع من الركوع",
+            "tr": "Rükûdan doğrulma"
+          },
+          "instruction": {
+            "ru": "Выпрямитесь, говоря «Сами'а-Ллаху лиман хамидах», и поднимите руки до плеч. Встав ровно, скажите «Раббана ва лакаль-хамд».",
+            "en": "Rise saying “Sami'a Allahu liman hamidah” and raise your hands to your shoulders. Once upright, say “Rabbana wa lakal-hamd”.",
+            "ar": "ارفع رأسك قائلًا: سمع الله لمن حمده، رافعًا يديك، فإذا اعتدلت قائمًا فقل: ربّنا ولك الحمد.",
+            "tr": "“Semiallâhu limen hamideh” diyerek doğrulun ve ellerinizi omuz hizasına kaldırın. Dik durunca “Rabbenâ ve leke'l-hamd” deyin."
+          },
+          "details": {
+            "ru": "Обе формулы — ваджиб. Молящийся за имамом говорит только «Раббана ва лакаль-хамд».",
+            "en": "Both formulas are obligatory (wajib). Someone praying behind an imam says only “Rabbana wa lakal-hamd”.",
+            "ar": "التسميع والتحميد واجبان، ويقتصر المأموم على: ربّنا ولك الحمد.",
+            "tr": "Her iki söz de vâciptir. İmama uyan yalnızca “Rabbenâ ve leke'l-hamd” der."
+          },
+          "media": "position-itidal",
+          "formulas": [
+            "sami-allah",
+            "rabbana-hamd"
+          ]
+        },
+        {
+          "slug": "sujud-1",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Первый земной поклон",
+            "en": "First prostration",
+            "ar": "السجدة الأولى",
+            "tr": "Birinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» опуститесь в земной поклон: колени, ладони, затем лоб и нос. Произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, go down into prostration: knees, palms, then forehead and nose. Say the tasbih three times.",
+            "ar": "كبّر واسجد: ركبتيك ثم يديك ثم جبهتك وأنفك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek secdeye varın: önce dizler, sonra avuçlar, sonra alın ve burun. Üç kez tesbih edin."
+          },
+          "details": {
+            "ru": "Тасбих один раз — ваджиб, три раза — сунна. Руки при этом не поднимают. Земли касаются лоб с носом, ладони, колени и пальцы стоп.",
+            "en": "Saying the tasbih once is obligatory (wajib); three times is a sunnah. The hands are not raised here. The forehead with the nose, the palms, the knees and the toes touch the ground.",
+            "ar": "التسبيح مرّةً واجب، والثلاث سنّة، ولا ترفع يديك هنا. ويسجد على الجبهة مع الأنف واليدين والركبتين وأطراف القدمين.",
+            "tr": "Bir kez tesbih vâcip, üç kez sünnettir. Burada eller kaldırılmaz. Burunla birlikte alın, avuçlar, dizler ve ayak parmakları yere değer."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "sujud-1",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Первый земной поклон",
+            "en": "First prostration",
+            "ar": "السجدة الأولى",
+            "tr": "Birinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» опуститесь в земной поклон: колени, ладони, затем лоб и нос. Произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, go down into prostration: knees, palms, then forehead and nose. Say the tasbih three times.",
+            "ar": "كبّر واسجد: ركبتيك ثم يديك ثم جبهتك وأنفك، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek secdeye varın: önce dizler, sonra avuçlar, sonra alın ve burun. Üç kez tesbih edin."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "jalsa",
+          "when": {
+            "rakat": 1
+          },
+          "kind": "recitation",
+          "position": "jalsa",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Сидение между поклонами",
+            "en": "Sitting between prostrations",
+            "ar": "الجلسة بين السجدتين",
+            "tr": "İki secde arası oturuş"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте на левую стопу, правую поставьте вертикально, и скажите «Рабби-гфир ли».",
+            "en": "Saying “Allahu akbar”, sit on your left foot with the right foot upright, and say “Rabbi ghfir li”.",
+            "ar": "كبّر واجلس مفترشًا، وقل: ربِّ اغفر لي.",
+            "tr": "“Allâhu ekber” diyerek sol ayağınızın üzerine oturun, sağ ayağınızı dik tutun ve “Rabbiğfir lî” deyin."
+          },
+          "details": {
+            "ru": "Произнести эти слова один раз — ваджиб. Посидите спокойно: сидение со спокойствием — рукн.",
+            "en": "Saying these words once is obligatory (wajib). Sit still: sitting with stillness is a pillar.",
+            "ar": "قولها مرّةً واجب، والجلوس مع الطمأنينة ركن.",
+            "tr": "Bu sözleri bir kez söylemek vâciptir. Sükûnetle oturun: sükûnetle oturmak rükündür."
+          },
+          "media": "position-jalsa",
+          "formulas": [
+            "between-sujud"
+          ]
+        },
+        {
+          "slug": "jalsa",
+          "when": {
+            "rakat": 2
+          },
+          "kind": "recitation",
+          "position": "jalsa",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Сидение между поклонами",
+            "en": "Sitting between prostrations",
+            "ar": "الجلسة بين السجدتين",
+            "tr": "İki secde arası oturuş"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте на левую стопу, правую поставьте вертикально, и скажите «Рабби-гфир ли».",
+            "en": "Saying “Allahu akbar”, sit on your left foot with the right foot upright, and say “Rabbi ghfir li”.",
+            "ar": "كبّر واجلس مفترشًا، وقل: ربِّ اغفر لي.",
+            "tr": "“Allâhu ekber” diyerek sol ayağınızın üzerine oturun, sağ ayağınızı dik tutun ve “Rabbiğfir lî” deyin."
+          },
+          "media": "position-jalsa",
+          "formulas": [
+            "between-sujud"
+          ]
+        },
+        {
+          "slug": "sujud-2",
+          "kind": "recitation",
+          "position": "sujud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Второй земной поклон",
+            "en": "Second prostration",
+            "ar": "السجدة الثانية",
+            "tr": "İkinci secde"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» совершите второй земной поклон так же, как первый, и произнесите тасбих три раза.",
+            "en": "Saying “Allahu akbar”, make the second prostration just like the first and say the tasbih three times.",
+            "ar": "كبّر واسجد الثانية كالأولى، وسبّح ثلاثًا.",
+            "tr": "“Allâhu ekber” diyerek ikinci secdeyi birincisi gibi yapın ve üç kez tesbih edin."
+          },
+          "media": "position-sujud",
+          "formulas": [
+            "sujud-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "rise",
+          "when": {
+            "sitting": "none",
+            "rakat": 1
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Подъём на следующий ракаат",
+            "en": "Rising for the next rak'ah",
+            "ar": "النهوض للركعة التالية",
+            "tr": "Sonraki rekâta kalkış"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» встаньте на следующий ракаат, опираясь на колени.",
+            "en": "Saying “Allahu akbar”, stand up for the next rak'ah, pushing up from your knees.",
+            "ar": "انهض مكبّرًا للركعة التالية معتمدًا على ركبتيك.",
+            "tr": "“Allâhu ekber” diyerek dizlerinizden destek alıp sonraki rekâta kalkın."
+          },
+          "details": {
+            "ru": "Встают сразу после второго поклона, не присаживаясь. Если трудно, можно опереться руками о пол.",
+            "en": "You stand straight after the second prostration without sitting first. If that is hard, you may push up with your hands on the floor.",
+            "ar": "تنهض على صدور قدميك دون جلوس، فإن شقّ عليك فاعتمد بيديك على الأرض.",
+            "tr": "İkinci secdeden sonra oturmadan doğrudan kalkılır. Zor gelirse ellerle yerden destek alınabilir."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "rise",
+          "when": {
+            "sitting": "none",
+            "rakat": 2
+          },
+          "kind": "action",
+          "position": "qiyam",
+          "title": {
+            "ru": "Подъём на следующий ракаат",
+            "en": "Rising for the next rak'ah",
+            "ar": "النهوض للركعة التالية",
+            "tr": "Sonraki rekâta kalkış"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» встаньте на следующий ракаат, опираясь на колени.",
+            "en": "Saying “Allahu akbar”, stand up for the next rak'ah, pushing up from your knees.",
+            "ar": "انهض مكبّرًا للركعة التالية معتمدًا على ركبتيك.",
+            "tr": "“Allâhu ekber” diyerek dizlerinizden destek alıp sonraki rekâta kalkın."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "final-tashahhud",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Последний ташаххуд",
+            "en": "Final tashahhud",
+            "ar": "التشهّد الأخير",
+            "tr": "Son teşehhüd"
+          },
+          "instruction": {
+            "ru": "Со словами «Аллаху акбар» сядьте, как между поклонами, и прочитайте ташаххуд.",
+            "en": "Saying “Allahu akbar”, sit as between the prostrations and recite the tashahhud.",
+            "ar": "كبّر واجلس مفترشًا واقرأ التشهّد.",
+            "tr": "“Allâhu ekber” diyerek iki secde arasındaki gibi oturun ve teşehhüdü okuyun."
+          },
+          "details": {
+            "ru": "Последний ташаххуд и сидение для него — рукн. Указательным пальцем правой руки указывайте при упоминании Аллаха.",
+            "en": "The final tashahhud and sitting for it are pillars. Point with your right index finger whenever Allah is mentioned.",
+            "ar": "التشهّد الأخير والجلوس له ركنان، وأشر بسبّابتك عند ذكر الله.",
+            "tr": "Son teşehhüd ve onun için oturmak rükündür. Allah anıldıkça sağ işaret parmağınızla işaret edin."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "tashahhud"
+          ]
+        },
+        {
+          "slug": "salawat",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Салават Пророку ﷺ",
+            "en": "Blessings on the Prophet ﷺ",
+            "ar": "الصلاة على النبيّ ﷺ",
+            "tr": "Salavat"
+          },
+          "instruction": {
+            "ru": "Оставаясь сидеть, прочитайте салават — благословение Пророку ﷺ.",
+            "en": "Still seated, recite the salawat: blessings on the Prophet ﷺ.",
+            "ar": "وأنت جالس صلِّ على النبيّ ﷺ.",
+            "tr": "Oturmaya devam ederek Peygamber'e ﷺ salavat getirin."
+          },
+          "details": {
+            "ru": "Салават в последнем ташаххуде — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» — ваджиб.",
+            "en": "The salawat in the final tashahhud is a pillar (rukn). So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” it is obligatory (wajib).",
+            "ar": "الصلاة على النبيّ ﷺ في التشهّد الأخير ركن، كما في «المنتهى» و«الإقناع»، وهي في «عمدة الفقه» واجبة.",
+            "tr": "Son teşehhüdde salavat rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta vâciptir."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "salawat"
+          ]
+        },
+        {
+          "slug": "dua",
+          "when": {
+            "sitting": "final_tashahhud",
+            "rakat": [
+              1,
+              2
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "sunnah",
+          "title": {
+            "ru": "Ду'а перед таслимом",
+            "en": "Supplication before the taslim",
+            "ar": "الدعاء قبل التسليم",
+            "tr": "Selâmdan önce dua"
+          },
+          "instruction": {
+            "ru": "Попросите Аллаха о защите от четырёх бед словами этого ду'а.",
+            "en": "Ask Allah for protection from four evils with the words of this supplication.",
+            "ar": "استعذ بالله من أربعٍ بهذا الدعاء.",
+            "tr": "Bu duanın sözleriyle dört kötülükten Allah'a sığının."
+          },
+          "details": {
+            "ru": "Это сунна. После него можно попросить Аллаха о любом благе.",
+            "en": "This is a sunnah. After it you may ask Allah for any good.",
+            "ar": "هذا سنّة، ولك بعده أن تدعو بما شئت من الخير.",
+            "tr": "Bu sünnettir. Ardından Allah'tan dilediğiniz hayrı isteyebilirsiniz."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "before-taslim"
+          ]
+        },
+        {
+          "slug": "taslim",
+          "when": {
+            "sitting": "final_tashahhud"
+          },
+          "kind": "recitation",
+          "position": "taslim",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Таслим",
+            "en": "Taslim",
+            "ar": "التسليم",
+            "tr": "Selâm"
+          },
+          "instruction": {
+            "ru": "Поверните голову направо и скажите «Ас-саляму 'алейкум ва рахмату-Ллах», затем налево и скажите то же. Намаз завершён.",
+            "en": "Turn your head to the right and say “As-salamu 'alaykum wa rahmatullah”, then to the left and say the same. The prayer is complete.",
+            "ar": "التفت عن يمينك وقل: السلام عليكم ورحمة الله، ثم عن يسارك كذلك، وبه تتمّ الصلاة.",
+            "tr": "Başınızı sağa çevirip “Esselâmü aleyküm ve rahmetullâh” deyin, sonra sola çevirip aynısını söyleyin. Namaz tamamlandı."
+          },
+          "details": {
+            "ru": "Оба таслима — рукн. Так в «Мунтаха аль-Ирадат» и «Икна'»; в «Умдат аль-фикх» второй таслим — ваджиб.",
+            "en": "Both taslims are pillars. So in “Muntaha al-Iradat” and “al-Iqna'”; in “Umdat al-Fiqh” the second taslim is obligatory (wajib).",
+            "ar": "التسليمتان ركن، كما في «المنتهى» و«الإقناع»، والثانية في «عمدة الفقه» واجبة.",
+            "tr": "Her iki selâm da rükündür. “Müntehe'l-İrâdât” ve “el-İknâ'”da böyledir; “Umdetü'l-Fıkh”ta ikinci selâm vâciptir."
+          },
+          "media": "position-taslim",
+          "formulas": [
+            "taslim"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "janazah",
+      "counts_rakats": false,
+      "steps": [
+        {
+          "slug": "intention",
+          "kind": "action",
+          "position": "qiyam",
+          "ruling": "shart",
+          "title": {
+            "ru": "Намерение",
+            "en": "Intention",
+            "ar": "النيّة",
+            "tr": "Niyet"
+          },
+          "instruction": {
+            "ru": "Встаньте лицом к кибле и намерьтесь сердцем совершить молитву над покойным.",
+            "en": "Stand facing the qibla and intend in your heart to pray over the deceased.",
+            "ar": "استقبل القبلة وانوِ بقلبك الصلاةَ على الميت.",
+            "tr": "Kıbleye yönelip kalben ölü için namaz kılmaya niyet edin."
+          },
+          "details": {
+            "ru": "Имам встаёт напротив груди покойного-мужчины и напротив середины тела покойной-женщины.",
+            "en": "The imam stands at the chest of a deceased man and at the middle of a deceased woman.",
+            "ar": "يقف الإمام عند صدر الرجل ووسط المرأة.",
+            "tr": "İmam, erkek cenazenin göğsü, kadın cenazenin ortası hizasında durur."
+          },
+          "media": "position-qiyam",
+          "formulas": []
+        },
+        {
+          "slug": "takbir-1",
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Первый такбир",
+            "en": "First takbir",
+            "ar": "التكبيرة الأولى",
+            "tr": "Birinci tekbir"
+          },
+          "instruction": {
+            "ru": "Поднимите руки до плеч и скажите «Аллаху акбар». С этого момента вы в намазе.",
+            "en": "Raise your hands to your shoulders and say “Allahu akbar”. From now on you are in the prayer.",
+            "ar": "ارفع يديك حذو منكبيك وقل: الله أكبر، وبها تدخل في الصلاة.",
+            "tr": "Ellerinizi omuz hizasına kaldırıp “Allâhu ekber” deyin. Artık namazdasınız."
+          },
+          "details": {
+            "ru": "Поднимать руки — сунна. После такбира нельзя говорить постороннее и отворачиваться от киблы.",
+            "en": "Raising the hands is a sunnah. After the takbir you may not speak of other things or turn away from the qibla.",
+            "ar": "رفع اليدين سنّة، ولا يجوز بعد التكبير الكلام ولا الالتفات عن القبلة.",
+            "tr": "Elleri kaldırmak sünnettir. Tekbirden sonra başka söz söylemek ve kıbleden yüz çevirmek caiz değildir."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "fatiha",
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Фатиха",
+            "en": "Al-Fatihah",
+            "ar": "الفاتحة",
+            "tr": "Fâtiha"
+          },
+          "instruction": {
+            "ru": "Сложите руки и про себя прочитайте Фатиху, начав с прибегания к защите и басмалы.",
+            "en": "Fold your hands and recite al-Fatihah silently, beginning with seeking refuge and the basmala.",
+            "ar": "ضع يديك واقرأ الفاتحة سرًّا بعد الاستعاذة والبسملة.",
+            "tr": "Ellerinizi bağlayıp eûzü ve besmeleden sonra Fâtiha'yı içinizden okuyun."
+          },
+          "details": {
+            "ru": "Вступительное дуа и сура в этой молитве не читаются, чтение всегда про себя. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "The opening supplication and a surah are not recited in this prayer; the recitation is always silent. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "لا يستفتح ولا يقرأ سورة، ويُسرّ بالقراءة ولو ليلًا. «المنتهى» و«الإقناع».",
+            "tr": "Bu namazda açılış duası ve sûre okunmaz; kıraat her zaman gizlidir. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "taawwudh",
+            "basmala",
+            "fatiha"
+          ]
+        },
+        {
+          "slug": "takbir-2",
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Второй такбир и салават",
+            "en": "Second takbir and the salawat",
+            "ar": "التكبيرة الثانية والصلاة على النبيّ ﷺ",
+            "tr": "İkinci tekbir ve salavat"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», поднимая руки, и прочитайте салават Пророку ﷺ — тот же, что в ташаххуде.",
+            "en": "Say “Allahu akbar”, raising your hands, and recite the salawat on the Prophet ﷺ as in the tashahhud.",
+            "ar": "كبِّر رافعًا يديك، ثم صلِّ على النبيّ ﷺ كما في التشهّد.",
+            "tr": "Ellerinizi kaldırarak “Allâhu ekber” deyin ve teşehhüddeki gibi Peygamber'e ﷺ salavat getirin."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir",
+            "salawat"
+          ]
+        },
+        {
+          "slug": "takbir-3",
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Третий такбир и дуа за покойного",
+            "en": "Third takbir and the supplication for the deceased",
+            "ar": "التكبيرة الثالثة والدعاء للميت",
+            "tr": "Üçüncü tekbir ve ölüye dua"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», поднимая руки, и сделайте дуа за покойного.",
+            "en": "Say “Allahu akbar”, raising your hands, and supplicate for the deceased.",
+            "ar": "كبِّر رافعًا يديك وادعُ للميت.",
+            "tr": "Ellerinizi kaldırarak “Allâhu ekber” deyin ve ölü için dua edin."
+          },
+          "details": {
+            "ru": "Достаточно любого дуа за покойного; лучше переданные от Пророка ﷺ. За ребёнка просят, чтобы он стал для родителей предшественником и наградой.",
+            "en": "Any supplication for the deceased suffices; the ones reported from the Prophet ﷺ are best. For a child, ask that he be a forerunner and a reward for his parents.",
+            "ar": "يُجزئ أيّ دعاءٍ للميت، والأفضل المأثور، ويدعو للصغير بأن يجعله الله فرطًا لوالديه وأجرًا.",
+            "tr": "Ölü için herhangi bir dua yeterlidir; en iyisi Peygamber'den ﷺ nakledilenlerdir. Çocuk için, anne babasına öncü ve ecir olmasını dileyin."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir",
+            "janazah-dua",
+            "janazah-dua-general",
+            "janazah-dua-child"
+          ]
+        },
+        {
+          "slug": "takbir-4",
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Четвёртый такбир",
+            "en": "Fourth takbir",
+            "ar": "التكبيرة الرابعة",
+            "tr": "Dördüncü tekbir"
+          },
+          "instruction": {
+            "ru": "Скажите «Аллаху акбар», поднимая руки, и немного постойте молча.",
+            "en": "Say “Allahu akbar”, raising your hands, and stand silently for a moment.",
+            "ar": "كبِّر رافعًا يديك وقف قليلًا.",
+            "tr": "Ellerinizi kaldırarak “Allâhu ekber” deyin ve kısa bir süre sessizce durun."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "taslim",
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Таслим",
+            "en": "Taslim",
+            "ar": "التسليم",
+            "tr": "Selâm"
+          },
+          "instruction": {
+            "ru": "Не садясь, поверните голову направо и скажите «Ас-саляму 'алейкум ва рахмату-Ллах». Молитва завершена.",
+            "en": "Without sitting, turn your head to the right and say “As-salamu 'alaykum wa rahmatullah”. The prayer is complete.",
+            "ar": "سلِّم تسليمةً واحدةً عن يمينك وأنت قائم.",
+            "tr": "Oturmadan başınızı sağa çevirip “Esselâmü aleyküm ve rahmetullâh” deyin. Namaz tamamlandı."
+          },
+          "details": {
+            "ru": "Сунна — один таслим направо; можно и два. Рукны этой молитвы: стояние, четыре такбира, Фатиха, салават, дуа за покойного, таслим и их порядок. «Мунтаха аль-Ирадат», «Икна'».",
+            "en": "The sunnah is one taslim to the right; two are allowed. The pillars of this prayer: standing, the four takbirs, al-Fatihah, the salawat, the supplication for the deceased, the taslim and their order. “Muntaha al-Iradat”, “al-Iqna'”.",
+            "ar": "السنّة تسليمةٌ واحدة عن يمينه، وتجوز ثانية. وأركانها: القيام، والتكبيرات الأربع، والفاتحة، والصلاة على النبيّ ﷺ، والدعاء للميت، والسلام، والترتيب. «المنتهى» و«الإقناع».",
+            "tr": "Sünnet olan sağa tek selâmdır; iki selâm da caizdir. Bu namazın rükünleri: kıyam, dört tekbir, Fâtiha, salavat, ölüye dua, selâm ve bunların sırası. “Müntehe'l-İrâdât”, “el-İknâ'”."
+          },
+          "media": "position-qiyam",
+          "formulas": [
+            "taslim-one"
           ]
         }
       ]
