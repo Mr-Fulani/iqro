@@ -694,5 +694,10 @@
   "salahRulingShart": "Condition (shart)",
   "salahRulingRukn": "Pillar (rukn)",
   "salahRulingWajib": "Obligatory (wajib)",
-  "salahRulingSunnah": "Sunnah"
+  "salahRulingSunnah": "Sunnah",
+  "salahOfflineTitle": "Pictures offline",
+  "salahOfflineImages": "Course illustrations",
+  "salahOfflineSaved": "Saved on this device",
+  "salahOfflineUpdateAvailable": "A new version is available",
+  "salahOfflineUpdate": "Update"
 }

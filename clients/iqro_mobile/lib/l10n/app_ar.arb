@@ -600,5 +600,10 @@
   "salahRulingShart": "شرط",
   "salahRulingRukn": "ركن",
   "salahRulingWajib": "واجب",
-  "salahRulingSunnah": "سنة"
+  "salahRulingSunnah": "سنة",
+  "salahOfflineTitle": "الصور دون إنترنت",
+  "salahOfflineImages": "رسوم الدورة التوضيحية",
+  "salahOfflineSaved": "محفوظة على هذا الجهاز",
+  "salahOfflineUpdateAvailable": "يتوفر إصدار جديد",
+  "salahOfflineUpdate": "تحديث"
 }

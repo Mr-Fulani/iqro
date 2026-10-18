@@ -1987,4 +1987,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'Sunnah';
+
+  @override
+  String get salahOfflineTitle => 'Pictures offline';
+
+  @override
+  String get salahOfflineImages => 'Course illustrations';
+
+  @override
+  String get salahOfflineSaved => 'Saved on this device';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'A new version is available';
+
+  @override
+  String get salahOfflineUpdate => 'Update';
 }

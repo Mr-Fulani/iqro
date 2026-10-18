@@ -1974,4 +1974,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'سنة';
+
+  @override
+  String get salahOfflineTitle => 'الصور دون إنترنت';
+
+  @override
+  String get salahOfflineImages => 'رسوم الدورة التوضيحية';
+
+  @override
+  String get salahOfflineSaved => 'محفوظة على هذا الجهاز';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'يتوفر إصدار جديد';
+
+  @override
+  String get salahOfflineUpdate => 'تحديث';
 }

@@ -1950,4 +1950,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'Sünnet';
+
+  @override
+  String get salahOfflineTitle => 'Çevrimdışı görseller';
+
+  @override
+  String get salahOfflineImages => 'Kursun görselleri';
+
+  @override
+  String get salahOfflineSaved => 'Bu cihaza kaydedildi';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'Yeni sürüm mevcut';
+
+  @override
+  String get salahOfflineUpdate => 'Güncelle';
 }

@@ -604,5 +604,10 @@
   "salahRulingShart": "Условие (шарт)",
   "salahRulingRukn": "Столп (рукн)",
   "salahRulingWajib": "Обязательно (ваджиб)",
-  "salahRulingSunnah": "Сунна"
+  "salahRulingSunnah": "Сунна",
+  "salahOfflineTitle": "Картинки без интернета",
+  "salahOfflineImages": "Иллюстрации курса",
+  "salahOfflineSaved": "Сохранены на устройстве",
+  "salahOfflineUpdateAvailable": "Есть новая версия",
+  "salahOfflineUpdate": "Обновить"
 }

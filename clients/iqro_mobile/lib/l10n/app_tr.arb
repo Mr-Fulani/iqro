@@ -600,5 +600,10 @@
   "salahRulingShart": "Şart",
   "salahRulingRukn": "Rükün",
   "salahRulingWajib": "Vacip",
-  "salahRulingSunnah": "Sünnet"
+  "salahRulingSunnah": "Sünnet",
+  "salahOfflineTitle": "Çevrimdışı görseller",
+  "salahOfflineImages": "Kursun görselleri",
+  "salahOfflineSaved": "Bu cihaza kaydedildi",
+  "salahOfflineUpdateAvailable": "Yeni sürüm mevcut",
+  "salahOfflineUpdate": "Güncelle"
 }

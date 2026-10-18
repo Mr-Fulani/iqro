@@ -2010,4 +2010,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'Сунна';
+
+  @override
+  String get salahOfflineTitle => 'Картинки без интернета';
+
+  @override
+  String get salahOfflineImages => 'Иллюстрации курса';
+
+  @override
+  String get salahOfflineSaved => 'Сохранены на устройстве';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'Есть новая версия';
+
+  @override
+  String get salahOfflineUpdate => 'Обновить';
 }

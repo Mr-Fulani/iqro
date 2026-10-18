@@ -3599,6 +3599,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sunnah'**
   String get salahRulingSunnah;
+
+  /// No description provided for @salahOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pictures offline'**
+  String get salahOfflineTitle;
+
+  /// No description provided for @salahOfflineImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Course illustrations'**
+  String get salahOfflineImages;
+
+  /// No description provided for @salahOfflineSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device'**
+  String get salahOfflineSaved;
+
+  /// No description provided for @salahOfflineUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is available'**
+  String get salahOfflineUpdateAvailable;
+
+  /// No description provided for @salahOfflineUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get salahOfflineUpdate;
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ import '../features/reminders/reminder_models.dart';
 import '../features/reminders/reminder_repository.dart';
 import '../features/salah/salah_display.dart';
 import '../features/salah/salah_models.dart';
+import '../features/salah/salah_offline_repository.dart';
 import '../features/salah/salah_progress.dart';
 import '../features/salah/salah_repository.dart';
 import '../features/share/share_repository.dart';
@@ -924,6 +926,140 @@ final salahImageProvider = Provider<ImageProvider Function(String url)>(
   (ref) =>
       (url) => CachedNetworkImageProvider(url),
 );
+final salahOfflineRepositoryProvider = Provider<SalahOfflineRepository>(
+  (ref) => SalahOfflineRepository(
+    gateway: ApiSalahOfflineGateway(ref.watch(apiClientProvider)),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+
+/// Downloaded course pictures by SHA-256, for the language being read.
+final salahOfflineImagesProvider =
+    FutureProvider.family<Map<String, String>, String>((ref, slug) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return ref
+          .watch(salahOfflineRepositoryProvider)
+          .localImages(slug, locale);
+    });
+
+/// A step picture from the offline package when it is downloaded, otherwise
+/// from the network as before.
+final salahCourseImageProvider =
+    Provider.family<ImageProvider Function(SalahMedia media), String>((
+      ref,
+      slug,
+    ) {
+      final local =
+          ref.watch(salahOfflineImagesProvider(slug)).valueOrNull ??
+          const <String, String>{};
+      final network = ref.watch(salahImageProvider);
+      return (media) {
+        final path = media.sha256.isEmpty ? null : local[media.sha256];
+        return path == null ? network(media.url) : FileImage(File(path));
+      };
+    });
+
+class SalahOfflineController extends StateNotifier<SalahOfflineSnapshot> {
+  SalahOfflineController(
+    this._repository,
+    this._slug,
+    this._language, {
+    this.onChanged,
+  }) : super(const SalahOfflineSnapshot.empty()) {
+    unawaited(initialize());
+  }
+
+  final SalahOfflineRepository _repository;
+  final String _slug;
+  final String _language;
+
+  /// Called when the stored pictures changed.
+  final void Function()? onChanged;
+
+  /// The stored state first, then the published size and version.
+  Future<void> initialize() async {
+    try {
+      final stored = await _repository.snapshot(_slug, _language);
+      if (mounted && state.status != SalahOfflineStatus.downloading) {
+        state = stored;
+      }
+      final latest = await _repository.check(_slug, _language);
+      if (mounted && state.status != SalahOfflineStatus.downloading) {
+        state = latest;
+      }
+    } on Object {
+      // Offline the stored state stays; without a manifest there is nothing
+      // to offer for download.
+    }
+  }
+
+  Future<void> download() async {
+    if (state.status == SalahOfflineStatus.downloading) return;
+    final previous = state;
+    state = SalahOfflineSnapshot(
+      status: SalahOfflineStatus.downloading,
+      packageId: previous.packageId,
+      totalItems: previous.totalItems,
+      totalBytes: previous.totalBytes,
+    );
+    try {
+      final installed = await _repository.install(
+        _slug,
+        _language,
+        onProgress: (progress) {
+          if (mounted) state = progress;
+        },
+      );
+      onChanged?.call();
+      if (mounted) state = installed;
+    } on Object catch (error) {
+      onChanged?.call();
+      if (!mounted) return;
+      state = SalahOfflineSnapshot(
+        status: SalahOfflineStatus.failed,
+        packageId: previous.packageId,
+        version: previous.version,
+        checksum: previous.checksum,
+        totalItems: previous.totalItems,
+        totalBytes: previous.totalBytes,
+        error: error.toString(),
+      );
+    }
+  }
+
+  Future<void> delete() async {
+    await _repository.delete(_slug, _language);
+    onChanged?.call();
+    if (!mounted) return;
+    state = SalahOfflineSnapshot(
+      status: SalahOfflineStatus.notDownloaded,
+      packageId: state.packageId,
+      totalItems: state.totalItems,
+      totalBytes: state.totalBytes,
+    );
+  }
+}
+
+// Not disposed with the course screen: a download keeps running and one
+// controller per course avoids two writers for the same package.
+final salahOfflineProvider =
+    StateNotifierProvider.family<
+      SalahOfflineController,
+      SalahOfflineSnapshot,
+      String
+    >((ref, slug) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return SalahOfflineController(
+        ref.watch(salahOfflineRepositoryProvider),
+        slug,
+        locale,
+        onChanged: () => ref.invalidate(salahOfflineImagesProvider(slug)),
+      );
+    });
 final prayerScheduleProvider = FutureProvider.autoDispose
     .family<PrayerSchedule?, AccountScopeKey>((ref, key) {
       final database = ref.watch(localDatabaseProvider);

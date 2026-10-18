@@ -8,7 +8,12 @@ import '../../core/storage/offline_package_queries.dart';
 
 const _mushafPackageType = 'mushaf_pages';
 const _audioPackageType = 'surah_audio';
-const _knownPackageTypes = <String>{_mushafPackageType, _audioPackageType};
+const _salahPackageType = 'salah_course';
+const _knownPackageTypes = <String>{
+  _mushafPackageType,
+  _audioPackageType,
+  _salahPackageType,
+};
 final _safePackageId = RegExp(r'^[a-zA-Z0-9._-]+$');
 
 typedef OfflineStorageDirectoryProvider = Future<Directory> Function();
@@ -42,6 +47,7 @@ class OfflinePackageSummary {
 
   bool get isMushaf => packageType == _mushafPackageType;
   bool get isAudio => packageType == _audioPackageType;
+  bool get isSalah => packageType == _salahPackageType;
   bool get isDownloading => status == 'downloading';
 
   String? get quality => isAudio ? manifest['quality']?.toString() : null;
@@ -196,7 +202,11 @@ class OfflineStorageRepository {
         !_knownPackageTypes.contains(packageType)) {
       return null;
     }
-    final category = packageType == _mushafPackageType ? 'mushaf' : 'audio';
+    final category = switch (packageType) {
+      _mushafPackageType => 'mushaf',
+      _salahPackageType => 'salah',
+      _ => 'audio',
+    };
     final root = p.normalize(
       p.absolute(p.join(support.path, 'offline_packages')),
     );

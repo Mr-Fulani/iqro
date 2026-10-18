@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -14,6 +15,7 @@ import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/salah/salah_home_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_lesson_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
+import 'package:iqro_mobile/features/salah/salah_offline_repository.dart';
 import 'package:iqro_mobile/features/salah/salah_progress.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -304,11 +306,35 @@ void main() {
     expect(find.text('Пять молитв'), findsOneWidget);
     expect(find.textContaining('Пройден'), findsOneWidget);
     expect(find.text('Продолжить'), findsOneWidget);
+    // Without a manifest there is nothing to download.
+    expect(find.byKey(const ValueKey('salah-offline')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('salah-continue')));
     await tester.pumpAndSettle();
     expect(find.text('Шаг 1 из 2'), findsOneWidget);
     expect(find.text('Намерение'), findsOneWidget);
+  });
+
+  testWidgets('course home downloads and removes the pictures', (tester) async {
+    await _pump(
+      tester,
+      location: '/salah',
+      offline: _MemoryOfflineRepository(publishedBytes: 3640),
+    );
+
+    expect(find.text('Картинки без интернета'), findsOneWidget);
+    expect(find.text('Иллюстрации курса · 3.6 KB'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('salah-offline-download')));
+    await tester.pumpAndSettle();
+    expect(find.text('Сохранены на устройстве · 3.6 KB'), findsOneWidget);
+    expect(find.byKey(const ValueKey('salah-offline-download')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('salah-offline-delete')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Удалить'));
+    await tester.pumpAndSettle();
+    expect(find.text('Иллюстрации курса · 3.6 KB'), findsOneWidget);
   });
 }
 
@@ -348,6 +374,7 @@ Future<_Harness> _pump(
   double textScale = 1,
   SalahCourseProgress progress = const SalahCourseProgress(),
   Map<String, Object> preferences = const <String, Object>{},
+  SalahOfflineRepository? offline,
 }) async {
   SharedPreferences.setMockInitialValues(preferences);
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -401,6 +428,9 @@ Future<_Harness> _pump(
         )),
         salahCourseProvider.overrideWith((ref, slug) async => document),
         salahProgressStoreProvider.overrideWithValue(store),
+        salahOfflineRepositoryProvider.overrideWithValue(
+          offline ?? _MemoryOfflineRepository(),
+        ),
         salahImageProvider.overrideWithValue((url) {
           images.add(url);
           return MemoryImage(_transparentPng);
@@ -538,4 +568,49 @@ class _SilentAudioEngine implements IqroAudioEngine {
 
   @override
   Future<void> stop() async {}
+}
+
+/// The offline package in memory, like the progress store. Without
+/// [publishedBytes] there is no manifest and the pictures stay online.
+class _MemoryOfflineRepository implements SalahOfflineRepository {
+  _MemoryOfflineRepository({this.publishedBytes});
+
+  final int? publishedBytes;
+  var _stored = const SalahOfflineSnapshot.empty();
+
+  @override
+  Future<SalahOfflineSnapshot> snapshot(String slug, String language) async =>
+      _stored;
+
+  @override
+  Future<SalahOfflineSnapshot> check(String slug, String language) async {
+    final bytes = publishedBytes;
+    if (bytes == null) throw const SocketException('offline');
+    return SalahOfflineSnapshot(
+      status: _stored.status,
+      totalItems: 1,
+      totalBytes: bytes,
+    );
+  }
+
+  @override
+  Future<SalahOfflineSnapshot> install(
+    String slug,
+    String language, {
+    void Function(SalahOfflineSnapshot progress)? onProgress,
+  }) async => _stored = SalahOfflineSnapshot(
+    status: SalahOfflineStatus.ready,
+    completedItems: 1,
+    totalItems: 1,
+    downloadedBytes: publishedBytes!,
+    totalBytes: publishedBytes!,
+  );
+
+  @override
+  Future<void> delete(String slug, String language) async =>
+      _stored = const SalahOfflineSnapshot.empty();
+
+  @override
+  Future<Map<String, String>> localImages(String slug, String language) async =>
+      const <String, String>{};
 }

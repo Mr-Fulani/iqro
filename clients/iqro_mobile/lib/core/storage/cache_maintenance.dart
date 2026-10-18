@@ -184,6 +184,9 @@ class CacheMaintenance {
             ..add('audio:reciters:')
             ..add('audio:recitations:')
             ..add('audio:playback:${contentKey.substring(11)}:');
+        // The course document stays readable offline with its pictures.
+        case 'salah_course' when contentKey.startsWith('salah:'):
+          prefixes.add('$contentKey:');
       }
     }
     return prefixes;

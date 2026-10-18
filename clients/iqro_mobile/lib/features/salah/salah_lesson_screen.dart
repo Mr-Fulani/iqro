@@ -173,7 +173,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
     if (media == null) return;
     unawaited(
       precacheImage(
-        ref.read(salahImageProvider)(media.url),
+        ref.read(salahCourseImageProvider(widget.courseSlug))(media),
         context,
         onError: (error, stack) {},
       ),
@@ -294,6 +294,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
                   onPageChanged: _onPageChanged,
                   itemBuilder: (context, index) => _StepPage(
                     key: ValueKey(_steps[index].slug),
+                    courseSlug: widget.courseSlug,
                     document: widget.document,
                     lesson: lesson,
                     step: _steps[index],
@@ -538,12 +539,14 @@ class _StepButtons extends StatelessWidget {
 
 class _StepPage extends ConsumerWidget {
   const _StepPage({
+    required this.courseSlug,
     required this.document,
     required this.lesson,
     required this.step,
     super.key,
   });
 
+  final String courseSlug;
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
@@ -564,7 +567,7 @@ class _StepPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (media != null) ...<Widget>[
-            _StepImage(media: media),
+            _StepImage(courseSlug: courseSlug, media: media),
             const SizedBox(height: 16),
           ],
           Text(
@@ -673,13 +676,14 @@ class _StepRepeatCounterState extends State<_StepRepeatCounter> {
 /// The step illustration in its declared proportions, never wider than its
 /// declared width and never taller than 40% of the screen.
 class _StepImage extends ConsumerWidget {
-  const _StepImage({required this.media});
+  const _StepImage({required this.courseSlug, required this.media});
 
+  final String courseSlug;
   final SalahMedia media;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final image = ref.watch(salahImageProvider)(media.url);
+    final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
     return Semantics(
       image: true,
