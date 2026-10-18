@@ -199,3 +199,10 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
   await expect(summary.getByRole("link", { name: "Продолжить" })).toHaveAttribute("href", "/ru/salah/what-is-salah");
   await expect(page.getByRole("link", { name: /Фаджр/ }).locator(".salah-lesson-status")).toHaveText("Пройден");
 });
+
+test("the prayer-times page links to the course", async ({ page }) => {
+  await page.goto("/ru/prayer");
+  await page.getByTestId("prayer-salah-link").click();
+  await expect(page).toHaveURL("/ru/salah");
+  await expect(page.getByRole("heading", { level: 1, name: "Обучение намазу" })).toBeVisible();
+});

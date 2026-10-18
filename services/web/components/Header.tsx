@@ -28,7 +28,6 @@ export function Header() {
     { href: "/dua", label: t("nav.dua"), icon: "🤲" },
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
-    { href: "/salah", label: t("nav.salah"), icon: "🧎" },
     { href: "/calendar", label: t("calendar.title"), icon: "☾" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];
@@ -48,7 +47,7 @@ export function Header() {
       <nav className="app-menu" aria-label={t("nav.aria")}>
         {navItems.map((item) => {
           const isActive = routePathname === item.href
-            || (item.href !== "/" && routePathname.startsWith(`${item.href}/`));
+            || (item.href !== "/" && routePathname.startsWith(item.href));
           return (
             <IntentPrefetchLink
               key={item.href}
