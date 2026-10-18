@@ -1,0 +1,398 @@
+/* -------------------------------------------------------------------------
+   Prayer learning (/salah)
+------------------------------------------------------------------------- */
+.salah-page {
+  display: grid;
+  gap: 20px;
+}
+
+.salah-hero {
+  display: grid;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--panel) 55%, var(--primary-subtle));
+}
+
+.salah-hero h1 {
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.2;
+}
+
+.salah-hero > p:not(.eyebrow) {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.salah-hero .salah-provenance {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.salah-course-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.salah-progress-copy {
+  display: grid;
+  gap: 6px;
+  min-width: min(260px, 100%);
+  font-weight: 600;
+}
+
+.salah-progress-copy progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--primary);
+}
+
+.salah-section {
+  display: grid;
+  gap: 14px;
+}
+
+.salah-section h2 {
+  font-size: 20px;
+}
+
+.salah-lesson-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.salah-lesson-card {
+  display: grid;
+  gap: 6px;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.salah-lesson-card:hover,
+.salah-lesson-card:focus-visible {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+.salah-lesson-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.salah-lesson-head h3 {
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.salah-lesson-summary {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.salah-lesson-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.salah-lesson-status {
+  flex-shrink: 0;
+  padding: 3px 9px;
+}
+
+/* Step player ------------------------------------------------------------ */
+.salah-player {
+  display: grid;
+  gap: 16px;
+}
+
+.salah-player-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.salah-mode-switch,
+.salah-text-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.salah-text-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.salah-text-toggles input {
+  accent-color: var(--primary);
+}
+
+.salah-step-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.salah-rakats {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.salah-rakats li {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--primary-border);
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.salah-rakats li.is-done {
+  border-color: var(--primary);
+  background: var(--primary-border);
+}
+
+.salah-rakats li.is-current {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.salah-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.salah-step {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.salah-step[hidden] {
+  display: none;
+}
+
+.salah-step:not(:has(.salah-step-image)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.salah-step-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.salah-step-body {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.salah-step-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.salah-step-head h2 {
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.25;
+}
+
+.salah-ruling {
+  padding: 3px 10px;
+}
+
+.salah-ruling.is-rukn {
+  background: var(--primary-subtle);
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+}
+
+.salah-ruling.is-wajib {
+  background: var(--accent-gold-subtle);
+  border-color: var(--accent-gold-border);
+  color: var(--accent-gold);
+}
+
+.salah-instruction {
+  font-size: 1.07rem;
+  line-height: 1.65;
+}
+
+.salah-details {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.salah-formula {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.salah-arabic {
+  color: #16251f;
+  font-family: var(--font-arabic);
+  /* rem-based so the browser font-size setting scales the Arabic text. */
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 2;
+  text-align: center;
+}
+
+.salah-transliteration {
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.salah-translation {
+  line-height: 1.6;
+}
+
+.salah-formula-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.salah-audio-panel {
+  margin-top: 0;
+}
+
+.salah-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.salah-counter button {
+  min-width: 44px;
+  min-height: 36px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.salah-counter button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.salah-counter.is-done {
+  border-color: var(--success-border);
+  background: var(--success-subtle);
+}
+
+.salah-step-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.salah-step-nav .btn {
+  min-height: 44px;
+  min-width: 120px;
+}
+
+.salah-keyboard-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.salah-completed {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-md);
+  background: var(--success-subtle);
+}
+
+.salah-completed > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.salah-player.is-practice .salah-arabic {
+  font-size: clamp(1.8rem, 3.4vw, 2.4rem);
+}
+
+@media (max-width: 768px) {
+  .salah-step {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .salah-step-image {
+    max-width: 420px;
+    margin-inline: auto;
+  }
+
+  .salah-step-nav {
+    position: sticky;
+    bottom: var(--mobile-nav-space, 72px);
+    z-index: 2;
+    padding: 10px 0;
+    background: var(--panel);
+  }
+
+  .salah-step-nav .btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .salah-keyboard-hint {
+    display: none;
+  }
+}

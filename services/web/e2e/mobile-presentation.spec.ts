@@ -69,7 +69,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await more.focus();
   await page.keyboard.press("Enter");
   await expect(navigation.locator(".mobile-more-panel")).toBeVisible();
-  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(5);
+  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(6);
   await page.keyboard.press("Escape");
   await expect(navigation.locator(".mobile-more-panel")).toBeHidden();
   await expect(more).toBeFocused();

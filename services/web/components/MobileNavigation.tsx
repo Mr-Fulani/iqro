@@ -7,7 +7,7 @@ import { useI18n } from "../lib/i18n-context";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
-type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "dua" | "calendar" | "profile";
+type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "dua" | "calendar" | "profile";
 
 function NavigationIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -17,6 +17,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     audio: <><path d="M3 14v-2a9 9 0 0 1 18 0v2M3 13h3v8H4a1 1 0 0 1-1-1Zm18 0h-3v8h2a1 1 0 0 0 1-1Z" /></>,
     more: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     prayer: <><path d="M20 15.2A9 9 0 0 1 8.8 4 9 9 0 1 0 20 15.2Z" /><path d="M17 3v4m-2-2h4" /></>,
+    salah: <><path d="M6 21V9a6 6 0 0 1 12 0v12Z" /><path d="M6 17h12M12 7v3" /></>,
     dua: <><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-14 5h3m4 0h3" /></>,
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
@@ -37,6 +38,7 @@ export function MobileNavigation() {
   ] as const;
   const more = [
     { href: "/prayer", label: t("nav.prayer"), icon: "prayer" },
+    { href: "/salah", label: t("nav.salah"), icon: "salah" },
     { href: "/calendar", label: t("calendar.title"), icon: "calendar" },
     { href: "/dua", label: t("nav.dua"), icon: "dua" },
     { href: "/memorization", label: t("nav.memorization"), icon: "plan" },

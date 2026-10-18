@@ -17,7 +17,9 @@
       "locale": "ar",
       "direction": "rtl",
       "template": "published-surah"
-    }
+    },
+    { "path": "/ru/salah/fajr", "locale": "ru", "direction": "ltr", "template": "salah-lesson" },
+    { "path": "/ar/salah/fajr", "locale": "ar", "direction": "rtl", "template": "salah-lesson" }
   ],
   "categories": {
     "performance": 0.75,
