@@ -27,9 +27,20 @@ export function recitationLabel(recitation: Recitation): string {
   return `${recitation.style.toUpperCase()} · ${recitation.quran_edition.riwayah}`;
 }
 
-export function formatTrackDuration(durationMs: number, locale: Locale): string {
+/**
+ * «9:44», or «1:57:34» for a recording of an hour or more, as the app shows
+ * it; minutes alone read «117:34». `head` formats the leading number.
+ */
+export function formatClock(durationMs: number, head: (value: number) => string = String): string {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1_000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return new Intl.NumberFormat(locale).format(minutes) + `:${String(seconds).padStart(2, "0")}`;
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return hours > 0
+    ? `${head(hours)}:${String(minutes).padStart(2, "0")}:${seconds}`
+    : `${head(minutes)}:${seconds}`;
+}
+
+export function formatTrackDuration(durationMs: number, locale: Locale): string {
+  return formatClock(durationMs, (value) => new Intl.NumberFormat(locale).format(value));
 }
