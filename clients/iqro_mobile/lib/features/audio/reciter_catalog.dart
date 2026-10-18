@@ -115,6 +115,7 @@ Recitation? recitationForPersonStyle(
   Iterable<Recitation> recitations,
   String style, {
   String? preferredId,
+  AudioRecitationRole role = AudioRecitationRole.listening,
 }) {
   return preferredRecitation(
     recitationsForPerson(
@@ -122,5 +123,6 @@ Recitation? recitationForPersonStyle(
       recitations,
     ).where((item) => item.style == style).toList(growable: false),
     preferredId: preferredId,
+    role: role,
   );
 }

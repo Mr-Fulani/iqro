@@ -142,6 +142,7 @@ class RecitationCoverageSerializer(serializers.Serializer[Any]):
     timed_ayahs = serializers.IntegerField(min_value=0)
     complete = serializers.BooleanField()
     timings_complete = serializers.BooleanField()
+    surah_numbers = serializers.ListField(child=serializers.IntegerField(min_value=1))
 
 
 class RecitationTimingsSerializer(serializers.Serializer[Any]):
@@ -220,7 +221,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
         }
 
     @extend_schema_field(RecitationCoverageSerializer)
-    def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool]:
+    def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool | list[int]]:
         track_count = int(getattr(obj, "track_count", 0))
         surah_count = int(getattr(obj, "surah_track_count", 0))
         expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
@@ -232,6 +233,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "expected_ayahs": expected_ayahs,
             "timed_ayahs": timed_ayahs,
             "timings_complete": expected_ayahs > 0 and timed_ayahs >= expected_ayahs,
+            "surah_numbers": list(getattr(obj, "surah_numbers", [])),
         }
 
     @extend_schema_field(RecitationTimingsSerializer)
@@ -249,11 +251,12 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     def get_capabilities(self, obj: RecitationEdition) -> dict[str, bool]:
         expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
         timed_ayahs = int(getattr(obj, "timed_ayah_count", 0) or 0)
-        timings_complete = expected_ayahs > 0 and timed_ayahs >= expected_ayahs
+        # Listening-only audio is kept out of the Mushaf and Memorization even when timed.
+        ayah_roles = expected_ayahs > 0 and timed_ayahs >= expected_ayahs and not obj.listening_only
         return {
             "listen": bool(obj.stream_allowed),
-            "ayah_playback": timings_complete,
-            "memorization": timings_complete,
+            "ayah_playback": ayah_roles,
+            "memorization": ayah_roles,
             "offline": bool(obj.offline_download_allowed),
         }
 

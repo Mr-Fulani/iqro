@@ -333,8 +333,8 @@ class RecitationEditionAudioAdapter:
             coverage=summary.coverage,
             capabilities=AudioVariantCapabilities(
                 listen=bool(recitation.stream_allowed and summary.track_count),
-                ayah_playback=summary.coverage.timings_complete,
-                memorization=summary.coverage.timings_complete,
+                ayah_playback=summary.coverage.timings_complete and not recitation.listening_only,
+                memorization=summary.coverage.timings_complete and not recitation.listening_only,
                 offline=bool(recitation.offline_download_allowed),
             ),
         )

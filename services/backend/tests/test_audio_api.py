@@ -545,6 +545,7 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
         "timed_ayahs": 2,
         "complete": True,
         "timings_complete": True,
+        "surah_numbers": list(range(1, 115)),
     }
     assert recitation_detail.json()["timings"] == {
         "available": True,
@@ -1306,8 +1307,9 @@ def test_recitation_list_is_free_of_serializer_n_plus_one_queries(
 
     assert response.status_code == 200
     assert len(response.json()["results"]) == 2
-    # The page itself, plus one query for every public recitation's summary.
-    assert len(cold) == 2
+    # The page itself, one query for every public recitation's summary and one
+    # for the surahs each of them holds.
+    assert len(cold) == 3
     # Summaries come from the cache: only the page is queried.
     assert len(warm) == 1
     assert cached.json() == response.json()

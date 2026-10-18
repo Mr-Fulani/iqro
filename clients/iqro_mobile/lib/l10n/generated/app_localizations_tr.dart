@@ -546,6 +546,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get styleMuallim => 'Muallim';
 
   @override
+  String get styleKidsRepeat => 'Çocuklar için tekrarlı';
+
+  @override
   String get refreshReciters => 'Kâri kataloğunu yenile';
 
   @override

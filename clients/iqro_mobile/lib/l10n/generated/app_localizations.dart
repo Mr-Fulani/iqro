@@ -1074,6 +1074,12 @@ abstract class AppLocalizations {
   /// **'Muallim'**
   String get styleMuallim;
 
+  /// No description provided for @styleKidsRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Children\'s repeat'**
+  String get styleKidsRepeat;
+
   /// No description provided for @refreshReciters.
   ///
   /// In en, this message translates to:

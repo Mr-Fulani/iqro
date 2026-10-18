@@ -15,6 +15,7 @@ import '../../core/storage/preferences_store.dart';
 import '../../core/utils/latest_async_work_queue.dart';
 import '../audio/mini_player.dart';
 import '../audio/audio_models.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
@@ -682,6 +683,61 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
+  /// The Mushaf keeps its own reciter, separate from the Audio tab's, and
+  /// offers only recitations timed ayah by ayah.
+  Future<void> _chooseMushafReciter() async {
+    List<Recitation> recitations;
+    try {
+      recitations = await ref
+          .read(audioRepositoryProvider)
+          .recitationsForRole(AudioRecitationRole.ayahPlayback);
+    } on Object {
+      recitations = const <Recitation>[];
+    }
+    if (!mounted) return;
+    if (recitations.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      return;
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    final currentId = ref.read(appPreferencesProvider).mushafRecitationId;
+    final picked = await showModalBottomSheet<Recitation>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: .7,
+        child: ListView(
+          children: <Widget>[
+            ListTile(
+              title: Text(
+                context.l10n.chooseReciter,
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            for (final recitation in recitations)
+              ListTile(
+                title: Text(recitation.reciter.nameFor(locale)),
+                subtitle: Text(
+                  recitationStyleLabel(sheetContext, recitation.style),
+                ),
+                trailing: recitation.id == currentId
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () => Navigator.pop(sheetContext, recitation),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setMushafRecitation(picked.id);
+  }
+
   Future<void> _bookmarkSelected() async {
     final reference = _selectedAyah ?? _pageReference;
     final scope = _database.accountScope.current;
@@ -819,7 +875,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     title: Text(context.l10n.chooseReciter),
                     onTap: () {
                       Navigator.pop(sheetContext);
-                      context.push('/app?tab=3');
+                      unawaited(_chooseMushafReciter());
                     },
                   ),
                   ListTile(

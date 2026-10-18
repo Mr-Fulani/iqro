@@ -543,6 +543,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get styleMuallim => 'معلّم';
 
   @override
+  String get styleKidsRepeat => 'للأطفال مع التكرار';
+
+  @override
   String get refreshReciters => 'تحديث قائمة القراء';
 
   @override

@@ -386,6 +386,7 @@ def _published_recitation(
         .filter(
             id=recitation_id,
             quran_edition_version_id=edition_version_id,
+            listening_only=False,
         )
         .first()
     )

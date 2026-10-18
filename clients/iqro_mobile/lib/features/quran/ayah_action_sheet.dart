@@ -10,6 +10,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_portraits.dart';
 import 'ayah_annotations.dart';
@@ -355,7 +356,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             (item) => DropdownMenuItem<String>(
               value: item.id,
               child: Text(
-                '${item.reciter.nameFor(locale)} · ${item.style}',
+                '${item.reciter.nameFor(locale)} · '
+                '${recitationStyleLabel(context, item.style)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

@@ -241,6 +241,11 @@ services:
       DATABASE_POOL_ENABLED: "true"
       # Cancel API statements still running after 30 s; workers and migrations keep no cap.
       DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-30000}
+      # Request bodies spool to disk, not the 64 MB in-memory /tmp: an admin surah
+      # upload can be several hundred megabytes.
+      TMPDIR: /var/tmp/iqro-uploads
+    volumes:
+      - backend-uploads:/var/tmp/iqro-uploads
     restart: unless-stopped
     depends_on:
       postgres:
@@ -573,6 +578,7 @@ services:
     logging: *default-logging
 
 volumes:
+  backend-uploads:
   postgres-data:
   redis-data:
   static-data:

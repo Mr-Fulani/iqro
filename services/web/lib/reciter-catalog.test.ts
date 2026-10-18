@@ -4,6 +4,8 @@ import test from "node:test";
 import type { Recitation, Reciter } from "./api.ts";
 import {
   latestRecitationsByVariant,
+  recitationHasSurah,
+  recitationStyleLabel,
   recitationsForRole,
   supportsRecitationRole,
 } from "./reciter-catalog.ts";
@@ -104,4 +106,27 @@ test("legacy responses retain listening compatibility while timed roles require 
   assert.equal(supportsRecitationRole(legacy, "listen"), true);
   assert.equal(supportsRecitationRole(legacy, "ayah_playback"), false);
   assert.equal(supportsRecitationRole(legacy, "memorization"), false);
+});
+
+test("a partial listening recording knows which surahs it holds", () => {
+  const partial = recitation("partial", "2026-10-18T00:00:00Z", {
+    listen: true,
+    ayah_playback: false,
+    memorization: false,
+    offline: false,
+  });
+  partial.coverage = { ...partial.coverage, surah_count: 2, complete: false, surah_numbers: [1, 112] };
+  const legacy = recitation("legacy", "2026-10-18T00:00:00Z", partial.capabilities);
+
+  assert.equal(recitationHasSurah(partial, 112), true);
+  assert.equal(recitationHasSurah(partial, 2), false);
+  assert.equal(recitationHasSurah(legacy, 2), true);
+});
+
+test("recitation styles are translated, including the children's repeat", () => {
+  const t = (key: string) => `t:${key}`;
+
+  assert.equal(recitationStyleLabel("kids-repeat", t), "t:audio.style.kidsRepeat");
+  assert.equal(recitationStyleLabel("mujawwad", t), "t:audio.style.mujawwad");
+  assert.equal(recitationStyleLabel("hadr", t), "hadr");
 });

@@ -3,19 +3,38 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, ClassVar, cast
+from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import admin
-from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpRequest
-from django.utils.html import format_html
+from django.contrib.admin.utils import unquote
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models import Count, Q
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseNotAllowed,
+    JsonResponse,
+)
+from django.urls import path, reverse
+from django.utils import timezone
+from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
+from django.utils.text import slugify
 
 from quran_backend.modules.audio.models import (
     AudioPlaybackPosition,
     AudioRendition,
     AudioTimingVersion,
     AudioTrack,
+    AudioTrackScope,
     AyahAudioSegment,
     PlayerBackground,
     QuranFoundationAyahRecitation,
@@ -41,12 +60,26 @@ from quran_backend.modules.audio.portrait_upload import (
     ReciterPortraitUploadError,
     upload_reciter_portrait,
 )
+from quran_backend.modules.audio.selectors import (
+    forget_recitation_summaries,
+    public_recitation_base,
+    public_reciters,
+)
 from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.audio.surah_upload import (
+    LISTENING_QURAN_EDITION,
+    MAX_SURAH_UPLOAD_MIB,
+    SurahUploadError,
+    accepts_new_surahs,
+    surah_number_from_filename,
+    upload_surah_audio,
+)
 from quran_backend.modules.core.content_revalidation import (
     enqueue_audio_content_change,
     enqueue_reciter_content_change,
 )
 from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.quran.models import QuranEdition
 
 logger = logging.getLogger(__name__)
 
@@ -120,19 +153,23 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
 
     def clean(self) -> dict[str, Any]:
         cleaned = super().clean() or {}
-        uploaded = cleaned.get("portrait_upload")
-        remove = cleaned.get("remove_portrait") is True
-        if uploaded and remove:
+        if cleaned.get("portrait_upload") and cleaned.get("remove_portrait") is True:
             self.add_error(
                 "portrait_upload",
                 "Выберите загрузку нового портрета или удаление текущего, но не оба действия.",
             )
-            return cleaned
+        return cleaned
+
+    def _post_clean(self) -> None:
+        super()._post_clean()  # type: ignore[misc]
+        # Upload only once the model itself is valid (a taken code, say), so a
+        # rejected form never leaves an immutable file behind in storage.
+        uploaded = self.cleaned_data.get("portrait_upload")
         if uploaded and not self.errors:
             try:
                 result = upload_reciter_portrait(
                     uploaded,
-                    reciter_code=str(cleaned.get("code") or ""),
+                    reciter_code=str(self.cleaned_data.get("code") or ""),
                 )
             except ReciterPortraitUploadError as exc:
                 self.add_error("portrait_upload", str(exc))
@@ -144,7 +181,6 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
                 )
             else:
                 self._uploaded_portrait_key = result.object_key
-        return cleaned
 
     def save(self, commit: bool = True) -> Reciter:
         instance = cast("Reciter", super().save(commit=False))
@@ -472,6 +508,8 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ("is_active", "country_code")
     search_fields = ("=code", "name_ar", "name_en", "name_ru", "name_tr")
     readonly_fields = (
+        "catalog_status",
+        "recordings",
         "portrait_preview",
         "portrait_storage_key",
         "id",
@@ -490,6 +528,7 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "name_tr",
                     "country_code",
                     "is_active",
+                    "catalog_status",
                 )
             },
         ),
@@ -512,6 +551,7 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             "Портрет чтеца",
             {"fields": ("portrait_preview", "portrait_upload", "remove_portrait")},
         ),
+        ("Записи", {"fields": ("recordings",)}),
         (
             "Служебная информация",
             {
@@ -543,6 +583,45 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             return "—"
         return obj.portrait_object_key
 
+    @admin.display(description="В приложении")
+    def catalog_status(self, obj: Reciter | None) -> str:
+        if obj is None or obj._state.adding:
+            return "Появится после сохранения и публикации первой записи."
+        if not obj.is_active:
+            return "Скрыт: выключен флажок «Показывать чтеца пользователям»."
+        if public_reciters().filter(pk=obj.pk).exists():
+            return "Виден в приложении и на сайте."
+        return "Не виден: у чтеца нет опубликованной записи с сурами."
+
+    @admin.display(description="Записи чтеца")
+    def recordings(self, obj: Reciter | None) -> str:
+        if obj is None or obj._state.adding:
+            return "Сохраните чтеца, чтобы добавить записи."
+        add_url = (
+            reverse("admin:audio_recitationedition_add")
+            + "?"
+            + urlencode({"reciter": str(obj.pk), "listening_only": "1"})
+        )
+        rows = format_html_join(
+            "",
+            '<li><a href="{}">{}</a> — {}, {}</li>',
+            (
+                (
+                    reverse("admin:audio_recitationedition_change", args=[recitation.pk]),
+                    f"{recitation.get_style_display()} · v{recitation.version}",
+                    recitation.get_status_display(),
+                    "только Аудио" if recitation.listening_only else "Аудио, Мусхаф, Заучивание",
+                )
+                for recitation in obj.recitations.order_by("style", "-created_at")
+            ),
+        )
+        return format_html(
+            '<ul style="margin:0 0 8px;padding-left:18px">{}</ul>'
+            '<a class="button" href="{}">Добавить запись для прослушивания</a>',
+            rows or mark_safe("<li>Записей пока нет.</li>"),
+            add_url,
+        )
+
     def save_model(
         self,
         request: HttpRequest,
@@ -557,25 +636,317 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         )
 
 
+class RecitationEditionAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    class Meta:
+        model = RecitationEdition
+        fields = (
+            "reciter",
+            "style",
+            "listening_only",
+            "quran_edition_version",
+            "status",
+            "rights_holder",
+            "license_name",
+            "license_url",
+            "license_spdx_id",
+            "license_attribution",
+            "stream_allowed",
+            "offline_download_allowed",
+            "rights_evidence_url",
+            "rights_checked_on",
+            "source_name",
+            "source_url",
+            "code",
+            "version",
+            "source_version",
+            "source_checksum_sha256",
+        )
+        help_texts: ClassVar[dict[str, str]] = {
+            "listening_only": (
+                "Запись звучит только во вкладке «Аудио» и в мини-плеере, никогда в Мусхафе "
+                "и Заучивании. Можно публиковать с любым числом сур и докладывать новые суры "
+                "после публикации."
+            ),
+            "quran_edition_version": "Для записей прослушивания оставьте значение по умолчанию.",
+            "status": (
+                "Опубликовать можно, когда загружена хотя бы одна сура и решены права. "
+                "Дата публикации проставится сама."
+            ),
+            "rights_holder": "Кто владеет записью: студия, радио, сам чтец.",
+            "stream_allowed": "Есть ли разрешение правообладателя на воспроизведение онлайн.",
+            "offline_download_allowed": "Есть ли отдельное разрешение на скачивание в приложение.",
+            "rights_evidence_url": "Ссылка на письмо, договор или страницу с разрешением.",
+            "source_name": "Откуда получены файлы.",
+            "code": "Для записей прослушивания заполнится сам из кода чтеца и стиля.",
+            "version": "Для записей прослушивания заполнится сам: 1, 2, 3…",
+            "source_version": "Если пусто, совпадёт с версией.",
+            "source_checksum_sha256": "Нужна только для записей с таймкодами аятов.",
+        }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        for name in ("code", "version", "source_version"):
+            if name in self.fields:
+                self.fields[name].required = False
+        if self.instance._state.adding:
+            self.fields["listening_only"].initial = True
+            self.fields["source_name"].initial = "Загружено редактором IQRO"
+            # Choices from the model field carry the admin's Russian labels.
+            cast("forms.ChoiceField", self.fields["status"]).choices = [
+                (value, label)
+                for value, label in RecitationEdition._meta.get_field("status").choices or ()
+                if value == RecitationPublicationStatus.DRAFT
+            ]
+            default_version = (
+                QuranEdition.objects.filter(code=LISTENING_QURAN_EDITION)
+                .values_list("active_version_id", flat=True)
+                .first()
+            )
+            if default_version is not None:
+                self.fields["quran_edition_version"].initial = default_version
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        if self.instance._state.adding:
+            self._fill_package_identity(cleaned)
+        elif "code" in self.fields and not (cleaned.get("code") and cleaned.get("version")):
+            self.add_error("code", "Код и версия обязательны.")
+        if "source_version" in self.fields and not cleaned.get("source_version"):
+            cleaned["source_version"] = cleaned.get("version") or self.instance.version
+        persisted_status = (
+            None
+            if self.instance._state.adding
+            else RecitationEdition.objects.filter(pk=self.instance.pk)
+            .values_list("status", flat=True)
+            .first()
+        )
+        if (
+            cleaned.get("status") == RecitationPublicationStatus.PUBLISHED
+            and persisted_status == RecitationPublicationStatus.DRAFT
+        ):
+            # Same as RecitationEdition.publish(); the date is never typed by hand.
+            self.instance.published_at = timezone.now()
+        return cleaned
+
+    def _fill_package_identity(self, cleaned: dict[str, Any]) -> None:
+        reciter = cleaned.get("reciter")
+        style = cleaned.get("style")
+        edition_version = cleaned.get("quran_edition_version")
+        if cleaned.get("code") and cleaned.get("version"):
+            return
+        if not cleaned.get("listening_only"):
+            self.add_error("code", "Для записи с таймкодами укажите код и версию.")
+            return
+        if reciter is None or not style or edition_version is None:
+            return
+        code = cleaned.get("code") or slugify(f"{reciter.code}-{style}")[:64]
+        number = 1
+        while (
+            RecitationEdition.objects.filter(code=code, version=str(number)).exists()
+            or RecitationEdition.objects.filter(
+                reciter=reciter,
+                quran_edition_version=edition_version,
+                style=style,
+                version=str(number),
+            ).exists()
+        ):
+            number += 1
+        cleaned["code"] = code
+        cleaned["version"] = cleaned.get("version") or str(number)
+
+
 @admin.register(RecitationEdition)
 class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    form = RecitationEditionAdminForm
     actions = None
     list_display = (
-        "code",
-        "version",
-        "style",
         "reciter",
-        "quran_edition_version",
+        "style",
+        "listening_only",
         "status",
+        "surah_count",
+        "version",
+        "quran_edition_version",
         "published_at",
     )
-    list_filter = ("status", "style", "quran_edition_version", "reciter")
-    search_fields = ("=code", "version", "reciter__name_ar", "reciter__name_en")
+    list_filter = ("status", "listening_only", "style", "quran_edition_version", "reciter")
+    search_fields = ("=code", "version", "reciter__name_ar", "reciter__name_en", "reciter__name_ru")
     list_select_related = (
         "reciter",
         "quran_edition_version__edition",
     )
-    readonly_fields = ("id", "created_at", "updated_at")
+    readonly_fields = (
+        "catalog_status",
+        "surah_coverage",
+        "published_at",
+        "id",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Чтец и назначение",
+            {"fields": ("reciter", "style", "listening_only", "quran_edition_version")},
+        ),
+        ("Публикация", {"fields": ("status", "published_at", "catalog_status")}),
+        ("Суры", {"fields": ("surah_coverage",)}),
+        (
+            "Права и источник",
+            {
+                "fields": (
+                    "rights_holder",
+                    "stream_allowed",
+                    "offline_download_allowed",
+                    "rights_evidence_url",
+                    "rights_checked_on",
+                    "license_name",
+                    "license_url",
+                    "license_spdx_id",
+                    "license_attribution",
+                    "source_name",
+                    "source_url",
+                )
+            },
+        ),
+        (
+            "Служебная информация",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "code",
+                    "version",
+                    "source_version",
+                    "source_checksum_sha256",
+                    "id",
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
+    )
+
+    class Media:
+        js = ("audio/admin/surah_upload.js",)
+
+    def get_queryset(self, request: HttpRequest) -> Any:
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(
+                surah_total=Count("tracks", filter=Q(tracks__scope=AudioTrackScope.SURAH)),
+            )
+        )
+
+    @admin.display(description="Сур", ordering="surah_total")
+    def surah_count(self, obj: RecitationEdition) -> int:
+        return int(getattr(obj, "surah_total", 0))
+
+    @admin.display(description="Где звучит")
+    def catalog_status(self, obj: RecitationEdition | None) -> str:  # noqa: PLR0911
+        if obj is None or obj._state.adding:
+            return "Сохраните черновик, затем загрузите суры."
+        if obj.status == RecitationPublicationStatus.WITHDRAWN:
+            return "Отозвана: нигде не звучит."
+        if obj.status == RecitationPublicationStatus.DRAFT:
+            return "Черновик: пользователи его не видят."
+        if not public_recitation_base().filter(pk=obj.pk).exists():
+            if not obj.reciter.is_active:
+                return "Не звучит: чтец скрыт."
+            if not obj.listening_only:
+                return (
+                    "Не звучит: запись для Мусхафа и Заучивания должна содержать все 114 сур. "
+                    "Для неполной записи включите «Только для вкладки «Аудио»»."
+                )
+            return "Не звучит: проверьте права и издание Корана."
+        if obj.listening_only:
+            return "Звучит во вкладке «Аудио» и в мини-плеере."
+        return "Звучит во вкладке «Аудио»; в Мусхафе и Заучивании — если есть все таймкоды."
+
+    @admin.display(description="Загруженные суры")
+    def surah_coverage(self, obj: RecitationEdition | None) -> str:
+        if obj is None or obj._state.adding:
+            return "Сохраните черновик, чтобы загрузить суры."
+        numbers = [
+            number
+            for number in obj.tracks.filter(scope=AudioTrackScope.SURAH)
+            .order_by("surah_number")
+            .values_list("surah_number", flat=True)
+            if number is not None
+        ]
+        summary = (
+            f"{len(numbers)} из 114: {_number_ranges(numbers)}" if numbers else "Пока ни одной."
+        )
+        if not accepts_new_surahs(obj):
+            return summary
+        return format_html(
+            '<p style="margin:0 0 8px">{}</p>'
+            '<div data-surah-upload="{}" data-max-mib="{}">'
+            '<input type="file" accept="audio/mpeg,.mp3" multiple data-surah-files>'
+            '<p class="help">MP3, каждый файл — одна сура. Номер берётся из начала имени '
+            "файла (001.mp3, 2.mp3, «112 Аль-Ихлас.mp3»), его можно поправить перед "
+            "загрузкой. До {} МБ на файл.</p>"
+            '<table data-surah-queue style="margin-top:8px"></table>'
+            '<button type="button" class="button" data-surah-start disabled>Загрузить</button>'
+            "</div>",
+            summary,
+            reverse("admin:audio_recitationedition_upload_surah", args=[obj.pk]),
+            MAX_SURAH_UPLOAD_MIB,
+            MAX_SURAH_UPLOAD_MIB,
+        )
+
+    def get_urls(self) -> list[Any]:
+        return [
+            path(
+                "<path:object_id>/surahs/upload/",
+                self.admin_site.admin_view(self.upload_surah_view),
+                name="audio_recitationedition_upload_surah",
+            ),
+            *super().get_urls(),
+        ]
+
+    def upload_surah_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        recitation = self.get_object(request, unquote(object_id))
+        if recitation is None:
+            raise Http404
+        if not (
+            self.has_change_permission(request, recitation)
+            and request.user.has_perm("audio.add_audiotrack")
+            and request.user.has_perm("audio.add_audiorendition")
+        ):
+            raise PermissionDenied
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            return JsonResponse({"error": "Файл не получен."}, status=400)
+        raw_number = str(request.POST.get("surah_number") or "").strip()
+        surah_number = (
+            int(raw_number)
+            if raw_number.isdigit()
+            else surah_number_from_filename(uploaded.name or "")
+        )
+        if surah_number is None:
+            return JsonResponse({"error": "Укажите номер суры."}, status=400)
+        try:
+            with _uploaded_file_path(uploaded) as source_path:
+                result = upload_surah_audio(recitation.pk, surah_number, source_path)
+        except SurahUploadError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+        except ImproperlyConfigured, ObjectStorageError, OSError:
+            logger.exception("Surah audio upload failed")
+            return JsonResponse(
+                {"error": "Не удалось сохранить файл в хранилище. Повторите позже."},
+                status=502,
+            )
+        self.log_change(request, recitation, f"Загружена сура {result.surah_number}.")
+        return JsonResponse(
+            {
+                "surah_number": result.surah_number,
+                "duration_ms": result.duration_ms,
+                "bitrate_kbps": result.bitrate_kbps,
+                "size_bytes": result.size_bytes,
+            }
+        )
 
     def get_readonly_fields(
         self,
@@ -584,11 +955,14 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ) -> tuple[str, ...]:
         fields = tuple(super().get_readonly_fields(request, obj))
         if obj and obj.status != RecitationPublicationStatus.DRAFT:
-            editable_status = (
-                {"status"} if obj.status == RecitationPublicationStatus.PUBLISHED else set()
+            # Withdrawal and the rights paperwork stay editable; the package itself does not.
+            editable = (
+                {"status", "listening_only", "rights_evidence_url", "rights_checked_on"}
+                if obj.status == RecitationPublicationStatus.PUBLISHED
+                else {"rights_evidence_url", "rights_checked_on"}
             )
             immutable = tuple(
-                field.name for field in obj._meta.fields if field.name not in editable_status
+                field.name for field in obj._meta.fields if field.name not in editable
             )
             return tuple(dict.fromkeys((*fields, *immutable)))
         return fields
@@ -611,12 +985,13 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         form: Any,
         change: bool,
     ) -> None:
-        previous_status = None
-        if change:
-            previous_status = (
-                RecitationEdition.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
-            )
+        previous = (
+            RecitationEdition.objects.filter(pk=obj.pk).values("status", "listening_only").first()
+            if change
+            else None
+        )
         super().save_model(request, obj, form, change)
+        previous_status = previous["status"] if previous else None
         if previous_status != obj.status and obj.status in {
             RecitationPublicationStatus.PUBLISHED,
             RecitationPublicationStatus.WITHDRAWN,
@@ -627,6 +1002,45 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 reciter_id=obj.reciter_id,
                 version=obj.version,
             )
+        elif (
+            previous is not None
+            and previous["listening_only"] != obj.listening_only
+            and obj.status == RecitationPublicationStatus.PUBLISHED
+        ):
+            # Where a live recitation plays changed; clients must drop cached roles.
+            forget_recitation_summaries()
+            enqueue_audio_content_change(
+                action=obj.status,
+                recitation_id=obj.id,
+                reciter_id=obj.reciter_id,
+                version=obj.version,
+            )
+
+
+def _number_ranges(numbers: list[int]) -> str:
+    ranges: list[str] = []
+    start = previous = None
+    for number in [*numbers, None]:
+        if number is not None and previous is not None and number == previous + 1:
+            previous = number
+            continue
+        if start is not None:
+            ranges.append(str(start) if start == previous else f"{start}–{previous}")
+        start = previous = number
+    return ", ".join(ranges)
+
+
+@contextmanager
+def _uploaded_file_path(uploaded: UploadedFile) -> Iterator[Path]:
+    temporary_path = getattr(uploaded, "temporary_file_path", None)
+    if callable(temporary_path):
+        yield Path(temporary_path())
+        return
+    with NamedTemporaryFile(prefix="iqro-surah-", suffix=".upload") as temporary:
+        for chunk in uploaded.chunks():
+            temporary.write(chunk)
+        temporary.flush()
+        yield Path(temporary.name)
 
 
 @admin.register(AudioTimingVersion)

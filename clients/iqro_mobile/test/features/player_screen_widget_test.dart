@@ -140,6 +140,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the Mushaf picker never offers a listening-only recording', (
+    tester,
+  ) async {
+    await _pumpPlayer(
+      tester,
+      channel: AudioPlaybackChannel.mushaf,
+      recitations: const <Recitation>[
+        _currentRecitation,
+        _mujawwadRecitation,
+        _listeningOnlyRecitation,
+      ],
+    );
+
+    await tester.tap(find.text('Текущий чтец'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Другой чтец'), findsOneWidget);
+    expect(find.text('Чтец для прослушивания'), findsNothing);
+  });
+
+  testWidgets('the listening picker offers a recording that holds the surah', (
+    tester,
+  ) async {
+    await _pumpPlayer(
+      tester,
+      recitations: const <Recitation>[
+        _currentRecitation,
+        _mujawwadRecitation,
+        _listeningOnlyRecitation,
+      ],
+    );
+
+    await tester.tap(find.text('Текущий чтец'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Чтец для прослушивания'), findsOneWidget);
+  });
+
   testWidgets('switches audio rendition without losing playback position', (
     tester,
   ) async {
@@ -413,6 +455,11 @@ void main() {
 Future<_PlayerHarness> _pumpPlayer(
   WidgetTester tester, {
   List<PlayerBackground> backgrounds = bundledPlayerBackgrounds,
+  AudioPlaybackChannel channel = AudioPlaybackChannel.listening,
+  List<Recitation> recitations = const <Recitation>[
+    _currentRecitation,
+    _mujawwadRecitation,
+  ],
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -433,7 +480,7 @@ Future<_PlayerHarness> _pumpPlayer(
     auth,
     NotificationGateway(database: database),
   );
-  final repository = _AudioRepositoryFake();
+  final repository = _AudioRepositoryFake(recitations);
   final engine = _RecordingAudioEngine();
   final controller = AudioController(engine: engine);
   await controller.loadPlayback(
@@ -444,6 +491,7 @@ Future<_PlayerHarness> _pumpPlayer(
     ),
     reciter: _currentReciter,
     surahName: 'Аль-Бакара',
+    channel: channel,
     autoplay: false,
   );
   await controller.seek(const Duration(seconds: 15));
@@ -549,6 +597,45 @@ const _mujawwadReciter = Reciter(
   biographyTr: '',
 );
 
+const _listeningReciter = Reciter(
+  id: 'reciter-listening',
+  slug: 'listening-reciter',
+  nameAr: 'قارئ الاستماع',
+  nameEn: 'Listening reciter',
+  nameRu: 'Чтец для прослушивания',
+  nameTr: 'Dinleme okuyucusu',
+  biographyAr: '',
+  biographyEn: '',
+  biographyRu: '',
+  biographyTr: '',
+);
+
+const _listeningOnlyRecitation = Recitation(
+  id: 'recitation-listening',
+  code: 'listening-mujawwad',
+  reciter: _listeningReciter,
+  style: 'mujawwad',
+  timingsAvailable: false,
+  surahCount: 2,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+  capabilities: RecitationCapabilities(
+    listen: true,
+    ayahPlayback: false,
+    memorization: false,
+    offline: false,
+  ),
+  coverage: RecitationCoverage(
+    trackCount: 2,
+    surahCount: 2,
+    expectedAyahs: 6236,
+    timedAyahs: 0,
+    complete: false,
+    timingsComplete: false,
+    surahNumbers: <int>[1, 2],
+  ),
+);
+
 const _currentRecitation = Recitation(
   id: 'recitation-current',
   code: 'current-murattal',
@@ -613,18 +700,21 @@ SurahPlayback _playback(
 );
 
 class _AudioRepositoryFake implements AudioRepository {
+  _AudioRepositoryFake(this._recitations);
+
+  final List<Recitation> _recitations;
   String? requestedRecitationId;
   int? requestedSurah;
 
   @override
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async =>
-      const <Reciter>[_currentReciter, _mujawwadReciter];
+      const <Reciter>[_currentReciter, _mujawwadReciter, _listeningReciter];
 
   @override
   Future<List<Recitation>> recitations({
     String? reciterId,
     bool forceRefresh = false,
-  }) async => const <Recitation>[_currentRecitation, _mujawwadRecitation];
+  }) async => _recitations;
 
   @override
   Future<SurahPlayback> playback({

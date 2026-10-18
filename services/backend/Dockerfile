@@ -78,6 +78,8 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
 COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
+# Admin surah uploads spool here; a named volume mounted on it inherits this owner.
+RUN install -d -o app -g app -m 0700 /var/tmp/iqro-uploads
 
 FROM scratch AS runtime
 

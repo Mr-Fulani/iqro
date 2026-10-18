@@ -12,6 +12,7 @@ import '../../core/theme/iqro_theme.dart';
 import 'mini_player.dart';
 import 'audio_models.dart';
 import 'audio_offline_repository.dart';
+import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
@@ -231,7 +232,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       );
     }
     final people = groupRecitersByPerson(reciters);
-    final styles = orderedRecitationStyles(recitations);
+    final styles = orderedRecitationStyles(
+      recitations.where((item) => item.supports(AudioRecitationRole.listening)),
+    );
     if (styles.isEmpty) {
       return IqroStatusBanner(
         icon: Icons.volume_off_outlined,
@@ -435,7 +438,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final controller = ref.read(audioControllerProvider.notifier);
     final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
-    final surah = controller.listeningSurah ?? 1;
+    final listeningSurah = controller.listeningSurah ?? 1;
+    // A listening recording may hold only some surahs; start on its first one.
+    final surah = recitation.coversSurah(listeningSurah)
+        ? listeningSurah
+        : recitation.coverage?.surahNumbers.firstOrNull ?? listeningSurah;
     final surahName = _surahName(
       surah,
       fallback: controller.listeningSurahName ?? '',
@@ -701,13 +708,6 @@ String _formatAudioMegabytes(int bytes) {
   return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
 }
 
-String _styleLabel(BuildContext context, String style) => switch (style) {
-  'murattal' => context.l10n.styleMurattal,
-  'mujawwad' => context.l10n.styleMujawwad,
-  'muallim' => context.l10n.styleMuallim,
-  _ => style,
-};
-
 class _RecitationStyleFilter extends StatelessWidget {
   const _RecitationStyleFilter({
     required this.styles,
@@ -732,7 +732,7 @@ class _RecitationStyleFilter extends StatelessWidget {
             for (var index = 0; index < styles.length; index++) ...<Widget>[
               if (index > 0) const SizedBox(width: 8),
               ChoiceChip(
-                label: Text(_styleLabel(context, styles[index])),
+                label: Text(recitationStyleLabel(context, styles[index])),
                 selected: styles[index] == selected,
                 showCheckmark: false,
                 visualDensity: VisualDensity.compact,

@@ -16,6 +16,7 @@ import '../quran/quran_models.dart';
 import '../quran/surah_name_art.dart';
 import 'audio_models.dart';
 import 'player_backgrounds.dart';
+import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
@@ -76,14 +77,6 @@ IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
       rangeStartAyah: chrome.rangeStartAyah,
       rangeEndAyah: chrome.rangeEndAyah,
     );
-
-String _recitationStyleLabel(BuildContext context, String style) =>
-    switch (style) {
-      'murattal' => context.l10n.styleMurattal,
-      'mujawwad' => context.l10n.styleMujawwad,
-      'muallim' => context.l10n.styleMuallim,
-      _ => style,
-    };
 
 String _audioQualityLabel(BuildContext context, String quality) =>
     switch (quality) {
@@ -235,7 +228,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     !_changingSurah &&
                     !_changingReciter &&
                     !_changingQuality,
-                onTap: () => _chooseSurah(surahs, currentSurah),
+                onTap: () => _chooseSurah(
+                  surahs
+                      .where(
+                        (surah) =>
+                            currentRecitation?.coversSurah(surah.number) ??
+                            true,
+                      )
+                      .toList(growable: false),
+                  currentSurah,
+                ),
               ),
               const SizedBox(height: 8),
               _ReciterButton(
@@ -244,7 +246,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     context.l10n.chooseReciter,
                 style: currentRecitation == null
                     ? null
-                    : _recitationStyleLabel(context, currentRecitation.style),
+                    : recitationStyleLabel(context, currentRecitation.style),
                 loading: _changingReciter,
                 enabled:
                     state.active &&
@@ -436,7 +438,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final player = ref.read(audioControllerProvider);
     if (!player.active || !_isCurrentController(scope, controller)) return;
     final people = groupRecitersByPerson(reciters);
-    if (people.isEmpty || recitations.isEmpty) return;
+    final role = switch (player.channel) {
+      AudioPlaybackChannel.listening => AudioRecitationRole.listening,
+      AudioPlaybackChannel.mushaf => AudioRecitationRole.ayahPlayback,
+      AudioPlaybackChannel.memorization => AudioRecitationRole.memorization,
+    };
+    final surah = player.track?.surah;
+    // Offer only what this channel may play and what holds the current surah,
+    // so a listening-only recording never becomes the Mushaf or Memorization voice.
+    final allowed = recitations
+        .where(
+          (item) =>
+              item.supports(role) && (surah == null || item.coversSurah(surah)),
+        )
+        .toList(growable: false);
+    if (people.isEmpty || allowed.isEmpty) return;
     final selection = await showModalBottomSheet<_ReciterSelection>(
       context: context,
       isScrollControlled: true,
@@ -445,7 +461,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         heightFactor: .88,
         child: _ReciterPickerSheet(
           people: people,
-          recitations: recitations,
+          recitations: allowed,
+          role: role,
           currentRecitationId: player.track?.recitationId,
           initialStyle: currentRecitation?.style ?? defaultRecitationStyle,
           apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
@@ -571,7 +588,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final currentSurah = player.track?.surah;
     if (currentSurah == null) return;
 
-    final targetSurah = currentSurah + direction;
+    final recitation = _recitationById(
+      ref.read(audioRecitationsProvider).valueOrNull,
+      player.track?.recitationId,
+    );
+    // A listening recording may hold only some surahs: skip to the next one it has.
+    final targetSurah = recitation == null
+        ? currentSurah + direction
+        : recitation.adjacentSurah(currentSurah, direction);
+    if (targetSurah == null) return;
     await _loadSurah(targetSurah);
   }
 
@@ -1265,6 +1290,7 @@ class _ReciterPickerSheet extends StatefulWidget {
   const _ReciterPickerSheet({
     required this.people,
     required this.recitations,
+    required this.role,
     required this.currentRecitationId,
     required this.initialStyle,
     required this.apiBaseUrl,
@@ -1272,6 +1298,7 @@ class _ReciterPickerSheet extends StatefulWidget {
 
   final List<ReciterPerson> people;
   final List<Recitation> recitations;
+  final AudioRecitationRole role;
   final String? currentRecitationId;
   final String initialStyle;
   final String apiBaseUrl;
@@ -1303,6 +1330,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                 person,
                 widget.recitations,
                 selectedStyle,
+                role: widget.role,
               ) !=
               null,
         )
@@ -1346,7 +1374,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
               children: <Widget>[
                 for (final style in styles)
                   ChoiceChip(
-                    label: Text(_recitationStyleLabel(context, style)),
+                    label: Text(recitationStyleLabel(context, style)),
                     selected: style == selectedStyle,
                     onSelected: (_) => setState(() => _style = style),
                   ),
@@ -1379,6 +1407,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                     widget.recitations,
                     selectedStyle,
                     preferredId: widget.currentRecitationId,
+                    role: widget.role,
                   )!;
                   return _PickerReciterCard(
                     person: person,
