@@ -23,6 +23,7 @@ import {
   DEFAULT_PRAYER_LOCATION,
   loadPrayerLocationPreference,
 } from "../lib/prayer-location";
+import { SurahNameArt } from "./SurahNameArt";
 
 const HERO_SLIDES = [
   { src: "/images/home/hero-kaaba.webp", label: "home.heroKaaba" as const },
@@ -429,9 +430,13 @@ export default function HomePage({ initialData }: { initialData?: PublishedHomeI
                     </p>
                   </div>
                 </div>
-                <span className="quran-arabic-text" style={{ fontSize: 20 }}>
-                  {hydrated && surah.name_ar}
-                </span>
+                {hydrated && (
+                  <SurahNameArt
+                    surah={surah.number}
+                    fallback={surah.name_ar}
+                    className="quran-arabic-text home-surah-name"
+                  />
+                )}
               </IntentPrefetchLink>
             ))
           ) : (

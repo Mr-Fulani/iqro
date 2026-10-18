@@ -11,6 +11,7 @@ import {
 import { editionName, quranEditionPath, quranSurahPath, surahName } from "@/lib/quran-content";
 import { localizedPath } from "@/lib/routing";
 import { createContentMetadata } from "@/lib/seo";
+import { SurahNameArt } from "../../../../components/SurahNameArt";
 
 export const revalidate = 3_600;
 
@@ -97,7 +98,7 @@ export default async function QuranEditionPage({ params }: { params: Promise<Rou
                 count: numbers.format(surah.ayah_count),
               })}</span>
             </span>
-            <span className="seo-catalog-arabic" lang="ar" dir="rtl">{surah.name_ar}</span>
+            <SurahNameArt surah={surah.number} fallback={surah.name_ar} className="seo-catalog-arabic" />
           </Link>
         ))}
       </section>

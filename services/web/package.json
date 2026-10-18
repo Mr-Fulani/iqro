@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:cache": "node --test cache/*.test.cjs",
-    "test:public-contracts": "node --test lib/cursor-pagination.test.ts lib/mobile-association.test.ts lib/public-route-params.test.ts lib/reading-position-storage.test.ts lib/reciter-catalog.test.ts lib/reciter-preference.test.ts lib/sentry-tunnel.test.ts lib/dua-topics.test.ts lib/salah.test.ts",
+    "test:public-contracts": "node --test lib/cursor-pagination.test.ts lib/mobile-association.test.ts lib/public-route-params.test.ts lib/reading-position-storage.test.ts lib/reciter-catalog.test.ts lib/reciter-preference.test.ts lib/sentry-tunnel.test.ts lib/dua-topics.test.ts lib/audio-content.test.ts lib/salah.test.ts",
     "test:salah": "node --test lib/salah.test.ts",
     "test:mushaf": "node --test lib/mushaf-page-cache.test.ts lib/mushaf-line-layout.test.ts lib/quran-font.test.ts lib/reading-position-storage.test.ts lib/surah-header.test.ts",
     "test:e2e": "playwright test",

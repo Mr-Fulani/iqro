@@ -3,8 +3,12 @@ import type { QuranFoundationMushafPage } from "./api";
 export type SurahHeaderSource = NonNullable<QuranFoundationMushafPage["surah_header"]>;
 export type SurahHeaderGlyph = { d: string; viewBox: string };
 
-const SURAH_HEADER_FONT_URL =
+export const SURAH_HEADER_FONT_URL =
   "https://static-cdn.tarteel.ai/qul/fonts/surah-names/surah-header/QCF_SurahHeader_COLOR-Regular.ttf";
+/** The pinned file, as in the backend's `surah_header.py`. */
+export const SURAH_HEADER_FONT_SHA256 = "de261a309bdd42262e1a268d5ead56b6ea8366cd59124baedea3903561d7370b";
+// Glyphs follow .notdef, uni0000, uni0009 and space in surah order.
+const FIRST_SURAH_GLYPH_ID = 4;
 const fonts = new Map<string, { promise: Promise<DataView>; font?: DataView }>();
 const glyphs = new Map<string, SurahHeaderGlyph | null>();
 
@@ -13,8 +17,15 @@ const glyphs = new Map<string, SurahHeaderGlyph | null>();
  * in font units with y pointing down. Browsers' font rasterizers drop parts of
  * the QUL surah-header outlines; filling the same outline as a path is exact.
  * Returns null for empty or composite glyphs; malformed data throws.
+ *
+ * With `keep`, only contours whose bounds it accepts are drawn and the view
+ * box is theirs; null when it accepts none.
  */
-export function readTrueTypeGlyph(font: DataView, glyphId: number): SurahHeaderGlyph | null {
+export function readTrueTypeGlyph(
+  font: DataView,
+  glyphId: number,
+  keep?: (contour: { left: number; top: number; right: number; bottom: number }) => boolean,
+): SurahHeaderGlyph | null {
   const tables = new Map<string, number>();
   for (let index = 0; index < font.getUint16(4); index++) {
     const record = 12 + index * 16;
@@ -64,9 +75,31 @@ export function readTrueTypeGlyph(font: DataView, glyphId: number): SurahHeaderG
   const xs = coordinates(2, 16);
   const ys = coordinates(4, 32);
   const commands: string[] = [];
+  let kept: { left: number; top: number; right: number; bottom: number } | null = null;
   let first = 0;
   for (const last of ends) {
     const count = last - first + 1;
+    if (keep) {
+      const bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+      for (let index = first; index <= last; index++) {
+        bounds.left = Math.min(bounds.left, xs[index]);
+        bounds.right = Math.max(bounds.right, xs[index]);
+        bounds.top = Math.min(bounds.top, -ys[index]);
+        bounds.bottom = Math.max(bounds.bottom, -ys[index]);
+      }
+      if (!keep(bounds)) {
+        first = last + 1;
+        continue;
+      }
+      kept = kept
+        ? {
+            left: Math.min(kept.left, bounds.left),
+            top: Math.min(kept.top, bounds.top),
+            right: Math.max(kept.right, bounds.right),
+            bottom: Math.max(kept.bottom, bounds.bottom),
+          }
+        : bounds;
+    }
     const at = (index: number): [number, number] => [xs[first + index % count], -ys[first + index % count]];
     const onCurve = (index: number) => (flags[first + index % count] & 1) !== 0;
     const middle = (a: [number, number], b: [number, number]): [number, number] => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -94,8 +127,58 @@ export function readTrueTypeGlyph(font: DataView, glyphId: number): SurahHeaderG
     commands.push("Z");
     first = last + 1;
   }
+  if (keep) {
+    return kept && {
+      d: commands.join(""),
+      viewBox: `${kept.left} ${kept.top} ${kept.right - kept.left} ${kept.bottom - kept.top}`,
+    };
+  }
   const [xMin, yMin, xMax, yMax] = [2, 4, 6, 8].map((field) => font.getInt16(start + field));
   return { d: commands.join(""), viewBox: `${xMin} ${-yMax} ${xMax - xMin} ${yMax - yMin}` };
+}
+
+// In font units: the cartouche's open middle, clear of its border bands and
+// end ornaments. Every surah's name lies within it, and nothing else does.
+const insideCartouche = (contour: { left: number; top: number; right: number; bottom: number }) =>
+  contour.right - contour.left < 3000 &&
+  contour.left > 900 &&
+  contour.right < 7300 &&
+  contour.top > -380 &&
+  contour.bottom < 380;
+
+const surahNames = new Map<number, SurahHeaderGlyph | null>();
+
+/** The calligraphic «سورة …» of a Mushaf heading, without its cartouche. */
+export function readSurahNameGlyph(font: DataView, surah: number): SurahHeaderGlyph | null {
+  if (!Number.isInteger(surah) || surah < 1 || surah > 114) return null;
+  return readTrueTypeGlyph(font, FIRST_SURAH_GLYPH_ID + surah - 1, insideCartouche);
+}
+
+const pinnedSource = {
+  font_url: SURAH_HEADER_FONT_URL,
+  font_sha256: SURAH_HEADER_FONT_SHA256,
+  glyph_ids: {},
+} as SurahHeaderSource;
+
+/** The name of `surah` once the heading font is loaded, else undefined. */
+export function loadedSurahNameGlyph(surah: number): SurahHeaderGlyph | null | undefined {
+  const font = fonts.get(`${SURAH_HEADER_FONT_URL}:${SURAH_HEADER_FONT_SHA256}`)?.font;
+  if (!font) return undefined;
+  if (!surahNames.has(surah)) {
+    let glyph: SurahHeaderGlyph | null = null;
+    try {
+      glyph = readSurahNameGlyph(font, surah);
+    } catch {
+      glyph = null;
+    }
+    surahNames.set(surah, glyph);
+  }
+  return surahNames.get(surah);
+}
+
+/** Fetches the pinned heading font once; surah names render from it after. */
+export function loadSurahNameFont(): Promise<void> {
+  return loadSurahHeaderGlyphs(pinnedSource).then(() => undefined);
 }
 
 function headingGlyphs(source: SurahHeaderSource, font: DataView): ReadonlyMap<number, SurahHeaderGlyph> {
