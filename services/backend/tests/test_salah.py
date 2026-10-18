@@ -19,6 +19,7 @@ from quran_backend.modules.salah.admin import SalahCourseVersionAdmin
 from quran_backend.modules.salah.compiler import compile_document
 from quran_backend.modules.salah.importer import (
     MAX_AUDIO_BYTES,
+    MAX_IMAGE_BYTES,
     import_salah_snapshot,
     publish_salah_version,
     webp_size,
@@ -146,6 +147,21 @@ def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
     for key in recorded.values():
         recording = COURSE_SNAPSHOT.parent / media[key]["file"]
         assert 0 < recording.stat().st_size <= MAX_AUDIO_BYTES
+
+
+def test_course_illustrations_in_git_are_square_webp_within_the_limit() -> None:
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    shipped = [
+        COURSE_SNAPSHOT.parent / asset["file"]
+        for asset in snapshot["media"]
+        if asset["file"].endswith(".webp") and (COURSE_SNAPSHOT.parent / asset["file"]).exists()
+    ]
+
+    assert len(shipped) >= 17
+    for image in shipped:
+        data = image.read_bytes()
+        assert webp_size(data) == (720, 720), image.name
+        assert len(data) <= MAX_IMAGE_BYTES, image.name
 
 
 def test_four_rakat_prayer_unrolls_with_a_middle_tashahhud() -> None:
