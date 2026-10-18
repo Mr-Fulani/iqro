@@ -381,6 +381,51 @@ curl --fail https://example.org/ru/audio/reciters
 Ошибка upstream не подменяется пустым успешным sitemap: endpoint отвечает 503, чтобы crawler
 повторил запрос позднее и не счёл исчезновение контента штатным удалением.
 
+## Курс «Обучение намазу»
+
+Курс хранится в git как JSON-снимок
+`services/backend/src/quran_backend/modules/salah/data/hanbali-umdah-v1.json`, рядом в `media/`
+лежат его картинки и записи формул. Формат и устройство — [`salah/learning-spec.md`](salah/learning-spec.md),
+спорные места фикха — [`salah/fiqh-review.md`](salah/fiqh-review.md).
+
+Каждая правка содержания выходит так:
+
+1. В снимке поднимается `course.version`, например `2026-10-18` → `2026-11-02`: импорт не
+   примет изменённое содержимое под старой версией.
+2. После выкладки образа backend версия импортируется черновиком:
+
+   ```bash
+   docker compose --env-file services/backend/.env.production -f compose.production.yaml \
+     exec backend python manage.py import_salah_course
+   ```
+
+   Импорт идемпотентен: повтор с тем же содержимым ничего не меняет. Тексты формул берутся из
+   опубликованного «Хисн аль-Муслим» и издания Корана `madani-hafs`: без них команда
+   остановится и назовёт, чего не хватает. Записи сур из аудиокаталога подставляются, если
+   опубликованы; без них формула остаётся без аудио.
+3. В админке: «Обучение намазу» → «Версии курса» → черновик.
+   - «Открыть иллюстрации» — загрузить недостающие картинки (PNG, JPEG или WebP до 20 МБ;
+     сервер обрежет до квадрата, сожмёт в WebP 720×720 и пересоберёт документы).
+   - Предпросмотр показывает весь курс на русском. Сверить пункты `fiqh-review.md`.
+   - Действие «Подписать: религиозная проверка пройдена» — подпись владельца; без неё публикация запрещена.
+   - Действие «Опубликовать» — версия становится активной, предыдущая отзывается, сайт получает
+     событие `salah.course.changed` и сбрасывает теги `salah:*`.
+4. Проверка:
+
+   ```bash
+   curl --fail https://example.org/api/v1/salah/courses
+   curl --fail -o /dev/null 'https://example.org/api/v1/salah/courses/hanbali-umdah?language=ru'
+   curl --fail -o /dev/null 'https://example.org/api/v1/salah/courses/hanbali-umdah/offline-manifest?language=ru'
+   curl --fail -o /dev/null https://example.org/ru/salah
+   curl --fail -o /dev/null https://example.org/ru/salah/janazah-prayer
+   ```
+
+   В приложении новая версия подтянется сама, офлайн-пакет картинок покажет «Обновить».
+
+Откат — опубликовать предыдущую версию снова нельзя (опубликованные версии неизменяемы);
+откатывают через git: вернуть снимок, поднять `course.version`, импортировать, подписать,
+опубликовать.
+
 ## Legal и public contacts
 
 Web публикует locale-prefixed `/privacy`, `/terms`, `/contacts` и `/sources`. Последний маршрут
