@@ -5201,6 +5201,19 @@ a.footer-store-badge:hover {
 /* -------------------------------------------------------------------------
    Responsive Breakpoints
 ------------------------------------------------------------------------- */
+/* Nine labelled menu items fit a narrow desktop only with tighter spacing. */
+@media (min-width: 1001px) and (max-width: 1200px) {
+  .app-menu {
+    gap: 2px;
+  }
+
+  .menu-link {
+    gap: 4px;
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+}
+
 @media (min-width: 769px) and (max-width: 1000px) {
   .app-header {
     gap: 10px;
