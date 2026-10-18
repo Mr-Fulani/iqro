@@ -16,6 +16,7 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/audio/player_backgrounds.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/features/audio/player_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -192,6 +193,200 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the surah list shows the length and the Mushaf name', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+
+    await tester.tap(find.text('Аль-Бакара').first);
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const ValueKey<int>(2));
+    expect(row, findsOneWidget);
+    for (final text in <String>['Аль-Бакара', '286 аятов · Мединская']) {
+      expect(
+        find.descendant(of: row, matching: find.text(text)),
+        findsOneWidget,
+      );
+    }
+    // Without the source font (as in tests) the name is set as text.
+    expect(
+      find.descendant(
+        of: find.descendant(of: row, matching: find.byType(SurahNameArt)),
+        matching: find.text('البقرة'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a tap on empty space leaves only the background', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+    double opacity() => tester
+        .widget<AnimatedOpacity>(
+          find.descendant(
+            of: find.byKey(const ValueKey('player-controls-toggle')),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .opacity;
+
+    // The side margin holds no control.
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    await tester.tapAt(empty);
+    // The equalizer sways while it plays, so the screen never settles.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(opacity(), 0);
+    expect(find.text('Фон плеера').hitTestable(), findsNothing);
+    // Nothing is left to read, so the scrim lifts off the background.
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DecoratedBox &&
+                    widget.decoration ==
+                        const BoxDecoration(gradient: playerBackgroundScrim),
+              ),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity,
+      0,
+    );
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(opacity(), 1);
+
+    // A control still acts and keeps the controls on screen.
+    await tester.ensureVisible(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    expect(find.text('Классический'), findsOneWidget);
+    expect(opacity(), 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer plays only over the bare background', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+    final equalizer = find.byKey(const ValueKey('player-equalizer'));
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    double equalizerOpacity() => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: equalizer, matching: find.byType(AnimatedOpacity)),
+        )
+        .opacity;
+
+    // Controls on screen: no bars, and nothing ticks.
+    expect(equalizer, findsNothing);
+
+    await tester.tapAt(empty);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+    expect(equalizerOpacity(), 1);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    // It never takes the tap that brings the controls back.
+    expect(equalizer.hitTestable(), findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isFalse);
+    expect(equalizer, findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(equalizer, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a background with the equalizer switched off stays bare', (
+    tester,
+  ) async {
+    const quiet = PlayerBackground(
+      id: 'remote:quiet',
+      titles: <String, String>{'ru': 'Тишина'},
+      assetPath: 'assets/player_backgrounds/sea-dawn.webp',
+      showEqualizer: false,
+    );
+    final harness = await _pumpPlayer(
+      tester,
+      backgrounds: <PlayerBackground>[...bundledPlayerBackgrounds, quiet],
+    );
+    await harness.preferences.setPlayerBackground(quiet.id);
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer rests when animations are disabled', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await _pumpPlayer(tester);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    // Static bars: the screen settles while they show.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the video background shows its poster under the video', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+
+    await harness.preferences.setPlayerBackground('bundled:reciter-video');
+    await tester.pumpAndSettle();
+
+    // Without a video decoder (as in tests) the poster stays.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is ResizeImage &&
+            (widget.image as ResizeImage).imageProvider ==
+                const AssetImage('assets/player_backgrounds/reciter-hood.webp'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('background swap is instant when animations are disabled', (
     tester,
   ) async {
@@ -215,7 +410,10 @@ void main() {
   });
 }
 
-Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
+Future<_PlayerHarness> _pumpPlayer(
+  WidgetTester tester, {
+  List<PlayerBackground> backgrounds = bundledPlayerBackgrounds,
+}) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
   final accountScope = AccountScope.forTesting('owner');
@@ -262,9 +460,8 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
         appPreferencesProvider.overrideWith((ref) => preferences),
         audioRepositoryProvider.overrideWithValue(repository),
         audioControllerProvider.overrideWith((ref) => controller),
-        playerBackgroundsProvider.overrideWith(
-          (ref) async => bundledPlayerBackgrounds,
-        ),
+        playerBackgroundsProvider.overrideWith((ref) async => backgrounds),
+        surahHeaderFontProvider.overrideWith((ref) async => null),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(
             surahs: <Surah>[

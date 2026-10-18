@@ -16,6 +16,41 @@ import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
 
+const _cardPortraitSize = 88.0;
+
+/// Loads the reciters and decodes their card portraits while another tab is
+/// open, so the Audio tab shows faces at once instead of a spinner, then
+/// initials, then a slow fade.
+Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
+  try {
+    final reciters = await ref.read(recitersProvider.future);
+    await ref.read(audioRecitationsProvider.future);
+    if (!context.mounted) return;
+    final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    for (final person in groupRecitersByPerson(reciters)) {
+      final url = resolveReciterPortraitUrl(
+        person.portraitSource,
+        apiBaseUrl: apiBaseUrl,
+      );
+      if (url == null || !context.mounted) continue;
+      unawaited(
+        precacheImage(
+          reciterPortraitImage(
+            url,
+            size: _cardPortraitSize,
+            devicePixelRatio: pixelRatio,
+          ),
+          context,
+          onError: (error, stack) {},
+        ),
+      );
+    }
+  } on Object {
+    // The tab loads the catalog itself and reports what failed.
+  }
+}
+
 class AudioScreen extends ConsumerStatefulWidget {
   const AudioScreen({super.key});
 
@@ -796,15 +831,15 @@ class _ReciterPortrait extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 88,
-      height: 88,
+      width: _cardPortraitSize,
+      height: _cardPortraitSize,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
             child: PremiumReciterPortrait(
               url: portraitUrl,
-              size: 88,
+              size: _cardPortraitSize,
               initials: initials,
               selected: active,
             ),

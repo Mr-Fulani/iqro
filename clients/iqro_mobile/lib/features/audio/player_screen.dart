@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
@@ -10,6 +13,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
+import '../quran/surah_name_art.dart';
 import 'audio_models.dart';
 import 'player_backgrounds.dart';
 import 'reciter_catalog.dart';
@@ -128,6 +132,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
   var _changingReciter = false;
   var _changingQuality = false;
+  var _controlsHidden = false;
   String? _ownerId;
   var _surahRequest = 0;
   var _reciterRequest = 0;
@@ -334,11 +339,35 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
+    // A tap on empty space hides everything but the background; the next tap
+    // brings the controls back. Not with a screen reader, which taps to act.
+    final canHide = !MediaQuery.accessibleNavigationOf(context);
+    final hidden = _controlsHidden && canHide;
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        _PlayerBackdrop(background: background),
-        scaffold,
+        _PlayerBackdrop(background: background, dimmed: !hidden),
+        _PlayerEqualizer(
+          visible:
+              background.showEqualizer &&
+              hidden &&
+              state.playing &&
+              !state.buffering,
+        ),
+        GestureDetector(
+          key: const ValueKey('player-controls-toggle'),
+          behavior: HitTestBehavior.opaque,
+          onTap: canHide
+              ? () => setState(() => _controlsHidden = !_controlsHidden)
+              : null,
+          child: AnimatedOpacity(
+            opacity: hidden ? 0 : 1,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 250),
+            child: IgnorePointer(ignoring: hidden, child: scaffold),
+          ),
+        ),
       ],
     );
   }
@@ -1002,10 +1031,19 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Text(
-                _duration(Duration(milliseconds: positionMs.round())),
+                playerTimeLabel(
+                  Duration(milliseconds: positionMs.round()),
+                  total: state.effectiveDuration,
+                ),
                 style: _metaStyle,
               ),
-              Text(_duration(state.effectiveDuration), style: _metaStyle),
+              Text(
+                playerTimeLabel(
+                  state.effectiveDuration,
+                  total: state.effectiveDuration,
+                ),
+                style: _metaStyle,
+              ),
             ],
           ),
         ),
@@ -1077,12 +1115,6 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
         ),
       ],
     );
-  }
-
-  static String _duration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }
 
@@ -1513,7 +1545,7 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
     super.initState();
     _searchController = TextEditingController();
     _scrollController = ScrollController(
-      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * 68.0,
+      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * _surahRowExtent,
     );
   }
 
@@ -1593,38 +1625,156 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
         Expanded(
           child: ListView.builder(
             controller: normalizedQuery.isEmpty ? _scrollController : null,
-            itemExtent: 68,
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            itemExtent: _surahRowExtent,
             itemCount: filtered.length,
             itemBuilder: (context, index) {
               final surah = filtered[index];
-              final selected = surah.number == widget.currentSurah;
-              final primaryName = surah.nameFor(locale);
-              final secondaryName = locale == 'ar'
-                  ? surah.nameEn
-                  : surah.nameAr;
-              return ListTile(
-                selected: selected,
-                leading: CircleAvatar(child: Text('${surah.number}')),
-                title: Text(
-                  primaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  secondaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: locale == 'ar'
-                      ? TextDirection.ltr
-                      : TextDirection.rtl,
-                ),
-                trailing: selected ? const Icon(Icons.check_rounded) : null,
+              return _SurahPickerRow(
+                key: ValueKey<int>(surah.number),
+                surah: surah,
+                locale: locale,
+                selected: surah.number == widget.currentSurah,
                 onTap: () => Navigator.pop(context, surah.number),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// «04:54», or «0:50:59» on a timeline of an hour or more: Al Imran's
+/// 1:09:32 used to read «09:32» because the hours were dropped. Both ends of
+/// a timeline share the form so they line up.
+String playerTimeLabel(Duration value, {required Duration total}) {
+  String two(int number) => number.toString().padLeft(2, '0');
+  final minutes = two(value.inMinutes.remainder(60));
+  final seconds = two(value.inSeconds.remainder(60));
+  return total.inHours > 0
+      ? '${value.inHours}:$minutes:$seconds'
+      : '$minutes:$seconds';
+}
+
+const _surahRowExtent = 76.0;
+
+/// A surah as a row of the picker: its number in an eight-pointed star, the
+/// name in the reader's language with its length and place of revelation,
+/// and the Arabic name as the Mushaf prints it.
+class _SurahPickerRow extends StatelessWidget {
+  const _SurahPickerRow({
+    required this.surah,
+    required this.locale,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final Surah surah;
+  final String locale;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = selected
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: selected ? colorScheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Semantics(
+            selected: selected,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 12, 0),
+              child: Row(
+                children: <Widget>[
+                  _SurahNumberStar(number: surah.number, color: accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          surah.nameFor(locale),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${surah.ayahCount} ${context.l10n.ayahs} · '
+                          '${surah.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SurahNameArt(
+                    surah: surah.number,
+                    fallback: surah.nameAr,
+                    height: 36,
+                    width: 112,
+                    color: accent,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurahNumberStar extends StatelessWidget {
+  const _SurahNumberStar({required this.number, required this.color});
+
+  final int number;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final square = DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: color.withValues(alpha: .55), width: 1.2),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: const SizedBox.square(dimension: 30),
+    );
+    return SizedBox.square(
+      dimension: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          square,
+          Transform.rotate(angle: math.pi / 4, child: square),
+          Text(
+            '$number',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1642,9 +1792,12 @@ const playerBackgroundScrim = LinearGradient(
 );
 
 class _PlayerBackdrop extends StatelessWidget {
-  const _PlayerBackdrop({required this.background});
+  const _PlayerBackdrop({required this.background, this.dimmed = true});
 
   final PlayerBackground background;
+
+  /// The scrim is there for the controls' text; without them it lifts.
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
@@ -1666,13 +1819,29 @@ class _PlayerBackdrop extends StatelessWidget {
                   key: ValueKey<String>(background.id),
                   fit: StackFit.expand,
                   children: <Widget>[
-                    _PlayerBackgroundImage(
-                      background: background,
-                      decodeWidth: decodeWidth,
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: playerBackgroundScrim,
+                    if (background.hasVideo && !reduceMotion)
+                      _PlayerBackgroundVideo(
+                        asset: background.videoAssetPath,
+                        url: background.videoUrl,
+                        poster: _PlayerBackgroundImage(
+                          background: background,
+                          decodeWidth: decodeWidth,
+                        ),
+                      )
+                    else
+                      _PlayerBackgroundImage(
+                        background: background,
+                        decodeWidth: decodeWidth,
+                      ),
+                    AnimatedOpacity(
+                      opacity: dimmed ? 1 : 0,
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 250),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: playerBackgroundScrim,
+                        ),
                       ),
                     ),
                   ],
@@ -1682,6 +1851,142 @@ class _PlayerBackdrop extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Sound bars like the audio quality icon, swaying over the bare background
+/// while the recitation plays. Calm static bars when motion is reduced; the
+/// ticker runs only while they are on screen.
+class _PlayerEqualizer extends StatefulWidget {
+  const _PlayerEqualizer({required this.visible});
+
+  final bool visible;
+
+  @override
+  State<_PlayerEqualizer> createState() => _PlayerEqualizerState();
+}
+
+class _PlayerEqualizerState extends State<_PlayerEqualizer>
+    with SingleTickerProviderStateMixin {
+  late final _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3600),
+  );
+  late var _shown = widget.visible;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncWave();
+  }
+
+  @override
+  void didUpdateWidget(_PlayerEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible) _shown = true;
+    _syncWave();
+  }
+
+  // Runs while visible and through the fade-out; stops once faded.
+  void _syncWave() {
+    final animate = _shown && !MediaQuery.disableAnimationsOf(context);
+    if (animate && !_wave.isAnimating) {
+      _wave.repeat();
+    } else if (!animate && _wave.isAnimating) {
+      _wave.stop();
+    }
+  }
+
+  void _faded() {
+    if (widget.visible || !_shown) return;
+    setState(() => _shown = false);
+    _syncWave();
+  }
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: AnimatedOpacity(
+          opacity: widget.visible ? 1 : 0,
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          onEnd: _faded,
+          child: !_shown && !widget.visible
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: const Alignment(0, .62),
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      key: const ValueKey('player-equalizer'),
+                      size: const Size(208, 84),
+                      painter: _EqualizerPainter(reduceMotion ? null : _wave),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EqualizerPainter extends CustomPainter {
+  _EqualizerPainter(this.wave) : super(repaint: wave);
+
+  /// Null paints the bars at rest.
+  final Animation<double>? wave;
+
+  // Taller in the middle, like Icons.graphic_eq_rounded.
+  static const _envelope = <double>[.44, .64, .84, .7, 1, .7, .84, .64, .44];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final count = _envelope.length;
+    final slot = size.width / count;
+    final barWidth = slot * .46;
+    final minHeight = barWidth;
+    final t = (wave?.value ?? 0) * 2 * math.pi;
+    final shadow = Paint()
+      ..color = const Color(0x59000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final bar = Paint()..color = const Color(0xEBFFFFFF);
+    final centreY = size.height / 2;
+    for (var i = 0; i < count; i++) {
+      // Whole cycles per loop keep the repeat seamless.
+      final level = wave == null
+          ? .62
+          : .64 +
+                .22 * math.sin(t * 3 + i * 1.7) +
+                .1 * math.sin(t * 5 - i * 2.3) +
+                .04 * math.sin(t * 8 + i * .9);
+      final height = math.max(
+        minHeight,
+        size.height * _envelope[i] * level.clamp(.28, 1),
+      );
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(slot * (i + .5), centreY),
+          width: barWidth,
+          height: height,
+        ),
+        Radius.circular(barWidth / 2),
+      );
+      canvas
+        ..drawRRect(rect.shift(const Offset(0, 1.5)), shadow)
+        ..drawRRect(rect, bar);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EqualizerPainter oldDelegate) => oldDelegate.wave != wave;
 }
 
 class _PlayerBackgroundImage extends StatelessWidget {
@@ -1715,6 +2020,91 @@ class _PlayerBackgroundImage extends StatelessWidget {
           : const Duration(milliseconds: 250),
       placeholder: (context, url) => empty,
       errorWidget: (context, url, error) => empty,
+    );
+  }
+}
+
+/// A silent looping video over its poster: bundled, or an admin video that is
+/// downloaded once and then played from the cache. The poster stays while it
+/// loads or if it cannot be decoded; recitation audio keeps its focus.
+class _PlayerBackgroundVideo extends StatefulWidget {
+  const _PlayerBackgroundVideo({this.asset, this.url, required this.poster});
+
+  final String? asset;
+  final String? url;
+  final Widget poster;
+
+  @override
+  State<_PlayerBackgroundVideo> createState() => _PlayerBackgroundVideoState();
+}
+
+class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
+  VideoPlayerController? _controller;
+  var _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_start());
+  }
+
+  Future<void> _start() async {
+    try {
+      final options = VideoPlayerOptions(mixWithOthers: true);
+      final asset = widget.asset;
+      final VideoPlayerController controller;
+      if (asset != null) {
+        controller = VideoPlayerController.asset(
+          asset,
+          videoPlayerOptions: options,
+        );
+      } else {
+        final file = await DefaultCacheManager().getSingleFile(widget.url!);
+        if (!mounted) return;
+        controller = VideoPlayerController.file(
+          file,
+          videoPlayerOptions: options,
+        );
+      }
+      _controller = controller;
+      await controller.initialize();
+      await controller.setVolume(0);
+      await controller.setLooping(true);
+      if (!mounted) return;
+      await controller.play();
+      if (mounted) setState(() => _ready = true);
+    } on Object {
+      // The poster stays.
+    }
+  }
+
+  @override
+  void dispose() {
+    final controller = _controller;
+    if (controller != null) unawaited(controller.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        widget.poster,
+        if (_ready && controller != null)
+          ExcludeSemantics(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: controller.value.size.width,
+                height: controller.value.size.height,
+                child: VideoPlayer(controller),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1858,6 +2248,16 @@ class _PlayerBackgroundTile extends StatelessWidget {
                       const Icon(
                         Icons.format_color_fill_rounded,
                         color: Color(0xFFB6E8D9),
+                      ),
+                    if (background.hasVideo)
+                      const PositionedDirectional(
+                        start: 6,
+                        bottom: 6,
+                        child: Icon(
+                          Icons.videocam_rounded,
+                          size: 18,
+                          color: Color(0xFFF5EAD5),
+                        ),
                       ),
                     if (selected)
                       PositionedDirectional(

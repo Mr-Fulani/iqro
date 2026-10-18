@@ -390,6 +390,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafPublishedDescription => 'Hafs · online and offline reading';
 
   @override
+  String get mushafPickerHint => 'Tap a page to see it up close';
+
+  @override
+  String get mushafMakePrimary => 'Make primary';
+
+  @override
+  String get mushafIsPrimary => 'Primary Mushaf';
+
+  @override
   String get mushafTextDescription => 'Crisp text adapted to your screen';
 
   @override
@@ -932,6 +941,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Saved duas';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Chapter $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get duaAudioFailed => 'The audio could not be played';
+
+  @override
   String duaCount(int count) {
     return '$count duas';
   }
@@ -958,9 +980,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get duaAudioStreaming =>
       'An internet connection is required to listen';
-
-  @override
-  String get duaAudioFailed => 'The audio could not be played';
 
   @override
   String get duaPractice => 'Repetition practice';
@@ -992,6 +1011,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareDua => 'Share dua';
+
+  @override
+  String get shareReadInIqro => 'Read in IQRO';
 
   @override
   String get duaReader => 'Reader';

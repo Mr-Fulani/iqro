@@ -6,20 +6,36 @@ import '../../core/utils/json_helpers.dart';
 
 const classicPlayerBackgroundId = 'bundled:classic';
 
-/// A still image behind the full-screen player. Bundled entries work offline;
-/// admin entries come from `/player-backgrounds` and are decoded downscaled.
+/// A still image, or a silent looping video over its poster, behind the
+/// full-screen player. Bundled entries work offline; admin entries come from
+/// `/player-backgrounds` and are decoded downscaled.
 class PlayerBackground {
   const PlayerBackground({
     required this.id,
     required this.titles,
     this.assetPath,
     this.imageUrl,
+    this.videoAssetPath,
+    this.videoUrl,
+    this.showEqualizer = true,
   });
 
   final String id;
   final Map<String, String> titles;
   final String? assetPath;
   final String? imageUrl;
+
+  /// Plays over the image, which stays as the poster and the picker tile.
+  final String? videoAssetPath;
+
+  /// An admin video, downloaded once and then played from the cache.
+  final String? videoUrl;
+
+  bool get hasVideo => videoAssetPath != null || videoUrl != null;
+
+  /// Whether the sound bars sway over it while the controls are hidden; set
+  /// per background in the admin.
+  final bool showEqualizer;
 
   bool get hasImage => assetPath != null || imageUrl != null;
 
@@ -82,6 +98,17 @@ const bundledPlayerBackgrounds = <PlayerBackground>[
       'ar': 'زخرفة',
     },
   ),
+  PlayerBackground(
+    id: 'bundled:reciter-video',
+    assetPath: 'assets/player_backgrounds/reciter-hood.webp',
+    videoAssetPath: 'assets/player_backgrounds/reciter-hood.mp4',
+    titles: <String, String>{
+      'ru': 'Чтец',
+      'en': 'Reciter',
+      'tr': 'Kâri',
+      'ar': 'القارئ',
+    },
+  ),
 ];
 
 List<PlayerBackground> parsePlayerBackgrounds(
@@ -97,12 +124,21 @@ List<PlayerBackground> parsePlayerBackgrounds(
     final url = json['image_url']?.toString().trim() ?? '';
     final uri = Uri.tryParse(url);
     if (id.isEmpty || uri == null || url.isEmpty) continue;
+    final video = json['video_url']?.toString().trim() ?? '';
+    final videoUri = video.isEmpty ? null : Uri.tryParse(video);
     result.add(
       PlayerBackground(
         id: 'remote:$id',
         imageUrl: uri.hasScheme
             ? url
             : resolvePublicAssetUri(url, base).toString(),
+        videoUrl: videoUri == null
+            ? null
+            : videoUri.hasScheme
+            ? video
+            : resolvePublicAssetUri(video, base).toString(),
+        // Rows cached before the admin switch existed keep the bars.
+        showEqualizer: json['show_equalizer'] != false,
         titles: <String, String>{
           for (final code in const <String>['ru', 'en', 'tr', 'ar'])
             if (json['title_$code'] != null) code: '${json['title_$code']}',
@@ -138,7 +174,8 @@ class PlayerBackgroundRepository {
   final ApiClient _api;
   final LocalDatabase _database;
   final String _apiBaseUrl;
-  static const _cacheKey = 'audio:player-backgrounds:v1';
+  // v2: rows carry video_url; a v1 copy would hide admin videos for 12 hours.
+  static const _cacheKey = 'audio:player-backgrounds:v2';
 
   Future<List<PlayerBackground>> remote() async {
     final cached = await _database.readCache(_cacheKey);

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/share/content_share.dart';
 import 'package:iqro_mobile/features/dua/dua_presentation.dart';
 import 'package:iqro_mobile/features/dua/dua_repository.dart';
 
@@ -60,18 +61,22 @@ void main() {
         ],
       );
 
-      final text = duaShareText(
-        entry,
-        translationLabel: 'Translation',
-        repetitionLabel: 'Repetitions',
-        sourceLabel: 'Source',
-        canonicalUrl: 'https://iqro.forum/dua/hisn-al-muslim/7',
+      final text = contentShareText(
+        duaContentShare(
+          entry,
+          locale: 'en',
+          repetitionLabel: 'Repetitions',
+          readInIqro: 'Read in IQRO',
+        ),
       );
 
-      expect(text, contains('Morning · #7'));
-      expect(text, contains('Translation:\nA meaning'));
-      expect(text, contains('Source: Hisn al-Muslim · Entry 7'));
-      expect(text, endsWith('https://iqro.forum/dua/hisn-al-muslim/7'));
+      expect(text, startsWith('Morning · #7'));
+      expect(text, contains('«A meaning»'));
+      expect(text, contains('Hisn al-Muslim · Entry 7'));
+      expect(
+        text,
+        endsWith('Read in IQRO: https://iqro.forum/en/dua/hisn-al-muslim/7'),
+      );
       expect(text.toLowerCase(), isNot(contains('verified')));
     },
   );
@@ -101,11 +106,13 @@ void main() {
       sourceLabel: '',
     );
 
-    String share(DuaEntry entry) => duaShareText(
-      entry,
-      translationLabel: 'Translation',
-      repetitionLabel: 'Repetitions',
-      sourceLabel: 'Source',
+    String share(DuaEntry entry) => contentShareText(
+      duaContentShare(
+        entry,
+        locale: 'en',
+        repetitionLabel: 'Repetitions',
+        readInIqro: 'Read in IQRO',
+      ),
     );
 
     expect(share(simple), contains('Repetitions: 3'));

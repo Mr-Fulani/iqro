@@ -13,6 +13,7 @@ import { isAllowedQuranFontUrl } from "../lib/quran-font";
 type MemorizationTajweedAyahsProps = {
   ayahs: Ayah[];
   hiddenAyahs: Set<number>;
+  playingAyah: number | null;
   onReveal: (ayahNumber: number) => void;
 };
 
@@ -75,6 +76,7 @@ function fontFamily(mushafId: number, pageNumber: number): string {
 export function MemorizationTajweedAyahs({
   ayahs,
   hiddenAyahs,
+  playingAyah,
   onReveal,
 }: MemorizationTajweedAyahsProps) {
   const { formatNumber, t } = useI18n();
@@ -226,7 +228,11 @@ export function MemorizationTajweedAyahs({
         const hidden = hiddenAyahs.has(ayah.number);
         const tajweedWords = wordsByAyah.get(ayah.number) || [];
         return (
-          <article key={ayah.id} className="memorization-ayah-card">
+          <article
+            key={ayah.id}
+            className={`memorization-ayah-card${ayah.number === playingAyah ? " is-playing" : ""}`}
+            aria-current={ayah.number === playingAyah ? "true" : undefined}
+          >
             <span className="memorization-ayah-number">{formatNumber(ayah.number)}</span>
             {hidden ? (
               <button

@@ -50,7 +50,7 @@ void main() {
     expect(widget, contains('.supportedFamilies([.systemMedium])'));
     expect(widget, contains('iqro://open/prayer?homeWidget'));
     expect(project, contains('PrayerTimesHomeWidget.appex'));
-    // The reading plan widget shows the palm stage art from its own catalog.
+    // The reading plan widget shows the palm stage photograph from its catalog.
     expect(
       project,
       contains(
@@ -62,16 +62,23 @@ void main() {
       project,
       contains('4D2A8C61B7E03F95A1C6D820 /* Assets.xcassets in Resources */,'),
     );
-    expect(widget, contains(r'Image("reading_plan_palm_\(data.palmStage)")'));
+    expect(
+      widget,
+      contains(r'Image("reading_plan_palm_bg_\(data.palmStage)")'),
+    );
     for (var stage = 0; stage <= 5; stage++) {
-      final art = 'reading_plan_palm_$stage';
+      final art = 'reading_plan_palm_bg_$stage';
       expect(
         File(
-          'ios/PrayerTimesHomeWidget/Assets.xcassets/$art.imageset/$art.png',
-        ).readAsBytesSync(),
-        File(
-          'android/app/src/main/res/drawable-nodpi/$art.png',
-        ).readAsBytesSync(),
+          'ios/PrayerTimesHomeWidget/Assets.xcassets/$art.imageset/$art.jpg',
+        ).existsSync(),
+        isTrue,
+        reason: art,
+      );
+      expect(
+        File('android/app/src/main/res/drawable-nodpi/$art.webp').existsSync(),
+        isTrue,
+        reason: art,
       );
     }
     expect(

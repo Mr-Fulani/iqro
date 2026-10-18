@@ -79,6 +79,7 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
 
 class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):
     image_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
 
     class Meta:
         model = PlayerBackground
@@ -89,12 +90,19 @@ class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):
             "title_ru",
             "title_tr",
             "image_url",
+            "video_url",
+            "show_equalizer",
             "sort_order",
         )
 
     @extend_schema_field(serializers.URLField())
     def get_image_url(self, obj: PlayerBackground) -> str:
         return public_audio_url(obj.image_object_key)
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_video_url(self, obj: PlayerBackground) -> str | None:
+        """A silent looping video over `image_url`, which is its poster."""
+        return public_audio_url(obj.video_object_key) if obj.video_object_key else None
 
 
 class QuranEditionAudioReferenceSerializer(serializers.ModelSerializer[QuranEditionVersion]):

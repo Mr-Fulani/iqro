@@ -77,6 +77,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
             surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
             initialAyah:
                 int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+            savesReadingPlace: state.uri.queryParameters['from'] != 'bookmark',
           ),
         ),
       ),
@@ -91,6 +92,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
                 int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1,
             surah: int.tryParse(state.uri.queryParameters['surah'] ?? '') ?? 1,
             ayah: int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+            savesReadingPlace: state.uri.queryParameters['from'] != 'bookmark',
           ),
         ),
       ),

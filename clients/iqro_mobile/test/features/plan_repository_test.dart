@@ -386,6 +386,69 @@ void main() {
     );
   });
 
+  test('reading offline moves today\'s plan at once', () async {
+    final database = _FakeLocalDatabase();
+    final remote = _FakePlanRemote()..offline = true;
+    var now = DateTime.now().toUtc();
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    final session = repository.startReadingSession(
+      accountScope: await database.captureAccount(),
+      clock: () => now,
+    );
+    session.observe(page: 1, surah: 1, ayah: 1);
+    session.observe(page: 2, surah: 2, ayah: 1);
+    session.observe(page: 3, surah: 2, ayah: 6);
+    now = now.add(const Duration(seconds: 10));
+    final updated = repository.updates.first;
+
+    await session.finish();
+
+    await updated.timeout(const Duration(seconds: 1));
+    final plan = await repository.load(preferredTarget: 5);
+    expect(plan.achieved, 2);
+    expect(plan.fromCache, isTrue);
+  });
+
+  test('without a server account the reader still counts', () async {
+    final database = _FakeLocalDatabase(<String, Map<String, Object?>>{
+      'reading:pending-automatic-sessions': <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{
+            'id': 'old',
+            'ended_at': DateTime.now()
+                .toUtc()
+                .subtract(const Duration(days: 10))
+                .toIso8601String(),
+            'credited_pages': 9,
+          },
+        ],
+      },
+    });
+    var now = DateTime.now().toUtc();
+    final repository = PlanRepository(database);
+    final session = repository.startReadingSession(
+      accountScope: await database.captureAccount(),
+      clock: () => now,
+    );
+    session.observe(page: 10, surah: 2, ayah: 60);
+    session.observe(page: 11, surah: 2, ayah: 62);
+    now = now.add(const Duration(seconds: 10));
+
+    await session.finish();
+
+    final plan = await repository.load(preferredTarget: 5);
+    expect(plan.achieved, 1);
+    // Nothing flushes this queue, so old days are dropped.
+    final items =
+        database.states['reading:pending-automatic-sessions']!['items']!
+            as List;
+    expect(items.map((item) => (item as Map)['id']), isNot(contains('old')));
+  });
+
   test('opening and closing a reader does not create fake progress', () async {
     final database = _FakeLocalDatabase();
     final remote = _FakePlanRemote();

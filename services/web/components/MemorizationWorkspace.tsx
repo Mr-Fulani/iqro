@@ -53,6 +53,7 @@ export function MemorizationWorkspace() {
   const [editingPlan, setEditingPlan] = useState(false);
   const [mode, setMode] = useState<PracticeMode>("read");
   const [revealedAyahs, setRevealedAyahs] = useState<Set<number>>(new Set());
+  const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [localRepetitions, setLocalRepetitions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -466,12 +467,14 @@ export function MemorizationWorkspace() {
                 repeatLimit={remainingForAudio}
                 pauseSeconds={plan.pause_seconds}
                 onCycleComplete={addRepetition}
+                onAyahChange={setPlayingAyah}
               />
             )}
 
             <MemorizationTajweedAyahs
               ayahs={practiceAyahs}
               hiddenAyahs={hiddenPracticeAyahs}
+              playingAyah={mode === "listen" ? playingAyah : null}
               onReveal={revealAyah}
             />
 

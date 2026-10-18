@@ -384,6 +384,15 @@ class AppLocalizationsTr extends AppLocalizations {
       'Hafs · çevrimiçi ve çevrimdışı okuma';
 
   @override
+  String get mushafPickerHint => 'Yakından bakmak için sayfaya dokunun';
+
+  @override
+  String get mushafMakePrimary => 'Ana Mushaf yap';
+
+  @override
+  String get mushafIsPrimary => 'Ana Mushaf';
+
+  @override
   String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
 
   @override
@@ -926,6 +935,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Kaydedilen dualar';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Bölüm $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return '$count kaldı';
+  }
+
+  @override
+  String get duaAudioFailed => 'Ses oynatılamadı';
+
+  @override
   String duaCount(int count) {
     return '$count dua';
   }
@@ -951,9 +973,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'Dinlemek için internet bağlantısı gerekir';
-
-  @override
-  String get duaAudioFailed => 'Ses oynatılamadı';
 
   @override
   String get duaPractice => 'Tekrar pratiği';
@@ -985,6 +1004,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareDua => 'Duayı paylaş';
+
+  @override
+  String get shareReadInIqro => 'IQRO\'da oku';
 
   @override
   String get duaReader => 'Okuyucu';

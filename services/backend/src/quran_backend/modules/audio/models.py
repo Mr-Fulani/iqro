@@ -1272,7 +1272,8 @@ class QuranFoundationAyahRecitationChapter(BaseModel):
 
 
 class PlayerBackground(BaseModel):
-    """Admin-curated still image shown behind the mobile player while audio plays."""
+    """Admin-curated background behind the mobile player while audio plays: a still
+    image, or a silent looping video whose first frame is that image (its poster)."""
 
     title_ar = models.CharField(max_length=80)
     title_en = models.CharField(max_length=80)
@@ -1282,6 +1283,16 @@ class PlayerBackground(BaseModel):
         max_length=512,
         blank=True,
         validators=[validate_relative_object_key],
+    )
+    video_object_key = models.CharField(
+        max_length=512,
+        blank=True,
+        validators=[validate_relative_object_key],
+        help_text="Беззвучное видео поверх изображения; изображение служит постером.",
+    )
+    show_equalizer = models.BooleanField(
+        default=True,
+        help_text=("Звуковые полосы поверх фона, когда идёт чтение и меню плеера скрыто тапом."),
     )
     sort_order = models.PositiveSmallIntegerField(
         default=100,

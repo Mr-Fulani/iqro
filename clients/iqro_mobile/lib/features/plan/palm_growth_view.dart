@@ -1,27 +1,36 @@
-import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/design_system/iqro_widgets.dart';
-import '../../core/theme/iqro_theme.dart';
 import 'palm_growth.dart';
 
-/// Fixed palm palette, shared with the Android home-screen widget art.
-abstract final class PalmColors {
-  static const gold = Color(0xFFD5A34C);
-  static const mint = Color(0xFFD6E5DA);
-  static const green = Color(0xFF0B5D4A);
-  static const sage = Color(0xFF91B4A5);
-  static const sand = Color(0xFFE6D3A8);
-  static const trunk = Color(0xFF8A6A3F);
-  static const trunkDark = Color(0xFF6B5030);
-  static const seed = Color(0xFF7A5230);
-  static const dusk = Color(0xFFB9CBC2);
-}
+/// Gold of the progress bar, as in the home-screen widget.
+const palmGold = Color(0xFFEBC776);
 
-/// The palm art. Plays one short growth-and-settle animation when it first
-/// appears or the stage changes, then rests; reduced motion draws it still.
-class PalmGrowthArt extends StatefulWidget {
+/// The photograph of a stage, used as the Plan card's background.
+String palmStageAsset(PalmStage stage) =>
+    'assets/plan/palm_stage_${stage.index}.webp';
+
+/// A square crop of the stage that keeps the plant readable when small.
+String palmThumbAsset(PalmStage stage) =>
+    'assets/plan/palm_thumb_${stage.index}.webp';
+
+/// A resting palm keeps its growth; the photograph only softens its colour.
+const _restingFilter = ColorFilter.matrix(<double>[
+  0.70, 0.25, 0.05, 0, 0, //
+  0.15, 0.80, 0.05, 0, 0,
+  0.15, 0.25, 0.60, 0, 0,
+  0, 0, 0, 1, 0,
+]);
+
+Widget _moodTint(PalmMood mood, Widget child) => mood == PalmMood.resting
+    ? ColorFiltered(colorFilter: _restingFilter, child: child)
+    : child;
+
+/// The palm as a round photograph, for compact places such as Home.
+class PalmGrowthArt extends StatelessWidget {
   const PalmGrowthArt({
     required this.stage,
     required this.mood,
@@ -34,434 +43,216 @@ class PalmGrowthArt extends StatefulWidget {
   final double size;
 
   @override
-  State<PalmGrowthArt> createState() => _PalmGrowthArtState();
-}
-
-class _PalmGrowthArtState extends State<PalmGrowthArt>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1600),
-  );
-  var _started = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.value = 1;
-    } else if (!_started) {
-      _controller.forward(from: 0);
-    }
-    _started = true;
-  }
-
-  @override
-  void didUpdateWidget(PalmGrowthArt oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.stage != widget.stage &&
-        !MediaQuery.disableAnimationsOf(context)) {
-      _controller.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: widget.size,
-    child: AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final t = _controller.value;
-        return CustomPaint(
-          painter: PalmPainter(
-            stage: widget.stage,
-            mood: widget.mood,
-            growth: Curves.easeOutCubic.transform(t),
-            // Damped sway that settles completely at the end.
-            sway: math.sin(t * math.pi * 3) * (1 - t) * 0.09,
-          ),
-        );
-      },
+  Widget build(BuildContext context) => ClipOval(
+    child: SizedBox.square(
+      dimension: size,
+      child: _moodTint(
+        mood,
+        Image.asset(
+          palmThumbAsset(stage),
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          excludeFromSemantics: true,
+        ),
+      ),
     ),
   );
 }
 
-class PalmPainter extends CustomPainter {
-  const PalmPainter({
-    required this.stage,
-    required this.mood,
-    this.growth = 1,
-    this.sway = 0,
-    this.celestial = true,
-  });
-
-  final PalmStage stage;
-  final PalmMood mood;
-
-  /// 0..1; the plant unfurls from 80% to full size.
-  final double growth;
-
-  /// Frond rotation in radians.
-  final double sway;
-
-  /// Draws the sun or moon of the mood; the home widget art leaves it out.
-  final bool celestial;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 100, size.height / 100);
-    _paintSky(canvas);
-    final scale = 0.8 + 0.2 * growth;
-    const groundY = 84.0;
-    switch (stage) {
-      case PalmStage.seed:
-        _paintSeed(canvas, groundY);
-      case PalmStage.sprout:
-        _paintSprout(canvas, groundY, scale);
-      case PalmStage.seedling:
-        _paintCrown(
-          canvas,
-          const Offset(50, groundY - 1),
-          3,
-          21 * scale,
-          spread: 0.75,
-        );
-      case PalmStage.youngPalm:
-        _paintPalm(canvas, groundY, 18 * scale, 5, 26 * scale);
-      case PalmStage.palm:
-        _paintPalm(canvas, groundY, 32 * scale, 7, 31 * scale);
-      case PalmStage.fruitingPalm:
-        _paintPalm(canvas, groundY, 36 * scale, 7, 32 * scale, dates: true);
-    }
-    _paintGround(canvas, groundY);
-    canvas.restore();
-  }
-
-  void _paintSky(Canvas canvas) {
-    final resting = mood == PalmMood.resting;
-    canvas.drawCircle(
-      const Offset(50, 50),
-      48,
-      Paint()
-        ..color = (resting ? PalmColors.dusk : PalmColors.mint).withValues(
-          alpha: .75,
-        ),
-    );
-    if (!celestial) return;
-    final gold = Paint()..color = PalmColors.gold;
-    switch (mood) {
-      case PalmMood.flourishing:
-        canvas.drawCircle(
-          const Offset(76, 24),
-          15,
-          Paint()..color = PalmColors.gold.withValues(alpha: .22),
-        );
-        canvas.drawCircle(const Offset(76, 24), 9, gold);
-      case PalmMood.growing:
-      case PalmMood.planting:
-        canvas.drawCircle(
-          const Offset(76, 28),
-          7,
-          Paint()..color = PalmColors.gold.withValues(alpha: .85),
-        );
-      case PalmMood.waiting:
-        canvas.drawCircle(
-          const Offset(78, 34),
-          6,
-          Paint()..color = PalmColors.gold.withValues(alpha: .55),
-        );
-      case PalmMood.resting:
-        // A calm crescent: evening rest, never a wilted plant.
-        final moon = Path()
-          ..addOval(Rect.fromCircle(center: const Offset(76, 24), radius: 8));
-        final cut = Path()
-          ..addOval(Rect.fromCircle(center: const Offset(80, 21), radius: 7));
-        canvas.drawPath(
-          Path.combine(PathOperation.difference, moon, cut),
-          gold,
-        );
-    }
-  }
-
-  void _paintGround(Canvas canvas, double groundY) {
-    final mound = Path()
-      ..moveTo(14, groundY + 4)
-      ..quadraticBezierTo(50, groundY - 9, 86, groundY + 4)
-      ..quadraticBezierTo(50, groundY + 12, 14, groundY + 4)
-      ..close();
-    canvas.drawPath(mound, Paint()..color = PalmColors.sand);
-  }
-
-  void _paintSeed(Canvas canvas, double groundY) {
-    canvas.save();
-    canvas.translate(50, groundY - 4);
-    canvas.rotate(-0.35);
-    final seed = Rect.fromCenter(center: Offset.zero, width: 18, height: 10);
-    canvas.drawOval(seed, Paint()..color = PalmColors.seed);
-    canvas.drawLine(
-      const Offset(-6, 0),
-      const Offset(6, 0),
-      Paint()
-        ..color = PalmColors.sand.withValues(alpha: .7)
-        ..strokeWidth = 1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  void _paintSprout(Canvas canvas, double groundY, double scale) {
-    final base = Offset(50, groundY - 2);
-    final top = base + Offset(0, -13 * scale);
-    canvas.drawPath(
-      Path()
-        ..moveTo(base.dx, base.dy)
-        ..quadraticBezierTo(base.dx - 2, base.dy - 7 * scale, top.dx, top.dy),
-      Paint()
-        ..color = PalmColors.green
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.8
-        ..strokeCap = StrokeCap.round,
-    );
-    _paintFrond(canvas, top, -2.3 + sway, 10 * scale, leaflets: false);
-    _paintFrond(canvas, top, -0.8 + sway, 11 * scale, leaflets: false);
-  }
-
-  void _paintPalm(
-    Canvas canvas,
-    double groundY,
-    double trunkHeight,
-    int fronds,
-    double frondLength, {
-    bool dates = false,
-  }) {
-    final base = Offset(50, groundY);
-    final crown = Offset(51 + trunkHeight * .04, groundY - trunkHeight);
-    final trunk = Path()
-      ..moveTo(base.dx - 4, base.dy)
-      ..quadraticBezierTo(
-        base.dx - 3,
-        base.dy - trunkHeight * .5,
-        crown.dx - 2.2,
-        crown.dy,
-      )
-      ..lineTo(crown.dx + 2.2, crown.dy)
-      ..quadraticBezierTo(
-        base.dx + 3,
-        base.dy - trunkHeight * .5,
-        base.dx + 4,
-        base.dy,
-      )
-      ..close();
-    canvas.drawPath(trunk, Paint()..color = PalmColors.trunk);
-    final rings = Paint()
-      ..color = PalmColors.trunkDark
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..strokeCap = StrokeCap.round;
-    for (var y = base.dy - 4; y > crown.dy + 2; y -= 4.5) {
-      final f = (base.dy - y) / trunkHeight;
-      final x = base.dx + (crown.dx - base.dx) * f;
-      final half = 3.6 - 1.4 * f;
-      canvas.drawPath(
-        Path()
-          ..moveTo(x - half, y)
-          ..quadraticBezierTo(x, y + 1.6, x + half, y),
-        rings,
-      );
-    }
-    if (dates) _paintDates(canvas, crown);
-    _paintCrown(canvas, crown, fronds, frondLength);
-  }
-
-  void _paintDates(Canvas canvas, Offset crown) {
-    final fruit = Paint()..color = PalmColors.gold;
-    final shade = Paint()..color = const Color(0xFFB0812F);
-    for (final side in <double>[-1, 1]) {
-      final hang = crown + Offset(side * 5, 3);
-      canvas.drawLine(
-        crown + Offset(side * 1.5, 0),
-        hang,
-        Paint()
-          ..color = PalmColors.trunkDark
-          ..strokeWidth = 1,
-      );
-      const offsets = <Offset>[
-        Offset(0, 1.5),
-        Offset(-2.4, 3.5),
-        Offset(2.4, 3.5),
-        Offset(0, 5.6),
-        Offset(-1.6, 7.4),
-        Offset(1.6, 7.4),
-      ];
-      for (var i = 0; i < offsets.length; i++) {
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: hang + Offset(offsets[i].dx * side, offsets[i].dy),
-            width: 2.8,
-            height: 3.6,
-          ),
-          i.isEven ? fruit : shade,
-        );
-      }
-    }
-  }
-
-  void _paintCrown(
-    Canvas canvas,
-    Offset crown,
-    int count,
-    double length, {
-    double spread = math.pi / 2 - 0.28,
-  }) {
-    // Fronds fan out around upright; a full palm reaches almost horizontal.
-    final start = -math.pi / 2 - spread;
-    final end = -math.pi / 2 + spread;
-    for (var i = 0; i < count; i++) {
-      final angle = start + (end - start) * i / (count - 1);
-      // Outer fronds sway more than the upright ones.
-      final weight = 0.4 + 0.6 * math.cos(angle + math.pi / 2).abs();
-      _paintFrond(canvas, crown, angle + sway * weight, length);
-    }
-    canvas.drawCircle(crown, 2.4, Paint()..color = PalmColors.green);
-  }
-
-  void _paintFrond(
-    Canvas canvas,
-    Offset base,
-    double angle,
-    double length, {
-    bool leaflets = true,
-  }) {
-    final dir = Offset(math.cos(angle), math.sin(angle));
-    final normal = Offset(-dir.dy, dir.dx);
-    // Horizontal fronds droop under their own weight.
-    final droop = length * 0.45 * dir.dx.abs();
-    final control = base + dir * (length * 0.6);
-    final tip = base + dir * length + Offset(0, droop);
-    final width = leaflets ? length * 0.11 : length * 0.28;
-    Offset at(double t) =>
-        base * ((1 - t) * (1 - t)) +
-        control * (2 * (1 - t) * t) +
-        tip * (t * t);
-
-    if (leaflets) {
-      final leaflet = Paint()
-        ..color = PalmColors.sage
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.3
-        ..strokeCap = StrokeCap.round;
-      for (var t = 0.18; t < 0.96; t += 0.09) {
-        final point = at(t);
-        final tangent =
-            (control - base) * (2 * (1 - t)) + (tip - control) * (2 * t);
-        final unit = tangent / tangent.distance;
-        final side = Offset(-unit.dy, unit.dx);
-        final reach = length * 0.22 * (1 - t * 0.7);
-        for (final s in <double>[-1, 1]) {
-          canvas.drawLine(
-            point,
-            point + side * (reach * s) + unit * (reach * 0.55) + Offset(0, 1),
-            leaflet,
-          );
-        }
-      }
-    }
-    final blade = Path()
-      ..moveTo(base.dx, base.dy)
-      ..quadraticBezierTo(
-        (control + normal * width).dx,
-        (control + normal * width).dy,
-        tip.dx,
-        tip.dy,
-      )
-      ..quadraticBezierTo(
-        (control - normal * width).dx,
-        (control - normal * width).dy,
-        base.dx,
-        base.dy,
-      )
-      ..close();
-    canvas.drawPath(blade, Paint()..color = PalmColors.green);
-  }
-
-  @override
-  bool shouldRepaint(PalmPainter oldDelegate) =>
-      oldDelegate.stage != stage ||
-      oldDelegate.mood != mood ||
-      oldDelegate.growth != growth ||
-      oldDelegate.sway != sway ||
-      oldDelegate.celestial != celestial;
-}
-
-/// Plan tab card: the palm, its stage, a gentle mood line and the way ahead.
-class PalmGrowthCard extends StatelessWidget {
+/// Plan tab card: the stage's photograph as the background, the stage and
+/// the way to the next one. The explanation waits behind the info button.
+/// A new stage fades in and a tap makes the scene breathe; reduced motion
+/// keeps it still.
+class PalmGrowthCard extends StatefulWidget {
   const PalmGrowthCard({required this.growth, super.key});
 
   final PalmGrowth growth;
 
   @override
+  State<PalmGrowthCard> createState() => _PalmGrowthCardState();
+}
+
+class _PalmGrowthCardState extends State<PalmGrowthCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _touch = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+  late final Animation<double> _touchScale =
+      TweenSequence<double>(<TweenSequenceItem<double>>[
+        TweenSequenceItem(
+          tween: Tween<double>(
+            begin: 1,
+            end: 1.06,
+          ).chain(CurveTween(curve: Curves.easeOut)),
+          weight: 35,
+        ),
+        TweenSequenceItem(
+          tween: Tween<double>(
+            begin: 1.06,
+            end: 1,
+          ).chain(CurveTween(curve: Curves.elasticOut)),
+          weight: 65,
+        ),
+      ]).animate(_touch);
+
+  @override
+  void dispose() {
+    _touch.dispose();
+    super.dispose();
+  }
+
+  void _respond() {
+    unawaited(HapticFeedback.lightImpact());
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    unawaited(_touch.forward(from: 0));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final growth = widget.growth;
     final next = growth.nextStage;
-    return IqroCard(
-      key: const ValueKey('palm-growth'),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Semantics(
-            image: true,
-            label: palmStageLabel(l10n, growth.stage),
-            child: ExcludeSemantics(
-              child: PalmGrowthArt(stage: growth.stage, mood: growth.mood),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final stageLabel = palmStageLabel(l10n, growth.stage);
+    const onImage = Colors.white;
+    return Semantics(
+      container: true,
+      label: stageLabel,
+      child: Card(
+        key: const ValueKey('palm-growth'),
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: InkWell(
+          onTap: _respond,
+          child: ConstrainedBox(
+            // At least the photograph's band; larger text makes it taller.
+            constraints: const BoxConstraints(minHeight: 196),
+            child: Stack(
               children: <Widget>[
-                Text(l10n.palmTitle, style: theme.textTheme.bodySmall),
-                const SizedBox(height: 2),
-                Text(
-                  palmStageLabel(l10n, growth.stage),
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(palmMoodLabel(l10n, growth.mood)),
-                const SizedBox(height: 12),
-                Text(
-                  next == null
-                      ? l10n.palmFullyGrown
-                      : l10n.palmNextStage(palmStageLabel(l10n, next)),
-                  style: theme.textTheme.labelMedium,
-                ),
-                if (next != null) ...<Widget>[
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(
-                    value: growth.progressToNext,
-                    minHeight: 6,
-                    color: PalmColors.gold,
-                    backgroundColor: context.iqroColors.line,
-                    borderRadius: BorderRadius.circular(4),
-                    semanticsLabel: l10n.palmNextStage(
-                      palmStageLabel(l10n, next),
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _touchScale,
+                    builder: (context, child) => Transform.scale(
+                      key: const ValueKey('palm-scene'),
+                      // A short breath when touched.
+                      scale: _touchScale.value,
+                      alignment: const Alignment(.55, .4),
+                      child: child,
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 600),
+                      layoutBuilder: (current, previous) => Stack(
+                        fit: StackFit.expand,
+                        children: <Widget>[...previous, ?current],
+                      ),
+                      child: _moodTint(
+                        growth.mood,
+                        Image.asset(
+                          palmStageAsset(growth.stage),
+                          key: ValueKey(growth.stage),
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          excludeFromSemantics: true,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-                const SizedBox(height: 10),
-                Text(l10n.palmHowItGrows, style: theme.textTheme.bodySmall),
+                ),
+                // Shade on the text side so white reads on bright sky.
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: <Color>[Color(0xB3231B0E), Color(0x00231B0E)],
+                        stops: <double>[.15, .75],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 8, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              stageLabel,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: onImage,
+                                fontWeight: FontWeight.w600,
+                                shadows: const <Shadow>[
+                                  Shadow(blurRadius: 8, color: Colors.black45),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Tooltip(
+                            key: const ValueKey('palm-info'),
+                            triggerMode: TooltipTriggerMode.tap,
+                            showDuration: const Duration(seconds: 8),
+                            preferBelow: true,
+                            margin: const EdgeInsets.symmetric(horizontal: 24),
+                            message:
+                                '${palmMoodLabel(l10n, growth.mood)}\n\n'
+                                '${l10n.palmHowItGrows}',
+                            child: const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                color: onImage,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 88),
+                      SizedBox(
+                        width: 190,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              next == null
+                                  ? l10n.palmFullyGrown
+                                  : l10n.palmNextStage(
+                                      palmStageLabel(l10n, next),
+                                    ),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: onImage,
+                              ),
+                            ),
+                            if (next != null) ...<Widget>[
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: growth.progressToNext,
+                                minHeight: 6,
+                                color: palmGold,
+                                backgroundColor: Colors.white24,
+                                borderRadius: BorderRadius.circular(4),
+                                semanticsLabel: l10n.palmNextStage(
+                                  palmStageLabel(l10n, next),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

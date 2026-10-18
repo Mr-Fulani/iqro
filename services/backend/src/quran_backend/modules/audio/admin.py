@@ -30,6 +30,12 @@ from quran_backend.modules.audio.player_background_upload import (
     PlayerBackgroundUploadError,
     upload_player_background,
 )
+from quran_backend.modules.audio.player_background_video import (
+    MAX_VIDEO_SECONDS,
+    MAX_VIDEO_UPLOAD_MIB,
+    PlayerBackgroundVideoError,
+    upload_player_background_video,
+)
 from quran_backend.modules.audio.portrait_upload import (
     MAX_RECITER_PORTRAIT_MIB,
     ReciterPortraitUploadError,
@@ -162,6 +168,21 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         ),
         widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg"}),
     )
+    video_upload = forms.FileField(
+        required=False,
+        label="Загрузить видео",
+        help_text=(
+            f"MP4, MOV или WebM до {MAX_VIDEO_UPLOAD_MIB} МБ. Сервер уберёт звук, сожмёт "
+            f"видео до 720p и обрежет до {MAX_VIDEO_SECONDS} с. В приложении оно идёт по кругу. "
+            "Первый кадр станет изображением фона, если изображение не загружено отдельно."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": "video/mp4,video/quicktime,video/webm"}),
+    )
+    remove_video = forms.BooleanField(
+        required=False,
+        label="Убрать видео",
+        help_text="Фон останется неподвижным изображением.",
+    )
 
     class Meta:
         model = PlayerBackground
@@ -170,6 +191,7 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "title_en",
             "title_ar",
             "title_tr",
+            "show_equalizer",
             "sort_order",
             "is_active",
         )
@@ -180,19 +202,45 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "title_tr": "Название на турецком",
             "sort_order": "Порядок вывода",
             "is_active": "Показывать в приложении",
+            "show_equalizer": "Показывать эквалайзер",
         }
         help_texts: ClassVar[dict[str, str]] = {
+            "title_ru": (
+                "Так фон подписан в приложении. Помечать видео не нужно: "
+                "приложение само покажет значок камеры."
+            ),
             "title_tr": "Если не заполнено, турецкий интерфейс покажет английское название.",
         }
 
     _uploaded_image_key: str | None = None
+    _uploaded_video_key: str | None = None
 
     def clean(self) -> dict[str, Any]:
         cleaned = super().clean() or {}
         uploaded = cleaned.get("image_upload")
-        if not uploaded and not self.instance.image_object_key:
-            self.add_error("image_upload", "Загрузите изображение фона.")
+        video = cleaned.get("video_upload")
+        if video and cleaned.get("remove_video"):
+            self.add_error("remove_video", "Либо загрузите новое видео, либо уберите текущее.")
             return cleaned
+        if not uploaded and not video and not self.instance.image_object_key:
+            self.add_error("image_upload", "Загрузите изображение или видео фона.")
+            return cleaned
+        if video and not self.errors:
+            try:
+                clip = upload_player_background_video(video)
+            except PlayerBackgroundVideoError as exc:
+                self.add_error("video_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Player background video upload failed")
+                self.add_error(
+                    "video_upload",
+                    "Не удалось обработать или сохранить видео. Повторите позже.",
+                )
+            else:
+                self._uploaded_video_key = clip.video_object_key
+                # A separately uploaded image stays the poster.
+                if not uploaded:
+                    self._uploaded_image_key = clip.poster_object_key
         if uploaded and not self.errors:
             try:
                 result = upload_player_background(uploaded)
@@ -212,6 +260,10 @@ class PlayerBackgroundAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         instance = cast("PlayerBackground", super().save(commit=False))
         if self._uploaded_image_key is not None:
             instance.image_object_key = self._uploaded_image_key
+        if self._uploaded_video_key is not None:
+            instance.video_object_key = self._uploaded_video_key
+        elif self.cleaned_data.get("remove_video"):
+            instance.video_object_key = ""
         if commit:
             instance.save()
             self.save_m2m()
@@ -315,22 +367,44 @@ class QuranFoundationSyncStateAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(PlayerBackground)
 class PlayerBackgroundAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     form = PlayerBackgroundAdminForm
-    list_display = ("image_thumbnail", "title_ru", "title_en", "sort_order", "is_active")
+    list_display = (
+        "image_thumbnail",
+        "title_ru",
+        "title_en",
+        "sort_order",
+        "is_active",
+        "show_equalizer",
+    )
     list_display_links = ("image_thumbnail", "title_ru")
-    list_editable = ("sort_order", "is_active")
+    list_editable = ("sort_order", "is_active", "show_equalizer")
     list_filter = ("is_active",)
     search_fields = ("title_ru", "title_en", "title_ar", "title_tr")
     ordering = ("sort_order", "created_at")
-    readonly_fields = ("image_preview", "image_storage_key", "id", "created_at", "updated_at")
+    readonly_fields = (
+        "image_preview",
+        "video_preview",
+        "image_storage_key",
+        "video_storage_key",
+        "id",
+        "created_at",
+        "updated_at",
+    )
     fieldsets = (
         ("Названия", {"fields": ("title_ru", "title_en", "title_ar", "title_tr")}),
         ("Изображение", {"fields": ("image_preview", "image_upload")}),
-        ("Публикация", {"fields": ("is_active", "sort_order")}),
+        ("Видео", {"fields": ("video_preview", "video_upload", "remove_video")}),
+        ("Публикация", {"fields": ("is_active", "show_equalizer", "sort_order")}),
         (
             "Служебная информация",
             {
                 "classes": ("collapse",),
-                "fields": ("image_storage_key", "id", "created_at", "updated_at"),
+                "fields": (
+                    "image_storage_key",
+                    "video_storage_key",
+                    "id",
+                    "created_at",
+                    "updated_at",
+                ),
             },
         ),
     )
@@ -358,11 +432,28 @@ class PlayerBackgroundAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             url,
         )
 
+    @admin.display(description="Текущее видео")
+    def video_preview(self, obj: PlayerBackground | None) -> str:
+        if obj is None or not obj.video_object_key:
+            return "Видео не загружено"
+        return format_html(
+            '<video src="{}" poster="{}" width="135" height="240" muted loop autoplay '
+            'playsinline style="object-fit:cover;border-radius:14px"></video>',
+            public_audio_url(obj.video_object_key),
+            public_audio_url(obj.image_object_key),
+        )
+
     @admin.display(description="Адрес файла в хранилище (служебное поле)")
     def image_storage_key(self, obj: PlayerBackground | None) -> str:
         if obj is None or not obj.image_object_key:
             return "—"
         return obj.image_object_key
+
+    @admin.display(description="Адрес видео в хранилище (служебное поле)")
+    def video_storage_key(self, obj: PlayerBackground | None) -> str:
+        if obj is None or not obj.video_object_key:
+            return "—"
+        return obj.video_object_key
 
 
 @admin.register(Reciter)

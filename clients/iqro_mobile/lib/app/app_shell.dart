@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import '../features/home/home_screen.dart';
 import '../features/more/more_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/quran/quran_screen.dart';
+import '../features/quran/surah_name_art.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({this.initialIndex = 0, this.child, super.key});
@@ -23,6 +26,19 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   late var _index = widget.initialIndex.clamp(0, 4);
+
+  @override
+  void initState() {
+    super.initState();
+    // The Audio tab is built only when first opened; warm what it shows.
+    // The Mushaf's surah-name font is fetched once (on the first launch) and
+    // then read from disk, so surah lists open with the calligraphy.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(warmAudioCatalog(context, ref));
+      unawaited(ref.read(surahHeaderFontProvider.future));
+    });
+  }
 
   @override
   void didUpdateWidget(covariant AppShell oldWidget) {

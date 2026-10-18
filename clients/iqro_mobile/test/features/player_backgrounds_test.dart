@@ -48,6 +48,8 @@ void main() {
     for (final background in bundledPlayerBackgrounds) {
       for (final locale in const <String>['ru', 'en', 'tr', 'ar']) {
         expect(background.titles[locale], isNotEmpty);
+        // A video is marked by the camera icon, not in its name.
+        expect(background.titles[locale], isNot(contains('(')));
       }
       final asset = background.assetPath;
       if (asset == null) continue;
@@ -55,6 +57,10 @@ void main() {
       expect(file.existsSync(), isTrue, reason: asset);
       // Keep the APK small and decoding cheap.
       expect(file.lengthSync(), lessThan(120 * 1024), reason: asset);
+      final video = background.videoAssetPath;
+      if (video == null) continue;
+      expect(File(video).existsSync(), isTrue, reason: video);
+      expect(File(video).lengthSync(), lessThan(200 * 1024), reason: video);
     }
   });
 
@@ -79,6 +85,58 @@ void main() {
     // An empty Turkish title falls back to English.
     expect(parsed.first.titleFor('tr'), 'Mountains');
     expect(parsed.first.titleFor('ru'), 'Горы');
+  });
+
+  test('an admin video background keeps its image as the poster', () {
+    final parsed = parsePlayerBackgrounds(<Map<String, Object?>>[
+      <String, Object?>{
+        'id': 'clip',
+        'title_en': 'Reciter',
+        'image_url': '/media/audio/player-backgrounds/clip.jpg',
+        'video_url': '/media/audio/player-backgrounds/clip.mp4',
+      },
+      <String, Object?>{
+        'id': 'still',
+        'title_en': 'Still',
+        'image_url': '/media/audio/player-backgrounds/still.jpg',
+        'video_url': null,
+      },
+    ], apiBaseUrl: _config.apiBaseUrl);
+
+    expect(
+      parsed.first.videoUrl,
+      'https://iqro.forum/media/audio/player-backgrounds/clip.mp4',
+    );
+    expect(
+      parsed.first.imageUrl,
+      'https://iqro.forum/media/audio/player-backgrounds/clip.jpg',
+    );
+    expect(parsed.first.hasVideo, isTrue);
+    expect(parsed.last.videoUrl, isNull);
+    expect(parsed.last.hasVideo, isFalse);
+  });
+
+  test('the admin switches the equalizer per background', () {
+    final parsed = parsePlayerBackgrounds(<Map<String, Object?>>[
+      <String, Object?>{
+        'id': 'off',
+        'image_url': '/media/a.jpg',
+        'show_equalizer': false,
+      },
+      <String, Object?>{
+        'id': 'on',
+        'image_url': '/media/b.jpg',
+        'show_equalizer': true,
+      },
+      // A list cached before the switch existed.
+      <String, Object?>{'id': 'old', 'image_url': '/media/c.jpg'},
+    ], apiBaseUrl: _config.apiBaseUrl);
+
+    expect(parsed.map((item) => item.showEqualizer), <bool>[false, true, true]);
+    expect(
+      bundledPlayerBackgrounds.every((item) => item.showEqualizer),
+      isTrue,
+    );
   });
 
   test('an unknown or removed background falls back to the default', () {
@@ -138,7 +196,7 @@ void main() {
 
   test('stale cache is used when the refresh fails', () async {
     final cache = _Cache()
-      ..values['audio:player-backgrounds:v1'] = CachedValue(
+      ..values['audio:player-backgrounds:v2'] = CachedValue(
         value: _payload,
         updatedAt: DateTime.utc(2026),
         expiresAt: DateTime.utc(2026),

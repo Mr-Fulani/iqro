@@ -383,6 +383,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafPublishedDescription => 'حفص · القراءة مع الإنترنت وبدونه';
 
   @override
+  String get mushafPickerHint => 'اضغط على الصفحة لمعاينتها عن قرب';
+
+  @override
+  String get mushafMakePrimary => 'اجعله المصحف الأساسي';
+
+  @override
+  String get mushafIsPrimary => 'المصحف الأساسي';
+
+  @override
   String get mushafTextDescription => 'نص واضح متكيف مع الشاشة';
 
   @override
@@ -920,6 +929,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'الأدعية المحفوظة';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'الباب $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return 'المتبقي: $count';
+  }
+
+  @override
+  String get duaAudioFailed => 'تعذر تشغيل الصوت';
+
+  @override
   String duaCount(int count) {
     return 'عدد الأدعية: $count';
   }
@@ -945,9 +967,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'يلزم الاتصال بالإنترنت للاستماع';
-
-  @override
-  String get duaAudioFailed => 'تعذر تشغيل الصوت';
 
   @override
   String get duaPractice => 'تدريب التكرار';
@@ -979,6 +998,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareDua => 'مشاركة الدعاء';
+
+  @override
+  String get shareReadInIqro => 'اقرأ في IQRO';
 
   @override
   String get duaReader => 'القارئ';

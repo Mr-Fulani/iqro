@@ -374,6 +374,40 @@ void main() {
     },
   );
 
+  test(
+    'a Dua speed belongs to its owner and the next item starts at 1x',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+      final owner = Object();
+      await controller.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Owned session',
+        owner: owner,
+        autoplay: false,
+      );
+
+      await controller.setStandaloneSpeed('dua:1', 1.5);
+      expect(controller.state.standalone?.speed, 1);
+
+      await controller.setStandaloneSpeed('dua:1', 1.5, owner: owner);
+      expect(controller.state.standalone?.speed, 1.5);
+      expect(engine.speed, 1.5);
+
+      await controller.loadStandalone(
+        id: 'dua:2',
+        url: 'https://media.example.test/dua/2.mp3',
+        title: 'Next',
+        owner: owner,
+        autoplay: false,
+      );
+      expect(controller.state.standalone?.speed, 1);
+      expect(engine.speed, 1);
+    },
+  );
+
   test('global player can toggle the current route-owned Dua source', () async {
     final engine = _FakeAudioEngine();
     final controller = AudioController(engine: engine);

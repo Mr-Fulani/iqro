@@ -157,103 +157,95 @@ void main() {
   });
 
   group('palm rendering', () {
+    String asset(WidgetTester tester, Finder within) =>
+        (tester
+                    .widget<Image>(
+                      find.descendant(of: within, matching: find.byType(Image)),
+                    )
+                    .image
+                as AssetImage)
+            .assetName;
+
     for (final stage in PalmStage.values) {
-      testWidgets('${stage.name} paints and settles to rest', (tester) async {
+      testWidgets('${stage.name} shows its own photograph', (tester) async {
         await tester.pumpWidget(
           Center(
             child: PalmGrowthArt(stage: stage, mood: PalmMood.growing),
           ),
         );
-        expect(tester.hasRunningAnimations, isTrue);
-        await tester.pumpAndSettle();
-        final painter = _painter(tester);
-        expect(painter.stage, stage);
-        expect(painter.growth, 1);
-        expect(painter.sway, 0);
         expect(
-          find.byType(PalmGrowthArt),
-          paints
-            ..circle(color: PalmColors.mint.withValues(alpha: .75))
-            ..path(),
+          asset(tester, find.byType(PalmGrowthArt)),
+          palmThumbAsset(stage),
         );
-        expect(tester.takeException(), isNull);
+        expect(File(palmThumbAsset(stage)).existsSync(), isTrue);
+        expect(File(palmStageAsset(stage)).existsSync(), isTrue);
+        expect(find.byType(ColorFiltered), findsNothing);
       });
     }
 
-    testWidgets('reduced motion draws the grown palm without animating', (
+    testWidgets('a resting palm is softened, not wilted', (tester) async {
+      await tester.pumpWidget(
+        const Center(
+          child: PalmGrowthArt(stage: PalmStage.palm, mood: PalmMood.resting),
+        ),
+      );
+      expect(find.byType(ColorFiltered), findsOneWidget);
+      expect(
+        asset(tester, find.byType(PalmGrowthArt)),
+        palmThumbAsset(PalmStage.palm),
+      );
+    });
+
+    testWidgets('the explanation waits behind the info button', (tester) async {
+      final growth = palmGrowthFor(
+        _plan(achieved: 2, history: [_day(1, 'completed')]),
+      );
+      await tester.pumpWidget(_app('ru', PalmGrowthCard(growth: growth)));
+      await tester.pump();
+      final l10n = lookupAppLocalizations(const Locale('ru'));
+      expect(find.text(l10n.palmMoodGrowing), findsNothing);
+      expect(find.text(l10n.palmHowItGrows), findsNothing);
+      final info = tester.widget<Tooltip>(
+        find.byKey(const ValueKey('palm-info')),
+      );
+      expect(info.message, contains(l10n.palmMoodGrowing));
+      expect(info.message, contains(l10n.palmHowItGrows));
+      expect(
+        asset(tester, find.byKey(const ValueKey('palm-growth'))),
+        palmStageAsset(PalmStage.sprout),
+      );
+    });
+
+    testWidgets('a tap answers with a breath; reduced motion stays still', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        const MediaQuery(
-          data: MediaQueryData(disableAnimations: true),
-          child: Center(
-            child: PalmGrowthArt(
-              stage: PalmStage.palm,
-              mood: PalmMood.flourishing,
-            ),
+      final growth = palmGrowthFor(_plan(achieved: 2));
+      double scale() => tester
+          .widget<Transform>(find.byKey(const ValueKey('palm-scene')))
+          .transform
+          .getMaxScaleOnAxis();
+      Widget card({required bool still}) => _app(
+        'ru',
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: still),
+            child: PalmGrowthCard(growth: growth),
           ),
         ),
       );
-      expect(tester.hasRunningAnimations, isFalse);
-      expect(_painter(tester).growth, 1);
-      expect(_painter(tester).sway, 0);
-    });
 
-    testWidgets('a new stage grows again', (tester) async {
-      Widget art(PalmStage stage) => Center(
-        child: PalmGrowthArt(stage: stage, mood: PalmMood.growing),
-      );
-      await tester.pumpWidget(art(PalmStage.sprout));
+      await tester.pumpWidget(card(still: true));
+      await tester.tap(find.byKey(const ValueKey('palm-growth')));
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(scale(), 1);
+
+      await tester.pumpWidget(card(still: false));
+      await tester.tap(find.byKey(const ValueKey('palm-growth')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(scale(), greaterThan(1));
       await tester.pumpAndSettle();
-      await tester.pumpWidget(art(PalmStage.seedling));
-      expect(tester.hasRunningAnimations, isTrue);
-      await tester.pumpAndSettle();
-      expect(_painter(tester).stage, PalmStage.seedling);
-    });
-
-    testWidgets('resting shows a crescent instead of a wilted palm', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        const MediaQuery(
-          data: MediaQueryData(disableAnimations: true),
-          child: Center(
-            child: PalmGrowthArt(stage: PalmStage.palm, mood: PalmMood.resting),
-          ),
-        ),
-      );
-      expect(
-        find.byType(PalmGrowthArt),
-        paints
-          ..circle(color: PalmColors.dusk.withValues(alpha: .75))
-          ..path(color: PalmColors.gold),
-      );
-    });
-
-    test('painter repaints only when its input changes', () {
-      const base = PalmPainter(stage: PalmStage.palm, mood: PalmMood.growing);
-      expect(
-        base.shouldRepaint(
-          const PalmPainter(stage: PalmStage.palm, mood: PalmMood.growing),
-        ),
-        isFalse,
-      );
-      expect(
-        base.shouldRepaint(
-          const PalmPainter(stage: PalmStage.palm, mood: PalmMood.resting),
-        ),
-        isTrue,
-      );
-      expect(
-        base.shouldRepaint(
-          const PalmPainter(
-            stage: PalmStage.palm,
-            mood: PalmMood.growing,
-            sway: .05,
-          ),
-        ),
-        isTrue,
-      );
+      expect(scale(), 1);
     });
 
     for (final locale in ['ru', 'en', 'ar', 'tr']) {
@@ -267,7 +259,6 @@ void main() {
         await tester.pumpAndSettle();
         final l10n = lookupAppLocalizations(Locale(locale));
         expect(find.text(l10n.palmStageSprout), findsOneWidget);
-        expect(find.text(l10n.palmMoodGrowing), findsOneWidget);
         expect(
           find.text(l10n.palmNextStage(l10n.palmStageSeedling)),
           findsOneWidget,
@@ -332,24 +323,13 @@ void main() {
       for (final stage in PalmStage.values) {
         final file = File(
           'android/app/src/main/res/drawable-nodpi/'
-          'reading_plan_palm_${stage.index}.png',
+          'reading_plan_palm_bg_${stage.index}.webp',
         );
         expect(file.existsSync(), isTrue, reason: file.path);
       }
     });
   });
 }
-
-PalmPainter _painter(WidgetTester tester) =>
-    tester
-            .widget<CustomPaint>(
-              find.descendant(
-                of: find.byType(PalmGrowthArt),
-                matching: find.byType(CustomPaint),
-              ),
-            )
-            .painter!
-        as PalmPainter;
 
 Widget _app(String locale, Widget child) => MaterialApp(
   theme: IqroTheme.light(),
