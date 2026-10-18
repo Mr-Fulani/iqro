@@ -18,7 +18,7 @@ SNAPSHOT_SCHEMA_VERSION = 1
 
 LESSON_KINDS = frozenset({"article", "steps", "prayer"})
 STEP_KINDS = frozenset({"action", "recitation", "info"})
-RULINGS = frozenset({"rukn", "wajib", "sunnah"})
+RULINGS = frozenset({"shart", "rukn", "wajib", "sunnah"})
 PRAYER_KINDS = frozenset({"fard", "witr", "sunnah"})
 RECITATIONS = frozenset({"jahr", "sirr"})
 SITTINGS = frozenset({"none", "middle_tashahhud", "final_tashahhud"})

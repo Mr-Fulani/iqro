@@ -691,6 +691,7 @@
   "salahStatusInProgress": "In progress",
   "salahUnavailable": "The course is not available yet",
   "salahLessonNotFound": "This lesson is not in the course",
+  "salahRulingShart": "Condition (shart)",
   "salahRulingRukn": "Pillar (rukn)",
   "salahRulingWajib": "Obligatory (wajib)",
   "salahRulingSunnah": "Sunnah"

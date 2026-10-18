@@ -296,7 +296,7 @@ class SalahStep {
   final String kind;
   final String? position;
 
-  /// `rukn`, `wajib` or `sunnah`.
+  /// `shart`, `rukn`, `wajib` or `sunnah`.
   final String? ruling;
   final int? rakat;
   final String title;

@@ -41,7 +41,7 @@ from quran_backend.modules.salah.snapshot import SalahSnapshotError
 
 logger = logging.getLogger(__name__)
 
-RULING_LABELS = {"rukn": "ркн", "wajib": "ваджиб", "sunnah": "сунна"}
+RULING_LABELS = {"shart": "шарт", "rukn": "рукн", "wajib": "ваджиб", "sunnah": "сунна"}
 
 
 @admin.register(SalahCourse)

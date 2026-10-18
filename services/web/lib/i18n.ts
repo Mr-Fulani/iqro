@@ -141,6 +141,7 @@ export const MESSAGES = {
   "salah.modePractice": message("Практика", "Practice", "تطبيق", "Uygulama"),
   "salah.showTransliteration": message("Транслитерация", "Transliteration", "النطق اللاتيني", "Okunuş"),
   "salah.showTranslation": message("Перевод", "Translation", "الترجمة", "Meal"),
+  "salah.rulingShart": message("Условие (шарт)", "Condition (shart)", "شرط", "Şart"),
   "salah.rulingRukn": message("Столп (рукн)", "Pillar (rukn)", "ركن", "Rükün"),
   "salah.rulingWajib": message("Обязательно (ваджиб)", "Obligatory (wajib)", "واجب", "Vacip"),
   "salah.rulingSunnah": message("Сунна", "Sunnah", "سنة", "Sünnet"),

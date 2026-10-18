@@ -239,6 +239,7 @@
   padding: 3px 10px;
 }
 
+.salah-ruling.is-shart,
 .salah-ruling.is-rukn {
   background: var(--primary-subtle);
   border-color: var(--primary-border);

@@ -1964,6 +1964,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salahLessonNotFound => 'هذا الدرس غير موجود في الدورة';
 
   @override
+  String get salahRulingShart => 'شرط';
+
+  @override
   String get salahRulingRukn => 'ركن';
 
   @override

@@ -638,6 +638,7 @@ class _StepPage extends ConsumerWidget {
 
   static String? _rulingLabel(BuildContext context, String? ruling) =>
       switch (ruling) {
+        'shart' => context.l10n.salahRulingShart,
         'rukn' => context.l10n.salahRulingRukn,
         'wajib' => context.l10n.salahRulingWajib,
         'sunnah' => context.l10n.salahRulingSunnah,

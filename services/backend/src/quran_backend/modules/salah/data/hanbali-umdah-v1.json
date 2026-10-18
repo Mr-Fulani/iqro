@@ -3052,7 +3052,8 @@
             "tr": "Niyet, namazın geçerlilik şartıdır. Dille söylemeye gerek yoktur."
           },
           "media": "position-qiyam",
-          "formulas": []
+          "formulas": [],
+          "ruling": "shart"
         },
         {
           "slug": "takbir",
@@ -4055,7 +4056,8 @@
             "tr": "Niyet, namazın geçerlilik şartıdır. Dille söylemeye gerek yoktur."
           },
           "media": "position-qiyam",
-          "formulas": []
+          "formulas": [],
+          "ruling": "shart"
         },
         {
           "slug": "takbir",

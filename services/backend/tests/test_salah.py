@@ -32,10 +32,15 @@ from quran_backend.modules.salah.resolvers import FormulaResolver, clean_note
 from quran_backend.modules.salah.snapshot import (
     SalahSnapshotError,
     expand_lesson_steps,
+    load_snapshot,
     validate_snapshot,
 )
 
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "salah"
+COURSE_SNAPSHOT = (
+    Path(__file__).resolve().parents[1]
+    / "src/quran_backend/modules/salah/data/hanbali-umdah-v1.json"
+)
 LANGUAGES = ("ru", "en", "ar", "tr")
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed")
@@ -117,6 +122,14 @@ def test_example_snapshot_validates_and_unrolls_fajr() -> None:
         "fajr.r2.ruku",
         "fajr.r2.tashahhud",
     ]
+
+
+def test_course_snapshot_marks_the_prayer_intention_as_a_condition() -> None:
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    validate_snapshot(snapshot)
+
+    assert {template["steps"][0]["slug"] for template in snapshot["templates"]} == {"intention"}
+    assert {template["steps"][0]["ruling"] for template in snapshot["templates"]} == {"shart"}
 
 
 def test_four_rakat_prayer_unrolls_with_a_middle_tashahhud() -> None:

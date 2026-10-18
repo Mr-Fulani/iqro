@@ -2000,6 +2000,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get salahLessonNotFound => 'Такого урока нет в курсе';
 
   @override
+  String get salahRulingShart => 'Условие (шарт)';
+
+  @override
   String get salahRulingRukn => 'Столп (рукн)';
 
   @override

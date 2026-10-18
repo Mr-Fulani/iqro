@@ -69,7 +69,7 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 - `sections[]`: `{slug, title{lang}, lessons[]}`.
 - `lessons[]`: урок.
   - `{slug, kind: article|steps|prayer, title{lang}, summary{lang}, minutes, steps[]|prayer}`.
-- Шаг: `{slug, kind: action|recitation|info, position?, ruling?: rukn|wajib|sunnah, title{lang}, instruction{lang}, details?{lang}, media?, formulas[], repeat?}`.
+- Шаг: `{slug, kind: action|recitation|info, position?, ruling?: shart|rukn|wajib|sunnah, title{lang}, instruction{lang}, details?{lang}, media?, formulas[], repeat?}`.
 - `prayer`: `{code, kind: fard|witr|sunnah, rakats, rakat_rules[], template}`.
   - `rakat_rules[]`: `{rakat, recitation: jahr|sirr, surah_after_fatiha: bool, sitting: none|middle_tashahhud|final_tashahhud, qunut: bool}`.
   - `template`: шаблон ракаата, шаги с условиями `when: {first_rakat, surah_after_fatiha, sitting, qunut}`.
@@ -123,7 +123,7 @@ Snapshot-тесты (`tests/test_salah_sequences.py`) фиксируют пол�
       slug,                     // стабильный id: "fajr.r1.ruku"
       kind: "action"|"recitation"|"info",
       position?: "takbir"|"qiyam"|"ruku"|"itidal"|"sujud"|"jalsa"|"tashahhud"|"taslim"|…,
-      ruling?: "rukn"|"wajib"|"sunnah",
+      ruling?: "shart"|"rukn"|"wajib"|"sunnah",
       rakat?: 1..4,             // только для молитв
       title, instruction, details?,
       media?: media_key,

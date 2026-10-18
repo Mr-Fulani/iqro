@@ -28,6 +28,7 @@ type Display = { mode: Mode; transliteration: boolean; translation: boolean };
 const DISPLAY_STORAGE_KEY = "iqro_salah_display_v1";
 const DEFAULT_DISPLAY: Display = { mode: "learn", transliteration: true, translation: true };
 const RULING_LABELS: Record<NonNullable<SalahStep["ruling"]>, MessageKey> = {
+  shart: "salah.rulingShart",
   rukn: "salah.rulingRukn",
   wajib: "salah.rulingWajib",
   sunnah: "salah.rulingSunnah",

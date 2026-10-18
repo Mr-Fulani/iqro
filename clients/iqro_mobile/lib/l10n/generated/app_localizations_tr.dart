@@ -1940,6 +1940,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get salahLessonNotFound => 'Bu ders kursta yok';
 
   @override
+  String get salahRulingShart => 'Şart';
+
+  @override
   String get salahRulingRukn => 'Rükün';
 
   @override

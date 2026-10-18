@@ -1977,6 +1977,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salahLessonNotFound => 'This lesson is not in the course';
 
   @override
+  String get salahRulingShart => 'Condition (shart)';
+
+  @override
   String get salahRulingRukn => 'Pillar (rukn)';
 
   @override

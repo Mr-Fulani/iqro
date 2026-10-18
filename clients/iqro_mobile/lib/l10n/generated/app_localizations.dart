@@ -3576,6 +3576,12 @@ abstract class AppLocalizations {
   /// **'This lesson is not in the course'**
   String get salahLessonNotFound;
 
+  /// No description provided for @salahRulingShart.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition (shart)'**
+  String get salahRulingShart;
+
   /// No description provided for @salahRulingRukn.
   ///
   /// In en, this message translates to:

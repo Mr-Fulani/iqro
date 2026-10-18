@@ -10,7 +10,7 @@ const STEP_SLUG_PATTERN = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/;
 
 export type SalahLessonKind = "article" | "steps" | "prayer";
 export type SalahStepKind = "action" | "recitation" | "info";
-export type SalahRuling = "rukn" | "wajib" | "sunnah";
+export type SalahRuling = "shart" | "rukn" | "wajib" | "sunnah";
 
 export type SalahCourseMeta = {
   slug: string;
