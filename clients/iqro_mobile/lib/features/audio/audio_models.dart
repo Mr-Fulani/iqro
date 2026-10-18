@@ -52,9 +52,11 @@ class RecitationCoverage {
     required this.timedAyahs,
     required this.complete,
     required this.timingsComplete,
+    this.surahNumbers = const <int>[],
   });
 
   factory RecitationCoverage.fromJson(Map<String, Object?> json) {
+    final numbers = json['surah_numbers'];
     return RecitationCoverage(
       trackCount: (json['track_count'] as num?)?.toInt() ?? 0,
       surahCount: (json['surah_count'] as num?)?.toInt() ?? 0,
@@ -62,6 +64,11 @@ class RecitationCoverage {
       timedAyahs: (json['timed_ayahs'] as num?)?.toInt() ?? 0,
       complete: json['complete'] == true,
       timingsComplete: json['timings_complete'] == true,
+      surahNumbers: numbers is List
+          ? List<int>.unmodifiable(
+              numbers.whereType<num>().map((item) => item.toInt()),
+            )
+          : const <int>[],
     );
   }
 
@@ -71,6 +78,9 @@ class RecitationCoverage {
   final int timedAyahs;
   final bool complete;
   final bool timingsComplete;
+
+  /// The surahs this recitation holds; empty when an older API left it out.
+  final List<int> surahNumbers;
 }
 
 class Reciter {
@@ -231,6 +241,25 @@ class Recitation {
   final bool offlineDownloadAllowed;
   final RecitationCapabilities? capabilities;
   final RecitationCoverage? coverage;
+
+  /// Listening recitations may hold only some surahs. Catalogs from before
+  /// the surah list only ever held complete recitations.
+  bool coversSurah(int surah) {
+    final numbers = coverage?.surahNumbers ?? const <int>[];
+    return numbers.isEmpty || numbers.contains(surah);
+  }
+
+  /// The nearest held surah after ([direction] 1) or before (-1) [from].
+  int? adjacentSurah(int from, int direction) {
+    for (
+      var surah = from + direction;
+      surah >= 1 && surah <= 114;
+      surah += direction
+    ) {
+      if (coversSurah(surah)) return surah;
+    }
+    return null;
+  }
 
   bool supports(AudioRecitationRole role) {
     final value = capabilities;

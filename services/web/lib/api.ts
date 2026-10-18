@@ -585,6 +585,8 @@ export type Recitation = {
     timed_ayahs: number;
     complete: boolean;
     timings_complete: boolean;
+    /** The surahs a recitation holds; listening-only recordings may be partial. */
+    surah_numbers?: number[];
   };
   timings: { available: boolean; segment_count: number; complete: boolean };
   capabilities: {

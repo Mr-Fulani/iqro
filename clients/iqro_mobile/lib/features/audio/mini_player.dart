@@ -8,6 +8,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
+import 'audio_models.dart';
 import 'premium_reciter_portrait.dart';
 import 'reciter_portraits.dart';
 
@@ -272,8 +273,17 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final recitationId = player.track?.recitationId;
     final currentSurah = player.track?.surah;
     if (reciter == null || recitationId == null || currentSurah == null) return;
-    final targetSurah = currentSurah + direction;
-    if (targetSurah < 1 || targetSurah > 114) return;
+    Recitation? recitation;
+    for (final item
+        in ref.read(audioRecitationsProvider).valueOrNull ??
+            const <Recitation>[]) {
+      if (item.id == recitationId) recitation = item;
+    }
+    // A listening recording may hold only some surahs: skip to the next one it has.
+    final targetSurah = recitation == null
+        ? currentSurah + direction
+        : recitation.adjacentSurah(currentSurah, direction);
+    if (targetSurah == null || targetSurah < 1 || targetSurah > 114) return;
 
     final locale = Localizations.localeOf(context).languageCode;
     var surahName = '${context.l10n.surah} $targetSurah';

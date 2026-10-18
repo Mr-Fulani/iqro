@@ -822,6 +822,7 @@ export const MESSAGES = {
   "audio.style.muallim": message("Муаллим", "Muallim", "معلّم", "Muallim"),
   "audio.style.mujawwad": message("Муджаввад", "Mujawwad", "مجود", "Mücevved"),
   "audio.style.murattal": message("Мурратталь", "Murattal", "مرتل", "Mürattel"),
+  "audio.style.kidsRepeat": message("Детское с повтором", "Children's repeat", "للأطفال مع التكرار", "Çocuklar için tekrarlı"),
   "audio.deep.reciterCatalogTitle": message(
     "Опубликованные чтецы Корана",
     "Published Quran reciters",

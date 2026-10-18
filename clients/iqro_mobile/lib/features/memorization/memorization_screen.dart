@@ -11,7 +11,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
-import '../audio/reciter_catalog.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/reciter_portraits.dart';
 import '../quran/quran_models.dart';
 import 'memorization_repository.dart';
@@ -504,7 +504,8 @@ class _PlanEditor extends ConsumerWidget {
                     (item) => DropdownMenuItem<String>(
                       value: item.id,
                       child: Text(
-                        '${item.reciter.nameFor(locale)} · ${item.style}',
+                        '${item.reciter.nameFor(locale)} · '
+                        '${recitationStyleLabel(context, item.style)}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1044,16 +1045,15 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
       final recitations = await ref.read(
         memorizationRecitationsProvider.future,
       );
-      final recitation =
-          recitations
-              .where((item) => item.id == selectedRecitationId)
-              .firstOrNull ??
-          preferredRecitation(
-            recitations,
-            preferredId: selectedRecitationId,
-            role: AudioRecitationRole.memorization,
-          );
-      if (recitation == null) throw const FormatException('no recitation');
+      final recitation = recitations
+          .where((item) => item.id == selectedRecitationId)
+          .firstOrNull;
+      if (recitation == null) {
+        // The plan's reciter is no longer offered for memorization. Never play
+        // someone else in its place: let the user choose again.
+        if (mounted && request == _audioRequest) widget.onEdit();
+        throw const FormatException('plan recitation unavailable');
+      }
       final playback = await ref
           .read(audioRepositoryProvider)
           .playback(recitationId: recitation.id, surah: plan.startAyah.surah);

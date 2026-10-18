@@ -18,6 +18,8 @@ import { useI18n } from "../lib/i18n-context";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
+  recitationHasSurah,
+  recitationStyleLabel,
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
@@ -285,6 +287,12 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
       return;
     }
 
+    if (!recitationHasSurah(selectedRecitation, pending.surahNumber)) {
+      // This recording does not hold the surah that was playing; the listener
+      // picks one of its surahs from the list instead of seeing an error.
+      pendingReciterPlaybackRef.current = null;
+      return;
+    }
     let cancelled = false;
     setLoadingTrackId(`reciter-switch-${pending.surahNumber}`);
     setError(null);
@@ -303,7 +311,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             ? t("common.ayah", { ayah: `${pending.surahNumber}:${pending.startAyah}` })
             : t("common.surah", { surah: pending.surahNumber }),
           artist: reciterName(selectedReciter),
-          album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+          album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
           autoPlay: false,
         });
         pendingReciterPlaybackRef.current = null;
@@ -341,7 +349,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
         kind: "surah",
         title: t("common.surah", { surah: track.surah_number }),
         artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
-        album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+        album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
         autoPlay: true,
       };
       startPlayback(request);
@@ -403,7 +411,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             >
               {recitations.map((rec) => (
                 <option key={rec.id} value={rec.id}>
-                  {rec.style.toUpperCase()} · {rec.quran_edition.riwayah} ({t("audio.tracksShort", { count: rec.coverage.track_count })})
+                  {recitationStyleLabel(rec.style, t)} · {rec.quran_edition.riwayah} ({t("audio.tracksShort", { count: rec.coverage.track_count })})
                 </option>
               ))}
             </select>

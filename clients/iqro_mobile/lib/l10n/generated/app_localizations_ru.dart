@@ -557,6 +557,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get styleMuallim => 'Муаллим';
 
   @override
+  String get styleKidsRepeat => 'Детское с повтором';
+
+  @override
   String get refreshReciters => 'Обновить каталог чтецов';
 
   @override

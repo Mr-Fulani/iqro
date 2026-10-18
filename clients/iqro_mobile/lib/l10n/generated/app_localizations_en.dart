@@ -552,6 +552,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get styleMuallim => 'Muallim';
 
   @override
+  String get styleKidsRepeat => 'Children\'s repeat';
+
+  @override
   String get refreshReciters => 'Refresh reciter catalog';
 
   @override

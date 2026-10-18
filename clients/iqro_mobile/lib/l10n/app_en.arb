@@ -167,6 +167,7 @@
   "styleMurattal": "Murattal",
   "styleMujawwad": "Mujawwad",
   "styleMuallim": "Muallim",
+  "styleKidsRepeat": "Children's repeat",
   "refreshReciters": "Refresh reciter catalog",
   "recitersUpdated": "Reciter catalog updated",
   "recitersRefreshFailed": "Could not refresh the catalog. Saved data is shown.",

@@ -175,17 +175,30 @@ class RecitationEdition(BaseModel):
         default=RecitationPublicationStatus.DRAFT,
     )
     published_at = models.DateTimeField(null=True, blank=True)
+    listening_only = models.BooleanField(
+        default=False,
+        help_text=(
+            "Only the Audio tab: never offered in the Mushaf or Memorization, may hold "
+            "some of the surahs, and accepts new surahs after publication."
+        ),
+    )
     source_name = models.CharField(max_length=255)
     source_url = models.URLField(blank=True)
     source_version = models.CharField(max_length=128)
-    source_checksum_sha256 = models.CharField(max_length=64, validators=[validate_sha256])
-    rights_holder = models.CharField(max_length=255)
-    license_name = models.CharField(max_length=255)
+    source_checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        validators=[validate_sha256],
+    )
+    rights_holder = models.CharField(max_length=255, blank=True)
+    license_name = models.CharField(max_length=255, blank=True)
     license_url = models.URLField(blank=True)
     license_spdx_id = models.CharField(max_length=64, blank=True)
     license_attribution = models.TextField(blank=True)
-    stream_allowed = models.BooleanField(null=True, blank=True)
-    offline_download_allowed = models.BooleanField(null=True, blank=True)
+    stream_allowed = models.BooleanField(null=True, blank=True, default=True)
+    offline_download_allowed = models.BooleanField(null=True, blank=True, default=False)
+    rights_evidence_url = models.URLField(max_length=1000, blank=True)
+    rights_checked_on = models.DateField(null=True, blank=True)
 
     immutable_fields: ClassVar[tuple[str, ...]] = (
         "code",
@@ -254,6 +267,19 @@ class RecitationEdition(BaseModel):
 
     def clean(self) -> None:
         super().clean()
+        if not self.listening_only:
+            # Imported timed recitations keep full provenance; an editor's own
+            # listening upload needs none of it.
+            required = {
+                "source_checksum_sha256": self.source_checksum_sha256,
+                "rights_holder": self.rights_holder,
+                "license_name": self.license_name,
+            }
+            missing = [field for field, value in required.items() if not value]
+            if missing:
+                raise ValidationError(
+                    dict.fromkeys(missing, "Recitations with ayah timings need this provenance.")
+                )
         if self.status == RecitationPublicationStatus.DRAFT and self.published_at is not None:
             raise ValidationError({"published_at": "Draft recitations cannot be published."})
         if self.status != RecitationPublicationStatus.DRAFT and self.published_at is None:
@@ -762,11 +788,25 @@ class AudioTrack(BaseModel):
     def _assert_parent_is_mutable(self) -> None:
         if not self.recitation_edition_id:
             return
-        current_status = (
+        parent = (
             RecitationEdition.objects.filter(pk=self.recitation_edition_id)
-            .values_list("status", flat=True)
+            .values("status", "listening_only")
             .first()
         )
+        current_status = parent["status"] if parent else None
+        if (
+            self._state.adding
+            and parent is not None
+            and parent["listening_only"]
+            and current_status == RecitationPublicationStatus.PUBLISHED
+        ):
+            # A published listening-only recitation grows by whole new surahs;
+            # what listeners already have never changes.
+            if self.scope != AudioTrackScope.SURAH or self.timing_version_id is not None:
+                raise ValidationError(
+                    "Only untimed surah tracks can be added to a published listening recitation."
+                )
+            return
         persisted_status = None
         if not self._state.adding:
             persisted_status = (
@@ -926,9 +966,22 @@ class AudioRendition(BaseModel):
             )
 
     def _assert_parent_is_mutable(self) -> None:
-        statuses = RecitationEdition.objects.filter(
-            pk__in=self._related_recitation_ids()
-        ).values_list("status", flat=True)
+        parents = list(
+            RecitationEdition.objects.filter(pk__in=self._related_recitation_ids()).values(
+                "status", "listening_only", "offline_download_allowed"
+            )
+        )
+        if (
+            self._state.adding
+            and len(parents) == 1
+            and parents[0]["listening_only"]
+            and parents[0]["status"] == RecitationPublicationStatus.PUBLISHED
+        ):
+            self._validate_appended_to_published(
+                offline_download_allowed=bool(parents[0]["offline_download_allowed"])
+            )
+            return
+        statuses = [parent["status"] for parent in parents]
         if any(
             status
             in {
@@ -938,6 +991,29 @@ class AudioRendition(BaseModel):
             for status in statuses
         ):
             raise ValidationError("Renditions in a published recitation edition are immutable.")
+
+    def _validate_appended_to_published(self, *, offline_download_allowed: bool) -> None:
+        """A new surah joins a live catalog at once, so it must arrive publishable."""
+        if type(self).objects.filter(track_id=self.track_id).exists():
+            raise ValidationError(
+                "Published tracks keep their renditions; add the new surah as its own track."
+            )
+        if not self.is_default:
+            raise ValidationError({"is_default": "The new surah's only rendition is its default."})
+        if self.object_key and not (
+            self.origin_etag and self.etag and self.cdn_contract_verified_at is not None
+        ):
+            raise ValidationError(
+                "A surah added after publication needs origin upload and public CDN evidence."
+            )
+        if self.external_url and offline_download_allowed:
+            raise ValidationError(
+                {
+                    "external_url": (
+                        "External provider renditions cannot be offered for offline download."
+                    )
+                }
+            )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         with transaction.atomic():

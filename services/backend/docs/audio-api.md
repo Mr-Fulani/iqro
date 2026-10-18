@@ -14,10 +14,12 @@ renditions всегда имеют `offline_download_allowed=false`, `immutable=
 Все endpoints доступны без авторизации, используют cursor pagination для списков и
 возвращают `ETag` вместе с
 `Cache-Control: public, max-age=300, stale-while-revalidate=86400`.
-В публичный каталог и playback endpoints попадают только декламации с полным набором
-из 114 треков уровня суры. Пилотные и прерванные импорты остаются доступны оператору в
-Django Admin, но не создают дубли чтецов и не дают пользователю выбрать неработающий
-каталог `1/114`.
+В публичный каталог и playback endpoints попадают декламации с полным набором из 114
+треков уровня суры. Исключение — записи «только для вкладки Аудио»
+(`listening_only`): они видны с любым числом сур и остаются в каталоге после смены
+активной версии текста Корана. Пилотные и прерванные импорты остаются доступны
+оператору в Django Admin, но не создают дубли чтецов и не дают пользователю выбрать
+неработающий каталог `1/114`.
 
 - `GET /api/v1/reciters`
 - `GET /api/v1/reciters/{uuid}`
@@ -64,7 +66,8 @@ legacy `timings` fields:
     "expected_ayahs": 6236,
     "timed_ayahs": 6236,
     "complete": true,
-    "timings_complete": true
+    "timings_complete": true,
+    "surah_numbers": [1, 2, "…", 114]
   },
   "timings": {
     "available": true,
@@ -80,9 +83,12 @@ legacy `timings` fields:
 }
 ```
 
-`listen` describes a streamable complete surah catalog. `ayah_playback` and
+`listen` describes a streamable surah catalog. `ayah_playback` and
 `memorization` require verified timing coverage for every ayah in the active
-Quran edition. `offline` reflects the redistribution right and does not imply
+Quran edition and are always `false` for a `listening_only` recitation, even a
+timed one. `coverage.surah_numbers` lists the surahs a recitation holds, so
+clients offer only those surahs and skip the gaps of a partial listening
+recording; clients treat a missing list as all 114. `offline` reflects the redistribution right and does not imply
 that a client has downloaded the package. Older clients may continue using
 `timings.available`; new clients must use capabilities and coverage to avoid
 offering partial or untimed variants in Mushaf and Memorization.
@@ -192,6 +198,28 @@ WebP, JPEG или PNG размером до 50 МБ; backend проверяет 
    `record_audio_media_contract`; origin ETag и public edge ETag сохраняются раздельно;
 6. для выделения аятов создать проверенную `AudioTimingVersion` и непересекающиеся сегменты;
 7. проверить реальное соответствие аудио каноническому тексту и правам распространения.
+
+### Записи только для прослушивания (Django Admin)
+
+Чтец → «Добавить запись для прослушивания» открывает форму с включённым флагом
+«Только для вкладки «Аудио»», подставленным чтецом и изданием `madani-hafs`; код и
+версия записи заполняются сами. После сохранения черновика блок «Суры» принимает
+несколько MP3 сразу: номер суры берётся из начала имени файла, каждый файл уходит
+отдельным запросом (до 512 МБ). Сервер сам измеряет длительность и битрейт (ffprobe),
+считает SHA-256, загружает файл create-only под неизменяемым ключом
+`audio/recitations/<code>/<version>/surah-NNN-<sha>.mp3`, проверяет публичный URL
+(`200`, размер, `audio/mpeg`, strong ETag, годовой `immutable`-кэш) и только потом
+создаёт трек. Статус «Опубликовано» ставит дату публикации сам; публиковать можно с
+одной сурой. Поля источника и прав необязательны и свёрнуты: воспроизведение включено
+по умолчанию, скачивание выключено. В опубликованную запись «только для Аудио» можно докладывать новые суры,
+уже загруженные не меняются. Такая запись никогда не попадает в Мусхаф и Заучивание.
+Офлайн-пакет по-прежнему требует все 114 сур и полный contract report.
+
+Через gateway этот путь принимает тело до 520 МБ без буферизации и ждёт ответа до
+10 минут; бэкенд кладёт тело запроса во временный том `backend-uploads`
+(`TMPDIR=/var/tmp/iqro-uploads`), а не в 64 МБ `/tmp` в памяти. TLS-proxy перед
+gateway должен пропускать такие запросы (Cloudflare proxy на тарифах Free/Pro режет
+тело запроса на 100 МБ).
 
 Пример операторского flow для уже созданной draft rendition:
 

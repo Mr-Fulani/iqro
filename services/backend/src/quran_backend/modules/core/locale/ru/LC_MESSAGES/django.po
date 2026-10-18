@@ -50,6 +50,15 @@ msgstr "Мекканская"
 msgid "Medinan"
 msgstr "Мединская"
 
+msgid "Murattal"
+msgstr "Муратталь"
+
+msgid "Mujawwad"
+msgstr "Муджаввад"
+
+msgid "Muallim"
+msgstr "Муаллим"
+
 msgid "Kids repeat"
 msgstr "Детское повторение"
 
