@@ -271,8 +271,29 @@ def test_withdrawn_listening_recitation_accepts_no_new_surahs(
         _add_surah(listening, 113)
 
 
-def test_timed_recitation_still_needs_a_source_checksum(quran_dataset: dict[str, Any]) -> None:
-    with pytest.raises(ValidationError, match="source checksum"):
+def test_listening_recitation_publishes_without_any_rights_paperwork(
+    quran_dataset: dict[str, Any],
+) -> None:
+    recitation = RecitationEdition.objects.create(
+        code="no-paperwork",
+        version="1",
+        reciter=_reciter("no-paperwork"),
+        quran_edition_version=quran_dataset["version"],
+        listening_only=True,
+        source_name="Editor upload",
+        source_version="1",
+    )
+    _add_surah(recitation, 1)
+    recitation.publish()
+    recitation.save()
+
+    assert recitation.stream_allowed is True
+    assert recitation.offline_download_allowed is False
+    assert public_recitation_base().filter(pk=recitation.pk).exists()
+
+
+def test_timed_recitation_still_needs_full_provenance(quran_dataset: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError, match="provenance") as error:
         RecitationEdition.objects.create(
             code="no-checksum",
             version="1",
@@ -280,9 +301,13 @@ def test_timed_recitation_still_needs_a_source_checksum(quran_dataset: dict[str,
             quran_edition_version=quran_dataset["version"],
             source_name="Studio",
             source_version="1",
-            rights_holder="Studio",
-            license_name="Permission",
         )
+
+    assert set(error.value.message_dict) == {
+        "source_checksum_sha256",
+        "rights_holder",
+        "license_name",
+    }
 
 
 @pytest.mark.parametrize(
@@ -486,8 +511,6 @@ def test_admin_form_names_and_versions_a_new_listening_recitation(
         "listening_only": "on",
         "quran_edition_version": str(quran_dataset["version"].pk),
         "status": RecitationPublicationStatus.DRAFT,
-        "rights_holder": "Studio",
-        "license_name": "Written permission",
         "stream_allowed": "true",
         "offline_download_allowed": "false",
         "source_name": "Studio upload",
@@ -501,6 +524,8 @@ def test_admin_form_names_and_versions_a_new_listening_recitation(
     assert recitation.version == "2"
     assert recitation.source_version == "2"
     assert recitation.listening_only is True
+    assert recitation.rights_holder == ""
+    assert recitation.license_name == ""
 
 
 def test_admin_form_dates_the_publication_itself(listening: RecitationEdition) -> None:

@@ -190,13 +190,13 @@ class RecitationEdition(BaseModel):
         blank=True,
         validators=[validate_sha256],
     )
-    rights_holder = models.CharField(max_length=255)
-    license_name = models.CharField(max_length=255)
+    rights_holder = models.CharField(max_length=255, blank=True)
+    license_name = models.CharField(max_length=255, blank=True)
     license_url = models.URLField(blank=True)
     license_spdx_id = models.CharField(max_length=64, blank=True)
     license_attribution = models.TextField(blank=True)
-    stream_allowed = models.BooleanField(null=True, blank=True)
-    offline_download_allowed = models.BooleanField(null=True, blank=True)
+    stream_allowed = models.BooleanField(null=True, blank=True, default=True)
+    offline_download_allowed = models.BooleanField(null=True, blank=True, default=False)
     rights_evidence_url = models.URLField(max_length=1000, blank=True)
     rights_checked_on = models.DateField(null=True, blank=True)
 
@@ -267,10 +267,19 @@ class RecitationEdition(BaseModel):
 
     def clean(self) -> None:
         super().clean()
-        if not self.listening_only and not self.source_checksum_sha256:
-            raise ValidationError(
-                {"source_checksum_sha256": "Recitations with ayah timings need a source checksum."}
-            )
+        if not self.listening_only:
+            # Imported timed recitations keep full provenance; an editor's own
+            # listening upload needs none of it.
+            required = {
+                "source_checksum_sha256": self.source_checksum_sha256,
+                "rights_holder": self.rights_holder,
+                "license_name": self.license_name,
+            }
+            missing = [field for field, value in required.items() if not value]
+            if missing:
+                raise ValidationError(
+                    dict.fromkeys(missing, "Recitations with ayah timings need this provenance.")
+                )
         if self.status == RecitationPublicationStatus.DRAFT and self.published_at is not None:
             raise ValidationError({"published_at": "Draft recitations cannot be published."})
         if self.status != RecitationPublicationStatus.DRAFT and self.published_at is None:

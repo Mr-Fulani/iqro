@@ -669,13 +669,13 @@ class RecitationEditionAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             ),
             "quran_edition_version": "Для записей прослушивания оставьте значение по умолчанию.",
             "status": (
-                "Опубликовать можно, когда загружена хотя бы одна сура и решены права. "
+                "Опубликовать можно, когда загружена хотя бы одна сура. "
                 "Дата публикации проставится сама."
             ),
-            "rights_holder": "Кто владеет записью: студия, радио, сам чтец.",
-            "stream_allowed": "Есть ли разрешение правообладателя на воспроизведение онлайн.",
-            "offline_download_allowed": "Есть ли отдельное разрешение на скачивание в приложение.",
-            "rights_evidence_url": "Ссылка на письмо, договор или страницу с разрешением.",
+            "stream_allowed": "Выключите, чтобы скрыть запись из приложения и с сайта.",
+            "offline_download_allowed": (
+                "Разрешить скачивание записи в приложение; работает, когда загружены все 114 сур."
+            ),
             "source_name": "Откуда получены файлы.",
             "code": "Для записей прослушивания заполнится сам из кода чтеца и стиля.",
             "version": "Для записей прослушивания заполнится сам: 1, 2, 3…",
@@ -791,8 +791,9 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         ("Публикация", {"fields": ("status", "published_at", "catalog_status")}),
         ("Суры", {"fields": ("surah_coverage",)}),
         (
-            "Права и источник",
+            "Источник и права",
             {
+                "classes": ("collapse",),
                 "fields": (
                     "rights_holder",
                     "stream_allowed",
@@ -805,7 +806,7 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "license_attribution",
                     "source_name",
                     "source_url",
-                )
+                ),
             },
         ),
         (
@@ -857,7 +858,9 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "Не звучит: запись для Мусхафа и Заучивания должна содержать все 114 сур. "
                     "Для неполной записи включите «Только для вкладки «Аудио»»."
                 )
-            return "Не звучит: проверьте права и издание Корана."
+            if not obj.stream_allowed:
+                return "Не звучит: выключено воспроизведение."
+            return "Не звучит: проверьте издание Корана."
         if obj.listening_only:
             return "Звучит во вкладке «Аудио» и в мини-плеере."
         return "Звучит во вкладке «Аудио»; в Мусхафе и Заучивании — если есть все таймкоды."
