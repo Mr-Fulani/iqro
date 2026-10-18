@@ -12,6 +12,8 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey } from "../lib/i18n";
+import { localizedPath } from "../lib/routing";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { ReminderManager } from "./ReminderManager";
 import {
   dateInTimezone,
@@ -320,13 +322,22 @@ export default function PrayerPage() {
             <p className="surface-subtitle">{t("prayer.description")}</p>
           </div>
 
-          <button
-            className="btn btn-outline-primary"
-            onClick={handleDetectLocation}
-            type="button"
-          >
-            {t("prayer.myLocation")}
-          </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <IntentPrefetchLink
+              className="btn btn-outline-primary"
+              data-testid="prayer-salah-link"
+              href={localizedPath(locale, "/salah")}
+            >
+              {t("salah.title")}
+            </IntentPrefetchLink>
+            <button
+              className="btn btn-outline-primary"
+              onClick={handleDetectLocation}
+              type="button"
+            >
+              {t("prayer.myLocation")}
+            </button>
+          </div>
         </div>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}

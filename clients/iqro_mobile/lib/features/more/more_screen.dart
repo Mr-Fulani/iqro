@@ -119,6 +119,12 @@ class MoreToolsGrid extends StatelessWidget {
         onTap: () => context.push('/prayer'),
       ),
       _ToolCard(
+        art: 'remembrance',
+        title: context.l10n.salahTitle,
+        color: context.iqroColors.sand,
+        onTap: () => context.push('/salah'),
+      ),
+      _ToolCard(
         art: 'memorization',
         title: context.l10n.memorization,
         color: context.iqroColors.lavender,

@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "course": {
+    "slug": "hanbali-umdah",
+    "version": "2026-10-18",
+    "methodology": "hanbali",
+    "source_title": {
+      "ru": "Умдат аль-фикх (Ибн Кудама)",
+      "en": "Umdat al-Fiqh (Ibn Qudamah)",
+      "ar": "عمدة الفقه لابن قدامة",
+      "tr": "Umdetü'l-Fıkh (İbn Kudâme)"
+    }
+  },
+  "prayer_kinds": [
+    {
+      "code": "fard",
+      "title": {
+        "ru": "Фард",
+        "en": "Obligatory (fard)",
+        "ar": "فرض",
+        "tr": "Farz"
+      }
+    }
+  ],
+  "formulas": [
+    {
+      "id": "takbir",
+      "source": {
+        "kind": "inline",
+        "arabic": "اللَّهُ أَكْبَرُ",
+        "repetitions": 1,
+        "audio_media": "audio-takbir",
+        "translations": {
+          "ru": {
+            "meaning": "Аллах велик",
+            "transliteration": "Аллаху акбар"
+          },
+          "en": {
+            "meaning": "Allah is the Greatest",
+            "transliteration": "Allahu akbar"
+          },
+          "ar": {
+            "meaning": "الله أكبر"
+          },
+          "tr": {
+            "meaning": "Allah en büyüktür",
+            "transliteration": "Allâhu ekber"
+          }
+        }
+      }
+    },
+    {
+      "id": "fatiha",
+      "source": {
+        "kind": "quran",
+        "surah": 1,
+        "ayah_from": 1,
+        "ayah_to": 7
+      }
+    },
+    {
+      "id": "ruku-tasbih",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 33
+      }
+    },
+    {
+      "id": "tashahhud",
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 52
+      }
+    }
+  ],
+  "media": [
+    {
+      "key": "position-takbir",
+      "file": "media/position-takbir.webp",
+      "alt": {
+        "ru": "Стоящий мужчина поднимает руки до плеч",
+        "en": "A standing man raises his hands to his shoulders",
+        "ar": "رجل قائم يرفع يديه حذو منكبيه",
+        "tr": "Ayakta duran adam ellerini omuz hizasına kaldırıyor"
+      }
+    },
+    {
+      "key": "position-ruku",
+      "file": "media/position-ruku.webp",
+      "alt": {
+        "ru": "Мужчина в поясном поклоне, ладони на коленях, спина ровная",
+        "en": "A man bowing, palms on his knees, back level",
+        "ar": "رجل راكع، كفاه على ركبتيه، وظهره مستوٍ",
+        "tr": "Rükûdaki adam, avuçları dizlerinde, sırtı düz"
+      }
+    },
+    {
+      "key": "position-tashahhud",
+      "file": "media/position-tashahhud.webp",
+      "alt": {
+        "ru": "Мужчина сидит в ташаххуде",
+        "en": "A man sitting for the tashahhud",
+        "ar": "رجل جالس للتشهد",
+        "tr": "Teşehhütte oturan adam"
+      }
+    },
+    {
+      "key": "audio-takbir",
+      "file": "media/takbir.m4a"
+    }
+  ],
+  "sections": [
+    {
+      "slug": "five-prayers",
+      "title": {
+        "ru": "Пять молитв",
+        "en": "The five prayers",
+        "ar": "الصلوات الخمس",
+        "tr": "Beş vakit namaz"
+      },
+      "lessons": [
+        "fajr"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "slug": "fajr",
+      "kind": "prayer",
+      "title": {
+        "ru": "Фаджр",
+        "en": "Fajr",
+        "ar": "الفجر",
+        "tr": "Sabah"
+      },
+      "summary": {
+        "ru": "2 ракаата фарда, чтение вслух.",
+        "en": "2 obligatory rak'ahs, recited aloud.",
+        "ar": "ركعتان فرضًا، جهرية.",
+        "tr": "2 rekât farz, sesli okunur."
+      },
+      "minutes": 6,
+      "prayer": {
+        "code": "fajr",
+        "kind": "fard",
+        "template": "fard-prayer",
+        "rakat_rules": [
+          {
+            "rakat": 1,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "none",
+            "qunut": false
+          },
+          {
+            "rakat": 2,
+            "recitation": "jahr",
+            "surah_after_fatiha": true,
+            "sitting": "final_tashahhud",
+            "qunut": false
+          }
+        ]
+      }
+    }
+  ],
+  "templates": [
+    {
+      "id": "fard-prayer",
+      "steps": [
+        {
+          "slug": "takbir",
+          "when": {
+            "first_rakat": true
+          },
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Начальный такбир",
+            "en": "Opening takbir",
+            "ar": "تكبيرة الإحرام",
+            "tr": "İftitah tekbiri"
+          },
+          "instruction": {
+            "ru": "Поднимите руки до плеч и скажите «Аллаху акбар».",
+            "en": "Raise your hands to your shoulders and say \"Allahu akbar\".",
+            "ar": "ارفع يديك حذو منكبيك وقل: الله أكبر.",
+            "tr": "Ellerinizi omuz hizasına kaldırıp \"Allâhu ekber\" deyin."
+          },
+          "media": "position-takbir",
+          "formulas": [
+            "takbir"
+          ]
+        },
+        {
+          "slug": "ruku",
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Руку'",
+            "en": "Ruku'",
+            "ar": "الركوع",
+            "tr": "Rükû"
+          },
+          "instruction": {
+            "ru": "Склонитесь, положив ладони на колени, спина ровная, и произнесите тасбих.",
+            "en": "Bow with your palms on your knees and back level, and say the tasbih.",
+            "ar": "اركع واضعًا كفيك على ركبتيك مستوي الظهر، وسبّح.",
+            "tr": "Avuçlarınız dizlerinizde, sırtınız düz olarak eğilin ve tesbih edin."
+          },
+          "media": "position-ruku",
+          "formulas": [
+            "ruku-tasbih"
+          ],
+          "repeat": 3
+        },
+        {
+          "slug": "tashahhud",
+          "when": {
+            "sitting": [
+              "middle_tashahhud",
+              "final_tashahhud"
+            ]
+          },
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "title": {
+            "ru": "Ташаххуд",
+            "en": "Tashahhud",
+            "ar": "التشهد",
+            "tr": "Teşehhüd"
+          },
+          "instruction": {
+            "ru": "Сядьте и прочитайте ташаххуд.",
+            "en": "Sit and recite the tashahhud.",
+            "ar": "اجلس واقرأ التشهد.",
+            "tr": "Oturun ve teşehhüdü okuyun."
+          },
+          "media": "position-tashahhud",
+          "formulas": [
+            "tashahhud"
+          ]
+        }
+      ]
+    }
+  ]
+}

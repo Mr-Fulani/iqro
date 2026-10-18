@@ -1,6 +1,8 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { isEditionCode, isUuid } from "./public-content";
 import { isDuaCollectionSlug } from "./public-route-params";
+import { isSalahSlug } from "./salah";
+import { SUPPORTED_LOCALES } from "./i18n";
 
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const QURAN_ACTIONS = new Set(["published", "activated", "withdrawn"]);
@@ -8,6 +10,7 @@ const AUDIO_ACTIONS = new Set(["published", "withdrawn"]);
 const RECITER_ACTIONS = new Set(["created", "updated"]);
 const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
+const SALAH_ACTIONS = new Set(["published", "activated", "withdrawn"]);
 
 type QuranContentChange = {
   type: "quran.edition.changed";
@@ -42,11 +45,19 @@ type DuaContentChange = {
   version: string;
 };
 
+type SalahCourseChange = {
+  type: "salah.course.changed";
+  action: string;
+  course: string;
+  version: string;
+};
+
 export type ContentChange =
   | QuranContentChange
   | AudioContentChange
   | ReciterContentChange
   | DuaContentChange
+  | SalahCourseChange
   | SocialProfilesChange;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -124,6 +135,19 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as DuaContentChange;
   }
 
+  if (value.type === "salah.course.changed") {
+    if (!hasExactKeys(value, ["type", "action", "course", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !SALAH_ACTIONS.has(value.action) ||
+      typeof value.course !== "string" ||
+      !isSalahSlug(value.course) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as SalahCourseChange;
+  }
+
   return null;
 }
 
@@ -157,6 +181,14 @@ export function revalidateContentChange(change: ContentChange): void {
     revalidatePath("/[locale]/dua/[category]", "page");
     revalidatePath("/[locale]/dua/[category]/categories/[topic]", "page");
     revalidatePath("/[locale]/dua/[category]/[sourceNumber]", "page");
+    return;
+  }
+
+  if (change.type === "salah.course.changed") {
+    expireTag(`salah:course:${change.course}`);
+    for (const locale of SUPPORTED_LOCALES) expireTag(`salah:locale:${locale}`);
+    revalidatePath("/[locale]/salah", "page");
+    revalidatePath("/[locale]/salah/[lesson]", "page");
     return;
   }
 

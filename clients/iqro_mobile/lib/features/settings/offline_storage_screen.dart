@@ -62,10 +62,12 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
         children: <Widget>[
           IqroStatusBanner(
             icon: Icons.offline_pin_outlined,
-            title: context.l10n.offlineStorageUsed(_formatBytes(totalUsed)),
+            title: context.l10n.offlineStorageUsed(
+              formatOfflineBytes(totalUsed),
+            ),
             message:
                 '${context.l10n.offlineStorageDescription}\n'
-                '${context.l10n.offlineStorageQuota(_formatBytes(offlineStorageQuotaBytes))}',
+                '${context.l10n.offlineStorageQuota(formatOfflineBytes(offlineStorageQuotaBytes))}',
             color: context.iqroColors.sand,
           ),
           const SizedBox(height: 22),
@@ -116,11 +118,11 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
           isPlayingFromPackage
               ? context.l10n.deletePlayingAudioConfirmation(
                   _packageTitle(context, package),
-                  _formatBytes(package.usedBytes),
+                  formatOfflineBytes(package.usedBytes),
                 )
               : context.l10n.deleteOfflinePackageConfirmation(
                   _packageTitle(context, package),
-                  _formatBytes(package.usedBytes),
+                  formatOfflineBytes(package.usedBytes),
                 ),
         ),
         actions: <Widget>[
@@ -147,6 +149,8 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
       ref.read(audioRepositoryProvider).clearPlaybackCache();
       ref.invalidate(selectedMushafDownloadControllerProvider);
       ref.invalidate(audioDownloadProvider);
+      ref.invalidate(salahOfflineProvider);
+      ref.invalidate(salahOfflineImagesProvider);
       ref.invalidate(mushafPageProvider);
       ref.invalidate(offlinePackagesProvider);
       if (!mounted) return;
@@ -182,7 +186,7 @@ class _OfflinePackageCard extends StatelessWidget {
         : '${package.completedItems} / ${package.totalItems}';
     final declared = package.totalBytes <= 0
         ? null
-        : context.l10n.packageTotalSize(_formatBytes(package.totalBytes));
+        : context.l10n.packageTotalSize(formatOfflineBytes(package.totalBytes));
     return IqroCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,6 +206,8 @@ class _OfflinePackageCard extends StatelessWidget {
                 child: IqroIcon(
                   package.isMushaf
                       ? Icons.menu_book_outlined
+                      : package.isSalah
+                      ? Icons.self_improvement
                       : Icons.headphones_outlined,
                 ),
               ),
@@ -245,7 +251,7 @@ class _OfflinePackageCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              Chip(label: Text(_formatBytes(package.usedBytes))),
+              Chip(label: Text(formatOfflineBytes(package.usedBytes))),
               if (progress != null) Chip(label: Text(progress)),
               if (declared != null) Chip(label: Text(declared)),
               Chip(label: Text(_statusLabel(context, package.status))),
@@ -259,12 +265,14 @@ class _OfflinePackageCard extends StatelessWidget {
 
 String _packageTitle(BuildContext context, OfflinePackageSummary package) {
   if (package.isMushaf) return context.l10n.offlineMushaf;
+  if (package.isSalah) return context.l10n.salahTitle;
   return package.reciterNameFor(Localizations.localeOf(context).languageCode) ??
       context.l10n.offlineAudio;
 }
 
 String _packageSubtitle(BuildContext context, OfflinePackageSummary package) {
   if (package.isMushaf) return context.l10n.completeMushafPages;
+  if (package.isSalah) return context.l10n.salahOfflineImages;
   final quality = switch (package.quality) {
     'economy' => context.l10n.qualityEconomy,
     'standard' => context.l10n.qualityStandard,
@@ -281,7 +289,7 @@ String _statusLabel(BuildContext context, String status) => switch (status) {
   _ => context.l10n.notReady,
 };
 
-String _formatBytes(int bytes) {
+String formatOfflineBytes(int bytes) {
   if (bytes < 1024 * 1024) {
     final kilobytes = bytes / 1024;
     return '${kilobytes.toStringAsFixed(kilobytes >= 100 ? 0 : 1)} KB';

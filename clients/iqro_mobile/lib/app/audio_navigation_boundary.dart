@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers.dart';
 
-enum AudioNavigationSection { other, quran, dua, memorization }
+enum AudioNavigationSection { other, quran, dua, memorization, salah }
 
 AudioNavigationSection audioSectionForUri(Uri uri) {
   final path = uri.path;
@@ -18,6 +18,9 @@ AudioNavigationSection audioSectionForUri(Uri uri) {
     return AudioNavigationSection.dua;
   }
   if (path == '/memorization') return AudioNavigationSection.memorization;
+  if (path == '/salah' || path.startsWith('/salah/')) {
+    return AudioNavigationSection.salah;
+  }
   return AudioNavigationSection.other;
 }
 
@@ -83,6 +86,9 @@ class _AudioNavigationBoundaryState
           return;
         case AudioNavigationSection.memorization:
           await audio.pauseForMemorizationEntry();
+          return;
+        case AudioNavigationSection.salah:
+          await audio.pauseForSalahEntry();
           return;
       }
     } on Object catch (error, stackTrace) {

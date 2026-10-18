@@ -106,6 +106,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
       "/dua",
       "/audio",
       "/prayer",
+      "/salah",
       "/legal",
       "/privacy",
       "/terms",
@@ -436,6 +437,30 @@ test("content revalidation accepts only authenticated allowlisted events", async
   });
   expect(acceptedDua.ok()).toBe(true);
   expect(await acceptedDua.json()).toEqual({ accepted: true, type: duaEvent.type });
+
+  const salahEvent = {
+    type: "salah.course.changed",
+    action: "published",
+    course: "hanbali-umdah",
+    version: "2026-10-18",
+  };
+  const acceptedSalah = await request.post(endpoint, {
+    data: salahEvent,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(acceptedSalah.ok()).toBe(true);
+  expect(await acceptedSalah.json()).toEqual({ accepted: true, type: salahEvent.type });
+  for (const invalid of [
+    { ...salahEvent, action: "deleted" },
+    { ...salahEvent, course: "../hanbali" },
+    { ...salahEvent, version: "" },
+    { type: salahEvent.type, action: "published", course: "hanbali-umdah" },
+  ]) {
+    expect((await request.post(endpoint, {
+      data: invalid,
+      headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+    })).status()).toBe(422);
+  }
 });
 
 test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {

@@ -15,6 +15,7 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/dua/dua_repository.dart';
+import '../features/salah/salah_repository.dart';
 import '../features/feedback/feedback_repository.dart';
 import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
@@ -45,6 +46,7 @@ class AppDependencies {
     required this.notifications,
     required this.memorization,
     required this.dua,
+    required this.salah,
     required this.feedback,
     required this.share,
     required this.sync,
@@ -68,6 +70,7 @@ class AppDependencies {
   final NotificationGateway notifications;
   final MemorizationRepository memorization;
   final DuaRepository dua;
+  final SalahRepository salah;
   final FeedbackRepository feedback;
   final ShareRepository share;
   final SyncService sync;
@@ -161,6 +164,7 @@ class AppDependencies {
       notifications: notifications,
       memorization: MemorizationRepository(api: api, database: database),
       dua: DuaRepository(api: api, database: database),
+      salah: SalahRepository(api: api, database: database),
       feedback: feedback,
       share: ShareRepository(
         api: api,
@@ -191,6 +195,7 @@ class AppDependencies {
     notificationGatewayProvider.overrideWithValue(notifications),
     memorizationRepositoryProvider.overrideWithValue(memorization),
     duaRepositoryProvider.overrideWithValue(dua),
+    salahRepositoryProvider.overrideWithValue(salah),
     feedbackRepositoryProvider.overrideWithValue(feedback),
     shareRepositoryProvider.overrideWithValue(share),
     syncServiceProvider.overrideWithValue(sync),

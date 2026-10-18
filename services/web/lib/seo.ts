@@ -15,6 +15,7 @@ export const PUBLIC_INDEXABLE_PATHS = [
   "/dua",
   "/audio",
   "/prayer",
+  "/salah",
   "/legal",
   "/privacy",
   "/terms",

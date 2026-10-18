@@ -1918,4 +1918,111 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get salahTitle => 'Обучение намазу';
+
+  @override
+  String get salahHint => 'Пошагово: вуду и пять молитв';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done из $total уроков';
+  }
+
+  @override
+  String get salahContinue => 'Продолжить';
+
+  @override
+  String get salahStart => 'Начать';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Шаг $current из $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Ракаат $current из $total';
+  }
+
+  @override
+  String get salahBack => 'Назад';
+
+  @override
+  String get salahNext => 'Далее';
+
+  @override
+  String get salahFinish => 'Завершить';
+
+  @override
+  String get salahNextStep => 'Следующий шаг';
+
+  @override
+  String get salahPreviousStep => 'Предыдущий шаг';
+
+  @override
+  String get salahModeLearn => 'Обучение';
+
+  @override
+  String get salahModePractice => 'Практика';
+
+  @override
+  String get salahDisplayOptions => 'Что показывать';
+
+  @override
+  String get salahShowArabic => 'Арабский текст';
+
+  @override
+  String get salahShowTransliteration => 'Транслитерация';
+
+  @override
+  String get salahShowTranslation => 'Перевод';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count мин';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Урок пройден';
+
+  @override
+  String get salahStatusCompleted => 'Пройден';
+
+  @override
+  String get salahStatusInProgress => 'Начат';
+
+  @override
+  String get salahUnavailable => 'Курс пока недоступен';
+
+  @override
+  String get salahLessonNotFound => 'Такого урока нет в курсе';
+
+  @override
+  String get salahRulingShart => 'Условие (шарт)';
+
+  @override
+  String get salahRulingRukn => 'Столп (рукн)';
+
+  @override
+  String get salahRulingWajib => 'Обязательно (ваджиб)';
+
+  @override
+  String get salahRulingSunnah => 'Сунна';
+
+  @override
+  String get salahOfflineTitle => 'Картинки без интернета';
+
+  @override
+  String get salahOfflineImages => 'Иллюстрации курса';
+
+  @override
+  String get salahOfflineSaved => 'Сохранены на устройстве';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'Есть новая версия';
+
+  @override
+  String get salahOfflineUpdate => 'Обновить';
 }

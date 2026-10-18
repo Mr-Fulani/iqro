@@ -1882,4 +1882,111 @@ class AppLocalizationsAr extends AppLocalizations {
   String planDays(num count) {
     return '$count أيام';
   }
+
+  @override
+  String get salahTitle => 'تعلّم الصلاة';
+
+  @override
+  String get salahHint => 'خطوة بخطوة: الوضوء والصلوات الخمس';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done من $total دروس';
+  }
+
+  @override
+  String get salahContinue => 'متابعة';
+
+  @override
+  String get salahStart => 'ابدأ';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'الركعة $current من $total';
+  }
+
+  @override
+  String get salahBack => 'السابق';
+
+  @override
+  String get salahNext => 'التالي';
+
+  @override
+  String get salahFinish => 'إنهاء';
+
+  @override
+  String get salahNextStep => 'الخطوة التالية';
+
+  @override
+  String get salahPreviousStep => 'الخطوة السابقة';
+
+  @override
+  String get salahModeLearn => 'تعلّم';
+
+  @override
+  String get salahModePractice => 'تدريب';
+
+  @override
+  String get salahDisplayOptions => 'ما يُعرض';
+
+  @override
+  String get salahShowArabic => 'النص العربي';
+
+  @override
+  String get salahShowTransliteration => 'النطق';
+
+  @override
+  String get salahShowTranslation => 'المعنى';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count د';
+  }
+
+  @override
+  String get salahLessonCompleted => 'اكتمل الدرس';
+
+  @override
+  String get salahStatusCompleted => 'مكتمل';
+
+  @override
+  String get salahStatusInProgress => 'بدأته';
+
+  @override
+  String get salahUnavailable => 'الدورة غير متاحة بعد';
+
+  @override
+  String get salahLessonNotFound => 'هذا الدرس غير موجود في الدورة';
+
+  @override
+  String get salahRulingShart => 'شرط';
+
+  @override
+  String get salahRulingRukn => 'ركن';
+
+  @override
+  String get salahRulingWajib => 'واجب';
+
+  @override
+  String get salahRulingSunnah => 'سنة';
+
+  @override
+  String get salahOfflineTitle => 'الصور دون إنترنت';
+
+  @override
+  String get salahOfflineImages => 'رسوم الدورة التوضيحية';
+
+  @override
+  String get salahOfflineSaved => 'محفوظة على هذا الجهاز';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'يتوفر إصدار جديد';
+
+  @override
+  String get salahOfflineUpdate => 'تحديث';
 }

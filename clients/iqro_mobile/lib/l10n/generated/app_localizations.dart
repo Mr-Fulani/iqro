@@ -3431,6 +3431,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} days'**
   String planDays(num count);
+
+  /// No description provided for @salahTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn to pray'**
+  String get salahTitle;
+
+  /// No description provided for @salahHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Step by step: wudu and the five prayers'**
+  String get salahHint;
+
+  /// No description provided for @salahLessonsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} lessons'**
+  String salahLessonsProgress(int done, int total);
+
+  /// No description provided for @salahContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get salahContinue;
+
+  /// No description provided for @salahStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get salahStart;
+
+  /// No description provided for @salahStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String salahStepOf(int current, int total);
+
+  /// No description provided for @salahRakatOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Rak‘ah {current} of {total}'**
+  String salahRakatOf(int current, int total);
+
+  /// No description provided for @salahBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get salahBack;
+
+  /// No description provided for @salahNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get salahNext;
+
+  /// No description provided for @salahFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get salahFinish;
+
+  /// No description provided for @salahNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get salahNextStep;
+
+  /// No description provided for @salahPreviousStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get salahPreviousStep;
+
+  /// No description provided for @salahModeLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn'**
+  String get salahModeLearn;
+
+  /// No description provided for @salahModePractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get salahModePractice;
+
+  /// No description provided for @salahDisplayOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'What to show'**
+  String get salahDisplayOptions;
+
+  /// No description provided for @salahShowArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic text'**
+  String get salahShowArabic;
+
+  /// No description provided for @salahShowTransliteration.
+  ///
+  /// In en, this message translates to:
+  /// **'Transliteration'**
+  String get salahShowTransliteration;
+
+  /// No description provided for @salahShowTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get salahShowTranslation;
+
+  /// No description provided for @salahMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String salahMinutes(int count);
+
+  /// No description provided for @salahLessonCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson complete'**
+  String get salahLessonCompleted;
+
+  /// No description provided for @salahStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get salahStatusCompleted;
+
+  /// No description provided for @salahStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get salahStatusInProgress;
+
+  /// No description provided for @salahUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The course is not available yet'**
+  String get salahUnavailable;
+
+  /// No description provided for @salahLessonNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This lesson is not in the course'**
+  String get salahLessonNotFound;
+
+  /// No description provided for @salahRulingShart.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition (shart)'**
+  String get salahRulingShart;
+
+  /// No description provided for @salahRulingRukn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pillar (rukn)'**
+  String get salahRulingRukn;
+
+  /// No description provided for @salahRulingWajib.
+  ///
+  /// In en, this message translates to:
+  /// **'Obligatory (wajib)'**
+  String get salahRulingWajib;
+
+  /// No description provided for @salahRulingSunnah.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunnah'**
+  String get salahRulingSunnah;
+
+  /// No description provided for @salahOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pictures offline'**
+  String get salahOfflineTitle;
+
+  /// No description provided for @salahOfflineImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Course illustrations'**
+  String get salahOfflineImages;
+
+  /// No description provided for @salahOfflineSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device'**
+  String get salahOfflineSaved;
+
+  /// No description provided for @salahOfflineUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is available'**
+  String get salahOfflineUpdateAvailable;
+
+  /// No description provided for @salahOfflineUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get salahOfflineUpdate;
 }
 
 class _AppLocalizationsDelegate
