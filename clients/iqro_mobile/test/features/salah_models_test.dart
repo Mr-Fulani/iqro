@@ -36,6 +36,8 @@ void main() {
     expect(fajr.prayer?.code, 'fajr');
     expect(fajr.prayer?.kind, 'fard');
     expect(fajr.prayer?.rakats, 2);
+    expect(fajr.prayer?.kind, 'fard');
+    expect(fajr.prayer?.kindTitle, 'Фард');
     expect(fajr.steps, hasLength(5));
     final ruku = fajr.steps[fajr.indexOfStep('fajr.r1.ruku')];
     expect(ruku.kind, 'recitation');
@@ -90,6 +92,27 @@ void main() {
     expect(document.sectionLessons(document.sections.first), hasLength(1));
     expect(document.stepFormulas(step), isEmpty);
     expect(document.stepMedia(step), isNull);
+  });
+
+  test('accepts prayer kinds and rulings from a newer course', () {
+    final json = salahFixture();
+    final lessons = json['lessons']! as List;
+    final fajr =
+        lessons.firstWhere((lesson) => (lesson as Map)['slug'] == 'fajr')
+            as Map;
+    fajr['prayer'] = <String, Object?>{
+      'code': 'eid',
+      'kind': 'eid',
+      'kind_title': 'Праздничный',
+      'rakats': 2,
+    };
+    ((fajr['steps']! as List).first as Map)['ruling'] = 'mustahabb';
+
+    final prayer = SalahCourseDocument.fromJson(json).lesson('fajr')!;
+
+    expect(prayer.prayer?.kind, 'eid');
+    expect(prayer.prayer?.kindTitle, 'Праздничный');
+    expect(prayer.steps.first.ruling, 'mustahabb');
   });
 
   test('rejects an incompatible schema version', () {

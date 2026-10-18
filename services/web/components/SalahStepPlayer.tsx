@@ -10,12 +10,14 @@ import type { MessageKey } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
 import {
   formulaAudioRange,
+  isSalahRuling,
   readSalahProgress,
   recordSalahStep,
   resumeStepIndex,
   type SalahFormula,
   type SalahLessonBundle,
   type SalahMedia,
+  type SalahRuling,
   type SalahStep,
   stepRepeatTarget,
   stepSlugFromLocation,
@@ -27,7 +29,7 @@ type Display = { mode: Mode; transliteration: boolean; translation: boolean };
 
 const DISPLAY_STORAGE_KEY = "iqro_salah_display_v1";
 const DEFAULT_DISPLAY: Display = { mode: "learn", transliteration: true, translation: true };
-const RULING_LABELS: Record<NonNullable<SalahStep["ruling"]>, MessageKey> = {
+const RULING_LABELS: Record<SalahRuling, MessageKey> = {
   shart: "salah.rulingShart",
   rukn: "salah.rulingRukn",
   wajib: "salah.rulingWajib",
@@ -386,7 +388,7 @@ export function SalahStepPlayer({
               <div className="salah-step-body">
                 <div className="salah-step-head">
                   <h2>{item.title}</h2>
-                  {!practice && item.ruling ? (
+                  {!practice && isSalahRuling(item.ruling) ? (
                     <span className={`status-chip salah-ruling is-${item.ruling}`}>{t(RULING_LABELS[item.ruling])}</span>
                   ) : null}
                 </div>

@@ -164,6 +164,28 @@ def test_course_illustrations_in_git_are_square_webp_within_the_limit() -> None:
         assert len(data) <= MAX_IMAGE_BYTES, image.name
 
 
+def test_prayer_kinds_come_from_the_course_and_compile_with_their_title() -> None:
+    snapshot = _example_snapshot()
+    unknown = copy.deepcopy(snapshot)
+    unknown["lessons"][0]["prayer"]["kind"] = "eid"
+    with pytest.raises(SalahSnapshotError) as error:
+        validate_snapshot(unknown)
+    assert "неизвестный вид молитвы «eid»" in "\n".join(error.value.problems)
+
+    unknown["prayer_kinds"].append(
+        {"code": "eid", "title": {"ru": "Праздничный", "en": "Eid", "ar": "عيد", "tr": "Bayram"}}
+    )
+    validate_snapshot(unknown)
+    document = compile_document(
+        unknown,
+        language="tr",
+        course_meta={"slug": "hanbali-umdah", "version": "v", "methodology": "hanbali"},
+        formulas=_fake_formulas(unknown),
+        media=_fake_media(unknown),
+    )
+    assert document["lessons"][0]["prayer"]["kind_title"] == "Bayram"
+
+
 def test_four_rakat_prayer_unrolls_with_a_middle_tashahhud() -> None:
     dhuhr = _prayer(
         "dhuhr",
@@ -271,7 +293,8 @@ def test_compiled_document_follows_the_published_contract() -> None:
     for step in document["lessons"][0]["steps"]:
         assert set(step) <= step_keys
         assert isinstance(step["title"], str)
-    assert document["lessons"][0]["prayer"] == {"code": "fajr", "kind": "fard", "rakats": 2}
+    contract_fajr = next(lesson for lesson in contract["lessons"] if lesson["slug"] == "fajr")
+    assert document["lessons"][0]["prayer"] == contract_fajr["prayer"]
     assert document["lessons"][0]["steps"][0]["rakat"] == 1
     assert set(document["formulas"]) == {"takbir", "ruku-tasbih", "tashahhud"}
 

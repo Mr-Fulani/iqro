@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   findSalahLesson,
   formulaAudioRange,
+  isSalahRuling,
   nextSalahLesson,
   orderedLessons,
   parseSalahCourseDocument,
@@ -50,6 +51,21 @@ test("the contract example parses into ordered lessons", () => {
   assert.equal(lesson("fajr").prayer?.rakats, 2);
   assert.equal(nextSalahLesson(course, "wudu")?.slug, "fajr");
   assert.equal(nextSalahLesson(course, "fajr"), null);
+});
+
+test("prayer kinds and rulings from a newer course do not break the document", () => {
+  assert.equal(lesson("fajr").prayer?.kind_title, "Фард");
+  const lessons = example.lessons as Record<string, unknown>[];
+  const eid = {
+    ...lessons[2],
+    slug: "eid",
+    prayer: { code: "eid", kind: "eid", kind_title: "Праздничный", rakats: 2 },
+  };
+  const newer = parseSalahCourseDocument({ ...example, lessons: [...lessons, eid] });
+  assert.equal(findSalahLesson(newer, "eid")?.prayer?.kind_title, "Праздничный");
+  assert.equal(isSalahRuling("rukn"), true);
+  assert.equal(isSalahRuling("mustahabb"), false);
+  assert.equal(isSalahRuling(undefined), false);
 });
 
 test("the parser rejects unsupported or broken documents", () => {

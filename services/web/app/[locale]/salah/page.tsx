@@ -49,7 +49,11 @@ function lessonMeta(locale: Locale, lesson: SalahLesson): string {
   const count = lesson.prayer
     ? translate(locale, "salah.rakatCount", { count: format.format(lesson.prayer.rakats) })
     : translate(locale, "salah.stepCount", { count: format.format(lesson.steps.length) });
-  return `${translate(locale, "common.minutes", { count: format.format(lesson.minutes) })} · ${count}`;
+  return [
+    translate(locale, "common.minutes", { count: format.format(lesson.minutes) }),
+    lesson.prayer?.kind_title,
+    count,
+  ].filter(Boolean).join(" · ");
 }
 
 export default async function SalahCoursePage({ params }: { params: Promise<RouteParams> }) {

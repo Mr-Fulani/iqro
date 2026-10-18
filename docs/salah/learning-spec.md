@@ -20,7 +20,7 @@
 
 ## 2. Принципы
 
-1. **Клиенты только отрисовывают.** Порядок шагов, правила ракаатов, тексты и формулы приходят с сервера. В коде клиентов нет `if (prayer == fajr)`.
+1. **Клиенты только отрисовывают.** Порядок шагов, правила ракаатов, тексты и формулы приходят с сервера. В коде клиентов нет `if (prayer == fajr)`. Незнакомые значения (вид молитвы, метка обязательности, вид шага) клиент не считает ошибкой: показывает шаг без метки, а название вида берёт из `kind_title`.
 2. **Последовательности собираются на сервере.** Правила ракаатов (вслух или про себя, сура после Фатихи, средний ташаххуд, кунут) разворачиваются при публикации в линейные шаги. Логика пишется один раз, на Python, и проверяется snapshot-тестами в CI бэкенда.
 3. **Формулы не копируются.** Текст ташаххуда, тасбиха в руку' и других формул — ссылка на запись «Хисн аль-Муслим» или на аяты Корана. При публикации ссылка разрешается в текст, перевод, транслитерацию и аудио.
 4. **Версии неизменяемы.** Шаблон домена ду'а: черновик → опубликовано → отозвано. `active_version` указывает на опубликованную версию, опубликованное в админке только читается.
@@ -70,7 +70,8 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 - `lessons[]`: урок.
   - `{slug, kind: article|steps|prayer, title{lang}, summary{lang}, minutes, steps[]|prayer}`.
 - Шаг: `{slug, kind: action|recitation|info, position?, ruling?: shart|rukn|wajib|sunnah, title{lang}, instruction{lang}, details?{lang}, media?, formulas[], repeat?}`.
-- `prayer`: `{code, kind: fard|witr|sunnah, rakats, rakat_rules[], template}`.
+- `prayer_kinds[]`: `{code, title{lang}}` — виды молитв курса (фард, витр, сунна; позже джума, праздничная, джаназа и т. д.). Список задаётся данными, поэтому новый вид не требует выпуска приложения.
+- `prayer`: `{code, kind, rakats, rakat_rules[], template}`, где `kind` — `code` из `prayer_kinds`.
   - `rakat_rules[]`: `{rakat, recitation: jahr|sirr, surah_after_fatiha: bool, sitting: none|middle_tashahhud|final_tashahhud, qunut: bool}`.
   - `template`: шаблон ракаата, шаги с условиями `when: {first_rakat, surah_after_fatiha, sitting, qunut}`.
 
@@ -118,7 +119,7 @@ Snapshot-тесты (`tests/test_salah_sequences.py`) фиксируют пол�
   "sections": [{slug, title, lessons: [lesson_slug]}],
   "lessons": [{
     slug, kind: "article"|"steps"|"prayer", title, summary, minutes,
-    prayer?: {code, kind: "fard"|"witr"|"sunnah", rakats},
+    prayer?: {code, kind, kind_title, rakats},  // kind — code из prayer_kinds, kind_title — его название на языке документа
     steps: [{
       slug,                     // стабильный id: "fajr.r1.ruku"
       kind: "action"|"recitation"|"info",

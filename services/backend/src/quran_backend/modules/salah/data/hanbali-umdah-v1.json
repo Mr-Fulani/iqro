@@ -11,6 +11,35 @@
       "tr": "Umdetü'l-Fıkh (İbn Kudâme)"
     }
   },
+  "prayer_kinds": [
+    {
+      "code": "fard",
+      "title": {
+        "ru": "Фард",
+        "en": "Obligatory (fard)",
+        "ar": "فرض",
+        "tr": "Farz"
+      }
+    },
+    {
+      "code": "witr",
+      "title": {
+        "ru": "Витр",
+        "en": "Witr",
+        "ar": "وتر",
+        "tr": "Vitir"
+      }
+    },
+    {
+      "code": "sunnah",
+      "title": {
+        "ru": "Сунна",
+        "en": "Sunnah",
+        "ar": "سنة",
+        "tr": "Sünnet"
+      }
+    }
+  ],
   "formulas": [
     {
       "id": "takbir",

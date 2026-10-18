@@ -19,7 +19,6 @@ SNAPSHOT_SCHEMA_VERSION = 1
 LESSON_KINDS = frozenset({"article", "steps", "prayer"})
 STEP_KINDS = frozenset({"action", "recitation", "info"})
 RULINGS = frozenset({"shart", "rukn", "wajib", "sunnah"})
-PRAYER_KINDS = frozenset({"fard", "witr", "sunnah"})
 RECITATIONS = frozenset({"jahr", "sirr"})
 SITTINGS = frozenset({"none", "middle_tashahhud", "final_tashahhud"})
 FORMULA_KINDS = frozenset({"dua", "quran", "inline"})
@@ -171,11 +170,30 @@ def _check_media(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
     return keys
 
 
+def _check_prayer_kinds(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
+    """Kinds of prayer come from the course, so a new one needs no client release."""
+    codes: set[str] = set()
+    for kind in snapshot.get("prayer_kinds", []):
+        code = kind.get("code")
+        if not isinstance(code, str) or not code.strip() or code in codes:
+            problems.append(f"Вид молитвы «{code}»: пустой или повторяющийся code.")
+            continue
+        codes.add(code)
+        _localized(kind.get("title"), f"Вид молитвы «{code}».title", problems)
+    if not codes:
+        problems.append("prayer_kinds: нужен хотя бы один вид молитвы.")
+    return codes
+
+
 def _check_prayer(
-    where: str, prayer: Mapping[str, Any], templates: Mapping[str, Any], problems: list[str]
+    where: str,
+    prayer: Mapping[str, Any],
+    templates: Mapping[str, Any],
+    kinds: set[str],
+    problems: list[str],
 ) -> bool:
     """Whether the prayer block can be unrolled."""
-    if prayer.get("kind") not in PRAYER_KINDS:
+    if prayer.get("kind") not in kinds:
         problems.append(f"{where}: неизвестный вид молитвы «{prayer.get('kind')}».")
     if prayer.get("template") not in templates:
         problems.append(f"{where}: нет шаблона «{prayer.get('template')}».")
@@ -219,7 +237,11 @@ def _check_steps(
 
 
 def _check_lessons(
-    snapshot: Mapping[str, Any], formulas: set[str], media: set[str], problems: list[str]
+    snapshot: Mapping[str, Any],
+    formulas: set[str],
+    media: set[str],
+    kinds: set[str],
+    problems: list[str],
 ) -> set[str]:
     templates = {template.get("id"): template for template in snapshot.get("templates", [])}
     for template_id, template in templates.items():
@@ -246,7 +268,7 @@ def _check_lessons(
             if not prayer:
                 problems.append(f"{where}: молитве не хватает блока prayer.")
                 continue
-            if not _check_prayer(where, prayer, templates, problems):
+            if not _check_prayer(where, prayer, templates, kinds, problems):
                 continue
         elif prayer:
             problems.append(f"{where}: блок prayer допустим лишь в уроках-молитвах.")
@@ -277,7 +299,8 @@ def validate_snapshot(snapshot: Mapping[str, Any]) -> None:
     _check_course(snapshot, problems)
     formulas = _check_formulas(snapshot, problems)
     media = _check_media(snapshot, problems)
-    lessons = _check_lessons(snapshot, formulas, media, problems)
+    kinds = _check_prayer_kinds(snapshot, problems)
+    lessons = _check_lessons(snapshot, formulas, media, kinds, problems)
     _check_sections(snapshot, lessons, problems)
     if problems:
         raise SalahSnapshotError(problems)

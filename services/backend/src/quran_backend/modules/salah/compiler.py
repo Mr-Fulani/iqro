@@ -31,6 +31,7 @@ def compile_document(
 ) -> dict[str, Any]:
     """`formulas` and `media` are already resolved for `language`, by id/key."""
     templates = {template["id"]: template for template in snapshot.get("templates", [])}
+    kind_titles = {kind["code"]: kind["title"] for kind in snapshot["prayer_kinds"]}
     used_formulas: set[str] = set()
     used_media: set[str] = set()
     lessons: list[dict[str, Any]] = []
@@ -68,6 +69,7 @@ def compile_document(
             entry["prayer"] = {
                 "code": prayer["code"],
                 "kind": prayer["kind"],
+                "kind_title": _text(kind_titles[prayer["kind"]], language),
                 "rakats": len(prayer["rakat_rules"]),
             }
         lessons.append(entry)

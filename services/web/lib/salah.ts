@@ -12,6 +12,13 @@ export type SalahLessonKind = "article" | "steps" | "prayer";
 export type SalahStepKind = "action" | "recitation" | "info";
 export type SalahRuling = "shart" | "rukn" | "wajib" | "sunnah";
 
+const SALAH_RULINGS: ReadonlySet<string> = new Set<SalahRuling>(["shart", "rukn", "wajib", "sunnah"]);
+
+/** A newer course may carry rulings this build has no label for; they are shown without one. */
+export function isSalahRuling(value: string | undefined): value is SalahRuling {
+  return value !== undefined && SALAH_RULINGS.has(value);
+}
+
 export type SalahCourseMeta = {
   slug: string;
   version: string;
@@ -34,7 +41,7 @@ export type SalahStep = {
   slug: string;
   kind: SalahStepKind;
   position?: string;
-  ruling?: SalahRuling;
+  ruling?: string;
   rakat?: number;
   title: string;
   instruction: string;
@@ -46,7 +53,9 @@ export type SalahStep = {
 
 export type SalahPrayer = {
   code: string;
-  kind: "fard" | "witr" | "sunnah";
+  /** A `prayer_kinds` code of the course; new kinds arrive as data. */
+  kind: string;
+  kind_title?: string;
   rakats: number;
 };
 

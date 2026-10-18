@@ -236,6 +236,7 @@ class SalahPrayer {
     required this.code,
     required this.kind,
     required this.rakats,
+    this.kindTitle,
   });
 
   factory SalahPrayer.fromJson(Object? value) {
@@ -243,14 +244,19 @@ class SalahPrayer {
     return SalahPrayer(
       code: _string(json['code']),
       kind: _string(json['kind']),
+      kindTitle: _optional(json['kind_title']),
       rakats: _int(json['rakats']) ?? 0,
     );
   }
 
   final String code;
 
-  /// `fard`, `witr` or `sunnah`.
+  /// A `prayer_kinds` code of the course (`fard`, `witr`, `sunnah`, and any
+  /// kind a newer course adds); the app shows [kindTitle] and never switches on it.
   final String kind;
+
+  /// The kind's name in the document's language.
+  final String? kindTitle;
   final int rakats;
 }
 

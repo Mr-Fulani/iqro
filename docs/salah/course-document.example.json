@@ -82,6 +82,7 @@
       "prayer": {
         "code": "fajr",
         "kind": "fard",
+        "kind_title": "Фард",
         "rakats": 2
       },
       "steps": [

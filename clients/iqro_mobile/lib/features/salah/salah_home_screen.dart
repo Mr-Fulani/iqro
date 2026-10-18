@@ -359,6 +359,7 @@ class _LessonCard extends StatelessWidget {
                   <String>[
                     if (lesson.minutes > 0)
                       context.l10n.salahMinutes(lesson.minutes),
+                    ?lesson.prayer?.kindTitle,
                     ?statusLabel,
                   ].join(' · '),
                   style: theme.textTheme.labelSmall?.copyWith(
