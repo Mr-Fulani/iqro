@@ -278,6 +278,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.memorization.apps.MemorizationConfig",
     "quran_backend.modules.reminders.apps.RemindersConfig",
     "quran_backend.modules.dua.apps.DuaConfig",
+    "quran_backend.modules.salah.apps.SalahConfig",
     "quran_backend.modules.feedback.apps.FeedbackConfig",
     "quran_backend.modules.website.apps.WebsiteConfig",
     "quran_backend.modules.calendar.apps.CalendarConfig",

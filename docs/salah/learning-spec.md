@@ -62,7 +62,7 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 
 - `course`: slug, version, methodology, source_title.
 - `formulas[]`: формулы.
-  - `{id, source: {kind: "dua", collection, source_number}}`
+  - `{id, source: {kind: "dua", collection, source_number, arabic?, translations?{lang: {meaning?, transliteration?}}}}`. Необязательные `arabic` и `translations` заменяют текст «Хисн аль-Муслим», когда для намаза нужна другая форма; ссылка на источник и аудио остаются. Без замены компилятор сам берёт часть внутри ((…)) и убирает пометки вида «- 3 раза» или «(three times)»: число повторов показывает счётчик.
   - `{id, source: {kind: "quran", surah, ayah_from, ayah_to}}`
   - `{id, source: {kind: "inline", arabic, translations{lang: {meaning, transliteration}}, audio_media?}}` — только для коротких формул, которых нет в «Хисн аль-Муслим»: такбир, «сами'а Ллаху лиман хамидах», таслим.
 - `media[]`: `{key, file, alt{lang}}`. Файл загружается командой импорта в объектное хранилище под неизменяемым ключом.

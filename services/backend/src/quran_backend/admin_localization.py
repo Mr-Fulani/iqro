@@ -163,10 +163,24 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "dua.DuaEvidence": ("ссылка на источник ду’а", "ссылки на источники ду’а"),
     "dua.DuaAudioAsset": ("аудиозапись ду’а", "аудиозаписи ду’а"),
     "dua.DuaFavorite": ("избранная ду’а", "избранные ду’а"),
+    "salah.SalahCourse": ("курс обучения намазу", "курсы обучения намазу"),
+    "salah.SalahCourseVersion": ("версия курса намаза", "версии курса намаза"),
+    "salah.SalahCompiledDocument": ("документ курса намаза", "документы курса намаза"),
+    "salah.SalahMediaAsset": ("медиафайл курса намаза", "медиафайлы курса намаза"),
 }
 
 
 FIELD_LABELS: dict[str, str] = {
+    "course": "Курс",
+    "methodology": "Методология",
+    "source_title": "Источник по языкам",
+    "snapshot": "Исходный снимок курса",
+    "reviewed_by": "Подписал",
+    "reviewed_at": "Подписано",
+    "review_note": "Примечание проверяющего",
+    "language": "Язык",
+    "bytes": "Размер, байт",
+    "sha256": "SHA-256",
     "month": "Месяц по Хиджре",
     "day_start": "С какого числа",
     "day_end": "По какое число включительно",
