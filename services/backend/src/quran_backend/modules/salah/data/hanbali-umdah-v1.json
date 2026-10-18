@@ -34,7 +34,8 @@
             "meaning": "Allah en büyüktür",
             "transliteration": "Allâhu ekber"
           }
-        }
+        },
+        "audio_media": "audio-takbir"
       }
     },
     {
@@ -72,7 +73,8 @@
             "meaning": "Kovulmuş şeytandan Allah'a sığınırım",
             "transliteration": "Eûzü billâhi mine'ş-şeytâni'r-racîm"
           }
-        }
+        },
+        "audio_media": "audio-taawwudh"
       }
     },
     {
@@ -623,6 +625,14 @@
         "ar": "رجلٌ يقف بهدوء بعد الوضوء، رافعًا بصره قليلًا",
         "tr": "Abdestten sonra sakin duran adam, bakışları hafifçe yukarıda"
       }
+    },
+    {
+      "key": "audio-takbir",
+      "file": "media/audio-takbir.mp3"
+    },
+    {
+      "key": "audio-taawwudh",
+      "file": "media/audio-taawwudh.mp3"
     }
   ],
   "sections": [

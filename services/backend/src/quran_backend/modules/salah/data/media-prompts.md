@@ -166,3 +166,11 @@ between the toes; thobe hem lifted just above the ankles.
 Waist-up, the man standing calmly after ablution, sleeves rolled down again, kufi on, gaze
 slightly raised upwards, hands relaxed in front of him, a few drops of water on the hands.
 ```
+
+## Аудио коротких формул
+
+Записи лежат в `media/` рядом с иллюстрациями и подключаются через `audio_media` встроенной формулы.
+
+- `audio-takbir.mp3` — «Аллаху акбар», такбират аль-ихрам, 1,6 с: archive.org, `takbiratul-ihram_202510`.
+- `audio-taawwudh.mp3` — та'аввуз, 5,3 с: EveryAyah, `Husary_128kbps/audhubillah.mp3`.
+- Для «амин» и таслима отдельной чистой записи пока нет.

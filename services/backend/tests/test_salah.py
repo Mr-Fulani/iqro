@@ -18,6 +18,7 @@ from quran_backend.modules.core.object_storage import ImmutableObjectSpec, Store
 from quran_backend.modules.salah.admin import SalahCourseVersionAdmin
 from quran_backend.modules.salah.compiler import compile_document
 from quran_backend.modules.salah.importer import (
+    MAX_AUDIO_BYTES,
     import_salah_snapshot,
     publish_salah_version,
     webp_size,
@@ -130,6 +131,21 @@ def test_course_snapshot_marks_the_prayer_intention_as_a_condition() -> None:
 
     assert {template["steps"][0]["slug"] for template in snapshot["templates"]} == {"intention"}
     assert {template["steps"][0]["ruling"] for template in snapshot["templates"]} == {"shart"}
+
+
+def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    media = {asset["key"]: asset for asset in snapshot["media"]}
+    recorded = {
+        formula["id"]: formula["source"]["audio_media"]
+        for formula in snapshot["formulas"]
+        if formula["source"].get("audio_media")
+    }
+
+    assert recorded == {"takbir": "audio-takbir", "taawwudh": "audio-taawwudh"}
+    for key in recorded.values():
+        recording = COURSE_SNAPSHOT.parent / media[key]["file"]
+        assert 0 < recording.stat().st_size <= MAX_AUDIO_BYTES
 
 
 def test_four_rakat_prayer_unrolls_with_a_middle_tashahhud() -> None:

@@ -26,6 +26,7 @@ media/
 !ops/media/
 !ops/media/*.py
 !ops/media/*.json
+!services/backend/src/quran_backend/modules/salah/data/media/
 tmp/
 /backups/*
 !/backups/.gitkeep
