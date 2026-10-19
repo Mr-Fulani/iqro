@@ -26,7 +26,7 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
       <MobileDisclosure title={t("footer.aboutLinks")} className="mobile-footer-details">
         <div className="footer-content">
           <div className="footer-brand">
-            <Image src="/iqro-wax-seal.png" alt="" width={40} height={40} sizes="40px" className="brand-logo brand-logo-sm" />
+            <Image src="/iqro-wax-seal-128.webp" alt="" width={40} height={40} className="brand-logo brand-logo-sm" unoptimized />
             <p>
               <strong>IQRO</strong> — {t("footer.description")}
             </p>

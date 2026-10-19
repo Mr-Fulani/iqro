@@ -37,7 +37,7 @@ export function Header() {
     <header className="app-header">
       <div className="brand-block">
         <IntentPrefetchLink href={localizedPath(locale, "/")} className="brand-link">
-          <Image src="/iqro-wax-seal.png" alt="" width={56} height={56} sizes="56px" className="brand-logo" preload />
+          <Image src="/iqro-wax-seal-128.webp" alt="" width={56} height={56} className="brand-logo" preload unoptimized />
           <div>
             <p className="eyebrow">IQRO</p>
             <p className="brand-title">{t("brand.subtitle")}</p>

@@ -2095,4 +2095,49 @@ class AppLocalizationsAr extends AppLocalizations {
   String audioOfflineNewSurahs(int count) {
     return 'سور جديدة: $count';
   }
+
+  @override
+  String get apiErrorEmailInvalid =>
+      'الرمز غير صحيح أو تغيرت الجلسة. اطلب رمزًا جديدًا.';
+
+  @override
+  String get apiErrorEmailExpired => 'انتهت صلاحية الرمز. اطلب رمزًا جديدًا.';
+
+  @override
+  String get apiErrorEmailDelivery => 'تعذر إرسال الرمز. حاول لاحقًا.';
+
+  @override
+  String get apiErrorRateLimited => 'محاولات كثيرة جدًا. حاول لاحقًا.';
+
+  @override
+  String get apiErrorInstallationMissing =>
+      'فُقدت جلسة الجهاز. اطلب رمزًا جديدًا.';
+
+  @override
+  String get apiErrorLinkUnavailable =>
+      'لا يمكن إكمال هذا الدخول في الجلسة الحالية.';
+
+  @override
+  String get apiErrorIdentityLinked => 'هذا البريد مرتبط بحساب آخر.';
+
+  @override
+  String get apiErrorReauthRequired => 'يلزم رمز بريد جديد لهذا الإجراء.';
+
+  @override
+  String get apiErrorLifecycleUnavailable =>
+      'إجراء الحساب هذا غير متاح حاليًا.';
+
+  @override
+  String get apiErrorCurrentDevice =>
+      'استخدم تسجيل الخروج العادي للجهاز الحالي.';
+
+  @override
+  String get apiErrorDeviceNotFound => 'الجهاز مفصول بالفعل أو غير متاح.';
+
+  @override
+  String get apiErrorCursorExpired =>
+      'انتهت صلاحية سجل المزامنة. تجري مزامنة كاملة.';
+
+  @override
+  String get apiErrorUnknown => 'حاول مرة أخرى لاحقًا.';
 }
