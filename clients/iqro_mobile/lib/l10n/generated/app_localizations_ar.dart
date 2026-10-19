@@ -1994,6 +1994,94 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salahOfflineUpdate => 'تحديث';
 
   @override
+  String get accountSignOutEverywhere => 'تسجيل الخروج من جميع الأجهزة';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'إنهاء جميع الجلسات؟';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'ستُلغى الجلسة الحالية وتسجيلات الدخول على الأجهزة الأخرى. ستحتاج إلى رمز بريد جديد للمتابعة.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'تأكيد الخروج من الجميع';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'تعذر إنهاء جميع الجلسات. حاول مجددًا.';
+
+  @override
+  String get accountDangerZone => 'منطقة خطرة';
+
+  @override
+  String get accountDeletionTitle => 'حذف الحساب';
+
+  @override
+  String get accountDeletionDescription =>
+      'بعد إعادة تأكيد البريد تبدأ مهلة إلغاء مدتها 7 أيام. لا يحدث الحذف النهائي قبل انتهائها.';
+
+  @override
+  String get accountDelete => 'حذف الحساب';
+
+  @override
+  String get accountDeletionRequestTitle => 'جدولة حذف الحساب؟';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'يُحظر الوصول العادي فورًا. بعد 7 أيام تُحذف البيانات المتزامنة ويُجهّل الحساب.';
+
+  @override
+  String get accountDeletionCancelTitle => 'إلغاء الحذف؟';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'لاستعادة الحساب، أثبت ملكية البريد برمز جديد لمرة واحدة.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'إرسال الرمز إلى $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'تأكيد الحذف';
+
+  @override
+  String get accountRestore => 'استعادة الحساب';
+
+  @override
+  String get accountNewCode => 'طلب رمز جديد';
+
+  @override
+  String get accountPendingDeletionTitle => 'تمت جدولة حذف الحساب';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'سيُحذف الحساب والبيانات المتزامنة بعد $date. وحتى ذلك الوقت يمكن إلغاء الحذف بعد تأكيد البريد.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'إلغاء الحذف';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'تمت جدولة حذف الحساب. يمكنك إلغاؤه قبل التاريخ المحدد.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'تم إلغاء حذف الحساب.';
+
+  @override
+  String get accountCodeSendError => 'تعذر إرسال الرمز. حاول مجددًا.';
+
+  @override
+  String get accountCodeVerifyError => 'تعذر تأكيد الرمز.';
+
+  @override
+  String get accountCodeExpired => 'انتهت صلاحية التأكيد. اطلب رمزًا جديدًا.';
+
+  @override
+  String get accountActionError => 'تعذر إكمال إجراء الحساب.';
+
+  @override
   String downloadOfflineSurahsConfirmation(int count, String size) {
     return 'عدد السور: $count، نحو $size. هل تريد بدء التنزيل؟';
   }
