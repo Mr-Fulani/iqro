@@ -258,6 +258,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get done => 'Bitti';
 
   @override
+  String get namesOfAllah => 'Esmâü\'l-Hüsnâ';
+
+  @override
   String get soon => 'Yakında';
 
   @override

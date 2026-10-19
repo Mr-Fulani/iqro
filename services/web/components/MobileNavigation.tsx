@@ -7,7 +7,7 @@ import { useI18n } from "../lib/i18n-context";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
-type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "dua" | "calendar" | "profile";
+type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "dua" | "calendar" | "profile" | "names";
 
 function NavigationIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -21,6 +21,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     dua: <><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-14 5h3m4 0h3" /></>,
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
+    names: <><rect x="5" y="5" width="14" height="14" rx="1" /><rect x="5" y="5" width="14" height="14" rx="1" transform="rotate(45 12 12)" /></>,
   };
   return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -75,6 +76,12 @@ export function MobileNavigation() {
                 <span className="mobile-more-chevron" aria-hidden="true">›</span>
               </IntentPrefetchLink>
             ))}
+            {/* Announced section without a page yet: shown, but not a link. */}
+            <div className="mobile-more-soon" aria-disabled="true" data-testid="more-names-of-allah">
+              <span className="mobile-more-icon"><NavigationIcon name="names" /></span>
+              <span>{t("nav.namesOfAllah")}</span>
+              <span className="status-chip mobile-more-soon-badge">{t("common.soon")}</span>
+            </div>
           </div>
           <LanguageSwitcher variant="menu" />
         </div>

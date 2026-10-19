@@ -237,7 +237,8 @@
     border-radius: 22px;
   }
 
-  .mobile-more-links a {
+  .mobile-more-links a,
+  .mobile-more-soon {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -248,8 +249,17 @@
     font-weight: 600;
   }
 
-  .mobile-more-links a + a {
+  .mobile-more-links a + a,
+  .mobile-more-links a + .mobile-more-soon {
     border-top: 1px solid var(--border);
+  }
+
+  .mobile-more-soon {
+    color: var(--text-muted);
+  }
+
+  .mobile-more-soon-badge {
+    margin-inline-start: auto;
   }
 
   .mobile-more-links a[aria-current="page"] {
