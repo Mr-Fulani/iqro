@@ -38,7 +38,11 @@ from quran_backend.modules.audio.models import (
     RecitationStyle,
     Reciter,
 )
-from quran_backend.modules.audio.selectors import public_recitation_base, public_reciters
+from quran_backend.modules.audio.selectors import (
+    public_recitation_base,
+    public_reciters,
+    verified_audio_segments,
+)
 from quran_backend.modules.audio.surah_upload import (
     SurahUploadError,
     surah_number_from_filename,
@@ -170,10 +174,9 @@ def test_listening_recitation_survives_a_newer_quran_version(
     assert public_recitation_base().filter(pk=listening.pk).exists()
 
 
-def test_catalog_lists_surahs_and_keeps_listening_audio_out_of_ayah_roles(
-    api_client: Any,
-    quran_dataset: dict[str, Any],
-) -> None:
+@pytest.fixture
+def timed_listening(quran_dataset: dict[str, Any]) -> RecitationEdition:
+    """A listening-only recitation whose surah carries verified ayah timings."""
     recitation = _recitation(quran_dataset)
     track = _add_surah(recitation, 1)
     timing = AudioTimingVersion.objects.create(
@@ -191,6 +194,15 @@ def test_catalog_lists_surahs_and_keeps_listening_audio_out_of_ayah_roles(
             track=track, ayah=ayah, start_ms=start, end_ms=start + 30_000
         )
     _publish(recitation)
+    return recitation
+
+
+def test_catalog_lists_surahs_and_keeps_listening_audio_out_of_ayah_roles(
+    api_client: Any,
+    quran_dataset: dict[str, Any],
+    timed_listening: RecitationEdition,
+) -> None:
+    recitation = timed_listening
 
     body = api_client.get(reverse("audio:recitation-detail", args=[recitation.pk])).json()
 
@@ -212,6 +224,69 @@ def test_catalog_lists_surahs_and_keeps_listening_audio_out_of_ayah_roles(
             start_ayah=quran_dataset["first_ayah"],
             end_ayah=quran_dataset["second_ayah"],
         )
+
+
+def test_legacy_ayah_endpoint_refuses_listening_audio_like_the_variant_endpoint(
+    api_client: Any,
+    timed_listening: RecitationEdition,
+) -> None:
+    legacy = api_client.get(
+        reverse("audio:ayah-playback", args=[timed_listening.pk, 1, 1]),
+    )
+    variant = api_client.get(
+        reverse("audio:variant-ayah", args=[str(timed_listening.pk), 1, 1]),
+    )
+
+    for response in (legacy, variant):
+        assert response.status_code == 404
+        assert response["Content-Type"] == "application/problem+json"
+        assert "ayah_playback" in response.json()["detail"]
+
+
+def test_listening_audio_plays_whole_surahs_without_ayah_timings(
+    api_client: Any,
+    timed_listening: RecitationEdition,
+) -> None:
+    surah = api_client.get(reverse("audio:surah-playback", args=[timed_listening.pk, 1]))
+    variant = api_client.get(reverse("audio:variant-track", args=[str(timed_listening.pk), 1]))
+
+    assert surah.status_code == 200
+    assert surah.json()["track"]["surah_number"] == 1
+    assert surah.json()["segments"] == []
+    assert variant.status_code == 200
+    assert variant.json()["track"]["ayahs"] == []
+    assert variant.json()["variant"]["timing_mode"] == "untimed"
+    # The timings stay stored; only the public paths leave them out.
+    assert AyahAudioSegment.objects.filter(track__recitation_edition=timed_listening).count() == 2
+    assert not verified_audio_segments().filter(track__recitation_edition=timed_listening).exists()
+
+
+def test_playback_position_keeps_listening_audio_to_whole_surahs(
+    api_client: Any,
+    timed_listening: RecitationEdition,
+) -> None:
+    api_client.force_authenticate(user=User.objects.create_user())
+    track = timed_listening.tracks.get()
+    payload = {
+        "base_revision": 0,
+        "track_id": str(track.id),
+        "position_ms": 4_000,
+        "speed": "1",
+        "repeat_enabled": True,
+        "range_start_ayah": 1,
+        "range_end_ayah": 2,
+        "client_updated_at": timezone.now().isoformat(),
+    }
+    url = reverse("audio:playback-position")
+
+    ranged = api_client.put(url, payload, format="json")
+    whole = api_client.put(
+        url, {**payload, "range_start_ayah": None, "range_end_ayah": None}, format="json"
+    )
+
+    assert ranged.status_code == 400
+    assert "range_start_ayah" in ranged.json()["field_errors"]
+    assert whole.status_code == 200
 
 
 def test_published_listening_recitation_accepts_new_surahs(

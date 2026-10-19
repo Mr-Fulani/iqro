@@ -309,7 +309,7 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
                     "version": track.timing_version.version,
                     "source_checksum_sha256": track.timing_version.source_checksum_sha256,
                 }
-                if track.timing_version is not None
+                if track.timing_version is not None and not recitation.listening_only
                 else None
             )
             file_name = f"surah-{track.surah_number:03d}.{rendition.codec}"
@@ -452,7 +452,10 @@ class AyahPlaybackView(PublicReadOnlyViewMixin, APIView):
         surah: int,
         ayah: int,
     ) -> Response:
-        get_object_or_404(public_recitation_base(), pk=recitation_id)
+        recitation = get_object_or_404(public_recitation_base(), pk=recitation_id)
+        if recitation.listening_only:
+            # Same refusal as the variant ayah endpoint for an unsupported role.
+            raise NotFound(f"Recitation '{recitation_id}' does not support 'ayah_playback'.")
         segment: AyahAudioSegment | None = public_ayah_segments(
             recitation_id,
             surah,

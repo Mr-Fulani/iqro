@@ -545,6 +545,7 @@ final _recitation = Recitation(
   reciter: _reciter,
   style: 'murattal',
   timingsAvailable: true,
+  timingsComplete: true,
   surahCount: 114,
   streamAllowed: true,
   offlineDownloadAllowed: false,
