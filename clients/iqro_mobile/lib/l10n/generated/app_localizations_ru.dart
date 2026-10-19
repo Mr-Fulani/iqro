@@ -2028,4 +2028,94 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get salahOfflineUpdate => 'Обновить';
+
+  @override
+  String get accountSignOutEverywhere => 'Выйти на всех устройствах';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'Завершить все сессии?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения потребуется снова получить код по email.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Подтвердить выход везде';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Не удалось завершить все сессии. Повторите попытку.';
+
+  @override
+  String get accountDangerZone => 'Опасная зона';
+
+  @override
+  String get accountDeletionTitle => 'Удаление аккаунта';
+
+  @override
+  String get accountDeletionDescription =>
+      'После повторной проверки email начнётся 7-дневный период отмены. До его окончания безвозвратное удаление не выполняется.';
+
+  @override
+  String get accountDelete => 'Удалить аккаунт';
+
+  @override
+  String get accountDeletionRequestTitle => 'Запланировать удаление аккаунта?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Обычный доступ будет заблокирован сразу. Через 7 дней синхронизируемые данные будут удалены, а аккаунт — анонимизирован.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Отменить удаление?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'Для восстановления аккаунта подтвердите владение email новым одноразовым кодом.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'Получить код на $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Подтвердить удаление';
+
+  @override
+  String get accountRestore => 'Восстановить аккаунт';
+
+  @override
+  String get accountNewCode => 'Запросить новый код';
+
+  @override
+  String get accountPendingDeletionTitle => 'Удаление аккаунта запланировано';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'Аккаунт и синхронизируемые данные будут удалены после $date. До этого момента удаление можно отменить после повторной проверки email.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Отменить удаление';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Удаление аккаунта запланировано. До указанной даты его можно отменить.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'Удаление аккаунта отменено.';
+
+  @override
+  String get accountCodeSendError =>
+      'Не удалось отправить код. Повторите попытку.';
+
+  @override
+  String get accountCodeVerifyError => 'Не удалось подтвердить код.';
+
+  @override
+  String get accountCodeExpired =>
+      'Подтверждение устарело. Запросите новый код.';
+
+  @override
+  String get accountActionError => 'Не удалось завершить действие с аккаунтом.';
 }

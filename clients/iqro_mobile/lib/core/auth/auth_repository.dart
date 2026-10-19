@@ -299,6 +299,14 @@ class AuthRepository {
   Future<AuthSession> refresh() async {
     await loadCachedSession();
     if (_verificationGatePending) await _retryPendingVerificationGate();
+    // A queued session write (an account summary) replaces the session
+    // object. Starting the refresh before it lands would rotate the token
+    // and then discard the result as stale, so the next refresh would replay
+    // the used token and the server would revoke the whole session.
+    for (var tail = _transitionTail; ; tail = _transitionTail) {
+      await tail;
+      if (identical(tail, _transitionTail)) break;
+    }
     final requestedStamp = _stamp();
     final active = _refreshFlight;
     final activeStamp = _refreshStamp;
@@ -489,7 +497,105 @@ class AuthRepository {
     }
   }
 
-  Future<void> clearSession() async {
+  /// Re-reads the account status (for example a deletion scheduled or
+  /// cancelled on another device) without touching the tokens.
+  Future<AuthSession> refreshAccountSummary({required String locale}) async {
+    final token = await validAccessToken(locale: locale);
+    final stamp = _stamp();
+    try {
+      final response = await _dio.get<Object?>('/me', options: _bearer(token));
+      return await _adoptAccountSummary(response.data, expected: stamp);
+    } on DioException catch (error) {
+      _ensureMatches(stamp);
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  /// Schedules account deletion. [challengeId] must be an email challenge that
+  /// this device verified for the same account within the last minutes.
+  Future<AuthSession> requestAccountDeletion(
+    String challengeId, {
+    required String locale,
+  }) => _changeAccountLifecycle(
+    '/me/deletion-request',
+    challengeId,
+    locale: locale,
+  );
+
+  Future<AuthSession> cancelAccountDeletion(
+    String challengeId, {
+    required String locale,
+  }) => _changeAccountLifecycle(
+    '/me/deletion-cancel',
+    challengeId,
+    locale: locale,
+  );
+
+  Future<AuthSession> _changeAccountLifecycle(
+    String path,
+    String challengeId, {
+    required String locale,
+  }) async {
+    final token = await validAccessToken(locale: locale);
+    final stamp = _stamp();
+    try {
+      final response = await _dio.post<Object?>(
+        path,
+        data: <String, Object?>{'reauth_challenge_id': challengeId},
+        options: _bearer(token),
+      );
+      return await _adoptAccountSummary(response.data, expected: stamp);
+    } on DioException catch (error) {
+      _ensureMatches(stamp);
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<AuthSession> _adoptAccountSummary(
+    Object? data, {
+    required _AuthTransitionStamp expected,
+  }) async {
+    final summary = _jsonMap(data);
+    // A token refresh may have started while the request was in flight. Let
+    // it land and apply the summary to its tokens instead of the used ones.
+    final refreshing = _refreshFlight;
+    if (refreshing != null) {
+      try {
+        await refreshing;
+      } on Object {
+        // The summary still applies to whatever session is current.
+      }
+    }
+    final current = _stamp();
+    final session = current.session;
+    if (session == null ||
+        current.scopeEpoch != expected.scopeEpoch ||
+        session.userId != expected.session?.userId) {
+      throw const AccountScopeChanged();
+    }
+    final next = session.withAccountSummary(summary);
+    if (next.userId != session.userId) throw const AccountScopeChanged();
+    await _persist(next, expected: current);
+    return next;
+  }
+
+  /// Revokes every session of the account on the server. The caller completes
+  /// the local logout with [clearSession] once this succeeds.
+  Future<void> revokeAllSessions({required String locale}) async {
+    final token = await validAccessToken(locale: locale);
+    final stamp = _stamp();
+    try {
+      await _dio.post<Object?>('/auth/logout-all', options: _bearer(token));
+    } on DioException catch (error) {
+      _ensureMatches(stamp);
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  static Options _bearer(String token) =>
+      Options(headers: <String, Object?>{'Authorization': 'Bearer $token'});
+
+  Future<void> clearSession({bool revokeRemote = true}) async {
     AuthSession? session;
     var durableLogoutRecorded = false;
     var sessionNeutralized = false;
@@ -557,7 +663,7 @@ class AuthRepository {
       }
     });
     final sessionToLogout = session;
-    if (sessionToLogout != null) {
+    if (revokeRemote && sessionToLogout != null) {
       try {
         await _dio.post<Object?>(
           '/auth/logout',

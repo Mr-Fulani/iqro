@@ -373,13 +373,51 @@ class SessionController extends StateNotifier<AsyncValue<AuthSession?>> {
     }
   }
 
-  Future<void> signOut() async {
+  /// Confirms ownership of the current account's email before a lifecycle
+  /// action. The account stays the same, so managed notifications are kept.
+  Future<void> reauthenticate(EmailChallenge challenge, String code) async {
+    await _auth.verifyEmail(
+      challenge: challenge,
+      code: code,
+      locale: _locale(),
+    );
+  }
+
+  Future<void> requestAccountDeletion(String challengeId) async {
+    await _auth.requestAccountDeletion(challengeId, locale: _locale());
+  }
+
+  Future<void> cancelAccountDeletion(String challengeId) async {
+    await _auth.cancelAccountDeletion(challengeId, locale: _locale());
+  }
+
+  /// Best-effort refresh of the account status, e.g. a deletion scheduled or
+  /// cancelled on the website.
+  Future<void> refreshAccountStatus() async {
+    try {
+      await _auth.refreshAccountSummary(locale: _locale());
+    } on Object {
+      // Offline or a changed account: the cached status stays authoritative.
+    }
+  }
+
+  Future<void> signOut() => _signOutLocally(_auth.clearSession);
+
+  /// Revokes all sessions on the server first; a failure leaves this device
+  /// signed in. Only then the local logout runs, without a redundant remote
+  /// logout of the already revoked session.
+  Future<void> signOutEverywhere() async {
+    await _auth.revokeAllSessions(locale: _locale());
+    await _signOutLocally(() => _auth.clearSession(revokeRemote: false));
+  }
+
+  Future<void> _signOutLocally(Future<void> Function() clearSession) async {
     // Drop every account-owned provider before secure storage or network work
     // so account A cannot remain visible while logout is in progress.
     state = const AsyncValue.loading();
     await _cancelManagedBestEffort();
     try {
-      await _auth.clearSession();
+      await clearSession();
     } on Object catch (error, stack) {
       // AuthRepository has already deactivated the in-memory scope. Never
       // strand the UI in loading or bootstrap a replacement session when the
