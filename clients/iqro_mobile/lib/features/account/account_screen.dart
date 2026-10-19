@@ -10,6 +10,7 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_session.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/sync/sync_service.dart';
@@ -487,7 +488,11 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
           } else {
             _message = error.isOffline
                 ? context.l10n.networkError
-                : error.message;
+                : apiErrorText(
+                    context.l10n,
+                    error,
+                    fallback: context.l10n.accountCodeSendError,
+                  );
           }
         });
       }
@@ -521,7 +526,15 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       // The account screen is replaced by its scope key on session changes.
     } on ApiException catch (error) {
       if (mounted && _isScreenCurrent(request)) {
-        setState(() => _message = error.message);
+        setState(
+          () => _message = error.isOffline
+              ? context.l10n.networkError
+              : apiErrorText(
+                  context.l10n,
+                  error,
+                  fallback: context.l10n.accountCodeVerifyError,
+                ),
+        );
       }
     } finally {
       if (mounted && _isScreenCurrent(request)) {
@@ -543,7 +556,15 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       if (mounted &&
           _isAccountCurrent(request) &&
           identical(controller, ref.read(syncProvider.notifier))) {
-        setState(() => _message = error.toString());
+        setState(
+          () => _message = error is ApiException && error.isOffline
+              ? context.l10n.networkError
+              : apiErrorText(
+                  context.l10n,
+                  error,
+                  fallback: context.l10n.apiErrorUnknown,
+                ),
+        );
       }
       return;
     }

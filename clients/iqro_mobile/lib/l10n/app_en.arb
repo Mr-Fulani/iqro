@@ -734,5 +734,18 @@
   "audioOfflineSurahs": "Surahs on this device: {count}",
   "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
   "audioOfflineNewSurahs": "New surahs: {count}",
-  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "apiErrorEmailInvalid": "The code is invalid or the session changed. Request a new code.",
+  "apiErrorEmailExpired": "The code expired. Request a new code.",
+  "apiErrorEmailDelivery": "Could not send the code. Try again later.",
+  "apiErrorRateLimited": "Too many attempts. Try again later.",
+  "apiErrorInstallationMissing": "The device session was lost. Request a new code.",
+  "apiErrorLinkUnavailable": "This sign-in cannot be completed in the current session.",
+  "apiErrorIdentityLinked": "This email is already linked to another account.",
+  "apiErrorReauthRequired": "A new email code is required for this action.",
+  "apiErrorLifecycleUnavailable": "This account action is currently unavailable.",
+  "apiErrorCurrentDevice": "Use regular sign-out for the current device.",
+  "apiErrorDeviceNotFound": "The device is already disconnected or unavailable.",
+  "apiErrorCursorExpired": "Sync history expired. A full reconciliation is running.",
+  "apiErrorUnknown": "Try again later."
 }

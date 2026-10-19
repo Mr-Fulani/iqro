@@ -644,5 +644,18 @@
   "audioOfflineSurahs": "Сур на устройстве: {count}",
   "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
   "audioOfflineNewSurahs": "Новые суры: {count}",
-  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "apiErrorEmailInvalid": "Код неверен или сессия изменилась. Запросите новый код.",
+  "apiErrorEmailExpired": "Срок действия кода истёк. Запросите новый код.",
+  "apiErrorEmailDelivery": "Не удалось отправить код. Попробуйте ещё раз позже.",
+  "apiErrorRateLimited": "Слишком много попыток. Повторите позже.",
+  "apiErrorInstallationMissing": "Сессия устройства потеряна. Запросите новый код.",
+  "apiErrorLinkUnavailable": "Этот вход нельзя завершить в текущей сессии.",
+  "apiErrorIdentityLinked": "Этот email уже привязан к другому аккаунту.",
+  "apiErrorReauthRequired": "Для этого действия нужен новый код из email.",
+  "apiErrorLifecycleUnavailable": "Это действие с аккаунтом сейчас недоступно.",
+  "apiErrorCurrentDevice": "Для текущего устройства используйте обычный выход.",
+  "apiErrorDeviceNotFound": "Устройство уже отключено или недоступно.",
+  "apiErrorCursorExpired": "История синхронизации устарела. Выполняется полная сверка данных.",
+  "apiErrorUnknown": "Повторите попытку позже."
 }

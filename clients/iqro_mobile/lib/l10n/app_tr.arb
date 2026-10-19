@@ -640,5 +640,18 @@
   "audioOfflineSurahs": "Cihazdaki sureler: {count}",
   "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
   "audioOfflineNewSurahs": "Yeni sureler: {count}",
-  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "apiErrorEmailInvalid": "Kod geçersiz veya oturum değişti. Yeni kod isteyin.",
+  "apiErrorEmailExpired": "Kodun süresi doldu. Yeni kod isteyin.",
+  "apiErrorEmailDelivery": "Kod gönderilemedi. Daha sonra tekrar deneyin.",
+  "apiErrorRateLimited": "Çok fazla deneme. Daha sonra tekrar deneyin.",
+  "apiErrorInstallationMissing": "Cihaz oturumu kayboldu. Yeni kod isteyin.",
+  "apiErrorLinkUnavailable": "Bu giriş mevcut oturumda tamamlanamaz.",
+  "apiErrorIdentityLinked": "Bu e-posta başka bir hesaba bağlı.",
+  "apiErrorReauthRequired": "Bu işlem için yeni bir e-posta kodu gerekir.",
+  "apiErrorLifecycleUnavailable": "Bu hesap işlemi şu anda kullanılamıyor.",
+  "apiErrorCurrentDevice": "Geçerli cihaz için normal çıkışı kullanın.",
+  "apiErrorDeviceNotFound": "Cihaz zaten bağlantısı kesilmiş veya kullanılamıyor.",
+  "apiErrorCursorExpired": "Senkronizasyon geçmişi eskidi. Tam eşitleme yapılıyor.",
+  "apiErrorUnknown": "Daha sonra tekrar deneyin."
 }

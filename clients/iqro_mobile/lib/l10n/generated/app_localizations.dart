@@ -3809,6 +3809,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New surahs: {count}'**
   String audioOfflineNewSurahs(int count);
+
+  /// No description provided for @apiErrorEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The code is invalid or the session changed. Request a new code.'**
+  String get apiErrorEmailInvalid;
+
+  /// No description provided for @apiErrorEmailExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The code expired. Request a new code.'**
+  String get apiErrorEmailExpired;
+
+  /// No description provided for @apiErrorEmailDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the code. Try again later.'**
+  String get apiErrorEmailDelivery;
+
+  /// No description provided for @apiErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again later.'**
+  String get apiErrorRateLimited;
+
+  /// No description provided for @apiErrorInstallationMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The device session was lost. Request a new code.'**
+  String get apiErrorInstallationMissing;
+
+  /// No description provided for @apiErrorLinkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in cannot be completed in the current session.'**
+  String get apiErrorLinkUnavailable;
+
+  /// No description provided for @apiErrorIdentityLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'This email is already linked to another account.'**
+  String get apiErrorIdentityLinked;
+
+  /// No description provided for @apiErrorReauthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A new email code is required for this action.'**
+  String get apiErrorReauthRequired;
+
+  /// No description provided for @apiErrorLifecycleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This account action is currently unavailable.'**
+  String get apiErrorLifecycleUnavailable;
+
+  /// No description provided for @apiErrorCurrentDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Use regular sign-out for the current device.'**
+  String get apiErrorCurrentDevice;
+
+  /// No description provided for @apiErrorDeviceNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'The device is already disconnected or unavailable.'**
+  String get apiErrorDeviceNotFound;
+
+  /// No description provided for @apiErrorCursorExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync history expired. A full reconciliation is running.'**
+  String get apiErrorCursorExpired;
+
+  /// No description provided for @apiErrorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again later.'**
+  String get apiErrorUnknown;
 }
 
 class _AppLocalizationsDelegate

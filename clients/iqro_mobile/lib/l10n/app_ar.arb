@@ -640,5 +640,18 @@
   "audioOfflineSurahs": "السور على هذا الجهاز: {count}",
   "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
   "audioOfflineNewSurahs": "سور جديدة: {count}",
-  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "apiErrorEmailInvalid": "الرمز غير صحيح أو تغيرت الجلسة. اطلب رمزًا جديدًا.",
+  "apiErrorEmailExpired": "انتهت صلاحية الرمز. اطلب رمزًا جديدًا.",
+  "apiErrorEmailDelivery": "تعذر إرسال الرمز. حاول لاحقًا.",
+  "apiErrorRateLimited": "محاولات كثيرة جدًا. حاول لاحقًا.",
+  "apiErrorInstallationMissing": "فُقدت جلسة الجهاز. اطلب رمزًا جديدًا.",
+  "apiErrorLinkUnavailable": "لا يمكن إكمال هذا الدخول في الجلسة الحالية.",
+  "apiErrorIdentityLinked": "هذا البريد مرتبط بحساب آخر.",
+  "apiErrorReauthRequired": "يلزم رمز بريد جديد لهذا الإجراء.",
+  "apiErrorLifecycleUnavailable": "إجراء الحساب هذا غير متاح حاليًا.",
+  "apiErrorCurrentDevice": "استخدم تسجيل الخروج العادي للجهاز الحالي.",
+  "apiErrorDeviceNotFound": "الجهاز مفصول بالفعل أو غير متاح.",
+  "apiErrorCursorExpired": "انتهت صلاحية سجل المزامنة. تجري مزامنة كاملة.",
+  "apiErrorUnknown": "حاول مرة أخرى لاحقًا."
 }

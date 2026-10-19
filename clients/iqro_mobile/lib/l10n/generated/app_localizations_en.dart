@@ -2110,4 +2110,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String audioOfflineNewSurahs(int count) {
     return 'New surahs: $count';
   }
+
+  @override
+  String get apiErrorEmailInvalid =>
+      'The code is invalid or the session changed. Request a new code.';
+
+  @override
+  String get apiErrorEmailExpired => 'The code expired. Request a new code.';
+
+  @override
+  String get apiErrorEmailDelivery =>
+      'Could not send the code. Try again later.';
+
+  @override
+  String get apiErrorRateLimited => 'Too many attempts. Try again later.';
+
+  @override
+  String get apiErrorInstallationMissing =>
+      'The device session was lost. Request a new code.';
+
+  @override
+  String get apiErrorLinkUnavailable =>
+      'This sign-in cannot be completed in the current session.';
+
+  @override
+  String get apiErrorIdentityLinked =>
+      'This email is already linked to another account.';
+
+  @override
+  String get apiErrorReauthRequired =>
+      'A new email code is required for this action.';
+
+  @override
+  String get apiErrorLifecycleUnavailable =>
+      'This account action is currently unavailable.';
+
+  @override
+  String get apiErrorCurrentDevice =>
+      'Use regular sign-out for the current device.';
+
+  @override
+  String get apiErrorDeviceNotFound =>
+      'The device is already disconnected or unavailable.';
+
+  @override
+  String get apiErrorCursorExpired =>
+      'Sync history expired. A full reconciliation is running.';
+
+  @override
+  String get apiErrorUnknown => 'Try again later.';
 }
