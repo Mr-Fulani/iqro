@@ -268,6 +268,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get done => 'Готово';
 
   @override
+  String get namesOfAllah => 'Имена Аллаха';
+
+  @override
   String get soon => 'Скоро';
 
   @override
@@ -393,6 +396,15 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mushafPublishedDescription =>
       'Хафс · чтение онлайн и без интернета';
+
+  @override
+  String get mushafPickerHint => 'Нажмите на страницу, чтобы рассмотреть её';
+
+  @override
+  String get mushafMakePrimary => 'Сделать основным';
+
+  @override
+  String get mushafIsPrimary => 'Основной Мусхаф';
 
   @override
   String get mushafTextDescription => 'Чёткий текст, адаптированный для экрана';
@@ -548,6 +560,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get styleMuallim => 'Муаллим';
 
   @override
+  String get styleKidsRepeat => 'Детское с повтором';
+
+  @override
   String get refreshReciters => 'Обновить каталог чтецов';
 
   @override
@@ -583,6 +598,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get audioQuality => 'Качество аудио';
+
+  @override
+  String get playerBackground => 'Фон плеера';
 
   @override
   String get qualityAutomatic => 'Автоматически';
@@ -935,6 +953,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Сохранённые ду’а';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Глава $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return 'Осталось: $count';
+  }
+
+  @override
+  String get duaAudioFailed => 'Не удалось воспроизвести аудио';
+
+  @override
   String duaCount(int count) {
     return 'Ду’а: $count';
   }
@@ -961,9 +992,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get duaAudioStreaming =>
       'Для прослушивания нужно подключение к интернету';
-
-  @override
-  String get duaAudioFailed => 'Не удалось воспроизвести аудио';
 
   @override
   String get duaPractice => 'Практика повторения';
@@ -995,6 +1023,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get shareDua => 'Поделиться ду’а';
+
+  @override
+  String get shareReadInIqro => 'Читать в IQRO';
 
   @override
   String get duaReader => 'Чтец';
@@ -1737,6 +1768,57 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Ваша финиковая пальма';
+
+  @override
+  String get palmStageSeed => 'Косточка финика';
+
+  @override
+  String get palmStageSprout => 'Росток';
+
+  @override
+  String get palmStageSeedling => 'Саженец';
+
+  @override
+  String get palmStageYoungPalm => 'Молодая пальма';
+
+  @override
+  String get palmStagePalm => 'Пальма';
+
+  @override
+  String get palmStageFruitingPalm => 'Пальма с финиками';
+
+  @override
+  String get palmMoodPlanting =>
+      'Посадите косточку: прочитайте первую страницу';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Цель на сегодня выполнена — пальма тянется к солнцу';
+
+  @override
+  String get palmMoodGrowing => 'Сегодняшнее чтение уже питает пальму';
+
+  @override
+  String get palmMoodWaiting => 'Пальма ждёт сегодняшнего чтения';
+
+  @override
+  String get palmMoodResting =>
+      'Пальма отдыхает в тени и ждёт вас. Даже одна страница её порадует';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Дальше: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Пальма выросла — пусть приносит плоды';
+
+  @override
+  String get palmHowItGrows =>
+      'День чтения — +1, выполненная цель — +2. Пропуски не вредят пальме — она просто отдыхает.';
+
+  @override
   String get planSummaryTitle => 'Сводка прогресса';
 
   @override
@@ -1838,5 +1920,217 @@ class AppLocalizationsRu extends AppLocalizations {
       one: '$count дн.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get salahTitle => 'Обучение намазу';
+
+  @override
+  String get salahHint => 'Пошагово: вуду и пять молитв';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done из $total уроков';
+  }
+
+  @override
+  String get salahContinue => 'Продолжить';
+
+  @override
+  String get salahStart => 'Начать';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Шаг $current из $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Ракаат $current из $total';
+  }
+
+  @override
+  String get salahBack => 'Назад';
+
+  @override
+  String get salahNext => 'Далее';
+
+  @override
+  String get salahFinish => 'Завершить';
+
+  @override
+  String get salahNextStep => 'Следующий шаг';
+
+  @override
+  String get salahPreviousStep => 'Предыдущий шаг';
+
+  @override
+  String get salahModeLearn => 'Обучение';
+
+  @override
+  String get salahModePractice => 'Практика';
+
+  @override
+  String get salahDisplayOptions => 'Что показывать';
+
+  @override
+  String get salahShowArabic => 'Арабский текст';
+
+  @override
+  String get salahShowTransliteration => 'Транслитерация';
+
+  @override
+  String get salahShowTranslation => 'Перевод';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count мин';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Урок пройден';
+
+  @override
+  String get salahStatusCompleted => 'Пройден';
+
+  @override
+  String get salahStatusInProgress => 'Начат';
+
+  @override
+  String get salahUnavailable => 'Курс пока недоступен';
+
+  @override
+  String get salahLessonNotFound => 'Такого урока нет в курсе';
+
+  @override
+  String get salahRulingShart => 'Условие (шарт)';
+
+  @override
+  String get salahRulingRukn => 'Столп (рукн)';
+
+  @override
+  String get salahRulingWajib => 'Обязательно (ваджиб)';
+
+  @override
+  String get salahRulingSunnah => 'Сунна';
+
+  @override
+  String get salahOfflineTitle => 'Картинки без интернета';
+
+  @override
+  String get salahOfflineImages => 'Иллюстрации курса';
+
+  @override
+  String get salahOfflineSaved => 'Сохранены на устройстве';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'Есть новая версия';
+
+  @override
+  String get salahOfflineUpdate => 'Обновить';
+
+  @override
+  String get accountSignOutEverywhere => 'Выйти на всех устройствах';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'Завершить все сессии?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения потребуется снова получить код по email.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Подтвердить выход везде';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Не удалось завершить все сессии. Повторите попытку.';
+
+  @override
+  String get accountDangerZone => 'Опасная зона';
+
+  @override
+  String get accountDeletionTitle => 'Удаление аккаунта';
+
+  @override
+  String get accountDeletionDescription =>
+      'После повторной проверки email начнётся 7-дневный период отмены. До его окончания безвозвратное удаление не выполняется.';
+
+  @override
+  String get accountDelete => 'Удалить аккаунт';
+
+  @override
+  String get accountDeletionRequestTitle => 'Запланировать удаление аккаунта?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Обычный доступ будет заблокирован сразу. Через 7 дней синхронизируемые данные будут удалены, а аккаунт — анонимизирован.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Отменить удаление?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'Для восстановления аккаунта подтвердите владение email новым одноразовым кодом.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'Получить код на $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Подтвердить удаление';
+
+  @override
+  String get accountRestore => 'Восстановить аккаунт';
+
+  @override
+  String get accountNewCode => 'Запросить новый код';
+
+  @override
+  String get accountPendingDeletionTitle => 'Удаление аккаунта запланировано';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'Аккаунт и синхронизируемые данные будут удалены после $date. До этого момента удаление можно отменить после повторной проверки email.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Отменить удаление';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Удаление аккаунта запланировано. До указанной даты его можно отменить.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'Удаление аккаунта отменено.';
+
+  @override
+  String get accountCodeSendError =>
+      'Не удалось отправить код. Повторите попытку.';
+
+  @override
+  String get accountCodeVerifyError => 'Не удалось подтвердить код.';
+
+  @override
+  String get accountCodeExpired =>
+      'Подтверждение устарело. Запросите новый код.';
+
+  @override
+  String get accountActionError => 'Не удалось завершить действие с аккаунтом.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Сур: $count, примерно $size. Начать загрузку?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Сур на устройстве: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'Новые суры: $count';
   }
 }

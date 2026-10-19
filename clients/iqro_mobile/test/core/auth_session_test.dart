@@ -74,4 +74,48 @@ void main() {
     expect(current.email, isNull);
     expect(current.isGuest, isTrue);
   });
+
+  test('deletion schedule survives storage and token refreshes', () {
+    final pending = AuthSession.fromApi(<String, Object?>{
+      'access_token': 'access',
+      'refresh_token': 'refresh',
+      'access_expires_at': '2030-01-01T00:00:00Z',
+      'refresh_expires_at': '2030-02-01T00:00:00Z',
+      'user': <String, Object?>{
+        'id': 'user',
+        'status': 'pending_deletion',
+        'email': 'reader@example.com',
+        'deletion_requested_at': '2026-10-19T09:00:00Z',
+        'deletion_scheduled_for': '2026-10-26T09:00:00Z',
+      },
+      'device': <String, Object?>{'id': 'device'},
+    });
+
+    expect(pending.isPendingDeletion, isTrue);
+    expect(pending.isVerified, isFalse);
+    final restored = AuthSession.fromJson(pending.toJson());
+    expect(restored.isPendingDeletion, isTrue);
+    expect(restored.deletionScheduledFor, DateTime.utc(2026, 10, 26, 9));
+
+    final refreshed = AuthSession.fromApi(<String, Object?>{
+      'access_token': 'new-access',
+      'refresh_token': 'new-refresh',
+      'access_expires_at': '2030-01-02T00:00:00Z',
+      'refresh_expires_at': '2030-02-02T00:00:00Z',
+    }, previous: pending);
+    expect(refreshed.deletionScheduledFor, DateTime.utc(2026, 10, 26, 9));
+
+    final cancelled = refreshed.withAccountSummary(<String, Object?>{
+      'user': <String, Object?>{
+        'id': 'user',
+        'status': 'active',
+        'email': 'reader@example.com',
+        'deletion_requested_at': null,
+        'deletion_scheduled_for': null,
+      },
+    });
+    expect(cancelled.isVerified, isTrue);
+    expect(cancelled.deletionScheduledFor, isNull);
+    expect(cancelled.accessToken, 'new-access');
+  });
 }

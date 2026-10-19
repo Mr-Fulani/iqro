@@ -258,6 +258,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get done => 'Bitti';
 
   @override
+  String get namesOfAllah => 'Esmâü\'l-Hüsnâ';
+
+  @override
   String get soon => 'Yakında';
 
   @override
@@ -382,6 +385,15 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get mushafPublishedDescription =>
       'Hafs · çevrimiçi ve çevrimdışı okuma';
+
+  @override
+  String get mushafPickerHint => 'Yakından bakmak için sayfaya dokunun';
+
+  @override
+  String get mushafMakePrimary => 'Ana Mushaf yap';
+
+  @override
+  String get mushafIsPrimary => 'Ana Mushaf';
 
   @override
   String get mushafTextDescription => 'Ekrana uyarlanmış net metin';
@@ -537,6 +549,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get styleMuallim => 'Muallim';
 
   @override
+  String get styleKidsRepeat => 'Çocuklar için tekrarlı';
+
+  @override
   String get refreshReciters => 'Kâri kataloğunu yenile';
 
   @override
@@ -572,6 +587,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get audioQuality => 'Ses kalitesi';
+
+  @override
+  String get playerBackground => 'Oynatıcı arka planı';
 
   @override
   String get qualityAutomatic => 'Otomatik';
@@ -923,6 +941,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Kaydedilen dualar';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Bölüm $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return '$count kaldı';
+  }
+
+  @override
+  String get duaAudioFailed => 'Ses oynatılamadı';
+
+  @override
   String duaCount(int count) {
     return '$count dua';
   }
@@ -948,9 +979,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'Dinlemek için internet bağlantısı gerekir';
-
-  @override
-  String get duaAudioFailed => 'Ses oynatılamadı';
 
   @override
   String get duaPractice => 'Tekrar pratiği';
@@ -982,6 +1010,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareDua => 'Duayı paylaş';
+
+  @override
+  String get shareReadInIqro => 'IQRO\'da oku';
 
   @override
   String get duaReader => 'Okuyucu';
@@ -1694,6 +1725,56 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Hurma ağacınız';
+
+  @override
+  String get palmStageSeed => 'Hurma çekirdeği';
+
+  @override
+  String get palmStageSprout => 'Filiz';
+
+  @override
+  String get palmStageSeedling => 'Fidan';
+
+  @override
+  String get palmStageYoungPalm => 'Genç hurma';
+
+  @override
+  String get palmStagePalm => 'Hurma ağacı';
+
+  @override
+  String get palmStageFruitingPalm => 'Meyve veren hurma';
+
+  @override
+  String get palmMoodPlanting => 'Çekirdeği ekin: ilk sayfanızı okuyun';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Bugünkü hedef tamam — hurma güneşe uzanıyor';
+
+  @override
+  String get palmMoodGrowing => 'Bugünkü okumanız hurmanızı besliyor';
+
+  @override
+  String get palmMoodWaiting => 'Hurmanız bugünkü okumanızı bekliyor';
+
+  @override
+  String get palmMoodResting =>
+      'Hurmanız gölgede dinleniyor. Tek bir sayfa bile onu sevindirir';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Sıradaki: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Tamamen büyüdü — bereketle meyve versin';
+
+  @override
+  String get palmHowItGrows =>
+      'Okuma günü +1, tamamlanan hedef +2. Kaçırılan günler hurmaya zarar vermez, sadece dinlenir.';
+
+  @override
   String get planSummaryTitle => 'İlerleme özeti';
 
   @override
@@ -1779,5 +1860,216 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String planDays(num count) {
     return '$count gün';
+  }
+
+  @override
+  String get salahTitle => 'Namaz öğrenimi';
+
+  @override
+  String get salahHint => 'Adım adım: abdest ve beş vakit namaz';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$total dersten $done tamamlandı';
+  }
+
+  @override
+  String get salahContinue => 'Devam et';
+
+  @override
+  String get salahStart => 'Başla';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Adım $current/$total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Rekât $current/$total';
+  }
+
+  @override
+  String get salahBack => 'Geri';
+
+  @override
+  String get salahNext => 'İleri';
+
+  @override
+  String get salahFinish => 'Bitir';
+
+  @override
+  String get salahNextStep => 'Sonraki adım';
+
+  @override
+  String get salahPreviousStep => 'Önceki adım';
+
+  @override
+  String get salahModeLearn => 'Öğren';
+
+  @override
+  String get salahModePractice => 'Pratik';
+
+  @override
+  String get salahDisplayOptions => 'Gösterilecekler';
+
+  @override
+  String get salahShowArabic => 'Arapça metin';
+
+  @override
+  String get salahShowTransliteration => 'Okunuş';
+
+  @override
+  String get salahShowTranslation => 'Meal';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count dk';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Ders tamamlandı';
+
+  @override
+  String get salahStatusCompleted => 'Tamamlandı';
+
+  @override
+  String get salahStatusInProgress => 'Devam ediyor';
+
+  @override
+  String get salahUnavailable => 'Kurs henüz kullanılamıyor';
+
+  @override
+  String get salahLessonNotFound => 'Bu ders kursta yok';
+
+  @override
+  String get salahRulingShart => 'Şart';
+
+  @override
+  String get salahRulingRukn => 'Rükün';
+
+  @override
+  String get salahRulingWajib => 'Vacip';
+
+  @override
+  String get salahRulingSunnah => 'Sünnet';
+
+  @override
+  String get salahOfflineTitle => 'Çevrimdışı görseller';
+
+  @override
+  String get salahOfflineImages => 'Kursun görselleri';
+
+  @override
+  String get salahOfflineSaved => 'Bu cihaza kaydedildi';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'Yeni sürüm mevcut';
+
+  @override
+  String get salahOfflineUpdate => 'Güncelle';
+
+  @override
+  String get accountSignOutEverywhere => 'Tüm cihazlardan çık';
+
+  @override
+  String get accountSignOutEverywhereTitle =>
+      'Tüm oturumlar sonlandırılsın mı?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'Geçerli oturum ve diğer cihazlardaki girişler iptal edilir. Devam etmek için yeni bir e-posta kodu gerekir.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Her yerden çıkışı onayla';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Tüm oturumlar sonlandırılamadı. Tekrar deneyin.';
+
+  @override
+  String get accountDangerZone => 'Tehlikeli alan';
+
+  @override
+  String get accountDeletionTitle => 'Hesap silme';
+
+  @override
+  String get accountDeletionDescription =>
+      'E-posta yeniden doğrulandıktan sonra 7 günlük iptal süresi başlar. Bu süre bitmeden geri alınamaz silme yapılmaz.';
+
+  @override
+  String get accountDelete => 'Hesabı sil';
+
+  @override
+  String get accountDeletionRequestTitle => 'Hesap silme planlansın mı?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Normal erişim hemen engellenir. 7 gün sonra eşitlenen veriler silinir ve hesap anonimleştirilir.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Silme iptal edilsin mi?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'Hesabı geri yüklemek için yeni bir tek kullanımlık kodla e-posta sahipliğini doğrulayın.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return '$email adresine kod gönder';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Silmeyi onayla';
+
+  @override
+  String get accountRestore => 'Hesabı geri yükle';
+
+  @override
+  String get accountNewCode => 'Yeni kod iste';
+
+  @override
+  String get accountPendingDeletionTitle => 'Hesap silme planlandı';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'Hesap ve eşitlenen veriler $date tarihinden sonra silinecek. O zamana kadar e-posta doğrulamasıyla silme iptal edilebilir.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Silmeyi iptal et';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Hesap silme planlandı. Belirtilen tarihe kadar iptal edebilirsiniz.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'Hesap silme iptal edildi.';
+
+  @override
+  String get accountCodeSendError => 'Kod gönderilemedi. Tekrar deneyin.';
+
+  @override
+  String get accountCodeVerifyError => 'Kod doğrulanamadı.';
+
+  @override
+  String get accountCodeExpired => 'Onayın süresi doldu. Yeni kod isteyin.';
+
+  @override
+  String get accountActionError => 'Hesap işlemi tamamlanamadı.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Sure sayısı: $count, yaklaşık $size. İndirme başlatılsın mı?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Cihazdaki sureler: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'Yeni sureler: $count';
   }
 }

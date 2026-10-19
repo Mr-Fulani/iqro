@@ -855,10 +855,13 @@ class PlanRepository {
     final scope = accountScope ?? await _database.captureAccount();
     final remote = _remote;
     if (remote == null) {
-      return _loadLocal(
+      return _withQueuedReading(
+        await _loadLocal(
+          scope,
+          preferredTarget: preferredTarget,
+          preferredMetric: preferredMetric,
+        ),
         scope,
-        preferredTarget: preferredTarget,
-        preferredMetric: preferredMetric,
       );
     }
     try {
@@ -870,11 +873,16 @@ class PlanRepository {
     } on Object {
       _database.ensureCurrent(scope);
       final cached = await _cachedRemote(scope);
-      if (cached != null) return cached.copyWith(fromCache: true);
-      return (await _loadLocal(
+      final fallback =
+          cached ??
+          await _loadLocal(
+            scope,
+            preferredTarget: preferredTarget,
+            preferredMetric: preferredMetric,
+          );
+      return (await _withQueuedReading(
+        fallback,
         scope,
-        preferredTarget: preferredTarget,
-        preferredMetric: preferredMetric,
       )).copyWith(fromCache: true);
     }
   }
@@ -1191,13 +1199,18 @@ class PlanRepository {
 
   Future<void> _completeReadingSession(ReadingSessionRecorder session) async {
     final remote = _remote;
-    if (remote == null) return;
     final scope = session.accountScope;
     try {
       _database.ensureCurrent(scope);
       final payload = session._payload(await _safeTimezone());
       if (payload == null) return;
       _database.ensureCurrent(scope);
+      if (remote == null) {
+        // Without a server the queued session is what counts today's reading.
+        await _savePendingAutomaticSession(payload, scope, keepDays: 7);
+        _notifyUpdated();
+        return;
+      }
       await remote.recordAutomatic(payload, accountScope: scope);
       _database.ensureCurrent(scope);
       _notifyUpdated();
@@ -1211,6 +1224,9 @@ class PlanRepository {
         final payload = session._payload(await _safeTimezone());
         if (payload != null) {
           await _savePendingAutomaticSession(payload, scope);
+          // The plan shows queued reading at once instead of waiting for the
+          // next successful sync.
+          _notifyUpdated();
         }
       } on AccountScopeChanged {
         return;
@@ -1218,15 +1234,50 @@ class PlanRepository {
     }
   }
 
-  Future<void> _savePendingAutomaticSession(
-    Map<String, Object?> payload,
+  /// Adds today's queued reading sessions to a plan the server has not
+  /// recalculated yet, so leaving the reader offline still moves the plan.
+  Future<DailyPlan> _withQueuedReading(
+    DailyPlan plan,
     AccountScopeSnapshot scope,
   ) async {
+    final today = _dateOnly(DateTime.now());
+    if (plan.localDate.isNotEmpty && plan.localDate != today) return plan;
+    final pending = _pendingSessions(
+      await _database.readState(_pendingSessionsKey, accountScope: scope),
+    );
+    _database.ensureCurrent(scope);
+    var extra = 0.0;
+    for (final session in pending) {
+      final endedAt = DateTime.tryParse(session['ended_at']?.toString() ?? '');
+      if (endedAt == null || _dateOnly(endedAt.toLocal()) != today) continue;
+      extra += switch (plan.metric) {
+        ReadingGoalMetric.pages => _amount(session['credited_pages']),
+        ReadingGoalMetric.ayahs => _amount(session['credited_ayahs']),
+        ReadingGoalMetric.minutes => _amount(session['active_seconds']) / 60,
+      };
+    }
+    return extra == 0 ? plan : plan.copyWith(achieved: plan.achieved + extra);
+  }
+
+  Future<void> _savePendingAutomaticSession(
+    Map<String, Object?> payload,
+    AccountScopeSnapshot scope, {
+    int? keepDays,
+  }) async {
     final state = await _database.readState(
       _pendingSessionsKey,
       accountScope: scope,
     );
     final pending = _pendingSessions(state);
+    if (keepDays != null) {
+      // Nothing ever flushes this queue without a server, so it keeps only
+      // the days the plan can still show.
+      final cutoff = DateTime.now().toUtc().subtract(Duration(days: keepDays));
+      pending.removeWhere((item) {
+        final endedAt = DateTime.tryParse(item['ended_at']?.toString() ?? '');
+        return endedAt == null || endedAt.isBefore(cutoff);
+      });
+    }
     if (!pending.any((item) => item['id'] == payload['id'])) {
       pending.add(payload);
     }

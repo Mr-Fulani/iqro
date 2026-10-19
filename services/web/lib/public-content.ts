@@ -23,6 +23,7 @@ import {
   reciterSourcesForPerson,
   selectHomePopularReciters,
 } from "./reciter-catalog";
+import { parseSalahCourseDocument, type SalahCourseDocument } from "./salah";
 
 export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
@@ -514,6 +515,16 @@ export const getPublishedDuaEntryByReference = cache(
         `dua:entry:${collection}:${sourceNumber}`,
       ],
     );
+  },
+);
+
+export const getPublishedSalahCourse = cache(
+  async (locale: SupportedLocale, slug: string): Promise<SalahCourseDocument> => {
+    const document = await fetchPublishedJson<unknown>(
+      `/api/v1/salah/courses/${encodeURIComponent(slug)}?language=${encodeURIComponent(locale)}`,
+      [`salah:course:${slug}`, `salah:locale:${locale}`],
+    );
+    return parseSalahCourseDocument(document);
   },
 );
 

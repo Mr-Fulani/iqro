@@ -45,6 +45,7 @@ dependencies:
   share_plus: ^13.3.0
   just_audio: ^0.10.6
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.2
   uuid: ^4.6.0
   package_info_plus: ^10.2.1
   device_info_plus: ^13.2.0
@@ -95,6 +96,8 @@ flutter:
     - assets/brand/iqro-logo.png
     - assets/brand/iqro-media-logo.png
     - assets/brand/startup.mp4
+    - assets/player_backgrounds/
+    - assets/plan/
     - assets/fonts/AmiriQuran-OFL.txt
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to

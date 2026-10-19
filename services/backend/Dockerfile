@@ -25,6 +25,8 @@ RUN DJANGO_SETTINGS_MODULE=quran_backend.settings.test \
 
 FROM builder AS test
 
+# Player background videos are re-encoded in the admin.
+RUN apk add --no-cache ffmpeg
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --all-groups
 COPY tests ./tests
@@ -43,6 +45,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 RUN apk add --no-cache \
         ca-certificates \
+        ffmpeg \
         'libcrypto3>=3.5.8-r0' \
         'libssl3>=3.5.8-r0' \
         gdbm \
@@ -75,6 +78,8 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
 COPY --from=builder --chown=app:app /app/manage.py /app/manage.py
 COPY --from=builder --chown=app:app /app/staticfiles /app/staticfiles
+# Admin surah uploads spool here; a named volume mounted on it inherits this owner.
+RUN install -d -o app -g app -m 0700 /var/tmp/iqro-uploads
 
 FROM scratch AS runtime
 

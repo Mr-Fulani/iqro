@@ -19,6 +19,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -27,6 +28,7 @@ from quran_backend.modules.audio.models import (
 from quran_backend.modules.audio.selectors import (
     attach_recitation_summaries,
     public_ayah_segments,
+    public_player_backgrounds,
     public_quran_foundation_ayah_chapters,
     public_quran_foundation_ayah_recitations,
     public_recitation_base,
@@ -43,6 +45,7 @@ from quran_backend.modules.audio.serializers import (
     AyahPlaybackSerializer,
     OfflineAudioManifestQuerySerializer,
     OfflineAudioManifestSerializer,
+    PlayerBackgroundSerializer,
     PublicCatalogPageQuerySerializer,
     QuranFoundationAyahChapterSerializer,
     QuranFoundationAyahRecitationSerializer,
@@ -112,6 +115,15 @@ class ReciterListView(PublicReadOnlyViewMixin, generics.ListAPIView[Reciter]):
         query = PublicCatalogPageQuerySerializer(data=self.request.query_params)
         query.is_valid(raise_exception=True)
         return public_reciters()
+
+
+@extend_schema(tags=["audio"])
+class PlayerBackgroundListView(PublicReadOnlyViewMixin, generics.ListAPIView[PlayerBackground]):
+    serializer_class = PlayerBackgroundSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[PlayerBackground]:
+        return public_player_backgrounds()
 
 
 @extend_schema(tags=["audio"])
@@ -250,7 +262,14 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
             )
         )
         tracks = list(track_queryset)
-        if len(tracks) != 114 or {track.surah_number for track in tracks} != set(range(1, 115)):
+        surah_numbers = [track.surah_number for track in tracks]
+        if recitation.listening_only:
+            # Listening-only audio grows by whole surahs after publication. The
+            # package keeps its id and carries the surahs there are; a new surah
+            # changes package_checksum_sha256, so clients fetch just that surah.
+            if not tracks or len(set(surah_numbers)) != len(surah_numbers):
+                raise NotFound("No offline audio package is available for this recitation.")
+        elif surah_numbers != list(range(1, 115)):
             raise NotFound("A complete 114-surah offline audio package is not available.")
 
         managed_quality_sets = [
@@ -297,7 +316,7 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
                     "version": track.timing_version.version,
                     "source_checksum_sha256": track.timing_version.source_checksum_sha256,
                 }
-                if track.timing_version is not None
+                if track.timing_version is not None and not recitation.listening_only
                 else None
             )
             file_name = f"surah-{track.surah_number:03d}.{rendition.codec}"
@@ -391,6 +410,8 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
                 "version": edition.version,
                 "checksum_sha256": edition.checksum_sha256,
             },
+            "listening_only": recitation.listening_only,
+            "surah_numbers": surah_numbers,
             "track_count": len(track_payloads),
             "total_bytes": sum(item["asset"]["bytes"] for item in track_payloads),
             "tracks": track_payloads,
@@ -440,7 +461,10 @@ class AyahPlaybackView(PublicReadOnlyViewMixin, APIView):
         surah: int,
         ayah: int,
     ) -> Response:
-        get_object_or_404(public_recitation_base(), pk=recitation_id)
+        recitation = get_object_or_404(public_recitation_base(), pk=recitation_id)
+        if recitation.listening_only:
+            # Same refusal as the variant ayah endpoint for an unsupported role.
+            raise NotFound(f"Recitation '{recitation_id}' does not support 'ayah_playback'.")
         segment: AyahAudioSegment | None = public_ayah_segments(
             recitation_id,
             surah,

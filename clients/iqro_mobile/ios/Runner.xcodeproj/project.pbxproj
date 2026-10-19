@@ -26,6 +26,7 @@
 		2992212B5C76D56A04969349 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 46BDF97636183193A8591FF8 /* Localizable.xcstrings */; };
 		F25354DFC4DA0B0464845A48 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 31E3062066ECA3B53A080E73 /* PrivacyInfo.xcprivacy */; };
 		5C1D9F12194A2682779AA435 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7EA2D24636A1609FDE2A33F4 /* PrivacyInfo.xcprivacy */; };
+		4D2A8C61B7E03F95A1C6D820 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5E3B9D72C8F14A06B2D7E931 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,6 +91,7 @@
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97C146FB1CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5E3B9D72C8F14A06B2D7E931 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1B2C3D4E5F60718293A4B5C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -233,6 +235,7 @@
 				D3FD8D252BC0C21296297863 /* Info.plist */,
 				46BDF97636183193A8591FF8 /* Localizable.xcstrings */,
 				7EA2D24636A1609FDE2A33F4 /* PrivacyInfo.xcprivacy */,
+				5E3B9D72C8F14A06B2D7E931 /* Assets.xcassets */,
 			);
 			path = PrayerTimesHomeWidget;
 			sourceTree = "<group>";
@@ -371,6 +374,7 @@
 			files = (
 				2992212B5C76D56A04969349 /* Localizable.xcstrings in Resources */,
 				5C1D9F12194A2682779AA435 /* PrivacyInfo.xcprivacy in Resources */,
+				4D2A8C61B7E03F95A1C6D820 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

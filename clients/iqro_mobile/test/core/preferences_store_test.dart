@@ -34,6 +34,22 @@ void main() {
     },
   );
 
+  test('player background persists and rejects malformed ids', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+    expect(store.read().playerBackgroundId, defaultPlayerBackgroundId);
+
+    await store.write(
+      store.read().copyWith(playerBackgroundId: 'remote:0193a5b0-7c1d'),
+    );
+    expect(store.read().playerBackgroundId, 'remote:0193a5b0-7c1d');
+
+    for (final invalid in ['', 'remote:', 'file:/etc/x', 'remote:a/b']) {
+      await store.write(store.read().copyWith(playerBackgroundId: invalid));
+      expect(store.read().playerBackgroundId, defaultPlayerBackgroundId);
+    }
+  });
+
   test(
     'Hijri adjustment is bounded and persists independently of locale',
     () async {

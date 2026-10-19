@@ -12,9 +12,45 @@ import '../../core/theme/iqro_theme.dart';
 import 'mini_player.dart';
 import 'audio_models.dart';
 import 'audio_offline_repository.dart';
+import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
+
+const _cardPortraitSize = 88.0;
+
+/// Loads the reciters and decodes their card portraits while another tab is
+/// open, so the Audio tab shows faces at once instead of a spinner, then
+/// initials, then a slow fade.
+Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
+  try {
+    final reciters = await ref.read(recitersProvider.future);
+    await ref.read(audioRecitationsProvider.future);
+    if (!context.mounted) return;
+    final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    for (final person in groupRecitersByPerson(reciters)) {
+      final url = resolveReciterPortraitUrl(
+        person.portraitSource,
+        apiBaseUrl: apiBaseUrl,
+      );
+      if (url == null || !context.mounted) continue;
+      unawaited(
+        precacheImage(
+          reciterPortraitImage(
+            url,
+            size: _cardPortraitSize,
+            devicePixelRatio: pixelRatio,
+          ),
+          context,
+          onError: (error, stack) {},
+        ),
+      );
+    }
+  } on Object {
+    // The tab loads the catalog itself and reports what failed.
+  }
+}
 
 class AudioScreen extends ConsumerStatefulWidget {
   const AudioScreen({super.key});
@@ -196,7 +232,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       );
     }
     final people = groupRecitersByPerson(reciters);
-    final styles = orderedRecitationStyles(recitations);
+    final styles = orderedRecitationStyles(
+      recitations.where((item) => item.supports(AudioRecitationRole.listening)),
+    );
     if (styles.isEmpty) {
       return IqroStatusBanner(
         icon: Icons.volume_off_outlined,
@@ -400,7 +438,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final controller = ref.read(audioControllerProvider.notifier);
     final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
-    final surah = controller.listeningSurah ?? 1;
+    final listeningSurah = controller.listeningSurah ?? 1;
+    // A listening recording may hold only some surahs; start on its first one.
+    final surah = recitation.coversSurah(listeningSurah)
+        ? listeningSurah
+        : recitation.coverage?.surahNumbers.firstOrNull ?? listeningSurah;
     final surahName = _surahName(
       surah,
       fallback: controller.listeningSurahName ?? '',
@@ -534,6 +576,9 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
     final downloading = state.status == AudioDownloadStatus.downloading;
     final ready = state.status == AudioDownloadStatus.ready;
     final failed = state.status == AudioDownloadStatus.failed;
+    final updateAvailable = state.status == AudioDownloadStatus.updateAvailable;
+    final available = ready || updateAvailable;
+    final newSurahs = state.totalTracks - state.completedTracks;
     final progressLabel = state.totalTracks <= 0
         ? null
         : '${state.completedTracks} / ${state.totalTracks} · '
@@ -547,13 +592,15 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
           Row(
             children: <Widget>[
               Icon(
-                ready ? Icons.offline_pin_outlined : Icons.download_outlined,
-                color: ready ? Theme.of(context).colorScheme.primary : null,
+                available
+                    ? Icons.offline_pin_outlined
+                    : Icons.download_outlined,
+                color: available ? Theme.of(context).colorScheme.primary : null,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  ready
+                  available
                       ? context.l10n.audioAvailableOffline
                       : downloading
                       ? context.l10n.audioDownloading
@@ -565,6 +612,8 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
                 IconButton.filledTonal(
                   tooltip: failed
                       ? context.l10n.resumeDownload
+                      : updateAvailable
+                      ? context.l10n.audioOfflineNewSurahs(newSurahs)
                       : context.l10n.downloadForOffline,
                   onPressed: downloading
                       ? null
@@ -588,6 +637,22 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
             const SizedBox(height: 4),
             Text(
               context.l10n.audioDownloadFailed,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          // A listening-only package may hold only some of the surahs.
+          if (updateAvailable) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioOfflineNewSurahs(newSurahs),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ] else if (ready &&
+              state.totalTracks > 0 &&
+              state.totalTracks < 114) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioOfflineSurahs(state.totalTracks),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -619,14 +684,21 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
         packageBytes: estimate.totalBytes,
       );
       if (!mounted) return;
+      final remainingSurahs = estimate.totalTracks - estimate.completedTracks;
+      final remainingSize = _formatAudioMegabytes(
+        estimate.totalBytes - estimate.downloadedBytes,
+      );
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(context.l10n.downloadForOffline),
           content: Text(
-            context.l10n.downloadOfflineConfirmation(
-              _formatAudioMegabytes(estimate.totalBytes),
-            ),
+            remainingSurahs == 114
+                ? context.l10n.downloadOfflineConfirmation(remainingSize)
+                : context.l10n.downloadOfflineSurahsConfirmation(
+                    remainingSurahs,
+                    remainingSize,
+                  ),
           ),
           actions: <Widget>[
             TextButton(
@@ -666,13 +738,6 @@ String _formatAudioMegabytes(int bytes) {
   return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
 }
 
-String _styleLabel(BuildContext context, String style) => switch (style) {
-  'murattal' => context.l10n.styleMurattal,
-  'mujawwad' => context.l10n.styleMujawwad,
-  'muallim' => context.l10n.styleMuallim,
-  _ => style,
-};
-
 class _RecitationStyleFilter extends StatelessWidget {
   const _RecitationStyleFilter({
     required this.styles,
@@ -697,7 +762,7 @@ class _RecitationStyleFilter extends StatelessWidget {
             for (var index = 0; index < styles.length; index++) ...<Widget>[
               if (index > 0) const SizedBox(width: 8),
               ChoiceChip(
-                label: Text(_styleLabel(context, styles[index])),
+                label: Text(recitationStyleLabel(context, styles[index])),
                 selected: styles[index] == selected,
                 showCheckmark: false,
                 visualDensity: VisualDensity.compact,
@@ -796,15 +861,15 @@ class _ReciterPortrait extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 88,
-      height: 88,
+      width: _cardPortraitSize,
+      height: _cardPortraitSize,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
             child: PremiumReciterPortrait(
               url: portraitUrl,
-              size: 88,
+              size: _cardPortraitSize,
               initials: initials,
               selected: active,
             ),

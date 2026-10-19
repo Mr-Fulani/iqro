@@ -14,6 +14,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -76,6 +77,34 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
         )
 
 
+class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):
+    image_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlayerBackground
+        fields = (
+            "id",
+            "title_ar",
+            "title_en",
+            "title_ru",
+            "title_tr",
+            "image_url",
+            "video_url",
+            "show_equalizer",
+            "sort_order",
+        )
+
+    @extend_schema_field(serializers.URLField())
+    def get_image_url(self, obj: PlayerBackground) -> str:
+        return public_audio_url(obj.image_object_key)
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_video_url(self, obj: PlayerBackground) -> str | None:
+        """A silent looping video over `image_url`, which is its poster."""
+        return public_audio_url(obj.video_object_key) if obj.video_object_key else None
+
+
 class QuranEditionAudioReferenceSerializer(serializers.ModelSerializer[QuranEditionVersion]):
     code = serializers.CharField(source="edition.code", read_only=True)
     content_version = serializers.CharField(source="version", read_only=True)
@@ -113,6 +142,7 @@ class RecitationCoverageSerializer(serializers.Serializer[Any]):
     timed_ayahs = serializers.IntegerField(min_value=0)
     complete = serializers.BooleanField()
     timings_complete = serializers.BooleanField()
+    surah_numbers = serializers.ListField(child=serializers.IntegerField(min_value=1))
 
 
 class RecitationTimingsSerializer(serializers.Serializer[Any]):
@@ -191,7 +221,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
         }
 
     @extend_schema_field(RecitationCoverageSerializer)
-    def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool]:
+    def get_coverage(self, obj: RecitationEdition) -> dict[str, int | bool | list[int]]:
         track_count = int(getattr(obj, "track_count", 0))
         surah_count = int(getattr(obj, "surah_track_count", 0))
         expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
@@ -203,6 +233,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "expected_ayahs": expected_ayahs,
             "timed_ayahs": timed_ayahs,
             "timings_complete": expected_ayahs > 0 and timed_ayahs >= expected_ayahs,
+            "surah_numbers": list(getattr(obj, "surah_numbers", [])),
         }
 
     @extend_schema_field(RecitationTimingsSerializer)
@@ -220,11 +251,12 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     def get_capabilities(self, obj: RecitationEdition) -> dict[str, bool]:
         expected_ayahs = int(getattr(obj, "expected_ayah_count", 0) or 0)
         timed_ayahs = int(getattr(obj, "timed_ayah_count", 0) or 0)
-        timings_complete = expected_ayahs > 0 and timed_ayahs >= expected_ayahs
+        # Listening-only audio is kept out of the Mushaf and Memorization even when timed.
+        ayah_roles = expected_ayahs > 0 and timed_ayahs >= expected_ayahs and not obj.listening_only
         return {
             "listen": bool(obj.stream_allowed),
-            "ayah_playback": timings_complete,
-            "memorization": timings_complete,
+            "ayah_playback": ayah_roles,
+            "memorization": ayah_roles,
             "offline": bool(obj.offline_download_allowed),
         }
 
@@ -541,6 +573,10 @@ class OfflineAudioManifestSerializer(serializers.Serializer[Any]):
     rights = RecitationRightsSerializer()
     reciter = ReciterSummarySerializer()
     quran_edition = OfflineAudioQuranEditionSerializer()
+    listening_only = serializers.BooleanField()
+    surah_numbers = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=114)
+    )
     track_count = serializers.IntegerField(min_value=1)
     total_bytes = serializers.IntegerField(min_value=1)
     tracks = OfflineAudioTrackSerializer(many=True)

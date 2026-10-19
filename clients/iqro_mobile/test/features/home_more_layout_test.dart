@@ -185,6 +185,18 @@ void main() {
             final context = tester.element(find.byType(MoreToolsGrid));
             final l10n = AppLocalizations.of(context);
             expect(find.text(l10n.notes), findsOneWidget);
+            final names = find.byKey(const ValueKey('more-names-of-allah'));
+            await tester.ensureVisible(names);
+            await tester.pumpAndSettle();
+            for (final text in <String>[l10n.namesOfAllah, l10n.soon]) {
+              expect(
+                find.descendant(of: names, matching: find.text(text)),
+                findsOneWidget,
+              );
+            }
+            await tester.tap(names);
+            await tester.pumpAndSettle();
+            expect(find.byType(MoreToolsGrid), findsOneWidget);
             final notes = find.text(l10n.notes);
             await tester.ensureVisible(notes);
             await tester.pumpAndSettle();

@@ -458,6 +458,33 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 10),
+            IqroCard(
+              key: const ValueKey('prayer-salah-learning'),
+              onTap: () => context.push('/salah'),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.school_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          context.l10n.salahTitle,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Text(
+                          context.l10n.salahHint,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
+            ),
             const SizedBox(height: 18),
             IqroCard(
               onTap: _addingWidget ? null : _addPrayerWidget,

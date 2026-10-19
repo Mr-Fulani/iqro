@@ -15,6 +15,7 @@ import '../../core/storage/preferences_store.dart';
 import '../../core/utils/latest_async_work_queue.dart';
 import '../audio/mini_player.dart';
 import '../audio/audio_models.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
@@ -41,6 +42,7 @@ class MushafScreen extends ConsumerStatefulWidget {
     required this.surah,
     required this.ayah,
     this.initialPageIsPhysical = false,
+    this.savesReadingPlace = true,
     super.key,
   });
 
@@ -48,6 +50,10 @@ class MushafScreen extends ConsumerStatefulWidget {
   final int surah;
   final int ayah;
   final bool initialPageIsPhysical;
+
+  /// False when opened from a bookmark or favourite: reading there still
+  /// counts for the plan, but it does not move the saved reading place.
+  final bool savesReadingPlace;
 
   @override
   ConsumerState<MushafScreen> createState() => _MushafScreenState();
@@ -677,6 +683,61 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
+  /// The Mushaf keeps its own reciter, separate from the Audio tab's, and
+  /// offers only recitations timed ayah by ayah.
+  Future<void> _chooseMushafReciter() async {
+    List<Recitation> recitations;
+    try {
+      recitations = await ref
+          .read(audioRepositoryProvider)
+          .recitationsForRole(AudioRecitationRole.ayahPlayback);
+    } on Object {
+      recitations = const <Recitation>[];
+    }
+    if (!mounted) return;
+    if (recitations.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      return;
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    final currentId = ref.read(appPreferencesProvider).mushafRecitationId;
+    final picked = await showModalBottomSheet<Recitation>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: .7,
+        child: ListView(
+          children: <Widget>[
+            ListTile(
+              title: Text(
+                context.l10n.chooseReciter,
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            for (final recitation in recitations)
+              ListTile(
+                title: Text(recitation.reciter.nameFor(locale)),
+                subtitle: Text(
+                  recitationStyleLabel(sheetContext, recitation.style),
+                ),
+                trailing: recitation.id == currentId
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () => Navigator.pop(sheetContext, recitation),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setMushafRecitation(picked.id);
+  }
+
   Future<void> _bookmarkSelected() async {
     final reference = _selectedAyah ?? _pageReference;
     final scope = _database.accountScope.current;
@@ -742,7 +803,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         .setReaderMode(ReaderMode.text);
     if (mounted) {
       context.pushReplacement(
-        '/reader/${reference?.surah ?? widget.surah}?ayah=${reference?.ayah ?? widget.ayah}',
+        '/reader/${reference?.surah ?? widget.surah}?ayah=${reference?.ayah ?? widget.ayah}'
+        '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
       );
     }
   }
@@ -813,7 +875,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     title: Text(context.l10n.chooseReciter),
                     onTap: () {
                       Navigator.pop(sheetContext);
-                      context.push('/app?tab=3');
+                      unawaited(_chooseMushafReciter());
                     },
                   ),
                   ListTile(
@@ -1170,12 +1232,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             .first;
         if (!_isCurrentPositionRequest(scope, request, page)) return;
       }
-      await repository.savePosition(
-        surah: reference?.surah ?? current.surah,
-        ayah: reference?.ayah ?? current.ayah,
-        page: canonicalPage,
-        accountScope: scope,
-      );
+      if (widget.savesReadingPlace) {
+        await repository.savePosition(
+          surah: reference?.surah ?? current.surah,
+          ayah: reference?.ayah ?? current.ayah,
+          page: canonicalPage,
+          accountScope: scope,
+        );
+      }
       if (mounted) {
         _readingSession?.observe(
           surah: reference?.surah ?? current.surah,
@@ -1191,12 +1255,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         return;
       }
       try {
-        await repository.savePosition(
-          surah: preferredReference?.surah ?? current.surah,
-          ayah: preferredReference?.ayah ?? current.ayah,
-          page: page,
-          accountScope: scope,
-        );
+        if (widget.savesReadingPlace) {
+          await repository.savePosition(
+            surah: preferredReference?.surah ?? current.surah,
+            ayah: preferredReference?.ayah ?? current.ayah,
+            page: page,
+            accountScope: scope,
+          );
+        }
         if (mounted) {
           _readingSession?.observe(
             surah: preferredReference?.surah ?? current.surah,

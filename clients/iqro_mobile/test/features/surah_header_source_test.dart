@@ -3,10 +3,12 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/features/quran/truetype_glyph.dart';
 
 const _fontUrl =
@@ -185,6 +187,53 @@ void main() {
             (arguments[1] as Paint).color.toARGB32() ==
                 mushafInkColor.toARGB32(),
       ),
+    );
+  });
+
+  test('a contour filter keeps only the accepted contours', () {
+    final font = ByteData.sublistView(_font());
+    expect(readTrueTypeGlyph(font, 1, keep: (_) => false), isNull);
+    final kept = readTrueTypeGlyph(font, 1, keep: (contour) => true)!;
+    expect(kept.bounds, const Rect.fromLTRB(0, -100, 200, 0));
+  });
+
+  test('the app pins the same heading font as the backend', () {
+    final backend = File(
+      '../../services/backend/src/quran_backend/modules/quran/surah_header.py',
+    ).readAsStringSync().replaceAll(RegExp(r'"\s*\n\s*"'), '');
+    expect(backend, contains(surahHeaderFontUrl));
+    expect(backend, contains(surahHeaderFontSha256));
+  });
+
+  testWidgets('a surah name is the source outline, or text without it', (
+    tester,
+  ) async {
+    final outline = readTrueTypeGlyph(ByteData.sublistView(_font()), 1)!;
+    Widget app(GlyphOutline? value) => ProviderScope(
+      overrides: [surahNameOutlineProvider(2).overrideWithValue(value)],
+      child: const MaterialApp(
+        home: Center(
+          child: SurahNameArt(
+            surah: 2,
+            fallback: 'البقرة',
+            color: Color(0xFF123456),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(app(null));
+    expect(find.text('البقرة'), findsOneWidget);
+
+    await tester.pumpWidget(app(outline));
+    expect(find.text('البقرة'), findsNothing);
+    expect(find.bySemanticsLabel('البقرة'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SurahNameArt),
+        matching: find.byType(CustomPaint),
+      ),
+      paints..path(color: const Color(0xFF123456)),
     );
   });
 }

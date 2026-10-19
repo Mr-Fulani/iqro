@@ -90,6 +90,17 @@ class GatewayConfigTests(unittest.TestCase):
         )[0]
         self.assertNotIn("proxy_cache ", generic_api)
 
+    def test_admin_surah_uploads_stream_to_a_disk_backed_backend(self) -> None:
+        route = self.config.split(
+            "location ~ ^/admin/audio/recitationedition/[^/]+/surahs/upload/$ {", maxsplit=1
+        )[1].split("}", maxsplit=1)[0]
+        self.assertIn("client_max_body_size 520m;", route)
+        self.assertIn("proxy_request_buffering off;", route)
+        self.assertIn("proxy_read_timeout 600s;", route)
+        production_compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")
+        self.assertIn("TMPDIR: /var/tmp/iqro-uploads", production_compose)
+        self.assertIn("- backend-uploads:/var/tmp/iqro-uploads", production_compose)
+
     def test_large_uploads_have_writable_bounded_temp_storage(self) -> None:
         production_compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")
         self.assertIn("client_max_body_size 55m;", self.config)

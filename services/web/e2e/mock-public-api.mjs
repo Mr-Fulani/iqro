@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import {
   paginated,
@@ -25,6 +26,30 @@ const playerBackgrounds = [
     sort_order: 10,
   },
 ];
+
+// The contract example is served as is; only its language follows the request and
+// its images point at this mock (through the site's /media rewrite) so pages load
+// without the network.
+const salahCourseExample = JSON.parse(
+  readFileSync(new URL("../../../docs/salah/course-document.example.json", import.meta.url), "utf8"),
+);
+const salahLanguages = new Set(["ru", "en", "ar", "tr"]);
+
+function salahCourse(language) {
+  const document = structuredClone(salahCourseExample);
+  document.course.language = language;
+  for (const item of Object.values(document.media)) {
+    item.url = item.url.replace("https://media.iqro.forum/", "/media/");
+  }
+  return document;
+}
+
+function salahImage(label) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">`
+    + `<rect width="720" height="720" fill="#ecfdf5"/><circle cx="360" cy="230" r="70" fill="#a7f3d0"/>`
+    + `<rect x="290" y="320" width="140" height="260" rx="60" fill="#a7f3d0"/>`
+    + `<text x="360" y="660" font-size="32" text-anchor="middle" fill="#065f46">${label}</text></svg>`;
+}
 
 const socialProfiles = [
   {
@@ -252,6 +277,27 @@ const server = createServer(async (request, response) => {
       expires_in: 600,
       expires_at: "2027-08-27T00:10:00Z",
     });
+  }
+
+  if (path === "/api/v1/salah/courses") {
+    const { course } = salahCourseExample;
+    return sendJson(response, 200, [{
+      slug: course.slug,
+      version: course.version,
+      methodology: course.methodology,
+      languages: [...salahLanguages],
+      published_at: course.published_at,
+    }]);
+  }
+  if (path === "/api/v1/salah/courses/hanbali-umdah") {
+    const requested = url.searchParams.get("language");
+    if (!salahLanguages.has(requested)) return sendJson(response, 400, { detail: "Unsupported language." });
+    return sendJson(response, 200, salahCourse(requested));
+  }
+  const salahMedia = path.match(/^\/media\/salah\/hanbali-umdah\/[^/]+\/([a-z-]+)-[0-9a-f]+\.webp$/);
+  if (salahMedia) {
+    response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" });
+    return response.end(salahImage(salahMedia[1]));
   }
 
   if (path === "/api/v1/quran/editions") return sendJson(response, 200, [edition]);

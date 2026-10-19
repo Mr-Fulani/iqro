@@ -6,7 +6,9 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../dua/dua_presentation.dart';
 import '../dua/dua_repository.dart';
+import '../quran/surah_name_art.dart';
 
 class FavoritesScreen extends ConsumerStatefulWidget {
   const FavoritesScreen({super.key});
@@ -149,7 +151,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                         return;
                                       }
                                       context.push(
-                                        '/reader/${item['surah']}?ayah=${item['ayah']}',
+                                        '/reader/${item['surah']}?ayah=${item['ayah']}'
+                                        '&from=bookmark',
                                       );
                                     },
                                     child: ListTile(
@@ -157,8 +160,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                       leading: const IqroIcon(
                                         Icons.menu_book_outlined,
                                       ),
-                                      title: Text(
-                                        '${context.l10n.surah} ${item['surah']} · ${context.l10n.ayah} ${item['ayah']}',
+                                      title: AyahFavoriteTitle(
+                                        surah: (item['surah']! as num).toInt(),
+                                        ayah: (item['ayah']! as num).toInt(),
                                       ),
                                       trailing: const Icon(Icons.chevron_right),
                                     ),
@@ -189,7 +193,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                       leading: const IqroIcon(iqroDuaIcon),
                                       title: Text(
                                         entry.available
-                                            ? entry.categoryTitle
+                                            ? duaDisplayTitle(
+                                                entry.categoryTitle,
+                                              )
                                             : context.l10n.duaUnavailable,
                                       ),
                                       subtitle: Text(
@@ -243,5 +249,65 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     }
     if (!_isCurrent(scope, key, locale)) return;
     _reload(scope, key, locale);
+  }
+}
+
+/// «Аль-Бакара», «Сура 2 · Аят 255», and the Arabic name as the Mushaf
+/// prints it, once the surah catalog is loaded.
+class AyahFavoriteTitle extends ConsumerWidget {
+  const AyahFavoriteTitle({required this.surah, required this.ayah, super.key});
+  final int surah;
+  final int ayah;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final model = ref
+        .watch(quranCatalogProvider)
+        .valueOrNull
+        ?.surahs
+        .where((item) => item.number == surah)
+        .firstOrNull;
+    final locale = Localizations.localeOf(context).languageCode;
+    final textTheme = Theme.of(context).textTheme;
+    final numbers = '${context.l10n.surah} $surah · ${context.l10n.ayah} $ayah';
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                model?.nameFor(locale) ?? numbers,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (model != null)
+                Text(
+                  numbers,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (model != null && model.nameAr.isNotEmpty) ...<Widget>[
+          const SizedBox(width: 10),
+          SurahNameArt(
+            surah: surah,
+            fallback: model.nameAr,
+            height: 34,
+            width: 104,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ],
+      ],
+    );
   }
 }

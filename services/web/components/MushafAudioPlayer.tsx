@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Recitation, SurahPlayback } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
-import { latestRecitationsByVariant } from "../lib/reciter-catalog";
+import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
 import { useMushafReader } from "./MushafReaderLayout";
 import {
   loadReciterPreference,
@@ -92,11 +92,7 @@ export function MushafAudioPlayer({
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
   const recitationLabel = useCallback((recitation: Recitation): string => {
-    const style = recitation.style === "muallim"
-      ? t("audio.style.muallim")
-      : recitation.style === "mujawwad"
-        ? t("audio.style.mujawwad")
-        : t("audio.style.murattal");
+    const style = recitationStyleLabel(recitation.style, t);
     const reciter = reciterName(recitation.reciter, locale);
     return `${reciter || recitation.reciter.name_en} · ${style}`;
   }, [locale, t]);

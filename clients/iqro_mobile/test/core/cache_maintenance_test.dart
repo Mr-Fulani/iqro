@@ -58,6 +58,27 @@ void main() {
     },
   );
 
+  test('keeps the course document of downloaded salah pictures', () async {
+    final h = await _Harness.create();
+    await h.package(
+      packageId: 'salah-hanbali-umdah-ru',
+      type: 'salah_course',
+      contentKey: 'salah:hanbali-umdah:ru',
+      localPaths: const [],
+    );
+    final expired = _now.subtract(const Duration(days: 400));
+    await h.entry('salah:hanbali-umdah:ru:1', expires: expired);
+    await h.entry('salah:hanbali-umdah:ru:current', expires: expired);
+    await h.entry('salah:hanbali-umdah:en:1', expires: expired);
+
+    await h.maintenance().run();
+
+    expect(await h.keys(), {
+      'salah:hanbali-umdah:ru:1',
+      'salah:hanbali-umdah:ru:current',
+    });
+  });
+
   test('never deletes offline package files, even unreferenced ones', () async {
     final h = await _Harness.create();
     final packageFile = h.file(

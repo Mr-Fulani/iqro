@@ -76,6 +76,15 @@ class IqroTheme {
   /// misplace Uthmani marks such as U+06E1 and U+08F0.
   static const arabicFontFamily = 'Amiri Quran';
 
+  /// Arabic text colour. In the dark theme a warm ivory instead of white:
+  /// thin script in pure white glares on the dark green.
+  static Color arabicInk(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.brightness == Brightness.dark
+        ? const Color(0xFFEFE6CF)
+        : theme.colorScheme.onSurface;
+  }
+
   static const _emerald = Color(0xFF0B5D4A);
   static const _emeraldDark = Color(0xFF073E34);
   static const _cream = Color(0xFFF7F4EC);

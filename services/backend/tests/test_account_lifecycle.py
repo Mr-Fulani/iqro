@@ -19,6 +19,7 @@ from quran_backend.modules.accounts.models import (
     Consent,
     ConsentPurpose,
     Device,
+    GuestMergeAudit,
     IdentityProvider,
     RefreshSession,
     User,
@@ -296,6 +297,79 @@ def test_deletion_request_requires_recent_same_device_email_verification(
 
     assert missing.status_code == 403
     assert missing.json()["code"] == "account_reauthentication_required"
+
+
+def test_guest_device_signs_in_to_pending_account_without_merging_guest_data(
+    api_client: APIClient,
+) -> None:
+    user, _device, credentials = _active_session()
+    verified, request_challenge_id = _reauthenticate(
+        api_client,
+        access_token=credentials["access_token"],
+    )
+    requested = api_client.post(
+        reverse("account_user:deletion-request"),
+        {"reauth_challenge_id": request_challenge_id},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {verified['access_token']}",
+    )
+    assert requested.status_code == 202
+
+    bootstrapped = api_client.post(
+        reverse("accounts:guest-bootstrap"),
+        {
+            "installation_id": str(uuid.uuid4()),
+            "installation_credential": INSTALLATION_CREDENTIAL,
+            "platform": "android",
+            "locale": "ru",
+            "app_version": "1.0.0",
+        },
+        format="json",
+    )
+    assert bootstrapped.status_code == 200
+    guest_session = bootstrapped.json()
+    guest = User.objects.get(id=guest_session["user"]["id"])
+    guest_device = Device.objects.get(user=guest)
+    guest_consent = Consent.objects.create(
+        user=guest,
+        purpose=ConsentPurpose.NOTIFICATIONS,
+        policy_version="1",
+        granted_at=timezone.now(),
+    )
+
+    signed_in, _challenge_id = _reauthenticate(
+        api_client,
+        access_token=guest_session["access_token"],
+    )
+
+    assert signed_in["user"]["id"] == str(user.id)
+    assert signed_in["user"]["status"] == UserStatus.PENDING_DELETION
+    guest_device.refresh_from_db()
+    guest.refresh_from_db()
+    guest_consent.refresh_from_db()
+    assert guest_device.user_id == user.id
+    assert guest.status == UserStatus.GUEST
+    assert guest_consent.user_id == guest.id
+    assert not GuestMergeAudit.objects.filter(source_user=guest).exists()
+    stale_guest = api_client.post(
+        reverse("accounts:token-refresh"),
+        {"refresh_token": guest_session["refresh_token"]},
+        format="json",
+    )
+    assert stale_guest.status_code == 401
+
+    cancel_verified, cancel_challenge_id = _reauthenticate(
+        api_client,
+        access_token=signed_in["access_token"],
+    )
+    cancelled = api_client.post(
+        reverse("account_user:deletion-cancel"),
+        {"reauth_challenge_id": cancel_challenge_id},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {cancel_verified['access_token']}",
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["user"]["status"] == UserStatus.ACTIVE
 
 
 def test_due_deletion_anonymizes_account_and_removes_synced_data(

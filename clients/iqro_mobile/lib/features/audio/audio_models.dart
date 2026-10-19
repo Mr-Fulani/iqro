@@ -52,9 +52,11 @@ class RecitationCoverage {
     required this.timedAyahs,
     required this.complete,
     required this.timingsComplete,
+    this.surahNumbers = const <int>[],
   });
 
   factory RecitationCoverage.fromJson(Map<String, Object?> json) {
+    final numbers = json['surah_numbers'];
     return RecitationCoverage(
       trackCount: (json['track_count'] as num?)?.toInt() ?? 0,
       surahCount: (json['surah_count'] as num?)?.toInt() ?? 0,
@@ -62,6 +64,11 @@ class RecitationCoverage {
       timedAyahs: (json['timed_ayahs'] as num?)?.toInt() ?? 0,
       complete: json['complete'] == true,
       timingsComplete: json['timings_complete'] == true,
+      surahNumbers: numbers is List
+          ? List<int>.unmodifiable(
+              numbers.whereType<num>().map((item) => item.toInt()),
+            )
+          : const <int>[],
     );
   }
 
@@ -71,6 +78,9 @@ class RecitationCoverage {
   final int timedAyahs;
   final bool complete;
   final bool timingsComplete;
+
+  /// The surahs this recitation holds; empty when an older API left it out.
+  final List<int> surahNumbers;
 }
 
 class Reciter {
@@ -180,6 +190,7 @@ class Recitation {
     required this.surahCount,
     required this.streamAllowed,
     required this.offlineDownloadAllowed,
+    this.timingsComplete = false,
     this.capabilities,
     this.coverage,
   });
@@ -206,6 +217,7 @@ class Recitation {
       reciter: Reciter.fromJson(reciterJson),
       style: json['style']?.toString() ?? 'murattal',
       timingsAvailable: timings['available'] == true,
+      timingsComplete: timings['complete'] == true,
       surahCount: (coverage['surah_count'] as num?)?.toInt() ?? 0,
       streamAllowed: rights['stream'] != false,
       offlineDownloadAllowed: rights['offline_download'] == true,
@@ -214,7 +226,8 @@ class Recitation {
         legacyListen:
             rights['stream'] != false &&
             ((coverage['surah_count'] as num?)?.toInt() ?? 0) > 0,
-        legacyTimed: timings['available'] == true,
+        legacyTimed:
+            timings['available'] == true && timings['complete'] == true,
         legacyOffline: rights['offline_download'] == true,
       ),
       coverage: RecitationCoverage.fromJson(coverage),
@@ -226,19 +239,44 @@ class Recitation {
   final Reciter reciter;
   final String style;
   final bool timingsAvailable;
+
+  /// Every ayah of the Quran edition has a verified timing.
+  final bool timingsComplete;
   final int surahCount;
   final bool streamAllowed;
   final bool offlineDownloadAllowed;
   final RecitationCapabilities? capabilities;
   final RecitationCoverage? coverage;
 
+  /// Listening recitations may hold only some surahs. Catalogs from before
+  /// the surah list only ever held complete recitations.
+  bool coversSurah(int surah) {
+    final numbers = coverage?.surahNumbers ?? const <int>[];
+    return numbers.isEmpty || numbers.contains(surah);
+  }
+
+  /// The nearest held surah after ([direction] 1) or before (-1) [from].
+  int? adjacentSurah(int from, int direction) {
+    for (
+      var surah = from + direction;
+      surah >= 1 && surah <= 114;
+      surah += direction
+    ) {
+      if (coversSurah(surah)) return surah;
+    }
+    return null;
+  }
+
+  /// Mirrors the site's `supportsRecitationRole`: the server's capabilities
+  /// decide, and they already keep listening-only recordings out of the ayah
+  /// roles. Catalogs from before capabilities need complete timings.
   bool supports(AudioRecitationRole role) {
     final value = capabilities;
     if (value != null) return value.supports(role);
     return switch (role) {
       AudioRecitationRole.listening => streamAllowed && surahCount > 0,
-      AudioRecitationRole.ayahPlayback => timingsAvailable,
-      AudioRecitationRole.memorization => timingsAvailable,
+      AudioRecitationRole.ayahPlayback ||
+      AudioRecitationRole.memorization => timingsAvailable && timingsComplete,
     };
   }
 }

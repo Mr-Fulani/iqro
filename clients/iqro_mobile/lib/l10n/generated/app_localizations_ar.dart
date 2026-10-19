@@ -258,6 +258,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get done => 'تم';
 
   @override
+  String get namesOfAllah => 'أسماء الله الحسنى';
+
+  @override
   String get soon => 'قريبًا';
 
   @override
@@ -381,6 +384,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mushafPublishedDescription => 'حفص · القراءة مع الإنترنت وبدونه';
+
+  @override
+  String get mushafPickerHint => 'اضغط على الصفحة لمعاينتها عن قرب';
+
+  @override
+  String get mushafMakePrimary => 'اجعله المصحف الأساسي';
+
+  @override
+  String get mushafIsPrimary => 'المصحف الأساسي';
 
   @override
   String get mushafTextDescription => 'نص واضح متكيف مع الشاشة';
@@ -534,6 +546,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get styleMuallim => 'معلّم';
 
   @override
+  String get styleKidsRepeat => 'للأطفال مع التكرار';
+
+  @override
   String get refreshReciters => 'تحديث قائمة القراء';
 
   @override
@@ -569,6 +584,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audioQuality => 'جودة الصوت';
+
+  @override
+  String get playerBackground => 'خلفية المشغل';
 
   @override
   String get qualityAutomatic => 'تلقائي';
@@ -917,6 +935,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'الأدعية المحفوظة';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'الباب $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return 'المتبقي: $count';
+  }
+
+  @override
+  String get duaAudioFailed => 'تعذر تشغيل الصوت';
+
+  @override
   String duaCount(int count) {
     return 'عدد الأدعية: $count';
   }
@@ -942,9 +973,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get duaAudioStreaming => 'يلزم الاتصال بالإنترنت للاستماع';
-
-  @override
-  String get duaAudioFailed => 'تعذر تشغيل الصوت';
 
   @override
   String get duaPractice => 'تدريب التكرار';
@@ -976,6 +1004,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareDua => 'مشاركة الدعاء';
+
+  @override
+  String get shareReadInIqro => 'اقرأ في IQRO';
 
   @override
   String get duaReader => 'القارئ';
@@ -1720,6 +1751,54 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'نخلتك';
+
+  @override
+  String get palmStageSeed => 'نواة التمر';
+
+  @override
+  String get palmStageSprout => 'برعم';
+
+  @override
+  String get palmStageSeedling => 'فسيلة';
+
+  @override
+  String get palmStageYoungPalm => 'نخلة فتية';
+
+  @override
+  String get palmStagePalm => 'نخلة';
+
+  @override
+  String get palmStageFruitingPalm => 'نخلة مثمرة';
+
+  @override
+  String get palmMoodPlanting => 'ازرع النواة: اقرأ أول صفحة';
+
+  @override
+  String get palmMoodFlourishing => 'أتممت هدف اليوم — النخلة تمتدّ نحو الشمس';
+
+  @override
+  String get palmMoodGrowing => 'قراءة اليوم تسقي نخلتك';
+
+  @override
+  String get palmMoodWaiting => 'نخلتك تنتظر قراءة اليوم';
+
+  @override
+  String get palmMoodResting => 'نخلتك تستريح في الظل، وصفحة واحدة تُسعدها';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'التالي: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'اكتمل نموّها — بارك الله في ثمرها';
+
+  @override
+  String get palmHowItGrows =>
+      'يوم القراءة +1، وإتمام الهدف +2. الأيام الفائتة لا تضرّ النخلة، إنها تستريح فقط.';
+
+  @override
   String get planSummaryTitle => 'ملخص التقدم';
 
   @override
@@ -1805,5 +1884,215 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String planDays(num count) {
     return '$count أيام';
+  }
+
+  @override
+  String get salahTitle => 'تعلّم الصلاة';
+
+  @override
+  String get salahHint => 'خطوة بخطوة: الوضوء والصلوات الخمس';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done من $total دروس';
+  }
+
+  @override
+  String get salahContinue => 'متابعة';
+
+  @override
+  String get salahStart => 'ابدأ';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'الركعة $current من $total';
+  }
+
+  @override
+  String get salahBack => 'السابق';
+
+  @override
+  String get salahNext => 'التالي';
+
+  @override
+  String get salahFinish => 'إنهاء';
+
+  @override
+  String get salahNextStep => 'الخطوة التالية';
+
+  @override
+  String get salahPreviousStep => 'الخطوة السابقة';
+
+  @override
+  String get salahModeLearn => 'تعلّم';
+
+  @override
+  String get salahModePractice => 'تدريب';
+
+  @override
+  String get salahDisplayOptions => 'ما يُعرض';
+
+  @override
+  String get salahShowArabic => 'النص العربي';
+
+  @override
+  String get salahShowTransliteration => 'النطق';
+
+  @override
+  String get salahShowTranslation => 'المعنى';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count د';
+  }
+
+  @override
+  String get salahLessonCompleted => 'اكتمل الدرس';
+
+  @override
+  String get salahStatusCompleted => 'مكتمل';
+
+  @override
+  String get salahStatusInProgress => 'بدأته';
+
+  @override
+  String get salahUnavailable => 'الدورة غير متاحة بعد';
+
+  @override
+  String get salahLessonNotFound => 'هذا الدرس غير موجود في الدورة';
+
+  @override
+  String get salahRulingShart => 'شرط';
+
+  @override
+  String get salahRulingRukn => 'ركن';
+
+  @override
+  String get salahRulingWajib => 'واجب';
+
+  @override
+  String get salahRulingSunnah => 'سنة';
+
+  @override
+  String get salahOfflineTitle => 'الصور دون إنترنت';
+
+  @override
+  String get salahOfflineImages => 'رسوم الدورة التوضيحية';
+
+  @override
+  String get salahOfflineSaved => 'محفوظة على هذا الجهاز';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'يتوفر إصدار جديد';
+
+  @override
+  String get salahOfflineUpdate => 'تحديث';
+
+  @override
+  String get accountSignOutEverywhere => 'تسجيل الخروج من جميع الأجهزة';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'إنهاء جميع الجلسات؟';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'ستُلغى الجلسة الحالية وتسجيلات الدخول على الأجهزة الأخرى. ستحتاج إلى رمز بريد جديد للمتابعة.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'تأكيد الخروج من الجميع';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'تعذر إنهاء جميع الجلسات. حاول مجددًا.';
+
+  @override
+  String get accountDangerZone => 'منطقة خطرة';
+
+  @override
+  String get accountDeletionTitle => 'حذف الحساب';
+
+  @override
+  String get accountDeletionDescription =>
+      'بعد إعادة تأكيد البريد تبدأ مهلة إلغاء مدتها 7 أيام. لا يحدث الحذف النهائي قبل انتهائها.';
+
+  @override
+  String get accountDelete => 'حذف الحساب';
+
+  @override
+  String get accountDeletionRequestTitle => 'جدولة حذف الحساب؟';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'يُحظر الوصول العادي فورًا. بعد 7 أيام تُحذف البيانات المتزامنة ويُجهّل الحساب.';
+
+  @override
+  String get accountDeletionCancelTitle => 'إلغاء الحذف؟';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'لاستعادة الحساب، أثبت ملكية البريد برمز جديد لمرة واحدة.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'إرسال الرمز إلى $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'تأكيد الحذف';
+
+  @override
+  String get accountRestore => 'استعادة الحساب';
+
+  @override
+  String get accountNewCode => 'طلب رمز جديد';
+
+  @override
+  String get accountPendingDeletionTitle => 'تمت جدولة حذف الحساب';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'سيُحذف الحساب والبيانات المتزامنة بعد $date. وحتى ذلك الوقت يمكن إلغاء الحذف بعد تأكيد البريد.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'إلغاء الحذف';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'تمت جدولة حذف الحساب. يمكنك إلغاؤه قبل التاريخ المحدد.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'تم إلغاء حذف الحساب.';
+
+  @override
+  String get accountCodeSendError => 'تعذر إرسال الرمز. حاول مجددًا.';
+
+  @override
+  String get accountCodeVerifyError => 'تعذر تأكيد الرمز.';
+
+  @override
+  String get accountCodeExpired => 'انتهت صلاحية التأكيد. اطلب رمزًا جديدًا.';
+
+  @override
+  String get accountActionError => 'تعذر إكمال إجراء الحساب.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'عدد السور: $count، نحو $size. هل تريد بدء التنزيل؟';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'السور على هذا الجهاز: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'سور جديدة: $count';
   }
 }

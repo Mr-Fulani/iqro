@@ -13,7 +13,7 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
-import { latestRecitationsByVariant } from "../lib/reciter-catalog";
+import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
 import {
   loadReciterPreference,
   preferredRecitation,
@@ -53,6 +53,7 @@ export function MemorizationWorkspace() {
   const [editingPlan, setEditingPlan] = useState(false);
   const [mode, setMode] = useState<PracticeMode>("read");
   const [revealedAyahs, setRevealedAyahs] = useState<Set<number>>(new Set());
+  const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [localRepetitions, setLocalRepetitions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -183,6 +184,12 @@ export function MemorizationWorkspace() {
   const targetToday = plan?.daily_repetitions || dailyRepetitions;
   const progressPercent = targetToday > 0 ? Math.min(100, (totalToday / targetToday) * 100) : 0;
   const remainingForAudio = Math.max(targetToday - totalToday, 1);
+  // Play the plan's reciter only while it is still offered for memorization;
+  // otherwise the loop asks for a new choice instead of playing someone else.
+  const planRecitationId = plan?.recitation_id &&
+    (loading || recitations.some((item) => item.id === plan.recitation_id))
+    ? plan.recitation_id
+    : null;
   const hiddenPracticeAyahs = useMemo(
     () => new Set(
       mode === "test"
@@ -376,7 +383,7 @@ export function MemorizationWorkspace() {
                 <option value="">{t("memorization.withoutAudio")}</option>
                 {recitations.map((recitation) => (
                   <option key={recitation.id} value={recitation.id}>
-                    {reciterName(recitation)} · {recitation.style}
+                    {reciterName(recitation)} · {recitationStyleLabel(recitation.style, t)}
                   </option>
                 ))}
               </select>
@@ -459,19 +466,21 @@ export function MemorizationWorkspace() {
 
             {mode === "listen" && (
               <MemorizationAudioLoop
-                recitationId={plan.recitation_id}
+                recitationId={planRecitationId}
                 surahNumber={plan.start_ayah.surah_number}
                 startAyah={plan.start_ayah.ayah_number}
                 endAyah={plan.end_ayah.ayah_number}
                 repeatLimit={remainingForAudio}
                 pauseSeconds={plan.pause_seconds}
                 onCycleComplete={addRepetition}
+                onAyahChange={setPlayingAyah}
               />
             )}
 
             <MemorizationTajweedAyahs
               ayahs={practiceAyahs}
               hiddenAyahs={hiddenPracticeAyahs}
+              playingAyah={mode === "listen" ? playingAyah : null}
               onReveal={revealAyah}
             />
 

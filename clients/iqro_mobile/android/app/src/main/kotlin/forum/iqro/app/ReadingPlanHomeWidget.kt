@@ -38,6 +38,13 @@ class ReadingPlanHomeWidget : GlanceAppWidget() {
 }
 
 internal object ReadingPlanWidgetViews {
+    // Photographs of the palm stages, cropped to the panel with its rounded
+    // corners and a darker lower half baked in for the white text.
+    private val PALM_STAGES = intArrayOf(
+        R.drawable.reading_plan_palm_bg_0, R.drawable.reading_plan_palm_bg_1,
+        R.drawable.reading_plan_palm_bg_2, R.drawable.reading_plan_palm_bg_3,
+        R.drawable.reading_plan_palm_bg_4, R.drawable.reading_plan_palm_bg_5)
+
     fun create(context: Context, data: JSONObject): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.reading_plan_widget)
         views.setInt(R.id.plan_widget_root, "setLayoutDirection",
@@ -56,6 +63,9 @@ internal object ReadingPlanWidgetViews {
             R.id.plan_remaining_unit to "unit", R.id.plan_prayer_heading to "afterPrayerLabel",
             R.id.plan_page_unit to "pageUnit")
         texts.forEach { (id, key) -> views.setTextViewText(id, data.optString(key, "—")) }
+        val palm = PALM_STAGES[data.optInt("palmStage").coerceIn(0, PALM_STAGES.lastIndex)]
+        views.setImageViewResource(R.id.plan_palm_bg, palm)
+        views.setContentDescription(R.id.plan_palm_bg, data.optString("palmLabel"))
         views.setProgressBar(R.id.plan_progress, 100, data.optInt("progress").coerceIn(0,100), false)
         val labels = listOf(R.id.plan_fajr_name, R.id.plan_dhuhr_name, R.id.plan_asr_name, R.id.plan_maghrib_name, R.id.plan_isha_name)
         val values = listOf(R.id.plan_fajr_value, R.id.plan_dhuhr_value, R.id.plan_asr_value, R.id.plan_maghrib_value, R.id.plan_isha_value)

@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
@@ -9,7 +13,10 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
+import '../quran/surah_name_art.dart';
 import 'audio_models.dart';
+import 'player_backgrounds.dart';
+import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
@@ -71,14 +78,6 @@ IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
       rangeEndAyah: chrome.rangeEndAyah,
     );
 
-String _recitationStyleLabel(BuildContext context, String style) =>
-    switch (style) {
-      'murattal' => context.l10n.styleMurattal,
-      'mujawwad' => context.l10n.styleMujawwad,
-      'muallim' => context.l10n.styleMuallim,
-      _ => style,
-    };
-
 String _audioQualityLabel(BuildContext context, String quality) =>
     switch (quality) {
       'economy' => context.l10n.qualityEconomy,
@@ -126,6 +125,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   var _changingSurah = false;
   var _changingReciter = false;
   var _changingQuality = false;
+  var _controlsHidden = false;
   String? _ownerId;
   var _surahRequest = 0;
   var _reciterRequest = 0;
@@ -160,6 +160,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final preferredQuality = ref.watch(
       appPreferencesProvider.select((value) => value.preferredAudioQuality),
     );
+    final backgroundId = ref.watch(
+      appPreferencesProvider.select((value) => value.playerBackgroundId),
+    );
+    final loadedBackgrounds = ref.watch(playerBackgroundsProvider).valueOrNull;
+    final backgrounds = loadedBackgrounds ?? bundledPlayerBackgrounds;
+    // Avoid flashing the default while a remembered admin background loads.
+    final background =
+        loadedBackgrounds == null && backgroundId.startsWith('remote:')
+        ? bundledPlayerBackgrounds.first
+        : resolvePlayerBackground(backgroundId, backgrounds);
     final currentAyah = state.displayedAyah;
     final reciter = state.reciter;
     final portraitUrl = reciter == null
@@ -169,8 +179,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
             reciters: reciters,
           );
-    return Scaffold(
-      backgroundColor: const Color(0xFF061D18),
+    final scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
@@ -218,7 +228,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     !_changingSurah &&
                     !_changingReciter &&
                     !_changingQuality,
-                onTap: () => _chooseSurah(surahs, currentSurah),
+                onTap: () => _chooseSurah(
+                  surahs
+                      .where(
+                        (surah) =>
+                            currentRecitation?.coversSurah(surah.number) ??
+                            true,
+                      )
+                      .toList(growable: false),
+                  currentSurah,
+                ),
               ),
               const SizedBox(height: 8),
               _ReciterButton(
@@ -227,7 +246,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     context.l10n.chooseReciter,
                 style: currentRecitation == null
                     ? null
-                    : _recitationStyleLabel(context, currentRecitation.style),
+                    : recitationStyleLabel(context, currentRecitation.style),
                 loading: _changingReciter,
                 enabled:
                     state.active &&
@@ -309,6 +328,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           )
                         : null,
                   ),
+                  _PlayerOption(
+                    icon: Icons.wallpaper_outlined,
+                    title: context.l10n.playerBackground,
+                    value: background.titleFor(locale),
+                    onTap: () => _chooseBackground(backgrounds, background.id),
+                  ),
                 ],
               ),
             ],
@@ -316,6 +341,59 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       ),
     );
+    // A tap on empty space hides everything but the background; the next tap
+    // brings the controls back. Not with a screen reader, which taps to act.
+    final canHide = !MediaQuery.accessibleNavigationOf(context);
+    final hidden = _controlsHidden && canHide;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        _PlayerBackdrop(background: background, dimmed: !hidden),
+        _PlayerEqualizer(
+          visible:
+              background.showEqualizer &&
+              hidden &&
+              state.playing &&
+              !state.buffering,
+        ),
+        GestureDetector(
+          key: const ValueKey('player-controls-toggle'),
+          behavior: HitTestBehavior.opaque,
+          onTap: canHide
+              ? () => setState(() => _controlsHidden = !_controlsHidden)
+              : null,
+          child: AnimatedOpacity(
+            opacity: hidden ? 0 : 1,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 250),
+            child: IgnorePointer(ignoring: hidden, child: scaffold),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _chooseBackground(
+    List<PlayerBackground> backgrounds,
+    String currentId,
+  ) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .72,
+        child: _PlayerBackgroundSheet(
+          backgrounds: backgrounds,
+          currentId: currentId,
+        ),
+      ),
+    );
+    if (selected == null || selected == currentId || !mounted) return;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setPlayerBackground(selected);
   }
 
   Recitation? _recitationById(List<Recitation>? recitations, String? id) {
@@ -360,7 +438,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final player = ref.read(audioControllerProvider);
     if (!player.active || !_isCurrentController(scope, controller)) return;
     final people = groupRecitersByPerson(reciters);
-    if (people.isEmpty || recitations.isEmpty) return;
+    final role = switch (player.channel) {
+      AudioPlaybackChannel.listening => AudioRecitationRole.listening,
+      AudioPlaybackChannel.mushaf => AudioRecitationRole.ayahPlayback,
+      AudioPlaybackChannel.memorization => AudioRecitationRole.memorization,
+    };
+    final surah = player.track?.surah;
+    // Offer only what this channel may play and what holds the current surah,
+    // so a listening-only recording never becomes the Mushaf or Memorization voice.
+    final allowed = recitations
+        .where(
+          (item) =>
+              item.supports(role) && (surah == null || item.coversSurah(surah)),
+        )
+        .toList(growable: false);
+    if (people.isEmpty || allowed.isEmpty) return;
     final selection = await showModalBottomSheet<_ReciterSelection>(
       context: context,
       isScrollControlled: true,
@@ -369,7 +461,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         heightFactor: .88,
         child: _ReciterPickerSheet(
           people: people,
-          recitations: recitations,
+          recitations: allowed,
+          role: role,
           currentRecitationId: player.track?.recitationId,
           initialStyle: currentRecitation?.style ?? defaultRecitationStyle,
           apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
@@ -495,7 +588,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final currentSurah = player.track?.surah;
     if (currentSurah == null) return;
 
-    final targetSurah = currentSurah + direction;
+    final recitation = _recitationById(
+      ref.read(audioRecitationsProvider).valueOrNull,
+      player.track?.recitationId,
+    );
+    // A listening recording may hold only some surahs: skip to the next one it has.
+    final targetSurah = recitation == null
+        ? currentSurah + direction
+        : recitation.adjacentSurah(currentSurah, direction);
+    if (targetSurah == null) return;
     await _loadSurah(targetSurah);
   }
 
@@ -955,10 +1056,19 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Text(
-                _duration(Duration(milliseconds: positionMs.round())),
+                playerTimeLabel(
+                  Duration(milliseconds: positionMs.round()),
+                  total: state.effectiveDuration,
+                ),
                 style: _metaStyle,
               ),
-              Text(_duration(state.effectiveDuration), style: _metaStyle),
+              Text(
+                playerTimeLabel(
+                  state.effectiveDuration,
+                  total: state.effectiveDuration,
+                ),
+                style: _metaStyle,
+              ),
             ],
           ),
         ),
@@ -1030,12 +1140,6 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
         ),
       ],
     );
-  }
-
-  static String _duration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }
 
@@ -1186,6 +1290,7 @@ class _ReciterPickerSheet extends StatefulWidget {
   const _ReciterPickerSheet({
     required this.people,
     required this.recitations,
+    required this.role,
     required this.currentRecitationId,
     required this.initialStyle,
     required this.apiBaseUrl,
@@ -1193,6 +1298,7 @@ class _ReciterPickerSheet extends StatefulWidget {
 
   final List<ReciterPerson> people;
   final List<Recitation> recitations;
+  final AudioRecitationRole role;
   final String? currentRecitationId;
   final String initialStyle;
   final String apiBaseUrl;
@@ -1224,6 +1330,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                 person,
                 widget.recitations,
                 selectedStyle,
+                role: widget.role,
               ) !=
               null,
         )
@@ -1267,7 +1374,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
               children: <Widget>[
                 for (final style in styles)
                   ChoiceChip(
-                    label: Text(_recitationStyleLabel(context, style)),
+                    label: Text(recitationStyleLabel(context, style)),
                     selected: style == selectedStyle,
                     onSelected: (_) => setState(() => _style = style),
                   ),
@@ -1300,6 +1407,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                     widget.recitations,
                     selectedStyle,
                     preferredId: widget.currentRecitationId,
+                    role: widget.role,
                   )!;
                   return _PickerReciterCard(
                     person: person,
@@ -1466,7 +1574,7 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
     super.initState();
     _searchController = TextEditingController();
     _scrollController = ScrollController(
-      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * 68.0,
+      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * _surahRowExtent,
     );
   }
 
@@ -1546,38 +1654,669 @@ class _SurahPickerSheetState extends State<_SurahPickerSheet> {
         Expanded(
           child: ListView.builder(
             controller: normalizedQuery.isEmpty ? _scrollController : null,
-            itemExtent: 68,
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            itemExtent: _surahRowExtent,
             itemCount: filtered.length,
             itemBuilder: (context, index) {
               final surah = filtered[index];
-              final selected = surah.number == widget.currentSurah;
-              final primaryName = surah.nameFor(locale);
-              final secondaryName = locale == 'ar'
-                  ? surah.nameEn
-                  : surah.nameAr;
-              return ListTile(
-                selected: selected,
-                leading: CircleAvatar(child: Text('${surah.number}')),
-                title: Text(
-                  primaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  secondaryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: locale == 'ar'
-                      ? TextDirection.ltr
-                      : TextDirection.rtl,
-                ),
-                trailing: selected ? const Icon(Icons.check_rounded) : null,
+              return _SurahPickerRow(
+                key: ValueKey<int>(surah.number),
+                surah: surah,
+                locale: locale,
+                selected: surah.number == widget.currentSurah,
                 onTap: () => Navigator.pop(context, surah.number),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// «04:54», or «0:50:59» on a timeline of an hour or more: Al Imran's
+/// 1:09:32 used to read «09:32» because the hours were dropped. Both ends of
+/// a timeline share the form so they line up.
+String playerTimeLabel(Duration value, {required Duration total}) {
+  String two(int number) => number.toString().padLeft(2, '0');
+  final minutes = two(value.inMinutes.remainder(60));
+  final seconds = two(value.inSeconds.remainder(60));
+  return total.inHours > 0
+      ? '${value.inHours}:$minutes:$seconds'
+      : '$minutes:$seconds';
+}
+
+const _surahRowExtent = 76.0;
+
+/// A surah as a row of the picker: its number in an eight-pointed star, the
+/// name in the reader's language with its length and place of revelation,
+/// and the Arabic name as the Mushaf prints it.
+class _SurahPickerRow extends StatelessWidget {
+  const _SurahPickerRow({
+    required this.surah,
+    required this.locale,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final Surah surah;
+  final String locale;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = selected
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: selected ? colorScheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Semantics(
+            selected: selected,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 12, 0),
+              child: Row(
+                children: <Widget>[
+                  _SurahNumberStar(number: surah.number, color: accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          surah.nameFor(locale),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${surah.ayahCount} ${context.l10n.ayahs} · '
+                          '${surah.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SurahNameArt(
+                    surah: surah.number,
+                    fallback: surah.nameAr,
+                    height: 36,
+                    width: 112,
+                    color: accent,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurahNumberStar extends StatelessWidget {
+  const _SurahNumberStar({required this.number, required this.color});
+
+  final int number;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final square = DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: color.withValues(alpha: .55), width: 1.2),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: const SizedBox.square(dimension: 30),
+    );
+    return SizedBox.square(
+      dimension: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          square,
+          Transform.rotate(angle: math.pi / 4, child: square),
+          Text(
+            '$number',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _playerBaseColor = Color(0xFF061D18);
+
+/// Darkens any image enough for white player text: over a pure white image
+/// white text stays above WCAG AA (4.5:1), and on the bundled images so does
+/// the 60% white secondary text at their brightest pixel.
+const playerBackgroundScrim = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: <Color>[Color(0xAD061D18), Color(0xC4061D18), Color(0xDB061D18)],
+  stops: <double>[0, .45, 1],
+);
+
+class _PlayerBackdrop extends StatelessWidget {
+  const _PlayerBackdrop({required this.background, this.dimmed = true});
+
+  final PlayerBackground background;
+
+  /// The scrim is there for the controls' text; without them it lifts.
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final size = MediaQuery.sizeOf(context);
+    // Decode no larger than the screen; ResizeImage never upscales.
+    final decodeWidth = (size.width * MediaQuery.devicePixelRatioOf(context))
+        .clamp(1, 1080)
+        .round();
+    return ColoredBox(
+      color: _playerBaseColor,
+      child: RepaintBoundary(
+        child: AnimatedSwitcher(
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 350),
+          child: background.hasImage
+              ? Stack(
+                  key: ValueKey<String>(background.id),
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (background.hasVideo && !reduceMotion)
+                      _PlayerBackgroundVideo(
+                        asset: background.videoAssetPath,
+                        url: background.videoUrl,
+                        poster: _PlayerBackgroundImage(
+                          background: background,
+                          decodeWidth: decodeWidth,
+                        ),
+                      )
+                    else
+                      _PlayerBackgroundImage(
+                        background: background,
+                        decodeWidth: decodeWidth,
+                      ),
+                    AnimatedOpacity(
+                      opacity: dimmed ? 1 : 0,
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 250),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: playerBackgroundScrim,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : SizedBox.expand(key: ValueKey<String>(background.id)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sound bars like the audio quality icon, swaying over the bare background
+/// while the recitation plays. Calm static bars when motion is reduced; the
+/// ticker runs only while they are on screen.
+class _PlayerEqualizer extends StatefulWidget {
+  const _PlayerEqualizer({required this.visible});
+
+  final bool visible;
+
+  @override
+  State<_PlayerEqualizer> createState() => _PlayerEqualizerState();
+}
+
+class _PlayerEqualizerState extends State<_PlayerEqualizer>
+    with SingleTickerProviderStateMixin {
+  late final _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3600),
+  );
+  late var _shown = widget.visible;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncWave();
+  }
+
+  @override
+  void didUpdateWidget(_PlayerEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible) _shown = true;
+    _syncWave();
+  }
+
+  // Runs while visible and through the fade-out; stops once faded.
+  void _syncWave() {
+    final animate = _shown && !MediaQuery.disableAnimationsOf(context);
+    if (animate && !_wave.isAnimating) {
+      _wave.repeat();
+    } else if (!animate && _wave.isAnimating) {
+      _wave.stop();
+    }
+  }
+
+  void _faded() {
+    if (widget.visible || !_shown) return;
+    setState(() => _shown = false);
+    _syncWave();
+  }
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: AnimatedOpacity(
+          opacity: widget.visible ? 1 : 0,
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          onEnd: _faded,
+          child: !_shown && !widget.visible
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: const Alignment(0, .62),
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      key: const ValueKey('player-equalizer'),
+                      size: const Size(208, 84),
+                      painter: _EqualizerPainter(reduceMotion ? null : _wave),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EqualizerPainter extends CustomPainter {
+  _EqualizerPainter(this.wave) : super(repaint: wave);
+
+  /// Null paints the bars at rest.
+  final Animation<double>? wave;
+
+  // Taller in the middle, like Icons.graphic_eq_rounded.
+  static const _envelope = <double>[.44, .64, .84, .7, 1, .7, .84, .64, .44];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final count = _envelope.length;
+    final slot = size.width / count;
+    final barWidth = slot * .46;
+    final minHeight = barWidth;
+    final t = (wave?.value ?? 0) * 2 * math.pi;
+    final shadow = Paint()
+      ..color = const Color(0x59000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final bar = Paint()..color = const Color(0xEBFFFFFF);
+    final centreY = size.height / 2;
+    for (var i = 0; i < count; i++) {
+      // Whole cycles per loop keep the repeat seamless.
+      final level = wave == null
+          ? .62
+          : .64 +
+                .22 * math.sin(t * 3 + i * 1.7) +
+                .1 * math.sin(t * 5 - i * 2.3) +
+                .04 * math.sin(t * 8 + i * .9);
+      final height = math.max(
+        minHeight,
+        size.height * _envelope[i] * level.clamp(.28, 1),
+      );
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(slot * (i + .5), centreY),
+          width: barWidth,
+          height: height,
+        ),
+        Radius.circular(barWidth / 2),
+      );
+      canvas
+        ..drawRRect(rect.shift(const Offset(0, 1.5)), shadow)
+        ..drawRRect(rect, bar);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EqualizerPainter oldDelegate) => oldDelegate.wave != wave;
+}
+
+class _PlayerBackgroundImage extends StatelessWidget {
+  const _PlayerBackgroundImage({
+    required this.background,
+    required this.decodeWidth,
+  });
+
+  final PlayerBackground background;
+  final int decodeWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    const empty = SizedBox.expand();
+    final assetPath = background.assetPath;
+    if (assetPath != null) {
+      return Image(
+        image: ResizeImage(AssetImage(assetPath), width: decodeWidth),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        excludeFromSemantics: true,
+        errorBuilder: (context, error, stackTrace) => empty,
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: background.imageUrl!,
+      fit: BoxFit.cover,
+      memCacheWidth: decodeWidth,
+      fadeInDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 250),
+      placeholder: (context, url) => empty,
+      errorWidget: (context, url, error) => empty,
+    );
+  }
+}
+
+/// A silent looping video over its poster: bundled, or an admin video that is
+/// downloaded once and then played from the cache. The poster stays while it
+/// loads or if it cannot be decoded; recitation audio keeps its focus.
+class _PlayerBackgroundVideo extends StatefulWidget {
+  const _PlayerBackgroundVideo({this.asset, this.url, required this.poster});
+
+  final String? asset;
+  final String? url;
+  final Widget poster;
+
+  @override
+  State<_PlayerBackgroundVideo> createState() => _PlayerBackgroundVideoState();
+}
+
+class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
+  VideoPlayerController? _controller;
+  var _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_start());
+  }
+
+  Future<void> _start() async {
+    try {
+      final options = VideoPlayerOptions(mixWithOthers: true);
+      final asset = widget.asset;
+      final VideoPlayerController controller;
+      if (asset != null) {
+        controller = VideoPlayerController.asset(
+          asset,
+          videoPlayerOptions: options,
+        );
+      } else {
+        final file = await DefaultCacheManager().getSingleFile(widget.url!);
+        if (!mounted) return;
+        controller = VideoPlayerController.file(
+          file,
+          videoPlayerOptions: options,
+        );
+      }
+      _controller = controller;
+      await controller.initialize();
+      await controller.setVolume(0);
+      await controller.setLooping(true);
+      if (!mounted) return;
+      await controller.play();
+      if (mounted) setState(() => _ready = true);
+    } on Object {
+      // The poster stays.
+    }
+  }
+
+  @override
+  void dispose() {
+    final controller = _controller;
+    if (controller != null) unawaited(controller.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        widget.poster,
+        if (_ready && controller != null)
+          ExcludeSemantics(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: controller.value.size.width,
+                height: controller.value.size.height,
+                child: VideoPlayer(controller),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PlayerBackgroundSheet extends StatelessWidget {
+  const _PlayerBackgroundSheet({
+    required this.backgrounds,
+    required this.currentId,
+  });
+
+  final List<PlayerBackground> backgrounds;
+  final String currentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 10),
+        Container(
+          width: 42,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(context).dividerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 8),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  context.l10n.playerBackground,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth < 700 ? 3 : 5;
+              final tileWidth =
+                  (constraints.maxWidth - 32 - 10 * (columns - 1)) / columns;
+              final thumbnailWidth =
+                  (tileWidth * MediaQuery.devicePixelRatioOf(context)).round();
+              final labelStyle = Theme.of(context).textTheme.labelMedium;
+              // Two label lines keep every thumbnail the same height.
+              final labelHeight =
+                  MediaQuery.textScalerOf(
+                    context,
+                  ).scale(labelStyle?.fontSize ?? 12) *
+                  (labelStyle?.height ?? 1.4) *
+                  2;
+              return GridView.builder(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 20),
+                itemCount: backgrounds.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 12,
+                  mainAxisExtent: tileWidth * 16 / 9 + 6 + labelHeight + 2,
+                ),
+                itemBuilder: (context, index) {
+                  final background = backgrounds[index];
+                  return _PlayerBackgroundTile(
+                    background: background,
+                    title: background.titleFor(locale),
+                    selected: background.id == currentId,
+                    decodeWidth: thumbnailWidth,
+                    onTap: () => Navigator.pop(context, background.id),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerBackgroundTile extends StatelessWidget {
+  const _PlayerBackgroundTile({
+    required this.background,
+    required this.title,
+    required this.selected,
+    required this.decodeWidth,
+    required this.onTap,
+  });
+
+  final PlayerBackground background;
+  final String title;
+  final bool selected;
+  final int decodeWidth;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: title,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: <Widget>[
+            AspectRatio(
+              aspectRatio: 9 / 16,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: _playerBaseColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.outlineVariant,
+                    width: selected ? 3 : 1,
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (background.hasImage)
+                      _PlayerBackgroundImage(
+                        background: background,
+                        decodeWidth: decodeWidth,
+                      )
+                    else
+                      const Icon(
+                        Icons.format_color_fill_rounded,
+                        color: Color(0xFFB6E8D9),
+                      ),
+                    if (background.hasVideo)
+                      const PositionedDirectional(
+                        start: 6,
+                        bottom: 6,
+                        child: Icon(
+                          Icons.videocam_rounded,
+                          size: 18,
+                          color: Color(0xFFF5EAD5),
+                        ),
+                      ),
+                    if (selected)
+                      PositionedDirectional(
+                        top: 6,
+                        end: 6,
+                        child: CircleAvatar(
+                          radius: 11,
+                          backgroundColor: colorScheme.primary,
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 15,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

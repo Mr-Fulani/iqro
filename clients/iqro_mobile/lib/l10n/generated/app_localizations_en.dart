@@ -265,6 +265,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get done => 'Done';
 
   @override
+  String get namesOfAllah => 'Names of Allah';
+
+  @override
   String get soon => 'Soon';
 
   @override
@@ -388,6 +391,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mushafPublishedDescription => 'Hafs · online and offline reading';
+
+  @override
+  String get mushafPickerHint => 'Tap a page to see it up close';
+
+  @override
+  String get mushafMakePrimary => 'Make primary';
+
+  @override
+  String get mushafIsPrimary => 'Primary Mushaf';
 
   @override
   String get mushafTextDescription => 'Crisp text adapted to your screen';
@@ -543,6 +555,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get styleMuallim => 'Muallim';
 
   @override
+  String get styleKidsRepeat => 'Children\'s repeat';
+
+  @override
   String get refreshReciters => 'Refresh reciter catalog';
 
   @override
@@ -578,6 +593,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audioQuality => 'Audio quality';
+
+  @override
+  String get playerBackground => 'Player background';
 
   @override
   String get qualityAutomatic => 'Automatic';
@@ -929,6 +947,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Saved duas';
 
   @override
+  String duaChapterNumber(int number) {
+    return 'Chapter $number';
+  }
+
+  @override
+  String duaCounterRemaining(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get duaAudioFailed => 'The audio could not be played';
+
+  @override
   String duaCount(int count) {
     return '$count duas';
   }
@@ -955,9 +986,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get duaAudioStreaming =>
       'An internet connection is required to listen';
-
-  @override
-  String get duaAudioFailed => 'The audio could not be played';
 
   @override
   String get duaPractice => 'Repetition practice';
@@ -989,6 +1017,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareDua => 'Share dua';
+
+  @override
+  String get shareReadInIqro => 'Read in IQRO';
 
   @override
   String get duaReader => 'Reader';
@@ -1724,6 +1755,57 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get palmTitle => 'Your date palm';
+
+  @override
+  String get palmStageSeed => 'Date seed';
+
+  @override
+  String get palmStageSprout => 'Sprout';
+
+  @override
+  String get palmStageSeedling => 'Seedling';
+
+  @override
+  String get palmStageYoungPalm => 'Young palm';
+
+  @override
+  String get palmStagePalm => 'Palm tree';
+
+  @override
+  String get palmStageFruitingPalm => 'Palm with dates';
+
+  @override
+  String get palmMoodPlanting => 'Plant the seed: read your first page';
+
+  @override
+  String get palmMoodFlourishing =>
+      'Today\'s goal is done — the palm reaches for the sun';
+
+  @override
+  String get palmMoodGrowing =>
+      'Today\'s reading is already nourishing your palm';
+
+  @override
+  String get palmMoodWaiting => 'Your palm is waiting for today\'s reading';
+
+  @override
+  String get palmMoodResting =>
+      'Your palm is resting in the shade. Even one page will make it glad';
+
+  @override
+  String palmNextStage(String stage) {
+    return 'Next: $stage';
+  }
+
+  @override
+  String get palmFullyGrown => 'Fully grown — may it keep bearing fruit';
+
+  @override
+  String get palmHowItGrows =>
+      'A day of reading is +1, a completed goal +2. Missed days never harm the palm — it simply rests.';
+
+  @override
   String get planSummaryTitle => 'Progress summary';
 
   @override
@@ -1815,5 +1897,217 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String planDays(num count) {
     return '$count days';
+  }
+
+  @override
+  String get salahTitle => 'Learn to pray';
+
+  @override
+  String get salahHint => 'Step by step: wudu and the five prayers';
+
+  @override
+  String salahLessonsProgress(int done, int total) {
+    return '$done of $total lessons';
+  }
+
+  @override
+  String get salahContinue => 'Continue';
+
+  @override
+  String get salahStart => 'Start';
+
+  @override
+  String salahStepOf(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String salahRakatOf(int current, int total) {
+    return 'Rak‘ah $current of $total';
+  }
+
+  @override
+  String get salahBack => 'Back';
+
+  @override
+  String get salahNext => 'Next';
+
+  @override
+  String get salahFinish => 'Finish';
+
+  @override
+  String get salahNextStep => 'Next step';
+
+  @override
+  String get salahPreviousStep => 'Previous step';
+
+  @override
+  String get salahModeLearn => 'Learn';
+
+  @override
+  String get salahModePractice => 'Practice';
+
+  @override
+  String get salahDisplayOptions => 'What to show';
+
+  @override
+  String get salahShowArabic => 'Arabic text';
+
+  @override
+  String get salahShowTransliteration => 'Transliteration';
+
+  @override
+  String get salahShowTranslation => 'Translation';
+
+  @override
+  String salahMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get salahLessonCompleted => 'Lesson complete';
+
+  @override
+  String get salahStatusCompleted => 'Completed';
+
+  @override
+  String get salahStatusInProgress => 'In progress';
+
+  @override
+  String get salahUnavailable => 'The course is not available yet';
+
+  @override
+  String get salahLessonNotFound => 'This lesson is not in the course';
+
+  @override
+  String get salahRulingShart => 'Condition (shart)';
+
+  @override
+  String get salahRulingRukn => 'Pillar (rukn)';
+
+  @override
+  String get salahRulingWajib => 'Obligatory (wajib)';
+
+  @override
+  String get salahRulingSunnah => 'Sunnah';
+
+  @override
+  String get salahOfflineTitle => 'Pictures offline';
+
+  @override
+  String get salahOfflineImages => 'Course illustrations';
+
+  @override
+  String get salahOfflineSaved => 'Saved on this device';
+
+  @override
+  String get salahOfflineUpdateAvailable => 'A new version is available';
+
+  @override
+  String get salahOfflineUpdate => 'Update';
+
+  @override
+  String get accountSignOutEverywhere => 'Sign out on all devices';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'End all sessions?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'The current session and sign-ins on other devices will be revoked. You will need a new email code to continue.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Confirm sign-out everywhere';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Could not end all sessions. Try again.';
+
+  @override
+  String get accountDangerZone => 'Danger zone';
+
+  @override
+  String get accountDeletionTitle => 'Account deletion';
+
+  @override
+  String get accountDeletionDescription =>
+      'After email re-verification, a 7-day cancellation period begins. Irreversible deletion does not occur before it ends.';
+
+  @override
+  String get accountDelete => 'Delete account';
+
+  @override
+  String get accountDeletionRequestTitle => 'Schedule account deletion?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Normal access is blocked immediately. After 7 days, synchronized data is deleted and the account is anonymized.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Cancel deletion?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'To restore the account, verify email ownership with a new one-time code.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'Send code to $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Confirm deletion';
+
+  @override
+  String get accountRestore => 'Restore account';
+
+  @override
+  String get accountNewCode => 'Request a new code';
+
+  @override
+  String get accountPendingDeletionTitle => 'Account deletion scheduled';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'The account and synchronized data will be deleted after $date. Until then, deletion can be cancelled after email verification.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Cancel deletion';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Account deletion is scheduled. You can cancel it before the stated date.';
+
+  @override
+  String get accountDeletionCancelledNotice =>
+      'Account deletion was cancelled.';
+
+  @override
+  String get accountCodeSendError => 'Could not send the code. Try again.';
+
+  @override
+  String get accountCodeVerifyError => 'Could not verify the code.';
+
+  @override
+  String get accountCodeExpired =>
+      'The confirmation has expired. Request a new code.';
+
+  @override
+  String get accountActionError => 'Could not complete the account action.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Surahs: $count, about $size. Start downloading?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Surahs on this device: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'New surahs: $count';
   }
 }

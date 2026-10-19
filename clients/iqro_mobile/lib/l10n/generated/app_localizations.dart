@@ -516,6 +516,12 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get done;
 
+  /// No description provided for @namesOfAllah.
+  ///
+  /// In en, this message translates to:
+  /// **'Names of Allah'**
+  String get namesOfAllah;
+
   /// No description provided for @soon.
   ///
   /// In en, this message translates to:
@@ -761,6 +767,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hafs · online and offline reading'**
   String get mushafPublishedDescription;
+
+  /// No description provided for @mushafPickerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a page to see it up close'**
+  String get mushafPickerHint;
+
+  /// No description provided for @mushafMakePrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Make primary'**
+  String get mushafMakePrimary;
+
+  /// No description provided for @mushafIsPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary Mushaf'**
+  String get mushafIsPrimary;
 
   /// No description provided for @mushafTextDescription.
   ///
@@ -1056,6 +1080,12 @@ abstract class AppLocalizations {
   /// **'Muallim'**
   String get styleMuallim;
 
+  /// No description provided for @styleKidsRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Children\'s repeat'**
+  String get styleKidsRepeat;
+
   /// No description provided for @refreshReciters.
   ///
   /// In en, this message translates to:
@@ -1127,6 +1157,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Audio quality'**
   String get audioQuality;
+
+  /// No description provided for @playerBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Player background'**
+  String get playerBackground;
 
   /// No description provided for @qualityAutomatic.
   ///
@@ -1782,6 +1818,24 @@ abstract class AppLocalizations {
   /// **'Saved duas'**
   String get duaFavoritesSubtitle;
 
+  /// No description provided for @duaChapterNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Chapter {number}'**
+  String duaChapterNumber(int number);
+
+  /// No description provided for @duaCounterRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String duaCounterRemaining(int count);
+
+  /// No description provided for @duaAudioFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The audio could not be played'**
+  String get duaAudioFailed;
+
   /// No description provided for @duaCount.
   ///
   /// In en, this message translates to:
@@ -1829,12 +1883,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An internet connection is required to listen'**
   String get duaAudioStreaming;
-
-  /// No description provided for @duaAudioFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The audio could not be played'**
-  String get duaAudioFailed;
 
   /// No description provided for @duaPractice.
   ///
@@ -1895,6 +1943,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share dua'**
   String get shareDua;
+
+  /// No description provided for @shareReadInIqro.
+  ///
+  /// In en, this message translates to:
+  /// **'Read in IQRO'**
+  String get shareReadInIqro;
 
   /// No description provided for @duaReader.
   ///
@@ -3138,6 +3192,96 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} day in a row} other{{count} days in a row}}'**
   String planStreak(num count);
 
+  /// No description provided for @palmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your date palm'**
+  String get palmTitle;
+
+  /// No description provided for @palmStageSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Date seed'**
+  String get palmStageSeed;
+
+  /// No description provided for @palmStageSprout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sprout'**
+  String get palmStageSprout;
+
+  /// No description provided for @palmStageSeedling.
+  ///
+  /// In en, this message translates to:
+  /// **'Seedling'**
+  String get palmStageSeedling;
+
+  /// No description provided for @palmStageYoungPalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Young palm'**
+  String get palmStageYoungPalm;
+
+  /// No description provided for @palmStagePalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Palm tree'**
+  String get palmStagePalm;
+
+  /// No description provided for @palmStageFruitingPalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Palm with dates'**
+  String get palmStageFruitingPalm;
+
+  /// No description provided for @palmMoodPlanting.
+  ///
+  /// In en, this message translates to:
+  /// **'Plant the seed: read your first page'**
+  String get palmMoodPlanting;
+
+  /// No description provided for @palmMoodFlourishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s goal is done — the palm reaches for the sun'**
+  String get palmMoodFlourishing;
+
+  /// No description provided for @palmMoodGrowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s reading is already nourishing your palm'**
+  String get palmMoodGrowing;
+
+  /// No description provided for @palmMoodWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your palm is waiting for today\'s reading'**
+  String get palmMoodWaiting;
+
+  /// No description provided for @palmMoodResting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your palm is resting in the shade. Even one page will make it glad'**
+  String get palmMoodResting;
+
+  /// No description provided for @palmNextStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {stage}'**
+  String palmNextStage(String stage);
+
+  /// No description provided for @palmFullyGrown.
+  ///
+  /// In en, this message translates to:
+  /// **'Fully grown — may it keep bearing fruit'**
+  String get palmFullyGrown;
+
+  /// No description provided for @palmHowItGrows.
+  ///
+  /// In en, this message translates to:
+  /// **'A day of reading is +1, a completed goal +2. Missed days never harm the palm — it simply rests.'**
+  String get palmHowItGrows;
+
   /// No description provided for @planSummaryTitle.
   ///
   /// In en, this message translates to:
@@ -3293,6 +3437,378 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} days'**
   String planDays(num count);
+
+  /// No description provided for @salahTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn to pray'**
+  String get salahTitle;
+
+  /// No description provided for @salahHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Step by step: wudu and the five prayers'**
+  String get salahHint;
+
+  /// No description provided for @salahLessonsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} lessons'**
+  String salahLessonsProgress(int done, int total);
+
+  /// No description provided for @salahContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get salahContinue;
+
+  /// No description provided for @salahStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get salahStart;
+
+  /// No description provided for @salahStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String salahStepOf(int current, int total);
+
+  /// No description provided for @salahRakatOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Rak‘ah {current} of {total}'**
+  String salahRakatOf(int current, int total);
+
+  /// No description provided for @salahBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get salahBack;
+
+  /// No description provided for @salahNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get salahNext;
+
+  /// No description provided for @salahFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get salahFinish;
+
+  /// No description provided for @salahNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get salahNextStep;
+
+  /// No description provided for @salahPreviousStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get salahPreviousStep;
+
+  /// No description provided for @salahModeLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn'**
+  String get salahModeLearn;
+
+  /// No description provided for @salahModePractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get salahModePractice;
+
+  /// No description provided for @salahDisplayOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'What to show'**
+  String get salahDisplayOptions;
+
+  /// No description provided for @salahShowArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic text'**
+  String get salahShowArabic;
+
+  /// No description provided for @salahShowTransliteration.
+  ///
+  /// In en, this message translates to:
+  /// **'Transliteration'**
+  String get salahShowTransliteration;
+
+  /// No description provided for @salahShowTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get salahShowTranslation;
+
+  /// No description provided for @salahMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String salahMinutes(int count);
+
+  /// No description provided for @salahLessonCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson complete'**
+  String get salahLessonCompleted;
+
+  /// No description provided for @salahStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get salahStatusCompleted;
+
+  /// No description provided for @salahStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get salahStatusInProgress;
+
+  /// No description provided for @salahUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The course is not available yet'**
+  String get salahUnavailable;
+
+  /// No description provided for @salahLessonNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This lesson is not in the course'**
+  String get salahLessonNotFound;
+
+  /// No description provided for @salahRulingShart.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition (shart)'**
+  String get salahRulingShart;
+
+  /// No description provided for @salahRulingRukn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pillar (rukn)'**
+  String get salahRulingRukn;
+
+  /// No description provided for @salahRulingWajib.
+  ///
+  /// In en, this message translates to:
+  /// **'Obligatory (wajib)'**
+  String get salahRulingWajib;
+
+  /// No description provided for @salahRulingSunnah.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunnah'**
+  String get salahRulingSunnah;
+
+  /// No description provided for @salahOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pictures offline'**
+  String get salahOfflineTitle;
+
+  /// No description provided for @salahOfflineImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Course illustrations'**
+  String get salahOfflineImages;
+
+  /// No description provided for @salahOfflineSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device'**
+  String get salahOfflineSaved;
+
+  /// No description provided for @salahOfflineUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is available'**
+  String get salahOfflineUpdateAvailable;
+
+  /// No description provided for @salahOfflineUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get salahOfflineUpdate;
+
+  /// No description provided for @accountSignOutEverywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out on all devices'**
+  String get accountSignOutEverywhere;
+
+  /// No description provided for @accountSignOutEverywhereTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End all sessions?'**
+  String get accountSignOutEverywhereTitle;
+
+  /// No description provided for @accountSignOutEverywhereDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The current session and sign-ins on other devices will be revoked. You will need a new email code to continue.'**
+  String get accountSignOutEverywhereDescription;
+
+  /// No description provided for @accountSignOutEverywhereConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm sign-out everywhere'**
+  String get accountSignOutEverywhereConfirm;
+
+  /// No description provided for @accountSignOutEverywhereError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not end all sessions. Try again.'**
+  String get accountSignOutEverywhereError;
+
+  /// No description provided for @accountDangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger zone'**
+  String get accountDangerZone;
+
+  /// No description provided for @accountDeletionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion'**
+  String get accountDeletionTitle;
+
+  /// No description provided for @accountDeletionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'After email re-verification, a 7-day cancellation period begins. Irreversible deletion does not occur before it ends.'**
+  String get accountDeletionDescription;
+
+  /// No description provided for @accountDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get accountDelete;
+
+  /// No description provided for @accountDeletionRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule account deletion?'**
+  String get accountDeletionRequestTitle;
+
+  /// No description provided for @accountDeletionRequestDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal access is blocked immediately. After 7 days, synchronized data is deleted and the account is anonymized.'**
+  String get accountDeletionRequestDescription;
+
+  /// No description provided for @accountDeletionCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel deletion?'**
+  String get accountDeletionCancelTitle;
+
+  /// No description provided for @accountDeletionCancelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'To restore the account, verify email ownership with a new one-time code.'**
+  String get accountDeletionCancelDescription;
+
+  /// No description provided for @accountSendCodeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code to {email}'**
+  String accountSendCodeTo(String email);
+
+  /// No description provided for @accountConfirmDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deletion'**
+  String get accountConfirmDeletion;
+
+  /// No description provided for @accountRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get accountRestore;
+
+  /// No description provided for @accountNewCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a new code'**
+  String get accountNewCode;
+
+  /// No description provided for @accountPendingDeletionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion scheduled'**
+  String get accountPendingDeletionTitle;
+
+  /// No description provided for @accountPendingDeletionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The account and synchronized data will be deleted after {date}. Until then, deletion can be cancelled after email verification.'**
+  String accountPendingDeletionDescription(String date);
+
+  /// No description provided for @accountCancelDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel deletion'**
+  String get accountCancelDeletion;
+
+  /// No description provided for @accountDeletionScheduledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion is scheduled. You can cancel it before the stated date.'**
+  String get accountDeletionScheduledNotice;
+
+  /// No description provided for @accountDeletionCancelledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion was cancelled.'**
+  String get accountDeletionCancelledNotice;
+
+  /// No description provided for @accountCodeSendError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the code. Try again.'**
+  String get accountCodeSendError;
+
+  /// No description provided for @accountCodeVerifyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify the code.'**
+  String get accountCodeVerifyError;
+
+  /// No description provided for @accountCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The confirmation has expired. Request a new code.'**
+  String get accountCodeExpired;
+
+  /// No description provided for @accountActionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the account action.'**
+  String get accountActionError;
+
+  /// No description provided for @downloadOfflineSurahsConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Surahs: {count}, about {size}. Start downloading?'**
+  String downloadOfflineSurahsConfirmation(int count, String size);
+
+  /// No description provided for @audioOfflineSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'Surahs on this device: {count}'**
+  String audioOfflineSurahs(int count);
+
+  /// No description provided for @audioOfflineNewSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'New surahs: {count}'**
+  String audioOfflineNewSurahs(int count);
 }
 
 class _AppLocalizationsDelegate

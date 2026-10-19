@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "course": {
+    "slug": "hanbali-umdah",
+    "version": "2026-10-18",
+    "methodology": "hanbali",
+    "source_title": "Умдат аль-фикх (Ибн Кудама)",
+    "language": "ru",
+    "reviewed_by": "IQRO",
+    "reviewed_at": "2026-10-18T10:00:00Z",
+    "published_at": "2026-10-18T10:05:00Z",
+    "checksum_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "sections": [
+    {
+      "slug": "basics",
+      "title": "Основы",
+      "lessons": ["what-is-salah"]
+    },
+    {
+      "slug": "purification",
+      "title": "Очищение",
+      "lessons": ["wudu"]
+    },
+    {
+      "slug": "five-prayers",
+      "title": "Пять молитв",
+      "lessons": ["fajr"]
+    }
+  ],
+  "lessons": [
+    {
+      "slug": "what-is-salah",
+      "kind": "article",
+      "title": "Что такое намаз",
+      "summary": "Пять ежедневных молитв — второй столп ислама.",
+      "minutes": 3,
+      "steps": [
+        {
+          "slug": "what-is-salah.intro",
+          "kind": "info",
+          "title": "Второй столп ислама",
+          "instruction": "Намаз — обязательная молитва, которую мусульманин совершает пять раз в день в установленное время.",
+          "details": "В этом курсе намаз изложен по ханбалитскому мазхабу, по книге «Умдат аль-фикх».",
+          "formulas": []
+        }
+      ]
+    },
+    {
+      "slug": "wudu",
+      "kind": "steps",
+      "title": "Вуду",
+      "summary": "Малое омовение перед намазом.",
+      "minutes": 8,
+      "steps": [
+        {
+          "slug": "wudu.intention",
+          "kind": "action",
+          "ruling": "wajib",
+          "title": "Намерение",
+          "instruction": "Намерьтесь сердцем совершить омовение. Произносить намерение вслух не нужно.",
+          "formulas": []
+        },
+        {
+          "slug": "wudu.face",
+          "kind": "action",
+          "ruling": "rukn",
+          "title": "Омыть лицо",
+          "instruction": "Омойте лицо от линии волос до подбородка и от уха до уха, прополоскав рот и нос.",
+          "media": "wudu-face",
+          "formulas": [],
+          "repeat": 3
+        }
+      ]
+    },
+    {
+      "slug": "fajr",
+      "kind": "prayer",
+      "title": "Фаджр",
+      "summary": "2 ракаата фарда, чтение вслух.",
+      "minutes": 6,
+      "prayer": {
+        "code": "fajr",
+        "kind": "fard",
+        "kind_title": "Фард",
+        "rakats": 2
+      },
+      "steps": [
+        {
+          "slug": "fajr.r1.takbir",
+          "kind": "recitation",
+          "position": "takbir",
+          "ruling": "rukn",
+          "rakat": 1,
+          "title": "Начальный такбир",
+          "instruction": "Поднимите руки до плеч и скажите «Аллаху акбар».",
+          "media": "position-takbir",
+          "formulas": ["takbir"]
+        },
+        {
+          "slug": "fajr.r1.fatiha",
+          "kind": "recitation",
+          "position": "qiyam",
+          "ruling": "rukn",
+          "rakat": 1,
+          "title": "Аль-Фатиха",
+          "instruction": "Стоя, положите правую руку на левую и прочитайте Аль-Фатиху вслух.",
+          "media": "position-qiyam",
+          "formulas": ["fatiha"]
+        },
+        {
+          "slug": "fajr.r1.ruku",
+          "kind": "recitation",
+          "position": "ruku",
+          "ruling": "rukn",
+          "rakat": 1,
+          "title": "Руку'",
+          "instruction": "Склонитесь, положив ладони на колени, спина ровная, и произнесите тасбих.",
+          "details": "Произнести тасбих один раз — ваджиб, до трёх раз — сунна.",
+          "media": "position-ruku",
+          "formulas": ["ruku-tasbih"],
+          "repeat": 3
+        },
+        {
+          "slug": "fajr.r2.tashahhud",
+          "kind": "recitation",
+          "position": "tashahhud",
+          "ruling": "rukn",
+          "rakat": 2,
+          "title": "Последний ташаххуд",
+          "instruction": "Сядьте и прочитайте ташаххуд, указывая указательным пальцем правой руки.",
+          "media": "position-tashahhud",
+          "formulas": ["tashahhud"]
+        },
+        {
+          "slug": "fajr.r2.taslim",
+          "kind": "recitation",
+          "position": "taslim",
+          "ruling": "rukn",
+          "rakat": 2,
+          "title": "Таслим",
+          "instruction": "Поверните голову направо, затем налево, произнося приветствие.",
+          "media": "position-taslim",
+          "formulas": ["taslim"]
+        }
+      ]
+    }
+  ],
+  "formulas": {
+    "takbir": {
+      "arabic": "اللَّهُ أَكْبَرُ",
+      "transliteration": "Аллаху акбар",
+      "translation": "Аллах велик",
+      "repetitions": 1,
+      "audio": {
+        "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/takbir-3f2a9c1d.m4a"
+      },
+      "source": {
+        "kind": "inline"
+      }
+    },
+    "fatiha": {
+      "arabic": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ۝ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+      "translation": "Во имя Аллаха, Милостивого, Милосердного. Хвала Аллаху, Господу миров…",
+      "repetitions": 1,
+      "audio": {
+        "url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/1.mp3",
+        "segments": [
+          { "ayah": 1, "start_ms": 0, "end_ms": 6000 },
+          { "ayah": 2, "start_ms": 6000, "end_ms": 11000 }
+        ]
+      },
+      "source": {
+        "kind": "quran",
+        "surah": 1,
+        "ayah_from": 1,
+        "ayah_to": 7
+      }
+    },
+    "ruku-tasbih": {
+      "arabic": "((سُبْحانَ رَبِّيَ الْعَظِيمِ)). ثلاث مرَّاتٍ.",
+      "transliteration": "Субхана Рабби-ль-'Азыми!\" - 3 раза",
+      "translation": "Слава моему Великому Господу! -3 раза",
+      "repetitions": 3,
+      "audio": {
+        "url": "https://www.hisnmuslim.com/audio/ar/33.mp3"
+      },
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 33
+      }
+    },
+    "tashahhud": {
+      "arabic": "التَّحِيَّاتُ لِلَّهِ، وَالصَّلَواتُ، وَالطَّيِّباتُ…",
+      "transliteration": "Ат-тахийату ли-Лляхи, ва-с-саля-вату ва-т-тайибату…",
+      "translation": "Приветствия Аллаху, и молитвы и лучшие слова…",
+      "repetitions": 1,
+      "audio": {
+        "url": "https://www.hisnmuslim.com/audio/ar/52.mp3"
+      },
+      "source": {
+        "kind": "dua",
+        "collection": "hisn-al-muslim",
+        "source_number": 52
+      }
+    },
+    "taslim": {
+      "arabic": "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ",
+      "transliteration": "Ас-саляму 'алейкум ва рахматуллах",
+      "translation": "Мир вам и милость Аллаха",
+      "repetitions": 2,
+      "source": {
+        "kind": "inline"
+      }
+    }
+  },
+  "media": {
+    "wudu-face": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/wudu-face-8b1d0e2a.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 41210,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "alt": "Мужчина омывает лицо водой из ладоней"
+    },
+    "position-takbir": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/position-takbir-0c7e5f11.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 38012,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "alt": "Стоящий мужчина поднимает руки до плеч"
+    },
+    "position-qiyam": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/position-qiyam-5a9d2b40.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 35990,
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "alt": "Мужчина стоит, правая рука на левой на груди"
+    },
+    "position-ruku": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/position-ruku-e4c81a77.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 36540,
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "alt": "Мужчина в поясном поклоне, ладони на коленях, спина ровная"
+    },
+    "position-tashahhud": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/position-tashahhud-9f03bb12.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 37800,
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "alt": "Мужчина сидит в ташаххуде, указательный палец правой руки вытянут"
+    },
+    "position-taslim": {
+      "url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/position-taslim-71aa0c3e.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 36120,
+      "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "alt": "Мужчина сидит и поворачивает голову вправо"
+    }
+  }
+}

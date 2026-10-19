@@ -11,6 +11,7 @@ const PRIORITY: Record<(typeof PUBLIC_INDEXABLE_PATHS)[number], number> = {
   "/dua": 0.8,
   "/audio": 0.8,
   "/prayer": 0.7,
+  "/salah": 0.7,
   "/legal": 0.4,
   "/privacy": 0.3,
   "/terms": 0.3,

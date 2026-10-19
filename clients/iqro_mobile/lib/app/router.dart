@@ -22,6 +22,8 @@ import '../features/prayer/prayer_calendar_screen.dart';
 import '../features/quran/mushaf_screen.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
+import '../features/salah/salah_home_screen.dart';
+import '../features/salah/salah_lesson_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/offline_storage_screen.dart';
 import '../features/share/share_screen.dart';
@@ -77,6 +79,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
             surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
             initialAyah:
                 int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+            savesReadingPlace: state.uri.queryParameters['from'] != 'bookmark',
           ),
         ),
       ),
@@ -91,6 +94,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
                 int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1,
             surah: int.tryParse(state.uri.queryParameters['surah'] ?? '') ?? 1,
             ayah: int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+            savesReadingPlace: state.uri.queryParameters['from'] != 'bookmark',
           ),
         ),
       ),
@@ -177,6 +181,32 @@ GoRouter createRouter({required bool onboardingComplete}) {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/salah',
+        builder: (context, state) => const AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahHomeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/salah/lesson/:slug',
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahLessonScreen(
+            lessonSlug: state.pathParameters['slug'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/salah/lesson/:slug/step/:step',
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.salah,
+          child: SalahLessonScreen(
+            lessonSlug: state.pathParameters['slug'] ?? '',
+            stepSlug: state.pathParameters['step'],
+          ),
+        ),
       ),
       GoRoute(
         path: '/favorites',

@@ -809,7 +809,13 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
 
   await expect(page.getByText("Найдено треков: 114")).toBeVisible();
-  await expect(page.locator(".track-row").first().getByText("الفاتحة", { exact: true })).toBeVisible();
+  // The Mushaf calligraphy replaces the text once the heading font loads.
+  const firstRow = page.locator(".track-row").first();
+  await expect(
+    firstRow
+      .getByText("الفاتحة", { exact: true })
+      .or(firstRow.getByRole("img", { name: "الفاتحة", exact: true })),
+  ).toBeVisible();
   const listenButtons = page.getByRole("button", { name: "Слушать", exact: true });
   await expect(listenButtons).toHaveCount(114);
 

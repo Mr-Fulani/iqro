@@ -85,6 +85,17 @@ def enqueue_dua_content_change(
     )
 
 
+def enqueue_salah_content_change(*, action: str, course: str, version: str) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "salah.course.changed",
+            "action": action,
+            "course": course,
+            "version": version,
+        }
+    )
+
+
 def enqueue_social_profiles_change(*, action: str) -> None:
     enqueue_content_revalidation(
         {

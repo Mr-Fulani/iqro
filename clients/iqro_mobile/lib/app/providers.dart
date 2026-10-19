@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +22,7 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
+import '../features/audio/player_backgrounds.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
@@ -36,6 +39,11 @@ import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
 import '../features/reminders/reminder_repository.dart';
+import '../features/salah/salah_display.dart';
+import '../features/salah/salah_models.dart';
+import '../features/salah/salah_offline_repository.dart';
+import '../features/salah/salah_progress.dart';
+import '../features/salah/salah_repository.dart';
 import '../features/share/share_repository.dart';
 import '../features/settings/offline_storage_repository.dart';
 
@@ -93,6 +101,9 @@ final memorizationRepositoryProvider = Provider<MemorizationRepository>(
 );
 final duaRepositoryProvider = Provider<DuaRepository>(
   (ref) => _missing('DuaRepository'),
+);
+final salahRepositoryProvider = Provider<SalahRepository>(
+  (ref) => _missing('SalahRepository'),
 );
 final feedbackRepositoryProvider = Provider<FeedbackRepository>(
   (ref) => _missing('FeedbackRepository'),
@@ -258,6 +269,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
     ),
   );
 
+  Future<void> setPlayerBackground(String id) =>
+      _set(state.copyWith(playerBackgroundId: id));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,
@@ -359,13 +373,51 @@ class SessionController extends StateNotifier<AsyncValue<AuthSession?>> {
     }
   }
 
-  Future<void> signOut() async {
+  /// Confirms ownership of the current account's email before a lifecycle
+  /// action. The account stays the same, so managed notifications are kept.
+  Future<void> reauthenticate(EmailChallenge challenge, String code) async {
+    await _auth.verifyEmail(
+      challenge: challenge,
+      code: code,
+      locale: _locale(),
+    );
+  }
+
+  Future<void> requestAccountDeletion(String challengeId) async {
+    await _auth.requestAccountDeletion(challengeId, locale: _locale());
+  }
+
+  Future<void> cancelAccountDeletion(String challengeId) async {
+    await _auth.cancelAccountDeletion(challengeId, locale: _locale());
+  }
+
+  /// Best-effort refresh of the account status, e.g. a deletion scheduled or
+  /// cancelled on the website.
+  Future<void> refreshAccountStatus() async {
+    try {
+      await _auth.refreshAccountSummary(locale: _locale());
+    } on Object {
+      // Offline or a changed account: the cached status stays authoritative.
+    }
+  }
+
+  Future<void> signOut() => _signOutLocally(_auth.clearSession);
+
+  /// Revokes all sessions on the server first; a failure leaves this device
+  /// signed in. Only then the local logout runs, without a redundant remote
+  /// logout of the already revoked session.
+  Future<void> signOutEverywhere() async {
+    await _auth.revokeAllSessions(locale: _locale());
+    await _signOutLocally(() => _auth.clearSession(revokeRemote: false));
+  }
+
+  Future<void> _signOutLocally(Future<void> Function() clearSession) async {
     // Drop every account-owned provider before secure storage or network work
     // so account A cannot remain visible while logout is in progress.
     state = const AsyncValue.loading();
     await _cancelManagedBestEffort();
     try {
-      await _auth.clearSession();
+      await clearSession();
     } on Object catch (error, stack) {
       // AuthRepository has already deactivated the in-memory scope. Never
       // strand the UI in loading or bootstrap a replacement session when the
@@ -543,7 +595,10 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
   final preference = ref.watch(
     appPreferencesProvider.select((p) => p.mushafVariant),
   );
-  final identity = MushafIdentity.fromPreference(preference);
+  // Readers who never chose an edition get the colour-coded Tajweed Mushaf.
+  final identity = preference == defaultMushafVariant
+      ? MushafIdentity.defaultEdition
+      : MushafIdentity.fromPreference(preference);
   final catalog = ref.watch(availableMushafRenditionsProvider);
   return availableMushafIdentity(
     identity,
@@ -551,20 +606,25 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
     isProduction: ref.watch(appConfigProvider).isProduction,
   );
 });
+final mushafRepositoryProvider =
+    Provider.family<QuranRepository, MushafIdentity>((ref, identity) {
+      final repository = ref.watch(quranRepositoryProvider);
+      final version =
+          ref
+              .watch(availableMushafRenditionsProvider)
+              .where((edition) => edition.identity == identity)
+              .firstOrNull
+              ?.sourceChecksum ??
+          '';
+      final selected = repository.forMushaf(identity);
+      return identity.isFoundation
+          ? selected.withFoundationVersion(version)
+          : selected;
+    });
 final selectedMushafRepositoryProvider = Provider<QuranRepository>((ref) {
-  final identity = ref.watch(selectedMushafIdentityProvider);
-  final repository = ref.watch(quranRepositoryProvider);
-  final version =
-      ref
-          .watch(availableMushafRenditionsProvider)
-          .where((edition) => edition.identity == identity)
-          .firstOrNull
-          ?.sourceChecksum ??
-      '';
-  final selected = repository.forMushaf(identity);
-  return identity.isFoundation
-      ? selected.withFoundationVersion(version)
-      : selected;
+  return ref.watch(
+    mushafRepositoryProvider(ref.watch(selectedMushafIdentityProvider)),
+  );
 });
 final selectedMushafPageCountProvider = Provider<int>((ref) {
   final identity = ref.watch(selectedMushafIdentityProvider);
@@ -678,6 +738,26 @@ final mushafDownloadProvider = Provider<MushafDownloadSnapshot>((ref) {
 final recitersProvider = FutureProvider<List<Reciter>>((ref) {
   return ref.watch(audioRepositoryProvider).reciters();
 });
+final playerBackgroundRepositoryProvider = Provider<PlayerBackgroundRepository>(
+  (ref) => PlayerBackgroundRepository(
+    api: ref.watch(apiClientProvider),
+    database: ref.watch(localDatabaseProvider),
+    apiBaseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+  ),
+);
+
+/// Bundled backgrounds always come first, so the picker works offline and
+/// before the admin has published anything.
+final playerBackgroundsProvider = FutureProvider<List<PlayerBackground>>((
+  ref,
+) async {
+  try {
+    final remote = await ref.watch(playerBackgroundRepositoryProvider).remote();
+    return <PlayerBackground>[...bundledPlayerBackgrounds, ...remote];
+  } on Object {
+    return bundledPlayerBackgrounds;
+  }
+});
 final audioRecitationsProvider = FutureProvider<List<Recitation>>((ref) {
   return ref.watch(audioRepositoryProvider).recitations();
 });
@@ -696,8 +776,16 @@ class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
   final AudioOfflineRepository _repository;
   final String _recitationId;
 
+  /// The stored state first, then whether the recitation gained surahs.
   Future<void> initialize() async {
     state = await _repository.snapshot(_recitationId);
+    if (state.status != AudioDownloadStatus.ready) return;
+    try {
+      final latest = await _repository.check(_recitationId);
+      if (mounted && state.status == AudioDownloadStatus.ready) state = latest;
+    } on Object {
+      // Offline the stored package stays as it is.
+    }
   }
 
   Future<void> download({String? quality}) async {
@@ -856,6 +944,167 @@ final duaEntryByReferenceProvider = FutureProvider.autoDispose
             collection: identity.collection,
             sourceNumber: identity.sourceNumber,
           );
+    });
+final salahCourseProvider = FutureProvider.family<SalahCourseDocument, String>((
+  ref,
+  slug,
+) {
+  final locale = ref.watch(
+    appPreferencesProvider.select((value) => value.locale),
+  );
+  return ref.watch(salahRepositoryProvider).course(slug, locale);
+});
+final salahProgressStoreProvider = Provider<SalahProgressStore>(
+  (ref) => SalahProgressStore(ref.watch(localDatabaseProvider)),
+);
+final salahProgressProvider = FutureProvider.autoDispose
+    .family<SalahCourseProgress, String>((ref, course) {
+      // Progress belongs to the account; switching it reads the new owner's.
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(salahProgressStoreProvider).read(course);
+    });
+final salahDisplayProvider = StateProvider<SalahDisplay>(
+  (ref) => const SalahDisplay(),
+);
+
+/// Step illustrations, kept in the image disk cache after the first view.
+final salahImageProvider = Provider<ImageProvider Function(String url)>(
+  (ref) =>
+      (url) => CachedNetworkImageProvider(url),
+);
+final salahOfflineRepositoryProvider = Provider<SalahOfflineRepository>(
+  (ref) => SalahOfflineRepository(
+    gateway: ApiSalahOfflineGateway(ref.watch(apiClientProvider)),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+
+/// Downloaded course pictures by SHA-256, for the language being read.
+final salahOfflineImagesProvider =
+    FutureProvider.family<Map<String, String>, String>((ref, slug) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return ref
+          .watch(salahOfflineRepositoryProvider)
+          .localImages(slug, locale);
+    });
+
+/// A step picture from the offline package when it is downloaded, otherwise
+/// from the network as before.
+final salahCourseImageProvider =
+    Provider.family<ImageProvider Function(SalahMedia media), String>((
+      ref,
+      slug,
+    ) {
+      final local =
+          ref.watch(salahOfflineImagesProvider(slug)).valueOrNull ??
+          const <String, String>{};
+      final network = ref.watch(salahImageProvider);
+      return (media) {
+        final path = media.sha256.isEmpty ? null : local[media.sha256];
+        return path == null ? network(media.url) : FileImage(File(path));
+      };
+    });
+
+class SalahOfflineController extends StateNotifier<SalahOfflineSnapshot> {
+  SalahOfflineController(
+    this._repository,
+    this._slug,
+    this._language, {
+    this.onChanged,
+  }) : super(const SalahOfflineSnapshot.empty()) {
+    unawaited(initialize());
+  }
+
+  final SalahOfflineRepository _repository;
+  final String _slug;
+  final String _language;
+
+  /// Called when the stored pictures changed.
+  final void Function()? onChanged;
+
+  /// The stored state first, then the published size and version.
+  Future<void> initialize() async {
+    try {
+      final stored = await _repository.snapshot(_slug, _language);
+      if (mounted && state.status != SalahOfflineStatus.downloading) {
+        state = stored;
+      }
+      final latest = await _repository.check(_slug, _language);
+      if (mounted && state.status != SalahOfflineStatus.downloading) {
+        state = latest;
+      }
+    } on Object {
+      // Offline the stored state stays; without a manifest there is nothing
+      // to offer for download.
+    }
+  }
+
+  Future<void> download() async {
+    if (state.status == SalahOfflineStatus.downloading) return;
+    final previous = state;
+    state = SalahOfflineSnapshot(
+      status: SalahOfflineStatus.downloading,
+      packageId: previous.packageId,
+      totalItems: previous.totalItems,
+      totalBytes: previous.totalBytes,
+    );
+    try {
+      final installed = await _repository.install(
+        _slug,
+        _language,
+        onProgress: (progress) {
+          if (mounted) state = progress;
+        },
+      );
+      onChanged?.call();
+      if (mounted) state = installed;
+    } on Object catch (error) {
+      onChanged?.call();
+      if (!mounted) return;
+      state = SalahOfflineSnapshot(
+        status: SalahOfflineStatus.failed,
+        packageId: previous.packageId,
+        version: previous.version,
+        checksum: previous.checksum,
+        totalItems: previous.totalItems,
+        totalBytes: previous.totalBytes,
+        error: error.toString(),
+      );
+    }
+  }
+
+  Future<void> delete() async {
+    await _repository.delete(_slug, _language);
+    onChanged?.call();
+    if (!mounted) return;
+    state = SalahOfflineSnapshot(
+      status: SalahOfflineStatus.notDownloaded,
+      packageId: state.packageId,
+      totalItems: state.totalItems,
+      totalBytes: state.totalBytes,
+    );
+  }
+}
+
+// Not disposed with the course screen: a download keeps running and one
+// controller per course avoids two writers for the same package.
+final salahOfflineProvider =
+    StateNotifierProvider.family<
+      SalahOfflineController,
+      SalahOfflineSnapshot,
+      String
+    >((ref, slug) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return SalahOfflineController(
+        ref.watch(salahOfflineRepositoryProvider),
+        slug,
+        locale,
+        onChanged: () => ref.invalidate(salahOfflineImagesProvider(slug)),
+      );
     });
 final prayerScheduleProvider = FutureProvider.autoDispose
     .family<PrayerSchedule?, AccountScopeKey>((ref, key) {

@@ -6,6 +6,7 @@ import { AudioTrack, AyahAudioSegment } from "../lib/api";
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey, TranslationVariables } from "../lib/i18n";
+import { formatClock } from "../lib/audio-content";
 
 export type AudioPlaybackRequest = {
   requestId: number;
@@ -117,10 +118,8 @@ function buildPlan(
 }
 
 function formatRemaining(milliseconds: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  // Rounded up: the last second of a timer reads 0:01, not 0:00.
+  return formatClock(Math.ceil(milliseconds / 1000) * 1000);
 }
 
 export function SegmentedAudioPlayer({

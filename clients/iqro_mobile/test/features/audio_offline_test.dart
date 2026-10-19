@@ -3,11 +3,19 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
+import 'package:iqro_mobile/core/auth/auth_repository.dart';
+import 'package:iqro_mobile/core/config/app_config.dart';
+import 'package:iqro_mobile/core/network/api_client.dart';
+import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/audio/audio_offline_repository.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _recitationId = '11111111-1111-4111-8111-111111111111';
 
 void main() {
+  setUpAll(sqfliteFfiInit);
+
   test('offline audio manifest verifies 114 surahs and canonical checksum', () {
     final fixture = _manifestFixture();
 
@@ -71,6 +79,126 @@ void main() {
     },
   );
 
+  test('a listening-only package carries the surahs it lists', () {
+    final manifest = OfflineAudioManifest.fromJson(
+      _manifestFixture(surahs: const <int>[1, 112], listeningOnly: true),
+      recitationId: _recitationId,
+    );
+
+    expect(manifest.listeningOnly, isTrue);
+    expect(manifest.tracks.map((track) => track.surah), <int>[1, 112]);
+    expect(manifest.sourceChecksum, isEmpty);
+
+    final complete = OfflineAudioManifest.fromJson(
+      _manifestFixture(surahNumbers: true),
+      recitationId: _recitationId,
+    );
+    expect(complete.tracks, hasLength(114));
+  });
+
+  test('surah_numbers must match the tracks and partial needs listening', () {
+    Map<String, Object?> partial() => Map<String, Object?>.from(
+      jsonDecode(
+            jsonEncode(
+              _manifestFixture(
+                surahs: const <int>[1, 112],
+                listeningOnly: true,
+              ),
+            ),
+          )
+          as Map,
+    );
+
+    final mismatched = partial()..['surah_numbers'] = <int>[1, 113];
+    final timed = partial()..['listening_only'] = false;
+    final unlisted = partial()..remove('surah_numbers');
+    for (final json in <Map<String, Object?>>[mismatched, timed, unlisted]) {
+      expect(
+        () => OfflineAudioManifest.fromJson(json, recitationId: _recitationId),
+        throwsFormatException,
+      );
+    }
+  });
+
+  test('a grown listening package downloads only its new surahs', () async {
+    final harness = await _harness();
+    final repository = harness.repository;
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+
+    final estimate = await repository.estimate(recitationId: _recitationId);
+    expect(estimate.totalTracks, 2);
+    expect(estimate.completedTracks, 0);
+
+    final installed = await repository.install(recitationId: _recitationId);
+    expect(installed.status, AudioDownloadStatus.ready);
+    expect(installed.totalTracks, 2);
+    expect(harness.api.downloads, <int>[1, 112]);
+    expect(
+      (await repository.check(_recitationId)).status,
+      AudioDownloadStatus.ready,
+    );
+    expect(
+      await repository.activePlayback(recitationId: _recitationId, surah: 113),
+      isNull,
+    );
+
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112, 113],
+      listeningOnly: true,
+    );
+    final update = await repository.check(_recitationId);
+    expect(update.status, AudioDownloadStatus.updateAvailable);
+    expect(update.completedTracks, 2);
+    expect(update.totalTracks, 3);
+    expect(update.totalBytes - update.downloadedBytes, _mp3Bytes(113).length);
+
+    // A failed update leaves the stored surahs playable.
+    harness.api.failDownloads = true;
+    await expectLater(
+      repository.install(recitationId: _recitationId),
+      throwsStateError,
+    );
+    expect(
+      (await repository.snapshot(_recitationId)).status,
+      AudioDownloadStatus.ready,
+    );
+    expect(
+      await repository.activePlayback(recitationId: _recitationId, surah: 1),
+      isNotNull,
+    );
+
+    harness.api.failDownloads = false;
+    harness.api.onDownload = (surah) async {
+      expect(
+        (await repository.snapshot(_recitationId)).status,
+        AudioDownloadStatus.ready,
+      );
+      expect(
+        await repository.activePlayback(recitationId: _recitationId, surah: 1),
+        isNotNull,
+      );
+    };
+    final updated = await repository.install(recitationId: _recitationId);
+
+    expect(updated.status, AudioDownloadStatus.ready);
+    expect(updated.totalTracks, 3);
+    expect(harness.api.downloads, <int>[1, 112, 113, 113]);
+    expect(
+      (await repository.check(_recitationId)).status,
+      AudioDownloadStatus.ready,
+    );
+    final stored = await repository.snapshot(_recitationId);
+    expect(stored.completedTracks, 3);
+    expect(stored.totalTracks, 3);
+    expect(
+      await repository.activePlayback(recitationId: _recitationId, surah: 113),
+      isNotNull,
+    );
+  });
+
   test('downloaded audio must match signature, size and SHA-256', () async {
     final bytes = _mp3Bytes(1);
     final directory = await Directory.systemTemp.createTemp('iqro-audio-test-');
@@ -95,10 +223,16 @@ void main() {
   });
 }
 
-Map<String, Object?> _manifestFixture() {
+/// Without [surahs] a complete package as servers before surah_numbers sent.
+Map<String, Object?> _manifestFixture({
+  List<int>? surahs,
+  bool listeningOnly = false,
+  bool surahNumbers = false,
+}) {
   final trackMaps = <Map<String, Object?>>[];
   final trackModels = <OfflineAudioTrack>[];
-  for (var surah = 1; surah <= 114; surah += 1) {
+  final numbers = surahs ?? List<int>.generate(114, (index) => index + 1);
+  for (final surah in numbers) {
     final bytes = _mp3Bytes(surah);
     final checksum = sha256.convert(bytes).toString();
     final id = _uuidFor(surah);
@@ -132,8 +266,8 @@ Map<String, Object?> _manifestFixture() {
       surah: surah,
       durationMs: 1000,
       renditionQuality: 'standard',
-      timing: timing,
-      segments: segments,
+      timing: listeningOnly ? null : timing,
+      segments: listeningOnly ? const <Map<String, Object?>>[] : segments,
       asset: asset,
     );
     trackModels.add(track);
@@ -155,7 +289,7 @@ Map<String, Object?> _manifestFixture() {
     quality: 'standard',
     availableQualities: const <String>['economy', 'standard'],
     packageChecksum: '0' * 64,
-    sourceChecksum: 'a' * 64,
+    sourceChecksum: listeningOnly ? '' : 'a' * 64,
     totalBytes: trackModels.fold<int>(
       0,
       (sum, track) => sum + track.asset.bytes,
@@ -185,6 +319,10 @@ Map<String, Object?> _manifestFixture() {
       'code': 'madani-hafs',
       'version': '1.0.0',
       'checksum_sha256': 'c' * 64,
+    },
+    if (surahs != null || surahNumbers) ...<String, Object?>{
+      'listening_only': listeningOnly,
+      'surah_numbers': numbers,
     },
     'track_count': trackModels.length,
     'total_bytes': provisional.totalBytes,
@@ -217,3 +355,116 @@ List<int> _mp3Bytes(int marker) => <int>[
   5,
   6,
 ];
+
+const _config = AppConfig(
+  apiBaseUrl: 'https://iqro.forum',
+  fallbackDownloadUrl: 'https://iqro.forum',
+  environment: 'production',
+);
+
+class _Harness {
+  _Harness(this.repository, this.api);
+
+  final AudioOfflineRepository repository;
+  final _OfflineAudioApi api;
+}
+
+Future<_Harness> _harness() async {
+  final support = await Directory.systemTemp.createTemp('iqro-audio-offline-');
+  final raw = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+  await raw.execute('''
+    CREATE TABLE offline_packages (
+      package_id TEXT PRIMARY KEY,
+      package_type TEXT NOT NULL,
+      content_key TEXT NOT NULL,
+      version TEXT NOT NULL,
+      width INTEGER,
+      checksum_sha256 TEXT NOT NULL,
+      manifest TEXT NOT NULL,
+      status TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 0,
+      total_items INTEGER NOT NULL,
+      completed_items INTEGER NOT NULL DEFAULT 0,
+      total_bytes INTEGER NOT NULL,
+      downloaded_bytes INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      updated_at TEXT NOT NULL
+    )
+  ''');
+  await raw.execute('''
+    CREATE TABLE offline_package_items (
+      package_id TEXT NOT NULL,
+      item_key TEXT NOT NULL,
+      item_number INTEGER NOT NULL,
+      file_name TEXT NOT NULL,
+      local_path TEXT NOT NULL,
+      url TEXT NOT NULL,
+      checksum_sha256 TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      metadata TEXT NOT NULL,
+      status TEXT NOT NULL,
+      downloaded_bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (package_id, item_key)
+    )
+  ''');
+  addTearDown(() async {
+    await raw.close();
+    if (await support.exists()) await support.delete(recursive: true);
+  });
+  final accountScope = AccountScope.forTesting('account-a');
+  final api = _OfflineAudioApi(
+    AuthRepository(config: _config, accountScope: accountScope),
+  );
+  return _Harness(
+    AudioOfflineRepository(
+      api: api,
+      database: LocalDatabase.forTesting(raw),
+      supportDirectory: () async => support,
+    ),
+    api,
+  );
+}
+
+class _OfflineAudioApi extends ApiClient {
+  _OfflineAudioApi(AuthRepository auth)
+    : super(config: _config, authRepository: auth, locale: () => 'ru');
+
+  Map<String, Object?> manifest = const <String, Object?>{};
+  final List<int> downloads = <int>[];
+  bool failDownloads = false;
+  Future<void> Function(int surah)? onDownload;
+
+  @override
+  Future<Object?> get(
+    String path, {
+    Map<String, Object?>? query,
+    bool public = false,
+    String? etag,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    if (path != '/recitations/$_recitationId/offline-manifest') {
+      throw StateError('Unexpected GET $path');
+    }
+    return jsonDecode(jsonEncode(manifest));
+  }
+
+  @override
+  Future<int> downloadPublicFile(
+    Uri uri,
+    File destination, {
+    required Set<String> allowedHosts,
+    required int expectedBytes,
+    String? expectedEtag,
+    int maxBytes = 8 * 1024 * 1024,
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final surah = int.parse(RegExp(r'surah-(\d+)').firstMatch(uri.path)![1]!);
+    downloads.add(surah);
+    if (failDownloads) throw StateError('Network is down');
+    await onDownload?.call(surah);
+    final bytes = _mp3Bytes(surah);
+    await destination.writeAsBytes(bytes, flush: true);
+    return bytes.length;
+  }
+}

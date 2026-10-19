@@ -15,6 +15,8 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
+import 'package:iqro_mobile/features/audio/player_backgrounds.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/features/audio/player_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -138,6 +140,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the Mushaf picker never offers a listening-only recording', (
+    tester,
+  ) async {
+    await _pumpPlayer(
+      tester,
+      channel: AudioPlaybackChannel.mushaf,
+      recitations: const <Recitation>[
+        _currentRecitation,
+        _mujawwadRecitation,
+        _listeningOnlyRecitation,
+      ],
+    );
+
+    await tester.tap(find.text('Текущий чтец'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Другой чтец'), findsOneWidget);
+    expect(find.text('Чтец для прослушивания'), findsNothing);
+  });
+
+  testWidgets('the listening picker offers a recording that holds the surah', (
+    tester,
+  ) async {
+    await _pumpPlayer(
+      tester,
+      recitations: const <Recitation>[
+        _currentRecitation,
+        _mujawwadRecitation,
+        _listeningOnlyRecitation,
+      ],
+    );
+
+    await tester.tap(find.text('Текущий чтец'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Чтец для прослушивания'), findsOneWidget);
+  });
+
   testWidgets('switches audio rendition without losing playback position', (
     tester,
   ) async {
@@ -163,9 +207,260 @@ void main() {
     expect(harness.engine.playCalls, 2);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('chooses a player background and remembers it', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final harness = await _pumpPlayer(tester);
+
+    expect(
+      harness.preferences.state.playerBackgroundId,
+      defaultPlayerBackgroundId,
+    );
+    expect(find.text('Ночная пустыня'), findsOneWidget);
+    await tester.ensureVisible(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Классический'), findsOneWidget);
+    await tester.tap(find.text('Море на рассвете'));
+    await tester.pumpAndSettle();
+
+    expect(harness.preferences.state.playerBackgroundId, 'bundled:sea-dawn');
+    expect(find.text('Море на рассвете'), findsOneWidget);
+    expect(harness.engine.playCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the surah list shows the length and the Mushaf name', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+
+    await tester.tap(find.text('Аль-Бакара').first);
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const ValueKey<int>(2));
+    expect(row, findsOneWidget);
+    for (final text in <String>['Аль-Бакара', '286 аятов · Мединская']) {
+      expect(
+        find.descendant(of: row, matching: find.text(text)),
+        findsOneWidget,
+      );
+    }
+    // Without the source font (as in tests) the name is set as text.
+    expect(
+      find.descendant(
+        of: find.descendant(of: row, matching: find.byType(SurahNameArt)),
+        matching: find.text('البقرة'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a tap on empty space leaves only the background', (
+    tester,
+  ) async {
+    await _pumpPlayer(tester);
+    double opacity() => tester
+        .widget<AnimatedOpacity>(
+          find.descendant(
+            of: find.byKey(const ValueKey('player-controls-toggle')),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .opacity;
+
+    // The side margin holds no control.
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    await tester.tapAt(empty);
+    // The equalizer sways while it plays, so the screen never settles.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(opacity(), 0);
+    expect(find.text('Фон плеера').hitTestable(), findsNothing);
+    // Nothing is left to read, so the scrim lifts off the background.
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DecoratedBox &&
+                    widget.decoration ==
+                        const BoxDecoration(gradient: playerBackgroundScrim),
+              ),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity,
+      0,
+    );
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(opacity(), 1);
+
+    // A control still acts and keeps the controls on screen.
+    await tester.ensureVisible(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фон плеера'));
+    await tester.pumpAndSettle();
+    expect(find.text('Классический'), findsOneWidget);
+    expect(opacity(), 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer plays only over the bare background', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+    final equalizer = find.byKey(const ValueKey('player-equalizer'));
+    final empty = Offset(
+      4,
+      tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+    );
+    double equalizerOpacity() => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: equalizer, matching: find.byType(AnimatedOpacity)),
+        )
+        .opacity;
+
+    // Controls on screen: no bars, and nothing ticks.
+    expect(equalizer, findsNothing);
+
+    await tester.tapAt(empty);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+    expect(equalizerOpacity(), 1);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    // It never takes the tap that brings the controls back.
+    expect(equalizer.hitTestable(), findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isFalse);
+    expect(equalizer, findsNothing);
+
+    await harness.controller.toggle();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(equalizer, findsOneWidget);
+
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(equalizer, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a background with the equalizer switched off stays bare', (
+    tester,
+  ) async {
+    const quiet = PlayerBackground(
+      id: 'remote:quiet',
+      titles: <String, String>{'ru': 'Тишина'},
+      assetPath: 'assets/player_backgrounds/sea-dawn.webp',
+      showEqualizer: false,
+    );
+    final harness = await _pumpPlayer(
+      tester,
+      backgrounds: <PlayerBackground>[...bundledPlayerBackgrounds, quiet],
+    );
+    await harness.preferences.setPlayerBackground(quiet.id);
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the equalizer rests when animations are disabled', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await _pumpPlayer(tester);
+
+    await tester.tapAt(
+      Offset(
+        4,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
+      ),
+    );
+    // Static bars: the screen settles while they show.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('player-equalizer')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the video background shows its poster under the video', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+
+    await harness.preferences.setPlayerBackground('bundled:reciter-video');
+    await tester.pumpAndSettle();
+
+    // Without a video decoder (as in tests) the poster stays.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is ResizeImage &&
+            (widget.image as ResizeImage).imageProvider ==
+                const AssetImage('assets/player_backgrounds/reciter-hood.webp'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('background swap is instant when animations are disabled', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final harness = await _pumpPlayer(tester);
+
+    await harness.preferences.setPlayerBackground(classicPlayerBackgroundId);
+    await tester.pump();
+
+    // No cross-fade: the previous image is gone on the very next frame.
+    expect(find.byType(AnimatedSwitcher), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AnimatedSwitcher),
+        matching: find.byType(Image),
+      ),
+      findsNothing,
+    );
+  });
 }
 
-Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
+Future<_PlayerHarness> _pumpPlayer(
+  WidgetTester tester, {
+  List<PlayerBackground> backgrounds = bundledPlayerBackgrounds,
+  AudioPlaybackChannel channel = AudioPlaybackChannel.listening,
+  List<Recitation> recitations = const <Recitation>[
+    _currentRecitation,
+    _mujawwadRecitation,
+  ],
+}) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
   final accountScope = AccountScope.forTesting('owner');
@@ -185,7 +480,7 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
     auth,
     NotificationGateway(database: database),
   );
-  final repository = _AudioRepositoryFake();
+  final repository = _AudioRepositoryFake(recitations);
   final engine = _RecordingAudioEngine();
   final controller = AudioController(engine: engine);
   await controller.loadPlayback(
@@ -196,6 +491,7 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
     ),
     reciter: _currentReciter,
     surahName: 'Аль-Бакара',
+    channel: channel,
     autoplay: false,
   );
   await controller.seek(const Duration(seconds: 15));
@@ -212,6 +508,8 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
         appPreferencesProvider.overrideWith((ref) => preferences),
         audioRepositoryProvider.overrideWithValue(repository),
         audioControllerProvider.overrideWith((ref) => controller),
+        playerBackgroundsProvider.overrideWith((ref) async => backgrounds),
+        surahHeaderFontProvider.overrideWith((ref) async => null),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(
             surahs: <Surah>[
@@ -239,15 +537,21 @@ Future<_PlayerHarness> _pumpPlayer(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
-  return _PlayerHarness(repository, engine, controller);
+  return _PlayerHarness(repository, engine, controller, preferences);
 }
 
 class _PlayerHarness {
-  const _PlayerHarness(this.repository, this.engine, this.controller);
+  const _PlayerHarness(
+    this.repository,
+    this.engine,
+    this.controller,
+    this.preferences,
+  );
 
   final _AudioRepositoryFake repository;
   final _RecordingAudioEngine engine;
   final AudioController controller;
+  final AppPreferencesController preferences;
 }
 
 const _config = AppConfig(
@@ -293,12 +597,52 @@ const _mujawwadReciter = Reciter(
   biographyTr: '',
 );
 
+const _listeningReciter = Reciter(
+  id: 'reciter-listening',
+  slug: 'listening-reciter',
+  nameAr: 'قارئ الاستماع',
+  nameEn: 'Listening reciter',
+  nameRu: 'Чтец для прослушивания',
+  nameTr: 'Dinleme okuyucusu',
+  biographyAr: '',
+  biographyEn: '',
+  biographyRu: '',
+  biographyTr: '',
+);
+
+const _listeningOnlyRecitation = Recitation(
+  id: 'recitation-listening',
+  code: 'listening-mujawwad',
+  reciter: _listeningReciter,
+  style: 'mujawwad',
+  timingsAvailable: false,
+  surahCount: 2,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+  capabilities: RecitationCapabilities(
+    listen: true,
+    ayahPlayback: false,
+    memorization: false,
+    offline: false,
+  ),
+  coverage: RecitationCoverage(
+    trackCount: 2,
+    surahCount: 2,
+    expectedAyahs: 6236,
+    timedAyahs: 0,
+    complete: false,
+    timingsComplete: false,
+    surahNumbers: <int>[1, 2],
+  ),
+);
+
 const _currentRecitation = Recitation(
   id: 'recitation-current',
   code: 'current-murattal',
   reciter: _currentReciter,
   style: 'murattal',
   timingsAvailable: true,
+  timingsComplete: true,
   surahCount: 114,
   streamAllowed: true,
   offlineDownloadAllowed: false,
@@ -310,6 +654,7 @@ const _mujawwadRecitation = Recitation(
   reciter: _mujawwadReciter,
   style: 'mujawwad',
   timingsAvailable: true,
+  timingsComplete: true,
   surahCount: 114,
   streamAllowed: true,
   offlineDownloadAllowed: false,
@@ -357,18 +702,21 @@ SurahPlayback _playback(
 );
 
 class _AudioRepositoryFake implements AudioRepository {
+  _AudioRepositoryFake(this._recitations);
+
+  final List<Recitation> _recitations;
   String? requestedRecitationId;
   int? requestedSurah;
 
   @override
   Future<List<Reciter>> reciters({bool forceRefresh = false}) async =>
-      const <Reciter>[_currentReciter, _mujawwadReciter];
+      const <Reciter>[_currentReciter, _mujawwadReciter, _listeningReciter];
 
   @override
   Future<List<Recitation>> recitations({
     String? reciterId,
     bool forceRefresh = false,
-  }) async => const <Recitation>[_currentRecitation, _mujawwadRecitation];
+  }) async => _recitations;
 
   @override
   Future<SurahPlayback> playback({

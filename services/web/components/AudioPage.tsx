@@ -12,12 +12,14 @@ import type { Surah } from "../lib/api";
 import type { PublishedAudioInitialData } from "../lib/public-content";
 import { ReciterAvatar } from "./ReciterAvatar";
 import type { AudioPlaybackRequest } from "./SegmentedAudioPlayer";
-import { reciterName as localizedReciterName } from "../lib/audio-content";
+import { formatClock, reciterName as localizedReciterName } from "../lib/audio-content";
 import { useAudioPlayer } from "../lib/audio-player-context";
 import { useI18n } from "../lib/i18n-context";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
+  recitationHasSurah,
+  recitationStyleLabel,
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
@@ -29,6 +31,7 @@ import {
   rememberReciterPreference,
 } from "../lib/reciter-preference";
 import { useHydrated } from "../lib/use-hydrated";
+import { SurahNameArt } from "./SurahNameArt";
 
 // useSearchParams() renders its subtree in the browser only, so it stays out of
 // the server-rendered catalog and reports the requested reciter after hydration.
@@ -285,6 +288,12 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
       return;
     }
 
+    if (!recitationHasSurah(selectedRecitation, pending.surahNumber)) {
+      // This recording does not hold the surah that was playing; the listener
+      // picks one of its surahs from the list instead of seeing an error.
+      pendingReciterPlaybackRef.current = null;
+      return;
+    }
     let cancelled = false;
     setLoadingTrackId(`reciter-switch-${pending.surahNumber}`);
     setError(null);
@@ -303,7 +312,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             ? t("common.ayah", { ayah: `${pending.surahNumber}:${pending.startAyah}` })
             : t("common.surah", { surah: pending.surahNumber }),
           artist: reciterName(selectedReciter),
-          album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+          album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
           autoPlay: false,
         });
         pendingReciterPlaybackRef.current = null;
@@ -341,7 +350,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
         kind: "surah",
         title: t("common.surah", { surah: track.surah_number }),
         artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
-        album: `${selectedRecitation.quran_edition.riwayah} · ${selectedRecitation.style}`,
+        album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
         autoPlay: true,
       };
       startPlayback(request);
@@ -352,12 +361,6 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     }
   };
 
-  const formatDuration = (ms: number) => {
-    const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   return (
     <div className="audio-page">
@@ -403,7 +406,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             >
               {recitations.map((rec) => (
                 <option key={rec.id} value={rec.id}>
-                  {rec.style.toUpperCase()} · {rec.quran_edition.riwayah} ({t("audio.tracksShort", { count: rec.coverage.track_count })})
+                  {recitationStyleLabel(rec.style, t)} · {rec.quran_edition.riwayah} ({t("audio.tracksShort", { count: rec.coverage.track_count })})
                 </option>
               ))}
             </select>
@@ -522,13 +525,15 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                       </strong>
                       <p className="kpi-desc">
                         {track.asset.codec.toUpperCase()} · {t("audio.bitrate", { value: formatNumber(track.asset.bitrate_kbps) })} ·{" "}
-                        {formatDuration(track.duration_ms)}
+                        {formatClock(track.duration_ms)}
                       </p>
                     </div>
                     {hydrated && trackSurah?.name_ar && (
-                      <span className="track-surah-name-ar" lang="ar" dir="rtl">
-                        {trackSurah.name_ar}
-                      </span>
+                      <SurahNameArt
+                        surah={trackSurah.number}
+                        fallback={trackSurah.name_ar}
+                        className="track-surah-name-ar"
+                      />
                     )}
                   </div>
 

@@ -69,7 +69,11 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await more.focus();
   await page.keyboard.press("Enter");
   await expect(navigation.locator(".mobile-more-panel")).toBeVisible();
-  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(5);
+  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(6);
+  const names = navigation.getByTestId("more-names-of-allah");
+  await expect(names).toContainText("Имена Аллаха");
+  await expect(names).toContainText("Скоро");
+  await expect(names).toHaveAttribute("aria-disabled", "true");
   await page.keyboard.press("Escape");
   await expect(navigation.locator(".mobile-more-panel")).toBeHidden();
   await expect(more).toBeFocused();

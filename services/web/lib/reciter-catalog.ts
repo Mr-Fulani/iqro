@@ -1,4 +1,5 @@
 import type { Recitation, Reciter } from "./api";
+import type { MessageKey } from "./i18n";
 
 const CANONICAL_RECITER_SLUGS: Readonly<Record<string, string>> = {
   "qf-1-abdulbaset-abdulsamad-mujawwad": "qf-2-abdul-baset-abdul-samad",
@@ -62,6 +63,25 @@ export function selectHomePopularReciters(reciters: Reciter[]): Reciter[] {
 export function reciterSourcesForPerson(reciters: Reciter[], selected: Reciter): Reciter[] {
   const personKey = reciterPersonKey(selected);
   return reciters.filter((reciter) => reciterPersonKey(reciter) === personKey);
+}
+
+const STYLE_MESSAGE_KEYS = {
+  murattal: "audio.style.murattal",
+  mujawwad: "audio.style.mujawwad",
+  muallim: "audio.style.muallim",
+  "kids-repeat": "audio.style.kidsRepeat",
+} as const satisfies Record<string, MessageKey>;
+
+/** The translated name of a recitation style; unknown styles show as sent. */
+export function recitationStyleLabel(style: string, t: (key: MessageKey) => string): string {
+  const key = STYLE_MESSAGE_KEYS[style as keyof typeof STYLE_MESSAGE_KEYS];
+  return key ? t(key) : style;
+}
+
+/** Listening recordings may hold only some surahs; older catalogs held all of them. */
+export function recitationHasSurah(recitation: Recitation, surahNumber: number): boolean {
+  const numbers = recitation.coverage.surah_numbers;
+  return !numbers?.length || numbers.includes(surahNumber);
 }
 
 export function supportsRecitationRole(

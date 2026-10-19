@@ -163,6 +163,7 @@ class IqroStandaloneAudioState {
     this.position = Duration.zero,
     this.duration = Duration.zero,
     this.repeatEnabled = false,
+    this.speed = 1,
     this.error,
   });
 
@@ -173,6 +174,7 @@ class IqroStandaloneAudioState {
   final Duration position;
   final Duration duration;
   final bool repeatEnabled;
+  final double speed;
   final String? error;
 
   double get progress {
@@ -195,6 +197,7 @@ class IqroStandaloneAudioState {
     Duration? position,
     Duration? duration,
     bool? repeatEnabled,
+    double? speed,
     String? error,
     bool clearError = false,
   }) {
@@ -206,6 +209,7 @@ class IqroStandaloneAudioState {
       position: position ?? this.position,
       duration: duration ?? this.duration,
       repeatEnabled: repeatEnabled ?? this.repeatEnabled,
+      speed: speed ?? this.speed,
       error: clearError ? null : error ?? this.error,
     );
   }
@@ -1258,7 +1262,12 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   Future<void> pauseForDuaEntry() {
     _navigationEpoch += 1;
-    return _pauseForNavigation(preserveDua: true);
+    return _pauseForNavigation(preserveStandaloneType: 'dua');
+  }
+
+  Future<void> pauseForSalahEntry() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation(preserveStandaloneType: 'salah');
   }
 
   Future<void> pauseForMemorizationEntry() {
@@ -1275,6 +1284,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   Future<void> pauseForDuaExit() => _pauseContextOnExit(
     (current) => current.standalone?.mediaItem.extras?['content_type'] == 'dua',
+  );
+
+  Future<void> pauseForSalahExit() => _pauseContextOnExit(
+    (current) =>
+        current.standalone?.mediaItem.extras?['content_type'] == 'salah',
   );
 
   Future<void> pauseForMemorizationExit() => _pauseContextOnExit(
@@ -1330,7 +1344,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
   }
 
   Future<void> _pauseForNavigation({
-    bool preserveDua = false,
+    String? preserveStandaloneType,
     bool preserveMushaf = false,
   }) {
     final intent = _sourceIntent;
@@ -1344,8 +1358,9 @@ class AudioController extends StateNotifier<IqroAudioState> {
         return;
       }
       if (standalone != null) {
-        if (preserveDua &&
-            standalone.mediaItem.extras?['content_type'] == 'dua') {
+        if (preserveStandaloneType != null &&
+            standalone.mediaItem.extras?['content_type'] ==
+                preserveStandaloneType) {
           return;
         }
         final mediaId = standalone.mediaItem.id;
@@ -1594,6 +1609,27 @@ class AudioController extends StateNotifier<IqroAudioState> {
             repeatEnabled: enabled,
             clearError: true,
           ),
+        );
+      }
+    });
+  }
+
+  /// Sets the playback speed of the standalone item. Loading another item
+  /// starts it at 1×.
+  Future<void> setStandaloneSpeed(
+    String mediaId,
+    double speed, {
+    Object? owner,
+  }) {
+    final request = _matchingStandaloneRequest(mediaId, owner);
+    if (request == null) return Future<void>.value();
+    final generation = _sourceGeneration;
+    return _serializeSource(() async {
+      if (!_ownsStandaloneRequest(generation, request)) return;
+      await _player.setSpeed(speed);
+      if (_ownsStandaloneRequest(generation, request)) {
+        state = state.copyWith(
+          standalone: state.standalone!.copyWith(speed: speed),
         );
       }
     });

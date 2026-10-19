@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/design_system/iqro_widgets.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
@@ -282,6 +284,266 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Сон и пробуждение'), findsWidgets);
       expect(find.text('Chapter entry'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a du\'a reads as one card: centred Arabic, then meaning', (
+      tester,
+    ) async {
+      final entry = _entry(
+        categoryTitle: 'Слова поминания при пробуждении',
+        arabicText: 'الحمد لله الذي أحيانا',
+        meaning: 'Хвала Аллаху, Который оживил нас',
+      );
+      await _pumpDetail(tester, load: (_) async => entry);
+
+      expect(find.text('Слова поминания при пробуждении'), findsOneWidget);
+      final arabic = tester.widget<Text>(
+        find.byKey(const ValueKey('dua-arabic')),
+      );
+      expect(arabic.textAlign, TextAlign.center);
+      expect(arabic.textDirection, TextDirection.rtl);
+      final meaning = tester.widget<Text>(
+        find.byKey(const ValueKey('dua-meaning')),
+      );
+      final context = tester.element(find.byKey(const ValueKey('dua-meaning')));
+      expect(meaning.style?.color, Theme.of(context).colorScheme.primary);
+
+      // Favourite and share sit at the foot of the card, not in the bar.
+      final card = find.ancestor(
+        of: find.byKey(const ValueKey('dua-arabic')),
+        matching: find.byType(IqroCard),
+      );
+      for (final tooltip in <String>['Избранное', 'Поделиться ду’а']) {
+        expect(
+          find.descendant(of: card, matching: find.byTooltip(tooltip)),
+          findsOneWidget,
+        );
+      }
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(IconButton),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a topic of several chapters lists them, each opens a feed', (
+      tester,
+    ) async {
+      const wakingCategory = DuaCategory(
+        id: 'waking',
+        slug: '001-upon-waking',
+        title: 'СЛОВА ПОМИНАНИЯ ПРИ ПРОБУЖДЕНИИ ОТО СНА',
+        entryCount: 2,
+        collection: 'hisn-al-muslim',
+        sourceNumber: 1,
+      );
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[
+          wakingCategory,
+          _sleepCategory,
+        ],
+        entries: (identity) async => <DuaEntry>[
+          _entry(
+            id: 'entry-1',
+            categoryTitle: wakingCategory.title,
+            arabicText:
+                'بسم الله الرحمن الرحيم ﴿قُلْ هُوَ اللَّهُ أَحَدٌ﴾ (ثلاثَ مرَّاتٍ)',
+            meaning: 'First',
+            repetitions: 3,
+          ),
+          _entry(
+            id: 'entry-2',
+            sourceNumber: 2,
+            categoryTitle: wakingCategory.title,
+            arabicText: 'الحمد لله',
+            meaning: 'Second',
+          ),
+        ],
+      );
+
+      await tester.tap(find.byKey(const ValueKey('dua-topic-sleep')));
+      await tester.pumpAndSettle();
+      final row = find.byKey(
+        const ValueKey('dua-chapter-hisn-al-muslim-001-upon-waking'),
+      );
+      expect(row, findsOneWidget);
+      expect(
+        find.descendant(of: row, matching: find.text('Глава 1')),
+        findsOneWidget,
+      );
+      // Capitals from the source read in sentence case, Allah keeps His.
+      expect(
+        find.text('Слова поминания при пробуждении ото сна'),
+        findsOneWidget,
+      );
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Глава 1'), findsOneWidget);
+      expect(find.text('First'), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
+      final basmala = tester.widget<Text>(
+        find.byKey(const ValueKey('dua-arabic')).first,
+      );
+      expect(basmala.data, 'بسم الله الرحمن الرحيم');
+
+      await tester.tap(find.byTooltip('Назад'));
+      await tester.pumpAndSettle();
+      expect(row, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a repeated du\'a counts down and vibrates at the end', (
+      tester,
+    ) async {
+      final haptics = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            haptics.add(call.arguments?.toString() ?? 'vibrate');
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final entry = _entry(
+        categoryTitle: 'Утром',
+        arabicText: 'سبحان الله',
+        meaning: 'Thrice',
+        repetitions: 3,
+      );
+      await _pumpDetail(tester, load: (_) async => entry);
+      final counter = find.byKey(const ValueKey('dua-counter'));
+      await tester.ensureVisible(counter);
+
+      for (final remaining in <String>['3', '2', '1']) {
+        expect(
+          find.descendant(of: counter, matching: find.text(remaining)),
+          findsOneWidget,
+        );
+        await tester.tap(counter);
+        await tester.pump();
+      }
+      expect(
+        find.descendant(
+          of: counter,
+          matching: find.byIcon(Icons.check_rounded),
+        ),
+        findsOneWidget,
+      );
+      // A light tap per repetition, then a strong one and a vibration.
+      expect(haptics, <String>[
+        'HapticFeedbackType.lightImpact',
+        'HapticFeedbackType.lightImpact',
+        'HapticFeedbackType.heavyImpact',
+        'vibrate',
+      ]);
+
+      await tester.tap(counter);
+      await tester.pump();
+      expect(
+        find.descendant(of: counter, matching: find.text('3')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('searching «истихара» offers its chapter', (tester) async {
+      const istikhara = DuaCategory(
+        id: 'istikhara',
+        slug: '026-istikharah-seeking-allah-s-counsel',
+        title:
+            'СЛОВА МОЛЬБЫ, ПРОИЗНОСИМЫЕ ВО ВРЕМЯ МОЛИТВЫ ИСПРАШИВАНИЯ ПОМОЩИ',
+        entryCount: 1,
+        collection: 'hisn-al-muslim',
+        sourceNumber: 26,
+      );
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => const <DuaCategory>[istikhara],
+        entries: (identity) async => <DuaEntry>[
+          _entry(
+            categoryTitle: istikhara.title,
+            arabicText: 'اللَّهُمَّ إِنِّي أَسْتَخِيرُكَ بِعِلْمِكَ',
+            meaning: 'О Аллах, я прошу Тебя помочь мне выбрать',
+          ),
+        ],
+      );
+
+      await tester.enterText(find.byType(EditableText), 'истихара');
+      await tester.pumpAndSettle();
+      final row = find.byKey(const ValueKey('dua-chapter-match-26'));
+      expect(row, findsOneWidget);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Глава 26'), findsOneWidget);
+      expect(
+        find.text('О Аллах, я прошу Тебя помочь мне выбрать'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('many matched chapters scroll with the du\'a, no overflow', (
+      tester,
+    ) async {
+      // A short window, as with the keyboard open.
+      tester.view
+        ..physicalSize = const Size(360, 420)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final chapters = <DuaCategory>[
+        for (final number in <int>[16, 26, 63, 129])
+          DuaCategory(
+            id: 'chapter-$number',
+            slug: 'chapter-$number',
+            title: 'ИСТИНА СЛОВ ГЛАВЫ $number',
+            entryCount: 1,
+            collection: 'hisn-al-muslim',
+            sourceNumber: number,
+          ),
+      ];
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        categories: () async => chapters,
+        search: (request) async => <DuaEntry>[
+          _entry(
+            categoryTitle: 'Мольбы',
+            arabicText: 'رَبِّ اغْفِرْ لِي',
+            meaning: 'Найденная мольба',
+          ),
+        ],
+      );
+
+      await tester.enterText(find.byType(EditableText), 'исти');
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const ValueKey('dua-chapter-match-16')),
+        findsOneWidget,
+      );
+
+      await tester.dragUntilVisible(
+        find.text('Найденная мольба'),
+        find.byType(Scrollable).last,
+        const Offset(0, -200),
+      );
+      expect(find.text('Найденная мольба'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -568,9 +830,15 @@ Future<void> _pumpCatalog(
   Future<List<DuaEntry>> Function(DuaSearchQuery request)? search,
   List<DuaEntry> favorites = const <DuaEntry>[],
 }) async {
+  // Du'a cards read the account and the shared player.
+  final database = await _openTestDatabase(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        localDatabaseProvider.overrideWithValue(database),
+        audioControllerProvider.overrideWith(
+          (ref) => AudioController(engine: _SilentAudioEngine()),
+        ),
         activeAccountScopeKeyProvider.overrideWithValue(_reader),
         duaFavoritesProvider.overrideWith((ref, key) async => favorites),
         duaCategoriesProvider.overrideWith((ref) => categories()),
@@ -669,6 +937,7 @@ DuaEntry _entry({
   required String arabicText,
   required String meaning,
   List<DuaAudioAsset> audio = const <DuaAudioAsset>[],
+  int repetitions = 1,
 }) => DuaEntry(
   id: id,
   sourceNumber: sourceNumber,
@@ -679,7 +948,7 @@ DuaEntry _entry({
   arabicText: arabicText,
   meaning: meaning,
   transliteration: '',
-  repetitions: 1,
+  repetitions: repetitions,
   sourceLabel: 'Hisn al-Muslim',
   audio: audio,
 );

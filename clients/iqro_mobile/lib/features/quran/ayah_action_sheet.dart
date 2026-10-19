@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
@@ -11,6 +10,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_portraits.dart';
 import 'ayah_annotations.dart';
@@ -18,6 +18,8 @@ import 'mushaf_paper.dart';
 import 'mushaf_ayah_excerpt.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
+import '../../core/share/content_share.dart';
+import 'ayah_share.dart';
 
 enum _CopyAyahFeedback { idle, copying, copied, failed }
 
@@ -354,7 +356,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             (item) => DropdownMenuItem<String>(
               value: item.id,
               child: Text(
-                '${item.reciter.nameFor(locale)} · ${item.style}',
+                '${item.reciter.nameFor(locale)} · '
+                '${recitationStyleLabel(context, item.style)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -868,10 +871,43 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   }
 
   Future<void> _shareAyah() async {
-    final ayah = _details?.ayah;
-    if (ayah == null) return;
-    await SharePlus.instance.share(
-      ShareParams(text: '${widget.reference.key}\n${ayah.textUthmani}'),
+    final details = _details;
+    final ayah = details?.ayah;
+    if (details == null || ayah == null) return;
+    final locale = Localizations.localeOf(context).languageCode;
+    final reference = widget.reference;
+    final surahName =
+        ref
+            .read(quranCatalogProvider)
+            .valueOrNull
+            ?.surahs
+            .where((surah) => surah.number == reference.surah)
+            .firstOrNull
+            ?.nameFor(locale) ??
+        '${context.l10n.surah} ${reference.surah}';
+    final edition = details.translationEditions
+        .where((item) => item.sourceId == _translationSourceId)
+        .firstOrNull;
+    final box = context.findRenderObject();
+    await shareContent(
+      context,
+      ayahContentShare(
+        locale: locale,
+        surahName: surahName,
+        surah: reference.surah,
+        ayah: reference.ayah,
+        arabic: ayah.textUthmani,
+        translation: details.translation?.text ?? '',
+        translator: edition == null
+            ? ''
+            : edition.authorName.trim().isEmpty
+            ? edition.name
+            : edition.authorName,
+        readInIqro: context.l10n.shareReadInIqro,
+      ),
+      origin: box is RenderBox
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null,
     );
   }
 

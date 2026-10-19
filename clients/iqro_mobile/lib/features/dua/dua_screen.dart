@@ -1,18 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
+import '../../core/design_system/iqro_repetition_counter.dart';
+import '../../core/share/content_share.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'dua_arabic.dart';
+import 'dua_search.dart';
 import 'dua_presentation.dart';
 import 'dua_repository.dart';
 import 'dua_topics.dart';
@@ -77,7 +80,7 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
     final sourceEntries = activeCategoryIdentity == null
         ? null
         : ref.watch(duaEntriesByCategoryProvider(activeCategoryIdentity));
-    final entries = _topic == null
+    final entries = activeCategoryIdentity != null || _topic == null
         ? sourceEntries
         : ref.watch(duaEntriesByTopicProvider(_topic!.id));
     final accountKey = ref.watch(activeAccountScopeKeyProvider);
@@ -87,6 +90,47 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
     final inCatalog =
         activeCategoryIdentity == null && _topic == null && !_favoritesOpen;
     final locale = Localizations.localeOf(context).languageCode;
+    // A topic made of several chapters lists them first; a topic of one
+    // chapter, or a chosen part of one (morning, evening), is read at once.
+    final topicChapters = _topic == null
+        ? const <DuaCategory>[]
+        : (categories.valueOrNull ?? const <DuaCategory>[])
+              .where(_topic!.includesCategory)
+              .toList(growable: false);
+    final showChapters =
+        _topic != null &&
+        activeCategoryIdentity == null &&
+        _topic!.entryNumbers == null &&
+        topicChapters.length > 1;
+    final String title;
+    String? subtitle;
+    String? banner;
+    if (_favoritesOpen) {
+      title = context.l10n.favorites;
+      subtitle = context.l10n.duaFavoritesSubtitle;
+    } else if (activeCategoryIdentity != null) {
+      title = category == null
+          ? context.l10n.dua
+          : context.l10n.duaChapterNumber(category.sourceNumber);
+      subtitle = category == null || category.collectionTitle.isEmpty
+          ? category?.collection
+          : category.collectionTitle;
+      banner = category == null ? null : duaDisplayTitle(category.title);
+    } else if (_topic != null) {
+      title = _topic!.title(locale);
+      if (showChapters) {
+        subtitle = _topic!.description(locale);
+      } else {
+        // One chapter: its own title, as in the book; a part of one or
+        // several chapters: what the topic gathers.
+        banner = topicChapters.length == 1
+            ? duaDisplayTitle(topicChapters.single.title)
+            : _topic!.description(locale);
+      }
+    } else {
+      title = context.l10n.dua;
+      subtitle = context.l10n.duaSubtitle;
+    }
     final searchRequest = (
       query: _submittedQuery,
       collection: null as String?,
@@ -102,22 +146,8 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
       },
       child: Scaffold(
         appBar: IqroTopBar(
-          title: _favoritesOpen
-              ? context.l10n.favorites
-              : _topic != null &&
-                    (category == null || _topic!.entryNumbers != null)
-              ? _topic!.title(locale)
-              : category?.title ?? context.l10n.dua,
-          subtitle: _favoritesOpen
-              ? context.l10n.duaFavoritesSubtitle
-              : _topic != null &&
-                    (category == null || _topic!.entryNumbers != null)
-              ? _topic!.description(locale)
-              : category == null
-              ? context.l10n.duaSubtitle
-              : category.collectionTitle.isEmpty
-              ? category.collection
-              : category.collectionTitle,
+          title: title,
+          subtitle: subtitle,
           leading: inCatalog
               ? null
               : IconButton(
@@ -149,23 +179,26 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
                         onSearchRetry: () =>
                             ref.invalidate(duaSearchProvider(searchRequest)),
                       )
-                    : _EntryList(
+                    : showChapters
+                    ? _DuaChapterList(
+                        chapters: topicChapters,
+                        onOpen: _openChapter,
+                      )
+                    : _DuaFeed(
+                        banner: banner,
                         entries: _favoritesOpen
                             ? favorites ??
                                   const AsyncValue<List<DuaEntry>>.data(
                                     <DuaEntry>[],
                                   )
                             : entries!,
-                        query: _query,
-                        searchController: _searchController,
-                        onQueryChanged: (value) =>
-                            setState(() => _query = value.trim()),
                         onRetry: () {
                           if (_favoritesOpen) {
                             if (accountKey != null) {
                               ref.invalidate(duaFavoritesProvider(accountKey));
                             }
-                          } else if (_topic == null) {
+                          } else if (activeCategoryIdentity != null ||
+                              _topic == null) {
                             ref.invalidate(
                               duaEntriesByCategoryProvider(
                                 activeCategoryIdentity!,
@@ -194,12 +227,20 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
   }
 
   void _goBack() {
+    // A chapter opened from its topic's list returns to that list.
+    if (_topic != null &&
+        (_categoryIdentity != null || _legacyCategorySlug != null)) {
+      _openCategory(null);
+      return;
+    }
     _openCategory(null);
     setState(() {
       _topic = null;
       _favoritesOpen = false;
     });
   }
+
+  void _openChapter(DuaCategory category) => _openCategory(category);
 
   void _openTopic(DuaTopic topic) {
     _openCategory(null);
@@ -357,6 +398,7 @@ extension on _DuaCatalog {
     final locale = Localizations.localeOf(context).languageCode;
     final needle = query.toLowerCase();
     final items = categories.valueOrNull ?? const <DuaCategory>[];
+    final chapters = duaChaptersMatching(query, items);
     final matches = duaTopics
         .where(
           (topic) =>
@@ -365,29 +407,31 @@ extension on _DuaCatalog {
                   topic.description(locale).toLowerCase().contains(needle)),
         )
         .toList(growable: false);
-    final entries = searchPending || searchResults == null
-        ? const IqroLoading()
-        : _AsyncDuaEntries(
-            entries: searchResults!,
-            query: '',
-            onRetry: onSearchRetry,
-            showEmpty: matches.isEmpty,
-          );
-    if (matches.isEmpty) return entries;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (final topic in matches) ...<Widget>[
-          _DuaTopicTile(
-            topic: topic,
-            locale: locale,
-            count: topic.entryCount(items),
-            onTap: () => onOpenTopic(topic),
-          ),
-          const SizedBox(height: 10),
-        ],
-        Expanded(child: entries),
-      ],
+    // Chapters, topics and du'a scroll together: in a fixed column the
+    // rows above the list overflowed once the keyboard took the space.
+    final leading = <Widget>[
+      for (final chapter in chapters)
+        _DuaChapterRow(
+          key: ValueKey('dua-chapter-match-${chapter.sourceNumber}'),
+          chapter: chapter,
+          onTap: () => onOpen(chapter),
+        ),
+      for (final topic in matches)
+        _DuaTopicTile(
+          topic: topic,
+          locale: locale,
+          count: topic.entryCount(items),
+          onTap: () => onOpenTopic(topic),
+        ),
+    ];
+    return _AsyncDuaEntries(
+      entries: searchPending || searchResults == null
+          ? const AsyncValue<List<DuaEntry>>.loading()
+          : searchResults!,
+      query: '',
+      onRetry: onSearchRetry,
+      showEmpty: leading.isEmpty,
+      leading: leading,
     );
   }
 }
@@ -509,40 +553,104 @@ class _DuaTopicCard extends StatelessWidget {
   );
 }
 
-class _EntryList extends StatelessWidget {
-  const _EntryList({
-    required this.entries,
-    required this.query,
-    required this.searchController,
-    required this.onQueryChanged,
-    required this.onRetry,
-  });
+/// The chapters of a topic as rows, as in the printed book's contents.
+class _DuaChapterList extends StatelessWidget {
+  const _DuaChapterList({required this.chapters, required this.onOpen});
 
-  final AsyncValue<List<DuaEntry>> entries;
-  final String query;
-  final TextEditingController searchController;
-  final ValueChanged<String> onQueryChanged;
-  final VoidCallback onRetry;
+  final List<DuaCategory> chapters;
+  final ValueChanged<DuaCategory> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        SearchBar(
-          controller: searchController,
-          hintText: context.l10n.search,
-          leading: const Icon(Icons.search),
-          onChanged: onQueryChanged,
-        ),
-        const SizedBox(height: 18),
-        Expanded(
-          child: _AsyncDuaEntries(
-            entries: entries,
-            query: query,
-            onRetry: onRetry,
+    return ListView.separated(
+      itemCount: chapters.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final chapter = chapters[index];
+        return _DuaChapterRow(chapter: chapter, onTap: () => onOpen(chapter));
+      },
+    );
+  }
+}
+
+/// One chapter as a row: «Глава N» and its title.
+class _DuaChapterRow extends StatelessWidget {
+  const _DuaChapterRow({required this.chapter, required this.onTap, super.key});
+
+  final DuaCategory chapter;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IqroCard(
+      key: ValueKey('dua-chapter-${chapter.collection}-${chapter.slug}'),
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            child: IqroIcon(iqroDuaIcon, color: theme.colorScheme.primary),
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  context.l10n.duaChapterNumber(chapter.sourceNumber),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  duaDisplayTitle(chapter.title),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+    );
+  }
+}
+
+/// A chapter, a topic or the favourites read as one column of du'a cards.
+class _DuaFeed extends StatelessWidget {
+  const _DuaFeed({required this.entries, required this.onRetry, this.banner});
+
+  final AsyncValue<List<DuaEntry>> entries;
+  final VoidCallback onRetry;
+  final String? banner;
+
+  @override
+  Widget build(BuildContext context) {
+    return entries.when(
+      loading: () => const IqroLoading(),
+      error: (error, stack) =>
+          IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      data: (items) {
+        if (items.isEmpty) return _DuaEmpty(message: context.l10n.noDuaFound);
+        final lead = banner == null ? 0 : 1;
+        return ListView.separated(
+          itemCount: items.length + lead,
+          separatorBuilder: (context, index) => const SizedBox(height: 14),
+          itemBuilder: (context, index) {
+            if (index < lead) return _DuaChapterBanner(title: banner!);
+            final entry = items[index - lead];
+            return DuaEntryCard(
+              key: ValueKey<String>('dua-entry-${entry.id}'),
+              entry: entry,
+              position: index - lead + 1,
+              count: items.length,
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -553,6 +661,7 @@ class _AsyncDuaEntries extends StatelessWidget {
     required this.query,
     required this.onRetry,
     this.showEmpty = true,
+    this.leading = const <Widget>[],
   });
 
   final AsyncValue<List<DuaEntry>> entries;
@@ -562,12 +671,30 @@ class _AsyncDuaEntries extends StatelessWidget {
   /// False when something else on screen already answers the search.
   final bool showEmpty;
 
+  /// Rows scrolled above the du'a, such as matching chapters and topics.
+  final List<Widget> leading;
+
+  // The state below the leading rows, which scroll with it.
+  Widget _withLeading(Widget state) => leading.isEmpty
+      ? state
+      : ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          children: <Widget>[
+            for (final row in leading) ...<Widget>[
+              row,
+              const SizedBox(height: 10),
+            ],
+            Padding(padding: const EdgeInsets.only(top: 12), child: state),
+          ],
+        );
+
   @override
   Widget build(BuildContext context) {
     return entries.when(
-      loading: () => const IqroLoading(),
-      error: (error, stack) =>
-          IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      loading: () => _withLeading(const IqroLoading()),
+      error: (error, stack) => _withLeading(
+        IqroAsyncError(title: context.l10n.networkError, onRetry: onRetry),
+      ),
       data: (items) {
         final normalizedQuery = query.toLowerCase();
         final visible = items
@@ -581,15 +708,20 @@ class _AsyncDuaEntries extends StatelessWidget {
             })
             .toList(growable: false);
         if (visible.isEmpty) {
-          return showEmpty
-              ? _DuaEmpty(message: context.l10n.noDuaFound)
-              : const SizedBox.shrink();
+          return _withLeading(
+            showEmpty
+                ? _DuaEmpty(message: context.l10n.noDuaFound)
+                : const SizedBox.shrink(),
+          );
         }
+        final lead = leading.length;
         return ListView.separated(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          itemCount: visible.length,
+          itemCount: lead + visible.length,
           separatorBuilder: (context, index) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
+          itemBuilder: (context, position) {
+            if (position < lead) return leading[position];
+            final index = position - lead;
             final entry = visible[index];
             final startsChapter =
                 index == 0 ||
@@ -759,7 +891,7 @@ class DuaEntryRouteScreen extends ConsumerWidget {
   }
 }
 
-class DuaEntryScreen extends ConsumerStatefulWidget {
+class DuaEntryScreen extends StatelessWidget {
   const DuaEntryScreen({
     required this.entry,
     this.audioEnabled = true,
@@ -773,7 +905,50 @@ class DuaEntryScreen extends ConsumerStatefulWidget {
   final VoidCallback? onRevalidate;
 
   @override
-  ConsumerState<DuaEntryScreen> createState() => _DuaEntryScreenState();
+  Widget build(BuildContext context) => Scaffold(
+    appBar: IqroTopBar(title: context.l10n.dua),
+    body: IqroPage(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (showCachedWarning) ...<Widget>[
+            IqroStatusBanner(
+              icon: Icons.cloud_off_outlined,
+              title: context.l10n.cachedDuaWarning,
+              actionLabel: onRevalidate == null ? null : context.l10n.retry,
+              onAction: onRevalidate,
+            ),
+            const SizedBox(height: 14),
+          ],
+          _DuaChapterBanner(title: duaDisplayTitle(entry.categoryTitle)),
+          const SizedBox(height: 14),
+          DuaEntryCard(entry: entry, audioEnabled: audioEnabled),
+        ],
+      ),
+    ),
+  );
+}
+
+/// One du'a as a card: the opening formulas on their own lines, the Arabic,
+/// a repetition counter when it is said several times, the meaning with its
+/// source, and the actions — listen, repeat, speed, favourite, share.
+class DuaEntryCard extends ConsumerStatefulWidget {
+  const DuaEntryCard({
+    required this.entry,
+    this.audioEnabled = true,
+    this.position,
+    this.count,
+    super.key,
+  });
+  final DuaEntry entry;
+  final bool audioEnabled;
+
+  /// Place of the du'a in its feed, shown as «position/count».
+  final int? position;
+  final int? count;
+
+  @override
+  ConsumerState<DuaEntryCard> createState() => _DuaEntryCardState();
 }
 
 bool _sameAccountScope(
@@ -781,7 +956,7 @@ bool _sameAccountScope(
   AccountScopeSnapshot? right,
 ) => left?.userId == right?.userId && left?.epoch == right?.epoch;
 
-class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
+class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
   var _favorite = false;
   var _favoriteBusy = true;
   var _completedRepetitions = 0;
@@ -843,147 +1018,251 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
     final entry = widget.entry;
     final currentController = ref.watch(audioControllerProvider.notifier);
     _synchronizeAccountBinding(currentController);
-    final stages = duaRepetitionStages(
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final repetitions = duaRepetitionStages(
       entry.repetitionLabel,
       entry.repetitions,
+    ).fold<int>(0, (sum, stage) => sum + stage);
+    final hasAudio = widget.audioEnabled && entry.audio.isNotEmpty;
+    final audioId = hasAudio
+        ? duaAudioPlaybackId(
+            entry,
+            entry.audio[_selectedAudioIndex],
+            _selectedAudioIndex,
+          )
+        : null;
+    final standalone = ref.watch(
+      audioControllerProvider.select((state) => state.standalone),
     );
-    final progress = DuaPracticeProgress(
-      stages: stages,
-      completed: _completedRepetitions,
+    final current = standalone != null && standalone.mediaItem.id == audioId
+        ? standalone
+        : null;
+    final owned = current != null && _ownedAudioId == audioId;
+    final reference = entry.evidence
+        .map((item) => item.sourceReference.trim())
+        .where((item) => item.isNotEmpty)
+        .firstOrNull;
+    final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
+      color: IqroTheme.arabicInk(context),
+      fontFamily: IqroTheme.arabicFontFamily,
+      fontWeight: FontWeight.normal,
+      fontSize: 28,
+      height: 2.05,
     );
-    return Scaffold(
-      appBar: IqroTopBar(
-        title: entry.categoryTitle,
-        subtitle: '#${entry.sourceNumber}',
-        actions: <Widget>[
-          Builder(
-            builder: (buttonContext) => IconButton(
-              tooltip: context.l10n.shareDua,
-              icon: const Icon(Icons.ios_share_outlined),
-              onPressed: () => unawaited(_share(buttonContext)),
-            ),
-          ),
-          IconButton(
-            tooltip: context.l10n.favorites,
-            isSelected: _favorite,
-            selectedIcon: const Icon(Icons.bookmark),
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: _favoriteBusy ? null : _toggle,
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: IqroPage(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (widget.showCachedWarning) ...<Widget>[
-              IqroStatusBanner(
-                icon: Icons.cloud_off_outlined,
-                title: context.l10n.cachedDuaWarning,
-                actionLabel: widget.onRevalidate == null
-                    ? null
-                    : context.l10n.retry,
-                onAction: widget.onRevalidate,
-              ),
-              const SizedBox(height: 14),
-            ],
-            IqroCard(
-              color: context.iqroColors.ink,
-              borderColor: Colors.transparent,
-              padding: const EdgeInsets.all(22),
-              child: Text(
-                entry.arabicText,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontFamily: IqroTheme.arabicFontFamily,
-                  fontWeight: FontWeight.normal,
-                  height: 1.9,
-                ),
-              ),
-            ),
-            if (entry.transliteration.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              IqroCard(
-                child: Text(
-                  entry.transliteration,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
-            ],
-            if (entry.meaning.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              IqroCard(
-                color: context.iqroColors.sand,
-                borderColor: Colors.transparent,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    IqroEyebrow(context.l10n.translation),
-                    const SizedBox(height: 8),
-                    Text(
-                      entry.meaning,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            if (widget.audioEnabled && entry.audio.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              _DuaAudioCard(
-                entry: entry,
-                selectedIndex: _selectedAudioIndex,
-                loadFailed: _audioLoadFailed,
-                onSelected: _selectAudio,
-                onToggle: _toggleAudio,
-                onRetry: _retryAudio,
-                onSeek: _seekAudio,
-                onRepeat: _toggleAudioRepeat,
-              ),
-            ],
-            if (progress.total > 1 ||
-                entry.repetitionLabel.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              _DuaPracticeCard(
-                progress: progress,
-                onIncrement: _incrementPractice,
-                onReset: _completedRepetitions == 0
-                    ? null
-                    : () => setState(() => _completedRepetitions = 0),
-              ),
-            ],
-            const SizedBox(height: 14),
-            _DuaSourceCard(entry: entry),
-            const SizedBox(height: 14),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _copy,
-                    icon: const Icon(Icons.copy_outlined),
-                    label: Text(context.l10n.copyText),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Builder(
-                    builder: (buttonContext) => FilledButton.icon(
-                      onPressed: () => unawaited(_share(buttonContext)),
-                      icon: const Icon(Icons.ios_share_outlined),
-                      label: Text(context.l10n.shareDua),
-                    ),
-                  ),
-                ),
-              ],
+    return IqroCard(
+      padding: const EdgeInsets.fromLTRB(18, 24, 18, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final (index, part) in splitDuaArabic(
+            entry.arabicText,
+          ).indexed) ...<Widget>[
+            if (index > 0) SizedBox(height: part.opening ? 18 : 6),
+            Text(
+              part.text,
+              key: index == 0 ? const ValueKey('dua-arabic') : null,
+              textDirection: TextDirection.rtl,
+              textAlign: TextAlign.center,
+              style: part.opening
+                  ? arabicStyle?.copyWith(fontSize: 22, color: scheme.primary)
+                  : arabicStyle,
             ),
           ],
-        ),
+          if (repetitions > 1) ...<Widget>[
+            const SizedBox(height: 18),
+            Center(
+              child: IqroRepetitionCounter(
+                key: const ValueKey('dua-counter'),
+                total: repetitions,
+                completed: _completedRepetitions,
+                onTap: _incrementPractice,
+              ),
+            ),
+          ],
+          if (entry.transliteration.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            Text(
+              entry.transliteration,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+                height: 1.5,
+              ),
+            ),
+          ],
+          if (entry.meaning.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 18),
+            Text(
+              entry.meaning,
+              key: const ValueKey('dua-meaning'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.primary,
+                height: 1.55,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          // The source sits under the text it backs; the full record opens
+          // from it.
+          InkWell(
+            key: const ValueKey('dua-source'),
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => _showSource(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                '[${reference ?? '${entry.sourceLabel} · #${entry.sourceNumber}'}]',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: .7),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: IconButtonTheme(
+              data: IconButtonThemeData(
+                style: IconButton.styleFrom(foregroundColor: scheme.primary),
+              ),
+              child: Row(
+                children: <Widget>[
+                  if (hasAudio) ...<Widget>[
+                    Expanded(
+                      child: _audioLoadFailed
+                          ? IconButton(
+                              tooltip: context.l10n.retry,
+                              onPressed: _retryAudio,
+                              icon: Icon(Icons.refresh, color: scheme.error),
+                            )
+                          : current?.loading == true
+                          ? const Center(
+                              child: SizedBox.square(
+                                dimension: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              tooltip: current?.playing == true
+                                  ? context.l10n.pause
+                                  : context.l10n.play,
+                              onPressed: _toggleAudio,
+                              icon: Icon(
+                                current?.playing == true
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                              ),
+                            ),
+                    ),
+                    Expanded(
+                      child: IconButton(
+                        tooltip: context.l10n.repeat,
+                        isSelected: owned && current.repeatEnabled,
+                        onPressed: owned
+                            ? () => unawaited(_toggleAudioRepeat(audioId!))
+                            : null,
+                        selectedIcon: const Icon(Icons.repeat_one),
+                        icon: const Icon(Icons.repeat),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: owned
+                            ? () => unawaited(
+                                _cycleAudioSpeed(audioId!, current.speed),
+                              )
+                            : null,
+                        child: Text(
+                          '${playbackSpeedLabel(owned ? current.speed : 1)}×',
+                          semanticsLabel: context.l10n.speed,
+                        ),
+                      ),
+                    ),
+                  ],
+                  Expanded(
+                    child: IconButton(
+                      tooltip: context.l10n.favorites,
+                      isSelected: _favorite,
+                      selectedIcon: const Icon(Icons.bookmark),
+                      icon: const Icon(Icons.bookmark_border),
+                      onPressed: _favoriteBusy ? null : _toggle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Builder(
+                      builder: (buttonContext) => IconButton(
+                        tooltip: context.l10n.shareDua,
+                        icon: const Icon(Icons.ios_share_outlined),
+                        onPressed: () => unawaited(_share(buttonContext)),
+                      ),
+                    ),
+                  ),
+                  if (widget.position != null && widget.count != null)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surface.withValues(alpha: .7),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            '${widget.position}/${widget.count}',
+                            style: theme.textTheme.labelLarge,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Future<void> _cycleAudioSpeed(String id, double speed) {
+    final scope = _accountScope;
+    final generation = _accountGeneration;
+    final controller = _audioController;
+    final owner = _audioOwner;
+    if (scope == null ||
+        _ownedAudioId != id ||
+        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
+      return Future<void>.value();
+    }
+    return controller.setStandaloneSpeed(
+      id,
+      nextPlaybackSpeed(speed),
+      owner: owner,
+    );
+  }
+
+  Future<void> _showSource(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: _DuaSourceCard(entry: widget.entry),
+      ),
+    ),
+  );
 
   Future<void> _toggle() async {
     if (_favoriteBusy) return;
@@ -1014,28 +1293,6 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
       if (_isCurrentAccount(scope, generation) && request == _favoriteRequest) {
         setState(() => _favoriteBusy = false);
       }
-    }
-  }
-
-  void _selectAudio(int index) {
-    final scope = _accountScope;
-    final generation = _accountGeneration;
-    final controller = _audioController;
-    final owner = _audioOwner;
-    if (scope == null ||
-        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
-      return;
-    }
-    if (index == _selectedAudioIndex) return;
-    final audioId = _ownedAudioId;
-    _ownedAudioId = null;
-    _audioRequest += 1;
-    setState(() {
-      _selectedAudioIndex = index;
-      _audioLoadFailed = false;
-    });
-    if (audioId != null) {
-      unawaited(controller.stopStandalone(audioId, owner: owner));
     }
   }
 
@@ -1098,19 +1355,6 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
         setState(() => _audioLoadFailed = true);
       }
     }
-  }
-
-  Future<void> _seekAudio(String id, Duration position) {
-    final scope = _accountScope;
-    final generation = _accountGeneration;
-    final controller = _audioController;
-    final owner = _audioOwner;
-    if (scope == null ||
-        _ownedAudioId != id ||
-        !_isCurrentAudioBinding(scope, generation, controller, owner)) {
-      return Future<void>.value();
-    }
-    return controller.seekStandalone(id, position, owner: owner);
   }
 
   Future<void> _toggleAudioRepeat(String id) {
@@ -1198,32 +1442,12 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
       widget.entry.repetitions,
     );
     final target = stages.fold<int>(0, (sum, stage) => sum + stage);
-    if (_completedRepetitions >= target) return;
-    final next = _completedRepetitions + 1;
-    setState(() => _completedRepetitions = next);
-    if (next == target) {
-      unawaited(HapticFeedback.mediumImpact());
-    } else {
-      unawaited(HapticFeedback.selectionClick());
-    }
-  }
-
-  String _shareText() => duaShareText(
-    widget.entry,
-    translationLabel: context.l10n.translation,
-    repetitionLabel: context.l10n.repetitionTarget,
-    sourceLabel: context.l10n.sourceAndVerification,
-    canonicalUrl:
-        '${ref.read(appConfigProvider).apiBaseUrl}${duaEntryRoute(widget.entry)}',
-  );
-
-  Future<void> _copy() async {
-    final confirmation = context.l10n.textCopied;
-    await Clipboard.setData(ClipboardData(text: _shareText()));
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(confirmation)));
+    setState(
+      () => _completedRepetitions = advanceRepetitionCount(
+        _completedRepetitions,
+        target,
+      ),
+    );
   }
 
   Future<void> _share(BuildContext buttonContext) async {
@@ -1231,451 +1455,41 @@ class _DuaEntryScreenState extends ConsumerState<DuaEntryScreen> {
     final origin = box is RenderBox
         ? box.localToGlobal(Offset.zero) & box.size
         : null;
-    await SharePlus.instance.share(
-      ShareParams(
-        subject: widget.entry.categoryTitle,
-        title: context.l10n.shareDua,
-        text: _shareText(),
-        sharePositionOrigin: origin,
+    await shareContent(
+      context,
+      duaContentShare(
+        widget.entry,
+        locale: Localizations.localeOf(context).languageCode,
+        repetitionLabel: context.l10n.repetitionTarget,
+        readInIqro: context.l10n.shareReadInIqro,
       ),
+      origin: origin,
     );
   }
 }
 
-class _DuaAudioCard extends ConsumerWidget {
-  const _DuaAudioCard({
-    required this.entry,
-    required this.selectedIndex,
-    required this.loadFailed,
-    required this.onSelected,
-    required this.onToggle,
-    required this.onRetry,
-    required this.onSeek,
-    required this.onRepeat,
-  });
-
-  final DuaEntry entry;
-  final int selectedIndex;
-  final bool loadFailed;
-  final ValueChanged<int> onSelected;
-  final Future<void> Function() onToggle;
-  final Future<void> Function() onRetry;
-  final Future<void> Function(String, Duration) onSeek;
-  final Future<void> Function(String) onRepeat;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(
-      audioControllerProvider.select((value) => value.standalone),
-    );
-    final locale = Localizations.localeOf(context).languageCode;
-    final safeIndex = selectedIndex.clamp(0, entry.audio.length - 1);
-    final asset = entry.audio[safeIndex];
-    final playbackId = duaAudioPlaybackId(entry, asset, safeIndex);
-    final active = state?.mediaItem.id == playbackId;
-    final duration = active ? state!.duration : Duration.zero;
-    final position = active
-        ? clampIqroAudioPosition(state!.position, duration)
-        : Duration.zero;
-    final loading = active && state!.loading;
-    final playbackFailed = active && state!.error != null;
-    final repeating = active && state!.repeatEnabled;
-    return IqroCard(
-      color: context.iqroColors.ink,
-      borderColor: Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(Icons.headphones_outlined, color: Colors.white),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  context.l10n.duaAudio,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.white),
-                ),
-              ),
-              if (asset.provider.isNotEmpty)
-                Text(
-                  asset.provider,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: .55),
-                    fontSize: 11,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (entry.audio.length > 1)
-            DropdownButtonFormField<int>(
-              key: ValueKey<String>('dua-audio-${entry.id}-$safeIndex'),
-              initialValue: safeIndex,
-              dropdownColor: context.iqroColors.ink,
-              style: const TextStyle(color: Colors.white),
-              iconEnabledColor: Colors.white,
-              decoration: InputDecoration(
-                labelText: context.l10n.duaReader,
-                labelStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: .7),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: .22),
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              items: <DropdownMenuItem<int>>[
-                for (var index = 0; index < entry.audio.length; index += 1)
-                  DropdownMenuItem<int>(
-                    value: index,
-                    child: Text(
-                      _duaAudioReader(entry.audio[index], locale),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: (value) {
-                if (value != null) onSelected(value);
-              },
-            )
-          else
-            Text(
-              _duaAudioReader(asset, locale),
-              style: TextStyle(color: Colors.white.withValues(alpha: .72)),
-            ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              SizedBox.square(
-                dimension: 54,
-                child: IconButton.filled(
-                  tooltip: active && state?.playing == true
-                      ? context.l10n.pause
-                      : context.l10n.play,
-                  onPressed: loading ? null : () => unawaited(onToggle()),
-                  icon: loading
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          active && state?.playing == true
-                              ? Icons.pause
-                              : Icons.play_arrow,
-                        ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DuaSeekSlider(
-                  mediaId: playbackId,
-                  active: active,
-                  position: position,
-                  duration: duration,
-                  onSeek: onSeek,
-                ),
-              ),
-              IconButton(
-                tooltip: repeating
-                    ? context.l10n.repeatOn
-                    : context.l10n.repeatOff,
-                color: repeating
-                    ? Theme.of(context).colorScheme.tertiary
-                    : Colors.white,
-                onPressed: active
-                    ? () => unawaited(onRepeat(playbackId))
-                    : null,
-                icon: const Icon(Icons.repeat),
-              ),
-            ],
-          ),
-          if (loadFailed || playbackFailed) ...<Widget>[
-            const SizedBox(height: 10),
-            _DuaAudioError(onRetry: () => unawaited(onRetry())),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: <Widget>[
-              Icon(
-                Icons.wifi_outlined,
-                color: Colors.white.withValues(alpha: .5),
-                size: 16,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  context.l10n.duaAudioStreaming,
-                  style: _audioMetaStyle,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  static const _audioMetaStyle = TextStyle(
-    color: Color(0x99FFFFFF),
-    fontSize: 11,
-  );
-}
-
-class _DuaSeekSlider extends StatefulWidget {
-  const _DuaSeekSlider({
-    required this.mediaId,
-    required this.active,
-    required this.position,
-    required this.duration,
-    required this.onSeek,
-  });
-
-  final String mediaId;
-  final bool active;
-  final Duration position;
-  final Duration duration;
-  final Future<void> Function(String, Duration) onSeek;
-
-  @override
-  State<_DuaSeekSlider> createState() => _DuaSeekSliderState();
-}
-
-class _DuaSeekSliderState extends State<_DuaSeekSlider> {
-  double? _previewMilliseconds;
-
-  @override
-  void didUpdateWidget(covariant _DuaSeekSlider oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.mediaId != widget.mediaId || !widget.active) {
-      _previewMilliseconds = null;
-    }
-  }
+/// The chapter the du'a belongs to, as a ribbon above the text.
+class _DuaChapterBanner extends StatelessWidget {
+  const _DuaChapterBanner({required this.title});
+  final String title;
 
   @override
   Widget build(BuildContext context) {
-    final durationMs = widget.duration.inMilliseconds;
-    final maximum = durationMs <= 0 ? 1 : durationMs;
-    final livePosition = widget.position.inMilliseconds.clamp(0, maximum);
-    final shownPosition = (_previewMilliseconds ?? livePosition.toDouble())
-        .clamp(0, maximum.toDouble())
-        .toDouble();
-    return Column(
-      children: <Widget>[
-        Slider(
-          value: shownPosition,
-          min: 0,
-          max: maximum.toDouble(),
-          onChanged: widget.active && durationMs > 0
-              ? (value) => setState(() => _previewMilliseconds = value)
-              : null,
-          onChangeEnd: widget.active && durationMs > 0
-              ? (value) {
-                  setState(() => _previewMilliseconds = null);
-                  unawaited(
-                    widget.onSeek(
-                      widget.mediaId,
-                      Duration(milliseconds: value.round()),
-                    ),
-                  );
-                }
-              : null,
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Text(
-                _duaDuration(Duration(milliseconds: shownPosition.round())),
-                style: _DuaAudioCard._audioMetaStyle,
-              ),
-              Text(
-                durationMs > 0 ? _duaDuration(widget.duration) : '--:--',
-                style: _DuaAudioCard._audioMetaStyle,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DuaAudioError extends StatelessWidget {
-  const _DuaAudioError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
+    final theme = Theme.of(context);
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(14),
+        color: context.iqroColors.sand,
+        borderRadius: BorderRadius.circular(22),
       ),
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.onErrorContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurface,
+            height: 1.35,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              context.l10n.duaAudioFailed,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
-        ],
-      ),
-    );
-  }
-}
-
-class _DuaPracticeCard extends StatelessWidget {
-  const _DuaPracticeCard({
-    required this.progress,
-    required this.onIncrement,
-    required this.onReset,
-  });
-
-  final DuaPracticeProgress progress;
-  final VoidCallback onIncrement;
-  final VoidCallback? onReset;
-
-  @override
-  Widget build(BuildContext context) {
-    return IqroCard(
-      color: context.iqroColors.sand,
-      borderColor: Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(Icons.repeat),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  context.l10n.duaPractice,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              Text(
-                '${progress.completed} / ${progress.total}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Semantics(
-            value: '${progress.completed} / ${progress.total}',
-            child: LinearProgressIndicator(value: progress.fraction),
-          ),
-          if (progress.stages.length > 1) ...<Widget>[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: <Widget>[
-                for (var index = 0; index < progress.stages.length; index += 1)
-                  _PracticeStage(
-                    label: '${context.l10n.practiceStage} ${index + 1}',
-                    target: progress.stages[index],
-                    active: index == progress.stageIndex,
-                    complete:
-                        index < progress.stageIndex || progress.isComplete,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${context.l10n.practiceStage} ${progress.stageIndex + 1}: '
-              '${progress.completedInStage} / ${progress.stageTarget}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: progress.isComplete ? null : onIncrement,
-            icon: Icon(
-              progress.isComplete ? Icons.check_circle : Icons.add_circle,
-            ),
-            label: Text(
-              progress.isComplete
-                  ? context.l10n.completed
-                  : context.l10n.markRepetition,
-            ),
-          ),
-          TextButton(onPressed: onReset, child: Text(context.l10n.reset)),
-          Text(
-            context.l10n.duaPracticeHint,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PracticeStage extends StatelessWidget {
-  const _PracticeStage({
-    required this.label,
-    required this.target,
-    required this.active,
-    required this.complete,
-  });
-
-  final String label;
-  final int target;
-  final bool active;
-  final bool complete;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      selected: active,
-      child: Container(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 10,
-          vertical: 7,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? colorScheme.primary
-              : complete
-              ? colorScheme.primaryContainer
-              : colorScheme.surface.withValues(alpha: .7),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (complete) ...<Widget>[
-              Icon(
-                Icons.check,
-                size: 14,
-                color: active ? colorScheme.onPrimary : colorScheme.primary,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              '$label · $target',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: active ? colorScheme.onPrimary : null,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1800,11 +1614,4 @@ String _duaAudioReader(DuaAudioAsset asset, String locale) {
   if (asset.readerName.trim().isNotEmpty) return asset.readerName.trim();
   if (asset.provider.trim().isNotEmpty) return asset.provider.trim();
   return 'IQRO';
-}
-
-String _duaDuration(Duration duration) {
-  final hours = duration.inHours;
-  final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
 }

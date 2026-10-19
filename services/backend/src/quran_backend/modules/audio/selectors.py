@@ -24,6 +24,7 @@ from quran_backend.modules.audio.models import (
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
+    PlayerBackground,
     QuranFoundationAyahRecitation,
     QuranFoundationAyahRecitationChapter,
     RecitationEdition,
@@ -46,17 +47,31 @@ def public_recitation_base() -> QuerySet[RecitationEdition]:
         .annotate(surah_count=Count("surah_number", distinct=True))
         .filter(surah_count=114)
     )
+    any_surah = AudioTrack.objects.filter(
+        recitation_edition_id=OuterRef("pk"),
+        scope=AudioTrackScope.SURAH,
+        renditions__is_default=True,
+    )
     return (
         RecitationEdition.objects.alias(
             has_complete_surah_catalog=Exists(complete_surah_catalog),
+            has_any_surah=Exists(any_surah),
         )
         .filter(
             status=RecitationPublicationStatus.PUBLISHED,
             stream_allowed=True,
-            has_complete_surah_catalog=True,
             reciter__is_active=True,
             quran_edition_version__status=PublicationStatus.PUBLISHED,
-            quran_edition_version__edition__active_version_id=F("quran_edition_version_id"),
+        )
+        .filter(
+            # Listening-only audio plays whole surahs and never maps onto ayahs,
+            # so it may be partial and outlives a newer Quran text version.
+            Q(listening_only=True, has_any_surah=True)
+            | Q(
+                listening_only=False,
+                has_complete_surah_catalog=True,
+                quran_edition_version__edition__active_version_id=F("quran_edition_version_id"),
+            )
         )
         .select_related("reciter", "quran_edition_version__edition")
         .order_by("code", "version", "id")
@@ -122,20 +137,41 @@ RECITATION_SUMMARY_FIELDS = (
     "expected_ayah_count",
     "timed_ayah_count",
 )
-RECITATION_SUMMARY_CACHE_KEY = "audio:public-recitation-summaries:v1"
+RECITATION_SUMMARY_CACHE_KEY = "audio:public-recitation-summaries:v2"
 # Matches the public API's max-age, so cached summaries are never staler than
 # what clients and the gateway edge cache already serve.
 RECITATION_SUMMARY_TTL_SECONDS = 300
 
+RecitationSummary = dict[str, int | list[int]]
 
-def _recitation_summaries(ids: list[uuid.UUID] | None = None) -> dict[str, dict[str, int]]:
+
+def _recitation_summaries(ids: list[uuid.UUID] | None = None) -> dict[str, RecitationSummary]:
     recitations = public_recitations()
     if ids is not None:
         recitations = recitations.filter(id__in=ids)
-    return {
+    summaries: dict[str, RecitationSummary] = {
         str(row["id"]): {field: int(row[field] or 0) for field in RECITATION_SUMMARY_FIELDS}
         for row in recitations.values("id", *RECITATION_SUMMARY_FIELDS)
     }
+    surah_numbers: dict[str, list[int]] = {key: [] for key in summaries}
+    playable = AudioTrack.objects.filter(
+        recitation_edition_id__in=[uuid.UUID(key) for key in summaries],
+        scope=AudioTrackScope.SURAH,
+        renditions__is_default=True,
+    ).order_by("surah_number")
+    for recitation_id, surah_number in playable.values_list(
+        "recitation_edition_id", "surah_number"
+    ):
+        if surah_number is not None:
+            surah_numbers[str(recitation_id)].append(surah_number)
+    for key, summary in summaries.items():
+        summary["surah_numbers"] = surah_numbers[key]
+    return summaries
+
+
+def forget_recitation_summaries() -> None:
+    """Drop cached summaries once a published recitation gains surahs."""
+    cache.delete(RECITATION_SUMMARY_CACHE_KEY)
 
 
 def attach_recitation_summaries(recitations: Iterable[RecitationEdition]) -> None:
@@ -149,7 +185,7 @@ def attach_recitation_summaries(recitations: Iterable[RecitationEdition]) -> Non
     items = list(recitations)
     if not items:
         return
-    summaries: dict[str, dict[str, int]] | None = cache.get(RECITATION_SUMMARY_CACHE_KEY)
+    summaries: dict[str, RecitationSummary] | None = cache.get(RECITATION_SUMMARY_CACHE_KEY)
     if summaries is None:
         summaries = _recitation_summaries()
         cache.set(RECITATION_SUMMARY_CACHE_KEY, summaries, RECITATION_SUMMARY_TTL_SECONDS)
@@ -168,6 +204,18 @@ def public_reciters() -> QuerySet[Reciter]:
         Reciter.objects.alias(has_public_recitation=Exists(public_recitation))
         .filter(is_active=True, has_public_recitation=True)
         .order_by("name_en", "code", "id")
+    )
+
+
+# The picker is a short curated strip; bound the payload regardless of admin data.
+MAX_PUBLIC_PLAYER_BACKGROUNDS = 24
+
+
+def public_player_backgrounds() -> QuerySet[PlayerBackground]:
+    return (
+        PlayerBackground.objects.filter(is_active=True)
+        .exclude(image_object_key="")
+        .order_by("sort_order", "created_at", "id")[:MAX_PUBLIC_PLAYER_BACKGROUNDS]
     )
 
 
@@ -260,8 +308,15 @@ def public_surah_tracks(recitation_id: uuid.UUID, surah_number: int) -> QuerySet
 
 
 def verified_audio_segments() -> QuerySet[AyahAudioSegment]:
+    """Ayah timings the public API may hand out.
+
+    Listening-only audio never maps onto ayahs, so its timings stay in the
+    database but leave through no public path: surah and ayah playback,
+    variants, offline packages, memorization and salah all read them here.
+    """
     return (
         AyahAudioSegment.objects.filter(
+            track__recitation_edition__listening_only=False,
             track__timing_version__verified_at__isnull=False,
             track__timing_version__recitation_edition_id=F("track__recitation_edition_id"),
             ayah__surah__edition_version_id=F(
