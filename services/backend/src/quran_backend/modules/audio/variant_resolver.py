@@ -316,8 +316,9 @@ class RecitationEditionAudioAdapter:
             delivery=summary.delivery,
             granularity=AudioVariantGranularity.SURAH,
             timing_mode=(
+                # Listening-only tracks resolve without ayahs even when timed.
                 AudioVariantTimingMode.TIMED
-                if summary.segment_count > 0
+                if summary.segment_count > 0 and not recitation.listening_only
                 else AudioVariantTimingMode.UNTIMED
             ),
             quran_edition_version_id=recitation.quran_edition_version_id,

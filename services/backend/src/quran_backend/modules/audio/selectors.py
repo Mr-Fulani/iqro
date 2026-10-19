@@ -308,8 +308,15 @@ def public_surah_tracks(recitation_id: uuid.UUID, surah_number: int) -> QuerySet
 
 
 def verified_audio_segments() -> QuerySet[AyahAudioSegment]:
+    """Ayah timings the public API may hand out.
+
+    Listening-only audio never maps onto ayahs, so its timings stay in the
+    database but leave through no public path: surah and ayah playback,
+    variants, offline packages, memorization and salah all read them here.
+    """
     return (
         AyahAudioSegment.objects.filter(
+            track__recitation_edition__listening_only=False,
             track__timing_version__verified_at__isnull=False,
             track__timing_version__recitation_edition_id=F("track__recitation_edition_id"),
             ayah__surah__edition_version_id=F(

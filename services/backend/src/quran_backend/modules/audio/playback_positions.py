@@ -90,6 +90,10 @@ def _validate_track_and_position(*, track: AudioTrack | None, data: dict[str, An
     end = data["range_end_ayah"]
     if start is None or end is None:
         return
+    if track.recitation_edition.listening_only:
+        raise ValidationError(
+            {"range_start_ayah": "Listening-only recitations play whole surahs, not ayah ranges."}
+        )
     available = set(
         track.segments.filter(ayah__number__in=(start, end)).values_list(
             "ayah__number",
