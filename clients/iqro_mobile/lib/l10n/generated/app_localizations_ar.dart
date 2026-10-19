@@ -2080,4 +2080,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountActionError => 'تعذر إكمال إجراء الحساب.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'عدد السور: $count، نحو $size. هل تريد بدء التنزيل؟';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'السور على هذا الجهاز: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'سور جديدة: $count';
+  }
 }

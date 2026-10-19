@@ -576,6 +576,9 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
     final downloading = state.status == AudioDownloadStatus.downloading;
     final ready = state.status == AudioDownloadStatus.ready;
     final failed = state.status == AudioDownloadStatus.failed;
+    final updateAvailable = state.status == AudioDownloadStatus.updateAvailable;
+    final available = ready || updateAvailable;
+    final newSurahs = state.totalTracks - state.completedTracks;
     final progressLabel = state.totalTracks <= 0
         ? null
         : '${state.completedTracks} / ${state.totalTracks} · '
@@ -589,13 +592,15 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
           Row(
             children: <Widget>[
               Icon(
-                ready ? Icons.offline_pin_outlined : Icons.download_outlined,
-                color: ready ? Theme.of(context).colorScheme.primary : null,
+                available
+                    ? Icons.offline_pin_outlined
+                    : Icons.download_outlined,
+                color: available ? Theme.of(context).colorScheme.primary : null,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  ready
+                  available
                       ? context.l10n.audioAvailableOffline
                       : downloading
                       ? context.l10n.audioDownloading
@@ -607,6 +612,8 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
                 IconButton.filledTonal(
                   tooltip: failed
                       ? context.l10n.resumeDownload
+                      : updateAvailable
+                      ? context.l10n.audioOfflineNewSurahs(newSurahs)
                       : context.l10n.downloadForOffline,
                   onPressed: downloading
                       ? null
@@ -630,6 +637,22 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
             const SizedBox(height: 4),
             Text(
               context.l10n.audioDownloadFailed,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          // A listening-only package may hold only some of the surahs.
+          if (updateAvailable) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioOfflineNewSurahs(newSurahs),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ] else if (ready &&
+              state.totalTracks > 0 &&
+              state.totalTracks < 114) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.audioOfflineSurahs(state.totalTracks),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -661,14 +684,21 @@ class _OfflineAudioCardState extends ConsumerState<_OfflineAudioCard> {
         packageBytes: estimate.totalBytes,
       );
       if (!mounted) return;
+      final remainingSurahs = estimate.totalTracks - estimate.completedTracks;
+      final remainingSize = _formatAudioMegabytes(
+        estimate.totalBytes - estimate.downloadedBytes,
+      );
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(context.l10n.downloadForOffline),
           content: Text(
-            context.l10n.downloadOfflineConfirmation(
-              _formatAudioMegabytes(estimate.totalBytes),
-            ),
+            remainingSurahs == 114
+                ? context.l10n.downloadOfflineConfirmation(remainingSize)
+                : context.l10n.downloadOfflineSurahsConfirmation(
+                    remainingSurahs,
+                    remainingSize,
+                  ),
           ),
           actions: <Widget>[
             TextButton(

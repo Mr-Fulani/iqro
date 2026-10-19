@@ -3791,6 +3791,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not complete the account action.'**
   String get accountActionError;
+
+  /// No description provided for @downloadOfflineSurahsConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Surahs: {count}, about {size}. Start downloading?'**
+  String downloadOfflineSurahsConfirmation(int count, String size);
+
+  /// No description provided for @audioOfflineSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'Surahs on this device: {count}'**
+  String audioOfflineSurahs(int count);
+
+  /// No description provided for @audioOfflineNewSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'New surahs: {count}'**
+  String audioOfflineNewSurahs(int count);
 }
 
 class _AppLocalizationsDelegate

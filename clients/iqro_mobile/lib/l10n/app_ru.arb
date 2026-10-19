@@ -638,5 +638,11 @@
   "accountCodeSendError": "Не удалось отправить код. Повторите попытку.",
   "accountCodeVerifyError": "Не удалось подтвердить код.",
   "accountCodeExpired": "Подтверждение устарело. Запросите новый код.",
-  "accountActionError": "Не удалось завершить действие с аккаунтом."
+  "accountActionError": "Не удалось завершить действие с аккаунтом.",
+  "downloadOfflineSurahsConfirmation": "Сур: {count}, примерно {size}. Начать загрузку?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Сур на устройстве: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "Новые суры: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

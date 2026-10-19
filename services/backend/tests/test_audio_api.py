@@ -826,6 +826,8 @@ def test_offline_audio_manifest_is_complete_verified_and_cacheable(
     assert manifest["package_type"] == "surah_audio"
     assert manifest["quality"] == "default"
     assert manifest["available_qualities"] == ["standard"]
+    assert manifest["listening_only"] is False
+    assert manifest["surah_numbers"] == list(range(1, 115))
     assert manifest["track_count"] == 114
     assert len(manifest["tracks"]) == 114
     assert manifest["total_bytes"] == 114 * 192_000

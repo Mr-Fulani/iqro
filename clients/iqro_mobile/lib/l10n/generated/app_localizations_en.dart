@@ -2095,4 +2095,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountActionError => 'Could not complete the account action.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Surahs: $count, about $size. Start downloading?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Surahs on this device: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'New surahs: $count';
+  }
 }

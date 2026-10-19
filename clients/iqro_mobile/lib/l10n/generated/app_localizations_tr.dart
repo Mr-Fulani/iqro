@@ -2057,4 +2057,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accountActionError => 'Hesap işlemi tamamlanamadı.';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Sure sayısı: $count, yaklaşık $size. İndirme başlatılsın mı?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Cihazdaki sureler: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'Yeni sureler: $count';
+  }
 }

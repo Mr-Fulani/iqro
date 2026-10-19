@@ -728,5 +728,11 @@
   "accountCodeSendError": "Could not send the code. Try again.",
   "accountCodeVerifyError": "Could not verify the code.",
   "accountCodeExpired": "The confirmation has expired. Request a new code.",
-  "accountActionError": "Could not complete the account action."
+  "accountActionError": "Could not complete the account action.",
+  "downloadOfflineSurahsConfirmation": "Surahs: {count}, about {size}. Start downloading?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Surahs on this device: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "New surahs: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

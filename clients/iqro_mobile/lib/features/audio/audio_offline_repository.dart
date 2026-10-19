@@ -22,7 +22,15 @@ const _audioEdition = 'madani-hafs';
 const _audioQualities = <String>{'default', 'economy', 'standard', 'high'};
 const _audioCodecs = <String>{'mp3', 'aac', 'opus', 'flac'};
 
-enum AudioDownloadStatus { notDownloaded, downloading, ready, failed }
+/// [updateAvailable]: a listening-only recitation gained surahs since the
+/// stored package; the stored surahs keep playing until the update lands.
+enum AudioDownloadStatus {
+  notDownloaded,
+  downloading,
+  ready,
+  updateAvailable,
+  failed,
+}
 
 class AudioDownloadSnapshot {
   const AudioDownloadSnapshot({
@@ -150,8 +158,11 @@ class OfflineAudioManifest {
     required this.totalBytes,
     required this.tracks,
     required this.raw,
+    this.listeningOnly = false,
   });
 
+  /// A listening-only package carries the surahs published so far and keeps
+  /// its id as surahs are added; a new surah changes [packageChecksum].
   factory OfflineAudioManifest.fromJson(
     Map<String, Object?> json, {
     required String recitationId,
@@ -168,6 +179,8 @@ class OfflineAudioManifest {
     final trackCount = (json['track_count'] as num?)?.toInt() ?? 0;
     final totalBytes = (json['total_bytes'] as num?)?.toInt() ?? 0;
     final rawQualities = json['available_qualities'];
+    final listeningOnly = json['listening_only'] == true;
+    final rawSurahNumbers = json['surah_numbers'];
     final expectedPackageId = 'recitation-$recitationId-$version-$quality';
     if (json['schema_version'] != 1 ||
         json['package_type'] != _audioPackageType ||
@@ -180,8 +193,12 @@ class OfflineAudioManifest {
         version.isEmpty ||
         !_audioQualities.contains(quality) ||
         !_isSha256(packageChecksum) ||
-        !_isSha256(sourceChecksum) ||
+        // An editor's own listening upload has no source archive checksum.
+        !(_isSha256(sourceChecksum) ||
+            (listeningOnly && sourceChecksum.isEmpty)) ||
         rawQualities is! List ||
+        // Servers before surah_numbers only sent complete packages.
+        (rawSurahNumbers == null ? listeningOnly : rawSurahNumbers is! List) ||
         rawTracks is! List ||
         rawTracks.isEmpty) {
       throw const FormatException('Offline audio manifest is invalid');
@@ -204,16 +221,23 @@ class OfflineAudioManifest {
           ),
         )
         .toList(growable: false);
+    final surahNumbers = rawSurahNumbers is List
+        ? rawSurahNumbers.whereType<int>().toList(growable: false)
+        : List<int>.generate(114, (index) => index + 1);
     if (tracks.length != rawTracks.length ||
         tracks.length != trackCount ||
-        trackCount != 114 ||
+        surahNumbers.length != trackCount ||
+        (rawSurahNumbers is List &&
+            surahNumbers.length != rawSurahNumbers.length) ||
+        (!listeningOnly && trackCount != 114) ||
         totalBytes !=
             tracks.fold<int>(0, (sum, track) => sum + track.asset.bytes)) {
       throw const FormatException('Offline audio coverage is incomplete');
     }
     for (var index = 0; index < tracks.length; index += 1) {
-      if (tracks[index].surah != index + 1) {
-        throw const FormatException('Offline audio surahs are not contiguous');
+      if (tracks[index].surah != surahNumbers[index] ||
+          (index > 0 && surahNumbers[index] <= surahNumbers[index - 1])) {
+        throw const FormatException('Offline audio surahs do not match');
       }
     }
 
@@ -228,6 +252,7 @@ class OfflineAudioManifest {
       totalBytes: totalBytes,
       tracks: tracks,
       raw: json,
+      listeningOnly: listeningOnly,
     );
     if (manifest.computedChecksum != packageChecksum) {
       throw const FormatException('Offline audio manifest checksum failed');
@@ -245,6 +270,7 @@ class OfflineAudioManifest {
   final int totalBytes;
   final List<OfflineAudioTrack> tracks;
   final Map<String, Object?> raw;
+  final bool listeningOnly;
 
   String get computedChecksum {
     final payload = <String, Object?>{
@@ -417,16 +443,17 @@ class AudioOfflineRepository {
     return _snapshotFromRow(row, recitationId, summary['quality']?.toString());
   }
 
+  /// Downloads the surahs the device does not have yet. Updating a ready
+  /// package keeps it ready: its stored surahs play throughout, and the new
+  /// manifest and checksum are recorded only once every surah is verified.
   Future<AudioDownloadSnapshot> install({
     required String recitationId,
     String? quality,
-    int expectedTrackCount = 114,
     void Function(AudioDownloadSnapshot progress)? onProgress,
   }) async {
     final manifest = await _manifest(
       recitationId: recitationId,
       quality: quality,
-      expectedTrackCount: expectedTrackCount,
     );
     await ensureOfflineStorageCapacity(
       _database,
@@ -441,7 +468,9 @@ class AudioOfflineRepository {
     await BackupExclusion.exclude(
       Directory(p.join(support.path, 'offline_packages')),
     );
-    await _preparePackage(manifest, packageDirectory);
+    final updating = await _isReady(manifest.packageId);
+    await _preparePackage(manifest, packageDirectory, updating: updating);
+    final readyItems = await _readyItemChecksums(manifest.packageId);
 
     var completedTracks = 0;
     var completedBytes = 0;
@@ -450,7 +479,12 @@ class AudioOfflineRepository {
         final destination = File(
           p.join(packageDirectory.path, track.asset.fileName),
         );
-        if (!await verifyAudioAssetFile(destination, track.asset)) {
+        // A surah verified by an earlier download is not hashed again.
+        final stored =
+            readyItems['surah:${track.surah}'] == track.asset.sha256 &&
+            await destination.exists() &&
+            await destination.length() == track.asset.bytes;
+        if (!stored && !await verifyAudioAssetFile(destination, track.asset)) {
           final partial = File(
             '${destination.path}.${track.asset.sha256.substring(0, 12)}.part',
           );
@@ -492,6 +526,7 @@ class AudioOfflineRepository {
           track,
           completedTracks: completedTracks,
           completedBytes: completedBytes,
+          updating: updating,
         );
         onProgress?.call(
           AudioDownloadSnapshot(
@@ -520,35 +555,101 @@ class AudioOfflineRepository {
       onProgress?.call(ready);
       return ready;
     } on Object catch (error) {
-      await _markPackageFailed(manifest.packageId, error);
+      await _markPackageFailed(manifest.packageId, error, keepReady: updating);
       rethrow;
     }
   }
 
+  /// The published package against what is stored: [completedTracks] and
+  /// [downloadedBytes] count the surahs already on the device.
   Future<AudioDownloadSnapshot> estimate({
     required String recitationId,
     String? quality,
-    int expectedTrackCount = 114,
   }) async {
     final manifest = await _manifest(
       recitationId: recitationId,
       quality: quality,
-      expectedTrackCount: expectedTrackCount,
+    );
+    return _published(manifest, AudioDownloadStatus.notDownloaded);
+  }
+
+  /// The stored package against the published one: a ready package whose
+  /// checksum changed is [AudioDownloadStatus.updateAvailable].
+  Future<AudioDownloadSnapshot> check(String recitationId) async {
+    final stored = await snapshot(recitationId);
+    final packageId = stored.packageId;
+    if (stored.status != AudioDownloadStatus.ready || packageId == null) {
+      return stored;
+    }
+    final manifest = await _manifest(
+      recitationId: recitationId,
+      quality: stored.quality == 'default' ? null : stored.quality,
+    );
+    final rows = await _database.database.query(
+      'offline_packages',
+      columns: const <String>['checksum_sha256'],
+      where: 'package_id = ?',
+      whereArgs: <Object?>[packageId],
+      limit: 1,
+    );
+    if (manifest.packageId != packageId ||
+        rows.isEmpty ||
+        rows.single['checksum_sha256'] == manifest.packageChecksum) {
+      return stored;
+    }
+    return _published(manifest, AudioDownloadStatus.updateAvailable);
+  }
+
+  Future<AudioDownloadSnapshot> _published(
+    OfflineAudioManifest manifest,
+    AudioDownloadStatus status,
+  ) async {
+    final readyItems = await _readyItemChecksums(manifest.packageId);
+    final stored = manifest.tracks.where(
+      (track) => readyItems['surah:${track.surah}'] == track.asset.sha256,
     );
     return AudioDownloadSnapshot(
-      status: AudioDownloadStatus.notDownloaded,
-      recitationId: recitationId,
+      status: status,
+      recitationId: manifest.recitationId,
       packageId: manifest.packageId,
       quality: manifest.quality,
+      completedTracks: stored.length,
       totalTracks: manifest.tracks.length,
+      downloadedBytes: stored.fold<int>(
+        0,
+        (sum, track) => sum + track.asset.bytes,
+      ),
       totalBytes: manifest.totalBytes,
     );
+  }
+
+  Future<Map<String, String>> _readyItemChecksums(String packageId) async {
+    final rows = await _database.database.query(
+      'offline_package_items',
+      columns: const <String>['item_key', 'checksum_sha256'],
+      where: "package_id = ? AND status = 'ready'",
+      whereArgs: <Object?>[packageId],
+    );
+    return <String, String>{
+      for (final row in rows)
+        row['item_key']! as String: row['checksum_sha256']! as String,
+    };
+  }
+
+  Future<bool> _isReady(String packageId) async {
+    final rows = await _database.database.query(
+      'offline_packages',
+      columns: const <String>['status'],
+      where: 'package_id = ?',
+      whereArgs: <Object?>[packageId],
+      limit: 1,
+    );
+    return rows.isNotEmpty && rows.single['status'] == 'ready';
   }
 
   Future<OfflineAudioManifest> _manifest({
     required String recitationId,
     required String? quality,
-    required int expectedTrackCount,
   }) async {
     if (!_isUuid(recitationId) ||
         (quality != null &&
@@ -560,14 +661,10 @@ class AudioOfflineRepository {
       query: quality == null ? null : <String, Object?>{'quality': quality},
       public: true,
     );
-    final manifest = OfflineAudioManifest.fromJson(
+    return OfflineAudioManifest.fromJson(
       jsonMap(payload),
       recitationId: recitationId,
     );
-    if (manifest.tracks.length != expectedTrackCount) {
-      throw const FormatException('The offline audio package is not complete');
-    }
-    return manifest;
   }
 
   Future<SurahPlayback?> activePlayback({
@@ -630,39 +727,43 @@ class AudioOfflineRepository {
 
   Future<void> _preparePackage(
     OfflineAudioManifest manifest,
-    Directory packageDirectory,
-  ) async {
+    Directory packageDirectory, {
+    required bool updating,
+  }) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await _database.database.transaction((transaction) async {
-      await transaction.insert('offline_packages', <String, Object?>{
-        'package_id': manifest.packageId,
-        'package_type': _audioPackageType,
-        'content_key': _contentKey(manifest.recitationId),
-        'version': manifest.version,
-        'width': null,
-        'checksum_sha256': manifest.packageChecksum,
-        'manifest': jsonEncode(manifest.raw),
-        'status': 'downloading',
-        'is_active': 0,
-        'total_items': manifest.tracks.length,
-        'completed_items': 0,
-        'total_bytes': manifest.totalBytes,
-        'downloaded_bytes': 0,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await transaction.update(
-        'offline_packages',
-        <String, Object?>{
+      // A ready package stays ready while its new surahs download.
+      if (!updating) {
+        await transaction.insert('offline_packages', <String, Object?>{
+          'package_id': manifest.packageId,
+          'package_type': _audioPackageType,
+          'content_key': _contentKey(manifest.recitationId),
+          'version': manifest.version,
+          'width': null,
+          'checksum_sha256': manifest.packageChecksum,
           'manifest': jsonEncode(manifest.raw),
           'status': 'downloading',
+          'is_active': 0,
           'total_items': manifest.tracks.length,
+          'completed_items': 0,
           'total_bytes': manifest.totalBytes,
-          'last_error': null,
+          'downloaded_bytes': 0,
           'updated_at': now,
-        },
-        where: 'package_id = ?',
-        whereArgs: <Object?>[manifest.packageId],
-      );
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        await transaction.update(
+          'offline_packages',
+          <String, Object?>{
+            'manifest': jsonEncode(manifest.raw),
+            'status': 'downloading',
+            'total_items': manifest.tracks.length,
+            'total_bytes': manifest.totalBytes,
+            'last_error': null,
+            'updated_at': now,
+          },
+          where: 'package_id = ?',
+          whereArgs: <Object?>[manifest.packageId],
+        );
+      }
       final items = transaction.batch();
       for (final track in manifest.tracks) {
         final localPath = p.join(packageDirectory.path, track.asset.fileName);
@@ -689,6 +790,7 @@ class AudioOfflineRepository {
     OfflineAudioTrack track, {
     required int completedTracks,
     required int completedBytes,
+    required bool updating,
   }) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await _database.database.transaction((transaction) async {
@@ -702,6 +804,7 @@ class AudioOfflineRepository {
         where: 'package_id = ? AND item_key = ?',
         whereArgs: <Object?>[manifest.packageId, 'surah:${track.surah}'],
       );
+      if (updating) return;
       await transaction.update(
         'offline_packages',
         <String, Object?>{
@@ -729,7 +832,11 @@ class AudioOfflineRepository {
         <String, Object?>{
           'status': 'ready',
           'is_active': 1,
+          'checksum_sha256': manifest.packageChecksum,
+          'manifest': jsonEncode(manifest.raw),
+          'total_items': manifest.tracks.length,
           'completed_items': manifest.tracks.length,
+          'total_bytes': manifest.totalBytes,
           'downloaded_bytes': manifest.totalBytes,
           'last_error': null,
           'updated_at': now,
@@ -740,12 +847,16 @@ class AudioOfflineRepository {
     });
   }
 
-  Future<void> _markPackageFailed(String packageId, Object error) async {
+  Future<void> _markPackageFailed(
+    String packageId,
+    Object error, {
+    required bool keepReady,
+  }) async {
     final message = error.toString();
     await _database.database.update(
       'offline_packages',
       <String, Object?>{
-        'status': 'failed',
+        if (!keepReady) 'status': 'failed',
         'last_error': message.substring(0, message.length.clamp(0, 500)),
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       },

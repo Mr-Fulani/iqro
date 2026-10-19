@@ -634,5 +634,11 @@
   "accountCodeSendError": "تعذر إرسال الرمز. حاول مجددًا.",
   "accountCodeVerifyError": "تعذر تأكيد الرمز.",
   "accountCodeExpired": "انتهت صلاحية التأكيد. اطلب رمزًا جديدًا.",
-  "accountActionError": "تعذر إكمال إجراء الحساب."
+  "accountActionError": "تعذر إكمال إجراء الحساب.",
+  "downloadOfflineSurahsConfirmation": "عدد السور: {count}، نحو {size}. هل تريد بدء التنزيل؟",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "السور على هذا الجهاز: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "سور جديدة: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

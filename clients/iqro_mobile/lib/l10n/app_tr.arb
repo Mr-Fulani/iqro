@@ -634,5 +634,11 @@
   "accountCodeSendError": "Kod gönderilemedi. Tekrar deneyin.",
   "accountCodeVerifyError": "Kod doğrulanamadı.",
   "accountCodeExpired": "Onayın süresi doldu. Yeni kod isteyin.",
-  "accountActionError": "Hesap işlemi tamamlanamadı."
+  "accountActionError": "Hesap işlemi tamamlanamadı.",
+  "downloadOfflineSurahsConfirmation": "Sure sayısı: {count}, yaklaşık {size}. İndirme başlatılsın mı?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Cihazdaki sureler: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "Yeni sureler: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

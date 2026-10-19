@@ -13,7 +13,7 @@ import pytest
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -344,6 +344,68 @@ def test_withdrawn_listening_recitation_accepts_no_new_surahs(
 
     with pytest.raises(ValidationError, match="immutable"):
         _add_surah(listening, 113)
+
+
+def _offline_manifest(api_client: Any, recitation: RecitationEdition) -> Any:
+    return api_client.get(reverse("audio:offline-manifest", args=[recitation.pk]))
+
+
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_partial_listening_recitation_downloads_the_surahs_it_has(
+    api_client: Any,
+    listening: RecitationEdition,
+) -> None:
+    RecitationEdition.objects.filter(pk=listening.pk).update(offline_download_allowed=True)
+
+    response = _offline_manifest(api_client, listening)
+
+    assert response.status_code == 200
+    manifest = response.json()
+    assert manifest["package_id"] == f"recitation-{listening.pk}-1-default"
+    assert manifest["listening_only"] is True
+    assert manifest["surah_numbers"] == [1, 112]
+    assert manifest["track_count"] == 2
+    assert manifest["total_bytes"] == 2 * 960_000
+    assert [track["surah_number"] for track in manifest["tracks"]] == [1, 112]
+    assert manifest["tracks"][1]["asset"]["file_name"] == "surah-112.mp3"
+    assert all(track["timing"] is None for track in manifest["tracks"])
+    assert all(track["segments"] == [] for track in manifest["tracks"])
+
+
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_new_surah_keeps_the_package_id_and_changes_its_checksum(
+    api_client: Any,
+    listening: RecitationEdition,
+) -> None:
+    RecitationEdition.objects.filter(pk=listening.pk).update(offline_download_allowed=True)
+    before = _offline_manifest(api_client, listening).json()
+
+    _add_surah(listening, 113)
+    after = _offline_manifest(api_client, listening).json()
+
+    assert after["package_id"] == before["package_id"]
+    assert after["package_checksum_sha256"] != before["package_checksum_sha256"]
+    assert after["surah_numbers"] == [1, 112, 113]
+    assert after["tracks"][:2] == before["tracks"]
+    assert after["total_bytes"] == before["total_bytes"] + 960_000
+
+
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_partial_offline_package_needs_its_licence_and_listening_only(
+    api_client: Any,
+    quran_dataset: dict[str, Any],
+    listening: RecitationEdition,
+) -> None:
+    assert _offline_manifest(api_client, listening).status_code == 403
+
+    timed = _recitation(
+        quran_dataset, reciter=_reciter("timed-reciter"), listening_only=False, code="timed-offline"
+    )
+    _add_surah(timed, 1)
+    _publish(timed)
+    RecitationEdition.objects.filter(pk=timed.pk).update(offline_download_allowed=True)
+
+    assert _offline_manifest(api_client, timed).status_code == 404
 
 
 def test_listening_recitation_publishes_without_any_rights_paperwork(
