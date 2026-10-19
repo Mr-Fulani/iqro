@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Amiri, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "../globals.css";
 import "../mobile.css";
 import "../mushaf-reader.css";
@@ -24,6 +25,19 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+});
+
+// Ğ ğ İ Ş ş are the only Turkish letters outside Inter's Latin face. This
+// 3 KB cut of the same Inter (wght 100-900) covers them, so Turkish pages do
+// not download the 85 KB Latin Extended face for five glyphs.
+const interTurkish = localFont({
+  src: "../fonts/inter-turkish.woff2",
+  weight: "100 900",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+  variable: "--font-inter-turkish",
+  declarations: [{ prop: "unicode-range", value: "U+011E-011F, U+0130, U+015E-015F" }],
 });
 
 // Not preloaded: most routes render no Arabic, and unicode-range lets the
@@ -91,7 +105,7 @@ export default async function RootLayout({ children, params }: Props) {
     <html
       lang={locale}
       dir={directionFor(locale)}
-      className={`${inter.variable} ${amiri.variable}`}
+      className={`${interTurkish.variable} ${inter.variable} ${amiri.variable}`}
       suppressHydrationWarning
     >
       <body>
