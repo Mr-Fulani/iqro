@@ -153,6 +153,46 @@ void main() {
       expect(sent.path, '/me');
       expect(session.isPendingDeletion, isTrue);
     });
+
+    test('a summary racing a token refresh keeps the rotated token', () async {
+      final storage = _storageWith(_activeSession());
+      final summaryReply = Completer<void>();
+      final refreshReply = Completer<void>();
+      final refreshTokensSent = <Object?>[];
+      final repository = _repository(storage, (request) async {
+        if (request.path == '/me') {
+          await summaryReply.future;
+          return _jsonResponse(_summary(status: 'pending_deletion'));
+        }
+        refreshTokensSent.add((request.data as Map)['refresh_token']);
+        await refreshReply.future;
+        return _jsonResponse(<String, Object?>{
+          'access_token': 'access-rotated',
+          'refresh_token': 'refresh-rotated',
+          'access_expires_at': '2035-01-01T00:00:00Z',
+          'refresh_expires_at': '2036-01-01T00:00:00Z',
+        });
+      });
+
+      final summary = repository.refreshAccountSummary(locale: 'ru');
+      await pumpEventQueue();
+      final refreshed = repository.refresh();
+      await pumpEventQueue();
+      summaryReply.complete();
+      await pumpEventQueue();
+      refreshReply.complete();
+      await refreshed;
+      final session = await summary;
+
+      expect(session.refreshToken, 'refresh-rotated');
+      expect(session.isPendingDeletion, isTrue);
+      expect(repository.current, same(session));
+      await repository.refresh();
+      expect(refreshTokensSent, <Object?>[
+        'refresh-account-a',
+        'refresh-rotated',
+      ]);
+    });
   });
 
   group('sign out everywhere', () {

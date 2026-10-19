@@ -299,6 +299,14 @@ class AuthRepository {
   Future<AuthSession> refresh() async {
     await loadCachedSession();
     if (_verificationGatePending) await _retryPendingVerificationGate();
+    // A queued session write (an account summary) replaces the session
+    // object. Starting the refresh before it lands would rotate the token
+    // and then discard the result as stale, so the next refresh would replay
+    // the used token and the server would revoke the whole session.
+    for (var tail = _transitionTail; ; tail = _transitionTail) {
+      await tail;
+      if (identical(tail, _transitionTail)) break;
+    }
     final requestedStamp = _stamp();
     final active = _refreshFlight;
     final activeStamp = _refreshStamp;
@@ -547,12 +555,27 @@ class AuthRepository {
     Object? data, {
     required _AuthTransitionStamp expected,
   }) async {
-    _ensureMatches(expected);
-    final session = expected.session;
-    if (session == null) throw const AccountScopeChanged();
-    final next = session.withAccountSummary(_jsonMap(data));
+    final summary = _jsonMap(data);
+    // A token refresh may have started while the request was in flight. Let
+    // it land and apply the summary to its tokens instead of the used ones.
+    final refreshing = _refreshFlight;
+    if (refreshing != null) {
+      try {
+        await refreshing;
+      } on Object {
+        // The summary still applies to whatever session is current.
+      }
+    }
+    final current = _stamp();
+    final session = current.session;
+    if (session == null ||
+        current.scopeEpoch != expected.scopeEpoch ||
+        session.userId != expected.session?.userId) {
+      throw const AccountScopeChanged();
+    }
+    final next = session.withAccountSummary(summary);
     if (next.userId != session.userId) throw const AccountScopeChanged();
-    await _persist(next, expected: expected);
+    await _persist(next, expected: current);
     return next;
   }
 
