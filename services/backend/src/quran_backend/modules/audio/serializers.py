@@ -573,6 +573,10 @@ class OfflineAudioManifestSerializer(serializers.Serializer[Any]):
     rights = RecitationRightsSerializer()
     reciter = ReciterSummarySerializer()
     quran_edition = OfflineAudioQuranEditionSerializer()
+    listening_only = serializers.BooleanField()
+    surah_numbers = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=114)
+    )
     track_count = serializers.IntegerField(min_value=1)
     total_bytes = serializers.IntegerField(min_value=1)
     tracks = OfflineAudioTrackSerializer(many=True)

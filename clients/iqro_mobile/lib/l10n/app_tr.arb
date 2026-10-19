@@ -606,5 +606,11 @@
   "salahOfflineImages": "Kursun görselleri",
   "salahOfflineSaved": "Bu cihaza kaydedildi",
   "salahOfflineUpdateAvailable": "Yeni sürüm mevcut",
-  "salahOfflineUpdate": "Güncelle"
+  "salahOfflineUpdate": "Güncelle",
+  "downloadOfflineSurahsConfirmation": "Sure sayısı: {count}, yaklaşık {size}. İndirme başlatılsın mı?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Cihazdaki sureler: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "Yeni sureler: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

@@ -738,8 +738,16 @@ class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
   final AudioOfflineRepository _repository;
   final String _recitationId;
 
+  /// The stored state first, then whether the recitation gained surahs.
   Future<void> initialize() async {
     state = await _repository.snapshot(_recitationId);
+    if (state.status != AudioDownloadStatus.ready) return;
+    try {
+      final latest = await _repository.check(_recitationId);
+      if (mounted && state.status == AudioDownloadStatus.ready) state = latest;
+    } on Object {
+      // Offline the stored package stays as it is.
+    }
   }
 
   Future<void> download({String? quality}) async {

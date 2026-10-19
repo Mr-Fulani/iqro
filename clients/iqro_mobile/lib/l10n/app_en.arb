@@ -700,5 +700,11 @@
   "salahOfflineImages": "Course illustrations",
   "salahOfflineSaved": "Saved on this device",
   "salahOfflineUpdateAvailable": "A new version is available",
-  "salahOfflineUpdate": "Update"
+  "salahOfflineUpdate": "Update",
+  "downloadOfflineSurahsConfirmation": "Surahs: {count}, about {size}. Start downloading?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Surahs on this device: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "New surahs: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

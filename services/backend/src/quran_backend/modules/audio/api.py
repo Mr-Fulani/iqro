@@ -262,7 +262,14 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
             )
         )
         tracks = list(track_queryset)
-        if len(tracks) != 114 or {track.surah_number for track in tracks} != set(range(1, 115)):
+        surah_numbers = [track.surah_number for track in tracks]
+        if recitation.listening_only:
+            # Listening-only audio grows by whole surahs after publication. The
+            # package keeps its id and carries the surahs there are; a new surah
+            # changes package_checksum_sha256, so clients fetch just that surah.
+            if not tracks or len(set(surah_numbers)) != len(surah_numbers):
+                raise NotFound("No offline audio package is available for this recitation.")
+        elif surah_numbers != list(range(1, 115)):
             raise NotFound("A complete 114-surah offline audio package is not available.")
 
         managed_quality_sets = [
@@ -403,6 +410,8 @@ class AudioOfflineManifestView(PublicReadOnlyViewMixin, APIView):
                 "version": edition.version,
                 "checksum_sha256": edition.checksum_sha256,
             },
+            "listening_only": recitation.listening_only,
+            "surah_numbers": surah_numbers,
             "track_count": len(track_payloads),
             "total_bytes": sum(item["asset"]["bytes"] for item in track_payloads),
             "tracks": track_payloads,

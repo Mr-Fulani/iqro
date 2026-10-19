@@ -606,5 +606,11 @@
   "salahOfflineImages": "رسوم الدورة التوضيحية",
   "salahOfflineSaved": "محفوظة على هذا الجهاز",
   "salahOfflineUpdateAvailable": "يتوفر إصدار جديد",
-  "salahOfflineUpdate": "تحديث"
+  "salahOfflineUpdate": "تحديث",
+  "downloadOfflineSurahsConfirmation": "عدد السور: {count}، نحو {size}. هل تريد بدء التنزيل؟",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "السور على هذا الجهاز: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "سور جديدة: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

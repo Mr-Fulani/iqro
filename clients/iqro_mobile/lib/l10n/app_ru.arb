@@ -610,5 +610,11 @@
   "salahOfflineImages": "Иллюстрации курса",
   "salahOfflineSaved": "Сохранены на устройстве",
   "salahOfflineUpdateAvailable": "Есть новая версия",
-  "salahOfflineUpdate": "Обновить"
+  "salahOfflineUpdate": "Обновить",
+  "downloadOfflineSurahsConfirmation": "Сур: {count}, примерно {size}. Начать загрузку?",
+  "@downloadOfflineSurahsConfirmation": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "audioOfflineSurahs": "Сур на устройстве: {count}",
+  "@audioOfflineSurahs": {"placeholders": {"count": {"type": "int"}}},
+  "audioOfflineNewSurahs": "Новые суры: {count}",
+  "@audioOfflineNewSurahs": {"placeholders": {"count": {"type": "int"}}}
 }

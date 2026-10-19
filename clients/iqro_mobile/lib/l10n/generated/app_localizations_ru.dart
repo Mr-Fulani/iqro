@@ -2028,4 +2028,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get salahOfflineUpdate => 'Обновить';
+
+  @override
+  String downloadOfflineSurahsConfirmation(int count, String size) {
+    return 'Сур: $count, примерно $size. Начать загрузку?';
+  }
+
+  @override
+  String audioOfflineSurahs(int count) {
+    return 'Сур на устройстве: $count';
+  }
+
+  @override
+  String audioOfflineNewSurahs(int count) {
+    return 'Новые суры: $count';
+  }
 }
