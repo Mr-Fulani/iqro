@@ -258,6 +258,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get done => 'تم';
 
   @override
+  String get namesOfAllah => 'أسماء الله الحسنى';
+
+  @override
   String get soon => 'قريبًا';
 
   @override

@@ -516,6 +516,12 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get done;
 
+  /// No description provided for @namesOfAllah.
+  ///
+  /// In en, this message translates to:
+  /// **'Names of Allah'**
+  String get namesOfAllah;
+
   /// No description provided for @soon.
   ///
   /// In en, this message translates to:

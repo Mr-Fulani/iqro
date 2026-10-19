@@ -265,6 +265,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get done => 'Done';
 
   @override
+  String get namesOfAllah => 'Names of Allah';
+
+  @override
   String get soon => 'Soon';
 
   @override

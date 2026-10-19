@@ -268,6 +268,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get done => 'Готово';
 
   @override
+  String get namesOfAllah => 'Имена Аллаха';
+
+  @override
   String get soon => 'Скоро';
 
   @override
