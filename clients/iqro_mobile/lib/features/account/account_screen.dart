@@ -428,6 +428,11 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
+              // The default primary text is unreadable on the error card.
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.onErrorContainer,
+                side: BorderSide(color: theme.colorScheme.onErrorContainer),
+              ),
               onPressed: _working ? null : _confirmSignOut,
               icon: const Icon(Icons.logout),
               label: Text(context.l10n.signOut),
