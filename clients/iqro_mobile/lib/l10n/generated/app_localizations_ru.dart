@@ -2133,4 +2133,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String audioOfflineNewSurahs(int count) {
     return 'Новые суры: $count';
   }
+
+  @override
+  String get apiErrorEmailInvalid =>
+      'Код неверен или сессия изменилась. Запросите новый код.';
+
+  @override
+  String get apiErrorEmailExpired =>
+      'Срок действия кода истёк. Запросите новый код.';
+
+  @override
+  String get apiErrorEmailDelivery =>
+      'Не удалось отправить код. Попробуйте ещё раз позже.';
+
+  @override
+  String get apiErrorRateLimited => 'Слишком много попыток. Повторите позже.';
+
+  @override
+  String get apiErrorInstallationMissing =>
+      'Сессия устройства потеряна. Запросите новый код.';
+
+  @override
+  String get apiErrorLinkUnavailable =>
+      'Этот вход нельзя завершить в текущей сессии.';
+
+  @override
+  String get apiErrorIdentityLinked =>
+      'Этот email уже привязан к другому аккаунту.';
+
+  @override
+  String get apiErrorReauthRequired =>
+      'Для этого действия нужен новый код из email.';
+
+  @override
+  String get apiErrorLifecycleUnavailable =>
+      'Это действие с аккаунтом сейчас недоступно.';
+
+  @override
+  String get apiErrorCurrentDevice =>
+      'Для текущего устройства используйте обычный выход.';
+
+  @override
+  String get apiErrorDeviceNotFound =>
+      'Устройство уже отключено или недоступно.';
+
+  @override
+  String get apiErrorCursorExpired =>
+      'История синхронизации устарела. Выполняется полная сверка данных.';
+
+  @override
+  String get apiErrorUnknown => 'Повторите попытку позже.';
 }

@@ -2072,4 +2072,53 @@ class AppLocalizationsTr extends AppLocalizations {
   String audioOfflineNewSurahs(int count) {
     return 'Yeni sureler: $count';
   }
+
+  @override
+  String get apiErrorEmailInvalid =>
+      'Kod geçersiz veya oturum değişti. Yeni kod isteyin.';
+
+  @override
+  String get apiErrorEmailExpired => 'Kodun süresi doldu. Yeni kod isteyin.';
+
+  @override
+  String get apiErrorEmailDelivery =>
+      'Kod gönderilemedi. Daha sonra tekrar deneyin.';
+
+  @override
+  String get apiErrorRateLimited =>
+      'Çok fazla deneme. Daha sonra tekrar deneyin.';
+
+  @override
+  String get apiErrorInstallationMissing =>
+      'Cihaz oturumu kayboldu. Yeni kod isteyin.';
+
+  @override
+  String get apiErrorLinkUnavailable =>
+      'Bu giriş mevcut oturumda tamamlanamaz.';
+
+  @override
+  String get apiErrorIdentityLinked => 'Bu e-posta başka bir hesaba bağlı.';
+
+  @override
+  String get apiErrorReauthRequired =>
+      'Bu işlem için yeni bir e-posta kodu gerekir.';
+
+  @override
+  String get apiErrorLifecycleUnavailable =>
+      'Bu hesap işlemi şu anda kullanılamıyor.';
+
+  @override
+  String get apiErrorCurrentDevice =>
+      'Geçerli cihaz için normal çıkışı kullanın.';
+
+  @override
+  String get apiErrorDeviceNotFound =>
+      'Cihaz zaten bağlantısı kesilmiş veya kullanılamıyor.';
+
+  @override
+  String get apiErrorCursorExpired =>
+      'Senkronizasyon geçmişi eskidi. Tam eşitleme yapılıyor.';
+
+  @override
+  String get apiErrorUnknown => 'Daha sonra tekrar deneyin.';
 }

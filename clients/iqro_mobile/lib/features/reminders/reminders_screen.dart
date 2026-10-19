@@ -7,6 +7,7 @@ import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../quran/quran_models.dart';
@@ -150,7 +151,11 @@ class RemindersScreen extends ConsumerWidget {
                 IqroStatusBanner(
                   icon: Icons.error_outline,
                   title: context.l10n.networkError,
-                  message: state.error.toString(),
+                  message: apiErrorText(
+                    context.l10n,
+                    state.error!,
+                    fallback: context.l10n.apiErrorUnknown,
+                  ),
                   actionLabel: context.l10n.retry,
                   onAction: ref.read(reminderProvider.notifier).reload,
                 ),
