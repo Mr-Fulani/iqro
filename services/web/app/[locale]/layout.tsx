@@ -14,7 +14,10 @@ import { Footer } from "../../components/Footer";
 import { AudioPlayerProvider } from "../../lib/audio-player-context";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../../lib/seo";
 import { serializeJsonLd } from "../../lib/json-ld";
-import { getPublishedSocialProfilesOrEmpty } from "../../lib/public-content";
+import {
+  getPublishedPlayerBackgroundsOrEmpty,
+  getPublishedSocialProfilesOrEmpty,
+} from "../../lib/public-content";
 
 // Only Latin is preloaded; the Cyrillic, Latin Extended and other faces load
 // on demand through unicode-range on the locales that need them.
@@ -73,7 +76,10 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
 export default async function RootLayout({ children, params }: Props) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const socialProfiles = await getPublishedSocialProfilesOrEmpty();
+  const [socialProfiles, playerBackgrounds] = await Promise.all([
+    getPublishedSocialProfilesOrEmpty(),
+    getPublishedPlayerBackgroundsOrEmpty(),
+  ]);
   const organizationId = absoluteSiteUrl("/#organization");
   const websiteJson = serializeJsonLd({
     "@context": "https://schema.org",
@@ -107,7 +113,7 @@ export default async function RootLayout({ children, params }: Props) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJson }} />
         <I18nProvider initialLocale={locale}>
           <AuthProvider>
-            <AudioPlayerProvider>
+            <AudioPlayerProvider playerBackgrounds={playerBackgrounds}>
               <div className="app-container">
                 <Header />
                 <main>{children}</main>

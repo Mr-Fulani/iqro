@@ -15,6 +15,18 @@ const publishedAt = "2026-08-24T00:00:00Z";
 const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
 const duaFavoriteKeys = new Set();
 
+const playerBackgrounds = [
+  {
+    id: "019a0000-0000-7000-8000-000000000901",
+    title_ar: "الجبال",
+    title_en: "Mountains",
+    title_ru: "Горы",
+    title_tr: "",
+    image_url: "/player-backgrounds/geometric.webp",
+    sort_order: 10,
+  },
+];
+
 // The contract example is served as is; only its language follows the request and
 // its images point at this mock (through the site's /media rewrite) so pages load
 // without the network.
@@ -360,6 +372,7 @@ const server = createServer(async (request, response) => {
     });
   }
   if (path === "/api/v1/site/social-profiles") return sendJson(response, 200, socialProfiles);
+  if (path === "/api/v1/player-backgrounds") return sendJson(response, 200, playerBackgrounds);
   if (path === "/api/v1/quran/editions/madani-hafs") return sendJson(response, 200, edition);
   if (path === "/api/v1/quran/editions/madani-hafs/surahs") return sendJson(response, 200, [surah]);
   if (path === "/api/v1/quran/editions/madani-hafs/surahs/1") return sendJson(response, 200, surah);
