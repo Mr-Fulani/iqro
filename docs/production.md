@@ -62,6 +62,9 @@ chmod 600 services/backend/.env.production
 - `PUBLIC_MEDIA_BASE_URL` и `PUBLIC_AUDIO_BASE_URL`: HTTPS custom-domain CDN, а не API/gateway.
 - `BACKUP_OBJECT_STORAGE_*`: отдельный private bucket и отдельный scoped token, не совпадающие
   с media bucket/token; `BACKUP_ENVIRONMENT` и bounded retention.
+- `SENTRY_DSN` и `WEB_SENTRY_DSN` — DSN проектов `backend` и `web` в Sentry (регион EU). Пустые
+  значения отключают мониторинг. DSN сайта встраивается в образ при сборке, поэтому после
+  его изменения образ web нужно пересобрать. Подробно — [tech-debt.md, 1.1](tech-debt.md).
 
 Production settings и `docker compose config` fail closed без этих значений. Credentials должны
 иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.
@@ -110,7 +113,9 @@ make release-check
 По умолчанию gateway слушает только `127.0.0.1:3000`. Это безопасная настройка для
 reverse proxy на том же сервере. Для публичного запуска TLS-proxy должен передавать
 `Host`, `X-Forwarded-For` и `X-Forwarded-Proto: https`. Не выставляйте gateway на
-`0.0.0.0` без firewall и настроенного TLS.
+`0.0.0.0` без firewall и настроенного TLS. Прокси должен пропускать тело запроса до 520 МБ:
+столько gateway разрешает для загрузки сур записи в админке
+(`/admin/audio/recitationedition/…/surahs/upload/`); для остальных путей лимит 55 МБ.
 
 Проверки после запуска:
 
@@ -124,6 +129,9 @@ curl --fail http://127.0.0.1:3000/sitemaps/audio/sitemap.xml
 curl --fail http://127.0.0.1:3000/ru/audio/reciters
 python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
 ```
+
+Курс «Обучение намазу» после первой выкладки нужно импортировать и опубликовать отдельно:
+[operations.md, «Курс „Обучение намазу“»](operations.md) и [tech-debt.md, 1.5](tech-debt.md).
 
 Для временной проверки только на loopback без TLS можно установить
 `DJANGO_SECURE_SSL_REDIRECT=false`. В реальном окружении значение должно оставаться
