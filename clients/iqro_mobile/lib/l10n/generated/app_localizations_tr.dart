@@ -1968,4 +1968,93 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get salahOfflineUpdate => 'Güncelle';
+
+  @override
+  String get accountSignOutEverywhere => 'Tüm cihazlardan çık';
+
+  @override
+  String get accountSignOutEverywhereTitle =>
+      'Tüm oturumlar sonlandırılsın mı?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'Geçerli oturum ve diğer cihazlardaki girişler iptal edilir. Devam etmek için yeni bir e-posta kodu gerekir.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Her yerden çıkışı onayla';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Tüm oturumlar sonlandırılamadı. Tekrar deneyin.';
+
+  @override
+  String get accountDangerZone => 'Tehlikeli alan';
+
+  @override
+  String get accountDeletionTitle => 'Hesap silme';
+
+  @override
+  String get accountDeletionDescription =>
+      'E-posta yeniden doğrulandıktan sonra 7 günlük iptal süresi başlar. Bu süre bitmeden geri alınamaz silme yapılmaz.';
+
+  @override
+  String get accountDelete => 'Hesabı sil';
+
+  @override
+  String get accountDeletionRequestTitle => 'Hesap silme planlansın mı?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Normal erişim hemen engellenir. 7 gün sonra eşitlenen veriler silinir ve hesap anonimleştirilir.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Silme iptal edilsin mi?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'Hesabı geri yüklemek için yeni bir tek kullanımlık kodla e-posta sahipliğini doğrulayın.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return '$email adresine kod gönder';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Silmeyi onayla';
+
+  @override
+  String get accountRestore => 'Hesabı geri yükle';
+
+  @override
+  String get accountNewCode => 'Yeni kod iste';
+
+  @override
+  String get accountPendingDeletionTitle => 'Hesap silme planlandı';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'Hesap ve eşitlenen veriler $date tarihinden sonra silinecek. O zamana kadar e-posta doğrulamasıyla silme iptal edilebilir.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Silmeyi iptal et';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Hesap silme planlandı. Belirtilen tarihe kadar iptal edebilirsiniz.';
+
+  @override
+  String get accountDeletionCancelledNotice => 'Hesap silme iptal edildi.';
+
+  @override
+  String get accountCodeSendError => 'Kod gönderilemedi. Tekrar deneyin.';
+
+  @override
+  String get accountCodeVerifyError => 'Kod doğrulanamadı.';
+
+  @override
+  String get accountCodeExpired => 'Onayın süresi doldu. Yeni kod isteyin.';
+
+  @override
+  String get accountActionError => 'Hesap işlemi tamamlanamadı.';
 }

@@ -2005,4 +2005,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get salahOfflineUpdate => 'Update';
+
+  @override
+  String get accountSignOutEverywhere => 'Sign out on all devices';
+
+  @override
+  String get accountSignOutEverywhereTitle => 'End all sessions?';
+
+  @override
+  String get accountSignOutEverywhereDescription =>
+      'The current session and sign-ins on other devices will be revoked. You will need a new email code to continue.';
+
+  @override
+  String get accountSignOutEverywhereConfirm => 'Confirm sign-out everywhere';
+
+  @override
+  String get accountSignOutEverywhereError =>
+      'Could not end all sessions. Try again.';
+
+  @override
+  String get accountDangerZone => 'Danger zone';
+
+  @override
+  String get accountDeletionTitle => 'Account deletion';
+
+  @override
+  String get accountDeletionDescription =>
+      'After email re-verification, a 7-day cancellation period begins. Irreversible deletion does not occur before it ends.';
+
+  @override
+  String get accountDelete => 'Delete account';
+
+  @override
+  String get accountDeletionRequestTitle => 'Schedule account deletion?';
+
+  @override
+  String get accountDeletionRequestDescription =>
+      'Normal access is blocked immediately. After 7 days, synchronized data is deleted and the account is anonymized.';
+
+  @override
+  String get accountDeletionCancelTitle => 'Cancel deletion?';
+
+  @override
+  String get accountDeletionCancelDescription =>
+      'To restore the account, verify email ownership with a new one-time code.';
+
+  @override
+  String accountSendCodeTo(String email) {
+    return 'Send code to $email';
+  }
+
+  @override
+  String get accountConfirmDeletion => 'Confirm deletion';
+
+  @override
+  String get accountRestore => 'Restore account';
+
+  @override
+  String get accountNewCode => 'Request a new code';
+
+  @override
+  String get accountPendingDeletionTitle => 'Account deletion scheduled';
+
+  @override
+  String accountPendingDeletionDescription(String date) {
+    return 'The account and synchronized data will be deleted after $date. Until then, deletion can be cancelled after email verification.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Cancel deletion';
+
+  @override
+  String get accountDeletionScheduledNotice =>
+      'Account deletion is scheduled. You can cancel it before the stated date.';
+
+  @override
+  String get accountDeletionCancelledNotice =>
+      'Account deletion was cancelled.';
+
+  @override
+  String get accountCodeSendError => 'Could not send the code. Try again.';
+
+  @override
+  String get accountCodeVerifyError => 'Could not verify the code.';
+
+  @override
+  String get accountCodeExpired =>
+      'The confirmation has expired. Request a new code.';
+
+  @override
+  String get accountActionError => 'Could not complete the account action.';
 }

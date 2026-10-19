@@ -9,6 +9,8 @@ class AuthSession {
     required this.userStatus,
     required this.deviceId,
     this.email,
+    this.deletionRequestedAt,
+    this.deletionScheduledFor,
   });
 
   factory AuthSession.fromJson(Map<String, Object?> json) {
@@ -23,6 +25,8 @@ class AuthSession {
       userStatus: userStatus,
       deviceId: json['device_id']?.toString() ?? '',
       email: userStatus == 'guest' ? null : json['email']?.toString(),
+      deletionRequestedAt: _optionalDate(json['deletion_requested_at']),
+      deletionScheduledFor: _optionalDate(json['deletion_scheduled_for']),
     );
   }
 
@@ -55,6 +59,13 @@ class AuthSession {
           : user.containsKey('email')
           ? user['email']?.toString()
           : previous?.email,
+      // Token responses carry no user summary; keep the last known schedule.
+      deletionRequestedAt: user.containsKey('status')
+          ? _optionalDate(user['deletion_requested_at'])
+          : previous?.deletionRequestedAt,
+      deletionScheduledFor: user.containsKey('status')
+          ? _optionalDate(user['deletion_scheduled_for'])
+          : previous?.deletionScheduledFor,
     );
   }
 
@@ -67,9 +78,12 @@ class AuthSession {
   final String userStatus;
   final String deviceId;
   final String? email;
+  final DateTime? deletionRequestedAt;
+  final DateTime? deletionScheduledFor;
 
   bool get isGuest => userStatus == 'guest';
   bool get isVerified => userStatus == 'active' && email != null;
+  bool get isPendingDeletion => userStatus == 'pending_deletion';
   bool get accessIsFresh => accessExpiresAt.isAfter(
     DateTime.now().toUtc().add(const Duration(seconds: 60)),
   );
@@ -85,7 +99,22 @@ class AuthSession {
     'user_status': userStatus,
     'device_id': deviceId,
     'email': email,
+    'deletion_requested_at': deletionRequestedAt?.toUtc().toIso8601String(),
+    'deletion_scheduled_for': deletionScheduledFor?.toUtc().toIso8601String(),
   };
+
+  /// Applies a `/me` style `{user, device}` summary while keeping the tokens.
+  AuthSession withAccountSummary(Map<String, Object?> json) =>
+      AuthSession.fromApi(<String, Object?>{
+        ...json,
+        'access_token': accessToken,
+        'refresh_token': refreshToken,
+        'access_expires_at': accessExpiresAt.toUtc().toIso8601String(),
+        'refresh_expires_at': refreshExpiresAt.toUtc().toIso8601String(),
+      }, previous: this);
+
+  static DateTime? _optionalDate(Object? value) =>
+      value == null ? null : DateTime.tryParse(value.toString())?.toUtc();
 }
 
 class EmailChallenge {

@@ -3635,6 +3635,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update'**
   String get salahOfflineUpdate;
+
+  /// No description provided for @accountSignOutEverywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out on all devices'**
+  String get accountSignOutEverywhere;
+
+  /// No description provided for @accountSignOutEverywhereTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End all sessions?'**
+  String get accountSignOutEverywhereTitle;
+
+  /// No description provided for @accountSignOutEverywhereDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The current session and sign-ins on other devices will be revoked. You will need a new email code to continue.'**
+  String get accountSignOutEverywhereDescription;
+
+  /// No description provided for @accountSignOutEverywhereConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm sign-out everywhere'**
+  String get accountSignOutEverywhereConfirm;
+
+  /// No description provided for @accountSignOutEverywhereError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not end all sessions. Try again.'**
+  String get accountSignOutEverywhereError;
+
+  /// No description provided for @accountDangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger zone'**
+  String get accountDangerZone;
+
+  /// No description provided for @accountDeletionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion'**
+  String get accountDeletionTitle;
+
+  /// No description provided for @accountDeletionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'After email re-verification, a 7-day cancellation period begins. Irreversible deletion does not occur before it ends.'**
+  String get accountDeletionDescription;
+
+  /// No description provided for @accountDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get accountDelete;
+
+  /// No description provided for @accountDeletionRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule account deletion?'**
+  String get accountDeletionRequestTitle;
+
+  /// No description provided for @accountDeletionRequestDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal access is blocked immediately. After 7 days, synchronized data is deleted and the account is anonymized.'**
+  String get accountDeletionRequestDescription;
+
+  /// No description provided for @accountDeletionCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel deletion?'**
+  String get accountDeletionCancelTitle;
+
+  /// No description provided for @accountDeletionCancelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'To restore the account, verify email ownership with a new one-time code.'**
+  String get accountDeletionCancelDescription;
+
+  /// No description provided for @accountSendCodeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code to {email}'**
+  String accountSendCodeTo(String email);
+
+  /// No description provided for @accountConfirmDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deletion'**
+  String get accountConfirmDeletion;
+
+  /// No description provided for @accountRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get accountRestore;
+
+  /// No description provided for @accountNewCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a new code'**
+  String get accountNewCode;
+
+  /// No description provided for @accountPendingDeletionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion scheduled'**
+  String get accountPendingDeletionTitle;
+
+  /// No description provided for @accountPendingDeletionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The account and synchronized data will be deleted after {date}. Until then, deletion can be cancelled after email verification.'**
+  String accountPendingDeletionDescription(String date);
+
+  /// No description provided for @accountCancelDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel deletion'**
+  String get accountCancelDeletion;
+
+  /// No description provided for @accountDeletionScheduledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion is scheduled. You can cancel it before the stated date.'**
+  String get accountDeletionScheduledNotice;
+
+  /// No description provided for @accountDeletionCancelledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion was cancelled.'**
+  String get accountDeletionCancelledNotice;
+
+  /// No description provided for @accountCodeSendError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the code. Try again.'**
+  String get accountCodeSendError;
+
+  /// No description provided for @accountCodeVerifyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify the code.'**
+  String get accountCodeVerifyError;
+
+  /// No description provided for @accountCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The confirmation has expired. Request a new code.'**
+  String get accountCodeExpired;
+
+  /// No description provided for @accountActionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the account action.'**
+  String get accountActionError;
 }
 
 class _AppLocalizationsDelegate
