@@ -238,9 +238,13 @@ def _complete_email_challenge(
             requester.status = UserStatus.ACTIVE
             requester.save(update_fields=["email", "status", "updated_at"])
             target = requester
+    elif requester.status == UserStatus.GUEST and target.status == UserStatus.PENDING_DELETION:
+        # Signing in lets the owner cancel the deletion. Only the installation
+        # moves: guest data stays with the guest instead of an account that is
+        # scheduled for erasure.
+        device.user = target
+        device.save(update_fields=["user", "updated_at"])
     elif requester.status == UserStatus.GUEST:
-        if target.status == UserStatus.PENDING_DELETION:
-            raise AccountLinkUnavailable
         merge_guest_into_account(
             source_user=requester,
             target_user=target,
