@@ -1,17 +1,32 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { lazy, useEffect, useRef, useState } from "react";
 
 import { api, type DuaEntry } from "../lib/api";
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useAuth } from "../lib/auth-context";
+import { contentShareText, shareTextOnly, type ContentShareText } from "../lib/content-share";
+import { duaShareText, duaShareTitle } from "../lib/dua-share";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
+import { ShareDialogBoundary } from "./ShareDialogBoundary";
 
-const DuaShareDialog = dynamic(() => import("./DuaShareDialog"), { ssr: false });
+// Loaded on the first press of "Share", and again after a failed load.
+const loadShareDialog = () => lazy(() => import("./ContentShareDialog"));
+let ContentShareDialog = loadShareDialog();
+function reloadShareDialog() {
+  ContentShareDialog = loadShareDialog();
+}
+
+/** A du'a as the app shares it, prepared when "Share" is pressed. */
+type DuaShare = {
+  entry: DuaEntry;
+  title: string;
+  url: string;
+  load: () => ContentShareText;
+};
 
 function entryKey(entry: DuaEntry): string {
   return `${entry.collection}:${entry.source_number}`;
@@ -58,7 +73,8 @@ export function DuaEntryList({
   const [activeAudioKey, setActiveAudioKey] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [sharedEntry, setSharedEntry] = useState<DuaEntry | null>(null);
+  const [share, setShare] = useState<DuaShare | null>(null);
+  const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -163,6 +179,32 @@ export function DuaEntryList({
     }
   };
 
+  const openShare = (entry: DuaEntry) => {
+    const content = duaShareText(entry, locale, t("duaShare.repetitions"));
+    setShareStatus("");
+    setShare({
+      entry,
+      title: duaShareTitle(entry, locale),
+      url: new URL(
+        localizedPath(locale, `/dua/${entry.collection}/${entry.source_number}`),
+        window.location.origin,
+      ).href,
+      load: () => content,
+    });
+  };
+
+  // Without the dialog's code the du'a still goes, as text with the link.
+  const shareWithoutPicture = async ({ title, url, load }: DuaShare) => {
+    reloadShareDialog();
+    setShare(null);
+    const result = await shareTextOnly(
+      title,
+      contentShareText(title, load(), t("contentShare.readInIqro"), url),
+    );
+    if (result === "copied") setShareStatus(t("contentShare.textCopied"));
+    if (result === "failed") setShareStatus(t("contentShare.shareError"));
+  };
+
   if (entries.length === 0) {
     return (
       <div className="dua-empty">
@@ -174,6 +216,7 @@ export function DuaEntryList({
 
   return (
     <div className={`dua-entry-list${compact ? " is-compact" : ""}`}>
+      {shareStatus ? <p role="status">{shareStatus}</p> : null}
       {entries.map((entry) => {
         const key = entryKey(entry);
         const audio = entry.audio?.[0];
@@ -209,7 +252,7 @@ export function DuaEntryList({
                     type="button"
                     className="btn btn-sm btn-secondary"
                     aria-haspopup="dialog"
-                    onClick={() => setSharedEntry(entry)}
+                    onClick={() => openShare(entry)}
                   >
                     {t("dua.share")}
                   </button>
@@ -345,12 +388,18 @@ export function DuaEntryList({
           </article>
         );
       })}
-      {sharedEntry ? (
-        <DuaShareDialog
-          key={entryKey(sharedEntry)}
-          entry={sharedEntry}
-          onClose={() => setSharedEntry(null)}
-        />
+      {share ? (
+        <ShareDialogBoundary key={entryKey(share.entry)} onFailure={() => void shareWithoutPicture(share)}>
+          <ContentShareDialog
+            heading={t("duaShare.action")}
+            title={share.title}
+            url={share.url}
+            fileName={`iqro-${share.entry.collection}-${share.entry.source_number}.png`}
+            previewAlt={t("duaShare.previewAlt", { number: share.entry.source_number })}
+            load={share.load}
+            onClose={() => setShare(null)}
+          />
+        </ShareDialogBoundary>
       ) : null}
     </div>
   );

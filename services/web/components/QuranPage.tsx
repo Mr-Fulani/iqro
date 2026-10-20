@@ -2,6 +2,7 @@
 
 import {
   Suspense,
+  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -26,6 +27,7 @@ import { ReadingActivityTracker } from "./ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 import { ShareIcon } from "./ShareIcon";
 import type { AyahShareTarget } from "./AyahShareDialog";
+import { ShareDialogBoundary } from "./ShareDialogBoundary";
 import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "./MushafReaderLayout";
 import type {
   AudioPlayerControlRequest,
@@ -59,6 +61,7 @@ import {
 } from "../lib/ayah-annotations";
 import { SYNC_STATE_EVENT } from "../lib/sync-state";
 import { useAuth } from "../lib/auth-context";
+import { contentShareText, shareTextOnly } from "../lib/content-share";
 import { useI18n } from "../lib/i18n-context";
 import type { PublishedQuranReaderPreview } from "../lib/public-content";
 import {
@@ -71,7 +74,12 @@ import { localizedPath } from "../lib/routing";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
-const AyahShareDialog = dynamic(() => import("./AyahShareDialog"), { ssr: false });
+// The share dialog is loaded again after a failed load, as React.lazy keeps it.
+const loadAyahShareDialog = () => lazy(() => import("./AyahShareDialog"));
+let AyahShareDialog = loadAyahShareDialog();
+function reloadAyahShareDialog() {
+  AyahShareDialog = loadAyahShareDialog();
+}
 
 const arabicNumber = new Intl.NumberFormat("ar-EG");
 
@@ -1511,6 +1519,26 @@ function QuranContent() {
     });
   };
 
+  // Without the dialog's code the ayah still goes, as the text the reader has
+  // and the link.
+  const shareAyahWithoutPicture = async (target: AyahShareTarget) => {
+    reloadAyahShareDialog();
+    setShareTarget(null);
+    const translation = target.translation ?? "";
+    const result = await shareTextOnly(target.title, contentShareText(
+      target.title,
+      {
+        arabic: target.arabic ?? "",
+        translation,
+        reference: translation.trim() ? target.translator : "",
+      },
+      t("contentShare.readInIqro"),
+      target.url,
+    ));
+    if (result === "copied") showAnnotationFeedback(t("contentShare.textCopied"));
+    if (result === "failed") setFeedbackMessage({ text: t("contentShare.shareError"), type: "err" });
+  };
+
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
     if (!bookmarkStateReady || bookmarkBusyKeys.has(ayahKey)) return;
@@ -2412,11 +2440,9 @@ function QuranContent() {
         />
       )}
       {shareTarget && (
-        <AyahShareDialog
-          key={shareTarget.ayahKey}
-          target={shareTarget}
-          onClose={() => setShareTarget(null)}
-        />
+        <ShareDialogBoundary key={shareTarget.ayahKey} onFailure={() => void shareAyahWithoutPicture(shareTarget)}>
+          <AyahShareDialog target={shareTarget} onClose={() => setShareTarget(null)} />
+        </ShareDialogBoundary>
       )}
     </MushafReaderLayout>
   );

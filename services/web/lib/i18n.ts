@@ -1257,6 +1257,9 @@ export const MESSAGES = {
   "contentShare.copyLink": message("Скопировать ссылку", "Copy link", "نسخ الرابط", "Bağlantıyı kopyala"),
   "contentShare.linkCopied": message("Ссылка скопирована", "Link copied", "تم نسخ الرابط", "Bağlantı kopyalandı"),
   "contentShare.copyError": message("Не удалось скопировать ссылку.", "Could not copy the link.", "تعذر نسخ الرابط.", "Bağlantı kopyalanamadı."),
+  "contentShare.copyText": message("Скопировать текст", "Copy text", "نسخ النص", "Metni kopyala"),
+  "contentShare.textCopied": message("Текст и ссылка скопированы", "Text and link copied", "تم نسخ النص والرابط", "Metin ve bağlantı kopyalandı"),
+  "contentShare.copyTextError": message("Не удалось скопировать текст.", "Could not copy the text.", "تعذر نسخ النص.", "Metin kopyalanamadı."),
   "contentShare.preparing": message("Готовим картинку…", "Preparing the image…", "جارٍ تجهيز الصورة…", "Görsel hazırlanıyor…"),
   "contentShare.imageError": message(
     "Не удалось подготовить картинку. Ссылкой поделиться можно.",

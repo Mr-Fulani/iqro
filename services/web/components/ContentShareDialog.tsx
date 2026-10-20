@@ -1,25 +1,17 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { contentShareText, type ContentShareText } from "../lib/content-share";
 import { useI18n } from "../lib/i18n-context";
 import { renderShareCard } from "../lib/share-card";
-
-/** What an ayah or a du'a shares besides its title, as the app's ContentShare. */
-export type ContentShareText = {
-  arabic: string;
-  translation: string;
-  /** A practical line, such as how many times a du'a is said. Only the message has it, as in the app. */
-  note?: string;
-  /** Where it comes from: the translator or the du'a's sources. */
-  reference: string;
-};
 
 type Picture = { file: File; url: string };
 
 /**
  * The web counterpart of the app's shareContent: a picture with the Arabic,
  * the meaning and the link. Web Share sends the picture where the browser can
- * share files; the picture can always be downloaded and the link copied.
+ * share files; the picture can always be downloaded and the link copied, and
+ * the text too where the browser has no Web Share.
  * Sharing waits for a press here, once the picture is ready, because browsers
  * refuse Web Share after the time the picture takes to draw.
  */
@@ -59,18 +51,10 @@ export default function ContentShareDialog({
   useEffect(() => {
     let cancelled = false;
     const objectUrls: string[] = [];
-    void Promise.resolve().then(load).then(async ({ arabic, translation, note = "", reference }) => {
+    void Promise.resolve().then(load).then(async (content) => {
       if (cancelled) return;
-      // The message of the app: the title, the Arabic, the meaning in quotes,
-      // the note, the source and the link.
-      setText([
-        title,
-        arabic.trim(),
-        translation.trim() && `«${translation.trim()}»`,
-        note.trim(),
-        reference.trim(),
-        `${readInIqro}: ${url}`,
-      ].filter(Boolean).join("\n\n"));
+      setText(contentShareText(title, content, readInIqro, url));
+      const { arabic, translation, reference } = content;
       const root = getComputedStyle(document.documentElement);
       // A late font brings a second picture, which replaces the first.
       await renderShareCard(
@@ -111,6 +95,16 @@ export default function ContentShareDialog({
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setNotice(t("contentShare.shareError"));
       }
+    }
+  };
+
+  const copyText = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setNotice(t("contentShare.textCopied"));
+    } catch {
+      setNotice(t("contentShare.copyTextError"));
     }
   };
 
@@ -162,6 +156,11 @@ export default function ContentShareDialog({
         <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>
           {t("contentShare.copyLink")}
         </button>
+        {!canShare && (
+          <button type="button" className="btn btn-secondary" onClick={() => void copyText()} disabled={!text}>
+            {t("contentShare.copyText")}
+          </button>
+        )}
         {picture && (
           <a className="btn btn-secondary" href={picture.url} download={picture.file.name}>
             {t("contentShare.download")}
