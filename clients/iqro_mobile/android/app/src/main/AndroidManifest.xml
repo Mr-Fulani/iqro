@@ -80,6 +80,38 @@
                     android:scheme="https"
                     android:host="iqro.forum"
                     android:pathPrefix="/tr/dua/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/ru/salah" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ru/salah/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/en/salah" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/en/salah/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/ar/salah" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ar/salah/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/tr/salah" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/tr/salah/" />
             </intent-filter>
             <intent-filter>
                 <action android:name="es.antonborri.home_widget.action.LAUNCH" />

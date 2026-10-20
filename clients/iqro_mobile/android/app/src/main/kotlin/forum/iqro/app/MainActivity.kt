@@ -3,10 +3,12 @@ package forum.iqro.app
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.media.AudioAttributes
 import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -17,6 +19,26 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
     private var lastPagePulse = 0L
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        moveSalahStepToQuery(intent)
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        moveSalahStepToQuery(intent)
+        super.onNewIntent(intent)
+    }
+
+    // Flutter receives only the path and query of a link, but the site keeps the
+    // current Salah step in the fragment (`/ru/salah/fajr#fajr.r1.ruku`).
+    private fun moveSalahStepToQuery(intent: Intent?) {
+        val uri = intent?.data ?: return
+        val step = uri.fragment?.removePrefix("step=").orEmpty()
+        if (uri.host != "iqro.forum" || step.isEmpty() ||
+            uri.pathSegments.getOrNull(1) != "salah" || uri.getQueryParameter("step") != null) return
+        intent.data = uri.buildUpon().fragment(null).appendQueryParameter("step", step).build()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

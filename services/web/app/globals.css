@@ -269,6 +269,14 @@ a:hover {
   font-size: 15px;
 }
 
+.menu-link-soon,
+.menu-link-soon:hover {
+  padding-inline: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .header-actions {
   grid-area: actions;
   display: flex;

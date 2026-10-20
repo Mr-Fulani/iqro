@@ -435,7 +435,7 @@
   "audioDownloadFailed": "The audio download stopped. You can resume from the saved point.",
   "audioOfflineUnavailable": "This recording is not licensed for offline download.",
   "offlineStorage": "Offline storage",
-  "offlineStorageSettingsSubtitle": "Downloaded Mushaf pages and audio",
+  "offlineStorageSettingsSubtitle": "Downloaded Mushaf pages, audio and prayer course pictures",
   "offlineStorageUsed": "Used offline: {size}",
   "@offlineStorageUsed": {"placeholders": {"size": {"type": "String"}}},
   "offlineStorageDescription": "Only files downloaded by the app are shown here. Nothing is removed automatically.",

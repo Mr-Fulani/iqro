@@ -431,7 +431,7 @@
   "audioDownloadFailed": "توقف تنزيل الصوت. يمكنك المتابعة من الموضع المحفوظ.",
   "audioOfflineUnavailable": "هذه التلاوة غير مرخّصة للتنزيل دون إنترنت.",
   "offlineStorage": "التخزين دون إنترنت",
-  "offlineStorageSettingsSubtitle": "صفحات المصحف والصوت المنزّلة",
+  "offlineStorageSettingsSubtitle": "صفحات المصحف والصوت وصور دورة الصلاة المنزّلة",
   "offlineStorageUsed": "المستخدم دون إنترنت: {size}",
   "@offlineStorageUsed": {"placeholders": {"size": {"type": "String"}}},
   "offlineStorageDescription": "تظهر هنا الملفات التي نزّلها التطبيق فقط. لا يُحذف أي شيء تلقائياً.",

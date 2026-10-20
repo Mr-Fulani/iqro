@@ -1370,7 +1370,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get offlineStorageSettingsSubtitle =>
-      'İndirilen Mushaf sayfaları ve sesler';
+      'İndirilen Mushaf sayfaları, sesler ve namaz kursu resimleri';
 
   @override
   String offlineStorageUsed(String size) {
