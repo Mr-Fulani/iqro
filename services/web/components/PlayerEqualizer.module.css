@@ -1,0 +1,56 @@
+/* Takes the free space in the expanded player's head row, as tall as its buttons.
+   Growing from zero, it never pushes a button onto the next line. */
+.equalizer {
+  --bar-height: 40px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 104px;
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  align-items: center;
+  justify-items: center;
+  height: var(--bar-height);
+  margin-inline-start: auto;
+  color: var(--primary);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.playing {
+  opacity: 1;
+}
+
+.bar {
+  width: 46%;
+  height: calc(var(--bar-envelope) * var(--bar-height));
+  border-radius: 999px;
+  background: currentColor;
+  /* The resting level the app shows with reduced motion. */
+  transform: scaleY(0.62);
+}
+
+/* White bars with a soft shadow over the picture, as in the app. */
+:global(.has-player-background) .equalizer {
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* Phones and portrait tablets have no room beside the buttons: the bars take
+   their own line on top, kept while they are faded out so nothing jumps. */
+@media (max-width: 860px) {
+  .equalizer {
+    order: -1;
+    flex-basis: 100%;
+    max-width: none;
+    grid-template-columns: repeat(9, 11.5px);
+    justify-content: center;
+    margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equalizer {
+    transition: none;
+  }
+}

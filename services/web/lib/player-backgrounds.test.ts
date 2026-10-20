@@ -110,6 +110,16 @@ test("admin backgrounds are validated, sorted and namespaced", () => {
   assert.deepEqual(parsePlayerBackgrounds({ results: [first] }), []);
 });
 
+test("sound bars stay on unless the admin switched them off", () => {
+  assert.ok(BUNDLED_PLAYER_BACKGROUNDS.every((background) => background.showEqualizer));
+  const [shown, hidden] = parsePlayerBackgrounds([
+    payload(),
+    payload({ id: "019a0000-0000-7000-8000-000000000002", show_equalizer: false }),
+  ]);
+  assert.equal(shown!.showEqualizer, true);
+  assert.equal(hidden!.showEqualizer, false);
+});
+
 test("an empty Turkish title falls back to English", () => {
   const [background] = parsePlayerBackgrounds([payload({ title_tr: "" })]);
   assert.equal(playerBackgroundTitle(background!, "tr"), "Mountains");
