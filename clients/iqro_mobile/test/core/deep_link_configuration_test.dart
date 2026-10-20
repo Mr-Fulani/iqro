@@ -36,6 +36,8 @@ void main() {
     expect(manifest, contains('android:pathPrefix="/dua/"'));
     for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
       expect(manifest, contains('android:pathPrefix="/$locale/dua/"'));
+      expect(manifest, contains('android:path="/$locale/salah"'));
+      expect(manifest, contains('android:pathPrefix="/$locale/salah/"'));
     }
     expect(RegExp(r'android:autoVerify="true"').allMatches(manifest).length, 1);
   });
@@ -66,6 +68,51 @@ void main() {
     expect(
       normalizeLocalizedDuaDeepLink(
         Uri.parse('https://iqro.forum/fr/dua/hisn-al-muslim/7'),
+      ),
+      isNull,
+    );
+  });
+
+  test('localized web Salah links normalize to course routes', () {
+    for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
+      expect(
+        normalizeLocalizedSalahDeepLink(
+          Uri.parse('https://iqro.forum/$locale/salah'),
+        ),
+        '/salah',
+      );
+      expect(
+        normalizeLocalizedSalahDeepLink(
+          Uri.parse('https://iqro.forum/$locale/salah/fajr'),
+        ),
+        '/salah/lesson/fajr',
+      );
+      expect(
+        normalizeLocalizedSalahDeepLink(
+          Uri.parse('https://iqro.forum/$locale/salah/fajr#fajr.r1.ruku'),
+        ),
+        '/salah/lesson/fajr/step/fajr.r1.ruku',
+      );
+      expect(
+        normalizeLocalizedSalahDeepLink(
+          Uri.parse('https://iqro.forum/$locale/salah/fajr#step=fajr.r1.ruku'),
+        ),
+        '/salah/lesson/fajr/step/fajr.r1.ruku',
+      );
+      expect(
+        normalizeLocalizedSalahDeepLink(
+          Uri.parse('https://iqro.forum/$locale/salah/fajr?step=fajr.r1.ruku'),
+        ),
+        '/salah/lesson/fajr/step/fajr.r1.ruku',
+      );
+    }
+    expect(
+      normalizeLocalizedSalahDeepLink(Uri.parse('/salah/lesson/fajr')),
+      isNull,
+    );
+    expect(
+      normalizeLocalizedSalahDeepLink(
+        Uri.parse('https://iqro.forum/fr/salah/fajr'),
       ),
       isNull,
     );

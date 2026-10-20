@@ -96,8 +96,11 @@ class _SalahLessonScreenState extends ConsumerState<SalahLessonScreen> {
             ? -1
             : lesson.indexOfStep(widget.stepSlug!);
         return SalahStepPlayer(
-          // A new content version restarts the player on the right step.
-          key: ValueKey('${document.course.version}:${lesson.slug}'),
+          // A new content version or a link to another step restarts the
+          // player on the right step.
+          key: ValueKey(
+            '${document.course.version}:${lesson.slug}:${widget.stepSlug}',
+          ),
           courseSlug: widget.courseSlug,
           document: document,
           lesson: lesson,

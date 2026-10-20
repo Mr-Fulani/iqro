@@ -1380,7 +1380,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get offlineStorageSettingsSubtitle =>
-      'Скачанные страницы Мусхафа и аудио';
+      'Скачанные страницы Мусхафа, аудио и картинки курса намаза';
 
   @override
   String offlineStorageUsed(String size) {

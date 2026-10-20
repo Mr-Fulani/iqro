@@ -2619,7 +2619,7 @@ abstract class AppLocalizations {
   /// No description provided for @offlineStorageSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Downloaded Mushaf pages and audio'**
+  /// **'Downloaded Mushaf pages, audio and prayer course pictures'**
   String get offlineStorageSettingsSubtitle;
 
   /// No description provided for @offlineStorageUsed.

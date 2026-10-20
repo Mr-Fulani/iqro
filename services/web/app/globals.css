@@ -269,6 +269,14 @@ a:hover {
   font-size: 15px;
 }
 
+.menu-link-soon,
+.menu-link-soon:hover {
+  padding-inline: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .header-actions {
   grid-area: actions;
   display: flex;
@@ -5491,6 +5499,14 @@ a.footer-store-badge:hover {
     gap: 4px;
     padding-inline: 8px;
     font-size: 13px;
+  }
+}
+
+/* Until the container reaches its 1200px cap, nine labelled links fill the
+   menu, so the announced "soon" item would push it past the header. */
+@media (min-width: 1001px) and (max-width: 1235px) {
+  .menu-link-soon {
+    display: none;
   }
 }
 
