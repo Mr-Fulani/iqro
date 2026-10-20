@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import styles from "./PlayerEqualizer.module.css";
 
@@ -9,6 +9,15 @@ import styles from "./PlayerEqualizer.module.css";
 const ENVELOPE = [0.44, 0.64, 0.84, 0.7, 1, 0.7, 0.84, 0.64, 0.44];
 const LOOP_MS = 3600;
 const FRAMES = 72;
+// The opacity transition in PlayerEqualizer.module.css.
+const FADE_MS = 400;
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeToMotionPreference(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
 
 function swayFrames(bar: number): Keyframe[] {
   return Array.from({ length: FRAMES + 1 }, (_, frame) => {
@@ -24,17 +33,23 @@ function swayFrames(bar: number): Keyframe[] {
 }
 
 /**
- * Sound bars in the expanded player: they sway while the recitation plays and
- * freeze on pause. Transform-only animations run off the main thread; with
- * reduced motion the bars stay at rest.
+ * Sound bars in the expanded player, as in the app: they fade in and sway while
+ * the recitation plays and fade out on pause or while buffering, the sway
+ * stopping once they are gone. Transform-only animations run off the main
+ * thread; with reduced motion the bars stand still.
  */
-export default function PlayerEqualizer({ playing }: { playing: boolean }) {
+export function PlayerEqualizer({ playing }: { playing: boolean }) {
   const rootRef = useRef<HTMLSpanElement>(null);
   const animationsRef = useRef<Animation[]>([]);
+  const reduceMotion = useSyncExternalStore(
+    subscribeToMotionPreference,
+    () => window.matchMedia(REDUCED_MOTION).matches,
+    () => true,
+  );
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!root || reduceMotion) return;
     const animations = Array.from(root.children, (bar, index) =>
       bar.animate(swayFrames(index), { duration: LOOP_MS, iterations: Infinity }),
     );
@@ -43,17 +58,27 @@ export default function PlayerEqualizer({ playing }: { playing: boolean }) {
       for (const animation of animations) animation.cancel();
       animationsRef.current = [];
     };
-  }, []);
+  }, [reduceMotion]);
 
   useEffect(() => {
-    for (const animation of animationsRef.current) {
-      if (playing) animation.play();
-      else animation.pause();
+    const animations = animationsRef.current;
+    if (playing) {
+      for (const animation of animations) animation.play();
+      return;
     }
-  }, [playing]);
+    const timer = window.setTimeout(() => {
+      for (const animation of animations) animation.pause();
+    }, FADE_MS);
+    return () => window.clearTimeout(timer);
+  }, [playing, reduceMotion]);
 
   return (
-    <span ref={rootRef} className={styles.equalizer} aria-hidden="true" data-testid="player-equalizer">
+    <span
+      ref={rootRef}
+      className={playing ? `${styles.equalizer} ${styles.playing}` : styles.equalizer}
+      aria-hidden="true"
+      data-testid="player-equalizer"
+    >
       {ENVELOPE.map((height, index) => (
         <span key={index} className={styles.bar} style={{ "--bar-envelope": height } as CSSProperties} />
       ))}

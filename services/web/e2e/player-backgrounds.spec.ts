@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 
 test("expanded player remembers a background and keeps the scrim under reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -14,12 +15,19 @@ test("expanded player remembers a background and keeps the scrim under reduced m
   await expect(backdrop).toHaveAttribute("loading", "lazy");
   await expect(backdrop).toHaveAttribute("sizes", "min(1160px, 100vw)");
   await expect(backdrop).toHaveCSS("transition-duration", "0s");
-  // With reduced motion the sound bars rest without any animation.
+  // Nothing plays, so the sound bars are faded out; reduced motion leaves them still.
   const equalizer = player.getByTestId("player-equalizer");
-  await expect(equalizer).toBeVisible();
   await expect(equalizer).toHaveAttribute("aria-hidden", "true");
+  await expect(equalizer).toHaveCSS("opacity", "0");
+  await expect(equalizer).toHaveCSS("transition-duration", "0s");
   expect(await equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
   await expect(equalizer.locator("span").first()).toHaveCSS("transform", "matrix(1, 0, 0, 0.62, 0, 0)");
+  // The preference is followed live, not only when the player opens.
+  const animations = () => equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect.poll(animations).toBe(9);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(animations).toBe(0);
   await expect(player.locator(".global-audio-player-scrim")).toHaveCSS(
     "background-image",
     /rgba\(6, 29, 24, 0\.68\).*rgba\(6, 29, 24, 0\.77\).*rgba\(6, 29, 24, 0\.86\)/,
@@ -56,7 +64,7 @@ test("admin backgrounds fall back to English titles in Turkish", async ({ page }
   await page.goto("/tr/audio");
   const player = page.getByTestId("global-audio-player");
   await player.getByRole("button", { name: "Oynatıcıyı genişlet", exact: true }).click();
-  await expect(player.getByTestId("player-equalizer")).toBeVisible();
+  await expect(player.getByTestId("player-equalizer")).toBeAttached();
   await player.getByRole("button", { name: "Oynatıcı arka planı" }).click();
   await player.getByText("Mountains", { exact: true }).click();
   await expect(player).toHaveAttribute(
@@ -69,4 +77,33 @@ test("admin backgrounds fall back to English titles in Turkish", async ({ page }
   );
   // This admin background has the sound bars switched off.
   await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+});
+
+test("sound bars never push the player buttons onto another line", async ({ page }) => {
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  const equalizer = player.getByTestId("player-equalizer");
+  const top = async (locator: Locator) => (await locator.boundingBox())!.y;
+  const controls = [
+    player.getByLabel("Быстрая смена чтеца"),
+    player.getByRole("button", { name: "Фон плеера" }),
+    player.getByRole("button", { name: "Свернуть плеер", exact: true }),
+  ];
+
+  // Portrait tablets: the bars take their own line above the controls.
+  for (const width of [768, 810, 820]) {
+    await page.setViewportSize({ width, height: 1024 });
+    const row = await top(controls[0]);
+    for (const control of controls) expect(Math.abs((await top(control)) - row)).toBeLessThan(8);
+    const bars = (await equalizer.boundingBox())!;
+    expect(bars.y + bars.height).toBeLessThanOrEqual(row);
+  }
+
+  // Wider screens: the bars sit between the reciter and the buttons.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const row = await top(controls[0]);
+  for (const control of controls) expect(Math.abs((await top(control)) - row)).toBeLessThan(8);
+  expect(Math.abs((await top(equalizer)) - row)).toBeLessThan(8);
+  expect((await equalizer.boundingBox())!.width).toBe(104);
 });
