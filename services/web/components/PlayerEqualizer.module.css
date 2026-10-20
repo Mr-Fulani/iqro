@@ -1,0 +1,37 @@
+/* Sits in the free space of the expanded player's head row, as tall as its buttons. */
+.equalizer {
+  --bar-height: 40px;
+  display: grid;
+  grid-template-columns: repeat(9, 11.5px);
+  justify-content: center;
+  align-items: center;
+  justify-items: center;
+  height: var(--bar-height);
+  margin-inline-start: auto;
+  color: var(--primary);
+  pointer-events: none;
+}
+
+.bar {
+  width: 46%;
+  height: calc(var(--bar-envelope) * var(--bar-height));
+  border-radius: 999px;
+  background: currentColor;
+  /* The resting level the app shows with reduced motion. */
+  transform: scaleY(0.62);
+}
+
+/* White bars with a soft shadow over the picture, as in the app. */
+:global(.has-player-background) .equalizer {
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* No room beside the buttons on a phone: the bars take their own line on top. */
+@media (max-width: 520px) {
+  .equalizer {
+    order: -1;
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+}

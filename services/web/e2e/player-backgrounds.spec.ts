@@ -14,6 +14,12 @@ test("expanded player remembers a background and keeps the scrim under reduced m
   await expect(backdrop).toHaveAttribute("loading", "lazy");
   await expect(backdrop).toHaveAttribute("sizes", "min(1160px, 100vw)");
   await expect(backdrop).toHaveCSS("transition-duration", "0s");
+  // With reduced motion the sound bars rest without any animation.
+  const equalizer = player.getByTestId("player-equalizer");
+  await expect(equalizer).toBeVisible();
+  await expect(equalizer).toHaveAttribute("aria-hidden", "true");
+  expect(await equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
+  await expect(equalizer.locator("span").first()).toHaveCSS("transform", "matrix(1, 0, 0, 0.62, 0, 0)");
   await expect(player.locator(".global-audio-player-scrim")).toHaveCSS(
     "background-image",
     /rgba\(6, 29, 24, 0\.68\).*rgba\(6, 29, 24, 0\.77\).*rgba\(6, 29, 24, 0\.86\)/,
@@ -50,6 +56,7 @@ test("admin backgrounds fall back to English titles in Turkish", async ({ page }
   await page.goto("/tr/audio");
   const player = page.getByTestId("global-audio-player");
   await player.getByRole("button", { name: "Oynatıcıyı genişlet", exact: true }).click();
+  await expect(player.getByTestId("player-equalizer")).toBeVisible();
   await player.getByRole("button", { name: "Oynatıcı arka planı" }).click();
   await player.getByText("Mountains", { exact: true }).click();
   await expect(player).toHaveAttribute(
@@ -60,4 +67,6 @@ test("admin backgrounds fall back to English titles in Turkish", async ({ page }
     "src",
     "/player-backgrounds/geometric.webp",
   );
+  // This admin background has the sound bars switched off.
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
 });

@@ -954,6 +954,39 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 
+test("expanded player sound bars sway while the recitation plays and freeze otherwise", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const audio = player.locator("audio");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  // The bars belong to the expanded player only.
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  const equalizer = player.getByTestId("player-equalizer");
+  await expect(equalizer).toBeVisible();
+  const playStates = () => equalizer.evaluate((element) =>
+    [...new Set(element.getAnimations({ subtree: true }).map((animation) => animation.playState))]);
+  await expect.poll(() => equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length))
+    .toBe(9);
+  await expect.poll(playStates).toEqual(["running"]);
+
+  await audio.evaluate((element) => (element as HTMLAudioElement).pause());
+  await expect.poll(playStates).toEqual(["paused"]);
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect.poll(playStates).toEqual(["running"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("waiting")));
+  await expect.poll(playStates).toEqual(["paused"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("playing")));
+  await expect.poll(playStates).toEqual(["running"]);
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+});
+
 test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/audio");

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -52,6 +53,8 @@ export type AudioPlayerReciterControls = {
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
+// Loaded only once a listener expands the player.
+const PlayerEqualizer = dynamic(() => import("../components/PlayerEqualizer"), { ssr: false });
 const NO_REMOTE_BACKGROUNDS: PlayerBackground[] = [];
 
 export function AudioPlayerProvider({
@@ -66,6 +69,7 @@ export function AudioPlayerProvider({
   const { locale, t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [reciterControls, setRegisteredReciterControls] =
     useState<AudioPlayerReciterControls | null>(null);
@@ -156,6 +160,9 @@ export function AudioPlayerProvider({
                       ))}
                     </select>
                   )}
+                  {expanded && background.showEqualizer && (
+                    <PlayerEqualizer playing={isPlaying && !isBuffering} />
+                  )}
                   {expanded && (
                     <PlayerBackgroundPicker
                       options={backgroundOptions}
@@ -182,6 +189,7 @@ export function AudioPlayerProvider({
                 request={request}
                 className="audio-player-bar global-audio-player-bar"
                 onPlayingChange={setIsPlaying}
+                onBufferingChange={setIsBuffering}
                 compact={compact}
               />
               {compact && (
