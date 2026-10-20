@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
+import { useReducedMotion } from "../lib/use-reduced-motion";
 import styles from "./PlayerEqualizer.module.css";
 
 // Ported from _EqualizerPainter in clients/iqro_mobile/lib/features/audio/player_screen.dart.
@@ -11,13 +12,6 @@ const LOOP_MS = 3600;
 const FRAMES = 72;
 // The opacity transition in PlayerEqualizer.module.css.
 const FADE_MS = 400;
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-
-function subscribeToMotionPreference(onChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
 
 function swayFrames(bar: number): Keyframe[] {
   return Array.from({ length: FRAMES + 1 }, (_, frame) => {
@@ -41,11 +35,7 @@ function swayFrames(bar: number): Keyframe[] {
 export function PlayerEqualizer({ playing }: { playing: boolean }) {
   const rootRef = useRef<HTMLSpanElement>(null);
   const animationsRef = useRef<Animation[]>([]);
-  const reduceMotion = useSyncExternalStore(
-    subscribeToMotionPreference,
-    () => window.matchMedia(REDUCED_MOTION).matches,
-    () => true,
-  );
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const root = rootRef.current;

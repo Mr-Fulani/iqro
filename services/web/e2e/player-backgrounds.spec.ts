@@ -110,6 +110,49 @@ test("a video background loops silently over its poster only in the expanded pla
   await expect.poll(() => mediaRequests).toContain("/player-backgrounds/reciter-hood.mp4");
 });
 
+test("the video code loads only for a video background and a failed load leaves the poster", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  const expand = player.getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  const chunkRequests: string[] = [];
+  await page.route("**/_next/static/chunks/**", (route) => {
+    chunkRequests.push(route.request().url());
+    return route.abort();
+  });
+
+  // The default picture needs no extra code.
+  await expand.click();
+  await expect(player).toHaveAttribute("data-player-background", "bundled:desert-night");
+  await expect(player.locator(".global-audio-player-backdrop img")).toHaveAttribute("data-loaded", "true");
+  expect(chunkRequests).toEqual([]);
+
+  // The chunk loader retries once; wait until the failure is final and handled.
+  const chunkFailed = page.waitForEvent("console", {
+    predicate: async (message) => {
+      if (message.type() !== "error") return false;
+      const names = await Promise.all(
+        message.args().map((arg) => arg.evaluate((value) => value instanceof Error && value.name)),
+      );
+      return names.includes("ChunkLoadError");
+    },
+  });
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Чтец", { exact: true }).click();
+  await chunkFailed;
+  expect(chunkRequests.length).toBeGreaterThan(0);
+  const poster = player.locator(".global-audio-player-backdrop img");
+  await expect(poster).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+  await expect(poster).toHaveAttribute("data-loaded", "true");
+  await expect(player.locator("video")).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(expand).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
 test("admin backgrounds fall back to English titles in Turkish", async ({ page }) => {
   await page.goto("/tr/audio");
   const player = page.getByTestId("global-audio-player");

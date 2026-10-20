@@ -1,62 +1,34 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import type { SyntheticEvent } from "react";
+import dynamic from "next/dynamic";
+import { Component, useId, useState } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 import { useI18n } from "../lib/i18n-context";
 import {
   PLAYER_BACKGROUND_SCRIM,
   playerBackgroundTitle,
 } from "../lib/player-backgrounds";
 import type { PlayerBackground } from "../lib/player-backgrounds";
+import { useReducedMotion } from "../lib/use-reduced-motion";
 
-function markLoaded(event: SyntheticEvent<HTMLElement>) {
+// Loaded only once the expanded player shows a video background.
+const PlayerBackgroundVideo = dynamic(() => import("./PlayerBackgroundVideo"), { ssr: false });
+
+function markLoaded(event: SyntheticEvent<HTMLImageElement>) {
   event.currentTarget.dataset.loaded = "true";
 }
 
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+/** If the video chunk fails to load, the poster stays and the player keeps working. */
+class PosterOnFailure extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
 
-function subscribeToMotionPreference(onChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
 
-function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeToMotionPreference,
-    () => window.matchMedia(REDUCED_MOTION).matches,
-    // Server HTML keeps the still picture.
-    () => true,
-  );
-}
-
-/**
- * A silent looping video over its poster, mirroring _PlayerBackgroundVideo in
- * the app. Nothing is fetched until it is mounted; the poster stays while it
- * loads or if the browser refuses to play it.
- */
-function PlayerBackgroundVideo({ src }: { src: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    videoRef.current?.play().catch(() => {
-      // Autoplay can be refused, for example in a battery saver mode.
-    });
-  }, []);
-
-  return (
-    <video
-      ref={videoRef}
-      src={src}
-      muted
-      loop
-      playsInline
-      preload="none"
-      disablePictureInPicture
-      disableRemotePlayback
-      onPlaying={markLoaded}
-    />
-  );
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** The chosen image behind the expanded player, under a dark scrim for legible text. */
@@ -77,7 +49,9 @@ export function PlayerBackdrop({ background }: { background: PlayerBackground })
         onLoad={markLoaded}
       />
       {background.videoSrc && !reduceMotion && (
-        <PlayerBackgroundVideo key={background.videoSrc} src={background.videoSrc} />
+        <PosterOnFailure key={background.videoSrc}>
+          <PlayerBackgroundVideo src={background.videoSrc} />
+        </PosterOnFailure>
       )}
       <span className="global-audio-player-scrim" style={{ backgroundImage: PLAYER_BACKGROUND_SCRIM }} />
     </div>
