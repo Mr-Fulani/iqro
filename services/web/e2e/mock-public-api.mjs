@@ -23,10 +23,13 @@ const playerBackgrounds = [
     title_ru: "Горы",
     title_tr: "",
     image_url: "/player-backgrounds/geometric.webp",
+    // VP9 decodes in every Chromium build; the Linux CI one may lack H.264.
+    video_url: "/media/audio/player-backgrounds/mountains-loop.webm",
     show_equalizer: false,
     sort_order: 10,
   },
 ];
+const playerBackgroundVideo = readFileSync(new URL("./fixtures/player-background-loop.webm", import.meta.url));
 
 // The contract example is served as is; only its language follows the request and
 // its images point at this mock (through the site's /media rewrite) so pages load
@@ -299,6 +302,10 @@ const server = createServer(async (request, response) => {
   if (salahMedia) {
     response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" });
     return response.end(salahImage(salahMedia[1]));
+  }
+  if (path === "/media/audio/player-backgrounds/mountains-loop.webm") {
+    response.writeHead(200, { "Content-Type": "video/webm", "Cache-Control": "public, max-age=60" });
+    return response.end(playerBackgroundVideo);
   }
 
   if (path === "/api/v1/quran/editions") return sendJson(response, 200, [edition]);

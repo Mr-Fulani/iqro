@@ -27,7 +27,7 @@ test("expanded player remembers a background and keeps the scrim under reduced m
 
   await player.getByRole("button", { name: "Фон плеера" }).click();
   const choices = player.getByRole("radio");
-  await expect(choices).toHaveCount(6);
+  await expect(choices).toHaveCount(7);
   await expect(player.getByRole("radio", { name: "Горы" })).toBeAttached();
   await expect(player.getByRole("radio", { name: "Ночная пустыня" })).toBeChecked();
   await expect(player.locator(".player-background-thumb img").first()).toHaveAttribute(
@@ -45,11 +45,61 @@ test("expanded player remembers a background and keeps the scrim under reduced m
     .click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:sea-dawn");
 
+  // With reduced motion a video background shows only its poster.
   await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Чтец", { exact: true }).click();
+  await expect(player).toHaveAttribute("data-player-background", "bundled:reciter-video");
+  await expect(backdrop).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+  await expect(player.locator(".global-audio-player-backdrop video")).toHaveCount(0);
+
   await player.getByText("Классический", { exact: true }).click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:classic");
   await expect(player).not.toHaveClass(/has-player-background/);
   await expect(player.locator(".global-audio-player-backdrop")).toHaveCount(0);
+});
+
+test("a video background loops silently over its poster only in the expanded player", async ({ page }) => {
+  const mediaRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "media") mediaRequests.push(new URL(request.url()).pathname);
+  });
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Горы", { exact: true }).click();
+
+  const backdrop = player.locator(".global-audio-player-backdrop");
+  await expect(backdrop.locator("img")).toHaveAttribute("src", "/player-backgrounds/geometric.webp");
+  const video = backdrop.locator("video");
+  await expect(video).toHaveAttribute("src", "/media/audio/player-backgrounds/mountains-loop.webm");
+  await expect(video).toHaveAttribute("preload", "none");
+  await expect(video).toHaveAttribute("loop");
+  await expect(video).toHaveAttribute("playsinline");
+  // It covers the poster once it actually plays and stays under the scrim.
+  await expect(video).toHaveAttribute("data-loaded", "true");
+  await expect(video).toHaveCSS("opacity", "1");
+  expect(await video.evaluate((element: HTMLVideoElement) => [element.muted, element.paused])).toEqual([true, false]);
+  await expect(backdrop.locator("video + .global-audio-player-scrim")).toHaveCount(1);
+
+  // A bundled video, as in the app.
+  await player.getByText("Чтец", { exact: true }).click();
+  await expect(video).toHaveAttribute("src", "/player-backgrounds/reciter-hood.mp4");
+  await expect(backdrop.locator("img")).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(page.locator("video")).toHaveCount(0);
+
+  // The choice is remembered, but nothing is fetched until the player is expanded.
+  mediaRequests.length = 0;
+  await page.reload();
+  const expand = page.getByTestId("global-audio-player").getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  await expect(page.locator("video")).toHaveCount(0);
+  expect(mediaRequests).toEqual([]);
+  await expand.click();
+  await expect(video).toHaveAttribute("src", "/player-backgrounds/reciter-hood.mp4");
+  await expect.poll(() => mediaRequests).toContain("/player-backgrounds/reciter-hood.mp4");
 });
 
 test("admin backgrounds fall back to English titles in Turkish", async ({ page }) => {

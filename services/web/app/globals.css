@@ -4139,7 +4139,7 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
 }
 
-.global-audio-player-backdrop img,
+.global-audio-player-backdrop :is(img, video),
 .global-audio-player-scrim {
   position: absolute;
   inset: 0;
@@ -4147,13 +4147,14 @@ input:focus, select:focus, textarea:focus {
   height: 100%;
 }
 
-.global-audio-player-backdrop img {
+/* A video stays transparent over its poster until it actually plays. */
+.global-audio-player-backdrop :is(img, video) {
   object-fit: cover;
   opacity: 0;
   transition: opacity 0.45s ease;
 }
 
-.global-audio-player-backdrop img[data-loaded="true"] {
+.global-audio-player-backdrop :is(img, video)[data-loaded="true"] {
   opacity: 1;
 }
 

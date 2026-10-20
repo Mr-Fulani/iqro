@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { SyntheticEvent } from "react";
 import { useI18n } from "../lib/i18n-context";
 import {
@@ -9,12 +9,59 @@ import {
 } from "../lib/player-backgrounds";
 import type { PlayerBackground } from "../lib/player-backgrounds";
 
-function markLoaded(event: SyntheticEvent<HTMLImageElement>) {
+function markLoaded(event: SyntheticEvent<HTMLElement>) {
   event.currentTarget.dataset.loaded = "true";
+}
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeToMotionPreference(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeToMotionPreference,
+    () => window.matchMedia(REDUCED_MOTION).matches,
+    // Server HTML keeps the still picture.
+    () => true,
+  );
+}
+
+/**
+ * A silent looping video over its poster, mirroring _PlayerBackgroundVideo in
+ * the app. Nothing is fetched until it is mounted; the poster stays while it
+ * loads or if the browser refuses to play it.
+ */
+function PlayerBackgroundVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    videoRef.current?.play().catch(() => {
+      // Autoplay can be refused, for example in a battery saver mode.
+    });
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      muted
+      loop
+      playsInline
+      preload="none"
+      disablePictureInPicture
+      disableRemotePlayback
+      onPlaying={markLoaded}
+    />
+  );
 }
 
 /** The chosen image behind the expanded player, under a dark scrim for legible text. */
 export function PlayerBackdrop({ background }: { background: PlayerBackground }) {
+  const reduceMotion = useReducedMotion();
   if (!background.image) return null;
   return (
     <div className="global-audio-player-backdrop" aria-hidden="true">
@@ -29,6 +76,9 @@ export function PlayerBackdrop({ background }: { background: PlayerBackground })
         decoding="async"
         onLoad={markLoaded}
       />
+      {background.videoSrc && !reduceMotion && (
+        <PlayerBackgroundVideo key={background.videoSrc} src={background.videoSrc} />
+      )}
       <span className="global-audio-player-scrim" style={{ backgroundImage: PLAYER_BACKGROUND_SCRIM }} />
     </div>
   );
