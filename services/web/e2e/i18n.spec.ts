@@ -331,6 +331,50 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
   await expect(dialog).toBeHidden();
 });
 
+test("without the share dialog's code a dua still goes as text, and the next press loads it", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedTexts: string[] };
+    target.copiedTexts = [];
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedTexts.push(text); } },
+    });
+  });
+  await page.goto("/ru/dua/hisn-al-muslim/1");
+  const copied = () => page.evaluate(() => (window as unknown as { copiedTexts: string[] }).copiedTexts);
+  const link = new URL("/ru/dua/hisn-al-muslim/1", page.url()).href;
+  const text = [
+    "Слова поминания при пробуждении ото сна · #1",
+    duaArabic,
+    "«Хвала Аллаху, воскресившему нас после того, как Он умертвил нас, и к Нему воскресение.»",
+    "Молитвы из Корана и Сунны · Al-Bukhari 6314; Muslim 2711.",
+    `Читать в IQRO: ${link}`,
+  ].join("\n\n");
+
+  // A network blip or a deploy that replaced the chunk: the page stays and the text goes.
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Текст и ссылка скопированы" })).toBeVisible();
+  expect(await copied()).toEqual([text]);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".dua-arabic")).toBeVisible();
+
+  // Once the network is back, the next press loads the dialog; without Web
+  // Share it copies the text too.
+  await page.unroute("**/_next/static/chunks/**");
+  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
+  await expect(dialog.getByRole("img", { name: "Картинка ду’а #1" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Скопировать текст" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Текст и ссылка скопированы" })).toBeVisible();
+  expect(await copied()).toEqual([text, text]);
+  expect(pageErrors).toEqual([]);
+});
+
 test("an Arabic dua picture is drawn right to left and downloads where files cannot be shared", async ({ page }) => {
   await page.addInitScript(() => {
     const target = window as unknown as { sharedDua?: unknown; copiedLink?: string };

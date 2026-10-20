@@ -2,8 +2,9 @@
 
 import { useCallback } from "react";
 import { api } from "../lib/api";
+import type { ContentShareText } from "../lib/content-share";
 import { useI18n } from "../lib/i18n-context";
-import ContentShareDialog, { type ContentShareText } from "./ContentShareDialog";
+import ContentShareDialog from "./ContentShareDialog";
 
 /** What the reader showed when the ayah was shared; missing text is fetched. */
 export type AyahShareTarget = {
