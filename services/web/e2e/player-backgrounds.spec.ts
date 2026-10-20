@@ -110,7 +110,7 @@ test("a video background loops silently over its poster only in the expanded pla
   await expect.poll(() => mediaRequests).toContain("/player-backgrounds/reciter-hood.mp4");
 });
 
-test("the video code loads only for a video background and a failed load leaves the poster", async ({ page }) => {
+test("the video code loads only for a video background, and a failed load leaves the poster until a retry", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/audio");
@@ -148,9 +148,43 @@ test("the video code loads only for a video background and a failed load leaves 
   await expect(poster).toHaveAttribute("data-loaded", "true");
   await expect(player.locator("video")).toHaveCount(0);
 
+  // Once the network is back, the next video background loads the chunk again.
+  await page.unroute("**/_next/static/chunks/**");
+  await player.getByText("Горы", { exact: true }).click();
+  const video = player.locator(".global-audio-player-backdrop video");
+  await expect(video).toHaveAttribute("src", "/media/audio/player-backgrounds/mountains-loop.webm");
+  await expect(video).toHaveAttribute("data-loaded", "true");
+
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
   await expect(expand).toBeVisible();
   expect(pageErrors).toEqual([]);
+});
+
+test("data saver keeps the poster and loads no video code", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "connection", {
+      configurable: true,
+      get: () => ({ saveData: true }),
+    });
+  });
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  const expand = player.getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  const lateRequests: string[] = [];
+  page.on("request", (request) => {
+    const type = request.resourceType();
+    if (type === "script" || type === "media") lateRequests.push(request.url());
+  });
+
+  await expand.click();
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Горы", { exact: true }).click();
+  const poster = player.locator(".global-audio-player-backdrop img");
+  await expect(poster).toHaveAttribute("src", "/player-backgrounds/geometric.webp");
+  await expect(poster).toHaveAttribute("data-loaded", "true");
+  await expect(player.locator("video")).toHaveCount(0);
+  expect(lateRequests).toEqual([]);
 });
 
 test("admin backgrounds fall back to English titles in Turkish", async ({ page }) => {

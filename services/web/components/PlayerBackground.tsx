@@ -1,7 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Component, useId, useState } from "react";
+import { Component, Suspense, lazy, useId, useState } from "react";
 import type { ReactNode, SyntheticEvent } from "react";
 import { useI18n } from "../lib/i18n-context";
 import {
@@ -12,18 +11,33 @@ import type { PlayerBackground } from "../lib/player-backgrounds";
 import { useReducedMotion } from "../lib/use-reduced-motion";
 
 // Loaded only once the expanded player shows a video background.
-const PlayerBackgroundVideo = dynamic(() => import("./PlayerBackgroundVideo"), { ssr: false });
+const loadVideo = () => lazy(() => import("./PlayerBackgroundVideo"));
+let PlayerBackgroundVideo = loadVideo();
 
 function markLoaded(event: SyntheticEvent<HTMLImageElement>) {
   event.currentTarget.dataset.loaded = "true";
 }
 
-/** If the video chunk fails to load, the poster stays and the player keeps working. */
+function savesData(): boolean {
+  // Not in the TypeScript DOM types yet.
+  const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } };
+  return connection?.saveData === true;
+}
+
+/**
+ * If the video chunk fails to load, the poster stays and the player keeps
+ * working; the next background or expansion loads the chunk again.
+ */
 class PosterOnFailure extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  componentDidCatch() {
+    // React.lazy keeps the rejected import, so start over with a fresh one.
+    PlayerBackgroundVideo = loadVideo();
   }
 
   render() {
@@ -48,9 +62,11 @@ export function PlayerBackdrop({ background }: { background: PlayerBackground })
         decoding="async"
         onLoad={markLoaded}
       />
-      {background.videoSrc && !reduceMotion && (
+      {background.videoSrc && !reduceMotion && !savesData() && (
         <PosterOnFailure key={background.videoSrc}>
-          <PlayerBackgroundVideo src={background.videoSrc} />
+          <Suspense fallback={null}>
+            <PlayerBackgroundVideo src={background.videoSrc} />
+          </Suspense>
         </PosterOnFailure>
       )}
       <span className="global-audio-player-scrim" style={{ backgroundImage: PLAYER_BACKGROUND_SCRIM }} />
