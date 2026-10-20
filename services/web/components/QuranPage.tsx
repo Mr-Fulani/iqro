@@ -2304,7 +2304,7 @@ function QuranContent() {
                 aria-haspopup="dialog"
                 aria-label={`${t("ayahShare.action")}: ${t("common.ayah", { ayah: selectedMushafAyah })}`}
               >
-                <ShareIcon /> {t("ayahShare.share")}
+                <ShareIcon /> {t("contentShare.share")}
               </button>
             </div>
           )}

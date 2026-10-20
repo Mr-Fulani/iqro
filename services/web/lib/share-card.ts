@@ -4,7 +4,7 @@
 // pixels; the PNG is twice as dense, as in the app.
 
 export type ShareCardContent = {
-  /** «Аль-Бакара · 2:255». */
+  /** «Аль-Бакара · 2:255», or the du'a's chapter and number. */
   title: string;
   arabic: string;
   translation: string;
