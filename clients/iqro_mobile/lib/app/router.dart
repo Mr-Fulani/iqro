@@ -45,13 +45,33 @@ String? normalizeLocalizedDuaDeepLink(Uri uri) {
   ).toString();
 }
 
+/// Web `/{locale}/salah/{lesson}#{step}` maps to `/salah/lesson/{lesson}/step/{step}`.
+/// The site also accepts `#step=…` and `?step=…`.
+String? normalizeLocalizedSalahDeepLink(Uri uri) {
+  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.length < 2 ||
+      segments.length > 3 ||
+      !_supportedWebLinkLocales.contains(segments.first) ||
+      segments[1] != 'salah') {
+    return null;
+  }
+  if (segments.length == 2) return '/salah';
+  final lesson = '/salah/lesson/${Uri.encodeComponent(segments[2])}';
+  var step = Uri.decodeComponent(uri.fragment);
+  if (step.startsWith('step=')) step = step.substring(5);
+  if (step.isEmpty) step = uri.queryParameters['step'] ?? '';
+  return step.isEmpty ? lesson : '$lesson/step/${Uri.encodeComponent(step)}';
+}
+
 GoRouter createRouter({required bool onboardingComplete}) {
   return GoRouter(
     initialLocation: onboardingComplete ? '/app' : '/onboarding',
     // Flutter can deliver the same native URL independently of home_widget.
     // Both entry points must resolve to the same canonical in-app route.
     redirect: (context, state) =>
-        homeWidgetRoute(state.uri) ?? normalizeLocalizedDuaDeepLink(state.uri),
+        homeWidgetRoute(state.uri) ??
+        normalizeLocalizedDuaDeepLink(state.uri) ??
+        normalizeLocalizedSalahDeepLink(state.uri),
     routes: <RouteBase>[
       GoRoute(
         path: '/onboarding',

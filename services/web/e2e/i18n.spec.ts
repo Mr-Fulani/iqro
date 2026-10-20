@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page) {
+  // Menu links animate padding and font size between breakpoints.
+  await page.locator(".app-header").evaluate((header) => Promise.allSettled(header
+    .getAnimations({ subtree: true })
+    .filter((animation) => animation instanceof CSSTransition)
+    .map((animation) => animation.finished)));
   const layout = await page.locator(".app-header").evaluate((header) => {
     const box = (element: Element) => {
       const rect = element.getBoundingClientRect();
@@ -10,7 +15,10 @@ async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page)
       fits: header.scrollWidth <= header.clientWidth,
       groups: [...header.children].map(box),
       menu: box(header.querySelector(".app-menu")!),
-      links: [...header.querySelectorAll(".menu-link")].map(box),
+      // The announced "soon" item is not rendered where the menu has no room.
+      links: [...header.querySelectorAll(".menu-link")]
+        .filter((link) => link.getClientRects().length > 0)
+        .map(box),
       actions: [...header.querySelectorAll(".header-actions > *")].map(box),
     };
   });
@@ -114,7 +122,7 @@ test("authenticated Russian header keeps navigation clear of account actions", a
 
   await expect(page.getByTestId("language-switcher")).toHaveValue("ru");
   await expect(page.locator(".app-header").getByRole("button", { name: "Выйти" })).toBeVisible();
-  for (const width of [1250, 900, 390]) {
+  for (const width of [1250, 1236, 1235, 1201, 1150, 1001, 900, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expectHeaderWithoutOverlap(page);
   }
@@ -141,6 +149,10 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
     "/ru/calendar",
     "/ru/profile",
   ]);
+  const names = page.locator(".app-menu").getByTestId("menu-names-of-allah");
+  await expect(names).toBeVisible();
+  await expect(names).toHaveAttribute("aria-disabled", "true");
+  await expect(names).toHaveAttribute("title", "Имена Аллаха — Скоро");
 
   await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");

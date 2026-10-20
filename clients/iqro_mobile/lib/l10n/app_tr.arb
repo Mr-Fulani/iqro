@@ -431,7 +431,7 @@
   "audioDownloadFailed": "Ses indirme durdu. Kaydedilen yerden devam edebilirsiniz.",
   "audioOfflineUnavailable": "Bu kayıt çevrimdışı indirme için lisanslı değil.",
   "offlineStorage": "Çevrimdışı depolama",
-  "offlineStorageSettingsSubtitle": "İndirilen Mushaf sayfaları ve sesler",
+  "offlineStorageSettingsSubtitle": "İndirilen Mushaf sayfaları, sesler ve namaz kursu resimleri",
   "offlineStorageUsed": "Çevrimdışı kullanılan: {size}",
   "@offlineStorageUsed": {"placeholders": {"size": {"type": "String"}}},
   "offlineStorageDescription": "Burada yalnızca uygulamanın indirdiği dosyalar gösterilir. Hiçbir şey otomatik olarak silinmez.",

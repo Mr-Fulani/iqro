@@ -1373,7 +1373,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineStorageSettingsSubtitle =>
-      'Downloaded Mushaf pages and audio';
+      'Downloaded Mushaf pages, audio and prayer course pictures';
 
   @override
   String offlineStorageUsed(String size) {
