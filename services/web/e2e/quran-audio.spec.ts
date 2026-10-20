@@ -1641,6 +1641,84 @@ test("an ayah note saved offline stays highlighted and waits in the outbox", asy
   ]);
 });
 
+test("text mode ends ayahs with the app's marker and shares an ayah picture through Web Share", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedAyah?: unknown };
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: (data: ShareData) => Boolean(data.files?.length),
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        const file = data.files?.[0];
+        const picture = file ? await createImageBitmap(file) : null;
+        target.sharedAyah = {
+          title: data.title,
+          text: data.text,
+          file: file && { name: file.name, type: file.type, width: picture?.width, height: picture?.height },
+        };
+      },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.locator("#quran-ayah-6-2 .ayah-end-marker")).toHaveText("﴿٢﴾");
+  await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text"))
+    .toHaveJSProperty("textContent", `${ayahs[1].text_uthmani}\u00A0\uFD3F\u0662\uFD3E`);
+
+  // The reader hides the translation; the picture still carries it, as in the app.
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await page.locator("#translation-enabled").filter({ visible: true }).uncheck();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByText("Аль-Анам · 6:1")).toBeVisible();
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
+  await expect.poll(() => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah))
+    .toEqual({
+      title: "Аль-Анам · 6:1",
+      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+      file: { name: "iqro-6-1.png", type: "image/png", width: 1080, height: 1350 },
+    });
+  await dialog.getByRole("button", { name: "Закрыть" }).click();
+  await expect(dialog).toBeHidden();
+});
+
+test("without Web Share the Mushaf ayah picture downloads and the link is copied", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedLink?: string };
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedLink = text; } },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+  await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toHaveCount(0);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("link", { name: "Скачать картинку" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("iqro-6-2.png");
+  const png = await readFile(await download.path());
+  expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
+
+  await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))
+    .toBe(new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href);
+});
+
 test("reading place is remembered automatically and retries a revision conflict", async ({ page }) => {
   const session = {
     token_type: "Bearer",
