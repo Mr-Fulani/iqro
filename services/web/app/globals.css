@@ -3639,17 +3639,17 @@ input:focus, select:focus, textarea:focus {
   vertical-align: -3px;
 }
 
-.ayah-share-dialog[open] {
+.content-share-dialog[open] {
   display: grid;
   gap: 16px;
 }
 
-.ayah-share-dialog .field-help {
+.content-share-dialog .field-help {
   margin: 0;
 }
 
 /* The card is 4:5; the preview keeps that shape within the screen height. */
-.ayah-share-preview {
+.content-share-preview {
   display: grid;
   place-items: center;
   width: min(100%, calc(min(56dvh, 500px) * 0.8));
@@ -3660,13 +3660,13 @@ input:focus, select:focus, textarea:focus {
   background: var(--bg-subtle);
 }
 
-.ayah-share-preview img {
+.content-share-preview img {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.ayah-share-preview p {
+.content-share-preview p {
   padding: 16px;
   text-align: center;
 }

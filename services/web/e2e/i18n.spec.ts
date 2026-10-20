@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+import { expect, test, type Locator } from "@playwright/test";
 
 async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page) {
   // Menu links animate padding and font size between breakpoints.
@@ -243,6 +245,179 @@ test("Dua cards expose source audio and account favorites", async ({ page }) => 
     "aria-pressed",
     "false",
   );
+});
+
+const duaArabic = "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ";
+
+// Which side of the drawn card the red wax seal is on: 44 px square, 40 px
+// from the top, inside 44 px margins of the 540 px card; the PNG is twice as
+// dense.
+function sealSide(picture: Locator) {
+  return picture.evaluate(async (image: HTMLImageElement) => {
+    await image.decode();
+    const bitmap = await createImageBitmap(image);
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d")!;
+    context.drawImage(bitmap, 0, 0);
+    const redness = (x: number) => {
+      const { data } = context.getImageData(x * 2, 80, 88, 88);
+      let sum = 0;
+      for (let index = 0; index < data.length; index += 4) sum += data[index] - data[index + 1];
+      return sum / (data.length / 4);
+    };
+    const [left, right] = [redness(44), redness(540 - 88)];
+    // The red of the seal against the green background; nothing drawn reads alike.
+    if (Math.abs(left - right) < 50) return "none";
+    return left > right ? "left" : "right";
+  });
+}
+
+test("a dua is shared as the app's picture through Web Share", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedDua?: unknown };
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: (data: ShareData) => Boolean(data.files?.length),
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        const file = data.files?.[0];
+        const picture = file ? await createImageBitmap(file) : null;
+        target.sharedDua = {
+          title: data.title,
+          text: data.text,
+          file: file && { name: file.name, type: file.type, width: picture?.width, height: picture?.height },
+        };
+      },
+    });
+  });
+  await page.goto("/ru/dua/hisn-al-muslim/1");
+  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
+  const title = "Слова поминания при пробуждении ото сна · #1";
+  await expect(dialog.getByText(title)).toBeVisible();
+  const picture = dialog.getByRole("img", { name: "Картинка ду’а #1" });
+  await expect(picture).toBeVisible();
+  expect(await sealSide(picture)).toBe("left");
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+
+  const link = new URL("/ru/dua/hisn-al-muslim/1", page.url()).href;
+  await expect.poll(() => page.evaluate(() => (window as unknown as { sharedDua?: unknown }).sharedDua))
+    .toEqual({
+      title,
+      text: [
+        title,
+        duaArabic,
+        "«Хвала Аллаху, воскресившему нас после того, как Он умертвил нас, и к Нему воскресение.»",
+        "Молитвы из Корана и Сунны · Al-Bukhari 6314; Muslim 2711.",
+        `Читать в IQRO: ${link}`,
+      ].join("\n\n"),
+      file: { name: "iqro-hisn-al-muslim-1.png", type: "image/png", width: 1080, height: 1350 },
+    });
+  await dialog.getByRole("button", { name: "Закрыть" }).click();
+  await expect(dialog).toBeHidden();
+});
+
+test("without the share dialog's code a dua still goes as text, and the next press loads it", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedTexts: string[] };
+    target.copiedTexts = [];
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedTexts.push(text); } },
+    });
+  });
+  await page.goto("/ru/dua/hisn-al-muslim/1");
+  const copied = () => page.evaluate(() => (window as unknown as { copiedTexts: string[] }).copiedTexts);
+  const link = new URL("/ru/dua/hisn-al-muslim/1", page.url()).href;
+  const text = [
+    "Слова поминания при пробуждении ото сна · #1",
+    duaArabic,
+    "«Хвала Аллаху, воскресившему нас после того, как Он умертвил нас, и к Нему воскресение.»",
+    "Молитвы из Корана и Сунны · Al-Bukhari 6314; Muslim 2711.",
+    `Читать в IQRO: ${link}`,
+  ].join("\n\n");
+
+  // A network blip or a deploy that replaced the chunk: the page stays and the text goes.
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Текст и ссылка скопированы" })).toBeVisible();
+  expect(await copied()).toEqual([text]);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".dua-arabic")).toBeVisible();
+
+  // Once the network is back, the next press loads the dialog; without Web
+  // Share it copies the text too.
+  await page.unroute("**/_next/static/chunks/**");
+  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
+  await expect(dialog.getByRole("img", { name: "Картинка ду’а #1" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Скопировать текст" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Текст и ссылка скопированы" })).toBeVisible();
+  expect(await copied()).toEqual([text, text]);
+  expect(pageErrors).toEqual([]);
+});
+
+test("an Arabic dua picture is drawn right to left and downloads where files cannot be shared", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedDua?: unknown; copiedLink?: string };
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        target.sharedDua = { title: data.title, text: data.text, files: data.files?.length ?? 0 };
+      },
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedLink = text; } },
+    });
+  });
+  await page.goto("/ar/dua/hisn-al-muslim/1");
+  // Linux has neither Times New Roman nor Arial, the local() metric fallbacks
+  // next/font lists after Amiri and Inter; the card must not depend on them.
+  await page.addStyleTag({
+    content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
+      html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
+  });
+  await page.getByRole("button", { name: "مشاركة", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "مشاركة الدعاء" });
+  const picture = dialog.getByRole("img", { name: "صورة الدعاء #1" });
+  await expect(picture).toBeVisible();
+  expect(await sealSide(picture)).toBe("right");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("link", { name: "تنزيل الصورة" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("iqro-hisn-al-muslim-1.png");
+  const png = await readFile(await download.path());
+  expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
+
+  const link = new URL("/ar/dua/hisn-al-muslim/1", page.url()).href;
+  await dialog.getByRole("button", { name: "نسخ الرابط" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "تم نسخ الرابط" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink)).toBe(link);
+
+  // The text still goes; the Arabic meaning, which repeats the du'a, does not.
+  await dialog.getByRole("button", { name: "مشاركة", exact: true }).click();
+  const title = "أذكار الاستيقاظ من النوم · #1";
+  await expect.poll(() => page.evaluate(() => (window as unknown as { sharedDua?: unknown }).sharedDua))
+    .toEqual({
+      title,
+      text: [
+        title,
+        duaArabic,
+        "حصن المسلم من أذكار الكتاب والسنة · Al-Bukhari 6314; Muslim 2711.",
+        `اقرأ في IQRO: ${link}`,
+      ].join("\n\n"),
+      files: 0,
+    });
 });
 
 test.describe("browser language negotiation", () => {
