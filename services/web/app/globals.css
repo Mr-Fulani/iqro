@@ -3449,6 +3449,49 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
+.share-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.mushaf-ayah-actions .share-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+
+.ayah-share-dialog[open] {
+  display: grid;
+  gap: 16px;
+}
+
+.ayah-share-dialog .field-help {
+  margin: 0;
+}
+
+/* The card is 4:5; the preview keeps that shape within the screen height. */
+.ayah-share-preview {
+  display: grid;
+  place-items: center;
+  width: min(100%, calc(min(56dvh, 500px) * 0.8));
+  aspect-ratio: 4 / 5;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.ayah-share-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ayah-share-preview p {
+  padding: 16px;
+  text-align: center;
+}
+
 .notes-list {
   display: grid;
   gap: 10px;
