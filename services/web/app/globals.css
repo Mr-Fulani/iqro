@@ -1161,6 +1161,183 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 18px;
 }
 
+.today-reading-layout.has-palm {
+  display: grid;
+  gap: 20px;
+}
+
+.today-reading-main {
+  min-width: 0;
+}
+
+/* The date palm: the stage's photograph with white text on a shaded side,
+   as in the app's Plan card. */
+.today-palm {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 960 / 700;
+  margin: 0;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #f1dcb4 0%, #d6ad78 100%);
+  color: #fff;
+}
+
+.today-palm::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to right, rgba(35, 27, 14, 0.7) 15%, rgba(35, 27, 14, 0) 75%);
+  pointer-events: none;
+}
+
+[dir="rtl"] .today-palm::after {
+  background: linear-gradient(to left, rgba(35, 27, 14, 0.7) 15%, rgba(35, 27, 14, 0) 75%);
+}
+
+.today-palm-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.today-palm-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* The plant stands on the right of each photograph; mirrored, it stays
+   clear of right-to-left text. */
+[dir="rtl"] .today-palm-photo {
+  transform: scaleX(-1);
+}
+
+.today-palm-photo.is-growing {
+  animation: today-palm-grow 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes today-palm-grow {
+  from {
+    opacity: 0;
+    clip-path: inset(40% 0 0 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+.today-palm-copy {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 10px 16px 18px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+[dir="rtl"] .today-palm-copy {
+  padding: 12px 18px 16px 10px;
+}
+
+.today-palm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.today-palm-head strong {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.today-palm-info-toggle {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  background: rgba(35, 27, 14, 0.25);
+  color: #fff;
+  font: italic 600 15px/1 Georgia, "Times New Roman", serif;
+  cursor: pointer;
+}
+
+.today-palm-info-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.today-palm-next {
+  display: grid;
+  gap: 8px;
+  max-width: 190px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.today-palm-track {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.today-palm-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #ebc776;
+  transition: width 240ms ease;
+}
+
+.today-palm-info {
+  position: absolute;
+  inset-inline: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  max-height: calc(100% - 20px);
+  overflow: auto;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(35, 27, 14, 0.96);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.today-palm-info[hidden] {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .today-reading-layout.has-palm {
+    grid-template-columns: 320px minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+  }
+}
+
 /* -------------------------------------------------------------------------
    Reading after prayer plan
 ------------------------------------------------------------------------- */
@@ -5770,8 +5947,13 @@ a.footer-store-badge:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .today-progress-track > span {
+  .today-progress-track > span,
+  .today-palm-track > span {
     transition: none;
+  }
+
+  .today-palm-photo.is-growing {
+    animation: none;
   }
 
   .prayer-reading-slot {
