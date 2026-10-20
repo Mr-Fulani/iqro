@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DuaCategoryPage } from "@/components/DuaCategoryPage";
+import { duaDisplayTitle } from "@/lib/dua-share";
 import { isLocale, translate, type Locale } from "@/lib/i18n";
 import {
   getPublishedDuaCategoryData,
@@ -41,10 +42,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const route = parseParams(await params);
   const published = await publishedCategory(route.locale, route.category);
+  const title = duaDisplayTitle(published.category.title, route.locale);
   return createContentMetadata(route.locale, {
-    title: published.category.title,
+    title,
     description: translate(route.locale, "dua.topicPageDescription", {
-      topic: published.category.title,
+      topic: title,
       count: published.category.entry_count,
     }),
     path:

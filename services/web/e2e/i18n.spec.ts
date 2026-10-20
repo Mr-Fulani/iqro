@@ -198,6 +198,12 @@ test("Dua topics use responsive cards without horizontal scrolling", async ({ pa
     (element) => element.getBoundingClientRect().width <= element.parentElement!.clientWidth,
   ))).toBe(true);
 
+  // The chapter, printed in capitals in the source, is found by its words.
+  await page.getByLabel("Поиск по темам ду’а").fill("поминания");
+  await page.getByRole("button", { name: "Найти" }).click();
+  await expect(page.getByRole("button", { name: "Сбросить" })).toBeVisible();
+  await expect(cards).toHaveCount(1);
+
   await page.getByLabel("Поиск по темам ду’а").fill("несуществующая тема");
   await page.getByRole("button", { name: "Найти" }).click();
   await expect(cards).toHaveCount(0);
@@ -292,10 +298,17 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
     });
   });
   await page.goto("/ru/dua/hisn-al-muslim/1");
+  // The chapter, printed in capitals in the source, reads in sentence case on
+  // the page, in its title and on the card alike.
+  const chapter = "Слова поминания при пробуждении ото сна";
+  const title = `${chapter} · #1`;
+  await expect(page).toHaveTitle(`${title} | Quran Platform`);
+  await expect(page.getByRole("heading", { level: 1, name: chapter, exact: true })).toBeVisible();
+  await expect(page.locator(".breadcrumbs").getByRole("link", { name: chapter, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: chapter, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Поделиться", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
-  const title = "Слова поминания при пробуждении ото сна · #1";
-  await expect(dialog.getByText(title)).toBeVisible();
+  await expect(dialog.getByText(title, { exact: true })).toBeVisible();
   const picture = dialog.getByRole("img", { name: "Картинка ду’а #1" });
   await expect(picture).toBeVisible();
   expect(await sealSide(picture)).toBe("left");

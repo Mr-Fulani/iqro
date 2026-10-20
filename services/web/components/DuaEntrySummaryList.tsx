@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { DuaEntry } from "../lib/api";
+import { duaDisplayTitle } from "../lib/dua-share";
 import { translate, type Locale } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
 
@@ -7,7 +8,7 @@ export function DuaEntrySummaryList({ entries, locale }: { entries: DuaEntry[]; 
   const groups = new Map<string, { title: string; entries: DuaEntry[] }>();
   for (const entry of entries) {
     const key = `${entry.collection}:${entry.category.slug}`;
-    const group = groups.get(key) ?? { title: entry.category.title, entries: [] };
+    const group = groups.get(key) ?? { title: duaDisplayTitle(entry.category.title, locale), entries: [] };
     group.entries.push(entry);
     groups.set(key, group);
   }

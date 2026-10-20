@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DuaEntrySummaryList } from "@/components/DuaEntrySummaryList";
 import { DuaTopicSelector } from "@/components/DuaTopicSelector";
 import { DuaTopicIcon } from "@/components/DuaTopicIcon";
+import { duaDisplayTitle } from "@/lib/dua-share";
 import { localeTag, translate, type Locale } from "@/lib/i18n";
 import type { PublishedDuaCategoryData } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
@@ -16,6 +17,7 @@ export function DuaCategoryPage({
   published: PublishedDuaCategoryData;
 }) {
   const numbers = new Intl.NumberFormat(localeTag(locale));
+  const title = duaDisplayTitle(published.category.title, locale);
   const topicPath =
     `/dua/${published.category.collection}/categories/${published.category.slug}`;
   const breadcrumbJson = JSON.stringify({
@@ -31,7 +33,7 @@ export function DuaCategoryPage({
       {
         "@type": "ListItem",
         position: 2,
-        name: published.category.title,
+        name: title,
         item: absoluteSiteUrl(localizedPath(locale, topicPath)),
       },
     ],
@@ -47,7 +49,7 @@ export function DuaCategoryPage({
               {translate(locale, "dua.allCategories")}
             </Link>
           </li>
-          <li aria-current="page">{published.category.title}</li>
+          <li aria-current="page">{title}</li>
         </ol>
       </nav>
 
@@ -58,10 +60,10 @@ export function DuaCategoryPage({
         />
         <div className="dua-topic-copy">
           <p className="eyebrow">{translate(locale, "dua.topicEyebrow")}</p>
-          <h1>{published.category.title}</h1>
+          <h1>{title}</h1>
           <p>
             {translate(locale, "dua.topicPageDescription", {
-              topic: published.category.title,
+              topic: title,
               count: numbers.format(published.category.entry_count),
             })}
           </p>

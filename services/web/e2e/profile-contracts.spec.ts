@@ -53,7 +53,7 @@ const duaFavoriteEntry = {
   category: {
     source_number: 1,
     slug: "waking-up",
-    title: "Слова поминания при пробуждении ото сна",
+    title: "СЛОВА ПОМИНАНИЯ ПРИ ПРОБУЖДЕНИИ ОТО СНА",
   },
   arabic_text: "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ",
   repetitions: 1,
@@ -264,7 +264,7 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await expect(page.locator(".profile-favorites .favorite-bookmark-icon")).toHaveCount(2);
   await expect(page.locator(".profile-favorites .favorite-heart-icon")).toHaveCount(0);
   await expect(page.getByText("Тестовая закладка")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Слова поминания при пробуждении ото сна", exact: true })).toHaveAttribute(
     "href",
     "/ru/dua/hisn-al-muslim/1",
   );
@@ -283,6 +283,7 @@ test("profile combines favorite duas and Quran bookmarks with working filters", 
   await expect(page.getByRole("heading", {
     level: 3,
     name: "Слова поминания при пробуждении ото сна",
+    exact: true,
   })).toBeVisible();
   await page.getByRole("button", { name: "Прослушать ду’а" }).click();
   await expect(page.locator(".dua-audio-panel audio")).toHaveAttribute(

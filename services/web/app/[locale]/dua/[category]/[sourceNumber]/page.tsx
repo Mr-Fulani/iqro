@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DuaEntryList } from "@/components/DuaEntryList";
+import { duaDisplayTitle, duaShareTitle } from "@/lib/dua-share";
 import { isLocale, translate, type Locale } from "@/lib/i18n";
 import {
   getPublishedDuaEntryByReference,
@@ -70,7 +71,7 @@ export async function generateMetadata({
   const entry = await publishedEntry(route);
   const meaning = entry.translation?.meaning_text.trim();
   return createContentMetadata(route.locale, {
-    title: `${entry.category.title} · #${entry.source_number}`,
+    title: duaShareTitle(entry, route.locale),
     description: meaning || entry.arabic_text,
     path: `/dua/${entry.collection}/${entry.source_number}`,
   });
@@ -83,6 +84,7 @@ export default async function LocalizedDuaEntryPage({
 }) {
   const route = parseParams(await params);
   const entry = await publishedEntry(route);
+  const title = duaDisplayTitle(entry.category.title, route.locale);
 
   return (
     <div className="dua-page dua-topic-page">
@@ -100,7 +102,7 @@ export default async function LocalizedDuaEntryPage({
                 `/dua/${entry.collection}/categories/${entry.category.slug}`,
               )}
             >
-              {entry.category.title}
+              {title}
             </Link>
           </li>
           <li aria-current="page">#{entry.source_number}</li>
@@ -110,7 +112,7 @@ export default async function LocalizedDuaEntryPage({
       <header className="surface dua-topic-hero">
         <div className="dua-topic-copy">
           <p className="eyebrow">{translate(route.locale, "dua.eyebrow")}</p>
-          <h1>{entry.category.title}</h1>
+          <h1>{title}</h1>
           <p>#{entry.source_number}</p>
         </div>
         <Link

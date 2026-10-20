@@ -148,7 +148,9 @@ const duaContent = {
     sourceUrl: "https://islamhouse.com/en/books/39062",
   },
   ru: {
-    title: "Слова поминания при пробуждении ото сна",
+    // In capitals, as the source prints most Russian chapters; pages read it
+    // in sentence case, as the app does.
+    title: "СЛОВА ПОМИНАНИЯ ПРИ ПРОБУЖДЕНИИ ОТО СНА",
     meaning: "Хвала Аллаху, воскресившему нас после того, как Он умертвил нас, и к Нему воскресение.",
     transliteration: "Аль-хамду ли-Лляхи аллязи ахйа-на ба'да ма амата-на ва иляй-хи-н-нушуру.",
     edition: "Молитвы из Корана и Сунны",
