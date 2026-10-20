@@ -419,9 +419,147 @@ test("Today creates a daily goal and adds paper Mushaf progress", async ({ page 
   await today.getByRole("button", { name: "Добавить к сегодняшнему прогрессу" }).click();
 
   await expect(today.getByText("Норма на сегодня выполнена")).toBeVisible();
-  await expect(today.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+  await expect(today.getByRole("progressbar", { name: "Прогресс чтения" })).toHaveAttribute("aria-valuenow", "100");
   expect(writes[1]).toMatchObject({ metric: "pages", amount: 3 });
   expect(String(writes[1].id)).toMatch(/^[0-9a-f-]{36}$/);
+});
+
+test("home Today card grows the date palm from the app's planner window", async ({ page }) => {
+  const { plannerRanges } = await installReadingMocks(page);
+  await page.goto("/");
+
+  const today = page.getByTestId("today-reading");
+  const palm = today.getByTestId("palm-growth");
+  // Yesterday's manual page is the only reading in the window: a sprout that
+  // rests until today's reading.
+  await expect(palm).toHaveAttribute("data-stage", "sprout");
+  await expect(palm).toHaveAttribute("data-mood", "resting");
+  expect(plannerRanges).toContain(90);
+  await expect(palm.getByText("Росток", { exact: true })).toBeVisible();
+  await expect(palm.getByText("Дальше: Саженец", { exact: true })).toBeVisible();
+  // A 320px card on a 1x screen takes the 480w file, not the 960w one.
+  await expect
+    .poll(() => palm.locator("img").evaluate((image: HTMLImageElement) => image.currentSrc))
+    .toMatch(/\/images\/palm\/palm-stage-1-480\.webp$/);
+
+  const restingText = palm.getByText("Пальма отдыхает в тени", { exact: false });
+  await expect(restingText).toBeHidden();
+  await palm.getByRole("button", { name: "Как растёт пальма" }).click();
+  await expect(restingText).toBeVisible();
+  await expect(palm.getByText("День чтения — +1, выполненная цель — +2", { exact: false })).toBeVisible();
+
+  await today.getByLabel("Считать норму в").selectOption("pages");
+  await today.getByLabel("Норма на день").fill("3");
+  await today.getByRole("button", { name: "Создать норму" }).click();
+  await today.getByRole("button", { name: "Добавить вручную" }).click();
+  await today.getByLabel("Прочитано — стр.").fill("3");
+  await today.getByRole("button", { name: "Добавить к сегодняшнему прогрессу" }).click();
+
+  // A completed goal is two points: 3 of the 6 a seedling needs, 40% of the way.
+  await expect(palm).toHaveAttribute("data-mood", "flourishing");
+  await expect(palm).toHaveAttribute("data-stage", "sprout");
+  await expect(palm.getByRole("progressbar", { name: "Дальше: Саженец" })).toHaveAttribute("aria-valuenow", "40");
+
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});
+
+test("a new palm stage grows in; reduced motion keeps it still", async ({ page }) => {
+  await installReadingMocks(page);
+  let achieved = 0;
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/today",
+    (route) => route.fulfill({ json: todaySnapshot(achieved, true) }),
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/reading-planner",
+    (route) =>
+      route.fulfill({
+        json: {
+          local_date: "2026-08-28",
+          timezone_name: "Europe/Istanbul",
+          days: [23, 24, 25, 26, 27].map((date) => ({
+            local_date: `2026-08-${date}`,
+            state: "partial",
+            has_reading: true,
+            goal: null,
+            prayer_check_ins: [],
+            prayer_pages: 0,
+            prayer_count: 0,
+            automatic_sessions: 0,
+            automatic_active_seconds: 0,
+            automatic_pages: 0,
+            automatic_ayahs: 0,
+          })),
+        },
+      }),
+  );
+  await page.goto("/");
+
+  const palm = page.getByTestId("palm-growth");
+  await expect(palm).toHaveAttribute("data-stage", "sprout");
+  await expect(palm.locator("img.is-growing")).toHaveCount(0);
+
+  // Five reading days and today's first page make six points: a seedling.
+  achieved = 1;
+  await page.evaluate(() => window.dispatchEvent(new Event("quran-reading-progress-changed")));
+  await expect(palm).toHaveAttribute("data-stage", "seedling");
+  const photo = palm.locator("img.is-growing");
+  await expect(photo).toHaveAttribute("src", "/images/palm/palm-stage-2-480.webp");
+  expect(await photo.evaluate((image) => getComputedStyle(image).animationName)).toBe("today-palm-grow");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await photo.evaluate((image) => getComputedStyle(image).animationName)).toBe("none");
+});
+
+test("today's progress does not wait for the palm and leaves with the reader", async ({ page }) => {
+  await installReadingMocks(page);
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/today",
+    (route) => route.fulfill({ json: todaySnapshot(1, true) }),
+  );
+  let releasePlanner = () => {};
+  const plannerHeld = new Promise<void>((resolve) => {
+    releasePlanner = resolve;
+  });
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/reading-planner",
+    async (route) => {
+      await plannerHeld;
+      await route.fallback();
+    },
+  );
+  await page.route("**/api/web-auth/logout", (route) => route.fulfill({ status: 204, body: "" }));
+  await page.goto("/");
+
+  const today = page.getByTestId("today-reading");
+  await expect(today.getByText("1 / 3 стр.")).toBeVisible();
+  await expect(today.getByTestId("palm-growth")).toHaveCount(0);
+  releasePlanner();
+  await expect(today.getByTestId("palm-growth")).toBeVisible();
+
+  await page.getByRole("button", { name: "Выйти" }).click();
+  await expect(today.getByRole("button", { name: "Создать норму" })).toBeVisible();
+  await expect(today.getByTestId("palm-growth")).toHaveCount(0);
+  await expect(today.getByText("1 / 3 стр.")).toHaveCount(0);
+});
+
+test("palm photographs load only with the palm card", async ({ page }) => {
+  const palmImages: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/images/palm/")) palmImages.push(request.url());
+  });
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  await page.goto("/ru");
+
+  const today = page.getByTestId("today-reading");
+  await expect(today.getByRole("button", { name: "Создать норму" })).toBeVisible();
+  await expect(today.getByTestId("palm-growth")).toHaveCount(0);
+  await page.goto("/ru/quran");
+  await page.waitForLoadState("networkidle");
+  expect(palmImages).toEqual([]);
 });
 
 for (const [metric, target, first, unit] of [
