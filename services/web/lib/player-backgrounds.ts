@@ -24,6 +24,7 @@ export type PlayerBackgroundPayload = {
   title_ru: string;
   title_tr: string;
   image_url: string;
+  show_equalizer?: boolean;
   sort_order: number;
 };
 
@@ -38,6 +39,8 @@ export type PlayerBackground = {
   id: string;
   titles: Record<Locale, string>;
   image: PlayerBackgroundImage | null;
+  // The admin can switch the sound bars off where they clash with a picture.
+  showEqualizer: boolean;
 };
 
 function bundledImage(name: string): PlayerBackgroundImage {
@@ -51,26 +54,31 @@ export const BUNDLED_PLAYER_BACKGROUNDS: readonly PlayerBackground[] = [
     id: CLASSIC_PLAYER_BACKGROUND_ID,
     titles: { ru: "Классический", en: "Classic", tr: "Klasik", ar: "كلاسيكي" },
     image: null,
+    showEqualizer: true,
   },
   {
     id: DEFAULT_PLAYER_BACKGROUND_ID,
     titles: { ru: "Ночная пустыня", en: "Desert night", tr: "Çöl gecesi", ar: "ليل الصحراء" },
     image: bundledImage("desert-night"),
+    showEqualizer: true,
   },
   {
     id: "bundled:sea-dawn",
     titles: { ru: "Море на рассвете", en: "Sea at dawn", tr: "Şafakta deniz", ar: "البحر عند الفجر" },
     image: bundledImage("sea-dawn"),
+    showEqualizer: true,
   },
   {
     id: "bundled:palm-oasis",
     titles: { ru: "Оазис", en: "Oasis", tr: "Vaha", ar: "الواحة" },
     image: bundledImage("palm-oasis"),
+    showEqualizer: true,
   },
   {
     id: "bundled:geometric",
     titles: { ru: "Орнамент", en: "Ornament", tr: "Süsleme", ar: "زخرفة" },
     image: bundledImage("geometric"),
+    showEqualizer: true,
   },
 ];
 
@@ -114,6 +122,7 @@ export function parsePlayerBackgrounds(payload: unknown): PlayerBackground[] {
           tr: text(item.title_tr) || english,
         },
         image: { src: imageUrl, thumbnailSrc: imageUrl },
+        showEqualizer: item.show_equalizer !== false,
       },
       sortOrder: typeof item.sort_order === "number" ? item.sort_order : 0,
     });

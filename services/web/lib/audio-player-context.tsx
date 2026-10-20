@@ -17,6 +17,7 @@ import {
 } from "../components/SegmentedAudioPlayer";
 import type { AudioPlaybackRequest } from "../components/SegmentedAudioPlayer";
 import { PlayerBackdrop, PlayerBackgroundPicker } from "../components/PlayerBackground";
+import { PlayerEqualizer } from "../components/PlayerEqualizer";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import {
@@ -66,6 +67,7 @@ export function AudioPlayerProvider({
   const { locale, t } = useI18n();
   const [request, setRequest] = useState<AudioPlaybackRequest | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [reciterControls, setRegisteredReciterControls] =
     useState<AudioPlayerReciterControls | null>(null);
@@ -156,6 +158,9 @@ export function AudioPlayerProvider({
                       ))}
                     </select>
                   )}
+                  {expanded && background.showEqualizer && (
+                    <PlayerEqualizer playing={isPlaying && !isBuffering} />
+                  )}
                   {expanded && (
                     <PlayerBackgroundPicker
                       options={backgroundOptions}
@@ -182,6 +187,7 @@ export function AudioPlayerProvider({
                 request={request}
                 className="audio-player-bar global-audio-player-bar"
                 onPlayingChange={setIsPlaying}
+                onBufferingChange={setIsBuffering}
                 compact={compact}
               />
               {compact && (

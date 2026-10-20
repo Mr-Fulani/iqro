@@ -23,6 +23,7 @@ const playerBackgrounds = [
     title_ru: "Горы",
     title_tr: "",
     image_url: "/player-backgrounds/geometric.webp",
+    show_equalizer: false,
     sort_order: 10,
   },
 ];

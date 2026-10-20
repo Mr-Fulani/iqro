@@ -51,6 +51,8 @@ type SegmentedAudioPlayerProps = {
   className?: string;
   onActiveAyahChange?: (ayahKey: string | null) => void;
   onPlayingChange?: (isPlaying: boolean) => void;
+  // True while playback waits for data, until the sound resumes or pauses.
+  onBufferingChange?: (isBuffering: boolean) => void;
   onSettingsChange?: (settings: AudioPlaybackSettings) => void;
   controlRequest?: AudioPlayerControlRequest | null;
   pauseOnNavigationKey?: string;
@@ -127,6 +129,7 @@ export function SegmentedAudioPlayer({
   className = "",
   onActiveAyahChange,
   onPlayingChange,
+  onBufferingChange,
   onSettingsChange,
   controlRequest,
   pauseOnNavigationKey,
@@ -154,6 +157,7 @@ export function SegmentedAudioPlayer({
   const pendingPauseStatusRef = useRef<StatusMessage | null>(null);
   const onActiveAyahChangeRef = useRef(onActiveAyahChange);
   const onPlayingChangeRef = useRef(onPlayingChange);
+  const onBufferingChangeRef = useRef(onBufferingChange);
   const navigationKeyRef = useRef(pauseOnNavigationKey);
   const handledControlRequestRef = useRef<number | null>(null);
 
@@ -180,6 +184,10 @@ export function SegmentedAudioPlayer({
   useEffect(() => {
     onPlayingChangeRef.current = onPlayingChange;
   }, [onPlayingChange]);
+
+  useEffect(() => {
+    onBufferingChangeRef.current = onBufferingChange;
+  }, [onBufferingChange]);
 
   useEffect(() => {
     if (compact) {
@@ -733,6 +741,14 @@ export function SegmentedAudioPlayer({
     && `${activeAyah.surah_number}:${activeAyah.ayah_number}` === readerControls.ayahKey);
   const readerIsPlaying = readerAyahIsActive && isPlaying;
 
+  // load() drops the queued pause event and a broken source never plays, so a
+  // reset or failed element reports that the sound has stopped.
+  const reportStopped = () => {
+    setIsPlaying(false);
+    onPlayingChangeRef.current?.(false);
+    onBufferingChangeRef.current?.(false);
+  };
+
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
       {readerControls?.container && createPortal(
@@ -797,11 +813,13 @@ export function SegmentedAudioPlayer({
           onPlaying={() => {
             setIsPlaying(true);
             onPlayingChangeRef.current?.(true);
+            onBufferingChangeRef.current?.(false);
             setStatus({ key: "player.status.playing" });
           }}
           onPause={() => {
             setIsPlaying(false);
             onPlayingChangeRef.current?.(false);
+            onBufferingChangeRef.current?.(false);
             const pendingStatus = pendingPauseStatusRef.current;
             pendingPauseStatusRef.current = null;
             if (pendingStatus) {
@@ -814,7 +832,10 @@ export function SegmentedAudioPlayer({
             if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
             updateMediaPosition();
           }}
-          onWaiting={() => setStatus({ key: "player.status.buffering" })}
+          onWaiting={() => {
+            setStatus({ key: "player.status.buffering" });
+            onBufferingChangeRef.current?.(true);
+          }}
           onCanPlay={() => {
             if (!isPlaying) {
               setStatus({
@@ -823,6 +844,8 @@ export function SegmentedAudioPlayer({
             }
           }}
           onEnded={handleBoundary}
+          onEmptied={reportStopped}
+          onError={reportStopped}
           onTimeUpdate={handleTimeUpdate}
         />
       </div>

@@ -420,6 +420,13 @@ async function installApiMocks(page: Page, nativeMedia = false) {
         queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
       },
     });
+    // Setting src still runs the browser's own loading on the empty mocked files;
+    // its reset and decode error are not part of the stubbed playback above.
+    for (const type of ["emptied", "error"]) {
+      window.addEventListener(type, (event) => {
+        if (event.target instanceof HTMLMediaElement) event.stopImmediatePropagation();
+      }, true);
+    }
   }, nativeMedia);
 
   await page.route("https://audio.example.test/**", (route) =>
@@ -952,6 +959,90 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await duaButton.click();
   await expect(duaButton).toHaveAttribute("aria-pressed", "true");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
+});
+
+test("expanded player sound bars sway while the recitation plays and fade out otherwise", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const audio = player.locator("audio");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  // The bars belong to the expanded player only.
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  const equalizer = player.getByTestId("player-equalizer");
+  const playStates = () => equalizer.evaluate((element) =>
+    [...new Set(element.getAnimations({ subtree: true }).map((animation) => animation.playState))]);
+  await expect.poll(() => equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length))
+    .toBe(9);
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+
+  // As in the app: a 400 ms fade on pause, then the sway stops.
+  await audio.evaluate((element) => (element as HTMLAudioElement).pause());
+  await expect(equalizer).toHaveCSS("transition-duration", "0.4s");
+  await expect(equalizer).toHaveCSS("opacity", "0");
+  await expect.poll(playStates).toEqual(["paused"]);
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("waiting")));
+  await expect(equalizer).toHaveCSS("opacity", "0");
+  await expect.poll(playStates).toEqual(["paused"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("playing")));
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+});
+
+test.describe("sound bars with native media", () => {
+  test.use({ nativeMedia: true });
+
+  test("sound bars fade out when the next surah's file fails to load", async ({ page }) => {
+    // The first surah is a real, decodable WAV; the second one is missing. Switching
+    // calls load(), which drops the pending pause event, and the broken file never plays.
+    const samples = 8_000 * 30;
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(8_000, 24); wav.writeUInt32LE(16_000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+    wav.write("data", 36); wav.writeUInt32LE(samples * 2, 40);
+    await page.route("https://audio.example.test/**", (route) => {
+      if (route.request().url() === tracks[1].asset.url) return route.fulfill({ status: 404, body: "" });
+      const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? "");
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2] ? Math.min(Number(range[2]), wav.length - 1) : wav.length - 1;
+      return route.fulfill({ status: range ? 206 : 200, contentType: "audio/wav",
+        headers: { "Accept-Ranges": "bytes", ...(range ? { "Content-Range": `bytes ${start}-${end}/${wav.length}` } : {}) },
+        body: wav.subarray(start, end + 1) });
+    });
+    await page.goto("/audio");
+    await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+    const player = page.getByTestId("global-audio-player");
+    const audio = player.locator("audio");
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).paused)).toBe(false);
+    await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+    const equalizer = player.getByTestId("player-equalizer");
+    const playStates = () => equalizer.evaluate((element) =>
+      [...new Set(element.getAnimations({ subtree: true }).map((animation) => animation.playState))]);
+    await expect(equalizer).toHaveCSS("opacity", "1");
+    await expect.poll(playStates).toEqual(["running"]);
+
+    // The expanded player covers the list, so the click goes to the button directly.
+    await page.locator(".track-row").nth(1).getByRole("button", { name: "Слушать", exact: true })
+      .dispatchEvent("click");
+    await expect(audio).toHaveAttribute("src", tracks[1].asset.url);
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).error?.code)).toBe(4);
+    await expect(audio).toHaveJSProperty("paused", true);
+    await expect(equalizer).toHaveCSS("opacity", "0");
+    await expect.poll(playStates).toEqual(["paused"]);
+  });
 });
 
 test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
@@ -1639,6 +1730,187 @@ test("an ayah note saved offline stays highlighted and waits in the outbox", asy
       payload: expect.objectContaining({ surah_number: 6, ayah_number: 1, note: "Без сети" }),
     }),
   ]);
+});
+
+test("text mode ends ayahs with the app's marker and shares an ayah picture through Web Share", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedAyah?: unknown };
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: (data: ShareData) => Boolean(data.files?.length),
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        const file = data.files?.[0];
+        const picture = file ? await createImageBitmap(file) : null;
+        target.sharedAyah = {
+          title: data.title,
+          text: data.text,
+          file: file && { name: file.name, type: file.type, width: picture?.width, height: picture?.height },
+        };
+      },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.locator("#quran-ayah-6-2 .ayah-end-marker")).toHaveText("﴿٢﴾");
+  await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text"))
+    .toHaveJSProperty("textContent", `${ayahs[1].text_uthmani}\u00A0\uFD3F\u0662\uFD3E`);
+
+  // The reader hides the translation; the picture still carries it, as in the app.
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await page.locator("#translation-enabled").filter({ visible: true }).uncheck();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByText("Аль-Анам · 6:1")).toBeVisible();
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
+  await expect.poll(() => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah))
+    .toEqual({
+      title: "Аль-Анам · 6:1",
+      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+      file: { name: "iqro-6-1.png", type: "image/png", width: 1080, height: 1350 },
+    });
+  await dialog.getByRole("button", { name: "Закрыть" }).click();
+  await expect(dialog).toBeHidden();
+});
+
+test("without Web Share the Mushaf ayah picture downloads and the link is copied", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedLink?: string };
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedLink = text; } },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  // Linux has neither Times New Roman nor Arial, the local() metric fallbacks
+  // next/font lists after Amiri and Inter; the card must not depend on them.
+  await page.addStyleTag({
+    content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
+      html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
+  });
+  await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+  await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toHaveCount(0);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("link", { name: "Скачать картинку" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("iqro-6-2.png");
+  const png = await readFile(await download.path());
+  expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
+
+  await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))
+    .toBe(new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href);
+});
+
+async function captureWebShare(page: Page) {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedAyah?: unknown };
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        target.sharedAyah = { title: data.title, text: data.text, files: data.files?.length ?? 0 };
+      },
+    });
+  });
+  return () => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah);
+}
+
+test("sharing while another translation loads uses that translation and its translator", async ({ page }) => {
+  const shared = await captureWebShare(page);
+  let release = () => {};
+  const arrived = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/quran/translations/79/surahs/6", async (route) => {
+    await arrived;
+    await route.fulfill({ json: translatedAyahs.map((verse) => ({ ...verse, text: `${verse.text} (Абу Адель)` })) });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await page.getByLabel("Перевод и автор").selectOption("79");
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  release();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await expect.poll(shared).toMatchObject({
+    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nAbu Adel\n\n"),
+  });
+});
+
+test("an ayah whose text cannot load is still shared as a link", async ({ page }) => {
+  const shared = await captureWebShare(page);
+  // As offline: the surah's text never arrives and the single ayah fails.
+  await page.route("**/api/v1/quran/editions/madani-hafs/surahs/6/ayahs", () => undefined);
+  await page.route("**/api/v1/quran/editions/madani-hafs/ayahs/6/2", (route) =>
+    route.fulfill({ status: 503, contentType: "application/problem+json", json: { detail: "Offline" } }));
+  await page.goto("/ru/quran?surah=6");
+  await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+  await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href;
+  await expect.poll(shared).toEqual({
+    title: "Аль-Анам · 6:2",
+    text: `Аль-Анам · 6:2\n\nЧитать в IQRO: ${link}`,
+    files: 0,
+  });
+});
+
+test("an ayah picture is drawn again when its font arrives late", async ({ page }) => {
+  await page.addInitScript(() => {
+    const load = FontFaceSet.prototype.load;
+    FontFaceSet.prototype.load = function (this: FontFaceSet, font: string, text?: string) {
+      const faces = load.call(this, font, text);
+      return /Amiri/.test(font)
+        ? faces.then((loaded) => new Promise<FontFace[]>((resolve) => setTimeout(() => resolve(loaded), 6000)))
+        : faces;
+    };
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const picture = page.getByRole("dialog", { name: "Поделиться аятом" })
+    .getByRole("img", { name: "Картинка аята 6:1" });
+  await expect(picture).toBeVisible({ timeout: 10_000 });
+  const first = await picture.getAttribute("src");
+  await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
+});
+
+test("an ayah picture that cannot be drawn is reported and the link still copies", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedLink?: string };
+    HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback) { callback(null); };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedLink = text; } },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
+  await expect(dialog.getByRole("img")).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: "Скачать картинку" })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))
+    .toBe(new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href);
 });
 
 test("reading place is remembered automatically and retries a revision conflict", async ({ page }) => {
