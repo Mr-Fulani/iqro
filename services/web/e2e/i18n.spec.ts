@@ -15,7 +15,10 @@ async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page)
       fits: header.scrollWidth <= header.clientWidth,
       groups: [...header.children].map(box),
       menu: box(header.querySelector(".app-menu")!),
-      links: [...header.querySelectorAll(".menu-link")].map(box),
+      // The announced "soon" item is not rendered where the menu has no room.
+      links: [...header.querySelectorAll(".menu-link")]
+        .filter((link) => link.getClientRects().length > 0)
+        .map(box),
       actions: [...header.querySelectorAll(".header-actions > *")].map(box),
     };
   });
@@ -119,7 +122,7 @@ test("authenticated Russian header keeps navigation clear of account actions", a
 
   await expect(page.getByTestId("language-switcher")).toHaveValue("ru");
   await expect(page.locator(".app-header").getByRole("button", { name: "Выйти" })).toBeVisible();
-  for (const width of [1250, 1201, 1150, 1001, 900, 390]) {
+  for (const width of [1250, 1236, 1235, 1201, 1150, 1001, 900, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expectHeaderWithoutOverlap(page);
   }

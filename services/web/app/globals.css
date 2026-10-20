@@ -5366,6 +5366,14 @@ a.footer-store-badge:hover {
   }
 }
 
+/* Until the container reaches its 1200px cap, nine labelled links fill the
+   menu, so the announced "soon" item would push it past the header. */
+@media (min-width: 1001px) and (max-width: 1235px) {
+  .menu-link-soon {
+    display: none;
+  }
+}
+
 @media (min-width: 769px) and (max-width: 1000px) {
   .app-header {
     gap: 10px;
