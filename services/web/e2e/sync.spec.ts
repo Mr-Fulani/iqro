@@ -328,7 +328,13 @@ test("expired cursor completes every full-resync page before resuming incrementa
   await page.addInitScript((key) => {
     localStorage.setItem(
       key,
-      JSON.stringify({ cursor: 1, outbox: [], reading_position_ids: {} }),
+      JSON.stringify({
+        cursor: 1,
+        outbox: [],
+        reading_position_ids: {},
+        annotations: {},
+        annotations_seeded: true,
+      }),
     );
   }, storageKey);
   const requests: string[] = [];

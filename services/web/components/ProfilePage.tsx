@@ -745,6 +745,9 @@ export default function ProfilePage() {
             <h3 className="surface-title">{t("profile.favoritesTitle")}</h3>
             <p className="surface-subtitle">{t("profile.favoritesDescription")}</p>
           </div>
+          <Link href={localizedPath(locale, "/notes")} className="btn btn-secondary btn-sm">
+            {t("notes.title")}
+          </Link>
         </div>
 
         <div className="profile-favorite-filters" aria-label={t("profile.favoriteFiltersLabel")}>

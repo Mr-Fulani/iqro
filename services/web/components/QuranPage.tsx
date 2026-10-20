@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import {
   MushafAudioPlayer,
@@ -32,6 +33,8 @@ import {
   api,
   ApiError,
   Ayah,
+  OfflineMutationQueuedError,
+  type AyahAnnotation,
   type Bookmark,
   type AyahTafsir,
   Hizb,
@@ -47,6 +50,8 @@ import {
   type PrayerReadingPrayer,
 } from "../lib/api";
 import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
+import { indexAyahAnnotations, type AyahHighlightColorKey } from "../lib/ayah-annotations";
+import { SYNC_STATE_EVENT } from "../lib/sync-state";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import type { PublishedQuranReaderPreview } from "../lib/public-content";
@@ -56,6 +61,9 @@ import {
   surahName as localizedSurahName,
 } from "../lib/quran-content";
 import { localizedPath } from "../lib/routing";
+
+// Loaded on first use so the reader's initial bundle stays within its budget.
+const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
 
 function positiveInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
@@ -516,6 +524,8 @@ function QuranContent() {
   const [bookmarkStateReady, setBookmarkStateReady] = useState(false);
   const [bookmarkBusyKeys, setBookmarkBusyKeys] = useState<Set<string>>(new Set());
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<AyahAnnotation[]>([]);
+  const [annotationAyahKey, setAnnotationAyahKey] = useState<string | null>(null);
 
   const queueReadingPlace = useCallback((candidate: Omit<ReadingPlaceCandidate, "editionCode" | "requestId">) => {
     if (viewMode !== "mushaf" && candidate.sourceId === undefined) {
@@ -902,6 +912,40 @@ function QuranContent() {
       cancelled = true;
     };
   }, [authLoading, session]);
+
+  // Annotations live in the synced local cache: show it at once, then sync so
+  // changes made in the app arrive, and flush queued changes when back online.
+  const sessionUserId = session?.user.id ?? null;
+  useEffect(() => {
+    if (authLoading || !sessionUserId) {
+      setAnnotations([]);
+      return;
+    }
+    const refresh = (event?: Event) => {
+      const userId = (event as CustomEvent<{ userId?: string }> | undefined)?.detail?.userId;
+      if (!userId || userId === sessionUserId) setAnnotations(api.getAyahAnnotations());
+    };
+    const sync = () => void api.syncNow().catch(() => undefined);
+    refresh();
+    sync();
+    window.addEventListener(SYNC_STATE_EVENT, refresh);
+    window.addEventListener("online", sync);
+    return () => {
+      window.removeEventListener(SYNC_STATE_EVENT, refresh);
+      window.removeEventListener("online", sync);
+    };
+  }, [authLoading, sessionUserId]);
+
+  const ayahAnnotations = useMemo(
+    () => indexAyahAnnotations(annotations, selectedEdition),
+    [annotations, selectedEdition],
+  );
+  const ayahHighlightColors = useMemo(
+    () => Object.fromEntries(
+      Object.entries(ayahAnnotations).map(([key, annotation]) => [key, annotation.color_key]),
+    ),
+    [ayahAnnotations],
+  );
 
   // Load Surahs when edition changes
   useEffect(() => {
@@ -1351,6 +1395,61 @@ function QuranContent() {
     setCurrentPage(nextPage);
     queueReadingPlace({ pageNumber: nextPage });
   }, [currentPage, mushafPageCount, queueReadingPlace]);
+
+  const annotationTarget = (ayahKey: string) => {
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    const ayah = ayahs.find(
+      (item) => item.surah_number === surahNumber && item.number === ayahNumber,
+    );
+    return {
+      edition_code: selectedEdition,
+      surah_number: surahNumber,
+      ayah_number: ayahNumber,
+      page_number: ayah?.pages.find((page) => page === currentPage) ?? ayah?.pages[0] ?? null,
+    };
+  };
+
+  const showAnnotationFeedback = (text: string) => {
+    setFeedbackMessage({ text, type: "ok" });
+    window.setTimeout(() => setFeedbackMessage(null), 4000);
+  };
+
+  const handleSaveAnnotation = async (
+    ayahKey: string,
+    colorKey: AyahHighlightColorKey,
+    note: string,
+  ): Promise<string | null> => {
+    if (!api.getSession() && !(await loginGuest())) return t("annotation.loginError");
+    const previousNote = ayahAnnotations[ayahKey]?.note.trim() ?? "";
+    const success = note.trim()
+      ? t("annotation.noteSaved")
+      : previousNote ? t("annotation.noteRemoved") : t("annotation.highlightSaved");
+    try {
+      await api.saveAyahAnnotation({ ...annotationTarget(ayahKey), color_key: colorKey, note });
+      showAnnotationFeedback(success);
+      return null;
+    } catch (err) {
+      if (err instanceof OfflineMutationQueuedError) {
+        showAnnotationFeedback(err.message);
+        return null;
+      }
+      return api.normalizeError(err);
+    }
+  };
+
+  const handleRemoveAnnotation = async (ayahKey: string): Promise<string | null> => {
+    try {
+      await api.deleteAyahAnnotation(annotationTarget(ayahKey));
+      showAnnotationFeedback(t("annotation.highlightRemoved"));
+      return null;
+    } catch (err) {
+      if (err instanceof OfflineMutationQueuedError) {
+        showAnnotationFeedback(err.message);
+        return null;
+      }
+      return api.normalizeError(err);
+    }
+  };
 
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
@@ -1890,6 +1989,7 @@ function QuranContent() {
                 const isAyahPlaying = isAyahActive && isAudioPlaying;
                 const isAyahRepeating = isAyahActive && audioSettings.repeatMode === "ayah";
                 const savedBookmark = savedAyahBookmarks[ayahKey];
+                const annotation = ayahAnnotations[ayahKey];
                 const bookmarkBusy = bookmarkBusyKeys.has(ayahKey);
                 const bookmarkAnimating = bookmarkAnimationKey === ayahKey;
                 const ayahTafsir = tafsirsByVerse[ayahKey];
@@ -1904,6 +2004,7 @@ function QuranContent() {
                     key={ayah.id}
                     id={`quran-ayah-${selectedSurah}-${ayah.number}`}
                     className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}${selectedMushafAyah === ayahKey ? " is-navigation-target" : ""}`}
+                    data-highlight={annotation?.color_key}
                   >
                     <div className="ayah-header">
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1962,6 +2063,16 @@ function QuranContent() {
                             disabled={bookmarkBusy || !bookmarkStateReady}
                           >
                             <FavoriteBookmarkIcon active={Boolean(savedBookmark)} />
+                          </button>
+                          <button
+                            className={`btn btn-sm ayah-icon-button${annotation ? " is-active" : ""}`}
+                            type="button"
+                            onClick={() => setAnnotationAyahKey(ayahKey)}
+                            aria-label={`${t("annotation.action")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={t("annotation.action")}
+                            aria-haspopup="dialog"
+                          >
+                            <span aria-hidden="true">✎</span>
                           </button>
                         </div>
                       </div>
@@ -2086,6 +2197,7 @@ function QuranContent() {
                     surahs={surahs}
                     selectedAyahKey={selectedMushafAyah}
                     playingAyahKey={playingMushafAyah}
+                    highlightColors={ayahHighlightColors}
                     onSelectAyah={handleSelectMushafAyah}
                   />
                 </MushafPageTurn>
@@ -2094,6 +2206,20 @@ function QuranContent() {
               <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
             )}
           </MushafGestureSurface>
+
+          {selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) && (
+            <div className="mushaf-ayah-actions">
+              <span>{t("common.ayah", { ayah: selectedMushafAyah })}</span>
+              <button
+                className={`btn btn-secondary btn-sm${ayahAnnotations[selectedMushafAyah] ? " is-active" : ""}`}
+                type="button"
+                onClick={() => setAnnotationAyahKey(selectedMushafAyah)}
+                aria-haspopup="dialog"
+              >
+                <span aria-hidden="true">✎ </span>{t("annotation.action")}
+              </button>
+            </div>
+          )}
 
           <div className="mushaf-page-navigation">
             <button
@@ -2185,6 +2311,16 @@ function QuranContent() {
             )}
           </MushafReaderPanel>
         </section>
+      )}
+      {annotationAyahKey && (
+        <AyahAnnotationDialog
+          key={annotationAyahKey}
+          ayahKey={annotationAyahKey}
+          annotation={ayahAnnotations[annotationAyahKey]}
+          onSave={(colorKey, note) => handleSaveAnnotation(annotationAyahKey, colorKey, note)}
+          onRemove={() => handleRemoveAnnotation(annotationAyahKey)}
+          onClose={() => setAnnotationAyahKey(null)}
+        />
       )}
     </MushafReaderLayout>
   );

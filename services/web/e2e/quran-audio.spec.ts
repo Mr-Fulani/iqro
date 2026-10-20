@@ -1355,6 +1355,180 @@ test("Quran favorite uses an animated bookmark and toggles the saved ayah", asyn
   expect(deleteRequested).toBe(true);
 });
 
+function annotationSession(userId: string) {
+  return {
+    token_type: "Bearer",
+    access_token: "ayah-annotation-access-token",
+    expires_in: 900,
+    access_expires_at: "2026-10-20T10:15:00Z",
+    user: { id: userId, status: "active", preferred_locale: "ru", email: "reader@example.com" },
+    device: {
+      id: "00000000-0000-7000-8000-000000000722",
+      platform: "web",
+      locale: "ru",
+      app_version: "1.0.0",
+      bootstrap_generation: 1,
+    },
+  };
+}
+
+test("ayah notes and highlights sync with the app in Mushaf, text and notes views", async ({ page }) => {
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: annotationSession("00000000-0000-7000-8000-000000000721") }));
+  const fromApp = {
+    id: "01992d87-6c00-7000-8000-000000000731",
+    entity_type: "ayah_annotation",
+    edition_code: "madani-hafs",
+    page_number: 128,
+    ayah: {
+      id: ayahs[1].id,
+      surah_number: 6,
+      ayah_number: 2,
+      surah_name_ar: surah.name_ar,
+      surah_name_en: surah.name_en,
+      surah_name_ru: surah.name_ru,
+    },
+    color_key: "pink",
+    note: "Из приложения",
+    client_updated_at: "2026-10-19T10:00:00Z",
+    revision: 3,
+    deleted_at: null,
+    device_id: null,
+    created_at: "2026-10-19T10:00:00Z",
+    updated_at: "2026-10-19T10:00:00Z",
+  };
+  const pushed: Record<string, unknown>[] = [];
+  let pulls = 0;
+  await page.route("**/api/v1/sync/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/sync/pull") {
+      pulls += 1;
+      return route.fulfill({
+        json: pulls === 1
+          ? {
+              mode: "incremental",
+              changes: [{
+                cursor: 5,
+                entity_type: "ayah_annotation",
+                entity_id: fromApp.id,
+                action: "upsert",
+                revision: 3,
+                entity: fromApp,
+                server_updated_at: fromApp.updated_at,
+              }],
+              next_cursor: 5,
+              has_more: false,
+            }
+          : { mode: "incremental", changes: [], next_cursor: 5, has_more: false },
+      });
+    }
+    const { operations } = route.request().postDataJSON() as { operations: Record<string, unknown>[] };
+    pushed.push(...operations);
+    return route.fulfill({
+      json: {
+        results: operations.map((operation) => {
+          const payload = operation.payload as Record<string, unknown>;
+          return {
+            operation_id: operation.operation_id,
+            outcome: "accepted",
+            replayed: false,
+            entity: operation.action === "delete"
+              ? { ...fromApp, revision: 4, deleted_at: "2026-10-20T10:01:00Z" }
+              : {
+                  ...fromApp,
+                  id: operation.entity_id,
+                  ayah: { ...fromApp.ayah, id: ayahs[0].id, ayah_number: payload.ayah_number },
+                  color_key: payload.color_key,
+                  note: payload.note,
+                  revision: 1,
+                  updated_at: "2026-10-20T10:00:00Z",
+                },
+            cursor: 6,
+          };
+        }),
+        cursor: 6,
+      },
+    });
+  });
+
+  await page.goto("/ru/quran?surah=6");
+  const fragment = (key: string) => page.locator(`.qf-mushaf-ayah-fragment[data-ayah-key="${key}"]`).first();
+  await expect(fragment("6:2")).toHaveAttribute("data-highlight", "pink");
+
+  await fragment("6:1").click();
+  await page.locator(".mushaf-ayah-actions").getByRole("button", { name: /Заметка и выделение/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
+  await dialog.getByText("Голубой", { exact: true }).click();
+  await dialog.getByLabel("Ваша заметка").fill("Заметка с сайта");
+  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Заметка сохранена")).toBeVisible();
+  await expect(fragment("6:1")).toHaveAttribute("data-highlight", "blue");
+  expect(pushed[0]).toMatchObject({
+    entity_type: "ayah_annotation",
+    action: "upsert",
+    base_revision: 0,
+    payload: {
+      edition_code: "madani-hafs",
+      surah_number: 6,
+      ayah_number: 1,
+      page_number: 128,
+      color_key: "blue",
+      note: "Заметка с сайта",
+    },
+  });
+
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.locator("#quran-ayah-6-2")).toHaveAttribute("data-highlight", "pink");
+  await page.getByRole("button", { name: "Заметка и выделение: Аят 6:2" }).click();
+  const appDialog = page.getByRole("dialog", { name: "Аят 6:2" });
+  await expect(appDialog.getByLabel("Ваша заметка")).toHaveValue("Из приложения");
+  await appDialog.getByRole("button", { name: "Убрать выделение" }).click();
+  await expect(appDialog.getByText("Заметка к этому аяту тоже будет удалена.")).toBeVisible();
+  await appDialog.getByRole("button", { name: "Удалить" }).click();
+  await expect(appDialog).toBeHidden();
+  await expect(page.locator("#quran-ayah-6-2")).not.toHaveAttribute("data-highlight", /.+/);
+  expect(pushed.at(-1)).toMatchObject({
+    entity_type: "ayah_annotation",
+    entity_id: fromApp.id,
+    action: "delete",
+    base_revision: 3,
+  });
+
+  await page.goto("/ru/notes");
+  const notes = page.locator(".notes-item");
+  await expect(notes).toHaveCount(1);
+  await expect(notes).toContainText("Заметка с сайта");
+  await expect(notes).toHaveAttribute("href", "/ru/quran?surah=6&ayah=1");
+});
+
+test("an ayah note saved offline stays highlighted and waits in the outbox", async ({ page }) => {
+  const userId = "00000000-0000-7000-8000-000000000741";
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: annotationSession(userId) }));
+  await page.route("**/api/v1/sync/**", (route) => route.abort("internetdisconnected"));
+
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Заметка и выделение: Аят 6:1" }).click();
+  const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
+  await dialog.getByLabel("Ваша заметка").fill("Без сети");
+  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await expect(page.getByText(/Сеть недоступна. Изменение сохранено/)).toBeVisible();
+  await expect(page.locator("#quran-ayah-6-1")).toHaveAttribute("data-highlight", "lime");
+  const state = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) || "{}"),
+    `quran_platform_sync_v1:${userId}`,
+  );
+  expect(state.outbox).toEqual([
+    expect.objectContaining({
+      entity_type: "ayah_annotation",
+      action: "upsert",
+      base_revision: 0,
+      payload: expect.objectContaining({ surah_number: 6, ayah_number: 1, note: "Без сети" }),
+    }),
+  ]);
+});
+
 test("reading place is remembered automatically and retries a revision conflict", async ({ page }) => {
   const session = {
     token_type: "Bearer",
