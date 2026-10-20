@@ -81,6 +81,33 @@ void main() {
     },
   );
 
+  test('Arabic share carries the du\'a once, without a meaning', () {
+    const arabic = 'الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا';
+    // Arabic «meaning» in the source repeats the du'a itself.
+    const entry = DuaEntry(
+      id: 'entry-ar',
+      sourceNumber: 1,
+      collection: 'hisn-al-muslim',
+      categoryTitle: 'أذكار الاستيقاظ من النوم',
+      arabicText: arabic,
+      meaning: arabic,
+      transliteration: '',
+      repetitions: 1,
+      sourceLabel: '',
+    );
+
+    final share = duaContentShare(
+      entry,
+      locale: 'ar',
+      repetitionLabel: 'التكرار',
+      readInIqro: 'اقرأ في IQRO',
+    );
+
+    expect(share.arabic, arabic);
+    expect(share.translation, isEmpty);
+    expect(arabic.allMatches(contentShareText(share)), hasLength(1));
+  });
+
   test('share text preserves simple and staged repetition instructions', () {
     const simple = DuaEntry(
       id: 'simple',

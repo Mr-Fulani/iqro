@@ -115,7 +115,9 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
       subtitle = category == null || category.collectionTitle.isEmpty
           ? category?.collection
           : category.collectionTitle;
-      banner = category == null ? null : duaDisplayTitle(category.title);
+      banner = category == null
+          ? null
+          : duaDisplayTitle(category.title, locale);
     } else if (_topic != null) {
       title = _topic!.title(locale);
       if (showChapters) {
@@ -124,7 +126,7 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
         // One chapter: its own title, as in the book; a part of one or
         // several chapters: what the topic gathers.
         banner = topicChapters.length == 1
-            ? duaDisplayTitle(topicChapters.single.title)
+            ? duaDisplayTitle(topicChapters.single.title, locale)
             : _topic!.description(locale);
       }
     } else {
@@ -606,7 +608,10 @@ class _DuaChapterRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  duaDisplayTitle(chapter.title),
+                  duaDisplayTitle(
+                    chapter.title,
+                    Localizations.localeOf(context).languageCode,
+                  ),
                   style: theme.textTheme.bodyLarge,
                 ),
               ],
@@ -920,7 +925,12 @@ class DuaEntryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-          _DuaChapterBanner(title: duaDisplayTitle(entry.categoryTitle)),
+          _DuaChapterBanner(
+            title: duaDisplayTitle(
+              entry.categoryTitle,
+              Localizations.localeOf(context).languageCode,
+            ),
+          ),
           const SizedBox(height: 14),
           DuaEntryCard(entry: entry, audioEnabled: audioEnabled),
         ],
@@ -1043,6 +1053,10 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         .map((item) => item.sourceReference.trim())
         .where((item) => item.isNotEmpty)
         .firstOrNull;
+    final meaning = duaMeaning(
+      entry,
+      Localizations.localeOf(context).languageCode,
+    );
     final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
       color: IqroTheme.arabicInk(context),
       fontFamily: IqroTheme.arabicFontFamily,
@@ -1092,10 +1106,10 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
               ),
             ),
           ],
-          if (entry.meaning.isNotEmpty) ...<Widget>[
+          if (meaning.isNotEmpty) ...<Widget>[
             const SizedBox(height: 18),
             Text(
-              entry.meaning,
+              meaning,
               key: const ValueKey('dua-meaning'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
