@@ -110,18 +110,14 @@ function drawBlock(
   lines.forEach((line, index) => context.fillText(line, x, top + lineHeight * (index + 0.5)));
 }
 
-// The card waits this long for its fonts and the seal, then draws with what
-// has arrived, so a slow network never leaves the dialog preparing.
+// How long the first picture waits for its fonts and the seal; whatever comes
+// later is drawn into a second picture.
 const ASSET_WAIT_MS = 4000;
-
-function delay(ms: number): Promise<null> {
-  return new Promise((resolve) => setTimeout(() => resolve(null), ms));
-}
 
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   const image = new Image();
   image.src = url;
-  return Promise.race([image.decode().then(() => image, () => null), delay(ASSET_WAIT_MS)]);
+  return image.decode().then(() => image, () => null);
 }
 
 // Fetches the faces, and only the unicode ranges, the card draws. next/font
@@ -129,33 +125,54 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
 // Roman after Amiri; where that system font is missing, as on Linux, loading
 // the whole list rejects. So each family loads on its own and may fail.
 function loadFonts(requests: [style: string, families: string, text: string][]): Promise<unknown> {
-  const loads = requests.flatMap(([style, families, text]) =>
-    families.split(",").map((family) => document.fonts.load(`${style} ${family.trim()}`, text)));
-  return Promise.race([Promise.allSettled(loads), delay(ASSET_WAIT_MS)]);
+  return Promise.allSettled(requests.flatMap(([style, families, text]) =>
+    families.split(",").map((family) => document.fonts.load(`${style} ${family.trim()}`, text))));
 }
 
-/** Draws the card and returns it as a PNG. */
+/**
+ * Draws the card and hands the PNG to `show`. A slow network does not keep the
+ * picture waiting: after a few seconds it is drawn with what has arrived, and
+ * drawn again once the reader's fonts and the seal are in, so it always ends
+ * in Amiri.
+ */
 export async function renderShareCard(
   content: ShareCardContent,
   fonts: ShareCardFonts,
   logoUrl: string,
-): Promise<Blob> {
+  show: (png: Blob) => void,
+): Promise<void> {
   const size = arabicSize(content.arabic);
-  const fontFaces = [
-    `${size}px ${fonts.arabic}`,
-    `600 17px ${fonts.text}`,
-    `15px ${fonts.text}`,
-  ];
   const sample = `${content.title} ${content.translation} ${content.reference} ${SITE}`;
-  const [logo] = await Promise.all([
-    loadImage(logoUrl),
+  const assets: { logo: HTMLImageElement | null } = { logo: null };
+  const loaded = Promise.all([
+    loadImage(logoUrl).then((logo) => { assets.logo = logo; }),
     loadFonts([
       [`${size}px`, fonts.arabic, content.arabic],
       ["600 17px", fonts.text, sample],
       ["15px", fonts.text, sample],
     ]),
   ]);
+  const inTime = await Promise.race([
+    loaded.then(() => true),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ASSET_WAIT_MS)),
+  ]);
+  show(await drawCard(content, fonts, size, assets.logo));
+  if (inTime) return;
+  await loaded;
+  show(await drawCard(content, fonts, size, assets.logo));
+}
 
+function drawCard(
+  content: ShareCardContent,
+  fonts: ShareCardFonts,
+  size: number,
+  logo: HTMLImageElement | null,
+): Promise<Blob> {
+  const fontFaces = [
+    `${size}px ${fonts.arabic}`,
+    `600 17px ${fonts.text}`,
+    `15px ${fonts.text}`,
+  ];
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH * PIXEL_RATIO;
   canvas.height = HEIGHT * PIXEL_RATIO;

@@ -1502,7 +1502,9 @@ function QuranContent() {
       ).href,
       arabic: ayah?.text_uthmani,
       translationId: selectedTranslationId,
-      translation: translationsByVerse[ayahKey]?.text,
+      // While another translation loads, the old text is still shown; the
+      // dialog then fetches the selected one, so text and translator match.
+      translation: translationLoading ? undefined : translationsByVerse[ayahKey]?.text,
       translator: selectedTranslation
         ? selectedTranslation.author_name.trim() || selectedTranslation.name
         : "",

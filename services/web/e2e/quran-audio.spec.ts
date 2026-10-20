@@ -1725,6 +1725,81 @@ test("without Web Share the Mushaf ayah picture downloads and the link is copied
     .toBe(new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href);
 });
 
+async function captureWebShare(page: Page) {
+  await page.addInitScript(() => {
+    const target = window as unknown as { sharedAyah?: unknown };
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      async value(data: ShareData) {
+        target.sharedAyah = { title: data.title, text: data.text, files: data.files?.length ?? 0 };
+      },
+    });
+  });
+  return () => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah);
+}
+
+test("sharing while another translation loads uses that translation and its translator", async ({ page }) => {
+  const shared = await captureWebShare(page);
+  let release = () => {};
+  const arrived = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/quran/translations/79/surahs/6", async (route) => {
+    await arrived;
+    await route.fulfill({ json: translatedAyahs.map((verse) => ({ ...verse, text: `${verse.text} (Абу Адель)` })) });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+  await page.getByLabel("Перевод и автор").selectOption("79");
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  release();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await expect.poll(shared).toMatchObject({
+    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nAbu Adel\n\n"),
+  });
+});
+
+test("an ayah whose text cannot load is still shared as a link", async ({ page }) => {
+  const shared = await captureWebShare(page);
+  // As offline: the surah's text never arrives and the single ayah fails.
+  await page.route("**/api/v1/quran/editions/madani-hafs/surahs/6/ayahs", () => undefined);
+  await page.route("**/api/v1/quran/editions/madani-hafs/ayahs/6/2", (route) =>
+    route.fulfill({ status: 503, contentType: "application/problem+json", json: { detail: "Offline" } }));
+  await page.goto("/ru/quran?surah=6");
+  await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+  await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href;
+  await expect.poll(shared).toEqual({
+    title: "Аль-Анам · 6:2",
+    text: `Аль-Анам · 6:2\n\nЧитать в IQRO: ${link}`,
+    files: 0,
+  });
+});
+
+test("an ayah picture is drawn again when its font arrives late", async ({ page }) => {
+  await page.addInitScript(() => {
+    const load = FontFaceSet.prototype.load;
+    FontFaceSet.prototype.load = function (this: FontFaceSet, font: string, text?: string) {
+      const faces = load.call(this, font, text);
+      return /Amiri/.test(font)
+        ? faces.then((loaded) => new Promise<FontFace[]>((resolve) => setTimeout(() => resolve(loaded), 6000)))
+        : faces;
+    };
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const picture = page.getByRole("dialog", { name: "Поделиться аятом" })
+    .getByRole("img", { name: "Картинка аята 6:1" });
+  await expect(picture).toBeVisible({ timeout: 10_000 });
+  const first = await picture.getAttribute("src");
+  await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
+});
+
 test("an ayah picture that cannot be drawn is reported and the link still copies", async ({ page }) => {
   await page.addInitScript(() => {
     const target = window as unknown as { copiedLink?: string };

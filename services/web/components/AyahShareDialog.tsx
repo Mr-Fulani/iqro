@@ -51,7 +51,7 @@ export default function AyahShareDialog({
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
+    const objectUrls: string[] = [];
     const [surah, ayah] = target.ayahKey.split(":").map(Number);
     const arabic = target.arabic !== undefined
       ? Promise.resolve(target.arabic)
@@ -74,26 +74,30 @@ export default function AyahShareDialog({
         `${readInIqro}: ${target.url}`,
       ].filter(Boolean).join("\n\n"));
       const root = getComputedStyle(document.documentElement);
-      const png = await renderShareCard(
+      // A late font brings a second picture, which replaces the first.
+      await renderShareCard(
         { title: target.title, arabic: arabicText, translation: meaning, reference },
         {
           arabic: root.getPropertyValue("--font-arabic").trim() || "serif",
           text: root.getPropertyValue("--font-sans").trim() || "sans-serif",
         },
         "/iqro-wax-seal-128.webp",
+        (png) => {
+          if (cancelled) return;
+          const url = URL.createObjectURL(png);
+          objectUrls.push(url);
+          setPicture({ file: new File([png], `iqro-${surah}-${ayah}.png`, { type: "image/png" }), url });
+        },
       );
-      if (cancelled) return;
-      objectUrl = URL.createObjectURL(png);
-      setPicture({
-        file: new File([png], `iqro-${surah}-${ayah}.png`, { type: "image/png" }),
-        url: objectUrl,
-      });
     }).catch(() => {
-      if (!cancelled) setFailed(true);
+      if (cancelled) return;
+      setFailed(true);
+      // Without the ayah's text the title and the link can still be shared.
+      setText((current) => current ?? `${target.title}\n\n${readInIqro}: ${target.url}`);
     });
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [readInIqro, target]);
 
