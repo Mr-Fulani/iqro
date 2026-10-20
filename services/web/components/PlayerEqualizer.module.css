@@ -1,15 +1,24 @@
-/* Sits in the free space of the expanded player's head row, as tall as its buttons. */
+/* Takes the free space in the expanded player's head row, as tall as its buttons.
+   Growing from zero, it never pushes a button onto the next line. */
 .equalizer {
   --bar-height: 40px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 104px;
   display: grid;
-  grid-template-columns: repeat(9, 11.5px);
-  justify-content: center;
+  grid-template-columns: repeat(9, 1fr);
   align-items: center;
   justify-items: center;
   height: var(--bar-height);
   margin-inline-start: auto;
   color: var(--primary);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.playing {
+  opacity: 1;
 }
 
 .bar {
@@ -27,11 +36,21 @@
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
 }
 
-/* No room beside the buttons on a phone: the bars take their own line on top. */
-@media (max-width: 520px) {
+/* Phones and portrait tablets have no room beside the buttons: the bars take
+   their own line on top, kept while they are faded out so nothing jumps. */
+@media (max-width: 860px) {
   .equalizer {
     order: -1;
     flex-basis: 100%;
+    max-width: none;
+    grid-template-columns: repeat(9, 11.5px);
+    justify-content: center;
     margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equalizer {
+    transition: none;
   }
 }

@@ -24,6 +24,8 @@ import {
 } from "./PrayerReadingSessionBar";
 import { ReadingActivityTracker } from "./ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
+import { ShareIcon } from "./ShareIcon";
+import type { AyahShareTarget } from "./AyahShareDialog";
 import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "./MushafReaderLayout";
 import type {
   AudioPlayerControlRequest,
@@ -61,6 +63,7 @@ import { useI18n } from "../lib/i18n-context";
 import type { PublishedQuranReaderPreview } from "../lib/public-content";
 import {
   editionName as localizedEditionName,
+  quranAyahPath,
   quranSurahPath,
   surahName as localizedSurahName,
 } from "../lib/quran-content";
@@ -68,6 +71,14 @@ import { localizedPath } from "../lib/routing";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
+const AyahShareDialog = dynamic(() => import("./AyahShareDialog"), { ssr: false });
+
+const arabicNumber = new Intl.NumberFormat("ar-EG");
+
+// The end-of-ayah sign with Arabic-Indic digits, ﴿١٢﴾, as the app draws it.
+function ayahEndMarker(ayahNumber: number): string {
+  return `\uFD3F${arabicNumber.format(ayahNumber)}\uFD3E`;
+}
 
 function positiveInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
@@ -530,6 +541,7 @@ function QuranContent() {
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<AyahAnnotation[]>([]);
   const [annotationAyahKey, setAnnotationAyahKey] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<AyahShareTarget | null>(null);
   const [annotationsReady, setAnnotationsReady] = useState(false);
 
   const queueReadingPlace = useCallback((candidate: Omit<ReadingPlaceCandidate, "editionCode" | "requestId">) => {
@@ -1474,6 +1486,31 @@ function QuranContent() {
     }
   };
 
+  const openAyahShare = (ayahKey: string) => {
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    const surah = surahs.find((item) => item.number === surahNumber);
+    const ayah = ayahs.find(
+      (item) => item.surah_number === surahNumber && item.number === ayahNumber,
+    );
+    setShareTarget({
+      ayahKey,
+      edition: selectedEdition,
+      title: `${surah ? localizedSurahName(surah, locale) : t("common.surah", { surah: surahNumber })} · ${ayahKey}`,
+      url: new URL(
+        localizedPath(locale, quranAyahPath(selectedEdition, surahNumber, ayahNumber)),
+        window.location.origin,
+      ).href,
+      arabic: ayah?.text_uthmani,
+      translationId: selectedTranslationId,
+      // While another translation loads, the old text is still shown; the
+      // dialog then fetches the selected one, so text and translator match.
+      translation: translationLoading ? undefined : translationsByVerse[ayahKey]?.text,
+      translator: selectedTranslation
+        ? selectedTranslation.author_name.trim() || selectedTranslation.name
+        : "",
+    });
+  };
+
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
     if (!bookmarkStateReady || bookmarkBusyKeys.has(ayahKey)) return;
@@ -2097,11 +2134,26 @@ function QuranContent() {
                           >
                             <span aria-hidden="true">✎</span>
                           </button>
+                          <button
+                            className="btn btn-sm ayah-icon-button"
+                            type="button"
+                            onClick={() => openAyahShare(ayahKey)}
+                            aria-label={`${t("ayahShare.action")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={t("ayahShare.action")}
+                            aria-haspopup="dialog"
+                          >
+                            <ShareIcon />
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    <p className="quran-arabic-text">{ayah.text_uthmani}</p>
+                    {/* A no-break space keeps the marker with the last word. The
+                        header already gives the number to screen readers. */}
+                    <p className="quran-arabic-text">
+                      {ayah.text_uthmani}{"\u00A0"}
+                      <span className="ayah-end-marker" aria-hidden="true">{ayahEndMarker(ayah.number)}</span>
+                    </p>
                     {translationEnabled && (
                       <div className="ayah-translation notranslate" translate="no">
                         {translationLoading ? (
@@ -2245,6 +2297,15 @@ function QuranContent() {
               >
                 <span aria-hidden="true">✎ </span>{t("annotation.action")}
               </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                onClick={() => openAyahShare(selectedMushafAyah)}
+                aria-haspopup="dialog"
+                aria-label={`${t("ayahShare.action")}: ${t("common.ayah", { ayah: selectedMushafAyah })}`}
+              >
+                <ShareIcon /> {t("ayahShare.share")}
+              </button>
             </div>
           )}
 
@@ -2350,11 +2411,16 @@ function QuranContent() {
           onClose={() => setAnnotationAyahKey(null)}
         />
       )}
+      {shareTarget && (
+        <AyahShareDialog
+          key={shareTarget.ayahKey}
+          target={shareTarget}
+          onClose={() => setShareTarget(null)}
+        />
+      )}
     </MushafReaderLayout>
   );
 }
-
-const arabicNumber = new Intl.NumberFormat("ar-EG");
 
 // The reader reads the query string and the saved position, so it renders in
 // the browser only. Until it mounts, the server HTML shows the canonical text of
@@ -2378,7 +2444,7 @@ function QuranReaderPreview({ preview }: { preview?: PublishedQuranReaderPreview
       {firstPageAyahs.length > 0 && (
         <p className="quran-arabic-text quran-reader-preview-page" lang="ar" dir="rtl">
           {firstPageAyahs
-            .map((ayah) => `${ayah.text_uthmani} \uFD3F${arabicNumber.format(ayah.number)}\uFD3E`)
+            .map((ayah) => `${ayah.text_uthmani} ${ayahEndMarker(ayah.number)}`)
             .join(" ")}
         </p>
       )}

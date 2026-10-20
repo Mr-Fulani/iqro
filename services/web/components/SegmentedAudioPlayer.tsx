@@ -741,6 +741,14 @@ export function SegmentedAudioPlayer({
     && `${activeAyah.surah_number}:${activeAyah.ayah_number}` === readerControls.ayahKey);
   const readerIsPlaying = readerAyahIsActive && isPlaying;
 
+  // load() drops the queued pause event and a broken source never plays, so a
+  // reset or failed element reports that the sound has stopped.
+  const reportStopped = () => {
+    setIsPlaying(false);
+    onPlayingChangeRef.current?.(false);
+    onBufferingChangeRef.current?.(false);
+  };
+
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
       {readerControls?.container && createPortal(
@@ -836,6 +844,8 @@ export function SegmentedAudioPlayer({
             }
           }}
           onEnded={handleBoundary}
+          onEmptied={reportStopped}
+          onError={reportStopped}
           onTimeUpdate={handleTimeUpdate}
         />
       </div>

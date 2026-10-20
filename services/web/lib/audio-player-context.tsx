@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +17,7 @@ import {
 } from "../components/SegmentedAudioPlayer";
 import type { AudioPlaybackRequest } from "../components/SegmentedAudioPlayer";
 import { PlayerBackdrop, PlayerBackgroundPicker } from "../components/PlayerBackground";
+import { PlayerEqualizer } from "../components/PlayerEqualizer";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import {
@@ -53,8 +53,6 @@ export type AudioPlayerReciterControls = {
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
-// Loaded only once a listener expands the player.
-const PlayerEqualizer = dynamic(() => import("../components/PlayerEqualizer"), { ssr: false });
 const NO_REMOTE_BACKGROUNDS: PlayerBackground[] = [];
 
 export function AudioPlayerProvider({
