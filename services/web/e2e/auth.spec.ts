@@ -289,10 +289,15 @@ test("logout all sessions requires confirmation and clears the web session", asy
     return route.fulfill({ status: 204, body: "" });
   });
 
+  const syncKey = `quran_platform_sync_v1:${activeSession.user.id}`;
   await page.goto("/profile");
-  await page.evaluate(() => {
+  await page.evaluate((key) => {
     localStorage.setItem("quran_platform_reading_sessions_v1", "[]");
-  });
+    localStorage.setItem(
+      key,
+      JSON.stringify({ cursor: 3, outbox: [], reading_position_ids: {}, annotations: {}, annotations_seeded: true }),
+    );
+  }, syncKey);
   await page.getByRole("button", { name: "Выйти на всех устройствах" }).click();
   await expect(page.getByText("Завершить все сессии?")).toBeVisible();
   expect(logoutAllCalls).toBe(0);
@@ -307,6 +312,8 @@ test("logout all sessions requires confirmation and clears the web session", asy
   expect(
     await page.evaluate(() => localStorage.getItem("quran_platform_reading_sessions_v1")),
   ).toBeNull();
+  // Synced note texts must not stay on a shared computer.
+  expect(await page.evaluate((key) => localStorage.getItem(key), syncKey)).toBeNull();
 });
 
 test("account cabinet lists devices and revokes another device after confirmation", async ({

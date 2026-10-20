@@ -3331,6 +3331,167 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(4, 75, 52, 0.48);
 }
 
+/* Ayah highlights: same palette as the app (ayah_annotations.dart). */
+[data-highlight] { --ayah-highlight: 156, 204, 101; }
+[data-highlight="yellow"] { --ayah-highlight: 255, 213, 79; }
+[data-highlight="blue"] { --ayah-highlight: 79, 195, 247; }
+[data-highlight="pink"] { --ayah-highlight: 240, 98, 146; }
+[data-highlight="lavender"] { --ayah-highlight: 179, 157, 219; }
+
+/* :where() keeps these at single-class weight, so selection, playback, hover,
+   focus and navigation-target states declared earlier still win. */
+.qf-mushaf-ayah-fragment:where([data-highlight]) {
+  background: rgba(var(--ayah-highlight), 0.38);
+}
+
+.ayah-card:where([data-highlight]) {
+  border-color: rgba(var(--ayah-highlight), 0.9);
+  background: rgba(var(--ayah-highlight), 0.14);
+}
+
+.mushaf-ayah-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.is-reader-immersive .mushaf-ayah-actions {
+  display: none;
+}
+
+.ayah-annotation-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ayah-annotation-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.ayah-annotation-dialog form {
+  display: grid;
+  gap: 16px;
+}
+
+.ayah-annotation-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ayah-annotation-dialog-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.ayah-annotation-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ayah-annotation-colors legend {
+  margin-bottom: 8px;
+}
+
+.ayah-annotation-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ayah-annotation-color:has(input:checked) {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.ayah-annotation-color:has(input:focus-visible) {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.ayah-annotation-color input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ayah-annotation-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgb(var(--ayah-highlight));
+}
+
+.ayah-annotation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.notes-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notes-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: inherit;
+  text-decoration: none;
+}
+
+.notes-item:hover {
+  border-color: var(--primary-border);
+}
+
+.notes-item .ayah-annotation-swatch {
+  flex: none;
+  margin-top: 5px;
+}
+
+.notes-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.notes-item p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .qf-mushaf-page-number {
   position: absolute;
   bottom: 2.5%;

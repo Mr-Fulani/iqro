@@ -1,4 +1,4 @@
-import type { SyncEntity, SyncEntityType, SyncOperation } from "./api";
+import type { AyahAnnotation, SyncEntity, SyncEntityType, SyncOperation } from "./api";
 
 const SYNC_STORAGE_PREFIX = "quran_platform_sync_v1";
 export const SYNC_STATE_EVENT = "quran-platform-sync-state";
@@ -7,12 +7,19 @@ type StoredSyncState = {
   cursor: number;
   outbox: SyncOperation[];
   reading_position_ids: Record<string, string>;
+  // Ayah annotations have no REST list, so the web keeps the synced copy here.
+  // `annotations_seeded` is false for state written before this cache existed:
+  // such a cursor already skipped older annotations, so they need one snapshot.
+  annotations: Record<string, AyahAnnotation>;
+  annotations_seeded: boolean;
 };
 
 const emptyState = (): StoredSyncState => ({
   cursor: 0,
   outbox: [],
   reading_position_ids: {},
+  annotations: {},
+  annotations_seeded: false,
 });
 
 const storageKey = (userId: string) => `${SYNC_STORAGE_PREFIX}:${userId}`;
@@ -23,12 +30,27 @@ function isSyncOperation(value: unknown): value is SyncOperation {
   return (
     typeof operation.operation_id === "string" &&
     typeof operation.entity_id === "string" &&
-    ["reading_position", "bookmark", "reminder"].includes(operation.entity_type || "") &&
+    ["reading_position", "bookmark", "ayah_annotation", "reminder"].includes(operation.entity_type || "") &&
     ["upsert", "delete"].includes(operation.action || "") &&
     Number.isInteger(operation.base_revision) &&
     typeof operation.client_updated_at === "string" &&
     Boolean(operation.payload) &&
     typeof operation.payload === "object"
+  );
+}
+
+function isAyahAnnotation(value: unknown): value is AyahAnnotation {
+  if (!value || typeof value !== "object") return false;
+  const annotation = value as Partial<AyahAnnotation>;
+  return (
+    typeof annotation.id === "string" &&
+    typeof annotation.edition_code === "string" &&
+    Boolean(annotation.ayah) &&
+    typeof annotation.ayah?.surah_number === "number" &&
+    typeof annotation.ayah?.ayah_number === "number" &&
+    typeof annotation.color_key === "string" &&
+    typeof annotation.note === "string" &&
+    Number.isInteger(annotation.revision)
   );
 }
 
@@ -48,6 +70,15 @@ function readState(userId: string): StoredSyncState {
         parsed.reading_position_ids && typeof parsed.reading_position_ids === "object"
           ? parsed.reading_position_ids
           : {},
+      annotations:
+        parsed.annotations && typeof parsed.annotations === "object"
+          ? Object.fromEntries(
+              Object.values(parsed.annotations)
+                .filter(isAyahAnnotation)
+                .map((annotation) => [annotation.id, annotation]),
+            )
+          : {},
+      annotations_seeded: parsed.annotations_seeded === true,
     };
   } catch {
     return emptyState();
@@ -84,20 +115,39 @@ export function clearSyncState(userId: string): void {
   window.dispatchEvent(new CustomEvent(SYNC_STATE_EVENT, { detail: { userId } }));
 }
 
+// Operations of the push request that is under way in this tab. The server may
+// accept them, so they are never rewritten or dropped; later intents for the
+// same entity queue behind them instead.
+const inFlightOperationIds = new Set<string>();
+
+export function markSyncOperationsInFlight(operationIds: string[], inFlight: boolean): void {
+  for (const operationId of operationIds) {
+    if (inFlight) inFlightOperationIds.add(operationId);
+    else inFlightOperationIds.delete(operationId);
+  }
+}
+
 export function enqueueSyncOperation(userId: string, operation: SyncOperation): void {
   const state = readState(userId);
-  const existingIndex = state.outbox.findIndex(
-    (candidate) =>
-      candidate.entity_type === operation.entity_type &&
-      candidate.entity_id === operation.entity_id,
+  const sameEntity = (candidate: SyncOperation) =>
+    candidate.entity_type === operation.entity_type &&
+    candidate.entity_id === operation.entity_id;
+  const sentEarlier = state.outbox.some(
+    (candidate) => sameEntity(candidate) && inFlightOperationIds.has(candidate.operation_id),
   );
+  let existingIndex = -1;
+  state.outbox.forEach((candidate, index) => {
+    if (sameEntity(candidate) && !inFlightOperationIds.has(candidate.operation_id)) {
+      existingIndex = index;
+    }
+  });
 
   if (existingIndex < 0) {
     state.outbox.push(operation);
   } else {
     const existing = state.outbox[existingIndex];
     if (existing.action === "delete") return;
-    if (existing.base_revision === 0 && operation.action === "delete") {
+    if (existing.base_revision === 0 && operation.action === "delete" && !sentEarlier) {
       state.outbox.splice(existingIndex, 1);
     } else {
       state.outbox[existingIndex] = {
@@ -111,6 +161,40 @@ export function enqueueSyncOperation(userId: string, operation: SyncOperation): 
     }
   }
   writeState(userId, state);
+}
+
+/** Points queued operations of an entity at the id and revision the server now has. */
+export function retargetQueuedOperations(
+  userId: string,
+  entityType: SyncEntityType,
+  fromEntityId: string,
+  toEntityId: string,
+  revision: number,
+): void {
+  const state = readState(userId);
+  let changed = false;
+  state.outbox = state.outbox.map((operation) => {
+    if (
+      operation.entity_type !== entityType ||
+      operation.entity_id !== fromEntityId ||
+      inFlightOperationIds.has(operation.operation_id)
+    ) {
+      return operation;
+    }
+    changed = true;
+    return { ...operation, entity_id: toEntityId, base_revision: revision };
+  });
+  if (changed) writeState(userId, state);
+}
+
+export function hasQueuedSyncOperation(
+  userId: string,
+  entityType: SyncEntityType,
+  entityId: string,
+): boolean {
+  return readState(userId).outbox.some(
+    (operation) => operation.entity_type === entityType && operation.entity_id === entityId,
+  );
 }
 
 export function replaceSyncOperation(
@@ -189,5 +273,89 @@ export function rebaseOutboxFromSnapshot(userId: string, entities: SyncEntity[])
       base_revision: entity.revision,
     };
   });
+  writeState(userId, state);
+}
+
+export function getAyahAnnotations(userId: string): AyahAnnotation[] {
+  return Object.values(readState(userId).annotations);
+}
+
+export function isAyahAnnotationCacheSeeded(userId: string): boolean {
+  return readState(userId).annotations_seeded;
+}
+
+export function markAyahAnnotationCacheSeeded(userId: string): void {
+  const state = readState(userId);
+  if (state.annotations_seeded) return;
+  state.annotations_seeded = true;
+  writeState(userId, state);
+}
+
+/** Records a local intent: the outbox carries it until the server accepts it. */
+export function storeLocalAyahAnnotation(userId: string, annotation: AyahAnnotation): void {
+  const state = readState(userId);
+  state.annotations[annotation.id] = annotation;
+  writeState(userId, state);
+}
+
+export function removeLocalAyahAnnotation(userId: string, annotationId: string): void {
+  const state = readState(userId);
+  if (!(annotationId in state.annotations)) return;
+  delete state.annotations[annotationId];
+  writeState(userId, state);
+}
+
+/** Moves a local annotation to the id the outbox now uses for it. */
+export function rekeyLocalAyahAnnotation(
+  userId: string,
+  previousId: string,
+  nextId: string,
+  revision: number,
+): void {
+  const state = readState(userId);
+  const annotation = state.annotations[previousId];
+  if (!annotation) return;
+  delete state.annotations[previousId];
+  state.annotations[nextId] = { ...annotation, id: nextId, revision };
+  writeState(userId, state);
+}
+
+const hasPendingOperation = (state: StoredSyncState, entityId: string) =>
+  state.outbox.some(
+    (operation) => operation.entity_type === "ayah_annotation" && operation.entity_id === entityId,
+  );
+
+/**
+ * Applies server copies. An annotation with a queued local change keeps the
+ * local copy: the queued operation still has to reach the server.
+ */
+export function applyRemoteAyahAnnotations(userId: string, entities: SyncEntity[]): void {
+  const annotations = entities.filter(
+    (entity): entity is AyahAnnotation & { entity_type: "ayah_annotation" } =>
+      entity.entity_type === "ayah_annotation",
+  );
+  if (annotations.length === 0) return;
+  const state = readState(userId);
+  for (const annotation of annotations) {
+    if (hasPendingOperation(state, annotation.id)) continue;
+    if (annotation.deleted_at) delete state.annotations[annotation.id];
+    else state.annotations[annotation.id] = annotation;
+  }
+  writeState(userId, state);
+}
+
+/** A full snapshot is authoritative except for annotations with queued changes. */
+export function replaceAyahAnnotationsFromSnapshot(userId: string, entities: SyncEntity[]): void {
+  const state = readState(userId);
+  const next: Record<string, AyahAnnotation> = {};
+  for (const [id, annotation] of Object.entries(state.annotations)) {
+    if (hasPendingOperation(state, id)) next[id] = annotation;
+  }
+  for (const entity of entities) {
+    if (entity.entity_type !== "ayah_annotation" || entity.deleted_at || next[entity.id]) continue;
+    next[entity.id] = entity;
+  }
+  state.annotations = next;
+  state.annotations_seeded = true;
   writeState(userId, state);
 }

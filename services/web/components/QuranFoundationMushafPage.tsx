@@ -62,6 +62,10 @@ type QuranFoundationMushafPageProps = {
   surahs: SurahIdentity[];
   selectedAyahKey: string | null;
   playingAyahKey: string | null;
+  /** Highlight color key per `surah:ayah`, from the user's ayah annotations. */
+  highlightColors?: Record<string, string>;
+  /** Spoken highlight and note state per `surah:ayah`. */
+  annotationLabels?: Record<string, string>;
   onSelectAyah: (ayahKey: string) => void;
 };
 
@@ -211,6 +215,8 @@ export function QuranFoundationMushafPageView({
   surahs,
   selectedAyahKey,
   playingAyahKey,
+  highlightColors,
+  annotationLabels,
   onSelectAyah,
 }: QuranFoundationMushafPageProps) {
   const { t } = useI18n();
@@ -457,7 +463,10 @@ export function QuranFoundationMushafPageView({
                     type="button"
                     key={fragment.key}
                     onClick={() => onSelectAyah(ayahKey)}
-                    aria-label={t("common.ayah", { ayah: ayahKey })}
+                    data-highlight={highlightColors?.[ayahKey]}
+                    aria-label={annotationLabels?.[ayahKey]
+                      ? `${t("common.ayah", { ayah: ayahKey })} · ${annotationLabels[ayahKey]}`
+                      : t("common.ayah", { ayah: ayahKey })}
                     aria-pressed={selectedAyahKey === ayahKey}
                     title={t("common.ayah", { ayah: ayahKey })}
                     data-ayah-key={ayahKey}

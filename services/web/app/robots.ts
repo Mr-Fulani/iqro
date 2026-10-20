@@ -8,7 +8,7 @@ import { AUDIO_SITEMAP_INDEX_PATH } from "../lib/audio-sitemap";
 export const dynamic = "force-dynamic";
 
 export default function robots(): MetadataRoute.Robots {
-  const privatePaths = ["/login", "/register", "/profile"];
+  const privatePaths = ["/login", "/register", "/profile", "/notes"];
   return {
     rules: {
       userAgent: "*",

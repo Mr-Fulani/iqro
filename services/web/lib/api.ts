@@ -4,18 +4,30 @@
  */
 
 import {
+  applyRemoteAyahAnnotations,
   discardEntityOperation,
   enqueueSyncOperation,
+  getAyahAnnotations,
   getPendingSyncCount,
   getPendingSyncOperations,
   getReadingPositionId,
   getSyncCursor,
+  hasQueuedSyncOperation,
+  isAyahAnnotationCacheSeeded,
+  markAyahAnnotationCacheSeeded,
+  markSyncOperationsInFlight,
   rebaseOutboxFromSnapshot,
+  rekeyLocalAyahAnnotation,
   rememberReadingPositionId,
+  removeLocalAyahAnnotation,
   removeSyncOperations,
+  replaceAyahAnnotationsFromSnapshot,
   replaceSyncOperation,
+  retargetQueuedOperations,
   setSyncCursor,
+  storeLocalAyahAnnotation,
 } from "./sync-state";
+import { normalizeAyahHighlightColor } from "./ayah-annotations";
 import { Locale, MessageKey, translate } from "./i18n";
 import { collectCursorPages } from "./cursor-pagination";
 
@@ -996,18 +1008,34 @@ export type Bookmark = {
   deleted_at: string | null;
 };
 
+/** Highlight and note of one ayah; any annotation is highlighted (app parity). */
+export type AyahAnnotation = {
+  id: string;
+  edition_code: string;
+  page_number: number | null;
+  ayah: Bookmark["ayah"];
+  color_key: string;
+  note: string;
+  client_updated_at: string;
+  revision: number;
+  deleted_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type PaginatedResponse<T> = {
   next: string | null;
   previous: string | null;
   results: T[];
 };
 
-export type SyncEntityType = "reading_position" | "bookmark" | "reminder";
+export type SyncEntityType = "reading_position" | "bookmark" | "ayah_annotation" | "reminder";
 export type SyncAction = "upsert" | "delete";
 
 export type SyncEntity =
   | (ReadingPosition & { id: string; entity_type: "reading_position" })
   | (Bookmark & { entity_type: "bookmark" })
+  | (AyahAnnotation & { entity_type: "ayah_annotation" })
   | (Reminder & { entity_type: "reminder" });
 
 export type SyncOperation = {
@@ -2346,7 +2374,150 @@ export class ApiClient {
     return userId ? getPendingSyncCount(userId) : 0;
   }
 
-  public async syncNow(limit = 100): Promise<SyncRunResult> {
+  public getAyahAnnotations(): AyahAnnotation[] {
+    const userId = this.session?.user.id;
+    return userId ? getAyahAnnotations(userId) : [];
+  }
+
+  /**
+   * Annotations have no REST endpoint: the change is stored locally, queued in
+   * the outbox and pushed at once. Without a network it stays queued and
+   * OfflineMutationQueuedError is thrown, as for the other offline mutations.
+   */
+  public async saveAyahAnnotation(data: {
+    edition_code: string;
+    surah_number: number;
+    ayah_number: number;
+    page_number?: number | null;
+    color_key: string;
+    note: string;
+  }): Promise<AyahAnnotation> {
+    const userId = this.session?.user.id;
+    if (!userId) throw new Error(this.message("error.syncSession"));
+    // A sync under way may still be bringing this ayah's annotation from
+    // another device; reading the cache before it ends would fork the record.
+    await this.settleSync();
+    const now = new Date().toISOString();
+    const existing = this.liveAyahAnnotations(userId, data)[0];
+    const colorKey = normalizeAyahHighlightColor(data.color_key);
+    const note = data.note.trim();
+    const pageNumber = data.page_number ?? existing?.page_number ?? null;
+    const annotation: AyahAnnotation = {
+      id: existing?.id ?? generateUuidV7(),
+      edition_code: data.edition_code,
+      page_number: pageNumber,
+      ayah: existing?.ayah ?? {
+        id: "",
+        surah_number: data.surah_number,
+        ayah_number: data.ayah_number,
+      },
+      color_key: colorKey,
+      note,
+      client_updated_at: now,
+      revision: existing?.revision ?? 0,
+      deleted_at: null,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+    };
+    enqueueSyncOperation(userId, {
+      operation_id: generateUuidV7(),
+      entity_type: "ayah_annotation",
+      entity_id: annotation.id,
+      action: "upsert",
+      base_revision: annotation.revision,
+      client_updated_at: now,
+      payload: {
+        edition_code: data.edition_code,
+        surah_number: data.surah_number,
+        ayah_number: data.ayah_number,
+        ...(pageNumber ? { page_number: pageNumber } : {}),
+        color_key: colorKey,
+        note,
+      },
+    });
+    storeLocalAyahAnnotation(userId, annotation);
+    await this.syncQueuedChange([annotation.id]);
+    return annotation;
+  }
+
+  /** Removes the highlight together with its note, as the app does. */
+  public async deleteAyahAnnotation(data: {
+    edition_code: string;
+    surah_number: number;
+    ayah_number: number;
+  }): Promise<void> {
+    const userId = this.session?.user.id;
+    if (!userId) throw new Error(this.message("error.syncSession"));
+    await this.settleSync();
+    const annotations = this.liveAyahAnnotations(userId, data);
+    if (annotations.length === 0) return;
+    const now = new Date().toISOString();
+    for (const annotation of annotations) {
+      enqueueSyncOperation(userId, {
+        operation_id: generateUuidV7(),
+        entity_type: "ayah_annotation",
+        entity_id: annotation.id,
+        action: "delete",
+        base_revision: annotation.revision,
+        client_updated_at: now,
+        payload: {},
+      });
+      removeLocalAyahAnnotation(userId, annotation.id);
+    }
+    await this.syncQueuedChange(annotations.map((annotation) => annotation.id));
+  }
+
+  private liveAyahAnnotations(
+    userId: string,
+    target: { edition_code: string; surah_number: number; ayah_number: number },
+  ): AyahAnnotation[] {
+    return getAyahAnnotations(userId)
+      .filter(
+        (annotation) =>
+          !annotation.deleted_at &&
+          annotation.edition_code === target.edition_code &&
+          annotation.ayah?.surah_number === target.surah_number &&
+          annotation.ayah?.ayah_number === target.ayah_number,
+      )
+      .sort((left, right) => (right.updated_at || "").localeCompare(left.updated_at || ""));
+  }
+
+  /**
+   * The change is already stored and queued, so a failed sync never means a
+   * failed save: it is reported as waiting, or not at all once it was pushed
+   * and only a later step (such as the pull) failed.
+   */
+  private async syncQueuedChange(entityIds: string[]): Promise<void> {
+    try {
+      await this.syncNow();
+    } catch (error) {
+      const userId = this.session?.user.id;
+      const queued = Boolean(userId) && entityIds.some(
+        (entityId) => hasQueuedSyncOperation(userId!, "ayah_annotation", entityId),
+      );
+      if (!queued) return;
+      // fetch() rejects with a TypeError when the network is unreachable.
+      throw new OfflineMutationQueuedError(
+        this.message(error instanceof TypeError ? "error.offlineQueued" : "annotation.savedSyncLater"),
+      );
+    }
+  }
+
+  private async settleSync(): Promise<void> {
+    await this.syncQueue.catch(() => undefined);
+  }
+
+  // Runs one sync at a time: the reader, the notes page and a save can all
+  // start one, and each caller gets a run that began after its own changes.
+  private syncQueue: Promise<unknown> = Promise.resolve();
+
+  public syncNow(limit = 100): Promise<SyncRunResult> {
+    const run = this.syncQueue.catch(() => undefined).then(() => this.runSync(limit));
+    this.syncQueue = run;
+    return run;
+  }
+
+  private async runSync(limit: number): Promise<SyncRunResult> {
     const userId = this.session?.user.id;
     if (!userId) throw new Error(this.message("error.syncSession"));
 
@@ -2361,8 +2532,18 @@ export class ApiClient {
       for (let cycle = 0; cycle < 20; cycle += 1) {
         const operations = getPendingSyncOperations(userId).slice(0, 100);
         if (operations.length === 0) return;
-        const response = await this.syncPush(operations);
+        const operationIds = operations.map((operation) => operation.operation_id);
+        markSyncOperationsInFlight(operationIds, true);
+        let response: SyncPushResponse;
+        try {
+          response = await this.syncPush(operations);
+        } finally {
+          markSyncOperationsInFlight(operationIds, false);
+        }
         const terminalIds: string[] = [];
+        const serverEntities: SyncEntity[] = [];
+        // Intents queued while this batch was in flight follow its outcome.
+        const retargets: Array<[SyncEntityType, string, string, number]> = [];
         let rebased = false;
 
         for (const result of response.results) {
@@ -2372,6 +2553,15 @@ export class ApiClient {
           if (!operation) continue;
           if (result.outcome === "accepted") {
             terminalIds.push(operation.operation_id);
+            if (result.entity) {
+              serverEntities.push(result.entity);
+              retargets.push([
+                operation.entity_type,
+                operation.entity_id,
+                result.entity.id,
+                result.entity.revision,
+              ]);
+            }
             pushed += 1;
             if (result.entity?.entity_type === "reading_position") {
               rememberReadingPositionId(
@@ -2407,6 +2597,10 @@ export class ApiClient {
               client_updated_at: new Date().toISOString(),
             };
             replaceSyncOperation(userId, operation.operation_id, replacement);
+            if (operation.entity_type === "ayah_annotation") {
+              rekeyLocalAyahAnnotation(userId, operation.entity_id, current.id, current.revision);
+            }
+            retargets.push([operation.entity_type, operation.entity_id, current.id, current.revision]);
             attempts.set(replacement.operation_id, attempt);
             rebased = true;
           } else if (canRemap) {
@@ -2417,15 +2611,28 @@ export class ApiClient {
               client_updated_at: new Date().toISOString(),
             };
             replaceSyncOperation(userId, operation.operation_id, replacement);
+            if (operation.entity_type === "ayah_annotation") {
+              rekeyLocalAyahAnnotation(userId, operation.entity_id, replacement.entity_id, 0);
+            }
+            retargets.push([operation.entity_type, operation.entity_id, replacement.entity_id, 0]);
             attempts.set(replacement.operation_id, attempt);
             rebased = true;
           } else {
             terminalIds.push(operation.operation_id);
             conflicts += 1;
+            // The server keeps its copy; without one the local intent is dropped.
+            if (current) serverEntities.push(current);
+            else if (operation.entity_type === "ayah_annotation") {
+              removeLocalAyahAnnotation(userId, operation.entity_id);
+            }
           }
         }
 
         removeSyncOperations(userId, terminalIds);
+        for (const [entityType, fromId, toId, revision] of retargets) {
+          retargetQueuedOperations(userId, entityType, fromId, toId, revision);
+        }
+        applyRemoteAyahAnnotations(userId, serverEntities);
         if (!rebased && terminalIds.length === 0) return;
       }
       throw new Error(this.message("error.syncQueue"));
@@ -2439,6 +2646,10 @@ export class ApiClient {
           throw new Error(this.message("error.syncMode"));
         }
         changes += response.changes.length;
+        applyRemoteAyahAnnotations(
+          userId,
+          response.changes.map((change) => change.entity),
+        );
         cursor = response.next_cursor;
         setSyncCursor(userId, cursor);
         if (!response.has_more) return cursor;
@@ -2468,6 +2679,7 @@ export class ApiClient {
             pageToken = response.next_page_token || undefined;
             if (!response.has_more) {
               rebaseOutboxFromSnapshot(userId, entities);
+              replaceAyahAnnotationsFromSnapshot(userId, entities);
               setSyncCursor(userId, snapshotCursor);
               snapshotEntities = entities.length;
               return;
@@ -2487,6 +2699,13 @@ export class ApiClient {
     };
 
     await flushOutbox();
+    // A cursor saved before the web cached annotations has already passed the
+    // older ones; one snapshot fills the cache. A cursor of 0 pulls them anyway.
+    if (!isAyahAnnotationCacheSeeded(userId) && getSyncCursor(userId) > 0) {
+      fullResync = true;
+      await collectFullSnapshot();
+      await flushOutbox();
+    }
     try {
       await pullIncremental();
     } catch (error) {
@@ -2498,6 +2717,7 @@ export class ApiClient {
       await flushOutbox();
       await pullIncremental();
     }
+    markAyahAnnotationCacheSeeded(userId);
 
     return {
       pushed,
