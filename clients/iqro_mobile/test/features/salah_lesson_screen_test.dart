@@ -96,6 +96,21 @@ void main() {
     expect(find.text('Шаг 3 из 5'), findsOneWidget);
   });
 
+  testWidgets('a link to another step of the open lesson moves there', (
+    tester,
+  ) async {
+    await _pump(tester, location: '/salah');
+    // `go` to the same route pattern keeps the page, as a deep link does.
+    final router = GoRouter.of(tester.element(find.byType(SalahHomeScreen)));
+    router.go('/salah/lesson/fajr/step/fajr.r1.ruku');
+    await tester.pumpAndSettle();
+    expect(find.text('Шаг 3 из 5'), findsOneWidget);
+
+    router.go('/salah/lesson/fajr/step/fajr.r1.fatiha');
+    await tester.pumpAndSettle();
+    expect(find.text('Шаг 2 из 5'), findsOneWidget);
+  });
+
   testWidgets('swipes follow the reading direction', (tester) async {
     await _pump(tester, location: '/salah/lesson/fajr');
     final pager = find.byKey(const ValueKey('salah-steps'));

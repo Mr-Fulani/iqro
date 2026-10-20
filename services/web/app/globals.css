@@ -269,6 +269,14 @@ a:hover {
   font-size: 15px;
 }
 
+.menu-link-soon,
+.menu-link-soon:hover {
+  padding-inline: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .header-actions {
   grid-area: actions;
   display: flex;
@@ -3701,6 +3709,142 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-primary);
 }
 
+.prayer-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.prayer-month {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prayer-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prayer-month-nav .surface-title {
+  text-align: center;
+}
+
+.prayer-month-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.prayer-month-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-month-table th,
+.prayer-month-table td {
+  padding: 8px 10px;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.prayer-month-table thead th {
+  background: var(--bg-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.prayer-month-table tbody th {
+  text-align: start;
+  font-weight: 600;
+}
+
+.prayer-month-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.prayer-month-table tr.is-today > * {
+  background: var(--primary-subtle);
+}
+
+.prayer-month-today {
+  display: block;
+  font-size: 12px;
+  color: var(--primary-text);
+}
+
+.prayer-qibla {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.prayer-qibla-compass {
+  flex: 0 0 auto;
+  width: 200px;
+  max-width: 100%;
+}
+
+.prayer-qibla-compass svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.prayer-qibla-copy {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prayer-qibla-bearing {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.prayer-qibla-ring {
+  fill: var(--primary-subtle);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
+.prayer-qibla-tick {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.prayer-qibla-north {
+  fill: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.prayer-qibla-arrow {
+  fill: var(--primary);
+}
+
+.prayer-qibla-tail {
+  fill: var(--border);
+}
+
+.prayer-qibla-kaaba {
+  fill: var(--text-primary);
+}
+
+.prayer-qibla-hub {
+  fill: #ffffff;
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
 /* -------------------------------------------------------------------------
    Audio Player UI
 ------------------------------------------------------------------------- */
@@ -5516,6 +5660,14 @@ a.footer-store-badge:hover {
     gap: 4px;
     padding-inline: 8px;
     font-size: 13px;
+  }
+}
+
+/* Until the container reaches its 1200px cap, nine labelled links fill the
+   menu, so the announced "soon" item would push it past the header. */
+@media (min-width: 1001px) and (max-width: 1235px) {
+  .menu-link-soon {
+    display: none;
   }
 }
 

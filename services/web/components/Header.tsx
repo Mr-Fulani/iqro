@@ -62,6 +62,17 @@ export function Header() {
             </IntentPrefetchLink>
           );
         })}
+        {/* Announced section without a page yet: shown, but not a link. A full
+            label does not fit the one-row menu, so the name is in the tooltip. */}
+        <span
+          className="menu-link menu-link-soon"
+          aria-disabled="true"
+          title={`${t("nav.namesOfAllah")} — ${t("common.soon")}`}
+          data-testid="menu-names-of-allah"
+        >
+          <span className="menu-icon" aria-hidden="true">۞</span>
+          <span className="sr-only">{`${t("nav.namesOfAllah")} — ${t("common.soon")}`}</span>
+        </span>
       </nav>
 
       <div className="header-actions">

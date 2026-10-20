@@ -1356,7 +1356,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get offlineStorage => 'التخزين دون إنترنت';
 
   @override
-  String get offlineStorageSettingsSubtitle => 'صفحات المصحف والصوت المنزّلة';
+  String get offlineStorageSettingsSubtitle =>
+      'صفحات المصحف والصوت وصور دورة الصلاة المنزّلة';
 
   @override
   String offlineStorageUsed(String size) {

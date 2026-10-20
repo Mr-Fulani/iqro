@@ -431,7 +431,7 @@
   "audioDownloadFailed": "Загрузка аудио прервана. Можно продолжить с сохранённого места.",
   "audioOfflineUnavailable": "Для этой записи право на офлайн-загрузку не предоставлено.",
   "offlineStorage": "Офлайн-хранилище",
-  "offlineStorageSettingsSubtitle": "Скачанные страницы Мусхафа и аудио",
+  "offlineStorageSettingsSubtitle": "Скачанные страницы Мусхафа, аудио и картинки курса намаза",
   "offlineStorageUsed": "Занято офлайн: {size}",
   "@offlineStorageUsed": {"placeholders": {"size": {"type": "String"}}},
   "offlineStorageDescription": "Здесь показаны только файлы, скачанные самим приложением. Ничего не удаляется автоматически.",

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import {
   api,
@@ -7,6 +8,7 @@ import {
   PrayerAdjustments,
   PrayerCalculationResponse,
   PrayerMethod,
+  PrayerMethodsResponse,
   PrayerProfile,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
@@ -15,12 +17,15 @@ import { MessageKey } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { ReminderManager } from "./ReminderManager";
+import { PrayerQibla } from "./PrayerQibla";
+import type { PrayerMonthInput } from "./PrayerMonthCalendar";
 import {
   dateInTimezone,
   DEFAULT_PRAYER_LOCATION,
   loadPrayerLocationPreference,
   savePrayerLocationPreference,
 } from "../lib/prayer-location";
+import { isValidPrayerAdjustment, isValidPrayerDate } from "../lib/prayer-input";
 
 const PRESET_CITIES = [
   { label: "prayer.city.makkah" as MessageKey, lat: DEFAULT_PRAYER_LOCATION.latitude, lng: DEFAULT_PRAYER_LOCATION.longitude, tz: DEFAULT_PRAYER_LOCATION.timezone },
@@ -31,6 +36,9 @@ const PRESET_CITIES = [
   { label: "prayer.city.istanbul" as MessageKey, lat: "41.0082", lng: "28.9784", tz: "Europe/Istanbul" },
   { label: "prayer.city.london" as MessageKey, lat: "51.5074", lng: "-0.1278", tz: "Europe/London" },
 ];
+
+// The month engine is loaded only when the visitor opens the month tab.
+const PrayerMonthCalendar = dynamic(() => import("./PrayerMonthCalendar"), { ssr: false });
 
 const ADJUSTMENT_LABELS: Array<[keyof PrayerAdjustments, MessageKey]> = [
   ["fajr", "prayer.fajr"],
@@ -45,6 +53,7 @@ export default function PrayerPage() {
   const { session, isLoggedIn, isLoading: authLoading, loginGuest } = useAuth();
   const { locale, t, formatDate } = useI18n();
   const [methods, setMethods] = useState<PrayerMethod[]>([]);
+  const [catalog, setCatalog] = useState<PrayerMethodsResponse | null>(null);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("");
   const [date, setDate] = useState<string>(() => dateInTimezone(DEFAULT_PRAYER_LOCATION.timezone));
   const [latitude, setLatitude] = useState<string>(DEFAULT_PRAYER_LOCATION.latitude);
@@ -77,6 +86,8 @@ export default function PrayerPage() {
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
 
   const [result, setResult] = useState<PrayerCalculationResponse | null>(null);
+  const [appliedInput, setAppliedInput] = useState<PrayerMonthInput | null>(null);
+  const [view, setView] = useState<"day" | "month">("day");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +97,7 @@ export default function PrayerPage() {
       .getPrayerMethods()
       .then((res) => {
         const nextMethods = res.methods || [];
+        setCatalog(res);
         setMethods(nextMethods);
         const defaultMethod = nextMethods.find((m) => m.available) || nextMethods[0];
         if (defaultMethod) {
@@ -210,8 +222,27 @@ export default function PrayerPage() {
     }
   };
 
+  const dateValid = isValidPrayerDate(date);
+  const invalidAdjustments = ADJUSTMENT_LABELS.map(([key]) => key).filter(
+    (key) => !isValidPrayerAdjustment(adjustments[key]),
+  );
+
+  // Same rules as the backend serializers; invalid input is never calculated or applied.
+  const validateInput = (): boolean => {
+    if (!dateValid) {
+      setError(t("prayer.invalidDate"));
+      return false;
+    }
+    if (invalidAdjustments.length > 0) {
+      setError(t("prayer.invalidAdjustments"));
+      return false;
+    }
+    return true;
+  };
+
   const handleCalculate = async (persistLocation = true) => {
     if (!selectedMethodId) return;
+    if (!validateInput()) return;
     setLoading(true);
     setError(null);
 
@@ -225,6 +256,20 @@ export default function PrayerPage() {
         asr_method: asrMethod,
       });
     }
+
+    // The day, the Qibla and the month all switch to this input together, and only
+    // after the backend accepted it; a failed request keeps the previous schedule whole.
+    const nextInput: PrayerMonthInput = {
+      date,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      timezone,
+      methodId: selectedMethodId,
+      asrMethod,
+      highLatitudeRule,
+      polarResolution,
+      adjustments,
+    };
 
     try {
       const calc = await api.calculatePrayer({
@@ -242,6 +287,7 @@ export default function PrayerPage() {
         adjustments,
       });
       setResult(calc);
+      setAppliedInput(nextInput);
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -252,6 +298,7 @@ export default function PrayerPage() {
   const handleSaveProfile = async () => {
     const activeMethod = methods.find((method) => method.id === selectedMethodId);
     if (!activeMethod) return;
+    if (!validateInput()) return;
     setSavingProfile(true);
     setError(null);
     setProfileMessage(null);
@@ -400,6 +447,7 @@ export default function PrayerPage() {
                 id="prayer-date"
                 type="date"
                 value={date}
+                aria-invalid={!dateValid}
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
@@ -558,7 +606,12 @@ export default function PrayerPage() {
                         type="number"
                         min={-120}
                         max={120}
+                        step={1}
                         value={adjustments[key]}
+                        aria-invalid={invalidAdjustments.includes(key)}
+                        aria-describedby={
+                          invalidAdjustments.includes(key) ? `adjustment-${key}-error` : undefined
+                        }
                         onChange={(event) =>
                           setAdjustments({
                             ...adjustments,
@@ -566,6 +619,11 @@ export default function PrayerPage() {
                           })
                         }
                       />
+                      {invalidAdjustments.includes(key) && (
+                        <p className="error-text" id={`adjustment-${key}-error`}>
+                          {t("prayer.invalidAdjustment")}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -590,66 +648,105 @@ export default function PrayerPage() {
       </section>
 
       {/* Calculated Results */}
-      {result && (result.times || result.prayer_times) && (() => {
-        const pTimes = result.times || result.prayer_times;
+      {appliedInput && (() => {
+        const pTimes = result?.times || result?.prayer_times;
+        const methodName =
+          result?.method ??
+          methods.find((method) => method.id === appliedInput.methodId);
         return (
           <section className="surface">
             <div className="surface-head">
               <div>
-                <p className="eyebrow">{t("prayer.results", { date: result.date })}</p>
+                <p className="eyebrow">
+                  {view === "day" && result ? t("prayer.results", { date: result.date }) : t("prayer.monthTitle")}
+                </p>
                 <h3 className="surface-title">
-                  {(locale === "ar" ? result.method?.name?.ar : locale === "ru" ? result.method?.name?.ru : result.method?.name?.en) || result.method?.code || t("prayer.schedule")}
+                  {(locale === "ar" ? methodName?.name?.ar : locale === "ru" ? methodName?.name?.ru : methodName?.name?.en) || methodName?.code || t("prayer.schedule")}
                 </h3>
               </div>
-              <span className="status-chip ok">{t("prayer.timezoneValue", { timezone: result.timezone })}</span>
+              <span className="status-chip ok">
+                {t("prayer.timezoneValue", { timezone: result?.timezone || appliedInput.timezone })}
+              </span>
             </div>
 
-            <div className="prayer-grid">
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الفجر</span>
-                <span className="prayer-name-ru">{t("prayer.fajrFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.fajr?.local)}</span>
-                <span className="kpi-desc">{t("prayer.fajrStart")}</span>
-              </div>
+            <div className="prayer-view-tabs" role="tablist" aria-label={t("prayer.viewAria")}>
+              {(["day", "month"] as const).map((item) => (
+                <button
+                  key={item}
+                  id={`prayer-view-${item}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === item}
+                  aria-controls="prayer-view-panel"
+                  className={`btn btn-sm ${view === item ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => setView(item)}
+                >
+                  {t(`prayer.view.${item}`)}
+                </button>
+              ))}
+            </div>
 
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الشروق</span>
-                <span className="prayer-name-ru">{t("prayer.sunriseFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.sunrise?.local)}</span>
-                <span className="kpi-desc">{t("prayer.fajrEnd")}</span>
-              </div>
+            <div id="prayer-view-panel" role="tabpanel" aria-labelledby={`prayer-view-${view}`}>
+              {view === "month" ? (
+                catalog && (
+                  <PrayerMonthCalendar
+                    key={appliedInput.date.slice(0, 7)}
+                    catalog={catalog}
+                    input={appliedInput}
+                  />
+                )
+              ) : pTimes && (
+              <div className="prayer-grid">
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">الفجر</span>
+                  <span className="prayer-name-ru">{t("prayer.fajrFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.fajr?.local)}</span>
+                  <span className="kpi-desc">{t("prayer.fajrStart")}</span>
+                </div>
 
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الظهر</span>
-                <span className="prayer-name-ru">{t("prayer.dhuhrFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.dhuhr?.local)}</span>
-                <span className="kpi-desc">{t("prayer.afterZenith")}</span>
-              </div>
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">الشروق</span>
+                  <span className="prayer-name-ru">{t("prayer.sunriseFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.sunrise?.local)}</span>
+                  <span className="kpi-desc">{t("prayer.fajrEnd")}</span>
+                </div>
 
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">العصر</span>
-                <span className="prayer-name-ru">{t("prayer.asrFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.asr?.local)}</span>
-                <span className="kpi-desc">{asrMethod === "hanafi" ? t("prayer.hanafi") : t("prayer.standard")}</span>
-              </div>
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">الظهر</span>
+                  <span className="prayer-name-ru">{t("prayer.dhuhrFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.dhuhr?.local)}</span>
+                  <span className="kpi-desc">{t("prayer.afterZenith")}</span>
+                </div>
 
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">المغرب</span>
-                <span className="prayer-name-ru">{t("prayer.maghribFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.maghrib?.local)}</span>
-                <span className="kpi-desc">{t("prayer.sunsetIftar")}</span>
-              </div>
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">العصر</span>
+                  <span className="prayer-name-ru">{t("prayer.asrFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.asr?.local)}</span>
+                  <span className="kpi-desc">{asrMethod === "hanafi" ? t("prayer.hanafi") : t("prayer.standard")}</span>
+                </div>
 
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">العشاء</span>
-                <span className="prayer-name-ru">{t("prayer.ishaFull")}</span>
-                <span className="prayer-time">{formatPrayerTime(pTimes?.isha?.local)}</span>
-                <span className="kpi-desc">{t("prayer.nightfall")}</span>
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">المغرب</span>
+                  <span className="prayer-name-ru">{t("prayer.maghribFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.maghrib?.local)}</span>
+                  <span className="kpi-desc">{t("prayer.sunsetIftar")}</span>
+                </div>
+
+                <div className="prayer-time-card">
+                  <span className="prayer-name-ar">العشاء</span>
+                  <span className="prayer-name-ru">{t("prayer.ishaFull")}</span>
+                  <span className="prayer-time">{formatPrayerTime(pTimes?.isha?.local)}</span>
+                  <span className="kpi-desc">{t("prayer.nightfall")}</span>
+                </div>
               </div>
+              )}
             </div>
           </section>
         );
       })()}
+      {appliedInput && (
+        <PrayerQibla latitude={appliedInput.latitude} longitude={appliedInput.longitude} />
+      )}
       <ReminderManager variant="prayer" />
     </div>
   );

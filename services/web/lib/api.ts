@@ -664,11 +664,17 @@ export type PrayerMethod = {
   name: { ar: string; en: string; ru: string };
   description: { ar: string; en: string; ru: string };
   checksum_sha256: string;
+  parameters?: {
+    fajr_angle: string | number;
+    isha: { type?: string; angle: string | number | null; interval_minutes: number | null };
+    method_adjustments?: Partial<PrayerAdjustments>;
+  };
 };
 
 export type PrayerMethodsResponse = {
   catalog_version: string;
   configuration_schema_version: number;
+  algorithm?: { id: string; version: string; upstream?: string };
   checksum_sha256: string;
   methods: PrayerMethod[];
 };
