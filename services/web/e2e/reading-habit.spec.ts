@@ -514,6 +514,38 @@ test("a new palm stage grows in; reduced motion keeps it still", async ({ page }
   expect(await photo.evaluate((image) => getComputedStyle(image).animationName)).toBe("none");
 });
 
+test("today's progress does not wait for the palm and leaves with the reader", async ({ page }) => {
+  await installReadingMocks(page);
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/today",
+    (route) => route.fulfill({ json: todaySnapshot(1, true) }),
+  );
+  let releasePlanner = () => {};
+  const plannerHeld = new Promise<void>((resolve) => {
+    releasePlanner = resolve;
+  });
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/reading-planner",
+    async (route) => {
+      await plannerHeld;
+      await route.fallback();
+    },
+  );
+  await page.route("**/api/web-auth/logout", (route) => route.fulfill({ status: 204, body: "" }));
+  await page.goto("/");
+
+  const today = page.getByTestId("today-reading");
+  await expect(today.getByText("1 / 3 стр.")).toBeVisible();
+  await expect(today.getByTestId("palm-growth")).toHaveCount(0);
+  releasePlanner();
+  await expect(today.getByTestId("palm-growth")).toBeVisible();
+
+  await page.getByRole("button", { name: "Выйти" }).click();
+  await expect(today.getByRole("button", { name: "Создать норму" })).toBeVisible();
+  await expect(today.getByTestId("palm-growth")).toHaveCount(0);
+  await expect(today.getByText("1 / 3 стр.")).toHaveCount(0);
+});
+
 test("palm photographs load only with the palm card", async ({ page }) => {
   const palmImages: string[] = [];
   page.on("request", (request) => {

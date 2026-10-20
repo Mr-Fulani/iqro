@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   ReadingGoalMetric,
@@ -27,6 +27,9 @@ function browserTimezone(): string {
     return "UTC";
   }
 }
+
+// Marks the card's own refresh signal so it does not reload itself twice.
+const PROGRESS_CHANGED_BY_CARD = "today-reading";
 
 function todayInTimezone(timezoneName: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -54,37 +57,75 @@ export function TodayReadingCard() {
   const [manualAmount, setManualAmount] = useState("1");
 
   const [timezoneName] = useState(() => browserTimezone());
+  // Only the latest request for the current account may update the card.
+  const todayRequest = useRef(0);
+  const palmRequest = useRef(0);
+
+  // A sign-out or another account must not keep the previous reader's data.
+  const sessionUserId = session?.user.id ?? null;
+  const [dataUserId, setDataUserId] = useState(sessionUserId);
+  if (dataUserId !== sessionUserId) {
+    setDataUserId(sessionUserId);
+    if (dataUserId !== null) {
+      setToday(null);
+      setPalmHistory(null);
+      setError(null);
+      setEditingGoal(false);
+      setManualOpen(false);
+      setMetric("minutes");
+      setTarget(String(DEFAULT_TARGETS.minutes));
+    }
+  }
+
+  const loadPalmHistory = useCallback(async (userId: string) => {
+    const request = ++palmRequest.current;
+    let planner: ReadingPlanner | null = null;
+    try {
+      planner = await api.getReadingPlanner(timezoneName, PALM_HISTORY_DAYS);
+    } catch {
+      // The palm counts the same planner window as the app. Without it the
+      // palm stays hidden instead of showing a smaller one.
+    }
+    if (request === palmRequest.current && api.getSession()?.user.id === userId) {
+      setPalmHistory(planner);
+    }
+  }, [timezoneName]);
 
   const loadToday = useCallback(async () => {
-    if (!api.getSession()) return;
+    const userId = api.getSession()?.user.id;
+    if (!userId) return;
+    const request = ++todayRequest.current;
+    const isLatest = () => request === todayRequest.current;
+    const isCurrent = () => isLatest() && api.getSession()?.user.id === userId;
+    // The palm's history loads on its own, so a slow planner never holds back
+    // today's progress.
+    void loadPalmHistory(userId);
     setLoading(true);
     setError(null);
     try {
-      const [result, planner] = await Promise.all([
-        api.getReadingToday(timezoneName),
-        // The palm counts the same planner window as the app. Without it the
-        // palm stays hidden instead of showing a smaller one.
-        api.getReadingPlanner(timezoneName, PALM_HISTORY_DAYS).catch(() => null),
-      ]);
+      const result = await api.getReadingToday(timezoneName);
+      if (!isCurrent()) return;
       setToday(result);
-      setPalmHistory(planner);
       if (result.goal) {
         setMetric(result.goal.metric);
         setTarget(String(Number(result.goal.target_amount)));
       }
     } catch (err) {
-      setError(api.normalizeError(err));
+      if (isCurrent()) setError(api.normalizeError(err));
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
-  }, [timezoneName]);
+  }, [loadPalmHistory, timezoneName]);
 
   useEffect(() => {
     if (!authLoading && session) void loadToday();
   }, [authLoading, loadToday, session]);
 
   useEffect(() => {
-    const refresh = () => void loadToday();
+    const refresh = (event: Event) => {
+      if ((event as CustomEvent<{ source?: string }>).detail?.source === PROGRESS_CHANGED_BY_CARD) return;
+      void loadToday();
+    };
     window.addEventListener("quran-reading-progress-changed", refresh);
     return () => window.removeEventListener("quran-reading-progress-changed", refresh);
   }, [loadToday]);
@@ -118,7 +159,9 @@ export function TodayReadingCard() {
       });
       setEditingGoal(false);
       await loadToday();
-      window.dispatchEvent(new Event("quran-reading-progress-changed"));
+      window.dispatchEvent(
+        new CustomEvent("quran-reading-progress-changed", { detail: { source: PROGRESS_CHANGED_BY_CARD } }),
+      );
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -143,7 +186,9 @@ export function TodayReadingCard() {
       setManualOpen(false);
       setManualAmount("1");
       await loadToday();
-      window.dispatchEvent(new Event("quran-reading-progress-changed"));
+      window.dispatchEvent(
+        new CustomEvent("quran-reading-progress-changed", { detail: { source: PROGRESS_CHANGED_BY_CARD } }),
+      );
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {

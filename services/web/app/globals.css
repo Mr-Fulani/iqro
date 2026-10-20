@@ -1323,7 +1323,9 @@ input:focus, select:focus, textarea:focus {
   background: rgba(35, 27, 14, 0.96);
   color: #fff;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.45;
+  text-shadow: none;
 }
 
 .today-palm-info[hidden] {

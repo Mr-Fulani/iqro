@@ -93,11 +93,11 @@ export function PalmGrowthCard({ growth }: { growth: PalmGrowth }) {
             </span>
           )}
         </span>
+        <span id={infoId} className="today-palm-info" hidden={!infoOpen}>
+          <span>{t(`palm.mood.${growth.mood}`)}</span>
+          <span>{t("palm.howItGrows")}</span>
+        </span>
       </figcaption>
-      <p id={infoId} className="today-palm-info" hidden={!infoOpen}>
-        <span>{t(`palm.mood.${growth.mood}`)}</span>
-        <span>{t("palm.howItGrows")}</span>
-      </p>
     </figure>
   );
 }
