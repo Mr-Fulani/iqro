@@ -25,6 +25,7 @@ import {
   loadPrayerLocationPreference,
   savePrayerLocationPreference,
 } from "../lib/prayer-location";
+import { isValidPrayerAdjustment, isValidPrayerDate } from "../lib/prayer-input";
 
 const PRESET_CITIES = [
   { label: "prayer.city.makkah" as MessageKey, lat: DEFAULT_PRAYER_LOCATION.latitude, lng: DEFAULT_PRAYER_LOCATION.longitude, tz: DEFAULT_PRAYER_LOCATION.timezone },
@@ -221,8 +222,27 @@ export default function PrayerPage() {
     }
   };
 
+  const dateValid = isValidPrayerDate(date);
+  const invalidAdjustments = ADJUSTMENT_LABELS.map(([key]) => key).filter(
+    (key) => !isValidPrayerAdjustment(adjustments[key]),
+  );
+
+  // Same rules as the backend serializers; invalid input is never calculated or applied.
+  const validateInput = (): boolean => {
+    if (!dateValid) {
+      setError(t("prayer.invalidDate"));
+      return false;
+    }
+    if (invalidAdjustments.length > 0) {
+      setError(t("prayer.invalidAdjustments"));
+      return false;
+    }
+    return true;
+  };
+
   const handleCalculate = async (persistLocation = true) => {
     if (!selectedMethodId) return;
+    if (!validateInput()) return;
     setLoading(true);
     setError(null);
 
@@ -237,8 +257,9 @@ export default function PrayerPage() {
       });
     }
 
-    // The Qibla and the month calendar follow the coordinates and profile of the last calculation.
-    setAppliedInput({
+    // The day, the Qibla and the month all switch to this input together, and only
+    // after the backend accepted it; a failed request keeps the previous schedule whole.
+    const nextInput: PrayerMonthInput = {
       date,
       latitude: Number(latitude),
       longitude: Number(longitude),
@@ -248,7 +269,7 @@ export default function PrayerPage() {
       highLatitudeRule,
       polarResolution,
       adjustments,
-    });
+    };
 
     try {
       const calc = await api.calculatePrayer({
@@ -266,6 +287,7 @@ export default function PrayerPage() {
         adjustments,
       });
       setResult(calc);
+      setAppliedInput(nextInput);
     } catch (err) {
       setError(api.normalizeError(err));
     } finally {
@@ -276,6 +298,7 @@ export default function PrayerPage() {
   const handleSaveProfile = async () => {
     const activeMethod = methods.find((method) => method.id === selectedMethodId);
     if (!activeMethod) return;
+    if (!validateInput()) return;
     setSavingProfile(true);
     setError(null);
     setProfileMessage(null);
@@ -424,6 +447,7 @@ export default function PrayerPage() {
                 id="prayer-date"
                 type="date"
                 value={date}
+                aria-invalid={!dateValid}
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
@@ -582,7 +606,12 @@ export default function PrayerPage() {
                         type="number"
                         min={-120}
                         max={120}
+                        step={1}
                         value={adjustments[key]}
+                        aria-invalid={invalidAdjustments.includes(key)}
+                        aria-describedby={
+                          invalidAdjustments.includes(key) ? `adjustment-${key}-error` : undefined
+                        }
                         onChange={(event) =>
                           setAdjustments({
                             ...adjustments,
@@ -590,6 +619,11 @@ export default function PrayerPage() {
                           })
                         }
                       />
+                      {invalidAdjustments.includes(key) && (
+                        <p className="error-text" id={`adjustment-${key}-error`}>
+                          {t("prayer.invalidAdjustment")}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

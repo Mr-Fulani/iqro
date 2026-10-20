@@ -25,7 +25,14 @@ const method = {
   checksum_sha256: "a".repeat(64),
 };
 
-async function mockPrayerApi(page: Page, algorithmVersion = "4.4.4-quran.1-adhanpy.1.0.5") {
+async function mockPrayerApi(
+  page: Page,
+  {
+    algorithmVersion = "4.4.4-quran.1-adhanpy.1.0.5",
+    failTimezone,
+  }: { algorithmVersion?: string; failTimezone?: string } = {},
+) {
+  const calculations: Array<Record<string, unknown>> = [];
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -44,6 +51,10 @@ async function mockPrayerApi(page: Page, algorithmVersion = "4.4.4-quran.1-adhan
     }
     if (url.pathname === "/api/v1/prayer/calculate") {
       const calculation = request.postDataJSON() as Record<string, unknown>;
+      calculations.push(calculation);
+      if (calculation.timezone === failTimezone) {
+        return route.fulfill({ status: 503, json: { detail: "Prayer calculation is unavailable." } });
+      }
       return route.fulfill({
         json: {
           date: calculation.date,
@@ -55,6 +66,7 @@ async function mockPrayerApi(page: Page, algorithmVersion = "4.4.4-quran.1-adhan
     }
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${url.pathname}` } });
   });
+  return calculations;
 }
 
 function moscowWallClock(epochMinutes: number): string {
@@ -69,7 +81,8 @@ test("prayer page shows the Qibla and a month calendar that matches the app", as
   await mockPrayerApi(page);
   await page.goto("/ru/prayer");
   // The first automatic calculation (Makkah by default) finishes restoring the form.
-  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("0° от географического севера");
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
+  await expect(page.getByTestId("prayer-qibla-arrow")).toHaveCount(0);
   await page.getByLabel("Быстрый выбор города").selectOption({ label: "Москва (Россия)" });
   await page.getByLabel("Дата расчёта").fill("2026-06-15");
   await page.getByLabel("Мазхаб для времени Аср").selectOption("hanafi");
@@ -116,10 +129,50 @@ test("prayer month and Qibla are localized and right-to-left in Arabic", async (
 });
 
 test("prayer month explains when the backend engine is newer than the web port", async ({ page }) => {
-  await mockPrayerApi(page, "5.0.0");
+  await mockPrayerApi(page, { algorithmVersion: "5.0.0" });
   await page.goto("/en/prayer");
   await page.getByRole("tab", { name: "Month" }).click();
   await expect(
     page.getByText("The monthly calendar is not available for this calculation method."),
   ).toBeVisible();
+});
+
+test("invalid date and adjustments are rejected before calculation", async ({ page }) => {
+  const calculations = await mockPrayerApi(page);
+  await page.goto("/ru/prayer");
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
+  const sent = calculations.length;
+
+  await page.getByLabel("Дата расчёта").fill("");
+  await page.getByRole("button", { name: "Рассчитать расписание" }).click();
+  await expect(page.getByText("Укажите дату расчёта в пределах 1900–2100 годов.")).toBeVisible();
+  await page.getByRole("tab", { name: "Месяц" }).click();
+  await expect(page.locator(".prayer-month-table tbody tr").first()).toBeVisible();
+
+  await page.getByLabel("Дата расчёта").fill("2026-06-15");
+  for (const value of ["1.5", "121"]) {
+    await page.getByLabel("Фаджр", { exact: true }).fill(value);
+    await expect(page.getByLabel("Фаджр", { exact: true })).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByText("Целое число минут от −120 до 120.")).toBeVisible();
+    // Native number constraints stop the form submit; the profile button reaches our own check.
+    await page.getByRole("button", { name: "Рассчитать расписание" }).click();
+    await page.getByRole("button", { name: "Сохранить профиль" }).click();
+    await expect(page.getByText("Исправьте поправки: нужны целые минуты от −120 до 120.")).toBeVisible();
+  }
+  expect(calculations).toHaveLength(sent);
+});
+
+test("a failed calculation keeps the previous day, Qibla and month together", async ({ page }) => {
+  const calculations = await mockPrayerApi(page, { failTimezone: "Europe/Moscow" });
+  await page.goto("/ru/prayer");
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
+  await page.getByLabel("Быстрый выбор города").selectOption({ label: "Москва (Россия)" });
+  await page.getByRole("button", { name: "Рассчитать расписание" }).click();
+  await expect.poll(() => calculations.at(-1)?.timezone).toBe("Europe/Moscow");
+  await expect(page.locator(".alert-error")).toBeVisible();
+
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
+  await expect(page.getByText("Часовой пояс: Asia/Riyadh")).toBeVisible();
+  await page.getByRole("tab", { name: "Месяц" }).click();
+  await expect(page.getByText("Часовой пояс: Asia/Riyadh")).toBeVisible();
 });

@@ -3,6 +3,8 @@
 // mirrors the backend's pinned Adhan 4.4.4 adapter. It accepts only the exact engine
 // version exposed by the backend so the month calendar matches the app.
 
+import { isValidPrayerAdjustment } from "./prayer-input.ts";
+
 export const LOCAL_PRAYER_ENGINE_ID = "adhan-js-python-adapter";
 export const LOCAL_PRAYER_ENGINE_VERSION = "4.4.4-quran.1-adhanpy.1.0.5";
 
@@ -146,7 +148,8 @@ export function calculatePrayerTimes(input: LocalPrayerInput): LocalPrayerResult
     longitude < -180 ||
     longitude > 180 ||
     method.fajrAngle <= 0 ||
-    (method.ishaAngle === null) === (method.ishaIntervalMinutes === null)
+    (method.ishaAngle === null) === (method.ishaIntervalMinutes === null) ||
+    !Object.values(input.adjustments ?? {}).every(isValidPrayerAdjustment)
   ) {
     throw new LocalPrayerCalculationUnavailable("invalid_input");
   }

@@ -5,6 +5,7 @@ import { PrayerAdjustments, PrayerMethodsResponse } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey } from "../lib/i18n";
 import { dateInTimezone } from "../lib/prayer-location";
+import { isValidPrayerDate } from "../lib/prayer-input";
 import { calculatePrayerMonth, localPrayerMethod, PRAYER_CODES } from "../lib/prayer-engine";
 
 export type PrayerMonthInput = {
@@ -37,7 +38,8 @@ export default function PrayerMonthCalendar({
 }) {
   const { t, formatDate, direction } = useI18n();
   const [month, setMonth] = useState(() => {
-    const [year, monthNumber] = input.date.split("-").map(Number);
+    const date = isValidPrayerDate(input.date) ? input.date : dateInTimezone(input.timezone);
+    const [year, monthNumber] = date.split("-").map(Number);
     return { year, month: monthNumber };
   });
 

@@ -24,6 +24,21 @@ export function qiblaBearing(latitude: number, longitude: number): number | null
   return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
 }
 
+const EARTH_RADIUS_METERS = 6_371_000;
+/** Closer than this the bearing is meaningless: the worshipper faces the Kaaba itself. */
+export const KAABA_PROXIMITY_METERS = 50;
+
+/** Great-circle distance to the Kaaba in meters, or null for invalid input. */
+export function distanceToKaabaMeters(latitude: number, longitude: number): number | null {
+  if (qiblaBearing(latitude, longitude) === null) return null;
+  const latitudeDelta = radians(KAABA_LATITUDE - latitude);
+  const longitudeDelta = radians(KAABA_LONGITUDE - longitude);
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(latitude)) * Math.cos(radians(KAABA_LATITUDE)) * Math.sin(longitudeDelta / 2) ** 2;
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
 /**
  * Compass heading from a `deviceorientationabsolute` event (clockwise from north),
  * corrected for screen rotation. Returns null when the event carries no absolute heading.

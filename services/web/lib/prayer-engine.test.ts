@@ -14,7 +14,8 @@ import {
   prayerCalendarDates,
 } from "./prayer-engine.ts";
 import type { LocalPrayerMethod } from "./prayer-engine.ts";
-import { headingFromOrientation, qiblaBearing } from "./qibla.ts";
+import { isValidPrayerAdjustment, isValidPrayerDate } from "./prayer-input.ts";
+import { distanceToKaabaMeters, headingFromOrientation, qiblaBearing } from "./qibla.ts";
 
 type BackendFixture = {
   cases: Array<{
@@ -234,4 +235,41 @@ test("compass heading uses only absolute orientation", () => {
   assert.equal(headingFromOrientation({ alpha: 90, absolute: false }), null);
   assert.equal(headingFromOrientation({ alpha: null, absolute: true }), null);
   assert.equal(headingFromOrientation({ alpha: 10, webkitCompassHeading: 45 }), 45);
+});
+
+test("prayer input follows the backend serializer limits", () => {
+  assert.equal(isValidPrayerDate("2026-10-20"), true);
+  assert.equal(isValidPrayerDate("2028-02-29"), true);
+  for (const value of ["", "2026-02-30", "1899-12-31", "2101-01-01", "2026-1-5"]) {
+    assert.equal(isValidPrayerDate(value), false, value);
+  }
+  for (const value of [0, -120, 120, 7]) assert.equal(isValidPrayerAdjustment(value), true);
+  for (const value of [1.5, 121, -121, Number.NaN, "3"]) {
+    assert.equal(isValidPrayerAdjustment(value), false, String(value));
+  }
+});
+
+test("the month engine rejects adjustments the backend would reject", () => {
+  for (const fajr of [1.5, 121]) {
+    assert.throws(
+      () =>
+        calculatePrayerTimes({
+          latitude: 41.0082,
+          longitude: 28.9784,
+          date: "2026-08-09",
+          method: mwl,
+          highLatitudeRule: "middle_of_night",
+          polarResolution: "unresolved",
+          adjustments: { fajr },
+        }),
+      (error: unknown) => error instanceof LocalPrayerCalculationUnavailable && error.reason === "invalid_input",
+    );
+  }
+});
+
+test("distance to the Kaaba separates the Haram from the rest of Makkah", () => {
+  assert.equal(distanceToKaabaMeters(21.4225, 39.8262), 0);
+  assert.ok((distanceToKaabaMeters(21.4228, 39.8262) ?? Infinity) < 50);
+  assert.ok((distanceToKaabaMeters(21.4266, 39.8262) ?? 0) > 400);
+  assert.equal(distanceToKaabaMeters(100, 0), null);
 });
