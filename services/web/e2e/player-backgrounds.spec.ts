@@ -35,7 +35,7 @@ test("expanded player remembers a background and keeps the scrim under reduced m
 
   await player.getByRole("button", { name: "Фон плеера" }).click();
   const choices = player.getByRole("radio");
-  await expect(choices).toHaveCount(6);
+  await expect(choices).toHaveCount(7);
   await expect(player.getByRole("radio", { name: "Горы" })).toBeAttached();
   await expect(player.getByRole("radio", { name: "Ночная пустыня" })).toBeChecked();
   await expect(player.locator(".player-background-thumb img").first()).toHaveAttribute(
@@ -53,11 +53,138 @@ test("expanded player remembers a background and keeps the scrim under reduced m
     .click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:sea-dawn");
 
+  // With reduced motion a video background shows only its poster.
   await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Чтец", { exact: true }).click();
+  await expect(player).toHaveAttribute("data-player-background", "bundled:reciter-video");
+  await expect(backdrop).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+  await expect(player.locator(".global-audio-player-backdrop video")).toHaveCount(0);
+
   await player.getByText("Классический", { exact: true }).click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:classic");
   await expect(player).not.toHaveClass(/has-player-background/);
   await expect(player.locator(".global-audio-player-backdrop")).toHaveCount(0);
+});
+
+test("a video background loops silently over its poster only in the expanded player", async ({ page }) => {
+  const mediaRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "media") mediaRequests.push(new URL(request.url()).pathname);
+  });
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Горы", { exact: true }).click();
+
+  const backdrop = player.locator(".global-audio-player-backdrop");
+  await expect(backdrop.locator("img")).toHaveAttribute("src", "/player-backgrounds/geometric.webp");
+  const video = backdrop.locator("video");
+  await expect(video).toHaveAttribute("src", "/media/audio/player-backgrounds/mountains-loop.webm");
+  await expect(video).toHaveAttribute("preload", "none");
+  await expect(video).toHaveAttribute("loop");
+  await expect(video).toHaveAttribute("playsinline");
+  // It covers the poster once it actually plays and stays under the scrim.
+  await expect(video).toHaveAttribute("data-loaded", "true");
+  await expect(video).toHaveCSS("opacity", "1");
+  expect(await video.evaluate((element: HTMLVideoElement) => [element.muted, element.paused])).toEqual([true, false]);
+  await expect(backdrop.locator("video + .global-audio-player-scrim")).toHaveCount(1);
+
+  // A bundled video, as in the app.
+  await player.getByText("Чтец", { exact: true }).click();
+  await expect(video).toHaveAttribute("src", "/player-backgrounds/reciter-hood.mp4");
+  await expect(backdrop.locator("img")).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(page.locator("video")).toHaveCount(0);
+
+  // The choice is remembered, but nothing is fetched until the player is expanded.
+  mediaRequests.length = 0;
+  await page.reload();
+  const expand = page.getByTestId("global-audio-player").getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  await expect(page.locator("video")).toHaveCount(0);
+  expect(mediaRequests).toEqual([]);
+  await expand.click();
+  await expect(video).toHaveAttribute("src", "/player-backgrounds/reciter-hood.mp4");
+  await expect.poll(() => mediaRequests).toContain("/player-backgrounds/reciter-hood.mp4");
+});
+
+test("the video code loads only for a video background, and a failed load leaves the poster until a retry", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  const expand = player.getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  const chunkRequests: string[] = [];
+  await page.route("**/_next/static/chunks/**", (route) => {
+    chunkRequests.push(route.request().url());
+    return route.abort();
+  });
+
+  // The default picture needs no extra code.
+  await expand.click();
+  await expect(player).toHaveAttribute("data-player-background", "bundled:desert-night");
+  await expect(player.locator(".global-audio-player-backdrop img")).toHaveAttribute("data-loaded", "true");
+  expect(chunkRequests).toEqual([]);
+
+  // The chunk loader retries once; wait until the failure is final and handled.
+  const chunkFailed = page.waitForEvent("console", {
+    predicate: async (message) => {
+      if (message.type() !== "error") return false;
+      const names = await Promise.all(
+        message.args().map((arg) => arg.evaluate((value) => value instanceof Error && value.name)),
+      );
+      return names.includes("ChunkLoadError");
+    },
+  });
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Чтец", { exact: true }).click();
+  await chunkFailed;
+  expect(chunkRequests.length).toBeGreaterThan(0);
+  const poster = player.locator(".global-audio-player-backdrop img");
+  await expect(poster).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
+  await expect(poster).toHaveAttribute("data-loaded", "true");
+  await expect(player.locator("video")).toHaveCount(0);
+
+  // Once the network is back, the next video background loads the chunk again.
+  await page.unroute("**/_next/static/chunks/**");
+  await player.getByText("Горы", { exact: true }).click();
+  const video = player.locator(".global-audio-player-backdrop video");
+  await expect(video).toHaveAttribute("src", "/media/audio/player-backgrounds/mountains-loop.webm");
+  await expect(video).toHaveAttribute("data-loaded", "true");
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(expand).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
+test("data saver keeps the poster and loads no video code", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "connection", {
+      configurable: true,
+      get: () => ({ saveData: true }),
+    });
+  });
+  await page.goto("/audio");
+  const player = page.getByTestId("global-audio-player");
+  const expand = player.getByRole("button", { name: "Развернуть плеер", exact: true });
+  await expect(expand).toBeVisible();
+  const lateRequests: string[] = [];
+  page.on("request", (request) => {
+    const type = request.resourceType();
+    if (type === "script" || type === "media") lateRequests.push(request.url());
+  });
+
+  await expand.click();
+  await player.getByRole("button", { name: "Фон плеера" }).click();
+  await player.getByText("Горы", { exact: true }).click();
+  const poster = player.locator(".global-audio-player-backdrop img");
+  await expect(poster).toHaveAttribute("src", "/player-backgrounds/geometric.webp");
+  await expect(poster).toHaveAttribute("data-loaded", "true");
+  await expect(player.locator("video")).toHaveCount(0);
+  expect(lateRequests).toEqual([]);
 });
 
 test("admin backgrounds fall back to English titles in Turkish", async ({ page }) => {

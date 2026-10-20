@@ -24,6 +24,8 @@ export type PlayerBackgroundPayload = {
   title_ru: string;
   title_tr: string;
   image_url: string;
+  // A silent looping video over image_url, which is its poster.
+  video_url?: string | null;
   show_equalizer?: boolean;
   sort_order: number;
 };
@@ -39,14 +41,16 @@ export type PlayerBackground = {
   id: string;
   titles: Record<Locale, string>;
   image: PlayerBackgroundImage | null;
+  // Plays over the image, which stays as the poster and the picker tile.
+  videoSrc?: string;
   // The admin can switch the sound bars off where they clash with a picture.
   showEqualizer: boolean;
 };
 
-function bundledImage(name: string): PlayerBackgroundImage {
+function bundledImage(name: string, width = 768): PlayerBackgroundImage {
   const src = `/player-backgrounds/${name}.webp`;
   const thumbnailSrc = `/player-backgrounds/${name}-192.webp`;
-  return { src, srcSet: `${thumbnailSrc} 192w, ${src} 768w`, thumbnailSrc };
+  return { src, srcSet: `${thumbnailSrc} 192w, ${src} ${width}w`, thumbnailSrc };
 }
 
 export const BUNDLED_PLAYER_BACKGROUNDS: readonly PlayerBackground[] = [
@@ -80,13 +84,20 @@ export const BUNDLED_PLAYER_BACKGROUNDS: readonly PlayerBackground[] = [
     image: bundledImage("geometric"),
     showEqualizer: true,
   },
+  {
+    id: "bundled:reciter-video",
+    titles: { ru: "Чтец", en: "Reciter", tr: "Kâri", ar: "القارئ" },
+    image: bundledImage("reciter-hood", 720),
+    videoSrc: "/player-backgrounds/reciter-hood.mp4",
+    showEqualizer: true,
+  },
 ];
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function safeImageUrl(value: unknown): string | null {
+function safeMediaUrl(value: unknown): string | null {
   const url = text(value);
   if (url.startsWith("/") && !url.startsWith("//")) return url;
   try {
@@ -108,7 +119,9 @@ export function parsePlayerBackgrounds(payload: unknown): PlayerBackground[] {
     if (!raw || typeof raw !== "object") continue;
     const item = raw as Record<string, unknown>;
     const id = text(item.id).toLowerCase();
-    const imageUrl = safeImageUrl(item.image_url);
+    const imageUrl = safeMediaUrl(item.image_url);
+    // An unsafe video is dropped and the picture stays, as in the app.
+    const videoUrl = safeMediaUrl(item.video_url);
     const english = text(item.title_en);
     if (!UUID_PATTERN.test(id) || !imageUrl || !english || seen.has(id)) continue;
     seen.add(id);
@@ -122,6 +135,7 @@ export function parsePlayerBackgrounds(payload: unknown): PlayerBackground[] {
           tr: text(item.title_tr) || english,
         },
         image: { src: imageUrl, thumbnailSrc: imageUrl },
+        ...(videoUrl ? { videoSrc: videoUrl } : {}),
         showEqualizer: item.show_equalizer !== false,
       },
       sortOrder: typeof item.sort_order === "number" ? item.sort_order : 0,

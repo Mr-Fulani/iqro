@@ -64,7 +64,7 @@ function contrast(foreground: number[], background: number[]): number {
   return (lighter! + 0.05) / (darker! + 0.05);
 }
 
-test("bundled backgrounds match the app and ship their WebP files", () => {
+test("bundled backgrounds match the app and ship their WebP and video files", () => {
   assert.deepEqual(
     BUNDLED_PLAYER_BACKGROUNDS.map((item) => item.id),
     [
@@ -73,16 +73,23 @@ test("bundled backgrounds match the app and ship their WebP files", () => {
       "bundled:sea-dawn",
       "bundled:palm-oasis",
       "bundled:geometric",
+      "bundled:reciter-video",
     ],
   );
   assert.equal(BUNDLED_PLAYER_BACKGROUNDS[0]!.image, null);
   for (const background of BUNDLED_PLAYER_BACKGROUNDS) {
     if (!background.image) continue;
-    for (const path of [background.image.src, background.image.thumbnailSrc]) {
+    const files = [background.image.src, background.image.thumbnailSrc];
+    if (background.videoSrc) files.push(background.videoSrc);
+    for (const path of files) {
       assert.ok(existsSync(new URL(`../public${path}`, import.meta.url)), path);
     }
-    assert.match(background.image.srcSet ?? "", /-192\.webp 192w, .+\.webp 768w$/);
+    assert.match(background.image.srcSet ?? "", /-192\.webp 192w, .+\.webp (?:768|720)w$/);
   }
+  assert.deepEqual(
+    BUNDLED_PLAYER_BACKGROUNDS.filter((background) => background.videoSrc).map((background) => background.videoSrc),
+    ["/player-backgrounds/reciter-hood.mp4"],
+  );
 });
 
 test("admin backgrounds are validated, sorted and namespaced", () => {
@@ -108,6 +115,30 @@ test("admin backgrounds are validated, sorted and namespaced", () => {
     thumbnailSrc: "https://cdn.example.test/audio/player-backgrounds/abc.webp",
   });
   assert.deepEqual(parsePlayerBackgrounds({ results: [first] }), []);
+});
+
+test("an admin video is kept only from a safe URL and its picture stays the poster", () => {
+  const parsed = parsePlayerBackgrounds([
+    payload({ video_url: "https://cdn.example.test/audio/player-backgrounds/abc.mp4" }),
+    payload({ id: "019a0000-0000-7000-8000-000000000002", video_url: "/media/loop.webm", sort_order: 11 }),
+    payload({ id: "019a0000-0000-7000-8000-000000000003", video_url: null, sort_order: 12 }),
+    payload({ id: "019a0000-0000-7000-8000-000000000004", video_url: "javascript:alert(1)", sort_order: 13 }),
+    payload({ id: "019a0000-0000-7000-8000-000000000005", video_url: "//evil.test/x.mp4", sort_order: 14 }),
+    payload({ id: "019a0000-0000-7000-8000-000000000006", video_url: "https://user:pw@cdn.example.test/x.mp4", sort_order: 15 }),
+  ]);
+
+  assert.deepEqual(parsed.map((item) => item.videoSrc), [
+    "https://cdn.example.test/audio/player-backgrounds/abc.mp4",
+    "/media/loop.webm",
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ]);
+  for (const background of parsed) {
+    assert.equal(background.image?.src, "https://cdn.example.test/audio/player-backgrounds/abc.webp");
+  }
+  assert.equal("videoSrc" in parsed[2]!, false);
 });
 
 test("sound bars stay on unless the admin switched them off", () => {
