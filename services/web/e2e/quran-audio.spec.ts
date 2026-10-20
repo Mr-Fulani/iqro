@@ -420,6 +420,13 @@ async function installApiMocks(page: Page, nativeMedia = false) {
         queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
       },
     });
+    // Setting src still runs the browser's own loading on the empty mocked files;
+    // its reset and decode error are not part of the stubbed playback above.
+    for (const type of ["emptied", "error"]) {
+      window.addEventListener(type, (event) => {
+        if (event.target instanceof HTMLMediaElement) event.stopImmediatePropagation();
+      }, true);
+    }
   }, nativeMedia);
 
   await page.route("https://audio.example.test/**", (route) =>
@@ -952,6 +959,90 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await duaButton.click();
   await expect(duaButton).toHaveAttribute("aria-pressed", "true");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
+});
+
+test("expanded player sound bars sway while the recitation plays and fade out otherwise", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+  const player = page.getByTestId("global-audio-player");
+  const audio = player.locator("audio");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  // The bars belong to the expanded player only.
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+
+  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+  const equalizer = player.getByTestId("player-equalizer");
+  const playStates = () => equalizer.evaluate((element) =>
+    [...new Set(element.getAnimations({ subtree: true }).map((animation) => animation.playState))]);
+  await expect.poll(() => equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length))
+    .toBe(9);
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+
+  // As in the app: a 400 ms fade on pause, then the sway stops.
+  await audio.evaluate((element) => (element as HTMLAudioElement).pause());
+  await expect(equalizer).toHaveCSS("transition-duration", "0.4s");
+  await expect(equalizer).toHaveCSS("opacity", "0");
+  await expect.poll(playStates).toEqual(["paused"]);
+
+  await audio.evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("waiting")));
+  await expect(equalizer).toHaveCSS("opacity", "0");
+  await expect.poll(playStates).toEqual(["paused"]);
+  await audio.evaluate((element) => element.dispatchEvent(new Event("playing")));
+  await expect(equalizer).toHaveCSS("opacity", "1");
+  await expect.poll(playStates).toEqual(["running"]);
+
+  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await expect(player.getByTestId("player-equalizer")).toHaveCount(0);
+});
+
+test.describe("sound bars with native media", () => {
+  test.use({ nativeMedia: true });
+
+  test("sound bars fade out when the next surah's file fails to load", async ({ page }) => {
+    // The first surah is a real, decodable WAV; the second one is missing. Switching
+    // calls load(), which drops the pending pause event, and the broken file never plays.
+    const samples = 8_000 * 30;
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(8_000, 24); wav.writeUInt32LE(16_000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+    wav.write("data", 36); wav.writeUInt32LE(samples * 2, 40);
+    await page.route("https://audio.example.test/**", (route) => {
+      if (route.request().url() === tracks[1].asset.url) return route.fulfill({ status: 404, body: "" });
+      const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? "");
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2] ? Math.min(Number(range[2]), wav.length - 1) : wav.length - 1;
+      return route.fulfill({ status: range ? 206 : 200, contentType: "audio/wav",
+        headers: { "Accept-Ranges": "bytes", ...(range ? { "Content-Range": `bytes ${start}-${end}/${wav.length}` } : {}) },
+        body: wav.subarray(start, end + 1) });
+    });
+    await page.goto("/audio");
+    await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+
+    const player = page.getByTestId("global-audio-player");
+    const audio = player.locator("audio");
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).paused)).toBe(false);
+    await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
+    const equalizer = player.getByTestId("player-equalizer");
+    const playStates = () => equalizer.evaluate((element) =>
+      [...new Set(element.getAnimations({ subtree: true }).map((animation) => animation.playState))]);
+    await expect(equalizer).toHaveCSS("opacity", "1");
+    await expect.poll(playStates).toEqual(["running"]);
+
+    // The expanded player covers the list, so the click goes to the button directly.
+    await page.locator(".track-row").nth(1).getByRole("button", { name: "Слушать", exact: true })
+      .dispatchEvent("click");
+    await expect(audio).toHaveAttribute("src", tracks[1].asset.url);
+    await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).error?.code)).toBe(4);
+    await expect(audio).toHaveJSProperty("paused", true);
+    await expect(equalizer).toHaveCSS("opacity", "0");
+    await expect.poll(playStates).toEqual(["paused"]);
+  });
 });
 
 test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
