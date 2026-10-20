@@ -1698,6 +1698,12 @@ test("without Web Share the Mushaf ayah picture downloads and the link is copied
     });
   });
   await page.goto("/ru/quran?surah=6");
+  // Linux has neither Times New Roman nor Arial, the local() metric fallbacks
+  // next/font lists after Amiri and Inter; the card must not depend on them.
+  await page.addStyleTag({
+    content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
+      html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
+  });
   await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
   await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
@@ -1713,6 +1719,28 @@ test("without Web Share the Mushaf ayah picture downloads and the link is copied
   expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
 
+  await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))
+    .toBe(new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href);
+});
+
+test("an ayah picture that cannot be drawn is reported and the link still copies", async ({ page }) => {
+  await page.addInitScript(() => {
+    const target = window as unknown as { copiedLink?: string };
+    HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback) { callback(null); };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { target.copiedLink = text; } },
+    });
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
+  await expect(dialog.getByRole("img")).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: "Скачать картинку" })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
   await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))

@@ -110,10 +110,28 @@ function drawBlock(
   lines.forEach((line, index) => context.fillText(line, x, top + lineHeight * (index + 0.5)));
 }
 
+// The card waits this long for its fonts and the seal, then draws with what
+// has arrived, so a slow network never leaves the dialog preparing.
+const ASSET_WAIT_MS = 4000;
+
+function delay(ms: number): Promise<null> {
+  return new Promise((resolve) => setTimeout(() => resolve(null), ms));
+}
+
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   const image = new Image();
   image.src = url;
-  return image.decode().then(() => image, () => null);
+  return Promise.race([image.decode().then(() => image, () => null), delay(ASSET_WAIT_MS)]);
+}
+
+// Fetches the faces, and only the unicode ranges, the card draws. next/font
+// follows each web font with a local() metric fallback, such as Times New
+// Roman after Amiri; where that system font is missing, as on Linux, loading
+// the whole list rejects. So each family loads on its own and may fail.
+function loadFonts(requests: [style: string, families: string, text: string][]): Promise<unknown> {
+  const loads = requests.flatMap(([style, families, text]) =>
+    families.split(",").map((family) => document.fonts.load(`${style} ${family.trim()}`, text)));
+  return Promise.race([Promise.allSettled(loads), delay(ASSET_WAIT_MS)]);
 }
 
 /** Draws the card and returns it as a PNG. */
@@ -131,10 +149,11 @@ export async function renderShareCard(
   const sample = `${content.title} ${content.translation} ${content.reference} ${SITE}`;
   const [logo] = await Promise.all([
     loadImage(logoUrl),
-    // Fetch the faces, and only the unicode ranges, the card actually draws.
-    document.fonts.load(fontFaces[0], content.arabic),
-    document.fonts.load(fontFaces[1], sample),
-    document.fonts.load(fontFaces[2], sample),
+    loadFonts([
+      [`${size}px`, fonts.arabic, content.arabic],
+      ["600 17px", fonts.text, sample],
+      ["15px", fonts.text, sample],
+    ]),
   ]);
 
   const canvas = document.createElement("canvas");
