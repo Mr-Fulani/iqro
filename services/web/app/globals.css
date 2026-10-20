@@ -3330,11 +3330,13 @@ input:focus, select:focus, textarea:focus {
 [data-highlight="pink"] { --ayah-highlight: 240, 98, 146; }
 [data-highlight="lavender"] { --ayah-highlight: 179, 157, 219; }
 
-.qf-mushaf-ayah-fragment[data-highlight]:not(.is-selected):not(.is-playing) {
+/* :where() keeps these at single-class weight, so selection, playback, hover,
+   focus and navigation-target states declared earlier still win. */
+.qf-mushaf-ayah-fragment:where([data-highlight]) {
   background: rgba(var(--ayah-highlight), 0.38);
 }
 
-.ayah-card[data-highlight]:not(.is-audio-active) {
+.ayah-card:where([data-highlight]) {
   border-color: rgba(var(--ayah-highlight), 0.9);
   background: rgba(var(--ayah-highlight), 0.14);
 }

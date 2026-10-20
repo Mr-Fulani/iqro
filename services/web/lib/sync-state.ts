@@ -115,20 +115,39 @@ export function clearSyncState(userId: string): void {
   window.dispatchEvent(new CustomEvent(SYNC_STATE_EVENT, { detail: { userId } }));
 }
 
+// Operations of the push request that is under way in this tab. The server may
+// accept them, so they are never rewritten or dropped; later intents for the
+// same entity queue behind them instead.
+const inFlightOperationIds = new Set<string>();
+
+export function markSyncOperationsInFlight(operationIds: string[], inFlight: boolean): void {
+  for (const operationId of operationIds) {
+    if (inFlight) inFlightOperationIds.add(operationId);
+    else inFlightOperationIds.delete(operationId);
+  }
+}
+
 export function enqueueSyncOperation(userId: string, operation: SyncOperation): void {
   const state = readState(userId);
-  const existingIndex = state.outbox.findIndex(
-    (candidate) =>
-      candidate.entity_type === operation.entity_type &&
-      candidate.entity_id === operation.entity_id,
+  const sameEntity = (candidate: SyncOperation) =>
+    candidate.entity_type === operation.entity_type &&
+    candidate.entity_id === operation.entity_id;
+  const sentEarlier = state.outbox.some(
+    (candidate) => sameEntity(candidate) && inFlightOperationIds.has(candidate.operation_id),
   );
+  let existingIndex = -1;
+  state.outbox.forEach((candidate, index) => {
+    if (sameEntity(candidate) && !inFlightOperationIds.has(candidate.operation_id)) {
+      existingIndex = index;
+    }
+  });
 
   if (existingIndex < 0) {
     state.outbox.push(operation);
   } else {
     const existing = state.outbox[existingIndex];
     if (existing.action === "delete") return;
-    if (existing.base_revision === 0 && operation.action === "delete") {
+    if (existing.base_revision === 0 && operation.action === "delete" && !sentEarlier) {
       state.outbox.splice(existingIndex, 1);
     } else {
       state.outbox[existingIndex] = {
@@ -142,6 +161,40 @@ export function enqueueSyncOperation(userId: string, operation: SyncOperation): 
     }
   }
   writeState(userId, state);
+}
+
+/** Points queued operations of an entity at the id and revision the server now has. */
+export function retargetQueuedOperations(
+  userId: string,
+  entityType: SyncEntityType,
+  fromEntityId: string,
+  toEntityId: string,
+  revision: number,
+): void {
+  const state = readState(userId);
+  let changed = false;
+  state.outbox = state.outbox.map((operation) => {
+    if (
+      operation.entity_type !== entityType ||
+      operation.entity_id !== fromEntityId ||
+      inFlightOperationIds.has(operation.operation_id)
+    ) {
+      return operation;
+    }
+    changed = true;
+    return { ...operation, entity_id: toEntityId, base_revision: revision };
+  });
+  if (changed) writeState(userId, state);
+}
+
+export function hasQueuedSyncOperation(
+  userId: string,
+  entityType: SyncEntityType,
+  entityId: string,
+): boolean {
+  return readState(userId).outbox.some(
+    (operation) => operation.entity_type === entityType && operation.entity_id === entityId,
+  );
 }
 
 export function replaceSyncOperation(

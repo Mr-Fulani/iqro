@@ -50,7 +50,11 @@ import {
   type PrayerReadingPrayer,
 } from "../lib/api";
 import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
-import { indexAyahAnnotations, type AyahHighlightColorKey } from "../lib/ayah-annotations";
+import {
+  indexAyahAnnotations,
+  normalizeAyahHighlightColor,
+  type AyahHighlightColorKey,
+} from "../lib/ayah-annotations";
 import { SYNC_STATE_EVENT } from "../lib/sync-state";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -526,6 +530,7 @@ function QuranContent() {
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<AyahAnnotation[]>([]);
   const [annotationAyahKey, setAnnotationAyahKey] = useState<string | null>(null);
+  const [annotationsReady, setAnnotationsReady] = useState(false);
 
   const queueReadingPlace = useCallback((candidate: Omit<ReadingPlaceCandidate, "editionCode" | "requestId">) => {
     if (viewMode !== "mushaf" && candidate.sourceId === undefined) {
@@ -919,20 +924,27 @@ function QuranContent() {
   useEffect(() => {
     if (authLoading || !sessionUserId) {
       setAnnotations([]);
+      setAnnotationsReady(!authLoading);
       return;
     }
+    let cancelled = false;
     const refresh = (event?: Event) => {
       const userId = (event as CustomEvent<{ userId?: string }> | undefined)?.detail?.userId;
       if (!userId || userId === sessionUserId) setAnnotations(api.getAyahAnnotations());
     };
-    const sync = () => void api.syncNow().catch(() => undefined);
+    const sync = () => api.syncNow().catch(() => undefined);
     refresh();
-    sync();
+    setAnnotationsReady(false);
+    void sync().then(() => {
+      if (!cancelled) setAnnotationsReady(true);
+    });
     window.addEventListener(SYNC_STATE_EVENT, refresh);
-    window.addEventListener("online", sync);
+    const syncOnline = () => void sync();
+    window.addEventListener("online", syncOnline);
     return () => {
+      cancelled = true;
       window.removeEventListener(SYNC_STATE_EVENT, refresh);
-      window.removeEventListener("online", sync);
+      window.removeEventListener("online", syncOnline);
     };
   }, [authLoading, sessionUserId]);
 
@@ -945,6 +957,17 @@ function QuranContent() {
       Object.entries(ayahAnnotations).map(([key, annotation]) => [key, annotation.color_key]),
     ),
     [ayahAnnotations],
+  );
+  // Spoken state of a highlighted ayah, so the highlight is not conveyed by color alone.
+  const ayahAnnotationLabels = useMemo(
+    () => Object.fromEntries(
+      Object.entries(ayahAnnotations).map(([key, annotation]) => {
+        const color = t(`annotation.color.${normalizeAyahHighlightColor(annotation.color_key)}`);
+        const highlighted = t("annotation.highlighted", { color });
+        return [key, annotation.note.trim() ? `${highlighted}, ${t("annotation.hasNote")}` : highlighted];
+      }),
+    ),
+    [ayahAnnotations, t],
   );
 
   // Load Surahs when edition changes
@@ -2068,7 +2091,7 @@ function QuranContent() {
                             className={`btn btn-sm ayah-icon-button${annotation ? " is-active" : ""}`}
                             type="button"
                             onClick={() => setAnnotationAyahKey(ayahKey)}
-                            aria-label={`${t("annotation.action")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            aria-label={`${t("annotation.action")}: ${t("common.ayah", { ayah: ayahKey })}${annotation ? ` · ${ayahAnnotationLabels[ayahKey]}` : ""}`}
                             title={t("annotation.action")}
                             aria-haspopup="dialog"
                           >
@@ -2198,6 +2221,7 @@ function QuranContent() {
                     selectedAyahKey={selectedMushafAyah}
                     playingAyahKey={playingMushafAyah}
                     highlightColors={ayahHighlightColors}
+                    annotationLabels={ayahAnnotationLabels}
                     onSelectAyah={handleSelectMushafAyah}
                   />
                 </MushafPageTurn>
@@ -2215,6 +2239,9 @@ function QuranContent() {
                 type="button"
                 onClick={() => setAnnotationAyahKey(selectedMushafAyah)}
                 aria-haspopup="dialog"
+                aria-label={ayahAnnotationLabels[selectedMushafAyah]
+                  ? `${t("annotation.action")} · ${ayahAnnotationLabels[selectedMushafAyah]}`
+                  : undefined}
               >
                 <span aria-hidden="true">✎ </span>{t("annotation.action")}
               </button>
@@ -2317,6 +2344,7 @@ function QuranContent() {
           key={annotationAyahKey}
           ayahKey={annotationAyahKey}
           annotation={ayahAnnotations[annotationAyahKey]}
+          ready={annotationsReady}
           onSave={(colorKey, note) => handleSaveAnnotation(annotationAyahKey, colorKey, note)}
           onRemove={() => handleRemoveAnnotation(annotationAyahKey)}
           onClose={() => setAnnotationAyahKey(null)}

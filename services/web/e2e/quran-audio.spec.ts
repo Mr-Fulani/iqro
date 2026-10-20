@@ -1502,6 +1502,118 @@ test("ayah notes and highlights sync with the app in Mushaf, text and notes view
   await expect(notes).toHaveAttribute("href", "/ru/quran?surah=6&ayah=1");
 });
 
+test("a note from the app that arrives while the dialog is open is kept, not overwritten", async ({ page }) => {
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: annotationSession("00000000-0000-7000-8000-000000000751") }));
+  const fromApp = {
+    id: "01992d87-6c00-7000-8000-000000000752",
+    entity_type: "ayah_annotation",
+    edition_code: "madani-hafs",
+    page_number: 128,
+    ayah: { id: ayahs[0].id, surah_number: 6, ayah_number: 1 },
+    color_key: "pink",
+    note: "Из приложения",
+    client_updated_at: "2026-10-19T10:00:00Z",
+    revision: 3,
+    deleted_at: null,
+    device_id: null,
+    created_at: "2026-10-19T10:00:00Z",
+    updated_at: "2026-10-19T10:00:00Z",
+  };
+  let releasePull!: () => void;
+  const pullReleased = new Promise<void>((resolve) => { releasePull = resolve; });
+  let pulls = 0;
+  const pushed: Record<string, unknown>[] = [];
+  await page.route("**/api/v1/sync/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/sync/pull") {
+      pulls += 1;
+      if (pulls === 1) await pullReleased;
+      return route.fulfill({
+        json: {
+          mode: "incremental",
+          changes: pulls === 1
+            ? [{
+                cursor: 5,
+                entity_type: "ayah_annotation",
+                entity_id: fromApp.id,
+                action: "upsert",
+                revision: 3,
+                entity: fromApp,
+                server_updated_at: fromApp.updated_at,
+              }]
+            : [],
+          next_cursor: 5,
+          has_more: false,
+        },
+      });
+    }
+    const { operations } = route.request().postDataJSON() as { operations: Record<string, unknown>[] };
+    pushed.push(...operations);
+    return route.fulfill({
+      json: {
+        results: operations.map((operation) => ({
+          operation_id: operation.operation_id,
+          outcome: "accepted",
+          replayed: false,
+          entity: { ...fromApp, ...(operation.payload as object), revision: 4, ayah: fromApp.ayah },
+          cursor: 6,
+        })),
+        cursor: 6,
+      },
+    });
+  });
+
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  const opener = page.getByRole("button", { name: /^Заметка и выделение: Аят 6:1/ });
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
+  const save = dialog.getByRole("button", { name: "Загрузка…" });
+  await expect(save).toBeDisabled();
+  await expect(dialog.getByLabel("Ваша заметка")).toHaveValue("");
+
+  releasePull();
+  await expect(dialog.getByLabel("Ваша заметка")).toHaveValue("Из приложения");
+  await expect(dialog.getByRole("radio", { name: "Розовый" })).toBeChecked();
+  await dialog.getByText("Жёлтый", { exact: true }).click();
+  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(opener).toHaveAccessibleName("Заметка и выделение: Аят 6:1 · Выделено: Жёлтый, есть заметка");
+  expect(pushed).toEqual([
+    expect.objectContaining({
+      entity_type: "ayah_annotation",
+      entity_id: fromApp.id,
+      action: "upsert",
+      base_revision: 3,
+      payload: expect.objectContaining({ color_key: "yellow", note: "Из приложения" }),
+    }),
+  ]);
+});
+
+test("a server error after the note is queued reports it as saved for a later sync", async ({ page }) => {
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: annotationSession("00000000-0000-7000-8000-000000000761") }));
+  await page.route("**/api/v1/sync/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/sync/pull") {
+      return route.fulfill({ json: { mode: "incremental", changes: [], next_cursor: 0, has_more: false } });
+    }
+    return route.fulfill({ status: 503, json: { detail: "Service unavailable." } });
+  });
+
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: /^Заметка и выделение: Аят 6:1/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
+  await dialog.getByLabel("Ваша заметка").fill("Сохранить позже");
+  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Сохранено на устройстве. Синхронизация завершится позже.")).toBeVisible();
+  await expect(page.locator("#quran-ayah-6-1")).toHaveAttribute("data-highlight", "lime");
+});
+
 test("an ayah note saved offline stays highlighted and waits in the outbox", async ({ page }) => {
   const userId = "00000000-0000-7000-8000-000000000741";
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ json: annotationSession(userId) }));

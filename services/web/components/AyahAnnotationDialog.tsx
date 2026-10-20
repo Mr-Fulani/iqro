@@ -16,6 +16,8 @@ const NOTE_MAX_LENGTH = 2000;
 type AyahAnnotationDialogProps = {
   ayahKey: string;
   annotation: AyahAnnotation | undefined;
+  /** False until the reader's sync settles; saving earlier could overwrite or fork a record. */
+  ready: boolean;
   onSave: (colorKey: AyahHighlightColorKey, note: string) => Promise<string | null>;
   onRemove: () => Promise<string | null>;
   onClose: () => void;
@@ -25,10 +27,13 @@ type AyahAnnotationDialogProps = {
  * Highlight and note of one ayah, the web counterpart of the app's ayah sheet:
  * a highlight may carry a note, and removing the highlight removes the note.
  * The callbacks resolve to an error message, or null once the dialog may close.
+ * Until the user edits something, the form follows the annotation as sync
+ * delivers it, so a note written in the app is never replaced by an empty one.
  */
 export default function AyahAnnotationDialog({
   ayahKey,
   annotation,
+  ready,
   onSave,
   onRemove,
   onClose,
@@ -41,6 +46,14 @@ export default function AyahAnnotationDialog({
     normalizeAyahHighlightColor(annotation?.color_key),
   );
   const [note, setNote] = useState(annotation?.note ?? "");
+  const source = annotation ? `${annotation.id}:${annotation.revision}:${annotation.updated_at}` : "";
+  const [shownSource, setShownSource] = useState(source);
+  const [edited, setEdited] = useState(false);
+  if (source !== shownSource && !edited) {
+    setShownSource(source);
+    setColorKey(normalizeAyahHighlightColor(annotation?.color_key));
+    setNote(annotation?.note ?? "");
+  }
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +69,8 @@ export default function AyahAnnotationDialog({
     const failure = await action();
     setBusy(false);
     if (failure) setError(failure);
-    else onClose();
+    // Closing the dialog itself returns focus to the control that opened it.
+    else dialog.current?.close();
   };
 
   const remove = () => {
@@ -102,7 +116,10 @@ export default function AyahAnnotationDialog({
                 name="ayah-highlight-color"
                 value={key}
                 checked={colorKey === key}
-                onChange={() => setColorKey(key)}
+                onChange={() => {
+                  setEdited(true);
+                  setColorKey(key);
+                }}
               />
               <span className="ayah-annotation-swatch" aria-hidden="true" />
               <span>{t(`annotation.color.${key}`)}</span>
@@ -118,7 +135,10 @@ export default function AyahAnnotationDialog({
             maxLength={NOTE_MAX_LENGTH}
             value={note}
             placeholder={t("annotation.noteHint")}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => {
+              setEdited(true);
+              setNote(event.target.value);
+            }}
             disabled={busy}
             dir="auto"
           />
@@ -131,15 +151,15 @@ export default function AyahAnnotationDialog({
 
         <div className="ayah-annotation-actions">
           {annotation && (
-            <button type="button" className="btn btn-secondary" onClick={remove} disabled={busy}>
+            <button type="button" className="btn btn-secondary" onClick={remove} disabled={busy || !ready}>
               {confirmRemove ? t("common.delete") : t("annotation.removeHighlight")}
             </button>
           )}
           <Link href={localizedPath(locale, "/notes")} className="btn btn-secondary">
             {t("annotation.allNotes")}
           </Link>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? t("common.saving") : t("common.save")}
+          <button type="submit" className="btn btn-primary" disabled={busy || !ready}>
+            {busy ? t("common.saving") : ready ? t("common.save") : t("common.loading")}
           </button>
         </div>
       </form>

@@ -11,8 +11,12 @@ import {
   applyRemoteAyahAnnotations,
   enqueueSyncOperation,
   getAyahAnnotations,
+  getPendingSyncOperations,
   isAyahAnnotationCacheSeeded,
+  markSyncOperationsInFlight,
+  removeSyncOperations,
   replaceAyahAnnotationsFromSnapshot,
+  retargetQueuedOperations,
   storeLocalAyahAnnotation,
 } from "./sync-state.ts";
 
@@ -112,4 +116,59 @@ test("a snapshot seeds the cache and keeps only queued local annotations", () =>
   ]);
   assert.deepEqual(getAyahAnnotations(userId).map((item) => item.id), ["fresh"]);
   assert.equal(isAyahAnnotationCacheSeeded(userId), true);
+});
+
+const entityId = "01992d87-6c00-7000-8000-000000000903";
+const createOperation = {
+  operation_id: "01992d87-6c00-7000-8000-000000000b01",
+  entity_type: "ayah_annotation" as const,
+  entity_id: entityId,
+  action: "upsert" as const,
+  base_revision: 0,
+  client_updated_at: "2026-10-20T10:00:00Z",
+  payload: { edition_code: "madani-hafs", surah_number: 2, ayah_number: 255, note: "new" },
+};
+const deleteOperation = {
+  ...createOperation,
+  operation_id: "01992d87-6c00-7000-8000-000000000b02",
+  action: "delete" as const,
+  payload: {},
+};
+
+test("deleting an unsent annotation drops its create", () => {
+  store.clear();
+  enqueueSyncOperation(userId, createOperation);
+  enqueueSyncOperation(userId, deleteOperation);
+  assert.deepEqual(getPendingSyncOperations(userId), []);
+});
+
+test("a delete queued while the create is being pushed waits behind it", () => {
+  store.clear();
+  enqueueSyncOperation(userId, createOperation);
+  markSyncOperationsInFlight([createOperation.operation_id], true);
+  enqueueSyncOperation(userId, deleteOperation);
+  assert.deepEqual(
+    getPendingSyncOperations(userId).map((operation) => [operation.operation_id, operation.action]),
+    [[createOperation.operation_id, "upsert"], [deleteOperation.operation_id, "delete"]],
+  );
+
+  // The server accepted the create as revision 1: the delete follows it.
+  markSyncOperationsInFlight([createOperation.operation_id], false);
+  removeSyncOperations(userId, [createOperation.operation_id]);
+  retargetQueuedOperations(userId, "ayah_annotation", entityId, entityId, 1);
+  assert.deepEqual(getPendingSyncOperations(userId), [{ ...deleteOperation, base_revision: 1 }]);
+});
+
+test("an edit made while the create is being pushed is not merged into it", () => {
+  store.clear();
+  enqueueSyncOperation(userId, createOperation);
+  markSyncOperationsInFlight([createOperation.operation_id], true);
+  const edit = {
+    ...createOperation,
+    operation_id: "01992d87-6c00-7000-8000-000000000b03",
+    payload: { ...createOperation.payload, note: "edited" },
+  };
+  enqueueSyncOperation(userId, edit);
+  markSyncOperationsInFlight([createOperation.operation_id], false);
+  assert.deepEqual(getPendingSyncOperations(userId), [createOperation, edit]);
 });

@@ -12,8 +12,10 @@ import {
   getPendingSyncOperations,
   getReadingPositionId,
   getSyncCursor,
+  hasQueuedSyncOperation,
   isAyahAnnotationCacheSeeded,
   markAyahAnnotationCacheSeeded,
+  markSyncOperationsInFlight,
   rebaseOutboxFromSnapshot,
   rekeyLocalAyahAnnotation,
   rememberReadingPositionId,
@@ -21,6 +23,7 @@ import {
   removeSyncOperations,
   replaceAyahAnnotationsFromSnapshot,
   replaceSyncOperation,
+  retargetQueuedOperations,
   setSyncCursor,
   storeLocalAyahAnnotation,
 } from "./sync-state";
@@ -2385,6 +2388,9 @@ export class ApiClient {
   }): Promise<AyahAnnotation> {
     const userId = this.session?.user.id;
     if (!userId) throw new Error(this.message("error.syncSession"));
+    // A sync under way may still be bringing this ayah's annotation from
+    // another device; reading the cache before it ends would fork the record.
+    await this.settleSync();
     const now = new Date().toISOString();
     const existing = this.liveAyahAnnotations(userId, data)[0];
     const colorKey = normalizeAyahHighlightColor(data.color_key);
@@ -2424,7 +2430,7 @@ export class ApiClient {
       },
     });
     storeLocalAyahAnnotation(userId, annotation);
-    await this.syncQueuedChange();
+    await this.syncQueuedChange([annotation.id]);
     return annotation;
   }
 
@@ -2436,6 +2442,7 @@ export class ApiClient {
   }): Promise<void> {
     const userId = this.session?.user.id;
     if (!userId) throw new Error(this.message("error.syncSession"));
+    await this.settleSync();
     const annotations = this.liveAyahAnnotations(userId, data);
     if (annotations.length === 0) return;
     const now = new Date().toISOString();
@@ -2451,7 +2458,7 @@ export class ApiClient {
       });
       removeLocalAyahAnnotation(userId, annotation.id);
     }
-    await this.syncQueuedChange();
+    await this.syncQueuedChange(annotations.map((annotation) => annotation.id));
   }
 
   private liveAyahAnnotations(
@@ -2469,13 +2476,29 @@ export class ApiClient {
       .sort((left, right) => (right.updated_at || "").localeCompare(left.updated_at || ""));
   }
 
-  private async syncQueuedChange(): Promise<void> {
+  /**
+   * The change is already stored and queued, so a failed sync never means a
+   * failed save: it is reported as waiting, or not at all once it was pushed
+   * and only a later step (such as the pull) failed.
+   */
+  private async syncQueuedChange(entityIds: string[]): Promise<void> {
     try {
       await this.syncNow();
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new OfflineMutationQueuedError(this.message("error.offlineQueued"));
+      const userId = this.session?.user.id;
+      const queued = Boolean(userId) && entityIds.some(
+        (entityId) => hasQueuedSyncOperation(userId!, "ayah_annotation", entityId),
+      );
+      if (!queued) return;
+      // fetch() rejects with a TypeError when the network is unreachable.
+      throw new OfflineMutationQueuedError(
+        this.message(error instanceof TypeError ? "error.offlineQueued" : "annotation.savedSyncLater"),
+      );
     }
+  }
+
+  private async settleSync(): Promise<void> {
+    await this.syncQueue.catch(() => undefined);
   }
 
   // Runs one sync at a time: the reader, the notes page and a save can all
@@ -2503,9 +2526,18 @@ export class ApiClient {
       for (let cycle = 0; cycle < 20; cycle += 1) {
         const operations = getPendingSyncOperations(userId).slice(0, 100);
         if (operations.length === 0) return;
-        const response = await this.syncPush(operations);
+        const operationIds = operations.map((operation) => operation.operation_id);
+        markSyncOperationsInFlight(operationIds, true);
+        let response: SyncPushResponse;
+        try {
+          response = await this.syncPush(operations);
+        } finally {
+          markSyncOperationsInFlight(operationIds, false);
+        }
         const terminalIds: string[] = [];
         const serverEntities: SyncEntity[] = [];
+        // Intents queued while this batch was in flight follow its outcome.
+        const retargets: Array<[SyncEntityType, string, string, number]> = [];
         let rebased = false;
 
         for (const result of response.results) {
@@ -2515,7 +2547,15 @@ export class ApiClient {
           if (!operation) continue;
           if (result.outcome === "accepted") {
             terminalIds.push(operation.operation_id);
-            if (result.entity) serverEntities.push(result.entity);
+            if (result.entity) {
+              serverEntities.push(result.entity);
+              retargets.push([
+                operation.entity_type,
+                operation.entity_id,
+                result.entity.id,
+                result.entity.revision,
+              ]);
+            }
             pushed += 1;
             if (result.entity?.entity_type === "reading_position") {
               rememberReadingPositionId(
@@ -2554,6 +2594,7 @@ export class ApiClient {
             if (operation.entity_type === "ayah_annotation") {
               rekeyLocalAyahAnnotation(userId, operation.entity_id, current.id, current.revision);
             }
+            retargets.push([operation.entity_type, operation.entity_id, current.id, current.revision]);
             attempts.set(replacement.operation_id, attempt);
             rebased = true;
           } else if (canRemap) {
@@ -2567,6 +2608,7 @@ export class ApiClient {
             if (operation.entity_type === "ayah_annotation") {
               rekeyLocalAyahAnnotation(userId, operation.entity_id, replacement.entity_id, 0);
             }
+            retargets.push([operation.entity_type, operation.entity_id, replacement.entity_id, 0]);
             attempts.set(replacement.operation_id, attempt);
             rebased = true;
           } else {
@@ -2581,6 +2623,9 @@ export class ApiClient {
         }
 
         removeSyncOperations(userId, terminalIds);
+        for (const [entityType, fromId, toId, revision] of retargets) {
+          retargetQueuedOperations(userId, entityType, fromId, toId, revision);
+        }
         applyRemoteAyahAnnotations(userId, serverEntities);
         if (!rebased && terminalIds.length === 0) return;
       }

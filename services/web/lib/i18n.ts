@@ -1229,6 +1229,13 @@ export const MESSAGES = {
   "annotation.noteSaved": message("Заметка сохранена", "Note saved", "تم حفظ الملاحظة", "Not kaydedildi"),
   "annotation.noteRemoved": message("Заметка удалена", "Note removed", "تم حذف الملاحظة", "Not silindi"),
   "annotation.loginError": message("Не удалось войти для сохранения заметки.", "Could not sign in to save the note.", "تعذر الدخول لحفظ الملاحظة.", "Notu kaydetmek için giriş yapılamadı."),
+  "annotation.hasNote": message("есть заметка", "has a note", "توجد ملاحظة", "not var"),
+  "annotation.savedSyncLater": message(
+    "Сохранено на устройстве. Синхронизация завершится позже.",
+    "Saved on this device. Sync will finish later.",
+    "حُفظ على هذا الجهاز. ستكتمل المزامنة لاحقًا.",
+    "Bu cihaza kaydedildi. Eşitleme daha sonra tamamlanacak.",
+  ),
   "annotation.allNotes": message("Все заметки", "All notes", "كل الملاحظات", "Tüm notlar"),
   "notes.title": message("Заметки", "Notes", "ملاحظات", "Notlar"),
   "notes.description": message(

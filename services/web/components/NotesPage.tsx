@@ -27,21 +27,26 @@ export default function NotesPage() {
     }
     let cancelled = false;
     const refresh = () => setAnnotations(api.getAyahAnnotations());
+    const sync = () => {
+      setSyncing(true);
+      setSyncFailed(false);
+      api
+        .syncNow()
+        .catch(() => {
+          if (!cancelled) setSyncFailed(true);
+        })
+        .finally(() => {
+          if (!cancelled) setSyncing(false);
+        });
+    };
     refresh();
-    setSyncing(true);
-    setSyncFailed(false);
-    api
-      .syncNow()
-      .catch(() => {
-        if (!cancelled) setSyncFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setSyncing(false);
-      });
+    sync();
     window.addEventListener(SYNC_STATE_EVENT, refresh);
+    window.addEventListener("online", sync);
     return () => {
       cancelled = true;
       window.removeEventListener(SYNC_STATE_EVENT, refresh);
+      window.removeEventListener("online", sync);
     };
   }, [authLoading, userId]);
 

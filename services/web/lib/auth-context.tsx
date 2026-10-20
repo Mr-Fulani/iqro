@@ -37,6 +37,20 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Tries to send queued changes before signing out clears this device's sync
+ * state. Signing out still goes ahead without a network: leaving the account's
+ * data (including note texts) on a shared computer is the worse outcome.
+ */
+async function pushPendingChanges(): Promise<void> {
+  if (api.getPendingSyncCount() === 0) return;
+  try {
+    await api.syncNow();
+  } catch {
+    // Offline or rejected: the queued changes are dropped with the local state.
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { locale, t } = useI18n();
   const pathname = usePathname();
@@ -163,12 +177,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
+      await pushPendingChanges();
       await api.logout();
     } catch {
       // Ignore network errors on logout
     } finally {
       clearPrayerLocationPreference(userId);
       clearReadingActivityQueue();
+      // The sync state holds note texts; do not leave them on a shared computer.
+      if (userId) clearSyncState(userId);
       setSession(null);
       setIsLoading(false);
     }
@@ -179,9 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
+      await pushPendingChanges();
       await api.logoutAll();
       clearPrayerLocationPreference(userId);
       clearReadingActivityQueue();
+      if (userId) clearSyncState(userId);
       setSession(null);
       return true;
     } catch (err) {
@@ -193,11 +212,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestAccountDeletion = useCallback(async (challengeId: string): Promise<boolean> => {
+    const userId = api.getSession()?.user.id;
     setIsLoading(true);
     setError(null);
     try {
       const next = await api.requestAccountDeletion(challengeId);
       clearReadingActivityQueue();
+      if (userId) clearSyncState(userId);
       sessionStorage.setItem(
         ACCOUNT_LIFECYCLE_NOTICE_KEY,
         t("auth.deletionScheduledNotice"),
