@@ -1,6 +1,6 @@
 "use client";
 
-// Loaded with next/dynamic only once the visitor acts on the page: this module pulls in three.js.
+// Loaded lazily only once the visitor acts on the page: this module pulls in three.js.
 import { useEffect, useEffectEvent, useState } from "react";
 
 import type { SalahSceneView } from "../lib/salah";
