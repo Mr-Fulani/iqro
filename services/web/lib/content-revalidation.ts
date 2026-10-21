@@ -11,6 +11,14 @@ const RECITER_ACTIONS = new Set(["created", "updated"]);
 const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
 const SALAH_ACTIONS = new Set(["published", "activated", "withdrawn"]);
+const ANNOUNCEMENT_ACTIONS = new Set([
+  "published",
+  "withdrawn",
+  "archived",
+  "scheduled",
+  "enabled",
+  "disabled",
+]);
 
 type QuranContentChange = {
   type: "quran.edition.changed";
@@ -38,6 +46,11 @@ type SocialProfilesChange = {
   action: string;
 };
 
+type AnnouncementsChange = {
+  type: "site.announcements.changed";
+  action: string;
+};
+
 type DuaContentChange = {
   type: "dua.collection.changed";
   action: string;
@@ -58,7 +71,8 @@ export type ContentChange =
   | ReciterContentChange
   | DuaContentChange
   | SalahCourseChange
-  | SocialProfilesChange;
+  | SocialProfilesChange
+  | AnnouncementsChange;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -122,6 +136,14 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as SocialProfilesChange;
   }
 
+  if (value.type === "site.announcements.changed") {
+    if (!hasExactKeys(value, ["type", "action"])) return null;
+    if (typeof value.action !== "string" || !ANNOUNCEMENT_ACTIONS.has(value.action)) {
+      return null;
+    }
+    return value as AnnouncementsChange;
+  }
+
   if (value.type === "dua.collection.changed") {
     if (!hasExactKeys(value, ["type", "action", "collection", "version"])) return null;
     if (
@@ -159,6 +181,12 @@ export function revalidateContentChange(change: ContentChange): void {
   if (change.type === "site.social_profiles.changed") {
     expireTag("site:social-profiles");
     revalidatePath("/", "layout");
+    return;
+  }
+
+  if (change.type === "site.announcements.changed") {
+    expireTag("site:announcements");
+    revalidatePath("/[locale]", "page");
     return;
   }
 
