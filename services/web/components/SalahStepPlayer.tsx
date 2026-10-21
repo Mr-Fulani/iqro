@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { preload } from "react-dom";
 
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
@@ -23,6 +23,8 @@ import {
   stepSlugFromLocation,
   writeSalahProgress,
 } from "../lib/salah";
+import { salahSceneSteps } from "../lib/salah-3d";
+import { type Salah3D, useSalah3D } from "./SalahStep3D";
 
 type Mode = "learn" | "practice";
 type Display = { mode: Mode; transliteration: boolean; translation: boolean };
@@ -115,6 +117,82 @@ function StepImage({ media, eager }: { media: SalahMedia; eager: boolean }) {
   );
 }
 
+/** The step's picture; on the current step also «Picture / 3D» and the 3D tools. */
+function StepVisual({
+  media,
+  eager,
+  three,
+  slot,
+}: {
+  media: SalahMedia;
+  eager: boolean;
+  three: Omit<Salah3D, "slot" | "stage"> | null;
+  slot?: Salah3D["slot"];
+}) {
+  const { formatNumber, t } = useI18n();
+  const shown = three?.shown ?? false;
+  return (
+    <figure className="salah-step-visual">
+      <div className="salah-step-frame">
+        <StepImage media={media} eager={eager} />
+        {three?.shown ? <div className="salah-3d-slot" ref={slot} data-testid="salah-3d" /> : null}
+        {three?.offered ? (
+          <div className="salah-visual-switch" role="group" aria-label={t("salah.visual")}>
+            <button type="button" aria-pressed={!shown} onClick={() => three.choose(false)}>
+              {t("salah.visualPicture")}
+            </button>
+            <button type="button" aria-pressed={shown} onClick={() => three.choose(true)}>
+              {t("salah.visual3d")}
+            </button>
+          </div>
+        ) : null}
+      </div>
+      {three?.shown ? (
+        <figcaption className="salah-3d-caption">
+          <span>{t("salah.schematic3d")}</span>
+          {three.ready ? (
+            <span className="salah-3d-tools">
+              <button
+                type="button"
+                className="dua-icon-action"
+                onClick={three.togglePlaying}
+                aria-label={three.playing ? t("salah.pause3d") : t("salah.play3d")}
+                title={three.playing ? t("salah.pause3d") : t("salah.play3d")}
+              >
+                <AudioIcon playing={three.playing} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary salah-3d-speed"
+                onClick={three.cycleSpeed}
+                aria-label={t("salah.speed3d", { speed: `${formatNumber(three.speed)}×` })}
+              >
+                {formatNumber(three.speed)}×
+              </button>
+              <button
+                type="button"
+                className="dua-icon-action salah-3d-reset"
+                onClick={three.resetView}
+                aria-label={t("salah.resetView3d")}
+                title={t("salah.resetView3d")}
+              >
+                <span aria-hidden="true">↺</span>
+              </button>
+            </span>
+          ) : (
+            <span role="status">{t("salah.loading3d")}</span>
+          )}
+        </figcaption>
+      ) : null}
+      {three?.notice ? (
+        <p className="salah-3d-notice" role="status">
+          {t("salah.unavailable3d")}
+        </p>
+      ) : null}
+    </figure>
+  );
+}
+
 export function SalahStepPlayer({
   bundle,
   nextLesson,
@@ -135,6 +213,8 @@ export function SalahStepPlayer({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const step = steps[index]!;
+  const sceneSteps = useMemo(() => salahSceneSteps(steps), [steps]);
+  const three = useSalah3D(sceneSteps[index] ?? null, step.slug);
   const practice = display.mode === "practice";
   const isLast = index === steps.length - 1;
 
@@ -384,7 +464,14 @@ export function SalahStepPlayer({
           const repeatTarget = stepRepeatTarget(item, formulas);
           return (
             <li key={item.slug} hidden={itemIndex !== index} className="salah-step" data-step={item.slug}>
-              {image ? <StepImage media={image} eager={itemIndex === index} /> : null}
+              {image ? (
+                <StepVisual
+                  media={image}
+                  eager={itemIndex === index}
+                  three={itemIndex === index ? three : null}
+                  slot={three.slot}
+                />
+              ) : null}
               <div className="salah-step-body">
                 <div className="salah-step-head">
                   <h2>{item.title}</h2>
@@ -406,6 +493,7 @@ export function SalahStepPlayer({
           );
         })}
       </ol>
+      {three.stage}
 
       <div className="salah-step-nav">
         <button type="button" className="btn btn-secondary" onClick={() => go(-1)} disabled={index === 0}>
