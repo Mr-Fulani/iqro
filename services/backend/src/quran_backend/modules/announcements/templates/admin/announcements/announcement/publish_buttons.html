@@ -1,0 +1,6 @@
+{% if publish_panel.show_publish %}<input type="submit" class="default" name="_publish" value="Сохранить и опубликовать">{% endif %}
+{% if publish_panel.show_religious_review %}<input type="submit" name="_religious_review" value="Религиозный текст проверен">{% endif %}
+{% if publish_panel.show_submit_review %}<input type="submit" name="_submit_review" value="Отправить владельцу на публикацию">{% endif %}
+{% if publish_panel.show_withdraw %}<input type="submit" name="_withdraw" value="Снять с публикации">{% endif %}
+{% if publish_panel.show_archive %}<input type="submit" name="_archive" value="В архив">{% endif %}
+{% if publish_panel.show_duplicate and original %}<input type="submit" name="_duplicate" value="Сделать копию-черновик">{% endif %}

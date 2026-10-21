@@ -244,7 +244,6 @@ def test_unfilled_languages_are_left_out_with_a_note() -> None:
             {"action_type": "external", "action_url": "https://example.com/pay"},
             "Внешняя ссылка: только HTTPS и только разрешённые сайты.",
         ),
-        ({"needs_religious_review": True}, "Нужна подпись проверяющего религиозные тексты."),
     ],
 )
 def test_channel_and_action_rules_block_publication(
@@ -303,6 +302,23 @@ def test_religious_review_is_signed_by_a_reviewer(owner: User) -> None:
 
     assert announcement.religious_reviewed_by == reviewer
     assert _publish(announcement, owner).status == AnnouncementStatus.PUBLISHED
+
+
+@pytest.mark.django_db
+def test_owner_confirms_the_religious_text_by_publishing(owner: User) -> None:
+    published = _publish(_announcement(needs_religious_review=True), owner)
+
+    assert published.status == AnnouncementStatus.PUBLISHED
+    assert published.religious_reviewed_by == owner
+    assert published.religious_reviewed_at == published.published_at
+
+
+@pytest.mark.django_db
+def test_editor_waits_for_a_religious_check(editor: User) -> None:
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        _publish(_announcement(needs_religious_review=True), editor)
+
+    assert error.value.problems == [announcement_services.RELIGIOUS_REVIEW_NEEDED]
 
 
 @pytest.mark.django_db
@@ -683,16 +699,60 @@ def test_admin_pages_show_language_tabs_preview_and_sign_off(
     listing = client.get("/admin/announcements/announcement/")
 
     assert add_page.status_code == 200
-    assert 'id="announcement-language-names"' in add_page.content.decode()
+    add_body = add_page.content.decode()
+    assert 'id="announcement-language-names"' in add_body
+    assert "Новое объявление" in add_body
+    assert add_body.count('name="_publish"') == 2
+    # Enter in a text field must save the draft, not publish it.
+    assert add_body.index('name="_continue"') < add_body.index('name="_publish"')
     draft_body = draft_page.content.decode()
-    assert "Подписать и опубликовать" in draft_body
-    assert "Готово к подписи." in draft_body
+    assert "Черновик" in draft_body
+    assert "Всё готово: нажмите «Сохранить и опубликовать»." in draft_body
     assert 'dir="rtl" lang="ar"' in draft_body
     assert "قارئ جديد" in draft_body
+    for confusing in ("подписать", "подписи", "подписал", "подписано", "подпись"):
+        assert confusing not in draft_body.lower()
     published_body = published_page.content.decode()
     assert "Снять с публикации" in published_body
-    assert "Подписать и опубликовать" not in published_body
+    assert 'name="_publish"' not in published_body
     assert listing.status_code == 200
+
+
+@pytest.mark.django_db
+def test_admin_publishes_straight_from_the_add_page(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    starts_at = timezone.localtime(timezone.now() - timedelta(minutes=5))
+    data = _form_data(starts_at=starts_at) | {
+        "translations-0-title": "Курс намаза обновлён",
+        "translations-0-summary": "Новые уроки и озвучка шагов.",
+        "_publish": "1",
+    }
+
+    response = client.post("/admin/announcements/announcement/add/", data, follow=True)
+
+    announcement = Announcement.objects.get()
+    assert response.redirect_chain[-1][0].endswith(f"/{announcement.pk}/change/")
+    assert announcement.status == AnnouncementStatus.PUBLISHED
+    assert announcement.audience_languages == ["ru"]
+    assert "Опубликовано. На сайте и в приложении появится в течение минуты." in (
+        response.content.decode()
+    )
+
+
+@pytest.mark.django_db
+def test_editor_sends_owner_only_announcements_to_the_owner(editor: User) -> None:
+    client = Client()
+    client.force_login(editor)
+    fundraising = _announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False)
+
+    body = client.get(
+        f"/admin/announcements/announcement/{fundraising.pk}/change/"
+    ).content.decode()
+
+    assert 'name="_publish"' not in body
+    assert "Отправить владельцу на публикацию" in body
+    assert "публикует только владелец" in body
 
 
 @pytest.mark.django_db
@@ -708,26 +768,34 @@ def test_admin_publish_button_reports_problems(owner: User) -> None:
     )
 
     assert response.status_code == 200
-    assert "Заполните текст хотя бы на одном языке." in response.content.decode()
+    body = response.content.decode()
+    assert "Объявление сохранено, но не опубликовано. Что осталось:" in body
+    assert "Заполните текст хотя бы на одном языке." in body
     announcement.refresh_from_db()
     assert announcement.status == AnnouncementStatus.DRAFT
 
 
 def _change_form_data(announcement: Announcement) -> dict[str, Any]:
-    starts_at = timezone.localtime(announcement.starts_at)
-    data: dict[str, Any] = {
-        "kind": announcement.kind,
-        "priority": announcement.priority,
+    data = _form_data(starts_at=timezone.localtime(announcement.starts_at))
+    for index in range(4):
+        data[f"translations-{index}-announcement"] = str(announcement.pk)
+    return data
+
+
+def _form_data(*, starts_at: Any) -> dict[str, Any]:
+    return {
+        "kind": "general",
+        "priority": "normal",
         "starts_at_0": starts_at.strftime("%Y-%m-%d"),
         "starts_at_1": starts_at.strftime("%H:%M:%S"),
-        "action_type": announcement.action_type,
+        "action_type": "none",
         "audience_platforms": ["web", "android", "ios"],
-        "audience_auth": announcement.audience_auth,
+        "audience_auth": "all",
         "channel_bubble": "on",
         "channel_home_card": "on",
-        "bubble_frequency": announcement.bubble_frequency,
-        "bubble_max_impressions": announcement.bubble_max_impressions,
-        "bubble_icon": announcement.bubble_icon,
+        "bubble_frequency": "daily",
+        "bubble_max_impressions": "5",
+        "bubble_icon": "auto",
         "translations-TOTAL_FORMS": "4",
         "translations-INITIAL_FORMS": "0",
         "translations-MIN_NUM_FORMS": "0",
@@ -737,9 +805,6 @@ def _change_form_data(announcement: Announcement) -> dict[str, Any]:
         "step_images-MIN_NUM_FORMS": "0",
         "step_images-MAX_NUM_FORMS": "5",
     }
-    for index in range(4):
-        data[f"translations-{index}-announcement"] = str(announcement.pk)
-    return data
 
 
 # Media
