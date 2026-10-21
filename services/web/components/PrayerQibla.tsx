@@ -51,12 +51,18 @@ function useLiveCompass(latitude: number, longitude: number, bearing: number, ac
       setState("unavailable");
       return;
     }
-    const orientation = window.DeviceOrientationEvent as unknown as OrientationPermission;
+    // Chromium sends the absolute heading without asking, even since it also exposes
+    // `requestPermission` (Chrome 152); only Safari, which has no absolute event, needs the tap.
+    if ("ondeviceorientationabsolute" in window) {
+      setEventName("deviceorientationabsolute");
+      return;
+    }
+    const orientation = DeviceOrientationEvent as unknown as OrientationPermission;
     if (typeof orientation.requestPermission === "function") {
       setState((current) => (current === "waiting" ? "permission" : current));
       return;
     }
-    setEventName("ondeviceorientationabsolute" in window ? "deviceorientationabsolute" : "deviceorientation");
+    setEventName("deviceorientation");
   }, [active]);
 
   const enable = useCallback(() => {
