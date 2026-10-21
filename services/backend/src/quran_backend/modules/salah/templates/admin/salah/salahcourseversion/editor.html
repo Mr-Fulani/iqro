@@ -1,0 +1,278 @@
+{% extends "admin/base_site.html" %}
+{% load static admin_urls %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'salah/editor.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'salah/editor.js' %}" defer></script>{% endblock %}
+{% block bodyclass %}{{ block.super }} salah-editor-page{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; Редактор
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="se{% if not editable %} is-readonly{% endif %}" data-editable="{{ editable|yesno:'1,0' }}">
+  <header class="se-head">
+    <div>
+      <h1>Редактор курса <span class="se-version">{{ original }}</span></h1>
+      <p class="se-status">
+        <span class="se-chip se-chip-{{ original.status }}{% if original.is_signed %} is-signed{% endif %}">{{ status_label }}</span>
+        {% if original.reviewed_at %}<span>Подписана {{ original.reviewed_at|date:"d.m.Y H:i" }}</span>{% endif %}
+        {% if original.published_at %}<span>Опубликована {{ original.published_at|date:"d.m.Y H:i" }}</span>{% endif %}
+      </p>
+    </div>
+    <div class="se-head-actions">
+      <a class="button" href="{% url 'admin:salah_salahcourseversion_snapshot' original.pk %}">Скачать JSON</a>
+      {% if can_copy %}
+        <a class="button{% if not editable %} default{% endif %}" href="{% url 'admin:salah_salahcourseversion_new_draft' original.pk %}">Создать черновик из этой версии</a>
+      {% endif %}
+      {% if can_review %}
+        <form method="post" action="{% url 'admin:salah_salahcourseversion_review' original.pk %}" class="se-review">
+          {% csrf_token %}
+          <input type="hidden" name="node" value="{{ node.id }}">
+          {% if editable %}
+            <button type="submit" name="action" value="sign" class="button" data-confirm="Подписать версию {{ original }}? Подпись подтверждает религиозную проверку, после неё текст не меняется.">Подписать</button>
+          {% elif original.is_signed %}
+            <button type="submit" name="action" value="publish" class="button default" data-confirm="Опубликовать {{ original }}? Приложение и сайт покажут эту версию вместо текущей.">Опубликовать</button>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if not editable %}
+    <div class="se-readonly" role="note">
+      <strong>Только чтение.</strong> {{ readonly_reason }}
+    </div>
+  {% endif %}
+
+  <div class="se-missing-bar" aria-live="polite">
+    {% if course_missing_total %}
+      <span>Во всём курсе не переведено:</span>
+      {% for language in languages %}
+        <span class="se-missing-lang{% if language.course_missing %} has-missing{% endif %}">{{ language.name }}: <b>{{ language.course_missing }}</b></span>
+      {% endfor %}
+      {% if next_missing_id %}<a class="button" href="?node={{ next_missing_id|urlencode }}">Следующий непереведённый →</a>{% endif %}
+    {% else %}
+      <span class="se-all-done">Все тексты курса переведены на все языки.</span>
+    {% endif %}
+  </div>
+
+  <div class="se-layout">
+    <nav class="se-tree" aria-label="Содержание курса">
+      <div class="se-tree-tools">
+        <input type="search" class="se-tree-search" placeholder="Найти урок или шаг" aria-label="Найти урок или шаг">
+        <label class="se-tree-filter"><input type="checkbox" class="se-tree-missing-only"> Только с непереведённым</label>
+      </div>
+      {% include "admin/salah/salahcourseversion/editor_tree.html" with entries=tree %}
+    </nav>
+
+    <div class="se-main">
+      <form method="post" enctype="multipart/form-data" class="se-form" id="se-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="node_revision" value="{{ revision }}">
+
+        {% if node_path %}
+          <nav class="se-path" aria-label="Где это в курсе">
+            {% for label, target in node_path %}<a href="?node={{ target|urlencode }}">{{ label }}</a> &rsaquo; {% endfor %}
+          </nav>
+        {% endif %}
+        <h2 class="se-title">{{ node.title }} <span class="se-kind">{{ node_kind }}{% if node.rakat %} · ракаат {{ node.rakat }}{% endif %}</span></h2>
+
+        {% if node.template_id %}
+          <div class="se-shared" role="note">
+            <p><strong>Этот шаг общий.</strong> Он из шаблона молитвы «{{ template_label }}» (вариант: {{ when }}) и показывается в уроках:
+              {% for title, where in template_usage %}{{ title }}{% if where %} ({{ where }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}.
+              Правка меняет его во всех этих уроках.</p>
+            {% if variants and editable %}
+              <label class="se-sync">
+                <input type="checkbox" name="sync_variants" value="on"{% if sync_variants %} checked{% endif %}>
+                Перенести правки в другие варианты этого шага, где текст был точно таким же
+              </label>
+              <details class="se-variants">
+                <summary>Другие варианты шага: {{ variants|length }}</summary>
+                <ul>{% for variant in variants %}<li>{{ variant }}</li>{% endfor %}</ul>
+              </details>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if node.kind == "course" %}
+          <section class="se-block se-howto" aria-labelledby="se-howto-title">
+            <h3 id="se-howto-title">Как пользоваться редактором</h3>
+            <ol>
+              <li>Слева — содержание курса: раздел → урок → шаг. Откройте урок и выберите шаг; оранжевое число — сколько текстов там не переведено.</li>
+              <li>У каждого текста есть поле на каждом языке. Пустые поля подсвечены оранжевым. Удобнее переводить по одному языку — переключатель «По одному языку» над текстами.</li>
+              <li>У шага можно добавить заметки: «?» — справка, «!» — важно или предупреждение. На сайте и в приложении они открываются по значку у шага.</li>
+              <li>Озвучку шага и своей записи формулы загружайте файлом m4a или mp3 (до 2 МБ и {{ max_audio_seconds }} секунд). Справа — предпросмотр шага, как его увидит ученик.</li>
+              <li>«Сохранить» записывает правки в этот черновик; на сайте и в приложении они появятся только после подписи и публикации.</li>
+              <li>Когда всё переведено и проверено, нажмите «Подписать», затем «Опубликовать».</li>
+            </ol>
+          </section>
+        {% endif %}
+
+        {% if lesson_steps %}
+          <section class="se-block" aria-labelledby="se-steps-title">
+            <h3 id="se-steps-title">Шаги урока</h3>
+            <ol class="se-step-links">
+              {% for target, label in lesson_steps %}<li><a href="?node={{ target|urlencode }}">{{ label }}</a></li>{% endfor %}
+            </ol>
+          </section>
+        {% endif %}
+
+        {% if formula %}
+          <section class="se-block se-formula" aria-labelledby="se-formula-title">
+            <h3 id="se-formula-title">Формула</h3>
+            <p>Источник: {{ formula.origin }}. Текст формулы берётся из источника и здесь не меняется.</p>
+            {% if formula.arabic %}<p class="se-arabic" lang="ar" dir="rtl">{{ formula.arabic }}</p>{% endif %}
+            <dl class="se-formula-translations">
+              {% for item in formula.translations %}
+                <dt>{{ item.language }}</dt><dd lang="{{ item.code }}" dir="{{ item.dir }}">{{ item.text|default:"—" }}</dd>
+              {% endfor %}
+            </dl>
+            {% if formula.audio_url %}
+              <p>Сейчас звучит: <audio controls preload="none" src="{{ formula.audio_url }}"></audio></p>
+            {% endif %}
+            {% if formula.steps %}
+              <details>
+                <summary>Шаги с этой формулой: {{ formula.steps|length }}</summary>
+                <ul>{% for target, label in formula.steps %}<li><a href="?node={{ target|urlencode }}">{{ label }}</a></li>{% endfor %}</ul>
+              </details>
+            {% endif %}
+          </section>
+        {% endif %}
+
+        {% if fields %}
+          <section class="se-block se-texts" aria-labelledby="se-texts-title">
+            <div class="se-block-head">
+              <h3 id="se-texts-title">Тексты</h3>
+              <div class="se-view-switch" role="group" aria-label="Как показывать языки">
+                <button type="button" class="button" data-view="columns" aria-pressed="true">Все языки колонками</button>
+                <button type="button" class="button" data-view="tabs" aria-pressed="false">По одному языку</button>
+              </div>
+            </div>
+            <div class="se-tabs" role="tablist" aria-label="Язык текстов">
+              {% for language in languages %}
+                <button type="button" role="tab" class="se-tab" data-lang="{{ language.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                  {{ language.name }} <span class="se-count{% if language.missing %} has-missing{% endif %}" data-count-lang="{{ language.code }}" title="Не переведено">{{ language.missing }}</span>
+                </button>
+              {% endfor %}
+            </div>
+            {% for row in fields %}
+              <div class="se-field" data-required="{{ row.field.required|yesno:'1,0' }}" data-field="{{ row.field.name }}">
+                <div class="se-field-label">{{ row.field.label }}{% if not row.field.required %} <span class="se-optional">необязательно</span>{% endif %}</div>
+                {% if row.field.help %}<p class="help">{{ row.field.help }}</p>{% endif %}
+                <div class="se-langs">
+                  {% for value in row.values %}
+                    <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
+                      <label for="id-{{ value.name }}">{{ value.language }}<span class="se-missing-mark"> — не переведено</span></label>
+                      <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="{{ row.field.rows }}" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="{{ row.field.max_length }}" data-preview="{{ row.field.name }}" placeholder="Не переведено"{% if value.error %} aria-invalid="true" aria-describedby="err-{{ value.name }}"{% endif %}{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
+                      <span class="se-length" aria-hidden="true"></span>
+                      {% if value.error %}<p class="se-error" id="err-{{ value.name }}">{{ value.error }}</p>{% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </section>
+        {% endif %}
+
+        {% if notes is not None %}
+          <section class="se-block se-notes" aria-labelledby="se-notes-title">
+            <h3 id="se-notes-title">Заметки «?» и «!»</h3>
+            <p class="help">Маленькие значки у шага: «?» — справка (пояснение, источник), «!» — важно или предупреждение. Ученик открывает заметку нажатием на значок. Порядок значков — как здесь: меняйте стрелками или перетаскиванием за «⠿».</p>
+            <input type="hidden" name="notes_order" value="{% for note in notes %}{{ note.uid }}{% if not forloop.last %},{% endif %}{% endfor %}">
+            <ol class="se-note-list" aria-label="Заметки шага">
+              {% for note in notes %}
+                {% include "admin/salah/salahcourseversion/editor_note.html" %}
+              {% endfor %}
+            </ol>
+            <p class="se-notes-empty"{% if notes %} hidden{% endif %}>Заметок пока нет.</p>
+            {% if editable %}
+              <template id="se-note-template">{% include "admin/salah/salahcourseversion/editor_note.html" with note=None %}</template>
+              <button type="button" class="button se-note-add">+ Добавить заметку</button>
+            {% endif %}
+            <p class="se-live" aria-live="polite"></p>
+          </section>
+        {% endif %}
+
+        {% for group in audio_groups %}
+          <section class="se-block se-audio" aria-labelledby="se-audio-{{ forloop.counter }}">
+            <h3 id="se-audio-{{ forloop.counter }}">{{ group.title }}{% if group.link %} <a class="se-small" href="?node={{ group.link|urlencode }}">все шаги с формулой</a>{% endif %}</h3>
+            <p class="help">{{ group.help }} Файл m4a или mp3, до 2 МБ и {{ max_audio_seconds }} секунд. Запись языка звучит вместо общей на этом языке.</p>
+            <table class="se-audio-table">
+              <tbody>
+                {% for slot in group.slots %}
+                  <tr class="{% if slot.error %}has-error{% endif %}">
+                    <th scope="row">{{ slot.label }}</th>
+                    <td class="se-audio-now">
+                      {% if slot.url %}
+                        <audio controls preload="none" src="{{ slot.url }}"></audio>
+                        <span class="se-small">{% if slot.duration %}{{ slot.duration }} · {% endif %}{{ slot.kib }} КБ</span>
+                      {% elif slot.stored_missing %}
+                        <span class="se-small">Файл записи ещё не загружен.</span>
+                      {% else %}
+                        <span class="se-small">Нет записи</span>
+                      {% endif %}
+                    </td>
+                    {% if editable %}
+                      <td class="se-audio-change">
+                        <label class="se-file">
+                          <span>{% if slot.url %}Заменить{% else %}Загрузить{% endif %}</span>
+                          <input type="file" name="{{ slot.field }}" accept=".m4a,.mp3,audio/mp4,audio/mpeg,audio/x-m4a"{% if slot.error %} aria-invalid="true" aria-describedby="err-{{ slot.field }}"{% endif %}>
+                        </label>
+                        {% if slot.key %}
+                          <label class="se-delete"><input type="checkbox" name="{{ slot.delete_field }}" value="on"> Удалить</label>
+                        {% endif %}
+                        <div class="se-file-preview" hidden></div>
+                        {% if slot.error %}<p class="se-error" id="err-{{ slot.field }}">{{ slot.error }}</p>{% endif %}
+                      </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </section>
+        {% endfor %}
+
+        {% if editable and fields or editable and audio_groups %}
+          <div class="se-actions">
+            <button type="submit" class="button default" name="save" value="1">Сохранить</button>
+            <button type="submit" class="button" name="save_next" value="1">Сохранить и дальше →</button>
+            <span class="se-dirty" hidden>Есть несохранённые правки</span>
+            <span class="se-small se-shortcut">⌘S / Ctrl+S — сохранить</span>
+          </div>
+        {% endif %}
+
+        <nav class="se-pager" aria-label="Соседние места курса">
+          {% if prev_id %}<a href="?node={{ prev_id|urlencode }}">← Предыдущее</a>{% else %}<span></span>{% endif %}
+          {% if next_id %}<a href="?node={{ next_id|urlencode }}">Следующее →</a>{% endif %}
+        </nav>
+      </form>
+    </div>
+
+    {% if preview %}
+      <aside class="se-preview" aria-labelledby="se-preview-title">
+        <div class="se-preview-head">
+          <h3 id="se-preview-title">Предпросмотр шага</h3>
+          <label>Язык
+            <select class="se-preview-lang">
+              {% for language in languages %}<option value="{{ language.code }}">{{ language.name }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <p class="help">Как шаг увидит ученик, с несохранёнными правками. Значки «?» и «!» нажимаются.</p>
+        <div class="se-phone" data-preview-root></div>
+        {{ preview|json_script:"se-preview-data" }}
+      </aside>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
