@@ -117,10 +117,6 @@ void main() {
           findsOneWidget,
         );
         expect(fake.last.speed, .75);
-        final resets = fake.last.resetCount;
-        await tester.tap(find.byTooltip('Вернуть исходный ракурс'));
-        await tester.pump();
-        expect(fake.last.resetCount, resets + 1);
 
         await _tapNext(tester);
         expect(find.text('Шаг 2 из 5'), findsOneWidget);
@@ -147,21 +143,26 @@ void main() {
         'step plays its own', (tester) async {
       final fake = _Fake3D();
       await _pump(tester, location: '/salah/lesson/fajr', view3d: fake.build);
-      final replay = find.byKey(const ValueKey('salah-3d-replay'));
+      final replay = find.byTooltip('Повторить');
       fake.last.onReady();
       await tester.pump();
       expect(replay, findsNothing);
       expect(find.byTooltip('Остановить движение'), findsOneWidget);
 
-      // The scene says the pose has played: it holds, with «Повторить» over it.
+      // The scene says the pose has played: it holds, and the pause button
+      // turns into «Повторить».
       fake.last.onEnded();
       await tester.pump();
       expect(replay, findsOneWidget);
       expect(
-        find.descendant(of: replay, matching: find.text('Повторить')),
+        find.descendant(
+          of: find.byKey(const ValueKey('salah-3d-play')),
+          matching: find.byIcon(Icons.replay),
+        ),
         findsOneWidget,
       );
-      expect(find.byTooltip('Воспроизвести движение'), findsOneWidget);
+      expect(find.byTooltip('Остановить движение'), findsNothing);
+      expect(find.byTooltip('Воспроизвести движение'), findsNothing);
       expect(fake.last.running, isTrue);
       final replays = fake.last.replayCount;
 
@@ -170,13 +171,6 @@ void main() {
       expect(fake.last.replayCount, replays + 1);
       expect(replay, findsNothing);
       expect(find.byTooltip('Остановить движение'), findsOneWidget);
-
-      // Play after the end plays the pose again too.
-      fake.last.onEnded();
-      await tester.pump();
-      await tester.tap(find.byTooltip('Воспроизвести движение'));
-      await tester.pump();
-      expect(fake.last.replayCount, replays + 2);
 
       // Paused or ended, the next step plays its own pose once.
       await tester.tap(find.byTooltip('Остановить движение'));
@@ -246,11 +240,6 @@ void main() {
     });
 
     testWidgets('the Arabic lesson labels the scene in Arabic', (tester) async {
-      // A phone-sized picture, so «Replay» does not fill its width.
-      tester.view.physicalSize = const Size(400, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
       final fake = _Fake3D();
       await _pump(
         tester,
@@ -264,18 +253,7 @@ void main() {
       expect(find.byTooltip('إيقاف الحركة مؤقتًا'), findsOneWidget);
       fake.last.onEnded();
       await tester.pump();
-      final replay = find.byKey(const ValueKey('salah-3d-replay'));
-      expect(
-        find.descendant(of: replay, matching: find.text('إعادة الحركة')),
-        findsOneWidget,
-      );
-      // At the scene's inline end: on the left in Arabic.
-      expect(
-        tester.getCenter(replay).dx,
-        lessThan(
-          tester.getCenter(find.byKey(const ValueKey('salah-3d-view'))).dx,
-        ),
-      );
+      expect(find.byTooltip('إعادة الحركة'), findsOneWidget);
     });
   });
 

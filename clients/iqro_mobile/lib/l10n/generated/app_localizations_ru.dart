@@ -2049,9 +2049,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get salah3dResetView => 'Вернуть исходный ракурс';
-
-  @override
   String get salah3dReplay => 'Повторить';
 
   @override

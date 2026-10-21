@@ -66,6 +66,17 @@ function AudioIcon({ playing }: { playing: boolean }) {
   );
 }
 
+function ReplayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function RepetitionCounter({ target, label }: { target: number; label: string }) {
   const { formatNumber, t } = useI18n();
   const [count, setCount] = useState(0);
@@ -135,17 +146,13 @@ function StepVisual({
   slot?: Salah3D["slot"];
 }) {
   const { formatNumber, t } = useI18n();
+  // Pause while the pose moves, play when paused, replay once it has played.
+  const motion = three?.ended ? t("salah.replay3d") : three?.playing ? t("salah.pause3d") : t("salah.play3d");
   return (
     <figure className="salah-step-visual">
       <div className="salah-step-frame">
         <StepImage media={media} eager={eager} />
         {three?.shown ? <div className="salah-3d-slot" ref={slot} data-testid="salah-3d" /> : null}
-        {three?.shown && three.ready && three.ended ? (
-          <button type="button" className="btn btn-sm btn-primary salah-3d-replay" onClick={three.replay}>
-            <span aria-hidden="true">↻</span>
-            {t("salah.replay3d")}
-          </button>
-        ) : null}
       </div>
       {still ? (
         <figcaption className="salah-3d-caption">
@@ -156,10 +163,10 @@ function StepVisual({
                 type="button"
                 className="dua-icon-action"
                 onClick={three.togglePlaying}
-                aria-label={three.playing ? t("salah.pause3d") : t("salah.play3d")}
-                title={three.playing ? t("salah.pause3d") : t("salah.play3d")}
+                aria-label={motion}
+                title={motion}
               >
-                <AudioIcon playing={three.playing} />
+                {three.ended ? <ReplayIcon /> : <AudioIcon playing={three.playing} />}
               </button>
               <button
                 type="button"
@@ -168,15 +175,6 @@ function StepVisual({
                 aria-label={t("salah.speed3d", { speed: `${formatNumber(three.speed)}×` })}
               >
                 {formatNumber(three.speed)}×
-              </button>
-              <button
-                type="button"
-                className="dua-icon-action salah-3d-reset"
-                onClick={three.resetView}
-                aria-label={t("salah.resetView3d")}
-                title={t("salah.resetView3d")}
-              >
-                <span aria-hidden="true">↺</span>
               </button>
             </span>
           ) : null}

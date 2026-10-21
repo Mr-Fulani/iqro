@@ -784,9 +784,6 @@ class _StepVisual extends StatelessWidget {
               media: media,
               view: runs ? _Salah3DHost(scene: scene, three: three) : null,
               stillOnTop: !(runs && three.ready),
-              overlay: runs && three.ready && three.ended
-                  ? _Salah3DReplay(three: three)
-                  : null,
             ),
             if (scene != null) _Salah3DBar(three: three, tools: runs),
           ],
@@ -846,7 +843,6 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
         running: three.playing && TickerMode.valuesOf(context).enabled,
         foreground: _foreground,
         speed: three.speed,
-        resetCount: three.resetCount,
         replayCount: three.replayCount,
         onReady: three.markReady,
         onEnded: three.markEnded,
@@ -891,11 +887,23 @@ class _Salah3DBar extends StatelessWidget {
               ),
             ),
             if (tools && three.ready) ...<Widget>[
+              // Pause while the pose moves, play when paused, replay once it
+              // has played.
               IconButton(
                 key: const ValueKey('salah-3d-play'),
-                tooltip: three.moving ? l10n.salah3dPause : l10n.salah3dPlay,
+                tooltip: three.ended
+                    ? l10n.salah3dReplay
+                    : three.moving
+                    ? l10n.salah3dPause
+                    : l10n.salah3dPlay,
                 onPressed: three.togglePlaying,
-                icon: Icon(three.moving ? Icons.pause : Icons.play_arrow),
+                icon: Icon(
+                  three.ended
+                      ? Icons.replay
+                      : three.moving
+                      ? Icons.pause
+                      : Icons.play_arrow,
+                ),
               ),
               Semantics(
                 label: l10n.salah3dSpeed(speed),
@@ -907,12 +915,6 @@ class _Salah3DBar extends StatelessWidget {
                   child: Text(speed),
                 ),
               ),
-              IconButton(
-                key: const ValueKey('salah-3d-reset'),
-                tooltip: l10n.salah3dResetView,
-                onPressed: three.resetView,
-                icon: const Icon(Icons.threesixty),
-              ),
             ],
           ],
         ),
@@ -921,53 +923,28 @@ class _Salah3DBar extends StatelessWidget {
   }
 }
 
-/// «Replay» once the pose has played: over the scene's corner at the end of
-/// the reading direction.
-class _Salah3DReplay extends StatelessWidget {
-  const _Salah3DReplay({required this.three});
-
-  final Salah3DController three;
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: AlignmentDirectional.bottomEnd,
-    child: Padding(
-      padding: const EdgeInsets.all(10),
-      child: FilledButton.icon(
-        key: const ValueKey('salah-3d-replay'),
-        onPressed: three.replay,
-        icon: const Icon(Icons.replay),
-        label: Text(context.l10n.salah3dReplay),
-      ),
-    ),
-  );
-}
-
 /// The step illustration in its declared proportions, never wider than its
 /// declared width and never taller than 40% of the screen. [view] (the
 /// running 3D scene) lies under the picture, which fades out once the scene
-/// has drawn ([stillOnTop] false); [overlay] lies over both.
+/// has drawn ([stillOnTop] false).
 class _StepImage extends ConsumerWidget {
   const _StepImage({
     required this.courseSlug,
     required this.media,
     this.view,
     this.stillOnTop = true,
-    this.overlay,
   });
 
   final String courseSlug;
   final SalahMedia media;
   final Widget? view;
   final bool stillOnTop;
-  final Widget? overlay;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
     final view = this.view;
-    final overlay = this.overlay;
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -1016,7 +993,6 @@ class _StepImage extends ConsumerWidget {
                   ),
                 ),
               ),
-              ?overlay,
             ],
           ),
         ),

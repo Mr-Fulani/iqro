@@ -5,8 +5,9 @@
    Technical changes: module import/export instead of globals, SEGMENTS + setStep (one
    course step's movement, played once to its last frame; onEnd, replay), rendering while
    the paused view is turned, the pageScroll option (the page keeps vertical swipes and
-   the wheel) and the WebGL context released on dispose. The app's copy (clients/iqro_mobile/assets/salah3d)
-   is generated from this file by scripts/salah3d-app-assets.mjs. */
+   the wheel) and the WebGL context released on dispose. The app's copy
+   (clients/iqro_mobile/assets/salah3d) is generated from this file by
+   scripts/salah3d-app-assets.mjs. */
 /* eslint-disable @typescript-eslint/no-this-alias, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions -- author's code, kept as delivered */
 import * as THREE from 'three';
 // salah3d:body-start
@@ -1425,7 +1426,8 @@ import * as THREE from 'three';
       setTime: function (t) { clock.t = t; frozen = true; applyTrack(true); renderOnce(); applyTrack(true); renderOnce(); },
       setStep: setStep,
       play: function () { if (!ended) { frozen = false; kick(); } }, // an ended step waits for replay()
-      replay: function () { clock.t = range ? range[0] : 0; frozen = ended = false; kick(); },
+      // from the start; a turned camera glides back
+      replay: function () { clock.t = range ? range[0] : 0; frozen = ended = false; manualUntil = 0; kick(); },
       pause: function () { frozen = true; },
       setSpeed: function (v) { opts.speed = +v || 1; },
       resetCamera: function () { onDbl(); },

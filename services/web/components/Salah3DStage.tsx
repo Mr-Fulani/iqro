@@ -13,11 +13,9 @@ export type Salah3DStageProps = {
   /** The pose whose movement plays once (the full view only). */
   step: SalahSceneStepId | null;
   playing: boolean;
-  /** Changes when the pose should play from its start: a new step or «Replay». */
+  /** Changes when the pose should play from its start: a new step or a replay. */
   run: number;
   speed: number;
-  /** Changes when the visitor asks for the starting view again. */
-  resetKey: number;
   onReady: () => void;
   /** The pose has played and holds its last frame. */
   onEnded: () => void;
@@ -37,7 +35,6 @@ export default function Salah3DStage({
   playing,
   run,
   speed,
-  resetKey,
   onReady,
   onEnded,
   onError,
@@ -89,7 +86,7 @@ export default function Salah3DStage({
     if (stage && step) stage.scene.setStep(step);
   }, [stage, step]);
 
-  // Every step, and «Replay», plays the pose from its start.
+  // Every step, and a replay, plays the pose from its start.
   useEffect(() => {
     if (stage && step) stage.scene.replay();
   }, [run, stage, step]);
@@ -97,10 +94,6 @@ export default function Salah3DStage({
   useEffect(() => {
     stage?.scene.setSpeed(speed);
   }, [speed, stage]);
-
-  useEffect(() => {
-    if (resetKey) stage?.scene.resetCamera();
-  }, [resetKey, stage]);
 
   // Runs only while moving, shown in a step and the tab is visible.
   useEffect(() => {

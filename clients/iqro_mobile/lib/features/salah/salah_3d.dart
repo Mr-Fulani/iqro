@@ -56,7 +56,7 @@ const salahSceneSpeeds = <double>[1, .75, .5];
 
 /// The lesson's 3D scene: it runs on the current step when the device can,
 /// and any failure leaves the stills for the rest of the visit. Each step
-/// plays its pose once and holds the last frame; «Replay» plays it again.
+/// plays its pose once and holds the last frame; play then replays it.
 /// Mirrors nextSalahScenePlayback in services/web/lib/salah-3d.ts.
 class Salah3DController extends ChangeNotifier {
   bool _failed = false;
@@ -64,7 +64,6 @@ class Salah3DController extends ChangeNotifier {
   bool _playing = true;
   bool _ended = false;
   double _speed = 1;
-  int _resetCount = 0;
   int _replayCount = 0;
 
   bool get failed => _failed;
@@ -79,7 +78,6 @@ class Salah3DController extends ChangeNotifier {
   /// The pose is moving: neither paused nor played to its end.
   bool get moving => _playing && !_ended;
   double get speed => _speed;
-  int get resetCount => _resetCount;
 
   /// Grows whenever the current pose should play again from its start.
   int get replayCount => _replayCount;
@@ -135,11 +133,6 @@ class Salah3DController extends ChangeNotifier {
     _speed = salahSceneSpeeds[next % salahSceneSpeeds.length];
     notifyListeners();
   }
-
-  void resetView() {
-    _resetCount++;
-    notifyListeners();
-  }
 }
 
 /// What the 3D view of one step is asked to show.
@@ -151,7 +144,6 @@ class Salah3DViewConfig {
     required this.running,
     required this.foreground,
     required this.speed,
-    required this.resetCount,
     required this.replayCount,
     required this.onReady,
     required this.onEnded,
@@ -171,7 +163,6 @@ class Salah3DViewConfig {
   /// view follows it without waiting for a rebuild.
   final ValueListenable<bool> foreground;
   final double speed;
-  final int resetCount;
 
   /// Changes when the pose should play again from its start.
   final int replayCount;
@@ -270,7 +261,6 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
     }
     _sync();
     if (old.speed != _config.speed) _run('salah.setSpeed(${_config.speed})');
-    if (old.resetCount != _config.resetCount) _run('salah.resetCamera()');
     if (old.replayCount != _config.replayCount) _run('salah.replay()');
     if (old.step != _config.step) {
       _run('salah.show(${jsonEncode(_config.step)})');

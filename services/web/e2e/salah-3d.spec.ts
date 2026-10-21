@@ -29,8 +29,10 @@ const currentStep = (page: Page) => page.locator(".salah-step:not([hidden])");
 const SCENE_TIMEOUT = { timeout: 30_000 };
 // Any first action on the page starts the scene.
 const act = (page: Page) => page.mouse.move(5, 5);
-// A pose plays once: the takbir in about 2.5 s, the tashahhud in about 12 s.
-const POSE_TIMEOUT = { timeout: 20_000 };
+// A pose plays once: the takbir in about 2.5 s, the tashahhud in about 12 s. The scene takes
+// at most 0.05 s per frame, so on a busy machine's software WebGL it plays several times slower.
+const POSE_TIMEOUT = { timeout: 60_000 };
+// Once the pose has played, play turns into «Повторить».
 const replayButton = (step: Locator) => step.getByRole("button", { name: "Повторить", exact: true });
 
 /** Whether the scene draws anything new between two looks a moment apart. */
@@ -75,6 +77,7 @@ test("the scene replaces the still once the visitor acts and follows the steps",
 });
 
 test("a pose plays once, holds its last frame and plays again on «Повторить»", async ({ page }) => {
+  test.slow();
   await openLesson(page, "/ru/salah/fajr");
   await act(page);
   const step = currentStep(page);
@@ -83,9 +86,9 @@ test("a pose plays once, holds its last frame and plays again on «Повтор�
   await expect(replayButton(step)).toHaveCount(0);
 
   await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
-  await expect(replayButton(step)).toContainText("↻");
   await expect(canvas).toHaveAttribute("data-running", "false");
-  await expect(step.getByRole("button", { name: "Воспроизвести движение" })).toBeVisible();
+  // The same button as pause and play, not one more: the tools are it and the speed.
+  await expect(step.locator(".salah-3d-tools button")).toHaveCount(2);
   // No loop: the figure holds still.
   await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(false);
 
@@ -95,11 +98,6 @@ test("a pose plays once, holds its last frame and plays again on «Повтор�
   expect(await moving(canvas)).toBe(true);
   await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
   await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(false);
-
-  // Play after the end plays the pose again too.
-  await step.getByRole("button", { name: "Воспроизвести движение" }).click();
-  await expect(canvas).toHaveAttribute("data-running", "true");
-  await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
 
   // The next step plays its own pose once.
   await page.getByRole("button", { name: "Далее" }).click();
@@ -187,16 +185,11 @@ test("reduced motion keeps the still, and a picture without a scene stays a pict
 });
 
 test("the Arabic page labels the scene and its tools in Arabic", async ({ page }) => {
+  test.slow();
   await openLesson(page, "/ar/salah/fajr");
   const step = currentStep(page);
   await expect(step.locator("figcaption")).toContainText("رسم توضيحي تخطيطي ثلاثي الأبعاد");
   await act(page);
   await expect(step.getByRole("button", { name: "إيقاف الحركة مؤقتًا" })).toBeVisible(SCENE_TIMEOUT);
-  await expect(step.getByRole("button", { name: "إعادة زاوية العرض" })).toBeVisible();
-  const replay = step.getByRole("button", { name: "إعادة الحركة" });
-  await expect(replay).toBeVisible(POSE_TIMEOUT);
-  // At the scene's inline end: on the left in Arabic.
-  const frame = (await step.locator(".salah-step-frame").boundingBox())!;
-  const button = (await replay.boundingBox())!;
-  expect(button.x + button.width / 2).toBeLessThan(frame.x + frame.width / 2);
+  await expect(step.getByRole("button", { name: "إعادة الحركة" })).toBeVisible(POSE_TIMEOUT);
 });

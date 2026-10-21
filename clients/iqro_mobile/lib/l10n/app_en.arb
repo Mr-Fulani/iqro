@@ -707,7 +707,6 @@
   "salah3dPause": "Pause the movement",
   "salah3dSpeed": "Movement speed: {speed}",
   "@salah3dSpeed": {"placeholders": {"speed": {"type": "String"}}},
-  "salah3dResetView": "Reset the view",
   "salah3dReplay": "Replay",
   "salahOfflineTitle": "Pictures offline",
   "salahOfflineImages": "Course illustrations",

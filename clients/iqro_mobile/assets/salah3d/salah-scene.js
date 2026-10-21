@@ -1418,7 +1418,8 @@
       setTime: function (t) { clock.t = t; frozen = true; applyTrack(true); renderOnce(); applyTrack(true); renderOnce(); },
       setStep: setStep,
       play: function () { if (!ended) { frozen = false; kick(); } }, // an ended step waits for replay()
-      replay: function () { clock.t = range ? range[0] : 0; frozen = ended = false; kick(); },
+      // from the start; a turned camera glides back
+      replay: function () { clock.t = range ? range[0] : 0; frozen = ended = false; manualUntil = 0; kick(); },
       pause: function () { frozen = true; },
       setSpeed: function (v) { opts.speed = +v || 1; },
       resetCamera: function () { onDbl(); },

@@ -47,10 +47,9 @@ export type Salah3D = {
   ended: boolean;
   speed: SalahSceneSpeed;
   slot: (element: HTMLDivElement | null) => void;
+  /** Pause, play, or replay once the pose has played. */
   togglePlaying: () => void;
-  replay: () => void;
   cycleSpeed: () => void;
-  resetView: () => void;
   /** Render once in the player; it draws into the current step's slot. */
   stage: ReactNode;
 };
@@ -58,7 +57,7 @@ export type Salah3D = {
 /**
  * The schematic 3D scene in place of the pose stills: it starts once the visitor acts on the
  * page, needs WebGL and no reduced motion, and any failure leaves the stills for the visit.
- * Each step plays its pose once; «Replay» plays it again.
+ * Each step plays its pose once; play after the end plays it again.
  */
 export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolean, stepIndex: number): Salah3D {
   const [capable, setCapable] = useState(false);
@@ -67,7 +66,6 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
   const [ready, setReady] = useState(false);
   const [playback, dispatch] = useReducer(nextSalahScenePlayback, SALAH_SCENE_PLAYBACK);
   const [speed, setSpeed] = useState<SalahSceneSpeed>(1);
-  const [resetKey, setResetKey] = useState(0);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
 
   // A new step plays its pose once, whether the last one was paused or had ended.
@@ -116,9 +114,7 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
     speed,
     slot: setSlot,
     togglePlaying: () => dispatch("toggle"),
-    replay: () => dispatch("replay"),
     cycleSpeed: () => setSpeed(nextSalahSceneSpeed),
-    resetView: () => setResetKey((value) => value + 1),
     stage: active ? (
       <Salah3DStage
         // A view is chosen when the scene mounts.
@@ -129,7 +125,6 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
         playing={playing}
         run={playback.run}
         speed={speed}
-        resetKey={resetKey}
         onReady={markReady}
         onEnded={markEnded}
         onError={fail}

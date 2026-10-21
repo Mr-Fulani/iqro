@@ -246,19 +246,6 @@
   cursor: grabbing;
 }
 
-/* Once the pose has played: over the scene's corner on the reading direction's end. */
-.salah-3d-replay {
-  position: absolute;
-  inset-block-end: 12px;
-  inset-inline-end: 12px;
-  gap: 6px;
-}
-
-.salah-3d-replay > span {
-  font-size: 16px;
-  line-height: 1;
-}
-
 .salah-3d-caption {
   display: flex;
   flex-wrap: wrap;
@@ -279,13 +266,6 @@
 .salah-3d-speed {
   min-width: 56px;
   font-variant-numeric: tabular-nums;
-}
-
-.salah-3d-reset {
-  place-items: center;
-  padding: 0;
-  font-size: 18px;
-  line-height: 1;
 }
 
 .salah-step-body {

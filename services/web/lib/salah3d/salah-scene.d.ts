@@ -32,7 +32,7 @@ export type SalahScene = {
   /** Resumes a paused movement; an ended one waits for replay(). */
   play(): void;
   pause(): void;
-  /** Plays the step's movement again from its start. */
+  /** Plays the step's movement again from its start; a turned camera glides back. */
   replay(): void;
   setSpeed(speed: number): void;
   resetCamera(): void;

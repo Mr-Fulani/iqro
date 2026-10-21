@@ -1989,9 +1989,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get salah3dResetView => 'Görünümü sıfırla';
-
-  @override
   String get salah3dReplay => 'Tekrar oynat';
 
   @override
