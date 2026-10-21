@@ -166,9 +166,7 @@ class SalahCourseVersionAdmin(SalahEditorAdminMixin, admin.ModelAdmin):  # type:
             raise Http404
         if not request.user.has_perm("salah.view_salahcourseversion"):
             raise PermissionDenied
-        editable = version.status == SalahPublicationStatus.DRAFT and request.user.has_perm(
-            "salah.change_salahcourseversion"
-        )
+        editable = editor_editable(request.user, version)
         if request.method == "POST":
             if not editable:
                 raise PermissionDenied

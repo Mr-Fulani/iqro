@@ -66,9 +66,10 @@ def upload_salah_image(
     uploader: ObjectUploader | None = None,
     ffmpeg: str | None = None,
 ) -> SalahMediaAsset:
-    if version.status != SalahPublicationStatus.DRAFT:
+    if version.status != SalahPublicationStatus.DRAFT or version.is_signed:
         raise SalahMediaUploadError(
-            "Иллюстрации меняются только в черновике. Для опубликованной версии импортируйте новую."
+            "Иллюстрации меняются только в черновике до подписи. "
+            "Создайте из этой версии новый черновик."
         )
     if key not in {asset["key"] for asset in image_keys(version)}:
         raise SalahMediaUploadError(f"Иллюстрации «{key}» нет в снимке курса.")

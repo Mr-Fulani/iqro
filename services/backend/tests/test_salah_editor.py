@@ -22,6 +22,7 @@ from quran_backend.modules.accounts.models import User
 from quran_backend.modules.salah import editor
 from quran_backend.modules.salah.compiler import compile_document
 from quran_backend.modules.salah.importer import import_salah_snapshot
+from quran_backend.modules.salah.media_upload import SalahMediaUploadError, upload_salah_image
 from quran_backend.modules.salah.models import (
     SALAH_LANGUAGES,
     SalahCourseVersion,
@@ -466,6 +467,11 @@ def test_signed_and_published_versions_are_read_only_with_a_copy_button(
     assert "readonly" in page
     assert 'name="save"' not in page
     assert _post(owner_client, draft, RUKU, form).status_code == 403
+    # Its illustrations are frozen with its texts.
+    with pytest.raises(SalahMediaUploadError, match="до подписи"):
+        upload_salah_image(
+            draft, "position-ruku", SimpleUploadedFile("x.png", b"x"), uploader=FakeUploader()
+        )
 
     with (
         patch(RESOLVER, FakeResolver),
