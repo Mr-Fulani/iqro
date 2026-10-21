@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -135,7 +136,8 @@ class SalahStepPlayer extends ConsumerStatefulWidget {
   ConsumerState<SalahStepPlayer> createState() => _SalahStepPlayerState();
 }
 
-class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
+class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
+    with WidgetsBindingObserver {
   late final PageController _pages;
 
   // The header and the buttons follow the page; the pager itself is not
@@ -148,11 +150,19 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
     _steps,
   );
 
+  // The lesson owns the recordings of its steps in the shared player: leaving
+  // a step stops whichever of them sounds, and it starts over on return.
+  final _audioOwner = Object();
+  // Kept for dispose, when ref can no longer be read.
+  late AudioController _audio;
+
   List<SalahStep> get _steps => widget.lesson.steps;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _audio = ref.read(audioControllerProvider.notifier);
     final initial = widget.initialIndex.clamp(0, _steps.length - 1);
     _pages = PageController(initialPage: initial);
     _index = ValueNotifier<int>(initial);
@@ -165,15 +175,39 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Another screen over the lesson leaves the step too.
+    if (!TickerMode.valuesOf(context).enabled) _stopAudio();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _stopAudio();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopAudio();
     _pages.dispose();
     _index.dispose();
     _three.dispose();
     super.dispose();
   }
 
+  void _stopAudio() {
+    // In dispose the element is already unmounted and ref is gone.
+    if (context.mounted) _audio = ref.read(audioControllerProvider.notifier);
+    unawaited(_audio.stopStandaloneOf(_audioOwner));
+  }
+
   void _onPageChanged(int index) {
     _index.value = index;
+    _stopAudio();
     _three.stepChanged();
     unawaited(_record(index));
     _precache(index + 1);
@@ -311,6 +345,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
                     document: widget.document,
                     lesson: lesson,
                     step: _steps[index],
+                    audioOwner: _audioOwner,
                     visual: _StepVisualState(
                       index: index,
                       current: _index,
@@ -562,6 +597,7 @@ class _StepPage extends ConsumerWidget {
     required this.document,
     required this.lesson,
     required this.step,
+    required this.audioOwner,
     required this.visual,
     super.key,
   });
@@ -570,6 +606,7 @@ class _StepPage extends ConsumerWidget {
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
+  final Object audioOwner;
   final _StepVisualState visual;
 
   @override
@@ -654,6 +691,7 @@ class _StepPage extends ConsumerWidget {
               formula: formula,
               display: display,
               audioTitle: '${lesson.title} · ${step.title}',
+              audioOwner: audioOwner,
             ),
           ],
         ],
@@ -746,6 +784,9 @@ class _StepVisual extends StatelessWidget {
               media: media,
               view: runs ? _Salah3DHost(scene: scene, three: three) : null,
               stillOnTop: !(runs && three.ready),
+              overlay: runs && three.ready && three.ended
+                  ? _Salah3DReplay(three: three)
+                  : null,
             ),
             if (scene != null) _Salah3DBar(three: three, tools: runs),
           ],
@@ -806,7 +847,9 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
         foreground: _foreground,
         speed: three.speed,
         resetCount: three.resetCount,
+        replayCount: three.replayCount,
         onReady: three.markReady,
+        onEnded: three.markEnded,
         onError: (code) {
           debugPrint('Salah 3D falls back to the still: $code');
           three.fail();
@@ -850,9 +893,9 @@ class _Salah3DBar extends StatelessWidget {
             if (tools && three.ready) ...<Widget>[
               IconButton(
                 key: const ValueKey('salah-3d-play'),
-                tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
+                tooltip: three.moving ? l10n.salah3dPause : l10n.salah3dPlay,
                 onPressed: three.togglePlaying,
-                icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
+                icon: Icon(three.moving ? Icons.pause : Icons.play_arrow),
               ),
               Semantics(
                 label: l10n.salah3dSpeed(speed),
@@ -878,28 +921,53 @@ class _Salah3DBar extends StatelessWidget {
   }
 }
 
+/// «Replay» once the pose has played: over the scene's corner at the end of
+/// the reading direction.
+class _Salah3DReplay extends StatelessWidget {
+  const _Salah3DReplay({required this.three});
+
+  final Salah3DController three;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: AlignmentDirectional.bottomEnd,
+    child: Padding(
+      padding: const EdgeInsets.all(10),
+      child: FilledButton.icon(
+        key: const ValueKey('salah-3d-replay'),
+        onPressed: three.replay,
+        icon: const Icon(Icons.replay),
+        label: Text(context.l10n.salah3dReplay),
+      ),
+    ),
+  );
+}
+
 /// The step illustration in its declared proportions, never wider than its
 /// declared width and never taller than 40% of the screen. [view] (the
 /// running 3D scene) lies under the picture, which fades out once the scene
-/// has drawn ([stillOnTop] false).
+/// has drawn ([stillOnTop] false); [overlay] lies over both.
 class _StepImage extends ConsumerWidget {
   const _StepImage({
     required this.courseSlug,
     required this.media,
     this.view,
     this.stillOnTop = true,
+    this.overlay,
   });
 
   final String courseSlug;
   final SalahMedia media;
   final Widget? view;
   final bool stillOnTop;
+  final Widget? overlay;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
     final view = this.view;
+    final overlay = this.overlay;
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -948,6 +1016,7 @@ class _StepImage extends ConsumerWidget {
                   ),
                 ),
               ),
+              ?overlay,
             ],
           ),
         ),

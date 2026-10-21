@@ -2052,6 +2052,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get salah3dResetView => 'Вернуть исходный ракурс';
 
   @override
+  String get salah3dReplay => 'Повторить';
+
+  @override
   String get salahOfflineTitle => 'Картинки без интернета';
 
   @override

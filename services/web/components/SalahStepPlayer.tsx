@@ -140,6 +140,12 @@ function StepVisual({
       <div className="salah-step-frame">
         <StepImage media={media} eager={eager} />
         {three?.shown ? <div className="salah-3d-slot" ref={slot} data-testid="salah-3d" /> : null}
+        {three?.shown && three.ready && three.ended ? (
+          <button type="button" className="btn btn-sm btn-primary salah-3d-replay" onClick={three.replay}>
+            <span aria-hidden="true">↻</span>
+            {t("salah.replay3d")}
+          </button>
+        ) : null}
       </div>
       {still ? (
         <figcaption className="salah-3d-caption">
@@ -201,7 +207,7 @@ export function SalahStepPlayer({
   const [audioError, setAudioError] = useState<string | null>(null);
   const step = steps[index]!;
   const scenes = useMemo(() => salahStepScenes(steps, media), [media, steps]);
-  const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean));
+  const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean), index);
   const practice = display.mode === "practice";
   const isLast = index === steps.length - 1;
 
@@ -247,11 +253,27 @@ export function SalahStepPlayer({
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || activeAudio === null) return;
-    return registerAudioPlayer(audioPlayerId, () => {
+    const unregister = registerAudioPlayer(audioPlayerId, () => {
       audio.pause();
       setAudioPlaying(false);
     });
+    // Another step, formula or page stops the clip; coming back plays it from its start.
+    return () => {
+      unregister();
+      audio.pause();
+    };
   }, [activeAudio, audioPlayerId]);
+
+  // Hiding the page stops the clip as well, as going to the background does in the app.
+  useEffect(() => {
+    const stop = () => {
+      if (!document.hidden) return;
+      setActiveAudio(null);
+      setAudioPlaying(false);
+    };
+    document.addEventListener("visibilitychange", stop);
+    return () => document.removeEventListener("visibilitychange", stop);
+  }, []);
 
   const go = useCallback((delta: number) => {
     setIndex((current) => Math.min(steps.length - 1, Math.max(0, current + delta)));

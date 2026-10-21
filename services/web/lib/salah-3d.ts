@@ -48,3 +48,25 @@ export type SalahSceneSpeed = (typeof SALAH_SCENE_SPEEDS)[number];
 export function nextSalahSceneSpeed(speed: SalahSceneSpeed): SalahSceneSpeed {
   return SALAH_SCENE_SPEEDS[(SALAH_SCENE_SPEEDS.indexOf(speed) + 1) % SALAH_SCENE_SPEEDS.length]!;
 }
+
+/**
+ * The scene on the current step plays its pose once and holds the last frame. `run` changes
+ * whenever the pose should play from its start: on every new step and on «Replay».
+ */
+export type SalahScenePlayback = { playing: boolean; ended: boolean; run: number };
+export type SalahScenePlaybackEvent = "step" | "replay" | "toggle" | "ended";
+
+export const SALAH_SCENE_PLAYBACK: SalahScenePlayback = { playing: true, ended: false, run: 0 };
+
+export function nextSalahScenePlayback(state: SalahScenePlayback, event: SalahScenePlaybackEvent): SalahScenePlayback {
+  switch (event) {
+    case "step":
+    case "replay":
+      return { playing: true, ended: false, run: state.run + 1 };
+    case "toggle":
+      // Play after the end plays the pose again.
+      return state.ended ? nextSalahScenePlayback(state, "replay") : { ...state, playing: !state.playing };
+    case "ended":
+      return { ...state, ended: true };
+  }
+}

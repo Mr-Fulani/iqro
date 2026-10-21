@@ -2030,6 +2030,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salah3dResetView => 'Reset the view';
 
   @override
+  String get salah3dReplay => 'Replay';
+
+  @override
   String get salahOfflineTitle => 'Pictures offline';
 
   @override

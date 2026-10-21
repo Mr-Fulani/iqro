@@ -3672,6 +3672,12 @@ abstract class AppLocalizations {
   /// **'Reset the view'**
   String get salah3dResetView;
 
+  /// No description provided for @salah3dReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get salah3dReplay;
+
   /// No description provided for @salahOfflineTitle.
   ///
   /// In en, this message translates to:

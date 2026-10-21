@@ -2017,6 +2017,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salah3dResetView => 'إعادة زاوية العرض';
 
   @override
+  String get salah3dReplay => 'إعادة الحركة';
+
+  @override
   String get salahOfflineTitle => 'الصور دون إنترنت';
 
   @override

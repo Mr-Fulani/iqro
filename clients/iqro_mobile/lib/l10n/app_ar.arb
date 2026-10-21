@@ -613,6 +613,7 @@
   "salah3dPause": "إيقاف الحركة مؤقتًا",
   "salah3dSpeed": "سرعة الحركة: {speed}",
   "salah3dResetView": "إعادة زاوية العرض",
+  "salah3dReplay": "إعادة الحركة",
   "salahOfflineTitle": "الصور دون إنترنت",
   "salahOfflineImages": "رسوم الدورة التوضيحية",
   "salahOfflineSaved": "محفوظة على هذا الجهاز",
