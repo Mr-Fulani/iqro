@@ -1981,6 +1981,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salahShowTranslation => 'Translation';
 
   @override
+  String get salahStepAudio => 'Step voice-over';
+
+  @override
+  String get salahNotes => 'Notes on this step';
+
+  @override
+  String get salahNoteHelp => 'Help';
+
+  @override
+  String get salahNoteWarning => 'Important';
+
+  @override
+  String get salahNoteClose => 'Close the note';
+
+  @override
   String salahMinutes(int count) {
     return '$count min';
   }

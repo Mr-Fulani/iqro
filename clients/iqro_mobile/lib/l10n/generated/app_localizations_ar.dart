@@ -1968,6 +1968,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salahShowTranslation => 'المعنى';
 
   @override
+  String get salahStepAudio => 'شرح الخطوة صوتيًا';
+
+  @override
+  String get salahNotes => 'ملاحظات على الخطوة';
+
+  @override
+  String get salahNoteHelp => 'توضيح';
+
+  @override
+  String get salahNoteWarning => 'تنبيه مهم';
+
+  @override
+  String get salahNoteClose => 'إغلاق الملاحظة';
+
+  @override
   String salahMinutes(int count) {
     return '$count د';
   }

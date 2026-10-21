@@ -271,6 +271,8 @@ class SalahStep {
     this.ruling,
     this.rakat,
     this.details,
+    this.notes = const <SalahStepNote>[],
+    this.audio,
     this.media,
     this.formulas = const <String>[],
     this.repeat,
@@ -287,6 +289,10 @@ class SalahStep {
       title: _string(json['title']),
       instruction: _string(json['instruction']),
       details: _optional(json['details']),
+      notes: <SalahStepNote>[
+        for (final item in _list(json['notes'])) ?SalahStepNote.tryParse(item),
+      ],
+      audio: SalahFormulaAudio.tryParse(json['audio']),
       media: _optional(json['media']),
       formulas: <String>[
         for (final item in _list(json['formulas'])) ?_optional(item),
@@ -308,9 +314,39 @@ class SalahStep {
   final String title;
   final String instruction;
   final String? details;
+
+  /// The «?» and «!» notes in their order.
+  final List<SalahStepNote> notes;
+
+  /// The step's own voice-over, in the document's language.
+  final SalahFormulaAudio? audio;
   final String? media;
   final List<String> formulas;
   final int? repeat;
+}
+
+enum SalahNoteKind { help, warning }
+
+/// A note of a step: «?» opens help, «!» a warning. A newer kind of note
+/// opens like help; a note without text is left out.
+@immutable
+class SalahStepNote {
+  const SalahStepNote({required this.kind, required this.text});
+
+  static SalahStepNote? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final text = _optional(value['text']);
+    if (text == null) return null;
+    return SalahStepNote(
+      kind: value['kind'] == 'warning'
+          ? SalahNoteKind.warning
+          : SalahNoteKind.help,
+      text: value['text'].toString(),
+    );
+  }
+
+  final SalahNoteKind kind;
+  final String text;
 }
 
 @immutable
@@ -357,6 +393,12 @@ class SalahFormulaAudio {
     this.endMs,
     this.segments = const <SalahAudioSegment>[],
   });
+
+  /// A malformed recording leaves the step without one.
+  static SalahFormulaAudio? tryParse(Object? value) {
+    if (value is! Map || _optional(value['url']) == null) return null;
+    return SalahFormulaAudio.fromJson(value);
+  }
 
   factory SalahFormulaAudio.fromJson(Object? value) {
     final json = _map(value, 'audio');

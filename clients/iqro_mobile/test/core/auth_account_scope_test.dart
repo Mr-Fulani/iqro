@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
@@ -1042,6 +1044,54 @@ void main() {
       expect(storage.values['logout_tombstone.v1'], isNull);
     },
   );
+
+  for (final (target, expected) in <(TargetPlatform, String)>[
+    (TargetPlatform.iOS, 'ios'),
+    (TargetPlatform.android, 'android'),
+  ]) {
+    test('guest bootstrap and device recovery report $expected', () async {
+      debugDefaultTargetPlatformOverride = target;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final requests = <String, Map<String, Object?>>{};
+      final adapter = _ScriptedAdapter((request) {
+        switch (request.path) {
+          case '/auth/guest':
+          case '/auth/device/recover':
+            requests[request.path] = Map<String, Object?>.from(
+              request.data! as Map,
+            );
+            return _jsonResponse(_apiSession('account-a', status: 'guest'));
+          case '/auth/token/refresh':
+            return _jsonResponse(const <String, Object?>{
+              'code': 'refresh_token_invalid',
+            }, status: 401);
+          default:
+            throw StateError('Unexpected request ${request.path}');
+        }
+      });
+
+      await _repository(
+        _MemorySecureStorage(<String, String>{}),
+        adapter,
+      ).bootstrapGuest(locale: 'ru');
+      await _repository(
+        _MemorySecureStorage(<String, String>{
+          'session.v1': jsonEncode(
+            _storedSession(
+              'account-a',
+              accessExpiresAt: DateTime.utc(2020),
+            ).toJson(),
+          ),
+          'installation_id.v1': 'installation-a',
+          'installation_credential.v1': 'credential-a',
+        }),
+        adapter,
+      ).ensureSession(locale: 'ru');
+
+      expect(requests['/auth/guest']?['platform'], expected);
+      expect(requests['/auth/device/recover']?['platform'], expected);
+    });
+  }
 
   test('malformed handoff falls back to the canonical session', () async {
     final storage = _MemorySecureStorage(<String, String>{

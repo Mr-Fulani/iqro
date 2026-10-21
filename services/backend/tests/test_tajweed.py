@@ -313,6 +313,26 @@ def test_word_positions_come_from_quran_foundation_mushafs(
 
 
 @pytest.mark.django_db
+def test_an_ayah_end_labelled_as_a_word_only_in_v4_is_not_a_word(
+    quran_dataset: dict[str, Any],
+) -> None:
+    # Production QF data: Mushaf 4 marks the 2:181 number as the ayah end,
+    # Mushaf 19 still labels the same word id as a word.
+    _mushaf(19, [*_glyphs("1:1", 4), *_glyphs("1:2", 4), ("1:2", 5, "ﱉ")])
+    _mushaf(4, [*_texts("1:1", FATIHA_1_WORDS), *_texts("1:2", (*FATIHA_2_WORDS, "٢"))])
+    QuranFoundationMushafPage.objects.filter(mushaf__source_id=4).update(
+        words=[
+            {**word, "char_type_name": "end"} if word["text"] == "٢" else word
+            for word in QuranFoundationMushafPage.objects.get(mushaf__source_id=4).words
+        ]
+    )
+
+    verse_words, _ = quran_foundation_verse_words("production")
+
+    assert verse_words["1:2"].words == FATIHA_2_WORDS
+
+
+@pytest.mark.django_db
 def test_missing_mushafs_or_mismatched_word_ids_abort(quran_dataset: dict[str, Any]) -> None:
     with pytest.raises(QuranFoundationError, match="Mushafs 19 and 4"):
         quran_foundation_verse_words("production")

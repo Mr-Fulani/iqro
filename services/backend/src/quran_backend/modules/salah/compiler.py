@@ -10,7 +10,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from quran_backend.modules.salah.snapshot import expand_lesson_steps, template_counts_rakats
+from quran_backend.modules.salah.snapshot import (
+    audio_media_key,
+    expand_lesson_steps,
+    template_counts_rakats,
+)
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -18,7 +22,17 @@ _STEP_FIELDS = ("kind", "position", "ruling", "rakat", "media", "repeat")
 
 
 def _text(value: Mapping[str, str] | None, language: str) -> str | None:
-    return None if value is None else value[language]
+    # A draft may still miss a translation; a published version never does.
+    return None if value is None else value.get(language, "")
+
+
+def _notes(step: Mapping[str, Any], language: str) -> list[dict[str, str]]:
+    """The «?» and «!» notes in their order; an untranslated draft note is left out."""
+    return [
+        {"kind": note["kind"], "text": text}
+        for note in step.get("notes", [])
+        if (text := _text(note["text"], language))
+    ]
 
 
 def compile_document(
@@ -29,7 +43,11 @@ def compile_document(
     formulas: Mapping[str, Mapping[str, Any]],
     media: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """`formulas` and `media` are already resolved for `language`, by id/key."""
+    """`formulas` and `media` are already resolved for `language`, by id/key.
+
+    `media` holds every stored file; only the pictures steps show go to the
+    document's `media`, a step's recording goes to the step itself.
+    """
     templates = {template["id"]: template for template in snapshot.get("templates", [])}
     kind_titles = {kind["code"]: kind["title"] for kind in snapshot["prayer_kinds"]}
     used_formulas: set[str] = set()
@@ -46,6 +64,12 @@ def compile_document(
             compiled["instruction"] = _text(step["instruction"], language)
             if step.get("details") is not None:
                 compiled["details"] = _text(step["details"], language)
+            notes = _notes(step, language)
+            if notes:
+                compiled["notes"] = notes
+            audio_key = audio_media_key(step, language)
+            if audio_key is not None and audio_key in media:
+                compiled["audio"] = {"url": media[audio_key]["url"]}
             compiled["formulas"] = [
                 formula_id for formula_id in step.get("formulas", []) if formula_id in formulas
             ]

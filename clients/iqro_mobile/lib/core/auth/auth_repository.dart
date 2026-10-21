@@ -4,6 +4,8 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
@@ -51,6 +53,10 @@ class AuthRepository {
   static const _pendingHandoffKey = 'pending_account_handoff.v1';
   static const _pendingVerificationKey = 'pending_email_verification.v1';
   static const _logoutTombstoneKey = 'logout_tombstone.v1';
+
+  // Backend `Device.platform` value; the mobile app ships only to iOS/Android.
+  static String get _devicePlatform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
 
   final FlutterSecureStorage _storage;
   final Dio _dio;
@@ -235,7 +241,7 @@ class AuthRepository {
         data: <String, Object?>{
           'installation_id': identity.$1,
           'installation_credential': identity.$2,
-          'platform': 'android',
+          'platform': _devicePlatform,
           'locale': locale,
           'app_version': _safeVersion(package.version),
         },
@@ -271,7 +277,7 @@ class AuthRepository {
         data: <String, Object?>{
           'installation_id': identity.$1,
           'installation_credential': identity.$2,
-          'platform': 'android',
+          'platform': _devicePlatform,
           'locale': locale,
           'app_version': _safeVersion(package.version),
         },

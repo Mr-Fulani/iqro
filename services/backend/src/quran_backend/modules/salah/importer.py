@@ -1,12 +1,14 @@
 """Imports a course snapshot, compiles its documents and publishes versions.
 
-Flow: import (draft, media uploaded, documents compiled) → the owner signs
-off in the admin → publish (previous version withdrawn, documents compiled
+Flow: import (draft, media uploaded, documents compiled) or a draft copied
+from another version in the admin → the owner edits the draft in the admin
+editor → signs off → publish (previous version withdrawn, documents compiled
 again with the publication stamp, web content revalidated).
 """
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import struct
@@ -67,6 +69,8 @@ def store_media(
     key: str,
     path: Path,
     uploader: ObjectUploader,
+    *,
+    duration_ms: int | None = None,
 ) -> SalahMediaAsset:
     """Stores one file under an immutable key; a new file for the key replaces the old."""
     data = path.read_bytes()
@@ -91,6 +95,7 @@ def store_media(
             "content_type": content_type,
             "width": size[0] if size else None,
             "height": size[1] if size else None,
+            "duration_ms": duration_ms,
             "bytes": len(data),
             "sha256": checksum,
         },
@@ -229,6 +234,46 @@ def import_salah_snapshot(
     return version
 
 
+def sign_salah_version(version: SalahCourseVersion, user: Any, note: str = "") -> None:
+    """The owner's sign-off of a complete draft: every text in every language."""
+    validate_snapshot(version.snapshot)
+    version.sign(user, note)
+    compile_version(version)
+
+
+@transaction.atomic
+def copy_salah_version(source: SalahCourseVersion, version: str) -> SalahCourseVersion:
+    """A new draft with the content and the stored files of `source`, which stays as it is."""
+    snapshot = copy.deepcopy(source.snapshot)
+    snapshot["course"]["version"] = version
+    draft = SalahCourseVersion.objects.create(
+        course=source.course,
+        version=version,
+        schema_version=source.schema_version,
+        methodology=source.methodology,
+        source_title=dict(source.source_title),
+        snapshot=snapshot,
+        checksum_sha256=snapshot_checksum(snapshot),
+    )
+    # Stored objects are immutable, so the draft points at the same files.
+    SalahMediaAsset.objects.bulk_create(
+        SalahMediaAsset(
+            version=draft,
+            key=asset.key,
+            object_key=asset.object_key,
+            content_type=asset.content_type,
+            width=asset.width,
+            height=asset.height,
+            duration_ms=asset.duration_ms,
+            bytes=asset.bytes,
+            sha256=asset.sha256,
+        )
+        for asset in source.media.all()
+    )
+    compile_version(draft)
+    return draft
+
+
 @transaction.atomic
 def publish_salah_version(version: SalahCourseVersion) -> SalahCourseVersion:
     """Publishes a signed draft and makes it the course's active version."""
@@ -241,6 +286,7 @@ def publish_salah_version(version: SalahCourseVersion) -> SalahCourseVersion:
         raise SalahSnapshotError(
             ["Версию нужно сначала подписать: религиозная проверка обязательна."]
         )
+    validate_snapshot(version.snapshot)
     course = SalahCourse.objects.select_for_update().get(pk=version.course_id)
     previous = course.active_version
     if previous is not None:

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -480,6 +481,93 @@ void main() {
     expect(standalone.mediaItem.extras?['content_type'], 'salah');
   });
 
+  testWidgets('step notes open in a bottom sheet and close every way', (
+    tester,
+  ) async {
+    await _pump(tester, location: '/salah/lesson/fajr/step/fajr.r1.ruku');
+    final help = find.byKey(const ValueKey('salah-note-0'));
+    final warning = find.byKey(const ValueKey('salah-note-1'));
+    final text = find.byKey(const ValueKey('salah-note-text'));
+    expect(find.descendant(of: help, matching: find.text('?')), findsOneWidget);
+    expect(
+      find.descendant(of: warning, matching: find.text('!')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Справка'), findsOneWidget);
+    expect(find.byTooltip('Важно'), findsOneWidget);
+    // A finger fits: the 32 dp circle sits in a 48 dp target.
+    expect(tester.getSize(help).height, greaterThanOrEqualTo(48));
+
+    await tester.tap(help);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('salah-note-title')), findsOneWidget);
+    expect(tester.widget<Text>(text).data, startsWith('Спина и голова'));
+    await tester.tap(find.byKey(const ValueKey('salah-note-close')));
+    await tester.pumpAndSettle();
+    expect(text, findsNothing);
+
+    await tester.tap(warning);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(text).data, contains('столп'));
+    // A tap outside the sheet closes it.
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    expect(text, findsNothing);
+
+    // So does Esc on a keyboard.
+    await tester.tap(help);
+    await tester.pumpAndSettle();
+    expect(text, findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(text, findsNothing);
+
+    // Practice shows only the picture, the Arabic text and the audio.
+    await tester.tap(find.text('Практика'));
+    await tester.pumpAndSettle();
+    expect(help, findsNothing);
+    expect(find.text('Озвучка шага'), findsOneWidget);
+  });
+
+  testWidgets('notes follow the reading direction in Arabic', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      location: '/salah/lesson/fajr/step/fajr.r1.ruku',
+      locale: 'ar',
+    );
+    final help = tester.getCenter(find.byKey(const ValueKey('salah-note-0')));
+    final warning = tester.getCenter(
+      find.byKey(const ValueKey('salah-note-1')),
+    );
+    expect(help.dx, greaterThan(warning.dx));
+    expect(find.byTooltip('توضيح'), findsOneWidget);
+    expect(find.bySemanticsLabel('ملاحظات على الخطوة'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('the step voice-over plays in the shared player', (tester) async {
+    final harness = await _pump(
+      tester,
+      location: '/salah/lesson/fajr/step/fajr.r1.ruku',
+    );
+    expect(find.text('Озвучка шага'), findsOneWidget);
+    final play = find.byKey(const ValueKey('salah-play-step:fajr.r1.ruku'));
+    await tester.ensureVisible(play);
+    await tester.pumpAndSettle();
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+
+    expect(harness.engine.setAudioSourceCalls, 1);
+    final standalone = harness.audio.state.standalone!;
+    expect(standalone.mediaItem.id, 'salah:step:fajr.r1.ruku');
+    expect(standalone.mediaItem.title, "Фаджр · Руку'");
+    // Steps without a voice-over show no bar.
+    await tester.tap(find.byKey(const ValueKey('salah-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Озвучка шага'), findsNothing);
+  });
+
   group('a step\'s recording', () {
     final play = find.byKey(const ValueKey('salah-play-takbir'));
 
@@ -547,6 +635,25 @@ void main() {
       router.pop();
       await tester.pumpAndSettle();
       expect(find.byType(SalahLessonScreen), findsNothing);
+      expect(harness.audio.state.standalone, isNull);
+    });
+
+    testWidgets('the step voice-over stops with the step too', (tester) async {
+      final harness = await _pump(
+        tester,
+        location: '/salah/lesson/fajr/step/fajr.r1.ruku',
+      );
+      final voice = find.byKey(const ValueKey('salah-play-step:fajr.r1.ruku'));
+      await tester.ensureVisible(voice);
+      await tester.pumpAndSettle();
+      await tester.tap(voice);
+      await tester.pumpAndSettle();
+      expect(
+        harness.audio.state.standalone?.mediaItem.id,
+        'salah:step:fajr.r1.ruku',
+      );
+
+      await _tapNext(tester);
       expect(harness.audio.state.standalone, isNull);
     });
 

@@ -18,6 +18,7 @@ import 'salah_formula_card.dart';
 import 'salah_models.dart';
 import 'salah_progress.dart';
 import 'salah_repository.dart';
+import 'salah_step_notes.dart';
 
 /// One lesson, step by step. Opens on [stepSlug] when it is given and still
 /// exists, otherwise on the saved step.
@@ -634,23 +635,29 @@ class _StepPage extends ConsumerWidget {
             textAlign: TextAlign.start,
           ),
           if (display.learning) ...<Widget>[
-            if (ruling != null) ...<Widget>[
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: context.iqroColors.sand,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+            // The ruling and the «?» and «!» notes, as by the title on the site.
+            if (ruling != null || step.notes.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 4),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: <Widget>[
+                  if (ruling != null)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: context.iqroColors.sand,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        child: Text(ruling, style: theme.textTheme.labelMedium),
+                      ),
                     ),
-                    child: Text(ruling, style: theme.textTheme.labelMedium),
-                  ),
-                ),
+                  if (step.notes.isNotEmpty) SalahStepNotes(notes: step.notes),
+                ],
               ),
             ],
             if (step.instruction.isNotEmpty) ...<Widget>[
@@ -677,6 +684,15 @@ class _StepPage extends ConsumerWidget {
                 ),
               ),
             ],
+          ],
+          if (step.audio case final audio?) ...<Widget>[
+            const SizedBox(height: 16),
+            SalahStepAudioBar(
+              step: step,
+              audio: audio,
+              title: '${lesson.title} · ${step.title}',
+              audioOwner: audioOwner,
+            ),
           ],
           // A repeated action without a counted formula (washing the face
           // three times) gets its own counter.

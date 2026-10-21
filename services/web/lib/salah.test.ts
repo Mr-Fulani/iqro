@@ -10,6 +10,7 @@ import {
   orderedLessons,
   parseSalahCourseDocument,
   parseSalahProgress,
+  parseSalahStepNotes,
   readSalahProgress,
   recordSalahStep,
   resumeStepIndex,
@@ -51,6 +52,45 @@ test("the contract example parses into ordered lessons", () => {
   assert.equal(lesson("fajr").prayer?.rakats, 2);
   assert.equal(nextSalahLesson(course, "wudu")?.slug, "fajr");
   assert.equal(nextSalahLesson(course, "fajr"), null);
+});
+
+test("a step carries its «?» and «!» notes in order and its own voice-over", () => {
+  const ruku = lesson("fajr").steps.find((step) => step.slug === "fajr.r1.ruku");
+  assert.ok(ruku);
+  assert.deepEqual(ruku.notes?.map((note) => note.kind), ["help", "warning"]);
+  assert.match(ruku.notes?.[0]?.text ?? "", /Спина и голова/);
+  assert.match(ruku.audio?.url ?? "", /audio-ruku-ru-[0-9a-f]+\.m4a$/);
+  // Steps without notes or a recording stay as they were: no empty arrays in the bundle.
+  const takbir = lesson("fajr").steps[0]!;
+  assert.equal("notes" in takbir, false);
+  assert.equal("audio" in takbir, false);
+  assert.deepEqual(salahLessonBundle(course, lesson("fajr")).lesson.steps[2]?.notes, ruku.notes);
+});
+
+test("malformed notes and recordings are dropped, a newer note kind opens as help", () => {
+  assert.deepEqual(
+    parseSalahStepNotes([
+      { kind: "warning", text: "Важно" },
+      { kind: "tip", text: "Новый вид" },
+      { kind: "help", text: "  " },
+      { kind: "help" },
+      "text",
+      null,
+    ]),
+    [
+      { kind: "warning", text: "Важно" },
+      { kind: "help", text: "Новый вид" },
+    ],
+  );
+  assert.deepEqual(parseSalahStepNotes({ kind: "help", text: "not a list" }), []);
+
+  const lessons = structuredClone(example.lessons) as Record<string, unknown>[];
+  const steps = lessons[2]!.steps as Record<string, unknown>[];
+  steps[2] = { ...steps[2], notes: "broken", audio: { url: 42 } };
+  const parsed = parseSalahCourseDocument({ ...example, lessons });
+  const ruku = findSalahLesson(parsed, "fajr")!.steps[2]!;
+  assert.equal(ruku.notes, undefined);
+  assert.equal(ruku.audio, undefined);
 });
 
 test("prayer kinds and rulings from a newer course do not break the document", () => {

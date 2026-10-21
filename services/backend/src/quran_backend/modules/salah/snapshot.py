@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,18 @@ SCENE_POSES = frozenset(
     {"qiyam", "takbir", "ruku", "itidal", "sujud", "sujud2", "jalsa", "tashahhud", "salam"}
 )
 SCENE_VIEWS = frozenset({"full", "hand", "back"})
+# A step's notes open from small icons: «?» for a help note, «!» for a warning.
+NOTE_KINDS = frozenset({"help", "warning"})
+AUDIO_SUFFIXES = (".m4a", ".mp3")
+
+
+@dataclass(frozen=True)
+class _Known:
+    """What a step may refer to: formula ids, media keys and, among them, recordings."""
+
+    formulas: set[str]
+    media: set[str]
+    audio: set[str]
 
 
 class SalahSnapshotError(ValueError):
@@ -89,21 +102,43 @@ def expand_lesson_steps(
     if not prayer:
         return [{**step, "slug": f"{slug}.{step['slug']}"} for step in lesson.get("steps", [])]
     template = templates[prayer["template"]]
+    steps: list[dict[str, Any]] = []
+    for index, rakat in prayer_step_sources(lesson, templates):
+        step = template["steps"][index]
+        expanded = {key: value for key, value in step.items() if key != "when"}
+        if rakat is not None:
+            expanded["slug"] = f"{slug}.r{rakat}.{step['slug']}"
+            expanded["rakat"] = rakat
+        else:
+            expanded["slug"] = f"{slug}.{step['slug']}"
+        steps.append(expanded)
+    return steps
+
+
+def prayer_step_sources(
+    lesson: Mapping[str, Any], templates: Mapping[str, Mapping[str, Any]]
+) -> list[tuple[int, int | None]]:
+    """Each step of a prayer lesson as (index of its template step, rak'ah or None)."""
+    prayer = lesson["prayer"]
+    template = templates[prayer["template"]]
     rules = prayer["rakat_rules"]
     counts_rakats = template_counts_rakats(template)
-    steps: list[dict[str, Any]] = []
-    for rule in rules:
-        for step in template["steps"]:
-            if not _rule_matches(step.get("when", {}), rule, rakats=len(rules)):
-                continue
-            expanded = {key: value for key, value in step.items() if key != "when"}
-            if counts_rakats:
-                expanded["slug"] = f"{slug}.r{rule['rakat']}.{step['slug']}"
-                expanded["rakat"] = int(rule["rakat"])
-            else:
-                expanded["slug"] = f"{slug}.{step['slug']}"
-            steps.append(expanded)
-    return steps
+    return [
+        (index, int(rule["rakat"]) if counts_rakats else None)
+        for rule in rules
+        for index, step in enumerate(template["steps"])
+        if _rule_matches(step.get("when", {}), rule, rakats=len(rules))
+    ]
+
+
+def audio_media_key(owner: Mapping[str, Any], language: str) -> str | None:
+    """The recording of a step or a formula source in `language`.
+
+    `audio_media_languages[language]` is a voice-over in that language; without
+    it the step or formula sounds `audio_media` in every language.
+    """
+    by_language = owner.get("audio_media_languages") or {}
+    return by_language.get(language) or owner.get("audio_media")
 
 
 def template_counts_rakats(template: Mapping[str, Any]) -> bool:
@@ -158,7 +193,7 @@ def _check_formula_source(formula_id: str, source: Mapping[str, Any], problems: 
         _localized(meanings, f"{where}.translations", problems)
 
 
-def _check_formulas(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
+def _check_formulas(snapshot: Mapping[str, Any], audio: set[str], problems: list[str]) -> set[str]:
     ids: set[str] = set()
     for formula in snapshot.get("formulas", []):
         formula_id = formula.get("id")
@@ -166,11 +201,44 @@ def _check_formulas(snapshot: Mapping[str, Any], problems: list[str]) -> set[str
             problems.append(f"Формула «{formula_id}»: пустой или повторяющийся id.")
             continue
         ids.add(formula_id)
-        _check_formula_source(formula_id, formula.get("source") or {}, problems)
+        source = formula.get("source") or {}
+        _check_formula_source(formula_id, source, problems)
+        _check_audio(f"Формула «{formula_id}»", source, audio, problems)
     return ids
 
 
+def _check_audio(
+    where: str, owner: Mapping[str, Any], audio: set[str], problems: list[str]
+) -> None:
+    """`audio_media` and `audio_media_languages` name recordings of `media[]`."""
+    keys = [owner["audio_media"]] if owner.get("audio_media") is not None else []
+    by_language = owner.get("audio_media_languages")
+    if by_language is not None:
+        if not isinstance(by_language, Mapping):
+            problems.append(f"{where}.audio_media_languages: ожидаются записи по языкам.")
+            by_language = {}
+        problems.extend(
+            f"{where}: запись на неизвестном языке «{language}»."
+            for language in by_language
+            if language not in SALAH_LANGUAGES
+        )
+        keys.extend(by_language.values())
+    problems.extend(f"{where}: нет записи «{key}» в media." for key in keys if key not in audio)
+
+
+def _check_notes(where: str, notes: Any, problems: list[str]) -> None:
+    if not isinstance(notes, list):
+        problems.append(f"{where}.notes: ожидается список заметок.")
+        return
+    for number, note in enumerate(notes, start=1):
+        if not isinstance(note, Mapping) or note.get("kind") not in NOTE_KINDS:
+            problems.append(f"{where}, заметка {number}: тип должен быть help или warning.")
+            continue
+        _localized(note.get("text"), f"{where}, заметка {number}", problems)
+
+
 def _check_media(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
+    """Every media key; recordings are the ones whose file is .m4a or .mp3."""
     keys: set[str] = set()
     for asset in snapshot.get("media", []):
         key = asset.get("key")
@@ -243,9 +311,7 @@ def _check_prayer(
     return True
 
 
-def _check_steps(
-    steps: Sequence[Mapping[str, Any]], formulas: set[str], media: set[str], problems: list[str]
-) -> None:
+def _check_steps(steps: Sequence[Mapping[str, Any]], known: _Known, problems: list[str]) -> None:
     seen: set[str] = set()
     for step in steps:
         where = f"Шаг «{step['slug']}»"
@@ -263,18 +329,17 @@ def _check_steps(
         problems.extend(
             f"{where}: нет формулы «{formula_id}»."
             for formula_id in step.get("formulas", [])
-            if formula_id not in formulas
+            if formula_id not in known.formulas
         )
-        if step.get("media") is not None and step["media"] not in media:
+        if step.get("media") is not None and step["media"] not in known.media:
             problems.append(f"{where}: нет медиа «{step['media']}».")
+        if step.get("notes") is not None:
+            _check_notes(where, step["notes"], problems)
+        _check_audio(where, step, known.audio, problems)
 
 
 def _check_lessons(
-    snapshot: Mapping[str, Any],
-    formulas: set[str],
-    media: set[str],
-    kinds: set[str],
-    problems: list[str],
+    snapshot: Mapping[str, Any], known: _Known, kinds: set[str], problems: list[str]
 ) -> set[str]:
     templates = {template.get("id"): template for template in snapshot.get("templates", [])}
     for template_id, template in templates.items():
@@ -308,7 +373,7 @@ def _check_lessons(
         steps = expand_lesson_steps(lesson, templates)
         if not steps:
             problems.append(f"{where}: нет шагов.")
-        _check_steps(steps, formulas, media, problems)
+        _check_steps(steps, known, problems)
     return slugs
 
 
@@ -330,10 +395,15 @@ def validate_snapshot(snapshot: Mapping[str, Any]) -> None:
     """Raises SalahSnapshotError listing every problem; returns when valid."""
     problems: list[str] = []
     _check_course(snapshot, problems)
-    formulas = _check_formulas(snapshot, problems)
     media = _check_media(snapshot, problems)
+    audio = {
+        asset["key"]
+        for asset in snapshot.get("media", [])
+        if asset.get("key") in media and str(asset.get("file", "")).lower().endswith(AUDIO_SUFFIXES)
+    }
+    formulas = _check_formulas(snapshot, audio, problems)
     kinds = _check_prayer_kinds(snapshot, problems)
-    lessons = _check_lessons(snapshot, formulas, media, kinds, problems)
+    lessons = _check_lessons(snapshot, _Known(formulas, media, audio), kinds, problems)
     _check_sections(snapshot, lessons, problems)
     if problems:
         raise SalahSnapshotError(problems)
