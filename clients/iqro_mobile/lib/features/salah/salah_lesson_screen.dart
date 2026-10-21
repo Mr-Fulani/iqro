@@ -1,14 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'salah_3d.dart';
 import 'salah_display.dart';
 import 'salah_formula_card.dart';
 import 'salah_models.dart';
@@ -139,6 +142,11 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   // rebuilt when it changes.
   late final ValueNotifier<int> _index;
   var _finishing = false;
+  final _three = Salah3DController();
+  late final List<SalahMediaScene?> _scenes = salahStepScenes(
+    widget.document,
+    _steps,
+  );
 
   List<SalahStep> get _steps => widget.lesson.steps;
 
@@ -160,11 +168,13 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   void dispose() {
     _pages.dispose();
     _index.dispose();
+    _three.dispose();
     super.dispose();
   }
 
   void _onPageChanged(int index) {
     _index.value = index;
+    _three.stepChanged();
     unawaited(_record(index));
     _precache(index + 1);
   }
@@ -301,6 +311,12 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
                     document: widget.document,
                     lesson: lesson,
                     step: _steps[index],
+                    visual: _StepVisualState(
+                      index: index,
+                      current: _index,
+                      scene: _scenes[index],
+                      three: _three,
+                    ),
                   ),
                 ),
               ),
@@ -546,6 +562,7 @@ class _StepPage extends ConsumerWidget {
     required this.document,
     required this.lesson,
     required this.step,
+    required this.visual,
     super.key,
   });
 
@@ -553,6 +570,7 @@ class _StepPage extends ConsumerWidget {
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
+  final _StepVisualState visual;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -570,7 +588,7 @@ class _StepPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (media != null) ...<Widget>[
-            _StepImage(courseSlug: courseSlug, media: media),
+            _StepVisual(courseSlug: courseSlug, media: media, state: visual),
             const SizedBox(height: 16),
           ],
           Text(
@@ -676,51 +694,261 @@ class _StepRepeatCounterState extends State<_StepRepeatCounter> {
   );
 }
 
-/// The step illustration in its declared proportions, never wider than its
-/// declared width and never taller than 40% of the screen.
-class _StepImage extends ConsumerWidget {
-  const _StepImage({required this.courseSlug, required this.media});
+/// Where a step page stands in the lesson's 3D scene.
+@immutable
+class _StepVisualState {
+  const _StepVisualState({
+    required this.index,
+    required this.current,
+    required this.scene,
+    required this.three,
+  });
+
+  final int index;
+  final ValueListenable<int> current;
+
+  /// The scene pose this page's picture is a still of, or null.
+  final SalahMediaScene? scene;
+  final Salah3DController three;
+}
+
+/// The step picture. A still of the 3D scene says it is schematic and, on
+/// the current page, gives way to the running scene with its tools.
+class _StepVisual extends StatelessWidget {
+  const _StepVisual({
+    required this.courseSlug,
+    required this.media,
+    required this.state,
+  });
 
   final String courseSlug;
   final SalahMedia media;
+  final _StepVisualState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final three = state.three;
+    final scene = state.scene;
+    return ListenableBuilder(
+      listenable: Listenable.merge(<Listenable>[state.current, three]),
+      builder: (context, _) {
+        final runs =
+            scene != null &&
+            state.current.value == state.index &&
+            !reduceMotion &&
+            !three.failed;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _StepImage(
+              courseSlug: courseSlug,
+              media: media,
+              view: runs ? _Salah3DHost(scene: scene, three: three) : null,
+              stillOnTop: !(runs && three.ready),
+            ),
+            if (scene != null) _Salah3DBar(three: three, tools: runs),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Runs the scene only while it plays, the app is in the foreground and the
+/// lesson is the visible route.
+class _Salah3DHost extends ConsumerStatefulWidget {
+  const _Salah3DHost({required this.scene, required this.three});
+
+  final SalahMediaScene scene;
+  final Salah3DController three;
+
+  @override
+  ConsumerState<_Salah3DHost> createState() => _Salah3DHostState();
+}
+
+class _Salah3DHostState extends ConsumerState<_Salah3DHost>
+    with WidgetsBindingObserver {
+  final _foreground = ValueNotifier<bool>(
+    WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _foreground.dispose();
+    super.dispose();
+  }
+
+  // Frames stop in the background, so this does not wait for a rebuild.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground.value = state == AppLifecycleState.resumed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final three = widget.three;
+    final builder = ref.watch(salah3DViewBuilderProvider);
+    return builder(
+      context,
+      Salah3DViewConfig(
+        step: widget.scene.pose,
+        view: widget.scene.view,
+        running: three.playing && TickerMode.valuesOf(context).enabled,
+        foreground: _foreground,
+        speed: three.speed,
+        resetCount: three.resetCount,
+        onReady: three.markReady,
+        onError: (code) {
+          debugPrint('Salah 3D falls back to the still: $code');
+          three.fail();
+        },
+      ),
+    );
+  }
+}
+
+/// «Schematic 3D illustration» and the tools of the scene.
+class _Salah3DBar extends StatelessWidget {
+  const _Salah3DBar({required this.three, required this.tools});
+
+  final Salah3DController three;
+
+  /// The scene runs on this page: its tools appear once it is drawn.
+  final bool tools;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final speed =
+        '${NumberFormat.decimalPattern(Localizations.localeOf(context).toLanguageTag()).format(three.speed)}×';
+    // As tall as its tools, so they do not move the step when they appear.
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l10n.salah3dSchematic,
+                key: const ValueKey('salah-3d-caption'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (tools && three.ready) ...<Widget>[
+              IconButton(
+                key: const ValueKey('salah-3d-play'),
+                tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
+                onPressed: three.togglePlaying,
+                icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
+              ),
+              Semantics(
+                label: l10n.salah3dSpeed(speed),
+                excludeSemantics: true,
+                button: true,
+                child: TextButton(
+                  key: const ValueKey('salah-3d-speed'),
+                  onPressed: three.cycleSpeed,
+                  child: Text(speed),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('salah-3d-reset'),
+                tooltip: l10n.salah3dResetView,
+                onPressed: three.resetView,
+                icon: const Icon(Icons.threesixty),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The step illustration in its declared proportions, never wider than its
+/// declared width and never taller than 40% of the screen. [view] (the
+/// running 3D scene) lies under the picture, which fades out once the scene
+/// has drawn ([stillOnTop] false).
+class _StepImage extends ConsumerWidget {
+  const _StepImage({
+    required this.courseSlug,
+    required this.media,
+    this.view,
+    this.stillOnTop = true,
+  });
+
+  final String courseSlug;
+  final SalahMedia media;
+  final Widget? view;
+  final bool stillOnTop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
-    return Semantics(
-      image: true,
-      label: media.alt,
-      child: ExcludeSemantics(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: media.width > 0
-                  ? media.width.toDouble()
-                  : double.infinity,
-              maxHeight: maxHeight,
-            ),
-            child: AspectRatio(
-              key: ValueKey('salah-image-${media.key}'),
-              aspectRatio: media.aspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Image(
-                  image: image,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stack) => ColoredBox(
-                    color: context.iqroColors.sand,
-                    child: Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: context.iqroColors.gold,
+    final view = this.view;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: media.width > 0 ? media.width.toDouble() : double.infinity,
+          maxHeight: maxHeight,
+        ),
+        child: AspectRatio(
+          key: ValueKey('salah-image-${media.key}'),
+          aspectRatio: media.aspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              if (view != null)
+                ClipRRect(
+                  key: const ValueKey('salah-3d-view'),
+                  borderRadius: BorderRadius.circular(22),
+                  child: view,
+                ),
+              Semantics(
+                image: true,
+                label: media.alt,
+                child: IgnorePointer(
+                  ignoring: !stillOnTop,
+                  child: AnimatedOpacity(
+                    opacity: stillOnTop ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: ExcludeSemantics(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image(
+                          image: image,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder: (context, error, stack) => ColoredBox(
+                            color: context.iqroColors.sand,
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: context.iqroColors.gold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),

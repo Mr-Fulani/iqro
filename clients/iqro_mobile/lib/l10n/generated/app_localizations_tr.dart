@@ -1975,6 +1975,23 @@ class AppLocalizationsTr extends AppLocalizations {
   String get salahRulingSunnah => 'Sünnet';
 
   @override
+  String get salah3dSchematic => 'Şematik 3D çizim';
+
+  @override
+  String get salah3dPlay => 'Hareketi oynat';
+
+  @override
+  String get salah3dPause => 'Hareketi duraklat';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'Hareket hızı: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'Görünümü sıfırla';
+
+  @override
   String get salahOfflineTitle => 'Çevrimdışı görseller';
 
   @override

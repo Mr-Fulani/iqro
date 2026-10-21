@@ -2013,6 +2013,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salahRulingSunnah => 'Sunnah';
 
   @override
+  String get salah3dSchematic => 'Schematic 3D illustration';
+
+  @override
+  String get salah3dPlay => 'Play the movement';
+
+  @override
+  String get salah3dPause => 'Pause the movement';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'Movement speed: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'Reset the view';
+
+  @override
   String get salahOfflineTitle => 'Pictures offline';
 
   @override

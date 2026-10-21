@@ -12,6 +12,7 @@ import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
+import 'package:iqro_mobile/features/salah/salah_3d.dart';
 import 'package:iqro_mobile/features/salah/salah_home_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_lesson_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
@@ -76,6 +77,132 @@ void main() {
       progress: _progress('fajr', 'fajr.r2.tashahhud'),
     );
     expect(find.text('Шаг 4 из 5'), findsOneWidget);
+  });
+
+  group('schematic 3D', () {
+    final view = find.byKey(const ValueKey('salah-3d-view'));
+    final caption = find.text('Схематичная 3D-иллюстрация');
+
+    testWidgets(
+      'replaces the still, follows the steps and pauses in background',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final fake = _Fake3D();
+        await _pump(tester, location: '/salah/lesson/fajr', view3d: fake.build);
+        expect(view, findsOneWidget);
+        expect(fake.last.step, 'takbir');
+        expect(fake.last.view, 'full');
+        expect(caption, findsOneWidget);
+        expect(find.byTooltip('Остановить движение'), findsNothing);
+        fake.last.onReady();
+        await tester.pump();
+        expect(fake.last.running, isTrue);
+        // The still underneath keeps describing the step.
+        expect(
+          find.bySemanticsLabel('Стоящий мужчина поднимает руки до плеч'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byTooltip('Остановить движение'));
+        await tester.pump();
+        expect(fake.last.running, isFalse);
+        await tester.tap(find.byTooltip('Воспроизвести движение'));
+        await tester.pump();
+        expect(fake.last.running, isTrue);
+        await tester.tap(find.byKey(const ValueKey('salah-3d-speed')));
+        await tester.pump();
+        expect(find.text('0,75×'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('Скорость движения: 0,75×'),
+          findsOneWidget,
+        );
+        expect(fake.last.speed, .75);
+        final resets = fake.last.resetCount;
+        await tester.tap(find.byTooltip('Вернуть исходный ракурс'));
+        await tester.pump();
+        expect(fake.last.resetCount, resets + 1);
+
+        await _tapNext(tester);
+        expect(find.text('Шаг 2 из 5'), findsOneWidget);
+        expect(fake.last.step, 'qiyam');
+        expect(view, findsOneWidget);
+        expect(find.byTooltip('Остановить движение'), findsNothing);
+        fake.last.onReady();
+        await tester.pump();
+
+        // Frames stop in the background: the view hears it without a rebuild.
+        final foreground = fake.last.foreground;
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        expect(foreground.value, isFalse);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        expect(foreground.value, isTrue);
+        expect(fake.last.running, isTrue);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('a failure leaves the stills for the visit', (tester) async {
+      final fake = _Fake3D();
+      await _pump(tester, location: '/salah/lesson/fajr', view3d: fake.build);
+      fake.last.onError('NO_WEBGL');
+      await tester.pump();
+      expect(view, findsNothing);
+      expect(
+        find.byKey(const ValueKey('salah-image-position-takbir')),
+        findsOneWidget,
+      );
+      expect(caption, findsOneWidget);
+      final built = fake.configs.length;
+      await _tapNext(tester);
+      expect(view, findsNothing);
+      expect(fake.configs.length, built);
+    });
+
+    testWidgets('reduced motion and pictures without a scene stay still', (
+      tester,
+    ) async {
+      final fake = _Fake3D();
+      await _pump(
+        tester,
+        location: '/salah/lesson/fajr',
+        view3d: fake.build,
+        disableAnimations: true,
+      );
+      expect(
+        find.byKey(const ValueKey('salah-image-position-takbir')),
+        findsOneWidget,
+      );
+      expect(caption, findsOneWidget);
+      expect(view, findsNothing);
+
+      await _pump(
+        tester,
+        location: '/salah/lesson/wudu/step/wudu.face',
+        view3d: fake.build,
+      );
+      expect(
+        find.byKey(const ValueKey('salah-image-wudu-face')),
+        findsOneWidget,
+      );
+      expect(caption, findsNothing);
+      expect(fake.configs, isEmpty);
+    });
+
+    testWidgets('the Arabic lesson labels the scene in Arabic', (tester) async {
+      final fake = _Fake3D();
+      await _pump(
+        tester,
+        location: '/salah/lesson/fajr',
+        locale: 'ar',
+        view3d: fake.build,
+      );
+      expect(find.text('رسم توضيحي تخطيطي ثلاثي الأبعاد'), findsOneWidget);
+      fake.last.onReady();
+      await tester.pump();
+      expect(find.byTooltip('إيقاف الحركة مؤقتًا'), findsOneWidget);
+    });
   });
 
   testWidgets('starts over when the saved step is gone', (tester) async {
@@ -356,6 +483,21 @@ void main() {
 ButtonStyleButton _button(WidgetTester tester, String key) =>
     tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key)));
 
+/// Stands in for the WebView and keeps what each build asked it to show.
+class _Fake3D {
+  final configs = <Salah3DViewConfig>[];
+
+  Salah3DViewConfig get last => configs.last;
+
+  Widget build(BuildContext context, Salah3DViewConfig config) {
+    configs.add(config);
+    return ColoredBox(
+      key: ValueKey('fake-3d-${config.step}'),
+      color: Colors.white,
+    );
+  }
+}
+
 Future<void> _tapNext(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('salah-next')));
   await tester.pumpAndSettle();
@@ -390,6 +532,8 @@ Future<_Harness> _pump(
   SalahCourseProgress progress = const SalahCourseProgress(),
   Map<String, Object> preferences = const <String, Object>{},
   SalahOfflineRepository? offline,
+  Salah3DViewBuilder? view3d,
+  bool disableAnimations = false,
 }) async {
   SharedPreferences.setMockInitialValues(preferences);
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -451,6 +595,8 @@ Future<_Harness> _pump(
           return MemoryImage(_transparentPng);
         }),
         audioControllerProvider.overrideWith((ref) => audio),
+        // Widget tests have no platform WebView; the scene is a stand-in.
+        salah3DViewBuilderProvider.overrideWithValue(view3d ?? _Fake3D().build),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
@@ -460,9 +606,10 @@ Future<_Harness> _pump(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         theme: IqroTheme.light(),
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+            disableAnimations: disableAnimations,
+          ),
           child: child!,
         ),
       ),

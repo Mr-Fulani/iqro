@@ -1,0 +1,1446 @@
+/* Salah 3D — procedural pencil-style prayer illustration (prototype).
+   The owner's scene (salah3d 0.1.0, docs/salah/salah-3d.md) as an ES module on three r149.
+   Kept close to the original so a new drop from the author can be compared line by line;
+   the poses are the author's draft and are reviewed together with the course.
+   Technical changes: module import/export instead of globals, SEGMENTS + setStep (one
+   course step's movement in a loop), rendering while the paused view is turned, the
+   pageScroll option (the page keeps vertical swipes and the wheel) and the WebGL context
+   released on dispose. The app's copy (clients/iqro_mobile/assets/salah3d)
+   is generated from this file by scripts/salah3d-app-assets.mjs. */
+/* eslint-disable @typescript-eslint/no-this-alias, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions -- author's code, kept as delivered */
+import * as THREE from 'three';
+// salah3d:body-start
+  var V3 = THREE.Vector3, Q = THREE.Quaternion, E = THREE.Euler;
+
+  var FLOOR = 0.012;
+  var D = {
+    hipHalf: 0.095, thigh: 0.44, shin: 0.43,
+    upperArm: 0.29, foreArm: 0.26,
+    spine1: 0.12, spine2: 0.17, chestTop: 0.2, neck: 0.085,
+    shX: 0.178, shY: 0.15, shZ: -0.015,
+    ballLocal: new V3(0, -0.066, 0.14)
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function v3(a) { return new V3(a[0], a[1], a[2]); }
+  function qE(r, order) { return new Q().setFromEuler(new E(r[0] || 0, r[1] || 0, r[2] || 0, order || 'XYZ')); }
+  function qBasis(f, n) {
+    var y = v3(f).normalize();
+    var z = v3(n); z.addScaledVector(y, -z.dot(y)).normalize();
+    var x = new V3().crossVectors(y, z);
+    return new Q().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  }
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
+  function ease(t) { t = clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); }
+  function easeIO(t) { t = clamp(t, 0, 1); return 0.5 - 0.5 * Math.cos(Math.PI * t); }
+
+  var _u = new V3(), _p = new V3();
+  // two-bone IK: returns reached end, writes mid joint into outMid
+  function ik2(root, target, l1, l2, pole, outMid, outEnd) {
+    _u.subVectors(target, root);
+    var dist = _u.length();
+    if (dist < 1e-6) { _u.set(0, -1, 0); dist = 1e-6; } else _u.divideScalar(dist);
+    dist = clamp(dist, Math.abs(l1 - l2) + 1e-4, l1 + l2 - 1e-4);
+    var a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist);
+    var h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+    _p.copy(pole).addScaledVector(_u, -pole.dot(_u));
+    if (_p.lengthSq() < 1e-8) _p.set(0, 0, 1).addScaledVector(_u, -_u.z);
+    _p.normalize();
+    outMid.copy(root).addScaledVector(_u, a).addScaledVector(_p, h);
+    outEnd.copy(root).addScaledVector(_u, dist);
+  }
+
+  // ---------------------------------------------------------------- shaders
+  var SHARED = {
+    uLight: { value: new V3(0.4, 0.8, 0.5).normalize() },
+    uLight2: { value: new V3(-0.6, 0.2, -0.3).normalize() },
+    uDpr: { value: 1 },
+    uRes: { value: new THREE.Vector2(1, 1) },
+    uInk: { value: new THREE.Color('#2a2826') },
+    uProjScale: { value: 1 }
+  };
+
+  var hatchVS = [
+    'varying vec3 vN; varying vec3 vVP; varying vec2 vUv;',
+    'void main(){',
+    '  vN = normalize(normalMatrix * normal);',
+    '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+    '  vVP = mv.xyz; vUv = uv;',
+    '  gl_Position = projectionMatrix * mv;',
+    '}'
+  ].join('\n');
+
+  var hatchFS = `
+    uniform vec3 uColor; uniform vec3 uInk; uniform vec3 uLight; uniform vec3 uLight2;
+    uniform float uDpr; uniform float uHatch; uniform float uRim;
+    uniform sampler2D uMap; uniform float uUseMap; uniform float uFlat; uniform float uStrand;
+    varying vec3 vN; varying vec3 vVP; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float lines(vec2 p, float ang, float spacing, float w){
+      vec2 d = vec2(cos(ang), sin(ang));
+      float t = dot(p, d) / spacing;
+      t += 0.18 * sin(dot(p, vec2(-d.y, d.x)) * 0.045 + ang * 11.0);
+      float row = floor(t);
+      float f = abs(fract(t) - 0.5) * 2.0;
+      float jw = w * (0.7 + 0.6 * hash(vec2(row, ang)));
+      float aa = fwidth(t) * 2.0;
+      return (1.0 - smoothstep(1.0 - jw - aa, 1.0 - jw + aa, 1.0 - f)) * smoothstep(0.0, 0.04, w);
+    }
+    void main(){
+      vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
+      vec3 vd = normalize(-vVP);
+      float k = dot(n, uLight);
+      float lit = clamp(k * 0.5 + 0.5, 0.0, 1.0);
+      float fill = max(dot(n, uLight2), 0.0) * 0.18;
+      float tone = clamp(lit * 0.92 + fill, 0.0, 1.0);
+      tone = mix(tone, 0.85, uFlat);
+      vec3 base = uUseMap > 0.5 ? texture2D(uMap, vUv).rgb : uColor;
+      vec3 col = base * (0.885 + 0.13 * tone);
+      vec2 p = gl_FragCoord.xy / uDpr;
+      float dark = 1.0 - tone;
+      float grain = hash(floor(p * 0.9)) * 0.5 + hash(floor(p * 0.33) + 7.0) * 0.5;
+      float h1 = lines(p, 0.95, 4.2, clamp((dark - 0.38) * 1.15, 0.0, 0.42));
+      float h2 = lines(p, -0.62, 4.6, clamp((dark - 0.56) * 1.2, 0.0, 0.4));
+      float h3 = lines(p, 0.2, 3.6, clamp((dark - 0.72) * 1.3, 0.0, 0.36));
+      float ink = max(max(h1 * 0.34, h2 * 0.40), h3 * 0.48) * uHatch * (0.55 + 0.6 * grain);
+      float rim = 1.0 - abs(dot(n, vd));
+      ink = max(ink, smoothstep(0.62, 1.0, rim) * uRim);
+      if (uStrand > 0.0) ink = max(ink, lines(p + vec2(sin(p.y * 0.09) * 2.0, 0.0), 1.49, 2.8, 0.26 + 0.25 * dark) * uStrand * (0.5 + 0.5 * grain));
+      col = mix(col, uInk, ink);
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+
+  var outlineVS = [
+    'uniform float uWidth; uniform float uMinPx; uniform float uMaxPx; uniform vec2 uRes; uniform float uProjScale;',
+    'void main(){',
+    '  vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+    '  vec3 vn = normalize(normalMatrix * normal);',
+    '  vec2 sn = (projectionMatrix * vec4(vn, 0.0)).xy;',
+    '  float l = length(sn); sn = l > 1e-5 ? sn / l : vec2(0.0);',
+    '  float px = clamp(uWidth * uProjScale / max(clip.w, 1e-3), uMinPx, uMaxPx);',
+    '  clip.xy += sn * px / uRes * 2.0 * clip.w;',
+    '  gl_Position = clip;',
+    '}'
+  ].join('\n');
+  var outlineFS = 'uniform vec3 uInk; void main(){ gl_FragColor = vec4(uInk, 1.0); }';
+
+  function hatchMat(color, opts) {
+    opts = opts || {};
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color(color) },
+        uInk: SHARED.uInk, uLight: SHARED.uLight, uLight2: SHARED.uLight2, uDpr: SHARED.uDpr,
+        uHatch: { value: opts.hatch != null ? opts.hatch : 1 },
+        uRim: { value: opts.rim != null ? opts.rim : 0.32 },
+        uFlat: { value: opts.flat || 0 },
+        uStrand: { value: opts.strand || 0 },
+        uMap: { value: opts.map || null },
+        uUseMap: { value: opts.map ? 1 : 0 }
+      },
+      vertexShader: hatchVS, fragmentShader: hatchFS,
+      side: opts.side || THREE.FrontSide,
+      extensions: { derivatives: true }
+    });
+  }
+  function outlineMat(width, minPx, maxPx) {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uWidth: { value: width }, uMinPx: { value: minPx }, uMaxPx: { value: maxPx },
+        uRes: SHARED.uRes, uProjScale: SHARED.uProjScale, uInk: SHARED.uInk
+      },
+      vertexShader: outlineVS, fragmentShader: outlineFS, side: THREE.BackSide
+    });
+  }
+
+  // ---------------------------------------------------------------- loft
+  function Loft(nR, nS, mat, oMat, floorClamp) {
+    this.nR = nR; this.nS = nS; this.floorClamp = floorClamp;
+    var g = new THREE.BufferGeometry();
+    this.pos = new Float32Array(nR * nS * 3);
+    var pa = new THREE.BufferAttribute(this.pos, 3); pa.setUsage(THREE.DynamicDrawUsage);
+    var na = new THREE.BufferAttribute(new Float32Array(nR * nS * 3), 3); na.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('position', pa); g.setAttribute('normal', na);
+    var idx = [];
+    for (var r = 0; r < nR - 1; r++) for (var s = 0; s < nS; s++) {
+      var a = r * nS + s, b = r * nS + (s + 1) % nS, c = (r + 1) * nS + s, d = (r + 1) * nS + (s + 1) % nS;
+      idx.push(a, b, c, b, d, c);
+    }
+    g.setIndex(idx);
+    this.geo = g;
+    this.mesh = new THREE.Mesh(g, mat); this.mesh.frustumCulled = false;
+    this.group = new THREE.Group(); this.group.add(this.mesh);
+    if (oMat) { this.outline = new THREE.Mesh(g, oMat); this.outline.frustumCulled = false; this.group.add(this.outline); }
+  }
+  Loft.prototype.ring = function (r, c, X, Y) {
+    var nS = this.nS, P = this.pos, o = r * nS * 3;
+    for (var s = 0; s < nS; s++) {
+      var t = s / nS * Math.PI * 2, cs = Math.cos(t), sn = Math.sin(t);
+      P[o++] = c.x + X.x * cs + Y.x * sn;
+      P[o++] = c.y + X.y * cs + Y.y * sn;
+      P[o++] = c.z + X.z * cs + Y.z * sn;
+    }
+  };
+  Loft.prototype.done = function () {
+    if (this.floorClamp != null) {
+      var P = this.pos, f = this.floorClamp;
+      for (var i = 1; i < P.length; i += 3) if (P[i] < f) P[i] = f;
+    }
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.computeVertexNormals();
+    this.geo.attributes.normal.needsUpdate = true;
+  };
+
+  // tube along a polyline of key points with radii, smoothed by Catmull-Rom; parallel-transport frames
+  function Tube(nR, nS, mat, oMat, floorClamp) { Loft.call(this, nR, nS, mat, oMat, floorClamp); this._N = new V3(); }
+  Tube.prototype = Object.create(Loft.prototype);
+  var _c = new V3(), _t = new V3(), _X = new V3(), _Y = new V3(), _prevT = new V3();
+  Tube.prototype.update = function (curve, radiusFn, t0, t1) {
+    var N = this._N, nR = this.nR;
+    for (var r = 0; r < nR; r++) {
+      var t = t0 + (t1 - t0) * r / (nR - 1);
+      curve.getPoint(t, _c);
+      curve.getTangent(clamp(t, 0.001, 0.999), _t);
+      if (r === 0) {
+        N.set(0, 0, 1); if (Math.abs(_t.z) > 0.9) N.set(1, 0, 0);
+        N.addScaledVector(_t, -N.dot(_t)).normalize();
+      } else {
+        N.addScaledVector(_t, -N.dot(_t)); if (N.lengthSq() < 1e-8) N.set(1, 0, 0).addScaledVector(_t, -_t.x); N.normalize();
+      }
+      var rad = radiusFn(t);
+      _X.copy(N).multiplyScalar(rad);
+      _Y.crossVectors(_t, N).multiplyScalar(rad); // N x B = T  ->  X x Y along T
+      // ensure X x Y = T : X=N, Y=T x N  => N x (T x N) = T  ok
+      this.ring(r, _c, _X, _Y);
+    }
+    this.done();
+  };
+
+  // ---------------------------------------------------------------- textures
+  function radialTexture() {
+    var c = document.createElement('canvas'); c.width = c.height = 128;
+    var g = c.getContext('2d');
+    var gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    var t = new THREE.CanvasTexture(c); return t;
+  }
+  function rugTexture() {
+    var W = 512, H = 840;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    g.fillStyle = '#d9d2c1'; g.fillRect(0, 0, W, H);
+    // border band
+    g.fillStyle = '#c3b79d'; g.fillRect(0, 0, W, 46); g.fillRect(0, H - 46, W, 46); g.fillRect(0, 0, 46, H); g.fillRect(W - 46, 0, 46, H);
+    g.strokeStyle = '#8c8170'; g.lineWidth = 3;
+    g.strokeRect(10, 10, W - 20, H - 20); g.strokeRect(46, 46, W - 92, H - 92);
+    g.lineWidth = 1.5; g.strokeRect(56, 56, W - 112, H - 112);
+    // border diamonds
+    g.strokeStyle = '#7d7262'; g.lineWidth = 2;
+    function diamond(x, y, s) { g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s, y); g.lineTo(x, y + s); g.lineTo(x - s, y); g.closePath(); g.stroke(); }
+    for (var x = 40; x < W - 20; x += 36) { diamond(x, 28, 9); diamond(x, H - 28, 9); }
+    for (var y = 64; y < H - 40; y += 36) { diamond(28, y, 9); diamond(W - 28, y, 9); }
+    // field: niche arch toward the top (qibla side)
+    g.fillStyle = '#cfc6b1';
+    g.beginPath();
+    var ax = 90, aw = W - 180, top = 120, bot = H - 110;
+    g.moveTo(ax, bot); g.lineTo(ax, top + 150);
+    g.quadraticCurveTo(ax, top + 40, W / 2, top);
+    g.quadraticCurveTo(ax + aw, top + 40, ax + aw, top + 150);
+    g.lineTo(ax + aw, bot); g.closePath(); g.fill();
+    g.strokeStyle = '#857a69'; g.lineWidth = 3; g.stroke();
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(ax + 14, bot - 14); g.lineTo(ax + 14, top + 156);
+    g.quadraticCurveTo(ax + 14, top + 56, W / 2, top + 16);
+    g.quadraticCurveTo(ax + aw - 14, top + 56, ax + aw - 14, top + 156);
+    g.lineTo(ax + aw - 14, bot - 14); g.closePath(); g.stroke();
+    // lamp motif
+    g.strokeStyle = '#857a69'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(W / 2, top + 16); g.lineTo(W / 2, top + 120); g.stroke();
+    g.beginPath(); g.ellipse(W / 2, top + 150, 22, 30, 0, 0, Math.PI * 2); g.stroke();
+    // small field ornaments
+    for (var i = 0; i < 4; i++) { diamond(W / 2, top + 260 + i * 110, 16); }
+    // fringe ticks
+    g.strokeStyle = '#9a8f7d'; g.lineWidth = 1;
+    for (var k = 0; k < 900; k++) { var rx = Math.random() * W, ry = Math.random() * H; g.globalAlpha = 0.08; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx + 3, ry + 1); g.stroke(); }
+    g.globalAlpha = 1;
+    var t = new THREE.CanvasTexture(c);
+    t.anisotropy = 4; t.flipY = false;
+    return t;
+  }
+
+  // ---------------------------------------------------------------- finger presets
+  // per finger [spread, f1, f2, f3] x4 (index, middle, ring, little) + thumb [abd, opp, f1, f2, f3]
+  var FINGERS = {
+    flat: [0.05, 0.06, 0.08, 0.05, 0, 0.06, 0.08, 0.05, -0.04, 0.07, 0.08, 0.05, -0.09, 0.08, 0.1, 0.06, 0.45, 0.35, 0.1, 0.12, 0.1],
+    relaxed: [0.06, 0.3, 0.42, 0.25, 0, 0.36, 0.48, 0.28, -0.05, 0.42, 0.52, 0.3, -0.11, 0.48, 0.55, 0.32, 0.55, 0.55, 0.2, 0.25, 0.2],
+    grasp: [0.13, 0.42, 0.42, 0.25, 0.03, 0.42, 0.45, 0.25, -0.07, 0.42, 0.45, 0.25, -0.16, 0.42, 0.45, 0.25, 0.95, 0.35, 0.25, 0.3, 0.25],
+    tashahhud: [0.0, 0.18, 0.14, 0.06, 0.0, 1.0, 1.3, 0.7, -0.02, 1.45, 1.6, 0.9, -0.06, 1.45, 1.55, 0.9, 0.55, 1.05, 0.35, 0.45, 0.35],
+    pointing: [0.0, -0.58, 0.0, 0.0, 0.0, 1.0, 1.3, 0.7, -0.02, 1.45, 1.6, 0.9, -0.06, 1.45, 1.55, 0.9, 0.55, 1.05, 0.35, 0.45, 0.35],
+    grip: [0.04, 0.55, 0.6, 0.35, 0, 0.6, 0.65, 0.35, -0.04, 0.68, 0.65, 0.35, -0.08, 0.72, 0.65, 0.35, 0.35, 1.1, 0.45, 0.45, 0.3]
+  };
+
+  // ---------------------------------------------------------------- the rig
+  function Rig() {
+    var root = this.root = new THREE.Group();
+    var M = this.M = {
+      robe: hatchMat('#efede6', { side: THREE.DoubleSide, hatch: 1 }),
+      skin: hatchMat('#e4d4c3', { hatch: 0.85, rim: 0.3 }),
+      beard: hatchMat('#3f3a35', { hatch: 1.0, rim: 0.35, strand: 0.6 }),
+      kufi: hatchMat('#f8f7f2', { hatch: 0.9, rim: 0.3 }),
+      band: hatchMat('#ffffff', { hatch: 0.6, rim: 0.2, map: bandTexture() }),
+      hair: hatchMat('#5c564f', { hatch: 1.1, rim: 0.35, strand: 0.4 }),
+      ink: new THREE.MeshBasicMaterial({ color: '#2a2826' })
+    };
+    var O = this.O = {
+      body: outlineMat(0.0065, 0.9, 3.2),
+      thin: outlineMat(0.0026, 0.6, 2.2),
+      none: null
+    };
+    // lofts
+    this.torso = new Loft(26, 28, M.robe, O.body); root.add(this.torso.group);
+    this.skirt = new Loft(34, 30, M.robe, O.body, FLOOR + 0.003); root.add(this.skirt.group);
+    this.arm = [new Tube(22, 16, M.robe, O.body, FLOOR + 0.004), new Tube(22, 16, M.robe, O.body, FLOOR + 0.004)];
+    this.wristT = [new Tube(5, 12, M.skin, O.thin), new Tube(5, 12, M.skin, O.thin)];
+    this.ankleT = [new Tube(6, 14, M.robe, O.body), new Tube(6, 14, M.robe, O.body)];
+    this.neckT = new Tube(6, 16, M.skin, O.body);
+    this.collar = new Tube(4, 24, M.robe, O.body); root.add(this.collar.group);
+    this.beardL = new Loft(18, 24, M.beard, O.body, FLOOR + 0.004); root.add(this.beardL.group);
+    this.placket = [new Tube(16, 6, M.ink, null), new Tube(16, 6, M.ink, null)];
+    root.add(this.placket[0].group); root.add(this.placket[1].group);
+    this.buttons = [0, 1, 2].map(function () { var b = this.sphere(0.0058, M.robe, O.thin); root.add(b); return b; }, this);
+    this.placketCurve = new THREE.CatmullRomCurve3([], false, 'centripetal');
+    this.beardCurve = new THREE.CatmullRomCurve3([new V3(), new V3(), new V3(), new V3()], false, 'centripetal');
+    var self = this;
+    this.arm.concat(this.wristT, this.ankleT, [this.neckT]).forEach(function (t) { root.add(t.group); });
+
+    this.shoulderCap = [this.sphere(0.057, M.robe, O.body), this.sphere(0.057, M.robe, O.body)];
+    this.shoulderCap.forEach(function (m) { root.add(m); });
+
+    // head: one sculpted mesh (no eyes/mouth), plus hair, beard, kufi and embroidered band shells
+    var head = this.head = new THREE.Group(); root.add(head);
+    var HG = headGeometries();
+    function add(g, mat, oMat) { head.add(new THREE.Mesh(g, mat)); if (oMat) head.add(new THREE.Mesh(g, oMat)); }
+    add(HG.skin, M.skin, O.body);
+    add(HG.hair, M.hair, O.thin);
+    add(HG.beard, M.beard, O.body);
+    add(HG.kufi, M.kufi, O.body);
+    add(HG.band, M.band, null);
+    this.part(head, 'sphere', [0.1], M.skin, O.thin, [0.077, 0.118, -0.014], [0.1, 0.31, 0.2], [0.05, 0.25, -0.1]); // ears
+    this.part(head, 'sphere', [0.1], M.skin, O.thin, [-0.077, 0.118, -0.014], [0.1, 0.31, 0.2], [0.05, -0.25, 0.1]);
+
+    // hands
+    this.hand = [this.buildHand(1), this.buildHand(-1)]; // [left (mirrored), right]
+    root.add(this.hand[0].g); root.add(this.hand[1].g);
+    // feet
+    this.foot = [this.buildFoot(), this.buildFoot()];
+    root.add(this.foot[0].g); root.add(this.foot[1].g);
+
+    // joint scratch
+    this.J = {};
+    ['P', 'S1', 'C', 'N', 'H', 'hipL', 'hipR', 'kneeL', 'kneeR', 'ankL', 'ankR', 'shL', 'shR', 'elL', 'elR', 'wrL', 'wrR', 'ballL', 'ballR'].forEach(function (k) { self.J[k] = new V3(); });
+    this.qP = new Q(); this.q1 = new Q(); this.qC = new Q(); this.qN = new Q(); this.qH = new Q();
+    this.curveTmp = new THREE.CatmullRomCurve3([new V3(), new V3(), new V3()], false, 'centripetal');
+    this.curveL = new THREE.CatmullRomCurve3([new V3(), new V3(), new V3()], false, 'centripetal');
+    this.curveR = new THREE.CatmullRomCurve3([new V3(), new V3(), new V3()], false, 'centripetal');
+    this.lineCurve = new THREE.CatmullRomCurve3([new V3(), new V3()], false, 'centripetal');
+  }
+
+  // ---------------------------------------------------------------- sculpted head
+  function sm(a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+  function gs(ux, uy, x0, y0, sx, sy) { var dx = (ux - x0) / sx, dy = (uy - y0) / sy; return Math.exp(-(dx * dx + dy * dy)); }
+  function vnoise(x, y, z) { return Math.sin(x * 41.3 + y * 17.1) * Math.sin(y * 37.7 - z * 23.9) * Math.sin(z * 29.3 + x * 13.7); }
+  function headPoint(ux, uy, uz, out) {
+    var rx = 0.077, ry = 0.112, rz = 0.097;
+    var x = ux * rx, y = uy * ry, z = uz * rz;
+    if (uy < 0) {
+      var t = -uy;
+      x *= 1 - 0.4 * t * t * sm(-0.6, 0.4, uz);
+      z += 0.026 * t * (uz > 0 ? 1 : 0.35);
+      if (uz < 0) y += 0.05 * t * t * (-uz);
+    }
+    if (uz < 0) z *= 1.04; // occiput
+    var w = sm(0.2, 0.85, uz);
+    var bump = 0.024 * gs(ux, uy, 0, -0.31, 0.13, 0.12) + 0.011 * gs(ux, uy, 0, -0.02, 0.08, 0.22)
+      + 0.008 * gs(ux, uy, 0, 0.31, 0.55, 0.09)
+      - 0.0035 * (gs(ux, uy, 0.33, 0.14, 0.2, 0.13) + gs(ux, uy, -0.33, 0.14, 0.2, 0.13))
+      + 0.006 * (gs(ux, uy, 0.52, -0.06, 0.2, 0.15) + gs(ux, uy, -0.52, -0.06, 0.2, 0.15))
+      + 0.006 * gs(ux, uy, 0, -0.56, 0.2, 0.08) + 0.01 * gs(ux, uy, 0, -0.86, 0.26, 0.12);
+    z += bump * w;
+    return out.set(x, 0.105 + y, z);
+  }
+  function smoothSeams(g) {
+    g.computeVertexNormals();
+    var p = g.attributes.position, n = g.attributes.normal, map = {};
+    for (var i = 0; i < p.count; i++) {
+      var k = Math.round(p.getX(i) * 1e5) + '_' + Math.round(p.getY(i) * 1e5) + '_' + Math.round(p.getZ(i) * 1e5);
+      (map[k] || (map[k] = [])).push(i);
+    }
+    var v = new V3();
+    for (var key in map) {
+      var ids = map[key]; if (ids.length < 2) continue;
+      v.set(0, 0, 0);
+      ids.forEach(function (j) { v.x += n.getX(j); v.y += n.getY(j); v.z += n.getZ(j); });
+      v.normalize();
+      ids.forEach(function (j) { n.setXYZ(j, v.x, v.y, v.z); });
+    }
+    n.needsUpdate = true;
+  }
+  var HEADGEO = null;
+  function headGeometries() {
+    if (HEADGEO) return HEADGEO;
+    var base = new THREE.SphereGeometry(1, 96, 72); base.rotateY(-Math.PI / 2);
+    var bp = base.attributes.position, N = bp.count;
+    var unit = new Float32Array(N * 3);
+    for (var i = 0; i < N; i++) { unit[i * 3] = bp.getX(i); unit[i * 3 + 1] = bp.getY(i); unit[i * 3 + 2] = bp.getZ(i); }
+    var tmp = new V3();
+    for (var j = 0; j < N; j++) { headPoint(unit[j * 3], unit[j * 3 + 1], unit[j * 3 + 2], tmp); bp.setXYZ(j, tmp.x, tmp.y, tmp.z); }
+    smoothSeams(base);
+    var bn = base.attributes.normal;
+    var DOWN = new V3(0, -1, 0.3).normalize();
+    function shell(fn, extraFn) {
+      var g = base.clone(), p = g.attributes.position;
+      for (var k = 0; k < N; k++) {
+        var ux = unit[k * 3], uy = unit[k * 3 + 1], uz = unit[k * 3 + 2];
+        var off = fn(ux, uy, uz), ex = extraFn ? extraFn(ux, uy, uz) : 0;
+        p.setXYZ(k, bp.getX(k) + bn.getX(k) * off + DOWN.x * ex, bp.getY(k) + bn.getY(k) * off + DOWN.y * ex, bp.getZ(k) + bn.getZ(k) * off + DOWN.z * ex);
+      }
+      smoothSeams(g); return g;
+    }
+    function rimY(uz) { return 0.40 + 0.13 * uz; } // kufi edge: higher on the forehead, lower at the nape
+    var IN = -0.006;
+    var beardM = function (ux, uy, uz) {
+      var line = -0.4 + 0.75 * (1 - clamp(uz, 0, 1));
+      var back = sm(-0.45, -0.25, uz) + (sm(0.04, 0.16, uz) - sm(-0.45, -0.25, uz)) * sm(-0.75, -0.4, uy); // stop in front of the ear
+      var m = sm(line + 0.05, line - 0.06, uy) * back;
+      m = Math.max(m, sm(-0.62, -0.8, uy) * sm(-0.55, -0.3, uz));
+      return m;
+    };
+    HEADGEO = {
+      skin: base,
+      hair: shell(function (ux, uy, uz) {
+        var face = sm(0.12, 0.3, uz) * (1 - sm(0.42, 0.55, uy));
+        var nape = sm(-0.05, 0.1, uy) + (sm(-0.42, -0.28, uy) - sm(-0.05, 0.1, uy)) * sm(0.05, -0.25, uz);
+        var m = nape * (1 - face);
+        return IN + (0.0035 - IN) * m;
+      }),
+      beard: shell(function (ux, uy, uz) {
+        var m = beardM(ux, uy, uz);
+        var th = 0.011 + 0.013 * sm(-0.45, -0.95, uy) * sm(0.0, 0.6, uz);
+        th *= 0.82 + 0.3 * (0.5 + 0.5 * vnoise(ux, uy, uz));
+        return IN + (th - IN) * m;
+      }, function (ux, uy, uz) {
+        // the beard falls below the jaw line, longest at the chin
+        var m = beardM(ux, uy, uz);
+        var chin = sm(-0.3, -0.85, uy) * sm(-0.2, 0.55, uz) * (1 - 0.35 * Math.abs(ux));
+        return m * chin * (0.085 + 0.012 * vnoise(ux * 2.0, uy * 2.0, uz * 2.0));
+      }),
+      kufi: shell(function (ux, uy, uz) {
+        var m = sm(rimY(uz) - 0.035, rimY(uz) + 0.005, uy);
+        return IN + (0.0085 - IN) * m;
+      }),
+      band: shell(function (ux, uy, uz) {
+        var r = rimY(uz), m = sm(r - 0.035, r + 0.005, uy) * (1 - sm(r + 0.15, r + 0.19, uy));
+        return IN + (0.0102 - IN) * m;
+      })
+    };
+    return HEADGEO;
+  }
+  function bandTexture() {
+    var c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    var g = c.getContext('2d');
+    g.fillStyle = '#f8f7f2'; g.fillRect(0, 0, 1024, 256);
+    // the band occupies a thin strip of the sphere's v range; draw a repeated embroidery across the whole map
+    g.strokeStyle = '#8f8a80'; g.lineWidth = 2;
+    for (var row = 0; row < 256; row += 8) {
+      g.beginPath();
+      for (var x = 0; x <= 1024; x += 8) { var y = row + ((x / 8) % 2 ? 3 : -1); if (x === 0) g.moveTo(x, y); else g.lineTo(x, y); }
+      g.stroke();
+    }
+    var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 1);
+    return t;
+  }
+
+  var GEO = {};
+  function geo(kind, args) {
+    var key = kind + args.join(',');
+    if (GEO[key]) return GEO[key];
+    var g;
+    if (kind === 'sphere') g = new THREE.SphereGeometry(args[0], 28, 20);
+    else if (kind === 'cyl') g = new THREE.CylinderGeometry(args[0], args[1], args[2], args[3] || 24, 1, false);
+    else if (kind === 'hemi') g = new THREE.SphereGeometry(args[0], 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    else if (kind === 'box') {
+      g = new THREE.SphereGeometry(1, 28, 20);
+      var pa = g.attributes.position;
+      for (var i = 0; i < pa.count; i++) {
+        var x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), e = args[3];
+        pa.setXYZ(i, Math.sign(x) * Math.pow(Math.abs(x), e) * args[0], Math.sign(y) * Math.pow(Math.abs(y), e) * args[1], Math.sign(z) * Math.pow(Math.abs(z), e) * args[2]);
+      }
+      g.computeVertexNormals();
+    }
+    else if (kind === 'cap') { g = new THREE.CapsuleGeometry(args[0], args[1], 6, 12); g.translate(0, args[1] / 2, 0); }
+    GEO[key] = g; return g;
+  }
+  Rig.prototype.sphere = function (r, mat, oMat) {
+    var g = new THREE.Group();
+    var m = new THREE.Mesh(geo('sphere', [r]), mat); g.add(m);
+    if (oMat) g.add(new THREE.Mesh(geo('sphere', [r]), oMat));
+    return g;
+  };
+  Rig.prototype.part = function (parent, kind, args, mat, oMat, pos, scl, rot) {
+    var g = new THREE.Group();
+    g.position.set(pos[0], pos[1], pos[2]);
+    if (scl) g.scale.set(scl[0], scl[1], scl[2]);
+    if (rot) g.rotation.set(rot[0], rot[1], rot[2]);
+    var G = geo(kind, args);
+    g.add(new THREE.Mesh(G, mat));
+    if (oMat) g.add(new THREE.Mesh(G, oMat));
+    parent.add(g);
+    return g;
+  };
+
+  // hand: local +y fingers, +z palm normal, +x thumb side (right hand); left hand mirrored
+  Rig.prototype.buildHand = function (side) {
+    var M = this.M, O = this.O;
+    var g = new THREE.Group();
+    var inner = new THREE.Group(); g.add(inner);
+    if (side > 0) inner.scale.x = -1; // left = +1 mirrored
+    this.part(inner, 'box', [0.041, 0.05, 0.0145, 0.55], M.skin, O.thin, [0, 0.048, 0.0]);
+    this.part(inner, 'sphere', [0.03], M.skin, O.thin, [0.02, 0.028, 0.007], [0.72, 1.05, 0.5]); // thenar
+    var fingers = [];
+    var base = [[0.029, 0.093, 0.0095, [0.046, 0.027, 0.021]], [0.0095, 0.097, 0.0098, [0.05, 0.031, 0.022]],
+      [-0.0105, 0.094, 0.0093, [0.047, 0.029, 0.021]], [-0.029, 0.086, 0.0083, [0.037, 0.022, 0.019]]];
+    for (var i = 0; i < 4; i++) {
+      var b = base[i];
+      var root = new THREE.Group(); root.position.set(b[0], b[1], 0.0); inner.add(root);
+      var segs = [], parent = root;
+      for (var s = 0; s < 3; s++) {
+        var j = new THREE.Group(); if (s > 0) j.position.y = b[3][s - 1]; parent.add(j);
+        var r = b[2] * (1 - s * 0.08);
+        j.add(new THREE.Mesh(geo('cap', [r, b[3][s] - r]), M.skin));
+        j.add(new THREE.Mesh(geo('cap', [r, b[3][s] - r]), O.thin));
+        segs.push(j); parent = j;
+      }
+      fingers.push({ root: root, segs: segs });
+    }
+    // thumb
+    var troot = new THREE.Group(); troot.position.set(0.025, 0.014, 0.008); inner.add(troot);
+    var tl = [0.045, 0.033, 0.027], tr = [0.0125, 0.0108, 0.0098], tsegs = [], par = troot;
+    for (var s2 = 0; s2 < 3; s2++) {
+      var jt = new THREE.Group(); if (s2 > 0) jt.position.y = tl[s2 - 1]; par.add(jt);
+      jt.add(new THREE.Mesh(geo('cap', [tr[s2], tl[s2] - tr[s2]]), M.skin));
+      jt.add(new THREE.Mesh(geo('cap', [tr[s2], tl[s2] - tr[s2]]), O.thin));
+      tsegs.push(jt); par = jt;
+    }
+    return { g: g, inner: inner, fingers: fingers, thumb: { root: troot, segs: tsegs } };
+  };
+  Rig.prototype.setFingers = function (h, f) {
+    for (var i = 0; i < 4; i++) {
+      var o = i * 4, fi = h.fingers[i];
+      fi.root.rotation.set(0, 0, f[o]);
+      fi.segs[0].rotation.x = f[o + 1]; fi.segs[1].rotation.x = f[o + 2]; fi.segs[2].rotation.x = f[o + 3];
+    }
+    var t = h.thumb, a = f[16], op = f[17];
+    t.root.rotation.set(0, -op, -a, 'ZYX');
+    t.segs[0].rotation.x = f[18]; t.segs[1].rotation.x = f[19]; t.segs[2].rotation.x = f[20];
+  };
+
+  // foot: local origin ankle, +z toes, +y dorsal
+  Rig.prototype.buildFoot = function () {
+    var M = this.M, O = this.O;
+    var g = new THREE.Group();
+    this.part(g, 'sphere', [0.05], M.skin, O.body, [0, -0.036, 0.052], [0.66, 0.58, 1.9]);
+    this.part(g, 'sphere', [0.036], M.skin, O.body, [0, -0.03, -0.025], [0.95, 1.05, 1.0]); // heel
+    var toes = new THREE.Group(); toes.position.set(0, -0.05, 0.135); g.add(toes);
+    this.part(toes, 'sphere', [0.05], M.skin, O.body, [0, 0.0, 0.028], [0.68, 0.27, 0.62]);
+    return { g: g, toes: toes };
+  };
+
+  var tmpA = new V3(), tmpB = new V3(), tmpC = new V3(), tmpQ = new Q(), qx = new Q();
+  var AX = new V3(1, 0, 0), AY = new V3(0, 1, 0), AZ = new V3(0, 0, 1);
+
+  Rig.prototype.apply = function (P, breath) {
+    this.solve(P, breath, true);
+    this.buildTorso();
+    this.buildSkirt();
+    this.buildLimbs();
+    var J = this.J, qH = this.qH;
+    this.head.position.copy(J.H); this.head.quaternion.copy(qH);
+    this.buildDetails();
+  };
+
+  var _b0 = new V3(), _b1 = new V3(), _hd = new V3(), _cf = new V3(), _g = new V3(0, -1, 0), _qi = new Q(), _lx = new V3();
+  // chest front surface depth (chest-local z) by chest-local height
+  function chestFront(y) {
+    if (y < 0.08) return 0.13;
+    if (y < 0.135) return 0.13 - (y - 0.08) / 0.055 * 0.025;
+    if (y < 0.172) return 0.105 - (y - 0.135) / 0.037 * 0.017;
+    if (y < 0.2) return 0.088 - (y - 0.172) / 0.028 * 0.014;
+    return 0.074;
+  }
+  Rig.prototype.buildDetails = function () {
+    var J = this.J, qH = this.qH, qC = this.qC;
+    // collar band
+    var lc = this.lineCurve;
+    lc.points[0].set(0, 0.188, -0.004).applyQuaternion(qC).add(J.C);
+    lc.points[1].set(0, 0.238, 0.0).applyQuaternion(qC).add(J.C);
+    this.collar.update(lc, function () { return 0.06; }, 0, 1);
+
+    // (the beard is now part of the head; the old hanging loft is disabled)
+    if (this.beardL.group.visible) this.beardL.group.visible = false;
+    if (false) {
+    var bc = this.beardCurve.points;
+    _hd.set(0, -1, 0.18).applyQuaternion(qH).normalize();
+    _cf.set(0, 0, 1).applyQuaternion(qC);
+    bc[0].set(0, 0.012, 0.07).applyQuaternion(qH).add(J.H);
+    _b0.copy(_hd).multiplyScalar(0.65).addScaledVector(_g, 0.35).normalize();
+    bc[1].copy(bc[0]).addScaledVector(_b0, 0.05);
+    _b1.copy(_hd).multiplyScalar(0.25).addScaledVector(_g, 0.75).addScaledVector(_cf, 0.1).normalize();
+    bc[2].copy(bc[1]).addScaledVector(_b1, 0.05);
+    bc[3].copy(bc[2]).addScaledVector(_b1, 0.025);
+    _qi.copy(qC).invert();
+    for (var i = 1; i < 4; i++) {
+      _b0.copy(bc[i]).sub(J.C).applyQuaternion(_qi);
+      if (_b0.y > -0.12 && _b0.y < 0.26) {
+        var zmin = chestFront(_b0.y) + 0.044;
+        if (Math.abs(_b0.x) < 0.2 && _b0.z < zmin) _b0.z = zmin;
+      }
+      bc[i].copy(_b0).applyQuaternion(qC).add(J.C);
+    }
+    var L = this.beardL, nR = L.nR;
+    _lx.set(1, 0, 0).applyQuaternion(qH);
+    for (var r = 0; r < nR; r++) {
+      var u = r / (nR - 1);
+      this.beardCurve.getPoint(u, _c);
+      this.beardCurve.getTangent(clamp(u, 0.001, 0.999), _t);
+      _X.copy(_lx).addScaledVector(_t, -_lx.dot(_t)).normalize();
+      _Y.crossVectors(_t, _X).normalize();
+      var end = Math.sqrt(Math.max(0, 1 - Math.pow(u, 3.2)));
+      var a = 0.008 + (0.05 - 0.012 * u) * end;
+      var b = 0.005 + (0.03 - 0.014 * u) * end;
+      _X.multiplyScalar(a); _Y.multiplyScalar(b);
+      L.ring(r, _c, _X, _Y);
+    }
+    L.done();
+    }
+
+    // placket lines and buttons, taken from the front of the torso surface
+    var T = this.torso, P = T.pos, N = T.geo.attributes.normal.array, nS = T.nS;
+    var r0 = 12, r1 = 22;
+    for (var side = 0; side < 2; side++) {
+      var pts = this.placketCurve.points; pts.length = 0;
+      var si = side ? 1 : nS - 1;
+      for (var rr = r0; rr <= r1; rr++) {
+        var o = rr * nS * 3, os = (rr * nS + si) * 3;
+        pts.push(new V3(
+          P[o] + (P[os] - P[o]) * 0.3 + N[o] * 0.0025,
+          P[o + 1] + (P[os + 1] - P[o + 1]) * 0.3 + N[o + 1] * 0.0025,
+          P[o + 2] + (P[os + 2] - P[o + 2]) * 0.3 + N[o + 2] * 0.0025));
+      }
+      this.placket[side].update(this.placketCurve, function () { return 0.0016; }, 0, 1);
+    }
+    var br = [14, 17, 20];
+    for (var k = 0; k < 3; k++) {
+      var ob = br[k] * nS * 3;
+      this.buttons[k].position.set(P[ob] + N[ob] * 0.004, P[ob + 1] + N[ob + 1] * 0.004, P[ob + 2] + N[ob + 2] * 0.004);
+    }
+  };
+  Rig.prototype.solve = function (P, breath, place) {
+    var J = this.J;
+    breath = breath || 0;
+    // ----- spine FK
+    var qP = this.qP.copy(P.pelvisQ);
+    J.P.copy(P.pelvisP);
+    var q1 = this.q1.copy(qP).multiply(P.spine0Q);
+    J.S1.copy(AY).multiplyScalar(D.spine1).applyQuaternion(qP).add(J.P);
+    var qC = this.qC.copy(q1).multiply(P.spine1Q);
+    if (breath) qC.multiply(qx.setFromAxisAngle(AX, -breath * 0.012));
+    J.C.copy(AY).multiplyScalar(D.spine2).applyQuaternion(q1).add(J.S1);
+    var qN = this.qN.copy(qC).multiply(P.neckQ);
+    J.N.copy(AY).multiplyScalar(D.chestTop).applyQuaternion(qC).add(J.C);
+    var qH = this.qH.copy(qN).multiply(P.headQ);
+    J.H.copy(AY).multiplyScalar(D.neck).applyQuaternion(qN).add(J.N);
+    // shoulders, hips
+    J.shL.set(D.shX, D.shY + breath * 0.003, D.shZ).applyQuaternion(qC).add(J.C);
+    J.shR.set(-D.shX, D.shY + breath * 0.003, D.shZ).applyQuaternion(qC).add(J.C);
+    J.hipL.set(D.hipHalf, 0, 0).applyQuaternion(qP).add(J.P);
+    J.hipR.set(-D.hipHalf, 0, 0).applyQuaternion(qP).add(J.P);
+
+    // ----- legs
+    var hips = [J.hipL, J.hipR], knees = [J.kneeL, J.kneeR], anks = [J.ankL, J.ankR];
+    for (var s = 0; s < 2; s++) {
+      var qF = P.footQ[s];
+      J[s ? 'ballR' : 'ballL'].copy(P.footBall[s]);
+      tmpA.copy(D.ballLocal).applyQuaternion(qF);
+      tmpB.copy(P.footBall[s]).sub(tmpA); // ankle target
+      ik2(hips[s], tmpB, D.thigh, D.shin, P.kneePole[s], knees[s], anks[s]);
+      if (!place) continue;
+      var f = this.foot[s];
+      f.g.position.copy(anks[s]); f.g.quaternion.copy(qF);
+      // toes
+      var toe = P.toe[s];
+      if (toe === 'auto' || toe == null || isNaN(toe)) {
+        // keep toes from going below floor: angle so toe direction is horizontal when grounded
+        tmpC.copy(AZ).applyQuaternion(qF);
+        var down = Math.asin(clamp(-tmpC.y, -1, 1));
+        var bh = P.footBall[s].y - FLOOR;
+        toe = down > 0 ? -down * (1 - clamp((bh - 0.02) / 0.06, 0, 1)) : 0;
+      }
+      f.toes.rotation.x = toe;
+    }
+    // ----- arms
+    var shs = [J.shL, J.shR], els = [J.elL, J.elR], wrs = [J.wrL, J.wrR];
+    for (var a = 0; a < 2; a++) {
+      ik2(shs[a], P.handP[a], D.upperArm, D.foreArm, P.elbowPole[a], els[a], wrs[a]);
+      if (!place) continue;
+      var h = this.hand[a];
+      h.g.position.copy(wrs[a]); h.g.quaternion.copy(P.handQ[a]);
+      this.setFingers(h, P.fingers[a]);
+    }
+
+    J.brow = J.brow || new V3(); J.brow.set(0, 0.13, 0.1).applyQuaternion(qH).add(J.H);
+    J.nose = J.nose || new V3(); J.nose.set(0, 0.1, 0.12).applyQuaternion(qH).add(J.H);
+  };
+
+  var TORSO = [ // [frame, yOffset, a (half width), b (half depth front), zOffset]
+    [0, -0.11, 0.19, 0.13, -0.012],
+    [0, -0.05, 0.188, 0.13, -0.006],
+    [0, 0.0, 0.18, 0.128, 0.0],
+    [1, -0.03, 0.168, 0.12, 0.005],
+    [1, 0.0, 0.162, 0.118, 0.008],
+    [1, 0.08, 0.165, 0.12, 0.01],
+    [2, 0.0, 0.172, 0.122, 0.008],
+    [2, 0.08, 0.188, 0.122, 0.0],
+    [2, 0.135, 0.2, 0.112, -0.01],
+    [2, 0.172, 0.165, 0.098, -0.012],
+    [2, 0.2, 0.09, 0.078, -0.006],
+    [2, 0.215, 0.07, 0.066, -0.004]
+  ];
+  var _fr = [null, null, null], _ctr = [], _qs = [];
+  for (var _i = 0; _i < TORSO.length; _i++) { _ctr.push(new V3()); _qs.push(new Q()); }
+  var torsoCurve = new THREE.CatmullRomCurve3(_ctr, false, 'centripetal');
+  Rig.prototype.buildTorso = function () {
+    var J = this.J;
+    var frames = [[J.P, this.qP], [J.S1, this.q1], [J.C, this.qC]];
+    for (var i = 0; i < TORSO.length; i++) {
+      var T = TORSO[i], fr = frames[T[0]];
+      _ctr[i].set(0, T[1], T[4]).applyQuaternion(fr[1]).add(fr[0]);
+      _qs[i].copy(fr[1]);
+    }
+    var L = this.torso, nR = L.nR, n = TORSO.length - 1;
+    for (var r = 0; r < nR; r++) {
+      var u = r / (nR - 1), x = u * n, k = Math.min(Math.floor(x), n - 1), w = x - k;
+      torsoCurve.getPoint(u, _c);
+      tmpQ.copy(_qs[k]).slerp(_qs[k + 1], w);
+      var ws = w * w * (3 - 2 * w);
+      var A = TORSO[k][2] + (TORSO[k + 1][2] - TORSO[k][2]) * ws;
+      var B = TORSO[k][3] + (TORSO[k + 1][3] - TORSO[k][3]) * ws;
+      _X.copy(AZ).applyQuaternion(tmpQ).multiplyScalar(B);
+      _Y.copy(AX).applyQuaternion(tmpQ).multiplyScalar(A);
+      L.ring(r, _c, _X, _Y);
+    }
+    L.done();
+  };
+
+  var _lp = new V3(), _rp = new V3(), _lt = new V3(), _rt = new V3(), _lat = new V3(), _fw = new V3(), _tan = new V3();
+  Rig.prototype.buildSkirt = function () {
+    var J = this.J, L = this.skirt, nR = L.nR;
+    var cl = this.curveL.points, cr = this.curveR.points;
+    cl[0].copy(J.hipL); cl[1].copy(J.kneeL); cl[2].copy(J.ankL);
+    cr[0].copy(J.hipR); cr[1].copy(J.kneeR); cr[2].copy(J.ankR);
+    var tEnd = 0.9;
+    var pelvX = tmpA.set(1, 0, 0).applyQuaternion(this.qP);
+    var pelvZ = tmpB.set(0, 0, 1).applyQuaternion(this.qP);
+    for (var r = 0; r < nR; r++) {
+      var t = (r / (nR - 1)) * tEnd;
+      this.curveL.getPoint(t, _lp); this.curveR.getPoint(t, _rp);
+      this.curveL.getTangent(clamp(t, 0.001, 0.999), _lt); this.curveR.getTangent(clamp(t, 0.001, 0.999), _rt);
+      _tan.addVectors(_lt, _rt).normalize();
+      _c.addVectors(_lp, _rp).multiplyScalar(0.5);
+      _lat.subVectors(_lp, _rp);
+      var half = _lat.length() / 2;
+      if (half < 1e-4) _lat.copy(pelvX); else _lat.divideScalar(half * 2);
+      if (t < 0.12) { // blend top toward pelvis frame
+        var bw = 1 - t / 0.12;
+        _lat.lerp(pelvX, bw).normalize();
+      }
+      _fw.crossVectors(_tan, _lat);
+      if (_fw.lengthSq() < 1e-6) _fw.copy(pelvZ);
+      _fw.normalize();
+      _lat.crossVectors(_fw, _tan).normalize();
+      // radii
+      var rad, dep;
+      if (t < 0.1) { var s0 = t / 0.1; rad = 0.06 + (0.106 - 0.06) * Math.sin(s0 * Math.PI / 2); dep = 0.105 + 0.029 * Math.sin(s0 * Math.PI / 2); }
+      else if (t < 0.5) { var s = (t - 0.1) / 0.4; rad = 0.106 + (0.078 - 0.106) * s; dep = 0.134 + (0.08 - 0.134) * Math.sqrt(s); }
+      else { var s2 = (t - 0.5) / (tEnd - 0.5); rad = 0.078 + (0.096 - 0.078) * s2 * s2; dep = 0.08 + (0.098 - 0.08) * s2 * s2; }
+      _X.copy(_lat).multiplyScalar(half + rad);
+      _Y.copy(_fw).multiplyScalar(dep);
+      L.ring(r, _c, _X, _Y);
+    }
+    L.done();
+  };
+
+  Rig.prototype.buildLimbs = function () {
+    var J = this.J, self = this;
+    var shs = [J.shL, J.shR], els = [J.elL, J.elR], wrs = [J.wrL, J.wrR];
+    for (var a = 0; a < 2; a++) {
+      var c = this.curveTmp; c.points[0].copy(shs[a]); c.points[1].copy(els[a]);
+      // sleeve ends a bit before the wrist
+      c.points[2].copy(wrs[a]).sub(els[a]).multiplyScalar(0.9).add(els[a]);
+      this.arm[a].update(c, function (t) {
+        return t < 0.5 ? 0.057 - 0.01 * (t / 0.5) : 0.047 + 0.003 * ((t - 0.5) / 0.5);
+      }, 0, 1);
+      this.shoulderCap[a].position.copy(shs[a]);
+      // wrist skin
+      var lc = this.lineCurve; lc.points[0].copy(wrs[a]).sub(els[a]).multiplyScalar(0.84).add(els[a]); lc.points[1].copy(wrs[a]);
+      tmpC.set(0, 0.012, 0).applyQuaternion(this.hand[a].g.quaternion).add(wrs[a]);
+      lc.points[1].copy(tmpC);
+      this.wristT[a].update(lc, function () { return 0.026; }, 0, 1);
+    }
+    var hips = [J.hipL, J.hipR], knees = [J.kneeL, J.kneeR], anks = [J.ankL, J.ankR];
+    for (var s = 0; s < 2; s++) {
+      var lc2 = this.lineCurve;
+      lc2.points[0].copy(anks[s]).sub(knees[s]).multiplyScalar(0.62).add(knees[s]);
+      lc2.points[1].copy(anks[s]);
+      this.ankleT[s].update(lc2, function (t) { return 0.047 + 0.006 * (1 - t); }, 0, 1);
+    }
+    var nc = this.lineCurve;
+    nc.points[0].copy(AY).multiplyScalar(-0.03).applyQuaternion(this.qC).add(J.N);
+    nc.points[1].copy(AY).multiplyScalar(0.06).applyQuaternion(this.qH).add(J.H);
+    this.neckT.update(nc, function (t) { return 0.055; }, 0, 1);
+  };
+
+  // ---------------------------------------------------------------- poses
+  function deepMerge(a, b) {
+    var o = {};
+    for (var k in a) o[k] = a[k];
+    for (var k2 in b) {
+      if (b[k2] && typeof b[k2] === 'object' && !Array.isArray(b[k2]) && a[k2] && typeof a[k2] === 'object' && !Array.isArray(a[k2])) o[k2] = deepMerge(a[k2], b[k2]);
+      else o[k2] = b[k2];
+    }
+    return o;
+  }
+
+  var BALL_Z = -0.27, BALL_X = 0.112;
+  var STAND = {
+    pelvis: { p: [0, 0.95, -0.415], r: [-0.02, 0, 0] },
+    spine: [[0.03, 0, 0], [0.02, 0, 0]],
+    neck: [0.04, 0, 0], head: [0.03, 0, 0],
+    footL: { b: [BALL_X, FLOOR + 0.012, BALL_Z], r: [0, 0.12, 0], toe: 0 },
+    footR: { b: [-BALL_X, FLOOR + 0.012, BALL_Z], r: [0, -0.12, 0], toe: 0 },
+    kneeL: [0.15, 0, 1], kneeR: [-0.15, 0, 1],
+    handL: { p: [0.215, 0.865, -0.4], f: [-0.08, -1, 0.06], n: [-1, 0, 0.1] },
+    handR: { p: [-0.215, 0.865, -0.4], f: [0.08, -1, 0.06], n: [1, 0, 0.1] },
+    elbowL: [0.4, -0.2, -1], elbowR: [-0.4, -0.2, -1],
+    fingersL: 'relaxed', fingersR: 'relaxed'
+  };
+  function pose(o) { return deepMerge(STAND, o); }
+
+  var POSES = {};
+  POSES.stand = pose({});
+  POSES.takbir = pose({
+    handL: { p: [0.2, 1.32, -0.29], f: [0.02, 1, 0.08], n: [-0.05, 0, 1] },
+    handR: { p: [-0.2, 1.32, -0.29], f: [-0.02, 1, 0.08], n: [0.05, 0, 1] },
+    elbowL: [0.5, -1, -0.2], elbowR: [-0.5, -1, -0.2],
+    fingersL: 'flat', fingersR: 'flat'
+  });
+  POSES.qiyam = pose({
+    neck: [0.14, 0, 0], head: [0.08, 0, 0],
+    handL: { p: [0.085, 1.0, -0.255], f: [-1, -0.12, 0.18], n: [0.15, 0, -1] },
+    handR: { p: [-0.075, 1.01, -0.21], f: [1, 0.04, 0.05], n: [0, 0.05, -1] },
+    elbowL: [1, -0.5, -0.5], elbowR: [-1, -0.5, -0.5],
+    fingersL: 'flat', fingersR: 'grip'
+  });
+  POSES.ruku = pose({
+    pelvis: { p: [0, 0.905, -0.5], r: [1.38, 0, 0] },
+    spine: [[0.06, 0, 0], [0.04, 0, 0]],
+    neck: [-0.12, 0, 0], head: [0.02, 0, 0],
+    kneeL: [0.1, 0, 1], kneeR: [-0.1, 0, 1],
+    handL: { p: [0.12, 0.555, -0.3], f: [-0.08, -1, 0.3], n: [0.1, 0.3, -1], onRobe: 0.018, ray: [0, -0.2, -1] },
+    handR: { p: [-0.12, 0.555, -0.3], f: [0.08, -1, 0.3], n: [-0.1, 0.3, -1], onRobe: 0.018, ray: [0, -0.2, -1] },
+    elbowL: [0.6, 0, -0.3], elbowR: [-0.6, 0, -0.3],
+    fingersL: 'grasp', fingersR: 'grasp'
+  });
+  POSES.itidalRaise = POSES.takbir;
+  // going down
+  POSES.descend = pose({
+    pelvis: { p: [0, 0.66, -0.36], r: [0.38, 0, 0] },
+    spine: [[0.06, 0, 0], [0.02, 0, 0]],
+    neck: [0.0, 0, 0], head: [0.04, 0, 0],
+    footL: { r: [0.85, 0.08, 0], toe: 'auto' }, footR: { r: [0.85, -0.08, 0], toe: 'auto' },
+    kneeL: [0.12, -0.35, 1], kneeR: [-0.12, -0.35, 1],
+    handL: { p: [0.2, 0.62, -0.08], f: [-0.05, -0.7, 0.7], n: [-0.2, -0.6, -0.7] },
+    handR: { p: [-0.2, 0.62, -0.08], f: [0.05, -0.7, 0.7], n: [0.2, -0.6, -0.7] },
+    elbowL: [0.5, -0.4, -1], elbowR: [-0.5, -0.4, -1]
+  });
+  // kneeling upright, toes tucked
+  POSES.kneel = pose({
+    pelvis: { p: [0, 0.50, 0.1], r: [0.2, 0, 0] },
+    auto: { kneeY: 0.062 },
+    spine: [[0.06, 0, 0], [0.04, 0, 0]],
+    neck: [0.0, 0, 0], head: [0.1, 0, 0],
+    footL: { r: [1.42, 0.05, 0], toe: 'auto' }, footR: { r: [1.42, -0.05, 0], toe: 'auto' },
+    kneeL: [0.15, -0.3, 1], kneeR: [-0.15, -0.3, 1],
+    handL: { p: [0.2, 0.42, 0.42], f: [0, -0.6, 0.8], n: [0, -0.8, -0.6] },
+    handR: { p: [-0.2, 0.42, 0.42], f: [0, -0.6, 0.8], n: [0, -0.8, -0.6] },
+    elbowL: [0.5, -0.4, -1], elbowR: [-0.5, -0.4, -1]
+  });
+  POSES.handsDown = pose({
+    pelvis: { p: [0, 0.49, 0.05], r: [1.15, 0, 0] },
+    auto: { kneeY: 0.062 },
+    spine: [[0.15, 0, 0], [0.1, 0, 0]],
+    neck: [-0.05, 0, 0], head: [0.2, 0, 0],
+    footL: { r: [1.42, 0.05, 0], toe: 'auto' }, footR: { r: [1.42, -0.05, 0], toe: 'auto' },
+    kneeL: [0.15, -0.3, 1], kneeR: [-0.15, -0.3, 1],
+    handL: { p: [0.205, FLOOR + 0.016, 0.49], f: [0, 0, 1], n: [0, -1, 0] },
+    handR: { p: [-0.205, FLOOR + 0.016, 0.49], f: [0, 0, 1], n: [0, -1, 0] },
+    elbowL: [1, 0.3, -0.2], elbowR: [-1, 0.3, -0.2],
+    fingersL: 'flat', fingersR: 'flat'
+  });
+  POSES.sujud = pose({
+    pelvis: { p: [0, 0.47, 0.03], r: [1.55, 0, 0] },
+    spine: [[0.22, 0, 0], [0.2, 0, 0]],
+    neck: [-0.15, 0, 0], head: [-0.1, 0, 0],
+    auto: { kneeY: 0.062, brow: FLOOR + 0.032 },
+    footL: { r: [1.42, 0.05, 0], toe: 'auto' }, footR: { r: [1.42, -0.05, 0], toe: 'auto' },
+    kneeL: [0.25, -0.3, 1], kneeR: [-0.25, -0.3, 1],
+    handL: { p: [0.205, FLOOR + 0.016, 0.49], f: [0, 0, 1], n: [0, -1, 0] },
+    handR: { p: [-0.205, FLOOR + 0.016, 0.49], f: [0, 0, 1], n: [0, -1, 0] },
+    elbowL: [1, 0.7, -0.1], elbowR: [-1, 0.7, -0.1],
+    fingersL: 'flat', fingersR: 'flat'
+  });
+  // sitting (iftirash): left foot laid, right foot upright
+  var SIT = {
+    pelvis: { p: [0.025, 0.3, -0.17], r: [0.06, 0, 0.09] },
+    auto: { kneeY: 0.062 },
+    spine: [[0.06, 0, 0], [0.0, 0, 0]],
+    neck: [0.12, 0, 0], head: [0.12, 0, 0],
+    footL: { b: [-0.025, FLOOR + 0.1, -0.325], r: [Math.PI - 0.1, 0.6, 0], toe: 0.1 },
+    footR: { r: [1.42, -0.05, 0], toe: 'auto' },
+    kneeL: [0.3, -0.4, 1], kneeR: [-0.3, -0.7, 1],
+    handL: { p: [0.15, 0.245, 0.0], f: [-0.04, 0, 1], n: [0, -1, 0], onRobe: 0.018 },
+    handR: { p: [-0.15, 0.245, 0.0], f: [0.04, 0, 1], n: [0, -1, 0], onRobe: 0.018 },
+    elbowL: [0.4, -0.3, -1], elbowR: [-0.4, -0.3, -1],
+    fingersL: 'flat', fingersR: 'flat'
+  };
+  POSES.jalsa = pose(SIT);
+  POSES.sitRise = pose(deepMerge(SIT, { // intermediate when moving between sit and sujud
+    pelvis: { p: [0, 0.40, -0.02], r: [0.7, 0, 0] },
+    auto: { kneeY: 0.062 },
+    footL: { b: [BALL_X, FLOOR + 0.012, BALL_Z], r: [1.42, 0.05, 0], toe: 'auto' },
+    spine: [[0.12, 0, 0], [0.08, 0, 0]],
+    neck: [0.05, 0, 0], head: [0.15, 0, 0],
+    handL: { p: [0.19, 0.12, 0.45], f: [0, -0.4, 1], n: [0, -1, -0.4], onRobe: null },
+    handR: { p: [-0.19, 0.12, 0.45], f: [0, -0.4, 1], n: [0, -1, -0.4], onRobe: null }
+  }));
+  POSES.tash = pose(deepMerge(SIT, {
+    handR: { p: [-0.155, 0.25, 0.0], f: [0.18, 0, 1], n: [0.72, -0.7, 0], onRobe: 0.036 },
+    fingersR: 'tashahhud'
+  }));
+  POSES.tashPoint = pose(deepMerge(SIT, {
+    handR: { p: [-0.155, 0.25, 0.0], f: [0.18, 0, 1], n: [0.72, -0.7, 0], onRobe: 0.036 },
+    fingersR: 'pointing'
+  }));
+  POSES.salamR = pose(deepMerge(SIT, {
+    handR: { p: [-0.155, 0.25, 0.0], f: [0.18, 0, 1], n: [0.72, -0.7, 0], onRobe: 0.036 },
+    fingersR: 'tashahhud',
+    neck: [0.08, -0.45, 0], head: [0.06, -0.85, 0]
+  }));
+  POSES.salamL = pose(deepMerge(SIT, {
+    handR: { p: [-0.155, 0.25, 0.0], f: [0.18, 0, 1], n: [0.72, -0.7, 0], onRobe: 0.036 },
+    fingersR: 'tashahhud',
+    neck: [0.08, 0.45, 0], head: [0.06, 0.85, 0]
+  }));
+  POSES.sitEnd = pose(SIT);
+
+  function compile(p) {
+    var fl = p.footL, fr = p.footR;
+    return {
+      pelvisP: v3(p.pelvis.p), pelvisQ: qE(p.pelvis.r, 'YXZ'),
+      spine0Q: qE(p.spine[0]), spine1Q: qE(p.spine[1]), neckQ: qE(p.neck, 'YXZ'), headQ: qE(p.head, 'YXZ'),
+      footBall: [v3(fl.b), v3(fr.b)], footQ: [qE(fl.r, 'YXZ'), qE(fr.r, 'YXZ')], toe: [fl.toe, fr.toe],
+      kneePole: [v3(p.kneeL).normalize(), v3(p.kneeR).normalize()],
+      handP: [v3(p.handL.p), v3(p.handR.p)], handQ: [qBasis(p.handL.f, p.handL.n), qBasis(p.handR.f, p.handR.n)],
+      elbowPole: [v3(p.elbowL).normalize(), v3(p.elbowR).normalize()],
+      fingers: [FINGERS[p.fingersL].slice(), FINGERS[p.fingersR].slice()]
+    };
+  }
+  function makeBlank() { return compile(POSES.stand); }
+  // blend with optional per-part timing offsets (u for body, uh for hands)
+  function blend(a, b, u, o, opt) {
+    opt = opt || {};
+    var uL = opt.legs != null ? opt.legs : u, uA = opt.arms != null ? opt.arms : u, uH = opt.head != null ? opt.head : u;
+    o.pelvisP.lerpVectors(a.pelvisP, b.pelvisP, u);
+    o.pelvisQ.copy(a.pelvisQ).slerp(b.pelvisQ, u);
+    o.spine0Q.copy(a.spine0Q).slerp(b.spine0Q, u);
+    o.spine1Q.copy(a.spine1Q).slerp(b.spine1Q, u);
+    o.neckQ.copy(a.neckQ).slerp(b.neckQ, uH);
+    o.headQ.copy(a.headQ).slerp(b.headQ, uH);
+    for (var s = 0; s < 2; s++) {
+      o.footBall[s].lerpVectors(a.footBall[s], b.footBall[s], uL);
+      o.footQ[s].copy(a.footQ[s]).slerp(b.footQ[s], uL);
+      var ta = a.toe[s], tb = b.toe[s];
+      o.toe[s] = (typeof ta === 'number' && typeof tb === 'number') ? ta + (tb - ta) * uL : (uL < 0.5 ? ta : tb);
+      o.kneePole[s].lerpVectors(a.kneePole[s], b.kneePole[s], uL).normalize();
+      o.handP[s].lerpVectors(a.handP[s], b.handP[s], uA);
+      o.handQ[s].copy(a.handQ[s]).slerp(b.handQ[s], uA);
+      o.elbowPole[s].lerpVectors(a.elbowPole[s], b.elbowPole[s], uA).normalize();
+      var fa = a.fingers[s], fb = b.fingers[s], fo = o.fingers[s];
+      for (var i = 0; i < fo.length; i++) fo[i] = fa[i] + (fb[i] - fa[i]) * uA;
+    }
+    return o;
+  }
+
+  // ---------------------------------------------------------------- timeline
+  // step indices refer to STEPS below
+  var STEPS = [
+    { id: 'qiyam', title: 'Кыям' },
+    { id: 'takbir', title: 'Такбир' },
+    { id: 'ruku', title: 'Руку‘' },
+    { id: 'itidal', title: 'И‘тидаль' },
+    { id: 'sujud', title: 'Суджуд' },
+    { id: 'jalsa', title: 'Джальса' },
+    { id: 'sujud2', title: 'Суджуд' },
+    { id: 'tashahhud', title: 'Ташаххуд' },
+    { id: 'salam', title: 'Салям' }
+  ];
+  // [pose, transition seconds, hold seconds, step index, blend options]
+  var MAIN = [
+    ['stand', 0, 1.4, 0],
+    ['takbir', 1.0, 0.9, 1],
+    ['qiyam', 1.1, 2.6, 0],
+    ['takbir', 0.9, 0.35, 2],
+    ['ruku', 1.4, 2.2, 2],
+    ['takbir', 1.4, 0.35, 3],
+    ['qiyam', 1.0, 1.6, 3],
+    ['descend', 1.0, 0, 4],
+    ['kneel', 0.9, 0.0, 4],
+    ['handsDown', 0.9, 0.0, 4, { arms: 'early' }],
+    ['sujud', 0.8, 2.4, 4],
+    ['handsDown', 0.8, 0.0, 5],
+    ['sitRise', 0.6, 0.0, 5],
+    ['jalsa', 0.9, 5.2, 5],
+    ['sitRise', 0.9, 0.0, 6],
+    ['handsDown', 0.6, 0.0, 6],
+    ['sujud', 0.7, 2.4, 6],
+    ['handsDown', 0.8, 0.0, 7],
+    ['sitRise', 0.6, 0.0, 7],
+    ['tash', 0.9, 2.8, 7],
+    ['tashPoint', 0.45, 1.1, 7],
+    ['tash', 0.45, 1.5, 7],
+    ['tashPoint', 0.45, 1.1, 7],
+    ['tash', 0.45, 1.4, 7],
+    ['salamR', 1.0, 1.1, 8],
+    ['tash', 0.8, 0.3, 8],
+    ['salamL', 1.0, 1.1, 8],
+    ['sitEnd', 0.9, 1.4, 8],
+    ['sitRise', 1.0, 0.0, 8],
+    ['kneel', 0.8, 0.0, 8],
+    ['descend', 0.9, 0.0, 8],
+    ['stand', 1.1, 0.2, 0]
+  ];
+  var HAND = [
+    ['tash', 0, 1.3, 7],
+    ['tashPoint', 0.5, 1.3, 7],
+    ['tash', 0.5, 1.5, 7]
+  ];
+  // One course step = the movement into one STEPS pose and its hold: [first, last] key of
+  // MAIN, plus the key shown when paused if it is not the last. Played in a loop with
+  // LEAD_IN seconds of the previous pose before it.
+  var SEGMENTS = {
+    qiyam: [2, 2], takbir: [1, 1], ruku: [3, 4], itidal: [5, 6], sujud: [7, 10],
+    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23, 22], salam: [24, 27, 24]
+  };
+  var LEAD_IN = 0.6;
+
+  // resolve 'auto' constraints: pelvis height so knees touch the rug, extra chest bend so the brow touches it
+  var _rq = new Q();
+  function resolveAuto(cp, raw, rig) {
+    var a = raw.auto || {};
+    var J = rig.J;
+    if (a.kneeY != null) {
+      var lo = 0.05, hi = 1.0;
+      for (var i = 0; i < 40; i++) {
+        var m = (lo + hi) / 2; cp.pelvisP.y = m; rig.solve(cp, 0, false);
+        if (Math.min(J.kneeL.y, J.kneeR.y) > a.kneeY) hi = m; else lo = m;
+      }
+      cp.pelvisP.y = (lo + hi) / 2;
+    }
+    if (a.brow != null) {
+      var base = cp.spine1Q.clone(), base0 = cp.spine0Q.clone(), l2 = -0.6, h2 = 1.2;
+      for (var j = 0; j < 40; j++) {
+        var d = (l2 + h2) / 2;
+        cp.spine0Q.copy(base0).multiply(_rq.setFromAxisAngle(AX, d * 0.5));
+        cp.spine1Q.copy(base).multiply(_rq.setFromAxisAngle(AX, d * 0.5));
+        rig.solve(cp, 0, false);
+        if (J.brow.y > a.brow) l2 = d; else h2 = d;
+      }
+    }
+    // hands resting on the robe over the thighs: raycast onto the cloth surface
+    var hs = [raw.handL, raw.handR];
+    if (hs[0].onRobe != null || hs[1].onRobe != null) {
+      rig.apply(cp);
+      rig.skirt.geo.computeBoundingSphere(); rig.skirt.geo.computeBoundingBox();
+      var rc = new THREE.Raycaster(), dn = new V3(0, -1, 0);
+      for (var s = 0; s < 2; s++) {
+        if (hs[s].onRobe == null) continue;
+        var lift = hs[s].onRobe, fdir = v3(hs[s].f).normalize();
+        var nrm = v3(hs[s].n).normalize();
+        if (hs[s].ray) dn = v3(hs[s].ray).normalize(); else dn = new V3(0, -1, 0);
+        var p1 = cp.handP[s].clone(), p2 = p1.clone().addScaledVector(fdir, 0.1);
+        rc.set(p1.clone().addScaledVector(dn, -0.5), dn); var h1 = rc.intersectObject(rig.skirt.mesh)[0];
+        rc.set(p2.clone().addScaledVector(dn, -0.5), dn); var h2 = rc.intersectObject(rig.skirt.mesh)[0];
+        if (!h1) continue;
+        cp.handP[s].copy(h1.point).addScaledVector(dn, -lift);
+        if (h2 && !hs[s].ray) {
+          var nf = new V3(fdir.x, (h2.point.y - h1.point.y) / 0.1 * Math.hypot(fdir.x, fdir.z), fdir.z).normalize();
+          cp.handQ[s] = qBasis([nf.x, nf.y, nf.z], hs[s].n);
+        }
+      }
+    }
+    return cp;
+  }
+  var CACHE = {};
+  function getPose(name, rig) {
+    if (!CACHE[name]) CACHE[name] = resolveAuto(compile(POSES[name]), POSES[name], rig);
+    return CACHE[name];
+  }
+
+  function Timeline(keys, rig) {
+    this.keys = keys.map(function (k) { return { pose: getPose(k[0], rig), name: k[0], tr: k[1], hold: k[2], step: k[3], opt: k[4] || null }; });
+    var t = 0;
+    this.keys.forEach(function (k) { k.t0 = t; t += k.tr; k.t1 = t; t += k.hold; k.t2 = t; });
+    this.dur = t;
+    this.out = makeBlank();
+  }
+  Timeline.prototype.sample = function (time) {
+    var t = ((time % this.dur) + this.dur) % this.dur, ks = this.keys;
+    for (var i = 0; i < ks.length; i++) {
+      var k = ks[i];
+      if (t < k.t2 || i === ks.length - 1) {
+        var prev = ks[(i - 1 + ks.length) % ks.length];
+        if (t < k.t1 && k.tr > 0) {
+          var u = (t - k.t0) / k.tr, e = ease(u);
+          var opt = null;
+          if (k.opt && k.opt.arms === 'early') opt = { arms: ease(Math.min(1, u * 1.35)) };
+          else opt = { head: ease(Math.max(0, (u - 0.08) / 0.92)) };
+          blend(prev.pose, k.pose, e, this.out, opt);
+          return { pose: this.out, step: k.step, hold: false, key: i };
+        }
+        blend(k.pose, k.pose, 1, this.out);
+        return { pose: this.out, step: k.step, hold: true, key: i, holdT: t - k.t1 };
+      }
+    }
+  };
+
+  // ---------------------------------------------------------------- scene
+  function mount(canvas, opts) {
+    opts = opts || {};
+    var view = opts.view || 'full';
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, preserveDrawingBuffer: !!opts.preserve });
+    renderer.setClearColor(0x000000, 0);
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    SHARED.uDpr.value = dpr;
+
+    var scene = new THREE.Scene();
+    // paper background + grain overlay (screen-space)
+    var paperVS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+    var paperFS = [
+      'uniform vec2 uRes; uniform float uDpr; uniform float uMode; varying vec2 vUv;',
+      'float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }',
+      'float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+      '  return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }',
+      'void main(){',
+      '  vec2 p = gl_FragCoord.xy / uDpr;',
+      '  float n = vn(p * 0.7) * 0.45 + vn(p * 0.18) * 0.35 + vn(p * 0.035) * 0.2;',
+      '  float fib = vn(vec2(p.x * 0.05 + p.y * 0.6, p.y * 0.04 - p.x * 0.3));',
+      '  if (uMode < 0.5) {',
+      '    vec3 paper = vec3(0.945, 0.929, 0.894);',
+      '    float vig = smoothstep(1.15, 0.25, length((vUv - vec2(0.58, 0.52)) * vec2(1.3, 1.0)));',
+      '    vec3 col = paper * (0.975 + 0.025 * vig) - (n - 0.5) * 0.018 - fib * 0.005;',
+      '    gl_FragColor = vec4(col, 1.0);',
+      '  } else {',
+      '    float g = 1.0 - (h(floor(p)) * 0.022 + (1.0 - n) * 0.018 + fib * 0.006);',
+      '    gl_FragColor = vec4(vec3(g), 1.0);',
+      '  }',
+      '}'].join('\n');
+    function paperMat(mode) {
+      var m = new THREE.ShaderMaterial({ uniforms: { uRes: SHARED.uRes, uDpr: SHARED.uDpr, uMode: { value: mode } }, vertexShader: paperVS, fragmentShader: paperFS, depthTest: false, depthWrite: false });
+      if (mode === 1) { m.blending = THREE.CustomBlending; m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.DstColorFactor; m.blendDst = THREE.ZeroFactor; m.transparent = true; }
+      return m;
+    }
+    var orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    var bgScene = new THREE.Scene(); bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), paperMat(0)));
+    var grainScene = new THREE.Scene(); grainScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), paperMat(1)));
+    renderer.autoClear = false;
+    function draw() {
+      renderer.clear();
+      renderer.render(bgScene, orthoCam);
+      renderer.clearDepth();
+      renderer.render(scene, camera);
+      renderer.render(grainScene, orthoCam);
+    }
+    var camera = new THREE.PerspectiveCamera(view === 'hand' ? 32 : 28, 1, 0.03, 60);
+
+    var rig = new Rig();
+    scene.add(rig.root);
+
+    // rug
+    var rugTex = rugTexture();
+    var rugMat = hatchMat('#ffffff', { map: rugTex, hatch: 0.55, rim: 0.0 });
+    var rugGeo = new THREE.BoxGeometry(0.8, FLOOR, 1.34);
+    var rug = new THREE.Mesh(rugGeo, rugMat); rug.position.set(0, FLOOR / 2, 0.17);
+    var rugO = new THREE.Mesh(rugGeo, outlineMat(0.004, 0.8, 2.0)); rugO.position.copy(rug.position);
+    scene.add(rug); scene.add(rugO);
+
+    // contact shadows
+    var radTex = radialTexture();
+    var shadowRoot = new THREE.Group(); scene.add(shadowRoot);
+    function decal(size, op) {
+      var m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: radTex, color: '#3b3630', transparent: true, opacity: op, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
+      m.rotation.x = -Math.PI / 2; m.userData.size = size; m.userData.op = op; m.renderOrder = 2;
+      shadowRoot.add(m); return m;
+    }
+    var floorShadow = decal(1, 0.2); floorShadow.position.set(0, 0.0005, 0.17); floorShadow.scale.set(1.25, 1.75, 1);
+    floorShadow.material.polygonOffset = false; floorShadow.renderOrder = 0;
+    var J = rig.J;
+    var trackers = [
+      [J.P, 0.55, 0.5], [J.C, 0.5, 0.4], [J.H, 0.24, 0.5], [J.kneeL, 0.2, 0.5], [J.kneeR, 0.2, 0.5],
+      [J.ballL, 0.18, 0.55], [J.ballR, 0.18, 0.55], [J.ankL, 0.16, 0.4], [J.ankR, 0.16, 0.4],
+      [J.wrL, 0.16, 0.45], [J.wrR, 0.16, 0.45]
+    ].map(function (t) { return { j: t[0], m: decal(t[1], t[2]) }; });
+    function updateShadows() {
+      for (var i = 0; i < trackers.length; i++) {
+        var tr = trackers[i], h = Math.max(0, tr.j.y - FLOOR);
+        var k = clamp(1 - h / 0.55, 0, 1);
+        tr.m.position.set(tr.j.x, FLOOR + 0.0008, tr.j.z);
+        var s = tr.m.userData.size * (0.75 + h * 1.6);
+        tr.m.scale.set(s, s, 1);
+        tr.m.material.opacity = tr.m.userData.op * k * k;
+      }
+    }
+
+    var tl = new Timeline(view === 'main' || view === 'full' ? MAIN : HAND, rig);
+
+    // camera orbit state
+    var CAM = view === 'hand'
+      ? { target: new V3(), az: -1.22, el: 0.3, dist: 0.56, minD: 0.3, maxD: 2.4 }
+      : view === 'back'
+      ? { target: new V3(0, 0.6, -0.04), az: 2.45, el: 0.26, dist: 3.7, minD: 1.2, maxD: 7 }
+      : { target: new V3(0, 0.72, 0.1), az: -0.98, el: 0.16, dist: 4.8, minD: 2.0, maxD: 9 };
+    if (view === 'hand') {
+      rig.apply(tl.keys[0].pose);
+      CAM.target.copy(rig.J.wrR); CAM.target.y += 0.03; CAM.target.z += 0.06;
+    }
+    var home = { az: CAM.az, el: CAM.el, dist: CAM.dist };
+    var cur = { az: CAM.az, el: CAM.el, dist: CAM.dist };
+    var curT = CAM.target.clone();
+
+    // ---- automatic camera choreography for the full cycle
+    var track = null;
+    if ((view === 'full' || view === 'main') && opts.autoCamera !== false) track = buildTrack();
+    function buildTrack() {
+      var D0 = { az: CAM.az, el: CAM.el, dist: CAM.dist, tx: CAM.target.x, ty: CAM.target.y, tz: CAM.target.z };
+      function nth(name, n) { var c = 0; for (var i = 0; i < tl.keys.length; i++) if (tl.keys[i].name === name && c++ === n) return tl.keys[i]; return null; }
+      rig.solve(getPose('tash', rig), 0, false);
+      var h = rig.J.wrR.clone();
+      var HANDSHOT = { az: -1.12, el: 0.36, dist: 0.95, tx: h.x + 0.0, ty: h.y + 0.04, tz: h.z + 0.06 };
+      var jal = nth('jalsa', 0), sj2 = nth('sujud', 1), t1 = nth('tash', 0), t3 = nth('tash', 2), sr = nth('salamR', 0);
+      if (!jal || !sj2 || !t1 || !t3 || !sr) return null;
+      return [
+        [0, D0],
+        [jal.t1 - 0.3, D0],
+        [jal.t1 + 1.4, { az: -1.85, el: 0.3, dist: 3.6, tx: 0, ty: 0.46, tz: -0.04 }],
+        [jal.t1 + 3.1, { az: -3.0, el: 0.36, dist: 3.25, tx: 0, ty: 0.42, tz: -0.08 }],
+        [jal.t2 - 0.2, { az: -3.8, el: 0.3, dist: 3.3, tx: 0, ty: 0.42, tz: -0.06 }],
+        [sj2.t1, D0],
+        [t1.t1 - 0.2, D0],
+        [t1.t2 - 0.15, HANDSHOT],
+        [t3.t1 + 0.8, HANDSHOT],
+        [sr.t1 - 0.1, D0],
+        [tl.dur, D0]
+      ];
+    }
+    var _shot = { az: 0, el: 0, dist: 0, tx: 0, ty: 0, tz: 0 };
+    function shotAt(t) {
+      t = ((t % tl.dur) + tl.dur) % tl.dur;
+      for (var i = 0; i < track.length - 1; i++) {
+        var a = track[i], b = track[i + 1];
+        if (t >= a[0] && t < b[0]) {
+          var u = b[0] > a[0] ? easeIO((t - a[0]) / (b[0] - a[0])) : 1;
+          for (var k in _shot) _shot[k] = a[1][k] + (b[1][k] - a[1][k]) * u;
+          return _shot;
+        }
+      }
+      var L = track[track.length - 1][1]; for (var k2 in _shot) _shot[k2] = L[k2]; return _shot;
+    }
+    var manualUntil = 0;
+    function applyTrack(snap) {
+      if (!track) return;
+      if (performance.now() < manualUntil) return;
+      var sh = shotAt(clock.t);
+      // keep the orbit continuous if the viewer spun the model several turns
+      var TWO = Math.PI * 2;
+      while (cur.az - sh.az > Math.PI) cur.az -= TWO;
+      while (sh.az - cur.az > Math.PI) cur.az += TWO;
+      CAM.az = sh.az; CAM.el = sh.el; CAM.dist = sh.dist; CAM.target.set(sh.tx, sh.ty, sh.tz);
+      if (snap) { cur.az = sh.az; cur.el = sh.el; cur.dist = sh.dist; curT.copy(CAM.target); }
+    }
+    if (opts.camera) { for (var ck in opts.camera) { CAM[ck] = opts.camera[ck]; cur[ck] = opts.camera[ck]; } }
+
+    function placeCamera() {
+      var ce = Math.cos(cur.el);
+      // narrow (portrait) screens: step back so the whole figure and rug stay in frame
+      var fit = view === 'hand' ? Math.pow(Math.max(1, 0.75 / camera.aspect), 0.8) : Math.pow(Math.max(1, 1.05 / camera.aspect), 0.72);
+      var d = cur.dist * fit;
+      camera.position.set(
+        curT.x + Math.sin(cur.az) * ce * d,
+        curT.y + Math.sin(cur.el) * d,
+        curT.z + Math.cos(cur.az) * ce * d);
+      camera.lookAt(curT);
+      camera.updateMatrixWorld();
+    }
+
+    // interaction
+    var ptrs = new Map(), lastPinch = 0, dragging = false;
+    function onDown(e) {
+      canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      dragging = true; lastInteract = performance.now(); manualUntil = lastInteract + 8000; kick();
+    }
+    function onMove(e) {
+      if (!ptrs.has(e.pointerId)) return;
+      var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 1) {
+        CAM.az -= dx * 0.008;
+        CAM.el = clamp(CAM.el + dy * 0.006, -0.05, 1.25);
+      } else if (ptrs.size === 2) {
+        var arr = Array.from(ptrs.values());
+        var d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+        if (lastPinch) CAM.dist = clamp(CAM.dist * lastPinch / d, CAM.minD, CAM.maxD);
+        lastPinch = d;
+      }
+      lastInteract = performance.now(); manualUntil = lastInteract + 8000; kick();
+    }
+    function onUp(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; if (!ptrs.size) dragging = false; }
+    function onWheel(e) {
+      if (opts.pageScroll && !e.ctrlKey) return; // inside a page the wheel scrolls it; pinch zooms
+      e.preventDefault();
+      CAM.dist = clamp(CAM.dist * Math.exp(e.deltaY * 0.0012), CAM.minD, CAM.maxD);
+      lastInteract = performance.now(); manualUntil = lastInteract + 8000; kick();
+    }
+    function onDbl() { manualUntil = 0; CAM.az = home.az; CAM.el = home.el; CAM.dist = home.dist; kick(); }
+    var lastInteract = 0;
+    canvas.style.touchAction = opts.pageScroll ? 'pan-y' : 'none';
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onUp);
+    canvas.addEventListener('pointercancel', onUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('dblclick', onDbl);
+
+    // sizing
+    var W = 1, H = 1;
+    function resize() {
+      var w = Math.max(1, canvas.clientWidth | 0), h = Math.max(1, canvas.clientHeight | 0);
+      if (w === W && h === H) return;
+      W = w; H = h;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      if (opts.offsetX) camera.setViewOffset(w, h, -w * opts.offsetX, 0, w, h); else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+      SHARED.uRes.value.set(w * dpr, h * dpr);
+      SHARED.uProjScale.value = (h * dpr) * camera.projectionMatrix.elements[5] / 2;
+    }
+    var ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
+    if (ro) ro.observe(canvas);
+    resize();
+
+    var visible = true;
+    var io = window.IntersectionObserver ? new IntersectionObserver(function (en) { visible = en[0].isIntersecting; if (visible) kick(); }) : null;
+    if (io) io.observe(canvas);
+
+    var lightW = new V3(0.45, 0.85, 0.55).normalize(), light2W = new V3(-0.7, 0.25, -0.4).normalize();
+    var clock = { t: opts.startTime || 0, last: 0 }, lastStep = -1, raf = 0, disposed = false, frozen = opts.frozenTime != null;
+    if (frozen) clock.t = opts.frozenTime;
+
+    // [start, end] seconds of the course step being shown, or null for the whole cycle
+    var range = null;
+    function setStep(id) {
+      var seg = id && tl.keys.length === MAIN.length ? SEGMENTS[id] : null;
+      if (!seg) { range = null; kick(); return; }
+      var first = tl.keys[seg[0]], prev = tl.keys[seg[0] - 1], last = tl.keys[seg[1]];
+      range = [prev ? Math.max(prev.t1, first.t0 - LEAD_IN) : first.t0, last.t2];
+      clock.t = frozen ? tl.keys[seg[2] != null ? seg[2] : seg[1]].t1 : range[0]; // paused: the pose itself
+      manualUntil = 0;
+      applyTrack(true); kick();
+    }
+    setStep(opts.step);
+    // a paused figure can still be turned: keep drawing until the camera settles
+    function settling() {
+      return dragging || Math.abs(CAM.az - cur.az) + Math.abs(CAM.el - cur.el) + Math.abs(CAM.dist - cur.dist) + curT.distanceTo(CAM.target) > 1e-3;
+    }
+
+    function frame(now) {
+      raf = 0;
+      if (disposed) return;
+      var dt = clock.last ? Math.min(0.05, (now - clock.last) / 1000) : 0;
+      clock.last = now;
+      if (!frozen) clock.t += dt * (opts.speed || 1);
+      if (range && clock.t >= range[1]) clock.t = range[0];
+      renderOnce();
+      if (visible && !document.hidden && (!frozen || settling())) raf = requestAnimationFrame(frame);
+    }
+    function renderOnce() {
+      resize();
+      var s = tl.sample(clock.t);
+      var breath = s.hold ? Math.sin(clock.t * 1.6) : 0;
+      rig.apply(s.pose, breath * 0.6);
+      updateShadows();
+      var k = 1 - Math.pow(0.0008, Math.min(0.05, 1 / 60));
+      applyTrack(false);
+      cur.az += (CAM.az - cur.az) * 0.12; cur.el += (CAM.el - cur.el) * 0.12; cur.dist += (CAM.dist - cur.dist) * 0.12;
+      curT.lerp(CAM.target, 0.12);
+      placeCamera();
+      SHARED.uLight.value.copy(lightW).transformDirection(camera.matrixWorldInverse);
+      SHARED.uLight2.value.copy(light2W).transformDirection(camera.matrixWorldInverse);
+      draw();
+      if (s.step !== lastStep) { lastStep = s.step; if (opts.onStep) try { opts.onStep(s.step, STEPS[s.step]); } catch (e) { } }
+      if (opts.onProgress) try { opts.onProgress(clock.t % tl.dur / tl.dur); } catch (e) { }
+    }
+    function kick() { if (!raf && !disposed) { clock.last = 0; raf = requestAnimationFrame(frame); } }
+    function onVis() { if (!document.hidden) kick(); }
+    document.addEventListener('visibilitychange', onVis);
+    kick();
+
+    return {
+      steps: STEPS,
+      duration: tl.dur,
+      setTime: function (t) { clock.t = t; frozen = true; applyTrack(true); renderOnce(); applyTrack(true); renderOnce(); },
+      setStep: setStep,
+      play: function () { frozen = false; kick(); },
+      pause: function () { frozen = true; },
+      setSpeed: function (v) { opts.speed = +v || 1; },
+      resetCamera: function () { onDbl(); },
+      setCamera: function (o) { manualUntil = Infinity; for (var k in o) { CAM[k] = o[k]; cur[k] = o[k]; } curT.copy(CAM.target); renderOnce(); },
+      renderPose: function (name) { frozen = true; rig.apply(getPose(name, rig)); updateShadows(); placeCamera(); SHARED.uLight.value.copy(lightW).transformDirection(camera.matrixWorldInverse); draw(); return rig.J; },
+      joints: rig.J,
+      dispose: function () {
+        disposed = true; if (raf) cancelAnimationFrame(raf);
+        document.removeEventListener('visibilitychange', onVis);
+        canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
+        canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
+        canvas.removeEventListener('wheel', onWheel); canvas.removeEventListener('dblclick', onDbl);
+        if (ro) ro.disconnect(); if (io) io.disconnect();
+        scene.traverse(function (o) { if (o.geometry && !GEO_VALUES_HAS(o.geometry)) o.geometry.dispose(); });
+        rugTex.dispose(); radTex.dispose();
+        renderer.dispose(); renderer.forceContextLoss();
+      }
+    };
+  }
+  function GEO_VALUES_HAS(g) { for (var k in GEO) if (GEO[k] === g) return true; return false; }
+
+// salah3d:body-end
+export var VERSION = '0.1.0';
+export { mount, STEPS, SEGMENTS, MAIN };

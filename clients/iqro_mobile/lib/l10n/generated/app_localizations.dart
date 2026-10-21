@@ -3642,6 +3642,36 @@ abstract class AppLocalizations {
   /// **'Sunnah'**
   String get salahRulingSunnah;
 
+  /// No description provided for @salah3dSchematic.
+  ///
+  /// In en, this message translates to:
+  /// **'Schematic 3D illustration'**
+  String get salah3dSchematic;
+
+  /// No description provided for @salah3dPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the movement'**
+  String get salah3dPlay;
+
+  /// No description provided for @salah3dPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause the movement'**
+  String get salah3dPause;
+
+  /// No description provided for @salah3dSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Movement speed: {speed}'**
+  String salah3dSpeed(String speed);
+
+  /// No description provided for @salah3dResetView.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset the view'**
+  String get salah3dResetView;
+
   /// No description provided for @salahOfflineTitle.
   ///
   /// In en, this message translates to:

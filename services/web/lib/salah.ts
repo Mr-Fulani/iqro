@@ -92,6 +92,11 @@ export type SalahFormula = {
   source: SalahFormulaSource;
 };
 
+/** The picture is a still of this pose of the schematic 3D scene (docs/salah/salah-3d.md). */
+export type SalahMediaScene = { pose: string; view: SalahSceneView };
+export type SalahSceneView = "full" | "hand" | "back";
+const SALAH_SCENE_VIEWS: ReadonlySet<string> = new Set<SalahSceneView>(["full", "hand", "back"]);
+
 export type SalahMedia = {
   url: string;
   width: number;
@@ -99,6 +104,7 @@ export type SalahMedia = {
   bytes: number;
   sha256: string;
   alt: string;
+  scene?: SalahMediaScene;
 };
 
 export type SalahCourseDocument = {
@@ -148,6 +154,10 @@ function requireCount(value: unknown, path: string): number {
   return value;
 }
 
+function isSalahMediaScene(value: unknown): value is SalahMediaScene {
+  return isRecord(value) && typeof value.pose === "string" && typeof value.view === "string" && SALAH_SCENE_VIEWS.has(value.view);
+}
+
 export function isSalahSlug(value: string): boolean {
   return value.length <= 64 && SLUG_PATTERN.test(value);
 }
@@ -181,12 +191,15 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
     requireString(formula.arabic, `formulas.${id}.arabic`);
     requirePositiveInteger(formula.repetitions, `formulas.${id}.repetitions`);
   }
-  const media = value.media as Record<string, SalahMedia>;
-  for (const [key, item] of Object.entries(media)) {
+  const media: Record<string, SalahMedia> = {};
+  for (const [key, item] of Object.entries(value.media)) {
     if (!isRecord(item)) throw new SalahDocumentError(`media.${key} must be an object`);
     requireString(item.url, `media.${key}.url`);
     requirePositiveInteger(item.width, `media.${key}.width`);
     requirePositiveInteger(item.height, `media.${key}.height`);
+    // A malformed scene leaves just the picture.
+    const { scene, ...picture } = item as SalahMedia & { scene?: unknown };
+    media[key] = isSalahMediaScene(scene) ? { ...picture, scene } : picture;
   }
 
   const lessonSlugs = new Set<string>();

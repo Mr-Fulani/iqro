@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": {
     "slug": "hanbali-umdah",
-    "version": "2026-10-18",
+    "version": "2026-10-21",
     "methodology": "hanbali",
     "source_title": {
       "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
@@ -629,6 +629,10 @@
     {
       "key": "position-takbir",
       "file": "media/position-takbir.webp",
+      "scene": {
+        "pose": "takbir",
+        "view": "full"
+      },
       "alt": {
         "ru": "Стоящий мужчина поднимает раскрытые ладони до плеч",
         "en": "A standing man raises his open palms to his shoulders",
@@ -639,6 +643,10 @@
     {
       "key": "position-qiyam",
       "file": "media/position-qiyam.webp",
+      "scene": {
+        "pose": "qiyam",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина стоит прямо, правая ладонь на левом запястье ниже пупка, взгляд опущен",
         "en": "A man stands upright, right palm over the left wrist below the navel, gaze lowered",
@@ -649,6 +657,10 @@
     {
       "key": "position-ruku",
       "file": "media/position-ruku.webp",
+      "scene": {
+        "pose": "ruku",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина в поясном поклоне, ладони на коленях, спина ровная",
         "en": "A man bowing, palms on his knees, back level",
@@ -659,11 +671,15 @@
     {
       "key": "position-itidal",
       "file": "media/position-itidal.webp",
+      "scene": {
+        "pose": "itidal",
+        "view": "full"
+      },
       "alt": {
-        "ru": "Мужчина стоит прямо после поясного поклона, руки опущены",
-        "en": "A man standing upright after bowing, arms lowered",
-        "ar": "رجلٌ قائمٌ معتدل بعد الركوع، ويداه مرسلتان",
-        "tr": "Rükûdan sonra dik duran adam, kolları yanlarında"
+        "ru": "Мужчина снова стоит прямо после поясного поклона, правая ладонь на левом запястье ниже пупка",
+        "en": "A man stands upright again after bowing, right palm over the left wrist below the navel",
+        "ar": "رجلٌ قائمٌ معتدل بعد الركوع، يده اليمنى على رسغ اليسرى تحت السرّة",
+        "tr": "Rükûdan sonra yeniden dik duran adam, sağ avucu sol bileğinin üzerinde, göbeğinin altında"
       }
     },
     {
@@ -679,6 +695,10 @@
     {
       "key": "position-sujud",
       "file": "media/position-sujud.webp",
+      "scene": {
+        "pose": "sujud",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина в земном поклоне: лоб и нос на полу, ладони на уровне плеч, локти отведены от боков",
         "en": "A man in prostration: forehead and nose on the floor, palms level with the shoulders, elbows away from the sides",
@@ -689,6 +709,10 @@
     {
       "key": "position-jalsa",
       "file": "media/position-jalsa.webp",
+      "scene": {
+        "pose": "jalsa",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина сидит на левой стопе, правая стопа поставлена вертикально, ладони на бёдрах",
         "en": "A man sits on his left foot, the right foot upright, palms on his thighs",
@@ -699,6 +723,10 @@
     {
       "key": "position-tashahhud",
       "file": "media/position-tashahhud.webp",
+      "scene": {
+        "pose": "tashahhud",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина сидит на левой стопе, указательный палец правой руки вытянут",
         "en": "A man sits on his left foot, the index finger of his right hand extended",
@@ -719,6 +747,10 @@
     {
       "key": "position-taslim",
       "file": "media/position-taslim.webp",
+      "scene": {
+        "pose": "salam",
+        "view": "full"
+      },
       "alt": {
         "ru": "Сидящий мужчина поворачивает голову вправо",
         "en": "A seated man turns his head to the right",

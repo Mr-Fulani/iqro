@@ -21,6 +21,9 @@ void main() {
     yield LicenseEntryWithLineBreaks(const <String>[
       'Amiri Quran',
     ], await rootBundle.loadString('assets/fonts/AmiriQuran-OFL.txt'));
+    yield LicenseEntryWithLineBreaks(const <String>[
+      'three.js',
+    ], await rootBundle.loadString('assets/salah3d/LICENSE-three.txt'));
   });
   runApp(const _IqroBootstrap());
 }

@@ -2000,6 +2000,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salahRulingSunnah => 'سنة';
 
   @override
+  String get salah3dSchematic => 'رسم توضيحي تخطيطي ثلاثي الأبعاد';
+
+  @override
+  String get salah3dPlay => 'تشغيل الحركة';
+
+  @override
+  String get salah3dPause => 'إيقاف الحركة مؤقتًا';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'سرعة الحركة: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'إعادة زاوية العرض';
+
+  @override
   String get salahOfflineTitle => 'الصور دون إنترنت';
 
   @override

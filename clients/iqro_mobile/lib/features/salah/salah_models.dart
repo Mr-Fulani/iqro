@@ -443,6 +443,7 @@ class SalahMedia {
     this.bytes = 0,
     this.sha256 = '',
     this.alt = '',
+    this.scene,
   });
 
   factory SalahMedia.fromJson(String key, Object? value) {
@@ -455,6 +456,7 @@ class SalahMedia {
       bytes: _int(json['bytes']) ?? 0,
       sha256: _string(json['sha256']),
       alt: _string(json['alt']),
+      scene: SalahMediaScene.tryParse(json['scene']),
     );
   }
 
@@ -466,8 +468,42 @@ class SalahMedia {
   final String sha256;
   final String alt;
 
+  /// Set when the picture is a still of the schematic 3D scene.
+  final SalahMediaScene? scene;
+
   /// Width over height, or a square when the document omits the size.
   double get aspectRatio => width > 0 && height > 0 ? width / height : 1;
+}
+
+/// The pose and view of the schematic 3D scene (docs/salah/salah-3d.md) that
+/// a picture is a still of. A malformed scene leaves just the picture.
+@immutable
+class SalahMediaScene {
+  const SalahMediaScene({required this.pose, this.view = 'full'});
+
+  static SalahMediaScene? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final pose = value['pose'];
+    final view = value['view'];
+    if (pose is! String || pose.isEmpty) return null;
+    if (view is! String || !_views.contains(view)) return null;
+    return SalahMediaScene(pose: pose, view: view);
+  }
+
+  static const _views = <String>{'full', 'hand', 'back'};
+
+  /// A pose of the scene, for example `ruku`.
+  final String pose;
+
+  /// `full`, `hand` or `back`.
+  final String view;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SalahMediaScene && other.pose == pose && other.view == view;
+
+  @override
+  int get hashCode => Object.hash(pose, view);
 }
 
 Map<String, Object?> _map(Object? value, String name) {

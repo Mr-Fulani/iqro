@@ -79,6 +79,7 @@
     {
       "key": "position-takbir",
       "file": "media/position-takbir.webp",
+      "scene": { "pose": "takbir", "view": "full" },
       "alt": {
         "ru": "Стоящий мужчина поднимает руки до плеч",
         "en": "A standing man raises his hands to his shoulders",
@@ -89,6 +90,7 @@
     {
       "key": "position-ruku",
       "file": "media/position-ruku.webp",
+      "scene": { "pose": "ruku", "view": "full" },
       "alt": {
         "ru": "Мужчина в поясном поклоне, ладони на коленях, спина ровная",
         "en": "A man bowing, palms on his knees, back level",
@@ -99,6 +101,7 @@
     {
       "key": "position-tashahhud",
       "file": "media/position-tashahhud.webp",
+      "scene": { "pose": "tashahhud", "view": "full" },
       "alt": {
         "ru": "Мужчина сидит в ташаххуде",
         "en": "A man sitting for the tashahhud",

@@ -32,6 +32,7 @@ from quran_backend.modules.salah.models import (
 )
 from quran_backend.modules.salah.resolvers import FormulaResolver, clean_note
 from quran_backend.modules.salah.snapshot import (
+    SCENE_POSES,
     SalahSnapshotError,
     expand_lesson_steps,
     load_snapshot,
@@ -162,6 +163,48 @@ def test_course_illustrations_in_git_are_square_webp_within_the_limit() -> None:
         data = image.read_bytes()
         assert webp_size(data) == (720, 720), image.name
         assert len(data) <= MAX_IMAGE_BYTES, image.name
+
+
+def test_course_pose_illustrations_are_stills_of_the_3d_scene() -> None:
+    # Rendered by services/web/scripts/salah3d-frames.ts (docs/salah/salah-3d.md).
+    snapshot = load_snapshot(COURSE_SNAPSHOT)
+    scenes = {asset["key"]: asset["scene"] for asset in snapshot["media"] if "scene" in asset}
+
+    assert {key: scene["pose"] for key, scene in scenes.items()} == {
+        "position-takbir": "takbir", "position-qiyam": "qiyam", "position-ruku": "ruku",
+        "position-itidal": "itidal", "position-sujud": "sujud", "position-jalsa": "jalsa",
+        "position-tashahhud": "tashahhud", "position-taslim": "salam",
+    }  # fmt: skip
+    assert {scene["view"] for scene in scenes.values()} == {"full"}
+    assert {scene["pose"] for scene in scenes.values()} <= SCENE_POSES
+    for key in scenes:
+        still = (COURSE_SNAPSHOT.parent / f"media/{key}.webp").read_bytes()
+        assert webp_size(still) == (720, 720), key
+        assert len(still) <= 60 * 1024, key
+    # The poses the scene has no figure for keep their drawings.
+    pictures = {asset["key"] for asset in snapshot["media"] if asset["file"].endswith(".webp")}
+    assert {key for key in pictures - set(scenes) if key.startswith("position-")} == {
+        "position-qunut",
+        "position-tawarruk",
+    }
+
+
+def test_a_scene_names_a_pose_and_a_view_of_the_scene() -> None:
+    broken = _example_snapshot()
+    media = {asset["key"]: asset for asset in broken["media"]}
+    media["position-takbir"]["scene"] = {"pose": "flying", "view": "full"}
+    media["position-ruku"]["scene"] = {"pose": "ruku", "view": "aerial"}
+    media["position-tashahhud"]["scene"] = {"pose": "tashahhud"}
+    media["audio-takbir"]["scene"] = {"pose": "takbir", "view": "full"}
+
+    with pytest.raises(SalahSnapshotError) as error:
+        validate_snapshot(broken)
+
+    problems = "\n".join(error.value.problems)
+    assert "Медиа «position-takbir».scene: в сцене нет позы «flying»" in problems
+    assert "Медиа «position-ruku».scene: в сцене нет вида «aerial»" in problems
+    assert "Медиа «position-tashahhud».scene: ожидается {pose, view}" in problems
+    assert "Медиа «audio-takbir».scene: сцену задают только картинке" in problems
 
 
 def test_prayer_kinds_come_from_the_course_and_compile_with_their_title() -> None:
@@ -407,6 +450,13 @@ def test_import_creates_a_draft_with_documents_and_immutable_media(
     ruku = version.media.get(key="position-ruku")
     assert (ruku.width, ruku.height) == (720, 720)
     assert ruku.object_key.startswith("salah/hanbali-umdah/2026-10-18/position-ruku-")
+    # A still of the 3D scene says which pose it shows.
+    media = version.documents.get(language="ar").payload["media"]
+    assert {key: entry["scene"] for key, entry in media.items()} == {
+        "position-takbir": {"pose": "takbir", "view": "full"},
+        "position-ruku": {"pose": "ruku", "view": "full"},
+        "position-tashahhud": {"pose": "tashahhud", "view": "full"},
+    }
 
     # The same content again is a no-op; changed content must be a new version.
     snapshot = _example_snapshot()
