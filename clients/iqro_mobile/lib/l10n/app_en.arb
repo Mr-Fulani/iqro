@@ -759,5 +759,21 @@
   "apiErrorCurrentDevice": "Use regular sign-out for the current device.",
   "apiErrorDeviceNotFound": "The device is already disconnected or unavailable.",
   "apiErrorCursorExpired": "Sync history expired. A full reconciliation is running.",
-  "apiErrorUnknown": "Try again later."
+  "apiErrorUnknown": "Try again later.",
+  "tajweedLegendPage": "Tajweed rules on this page",
+  "tajweedLegendAyah": "Tajweed rules in this ayah",
+  "tajweedWordTitle": "Tajweed in this word",
+  "tajweedRuleTitle": "Tajweed rule",
+  "tajweedWhyHere": "Why here",
+  "tajweedWhenApplies": "When it applies",
+  "tajweedHowToRead": "How to read",
+  "tajweedOccurrencesPage": "Where on this page",
+  "tajweedOccurrencesAyah": "Where in this ayah",
+  "tajweedListen": "Listen to this word",
+  "tajweedStop": "Stop",
+  "tajweedSlow": "0.75×",
+  "tajweedSlowLabel": "Slower, 0.75×",
+  "tajweedClose": "Close",
+  "tajweedReviewNote": "These explanations are being reviewed by a tajweed teacher.",
+  "tajweedAudioError": "Could not play this word."
 }

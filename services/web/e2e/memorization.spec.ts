@@ -405,3 +405,105 @@ test("highlights the recited ayah while the range plays and repeats", async ({ p
   await page.getByRole("tab", { name: "Слушать" }).click();
   await expect(playing).toHaveCount(0);
 });
+
+const tajweedTexts = (ru: string, en: string) => ({ ru, en, ar: en, tr: en });
+const tajweedRules = {
+  version: "test",
+  review_status: "pending_teacher_review",
+  languages: ["ru", "en", "ar", "tr"],
+  rules: [
+    {
+      code: "madda_permissible",
+      arabic_name: "المد الجائز",
+      color: "#FF7B00",
+      name: tajweedTexts("Мадд джаиз", "Permissible madd"),
+      why: tajweedTexts("Буква мадда перед остановкой.", "A madd letter before a stop."),
+      how: tajweedTexts("При остановке 2, 4 или 6 харакатов.", "2, 4 or 6 counts when stopping."),
+      variants: [],
+    },
+    {
+      code: "ham_wasl",
+      arabic_name: "همزة الوصل",
+      color: "#9FA5A5",
+      name: tajweedTexts("Хамзату-ль-васль", "Hamzat al-wasl"),
+      why: tajweedTexts("Соединительная хамза в начале слова.", "A connecting hamza."),
+      how: tajweedTexts("В связном чтении не произносится.", "Silent when reading on."),
+      variants: [],
+    },
+  ],
+};
+const tajweedMarkup = {
+  page_number: 1,
+  rules: ["madda_permissible", "ham_wasl"],
+  ayahs: [
+    {
+      verse_key: "1:1",
+      surah_number: 1,
+      ayah_number: 1,
+      page_number: 1,
+      rules: ["ham_wasl"],
+      words: [{ position: 1, text: "ٱلْحَمْدُ", rules: [{ code: "ham_wasl", start: 0, end: 1 }] }],
+    },
+    {
+      verse_key: "1:2",
+      surah_number: 1,
+      ayah_number: 2,
+      page_number: 1,
+      rules: ["madda_permissible"],
+      words: [
+        { position: 3, text: "ٱلْعَـٰلَمِينَ", rules: [{ code: "madda_permissible", start: 10, end: 12 }] },
+      ],
+    },
+  ],
+  source: tajweedMushaf.source,
+};
+
+test("coloured memorization text explains a tapped tajweed word", async ({ page }) => {
+  await installMocks(page);
+  await page.route("**/api/v1/quran/tajweed/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/v1/quran/tajweed/rules") return route.fulfill({ json: tajweedRules });
+    if (path === "/api/v1/quran/tajweed/pages/1") return route.fulfill({ json: tajweedMarkup });
+    return route.fulfill({ status: 404, json: { detail: "Not found" } });
+  });
+  await page.route(`**/api/v1/recitations/${recitation.id}/ayahs/1/1`, (route) => route.fulfill({
+    json: {
+      track: surahPlayback.track,
+      segment: { ...surahPlayback.segments[0], words: [[1, 0, 600]] },
+    },
+  }));
+
+  await page.goto("/ru/memorization");
+  await page.getByLabel("Чтец для повторения").selectOption(recitation.id);
+  await page.getByLabel("По аят").selectOption("2");
+  await page.getByRole("button", { name: "Сохранить план" }).click();
+  await expect(page.getByTestId("memorization-tajweed")).toHaveAttribute("data-tajweed-status", "ready");
+
+  const legends = page.getByTestId("tajweed-legend");
+  await expect(legends).toHaveCount(2);
+  await expect(legends.first().getByRole("button")).toHaveText(["Хамзату-ль-васль"]);
+  await expect(legends.first()).toHaveAttribute("dir", "ltr");
+  const word = page.getByRole("button", { name: "ٱلْحَمْدُ: Хамзату-ль-васль" });
+  await word.click();
+  const card = page.getByRole("dialog", { name: "Таджвид в слове" });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("heading", { name: "Хамзату-ль-васль" })).toBeVisible();
+  await expect(card.getByText("Соединительная хамза в начале слова.")).toBeVisible();
+  await expect(card.getByTestId("tajweed-listen")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(card).toHaveCount(0);
+  await expect(word).toBeFocused();
+
+  await legends.last().getByRole("button", { name: "Мадд джаиз" }).click();
+  const ruleCard = page.getByRole("dialog", { name: "Правило таджвида" });
+  await expect(ruleCard.getByText("Где в этом аяте")).toBeVisible();
+  await ruleCard.getByRole("button", { name: /1:2/ }).click();
+  await expect(page.getByRole("dialog", { name: "Таджвид в слове" })).toBeVisible();
+  // 1:2 has no word timing for this reciter, so there is nothing to play.
+  await expect(page.getByTestId("tajweed-listen")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  // Recall practice hides the ayahs, and with them every tajweed hint.
+  await page.getByRole("tab", { name: "Проверить себя" }).click();
+  await expect(page.getByTestId("tajweed-legend")).toHaveCount(0);
+});

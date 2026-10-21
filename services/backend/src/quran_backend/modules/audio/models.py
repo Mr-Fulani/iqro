@@ -1048,6 +1048,8 @@ class AyahAudioSegment(BaseModel):
     ayah = models.ForeignKey(Ayah, on_delete=models.PROTECT, related_name="audio_segments")
     start_ms = models.PositiveBigIntegerField()
     end_ms = models.PositiveBigIntegerField()
+    # Provider word timings within the track: [[word position, start_ms, end_ms], ...].
+    word_segments = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "audio_ayah_segment"

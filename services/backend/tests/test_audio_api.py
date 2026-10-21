@@ -1084,7 +1084,33 @@ def test_surah_and_ayah_playback_payloads_are_timeline_ready(
     assert ayah_response.status_code == 200
     ayah_payload = ayah_response.json()
     assert ayah_payload["track"]["id"] == str(track.id)
-    assert ayah_payload["segment"] == surah_payload["segments"][1]
+    assert ayah_payload["segment"] == {**surah_payload["segments"][1], "words": []}
+
+
+@pytest.mark.django_db
+def test_word_timings_are_served_for_one_ayah_only(
+    api_client: APIClient,
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    recitation = published_audio_dataset["recitation"]
+    AyahAudioSegment.objects.filter(ayah__number=2).update(
+        word_segments=[[1, 5_000, 6_200], [2, 6_200, 9_900]]
+    )
+
+    with CaptureQueriesContext(connection) as queries:
+        surah_response = api_client.get(
+            reverse("audio:surah-playback", kwargs={"recitation_id": recitation.id, "surah": 1})
+        )
+    ayah_response = api_client.get(
+        reverse(
+            "audio:ayah-playback",
+            kwargs={"recitation_id": recitation.id, "surah": 1, "ayah": 2},
+        )
+    )
+
+    assert "words" not in surah_response.json()["segments"][1]
+    assert not any("word_segments" in query["sql"] for query in queries.captured_queries)
+    assert ayah_response.json()["segment"]["words"] == [[1, 5_000, 6_200], [2, 6_200, 9_900]]
 
 
 @pytest.mark.django_db

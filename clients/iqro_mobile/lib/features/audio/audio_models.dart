@@ -549,6 +549,37 @@ class SurahPlayback {
   }
 }
 
+/// One timed ayah of a recitation with the timings of its words.
+class AyahPlayback {
+  const AyahPlayback({required this.track, required this.words});
+
+  factory AyahPlayback.fromJson(Map<String, Object?> json) {
+    final words = <int, ({Duration start, Duration end})>{};
+    final segment = json['segment'];
+    final rows = segment is Map ? segment['words'] : null;
+    for (final row in rows is List ? rows : const <Object?>[]) {
+      if (row is! List || row.length != 3 || row.any((item) => item is! int)) {
+        continue;
+      }
+      final [position as int, start as int, end as int] = row;
+      if (position < 1 || start < 0 || end <= start) continue;
+      words.putIfAbsent(
+        position,
+        () => (
+          start: Duration(milliseconds: start),
+          end: Duration(milliseconds: end),
+        ),
+      );
+    }
+    return AyahPlayback(track: AudioTrack.fromPlayback(json), words: words);
+  }
+
+  final AudioTrack track;
+
+  /// `[start, end)` in [track] of each timed word, by its position in the ayah.
+  final Map<int, ({Duration start, Duration end})> words;
+}
+
 List<Reciter> parseReciters(Object? payload) => jsonResults(payload)
     .whereType<Map>()
     .map((item) => Reciter.fromJson(Map<String, Object?>.from(item)))

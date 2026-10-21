@@ -344,6 +344,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     divisions: divisions,
                     showPageLabels: !_controlsVisible,
                     onSelectAyah: _selectAyah,
+                    onTajweedWord: (reference) =>
+                        _selectAyah(reference, toggleControls: false),
+                    tajweedRecitation: _tajweedRecitationId,
                     onOpenAyah: _openAyah,
                     onBackgroundTap: () => _setControls(!_controlsVisible),
                     onScale: (value) {
@@ -565,7 +568,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     );
   }
 
-  void _selectAyah(QuranAyahReference reference) {
+  /// A tajweed card opening over the page leaves the controls as they are.
+  void _selectAyah(QuranAyahReference reference, {bool toggleControls = true}) {
     final scope = _database.accountScope.current;
     if (scope == null || !_isCurrentAccount(scope)) return;
     final show = reference != _selectedAyah || !_controlsVisible;
@@ -577,7 +581,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       _audioLoading = false;
       _playerExpanded = false;
     });
-    unawaited(_setControls(show));
+    if (toggleControls) unawaited(_setControls(show));
     _queuePagePositionSave(
       _currentPage,
       preferredReference: reference,
@@ -681,6 +685,24 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         setState(() => _audioLoading = false);
       }
     }
+  }
+
+  /// The reciter the play button would use, for words played from a card.
+  Future<String?> _tajweedRecitationId() async {
+    final recitations = await ref
+        .read(audioRepositoryProvider)
+        .recitationsForRole(AudioRecitationRole.ayahPlayback);
+    if (!mounted) return null;
+    final current = ref.read(audioControllerProvider);
+    return preferredRecitation(
+      recitations,
+      preferredId:
+          ref.read(appPreferencesProvider).mushafRecitationId ??
+          (current.channel == AudioPlaybackChannel.mushaf
+              ? current.track?.recitationId
+              : null),
+      role: AudioRecitationRole.ayahPlayback,
+    )?.id;
   }
 
   /// The Mushaf keeps its own reciter, separate from the Audio tab's, and

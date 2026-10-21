@@ -592,6 +592,18 @@ class AyahAudioSegmentSerializer(serializers.ModelSerializer[AyahAudioSegment]):
         fields = ("ayah_id", "surah_number", "ayah_number", "start_ms", "end_ms")
 
 
+class AyahAudioWordSegmentSerializer(AyahAudioSegmentSerializer):
+    words = serializers.ListField(
+        source="word_segments",
+        child=serializers.ListField(child=serializers.IntegerField(min_value=0)),
+        read_only=True,
+    )
+
+    class Meta:
+        model = AyahAudioSegment
+        fields = ("ayah_id", "surah_number", "ayah_number", "start_ms", "end_ms", "words")
+
+
 class SurahPlaybackSerializer(serializers.Serializer[Any]):
     track = AudioTrackSerializer()
     segments = AyahAudioSegmentSerializer(many=True)
@@ -599,7 +611,7 @@ class SurahPlaybackSerializer(serializers.Serializer[Any]):
 
 class AyahPlaybackSerializer(serializers.Serializer[Any]):
     track = AudioTrackSerializer()
-    segment = AyahAudioSegmentSerializer()
+    segment = AyahAudioWordSegmentSerializer()
 
 
 class AudioVariantCoverageSerializer(serializers.Serializer[Any]):

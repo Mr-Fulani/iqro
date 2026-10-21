@@ -664,5 +664,21 @@
   "apiErrorCurrentDevice": "استخدم تسجيل الخروج العادي للجهاز الحالي.",
   "apiErrorDeviceNotFound": "الجهاز مفصول بالفعل أو غير متاح.",
   "apiErrorCursorExpired": "انتهت صلاحية سجل المزامنة. تجري مزامنة كاملة.",
-  "apiErrorUnknown": "حاول مرة أخرى لاحقًا."
+  "apiErrorUnknown": "حاول مرة أخرى لاحقًا.",
+  "tajweedLegendPage": "أحكام التجويد في هذه الصفحة",
+  "tajweedLegendAyah": "أحكام التجويد في هذه الآية",
+  "tajweedWordTitle": "التجويد في هذه الكلمة",
+  "tajweedRuleTitle": "حكم التجويد",
+  "tajweedWhyHere": "لماذا هنا",
+  "tajweedWhenApplies": "متى يُطبَّق",
+  "tajweedHowToRead": "كيف تقرأ",
+  "tajweedOccurrencesPage": "مواضعه في هذه الصفحة",
+  "tajweedOccurrencesAyah": "مواضعه في هذه الآية",
+  "tajweedListen": "استمع إلى الكلمة",
+  "tajweedStop": "إيقاف",
+  "tajweedSlow": "0.75×",
+  "tajweedSlowLabel": "أبطأ، 0.75×",
+  "tajweedClose": "إغلاق",
+  "tajweedReviewNote": "تخضع هذه الشروح لمراجعة معلّم تجويد.",
+  "tajweedAudioError": "تعذّر تشغيل الكلمة."
 }

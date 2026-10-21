@@ -13,6 +13,42 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   setUpAll(sqfliteFfiInit);
 
+  test(
+    'a standalone clip plays only its part at the requested speed',
+    () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadStandalone(
+        id: 'tajweed:1',
+        url: 'https://media.example.test/112.mp3',
+        title: 'يَكُن',
+        contentType: 'tajweed',
+        speed: .75,
+        clipStart: const Duration(milliseconds: 9600),
+        clipEnd: const Duration(milliseconds: 10100),
+      );
+
+      final source = engine.sources.single as ClippingAudioSource;
+      expect(source.child.uri, Uri.parse('https://media.example.test/112.mp3'));
+      expect(source.start, const Duration(milliseconds: 9600));
+      expect(source.end, const Duration(milliseconds: 10100));
+      expect(source.duration, const Duration(milliseconds: 500));
+      expect(engine.speed, .75);
+      expect(controller.state.standalone?.speed, .75);
+      expect(controller.state.standalone?.playing, isTrue);
+
+      await controller.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Morning remembrance',
+      );
+      expect(engine.sources.last, isA<UriAudioSource>());
+      expect(engine.speed, 1);
+    },
+  );
+
   test('memorization playback is not exposed as primary audio playback', () {
     expect(
       isPrimaryAudioPlayback(IqroAudioState(track: _playbackTrack)),

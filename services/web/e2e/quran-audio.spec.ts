@@ -1328,6 +1328,186 @@ test("mushaf switcher renders all supported Quran.Foundation font variants", asy
   await expect(page.locator(".qf-mushaf-view")).toBeVisible();
 });
 
+const tajweedTexts = (ru: string, en: string) => ({ ru, en, ar: en, tr: en });
+const tajweedReference = {
+  version: "test",
+  review_status: "pending_teacher_review",
+  languages: ["ru", "en", "ar", "tr"],
+  rules: [
+    {
+      code: "idgham_wo_ghunnah",
+      arabic_name: "الإدغام بغير غنة",
+      color: "#A3A5A5",
+      name: tajweedTexts("Идгам без гунны", "Idgham without ghunnah"),
+      why: tajweedTexts("Нун с сукуном перед ل или ر.", "A noon with sukun before ل or ر."),
+      how: tajweedTexts("Сразу читайте удвоенную ل.", "Go straight to a doubled ل."),
+      variants: [],
+    },
+    {
+      code: "qalaqah",
+      arabic_name: "القلقلة",
+      color: "#2FADFF",
+      name: tajweedTexts("Калькаля", "Qalqalah"),
+      why: tajweedTexts("Буква калькали с сукуном.", "A qalqalah letter with sukun."),
+      how: tajweedTexts("Лёгкий отскок.", "A light bounce."),
+      variants: [{
+        code: "stop",
+        name: tajweedTexts("при остановке", "when stopping"),
+        why: tajweedTexts("Буква в конце слова.", "The letter ends the word."),
+        how: tajweedTexts("Отскок отчётливее.", "A clearer bounce."),
+      }],
+    },
+    {
+      code: "madda_normal",
+      arabic_name: "المد الطبيعي",
+      color: "#CE9E00",
+      name: tajweedTexts("Мадд табии", "Natural madd"),
+      why: tajweedTexts("Буква мадда.", "A madd letter."),
+      how: tajweedTexts("2 хараката.", "2 counts."),
+      variants: [{
+        code: "silah_sughra",
+        name: tajweedTexts("Мадд силя сугра", "Minor silah"),
+        why: tajweedTexts("Хаъ местоимения между огласованными буквами.", "The pronoun ha."),
+        how: tajweedTexts("2 хараката при слитном чтении.", "2 counts when reading on."),
+      }],
+    },
+  ],
+};
+
+// 112:4 markup on the fixture page: the idgham runs from word 3 into word 4.
+const tajweedPage128 = {
+  page_number: 128,
+  rules: ["idgham_wo_ghunnah", "qalaqah", "madda_normal"],
+  ayahs: [
+    {
+      verse_key: "6:1", surah_number: 6, ayah_number: 1, page_number: 128, rules: ["qalaqah"],
+      words: [{ position: 1, text: "أَحَدُۢ", rules: [{ code: "qalaqah", start: 4, end: 5, variant: "stop" }] }],
+    },
+    {
+      verse_key: "6:2", surah_number: 6, ayah_number: 2, page_number: 128,
+      rules: ["idgham_wo_ghunnah", "madda_normal"],
+      words: [
+        { position: 3, text: "يَكُن", rules: [{ code: "idgham_wo_ghunnah", start: 3, end: 5, joins_next: true }] },
+        {
+          position: 4,
+          text: "لَّهُۥ",
+          rules: [
+            { code: "idgham_wo_ghunnah", start: 0, end: 1, joins_previous: true },
+            { code: "madda_normal", start: 5, end: 6, variant: "silah_sughra" },
+          ],
+        },
+      ],
+    },
+  ],
+  source: foundationMushafs[2].source,
+};
+
+async function installTajweedMocks(page: Page) {
+  await page.addInitScript(() => localStorage.setItem("iqro_quran_mushaf_variant_v1", "19"));
+  await page.route("**/api/v1/quran/tajweed/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/v1/quran/tajweed/rules") return route.fulfill({ json: tajweedReference });
+    if (path === "/api/v1/quran/tajweed/pages/128") return route.fulfill({ json: tajweedPage128 });
+    // Once imported, every Mushaf page has markup; a 404 would mean none is imported.
+    const pageNumber = Number(path.split("/").at(-1));
+    return route.fulfill({ json: { ...tajweedPage128, page_number: pageNumber, rules: [], ayahs: [] } });
+  });
+  await page.route(`**/api/v1/recitations/${recitation.id}/ayahs/6/2`, (route) => route.fulfill({
+    json: {
+      track: tracks[5],
+      segment: {
+        ayah_id: ayahs[1].id,
+        surah_number: 6,
+        ayah_number: 2,
+        start_ms: 1_000,
+        end_ms: 2_000,
+        words: [[3, 1_000, 1_400], [4, 1_400, 1_900]],
+      },
+    },
+  }));
+}
+
+test("tajweed Mushaf explains a tapped word, its letters and its sound", async ({ page }) => {
+  await installTajweedMocks(page);
+  await page.goto("/ru/quran?surah=6");
+  const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+  await expect(view).toHaveAttribute("data-font-status", "ready");
+  const legend = page.getByTestId("tajweed-legend");
+  await expect(legend.getByRole("button")).toHaveText(["Идгам без гунны", "Калькаля", "Мадд табии"]);
+
+  await view.locator('.qf-mushaf-word.has-tajweed[data-word-position="3"]').click();
+  await expect(view.getByRole("button", { name: "Аят 6:2", exact: true }).first()).toHaveClass(/is-selected/);
+  const card = page.getByRole("dialog", { name: "Таджвид в слове" });
+  await expect(card).toBeVisible();
+  const idgham = card.locator('.tajweed-rule[data-rule="idgham_wo_ghunnah"]');
+  await expect(idgham.getByRole("heading", { name: "Идгам без гунны" })).toBeVisible();
+  // Zero-width joiners keep the coloured letters connected; the words are unchanged.
+  expect((await idgham.locator(".tajweed-letters").textContent())?.replaceAll("\u200d", "")).toBe("يَكُن لَّهُۥ");
+  await expect(idgham.getByText("Нун с сукуном перед ل или ر.")).toBeVisible();
+  await expect(idgham.getByText("Сразу читайте удвоенную ل.")).toBeVisible();
+  await expect(card.getByText("Пояснения проходят проверку у преподавателя таджвида.")).toBeVisible();
+
+  const slow = card.getByRole("button", { name: "Медленнее, 0,75×" });
+  await slow.click();
+  await expect(slow).toHaveAttribute("aria-pressed", "true");
+  await card.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await expect(card.getByRole("button", { name: "Остановить" })).toBeVisible();
+  expect(await card.locator("audio").evaluate((audio: HTMLAudioElement) => ({
+    rate: audio.playbackRate,
+    start: audio.currentTime,
+    src: audio.getAttribute("src"),
+  }))).toEqual({ rate: 0.75, start: 1, src: tracks[5].asset.url });
+
+  await page.keyboard.press("Escape");
+  await expect(card).toHaveCount(0);
+  await expect(view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first()).toBeFocused();
+
+  // The second word shows the same idgham and its own silah.
+  await view.locator('.qf-mushaf-word.has-tajweed[data-word-position="4"]').click();
+  await expect(card.getByRole("heading", { name: "Мадд табии · Мадд силя сугра" })).toBeVisible();
+  expect((await card.locator('.tajweed-rule[data-rule="idgham_wo_ghunnah"] .tajweed-letters').textContent())
+    ?.replaceAll("\u200d", "")).toBe("يَكُن لَّهُۥ");
+  await page.keyboard.press("Escape");
+
+  await legend.getByRole("button", { name: "Калькаля" }).click();
+  const ruleCard = page.getByRole("dialog", { name: "Правило таджвида" });
+  await expect(ruleCard.getByText("Где на этой странице")).toBeVisible();
+  await expect(ruleCard.getByText("Буква калькали с сукуном.")).toBeVisible();
+  await ruleCard.getByRole("button", { name: /6:1/ }).click();
+  const wordCard = page.getByRole("dialog", { name: "Таджвид в слове" });
+  await expect(wordCard.getByRole("heading", { name: "Калькаля · при остановке" })).toBeVisible();
+  await expect(wordCard.getByText("Буква в конце слова.")).toBeVisible();
+  // This reciter has no word timing for 6:1, so the card offers nothing to play.
+  await expect(wordCard.getByTestId("tajweed-listen")).toHaveCount(0);
+  // A tap on the shade around the card closes it.
+  await page.mouse.click(4, 4);
+  await expect(wordCard).toHaveCount(0);
+});
+
+test("tajweed chips float in the phone reader and open a bottom sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installTajweedMocks(page);
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+  // A development server hydrates the reader before it turns immersive; production opens it directly.
+  const enterReader = page.getByRole("button", { name: "Открыть читалку" });
+  if (await enterReader.isVisible()) await enterReader.click();
+  const legend = page.getByTestId("tajweed-legend");
+  // Like the page labels in the app, the chips give way to the open reader menu.
+  await expect(legend).toBeHidden();
+  await page.getByRole("button", { name: "Свернуть меню читалки" }).click();
+  await expect(legend).toBeVisible();
+  const legendBox = await legend.boundingBox();
+  expect((legendBox?.y ?? 0) + (legendBox?.height ?? 0)).toBeLessThanOrEqual(844);
+  await legend.getByRole("button", { name: "Мадд табии" }).click();
+  const card = page.getByRole("dialog", { name: "Правило таджвида" });
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  expect(box?.width).toBe(390);
+  expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 test("source surah headings are filled from the pinned QUL heading font", async ({ page }) => {
   const font = syntheticHeadingFont();
   const checksum = createHash("sha256").update(font).digest("hex");

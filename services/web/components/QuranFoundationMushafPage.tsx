@@ -10,6 +10,7 @@ import type {
 import { useI18n } from "../lib/i18n-context";
 import { isAllowedQuranWordImageUrl, isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 import { fitMushafLines, qulGridRow } from "../lib/mushaf-line-layout";
+import { tajweedWordKey } from "../lib/tajweed";
 import {
   loadedSurahHeaderGlyphs,
   loadSurahHeaderGlyphs,
@@ -67,6 +68,9 @@ type QuranFoundationMushafPageProps = {
   /** Spoken highlight and note state per `surah:ayah`. */
   annotationLabels?: Record<string, string>;
   onSelectAyah: (ayahKey: string) => void;
+  /** `verse:ayah#position` of the QCF V4 words that carry tajweed rules. */
+  tajweedWords?: ReadonlySet<string>;
+  onSelectTajweedWord?: (verseKey: string, position: number) => void;
 };
 
 function verseKeysFromMapping(mapping: Record<string, string>): string[] {
@@ -218,6 +222,8 @@ export function QuranFoundationMushafPageView({
   highlightColors,
   annotationLabels,
   onSelectAyah,
+  tajweedWords,
+  onSelectTajweedWord,
 }: QuranFoundationMushafPageProps) {
   const { t } = useI18n();
   const layout = page.layout?.version === 1 ? page.layout : null;
@@ -433,22 +439,27 @@ export function QuranFoundationMushafPageView({
                   ayahKey && playingAyahKey === ayahKey ? "is-playing" : "",
                 ].filter(Boolean).join(" ");
                 const style = { fontFamily: `"${fontFamily}", serif` };
-                const content = fragment.words.map((word) => (
-                  <span
-                    className={`qf-mushaf-word${word.char_type_name === "end" ? " is-ayah-end" : ""}`}
-                    style={word.css_class?.split(/\s+/).includes("bidi-override") ? { unicodeBidi: "bidi-override" } : undefined}
-                    key={word.id}
-                    data-position-in-page={word.position_in_page}
-                  >
-                    {imageMode && isAllowedQuranWordImageUrl(word.image_url) ? (
-                      // Provider word images have intrinsic metrics, including the smaller verse markers.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={word.image_url} alt="" draggable={false} />
-                    ) : word.text_runs ? word.text_runs.map((run, index) => (
-                      <span key={index} style={run.color ? { color: run.color } : undefined}>{run.text}</span>
-                    )) : word.text}
-                  </span>
-                ));
+                const content = fragment.words.map((word) => {
+                  const tajweed = Boolean(ayahKey && word.char_type_name === "word"
+                    && tajweedWords?.has(tajweedWordKey(ayahKey, word.position_in_verse ?? 0)));
+                  return (
+                    <span
+                      className={`qf-mushaf-word${word.char_type_name === "end" ? " is-ayah-end" : ""}${tajweed ? " has-tajweed" : ""}`}
+                      style={word.css_class?.split(/\s+/).includes("bidi-override") ? { unicodeBidi: "bidi-override" } : undefined}
+                      key={word.id}
+                      data-position-in-page={word.position_in_page}
+                      data-word-position={tajweed ? word.position_in_verse ?? undefined : undefined}
+                    >
+                      {imageMode && isAllowedQuranWordImageUrl(word.image_url) ? (
+                        // Provider word images have intrinsic metrics, including the smaller verse markers.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={word.image_url} alt="" draggable={false} />
+                      ) : word.text_runs ? word.text_runs.map((run, index) => (
+                        <span key={index} style={run.color ? { color: run.color } : undefined}>{run.text}</span>
+                      )) : word.text}
+                    </span>
+                  );
+                });
                 if (!ayahKey) {
                   return (
                     <span className={fragmentClassName} style={style} key={fragment.key}>
@@ -462,7 +473,12 @@ export function QuranFoundationMushafPageView({
                     style={style}
                     type="button"
                     key={fragment.key}
-                    onClick={() => onSelectAyah(ayahKey)}
+                    onClick={(event) => {
+                      onSelectAyah(ayahKey);
+                      // A tap on a coloured word also explains its tajweed rules.
+                      const word = (event.target as Element).closest<HTMLElement>(".qf-mushaf-word.has-tajweed");
+                      if (word && onSelectTajweedWord) onSelectTajweedWord(ayahKey, Number(word.dataset.wordPosition));
+                    }}
                     data-highlight={highlightColors?.[ayahKey]}
                     aria-label={annotationLabels?.[ayahKey]
                       ? `${t("common.ayah", { ayah: ayahKey })} · ${annotationLabels[ayahKey]}`

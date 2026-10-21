@@ -3953,6 +3953,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again later.'**
   String get apiErrorUnknown;
+
+  /// No description provided for @tajweedLegendPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed rules on this page'**
+  String get tajweedLegendPage;
+
+  /// No description provided for @tajweedLegendAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed rules in this ayah'**
+  String get tajweedLegendAyah;
+
+  /// No description provided for @tajweedWordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed in this word'**
+  String get tajweedWordTitle;
+
+  /// No description provided for @tajweedRuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed rule'**
+  String get tajweedRuleTitle;
+
+  /// No description provided for @tajweedWhyHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Why here'**
+  String get tajweedWhyHere;
+
+  /// No description provided for @tajweedWhenApplies.
+  ///
+  /// In en, this message translates to:
+  /// **'When it applies'**
+  String get tajweedWhenApplies;
+
+  /// No description provided for @tajweedHowToRead.
+  ///
+  /// In en, this message translates to:
+  /// **'How to read'**
+  String get tajweedHowToRead;
+
+  /// No description provided for @tajweedOccurrencesPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Where on this page'**
+  String get tajweedOccurrencesPage;
+
+  /// No description provided for @tajweedOccurrencesAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Where in this ayah'**
+  String get tajweedOccurrencesAyah;
+
+  /// No description provided for @tajweedListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to this word'**
+  String get tajweedListen;
+
+  /// No description provided for @tajweedStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get tajweedStop;
+
+  /// No description provided for @tajweedSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'0.75×'**
+  String get tajweedSlow;
+
+  /// No description provided for @tajweedSlowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slower, 0.75×'**
+  String get tajweedSlowLabel;
+
+  /// No description provided for @tajweedClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get tajweedClose;
+
+  /// No description provided for @tajweedReviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These explanations are being reviewed by a tajweed teacher.'**
+  String get tajweedReviewNote;
+
+  /// No description provided for @tajweedAudioError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not play this word.'**
+  String get tajweedAudioError;
 }
 
 class _AppLocalizationsDelegate

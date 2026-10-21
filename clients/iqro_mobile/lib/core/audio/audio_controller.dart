@@ -1410,6 +1410,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state.standalone == null &&
       state.track?.id == trackId;
 
+  /// With [clipStart] or [clipEnd] only that part of the file plays, for
+  /// example one word of a surah track; the item then stops at its end.
   Future<void> loadStandalone({
     required String id,
     required String url,
@@ -1422,6 +1424,9 @@ class AudioController extends StateNotifier<IqroAudioState> {
     Map<String, dynamic>? extras,
     bool autoplay = true,
     Object? owner,
+    double speed = 1,
+    Duration? clipStart,
+    Duration? clipEnd,
   }) {
     final navigationEpoch = _navigationEpoch;
     final uri = validateIqroStreamingAudioUrl(url);
@@ -1477,14 +1482,29 @@ class AudioController extends StateNotifier<IqroAudioState> {
             loading: true,
             duration: requestedDuration,
             repeatEnabled: repeatEnabled,
+            speed: speed,
           ),
         );
         _activeSourceIntent = sourceIntent.intent;
+        final source = buildIqroStandaloneAudioSource(
+          uri: uri,
+          mediaItem: mediaItem,
+        );
         final resolvedDuration = await _player.setAudioSource(
-          buildIqroStandaloneAudioSource(uri: uri, mediaItem: mediaItem),
+          clipStart == null && clipEnd == null
+              ? source
+              : ClippingAudioSource(
+                  child: source,
+                  start: clipStart,
+                  end: clipEnd,
+                  tag: mediaItem,
+                  duration: clipStart != null && clipEnd != null
+                      ? clipEnd - clipStart
+                      : null,
+                ),
         );
         if (!_ownsStandalone(generation, mediaItem.id)) return;
-        await _player.setSpeed(1);
+        await _player.setSpeed(speed);
         if (!_ownsStandalone(generation, mediaItem.id)) return;
         await _player.setLoopMode(repeatEnabled ? LoopMode.one : LoopMode.off);
         if (!_ownsStandalone(generation, mediaItem.id)) return;
@@ -1615,7 +1635,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
   }
 
   /// Sets the playback speed of the standalone item. Loading another item
-  /// starts it at 1×.
+  /// starts it at its requested speed, 1× by default.
   Future<void> setStandaloneSpeed(
     String mediaId,
     double speed, {

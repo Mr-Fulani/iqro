@@ -223,6 +223,23 @@ class AudioRepository {
     }
   }
 
+  /// The word timings of one ayah, asked for when a tajweed card opens.
+  Future<AyahPlayback> ayahPlayback({
+    required String recitationId,
+    required int surah,
+    required int ayah,
+  }) async {
+    final payload = await _api.get(
+      '/recitations/$recitationId/ayahs/$surah/$ayah',
+      public: true,
+    );
+    final playback = AyahPlayback.fromJson(jsonMap(payload));
+    return AyahPlayback(
+      track: playback.track.withPreferredQuality(_preferredQuality()),
+      words: playback.words,
+    );
+  }
+
   SurahPlayback _rememberPlayback(String key, SurahPlayback value) {
     _playbackMemory.remove(key);
     _playbackMemory[key] = value;

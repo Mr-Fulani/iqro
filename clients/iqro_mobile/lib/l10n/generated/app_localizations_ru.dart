@@ -2220,4 +2220,53 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get apiErrorUnknown => 'Повторите попытку позже.';
+
+  @override
+  String get tajweedLegendPage => 'Правила таджвида на странице';
+
+  @override
+  String get tajweedLegendAyah => 'Правила таджвида в аяте';
+
+  @override
+  String get tajweedWordTitle => 'Таджвид в слове';
+
+  @override
+  String get tajweedRuleTitle => 'Правило таджвида';
+
+  @override
+  String get tajweedWhyHere => 'Почему здесь';
+
+  @override
+  String get tajweedWhenApplies => 'Когда действует';
+
+  @override
+  String get tajweedHowToRead => 'Как читать';
+
+  @override
+  String get tajweedOccurrencesPage => 'Где на этой странице';
+
+  @override
+  String get tajweedOccurrencesAyah => 'Где в этом аяте';
+
+  @override
+  String get tajweedListen => 'Послушать фрагмент';
+
+  @override
+  String get tajweedStop => 'Остановить';
+
+  @override
+  String get tajweedSlow => '0,75×';
+
+  @override
+  String get tajweedSlowLabel => 'Медленнее, 0,75×';
+
+  @override
+  String get tajweedClose => 'Закрыть';
+
+  @override
+  String get tajweedReviewNote =>
+      'Пояснения проходят проверку у преподавателя таджвида.';
+
+  @override
+  String get tajweedAudioError => 'Не удалось воспроизвести фрагмент.';
 }

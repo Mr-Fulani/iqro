@@ -664,5 +664,21 @@
   "apiErrorCurrentDevice": "Geçerli cihaz için normal çıkışı kullanın.",
   "apiErrorDeviceNotFound": "Cihaz zaten bağlantısı kesilmiş veya kullanılamıyor.",
   "apiErrorCursorExpired": "Senkronizasyon geçmişi eskidi. Tam eşitleme yapılıyor.",
-  "apiErrorUnknown": "Daha sonra tekrar deneyin."
+  "apiErrorUnknown": "Daha sonra tekrar deneyin.",
+  "tajweedLegendPage": "Bu sayfadaki tecvid kuralları",
+  "tajweedLegendAyah": "Bu ayetteki tecvid kuralları",
+  "tajweedWordTitle": "Bu kelimedeki tecvid",
+  "tajweedRuleTitle": "Tecvid kuralı",
+  "tajweedWhyHere": "Neden burada",
+  "tajweedWhenApplies": "Ne zaman uygulanır",
+  "tajweedHowToRead": "Nasıl okunur",
+  "tajweedOccurrencesPage": "Bu sayfada nerede",
+  "tajweedOccurrencesAyah": "Bu ayette nerede",
+  "tajweedListen": "Kelimeyi dinle",
+  "tajweedStop": "Durdur",
+  "tajweedSlow": "0,75×",
+  "tajweedSlowLabel": "Daha yavaş, 0,75×",
+  "tajweedClose": "Kapat",
+  "tajweedReviewNote": "Bu açıklamalar bir tecvid hocası tarafından gözden geçiriliyor.",
+  "tajweedAudioError": "Kelime çalınamadı."
 }

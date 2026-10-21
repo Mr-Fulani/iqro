@@ -16,6 +16,8 @@ import {
   type AyahPlaybackTrigger,
 } from "./MushafAudioPlayer";
 import { useMushafPages } from "./useMushafPages";
+import { useTajweed } from "./useTajweed";
+import { TajweedLegend } from "./TajweedLegend";
 import { MushafPageTurn } from "./MushafPageTurn";
 import { MushafGestureSurface } from "./MushafGestureSurface";
 import { QuranFoundationMushafPageView } from "./QuranFoundationMushafPage";
@@ -71,9 +73,11 @@ import {
   surahName as localizedSurahName,
 } from "../lib/quran-content";
 import { localizedPath } from "../lib/routing";
+import { isTajweedMushaf, tajweedWordIndex, type TajweedSelection } from "../lib/tajweed";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
+const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
 // The share dialog is loaded again after a failed load, as React.lazy keeps it.
 const loadAyahShareDialog = () => lazy(() => import("./AyahShareDialog"));
 let AyahShareDialog = loadAyahShareDialog();
@@ -397,6 +401,8 @@ function QuranContent() {
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
+  const [mushafRecitationId, setMushafRecitationId] = useState("");
+  const [tajweedSelection, setTajweedSelection] = useState<TajweedSelection | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isImmersiveReader, setIsImmersiveReader] = useState(false);
   const [playAyahRequest, setPlayAyahRequest] = useState<AyahPlaybackTrigger | null>(null);
@@ -451,6 +457,20 @@ function QuranContent() {
     viewMode === "mushaf" && localPositionReady,
   );
   const foundationPageLoading = pageLoading;
+  // Only the page on screen: the current page passes through transient values
+  // while the page index resolves.
+  const tajweed = useTajweed(
+    foundationMushafPage ? [foundationMushafPage.page_number] : [],
+    viewMode === "mushaf" && Boolean(selectedFoundationMushaf && isTajweedMushaf(selectedFoundationMushaf)),
+  );
+  const tajweedPage = tajweed?.pages.find((page) => page.page_number === foundationMushafPage?.page_number) ?? null;
+  const tajweedWords = useMemo(
+    () => tajweedPage ? new Set(tajweedWordIndex(tajweedPage.ayahs).keys()) : undefined,
+    [tajweedPage],
+  );
+  const handleSelectTajweedWord = useCallback((verseKey: string, position: number) => {
+    setTajweedSelection({ kind: "word", verseKey, position });
+  }, []);
   const selectedTranslation = useMemo(
     () =>
       translationEditions.find((edition) => edition.source_id === selectedTranslationId) || null,
@@ -2050,6 +2070,7 @@ function QuranContent() {
           onActiveAyahChange={handleActiveAyahChange}
           onPlayingChange={setIsAudioPlaying}
           onSettingsChange={setAudioSettings}
+          onRecitationChange={setMushafRecitationId}
         />
       </MushafReaderPanel>
 
@@ -2303,6 +2324,8 @@ function QuranContent() {
                     highlightColors={ayahHighlightColors}
                     annotationLabels={ayahAnnotationLabels}
                     onSelectAyah={handleSelectMushafAyah}
+                    tajweedWords={tajweedWords}
+                    onSelectTajweedWord={handleSelectTajweedWord}
                   />
                 </MushafPageTurn>
               ) : null
@@ -2334,6 +2357,17 @@ function QuranContent() {
               >
                 <ShareIcon /> {t("contentShare.share")}
               </button>
+            </div>
+          )}
+
+          {tajweed && tajweedPage && (
+            <div className="mushaf-tajweed-legend">
+              <TajweedLegend
+                reference={tajweed.reference}
+                codes={tajweedPage.rules}
+                title={t("tajweed.legendPage")}
+                onSelectRule={(code) => setTajweedSelection({ kind: "rule", code })}
+              />
             </div>
           )}
 
@@ -2437,6 +2471,17 @@ function QuranContent() {
           onSave={(colorKey, note) => handleSaveAnnotation(annotationAyahKey, colorKey, note)}
           onRemove={() => handleRemoveAnnotation(annotationAyahKey)}
           onClose={() => setAnnotationAyahKey(null)}
+        />
+      )}
+      {tajweedSelection && tajweed && tajweedPage && (
+        <TajweedCard
+          reference={tajweed.reference}
+          ayahs={tajweedPage.ayahs}
+          selection={tajweedSelection}
+          scope="page"
+          recitationId={mushafRecitationId || null}
+          onSelect={setTajweedSelection}
+          onClose={() => setTajweedSelection(null)}
         />
       )}
       {shareTarget && (

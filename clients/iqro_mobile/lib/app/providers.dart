@@ -47,6 +47,8 @@ import '../features/salah/salah_progress.dart';
 import '../features/salah/salah_repository.dart';
 import '../features/share/share_repository.dart';
 import '../features/settings/offline_storage_repository.dart';
+import '../features/tajweed/tajweed_models.dart';
+import '../features/tajweed/tajweed_repository.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
 
@@ -646,6 +648,21 @@ final mushafPageProvider = FutureProvider.autoDispose
     .family<MushafPageData, int>((ref, page) {
       return ref.watch(selectedMushafRepositoryProvider).mushafPage(page);
     });
+final tajweedRepositoryProvider = Provider<TajweedRepository>(
+  (ref) => TajweedRepository(
+    api: ref.watch(apiClientProvider),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+final tajweedRulesProvider = FutureProvider.autoDispose<TajweedReference?>(
+  (ref) => ref.watch(tajweedRepositoryProvider).rules(),
+);
+
+/// Tajweed of a QF Mushaf 19 page, whose numbering it shares.
+final tajweedPageProvider = FutureProvider.autoDispose
+    .family<TajweedPage?, int>(
+      (ref, page) => ref.watch(tajweedRepositoryProvider).page(page),
+    );
 
 class MushafDownloadController extends StateNotifier<MushafDownloadSnapshot> {
   MushafDownloadController(this._repository)

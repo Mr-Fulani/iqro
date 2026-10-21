@@ -482,6 +482,7 @@ export function MemorizationWorkspace() {
               hiddenAyahs={hiddenPracticeAyahs}
               playingAyah={mode === "listen" ? playingAyah : null}
               onReveal={revealAyah}
+              recitationId={planRecitationId}
             />
 
             <div className="memorization-counter">
