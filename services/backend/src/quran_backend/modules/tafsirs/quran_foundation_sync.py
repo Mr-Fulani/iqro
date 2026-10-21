@@ -294,15 +294,18 @@ def _replace_snapshot(
     verse_rank = {key: index for index, key in enumerate(ordered_keys, start=1)}
     normalized: list[dict[str, Any]] = []
     seen_verse_keys: set[str] = set()
-    covered_ranks: set[int] = set()
     for record in records:
         row = _normalize_tafsir_record(record, resource_id, verse_rank)
         if row["verse_key"] in seen_verse_keys:
             raise QuranFoundationError("Quran.Foundation returned a duplicate Tafsir verse.")
         seen_verse_keys.add(row["verse_key"])
-        covered_ranks.update(range(row["start_verse_id"], row["end_verse_id"] + 1))
         normalized.append(row)
-    _validate_grouped_tafsir_texts(normalized)
+    normalized = _resolve_grouped_tafsir_texts(normalized)
+    if not normalized:
+        raise QuranFoundationError("Quran.Foundation Tafsir snapshot has no Tafsir text.")
+    covered_ranks = {
+        rank for row in normalized for rank in range(row["start_verse_id"], row["end_verse_id"] + 1)
+    }
     language_name = _required_string(metadata.get("language_name"), "Tafsir language")
     language_code = LANGUAGE_CODES.get(language_name.lower())
     if language_code is None:
@@ -441,25 +444,50 @@ def _normalize_tafsir_record(
     }
 
 
-def _validate_grouped_tafsir_texts(rows: list[dict[str, Any]]) -> None:
-    """Validate provider rows that reference one shared Tafsir range text."""
+def _resolve_grouped_tafsir_texts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Link empty provider rows to the one text of their authored range.
+
+    An empty row shares the text of a non-empty row with the same
+    `start_verse_key`-`end_verse_key` range. `group_tafsir_id` names that row;
+    when the provider omits it or it names no row, the range must hold exactly
+    one text. The resolved row ID is stored in `provider_group_id`. Rows whose
+    range has no text at all are dropped, so the ayah is honestly uncovered.
+    """
 
     rows_by_source_id = {row["source_id"]: row for row in rows}
+    texts_by_range: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in rows:
         if row["text"]:
+            key = (row["start_verse_key"], row["end_verse_key"])
+            texts_by_range.setdefault(key, []).append(row)
+
+    resolved: list[dict[str, Any]] = []
+    unresolved: list[str] = []
+    for row in rows:
+        if row["text"]:
+            resolved.append(row)
             continue
-        group_id = row["provider_group_id"]
-        source = rows_by_source_id.get(group_id)
-        if (
-            group_id is None
-            or source is None
-            or not source["text"]
-            or source["start_verse_key"] != row["start_verse_key"]
-            or source["end_verse_key"] != row["end_verse_key"]
-        ):
-            raise QuranFoundationError(
-                "Quran.Foundation returned an unresolved grouped Tafsir text."
-            )
+        candidates = texts_by_range.get((row["start_verse_key"], row["end_verse_key"]), [])
+        if not candidates:
+            continue
+        referenced = rows_by_source_id.get(row["provider_group_id"])
+        if referenced is not None:
+            source = referenced if referenced in candidates else None
+        else:
+            source = candidates[0] if len(candidates) == 1 else None
+        if source is None:
+            unresolved.append(row["verse_key"])
+            continue
+        resolved.append({**row, "provider_group_id": source["source_id"]})
+
+    if unresolved:
+        listed = ", ".join(unresolved[:10])
+        if len(unresolved) > 10:
+            listed += f" and {len(unresolved) - 10} more"
+        raise QuranFoundationError(
+            f"Quran.Foundation returned an unresolved grouped Tafsir text for {listed}."
+        )
+    return resolved
 
 
 def _published_quran_verse_keys() -> set[str]:
