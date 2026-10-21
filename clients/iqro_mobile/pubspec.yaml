@@ -64,6 +64,7 @@ dependencies:
   workmanager: ^0.10.9
   home_widget: 0.9.4
   video_player: 2.11.1
+  geomag: ^0.3.0
 
 dev_dependencies:
   flutter_test:

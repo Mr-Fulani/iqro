@@ -779,6 +779,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.';
 
   @override
+  String get qiblaNorth => 'N';
+
+  @override
+  String get qiblaLiveHint =>
+      'Device compass is on: hold the phone flat — the arrow shows the Qibla relative to its top.';
+
+  @override
+  String get qiblaFacing => 'You are facing the Qibla';
+
+  @override
+  String get qiblaCalibrationNeeded => 'The compass needs calibration';
+
+  @override
+  String get qiblaCalibrationHint =>
+      'Move the phone through the air in a figure eight a few times, away from metal and magnets, including magnetic cases.';
+
+  @override
+  String get qiblaCompassUnavailable =>
+      'The compass is not available on this device.';
+
+  @override
   String get prayerCalendar => 'Monthly prayer calendar';
 
   @override
