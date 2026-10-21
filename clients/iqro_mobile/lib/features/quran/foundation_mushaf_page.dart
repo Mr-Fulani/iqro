@@ -141,6 +141,7 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
     required this.onSelect,
     required this.onOpen,
     required this.onBackgroundTap,
+    this.onSelectWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -152,6 +153,7 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
   final ValueChanged<QuranAyahReference> onSelect;
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
+  final FoundationWordTap? onSelectWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -227,12 +229,58 @@ class _FoundationContentState
         onSelect: widget.onSelect,
         onOpen: widget.onOpen,
         onBackgroundTap: widget.onBackgroundTap,
+        onSelectWord: widget.onSelectWord,
         surahs: widget.surahs,
         excerpt: widget.excerpt,
       );
     },
   );
 }
+
+/// One word of a source page in its page font: the glyph text, with the
+/// source's own colour runs or bidi override where it has them.
+TextSpan foundationWordSpan(Map<String, Object?> word, TextStyle style) {
+  final runs = word['text_runs'] as List?;
+  final overrideBidi = (word['css_class']?.toString() ?? '')
+      .split(RegExp(r'\s+'))
+      .contains('bidi-override');
+  return TextSpan(
+    style: style,
+    text: runs == null
+        ? (overrideBidi
+              ? '\u202e${word['text']}\u202c'
+              : word['text'] as String)
+        : null,
+    children: runs
+        ?.whereType<Map>()
+        .map(
+          (run) => TextSpan(
+            text: run['text'] as String,
+            style:
+                run['color'] is String &&
+                    RegExp(
+                      r'^#[0-9a-fA-F]{6}$',
+                    ).hasMatch(run['color'] as String)
+                ? TextStyle(
+                    color: Color(
+                      0xff000000 |
+                          int.parse(
+                            (run['color'] as String).substring(1),
+                            radix: 16,
+                          ),
+                    ),
+                  )
+                : null,
+          ),
+        )
+        .toList(),
+  );
+}
+
+/// Handles a tap on the word at [position] (`position_in_verse`) of [ayah];
+/// returns false to leave it to the ayah selection.
+typedef FoundationWordTap =
+    bool Function(QuranAyahReference ayah, int position);
 
 /// Text is shaped by Flutter with the provider font. The painted word boxes
 /// also define hit testing, so zoom, selection and audio use the same geometry.
@@ -245,6 +293,7 @@ class FoundationPageCanvas extends StatefulWidget {
     required this.onSelect,
     required this.onOpen,
     required this.onBackgroundTap,
+    this.onSelectWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -257,6 +306,7 @@ class FoundationPageCanvas extends StatefulWidget {
   final ValueChanged<QuranAyahReference> onSelect;
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
+  final FoundationWordTap? onSelectWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -327,22 +377,22 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
           ),
         );
       }
-      QuranAyahReference? at(Offset point) => layout.words
-          .where((w) => w.rect.contains(point))
-          .firstOrNull
-          ?.reference;
+      _WordPaint? at(Offset point) =>
+          layout.words.where((w) => w.rect.contains(point)).firstOrNull;
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapUp: (details) {
-          final ayah = at(details.localPosition);
-          if (ayah == null) {
+          final word = at(details.localPosition);
+          final position = word?.position;
+          if (word == null) {
             widget.onBackgroundTap();
-          } else {
-            widget.onSelect(ayah);
+          } else if (position == null ||
+              widget.onSelectWord?.call(word.reference, position) != true) {
+            widget.onSelect(word.reference);
           }
         },
         onLongPressStart: (details) {
-          final ayah = at(details.localPosition);
+          final ayah = at(details.localPosition)?.reference;
           if (ayah != null) widget.onOpen(ayah);
         },
         child: CustomPaint(
@@ -360,8 +410,11 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
 }
 
 class _WordPaint {
-  _WordPaint(this.reference, this.painter, this.image);
+  _WordPaint(this.reference, this.position, this.painter, this.image);
   final QuranAyahReference reference;
+
+  /// `position_in_verse` of a word; null for an ayah-end marker.
+  final int? position;
   final TextPainter? painter;
   final ui.Image? image;
   late Rect rect;
@@ -393,52 +446,28 @@ class FoundationPageLayout {
       final image = resources.images[(word['id'] as num).toInt()];
       TextPainter? text;
       if (image == null) {
-        final runs = word['text_runs'] as List?;
-        final overrideBidi = (word['css_class']?.toString() ?? '')
-            .split(RegExp(r'\s+'))
-            .contains('bidi-override');
         text = TextPainter(
           textDirection: TextDirection.rtl,
           textScaler: TextScaler.noScaling,
-          text: TextSpan(
-            style: TextStyle(
+          text: foundationWordSpan(
+            word,
+            TextStyle(
               fontFamily: resources.fontFamily,
               fontSize: 56,
               height: 1.6,
               color: mushafInkColor,
             ),
-            text: runs == null
-                ? (overrideBidi
-                      ? '\u202e${word['text']}\u202c'
-                      : word['text'] as String)
-                : null,
-            children: runs
-                ?.whereType<Map>()
-                .map(
-                  (run) => TextSpan(
-                    text: run['text'] as String,
-                    style:
-                        run['color'] is String &&
-                            RegExp(
-                              r'^#[0-9a-fA-F]{6}$',
-                            ).hasMatch(run['color'] as String)
-                        ? TextStyle(
-                            color: Color(
-                              0xff000000 |
-                                  int.parse(
-                                    (run['color'] as String).substring(1),
-                                    radix: 16,
-                                  ),
-                            ),
-                          )
-                        : null,
-                  ),
-                )
-                .toList(),
           ),
         )..layout();
       }
-      final entry = _WordPaint(reference, text, image);
+      final entry = _WordPaint(
+        reference,
+        word['char_type_name'] == 'word'
+            ? (word['position_in_verse'] as num?)?.toInt()
+            : null,
+        text,
+        image,
+      );
       lines
           .putIfAbsent((word['line_number'] as num).toInt(), () => [])
           .add(entry);

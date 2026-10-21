@@ -2158,4 +2158,53 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get apiErrorUnknown => 'Daha sonra tekrar deneyin.';
+
+  @override
+  String get tajweedLegendPage => 'Bu sayfadaki tecvid kuralları';
+
+  @override
+  String get tajweedLegendAyah => 'Bu ayetteki tecvid kuralları';
+
+  @override
+  String get tajweedWordTitle => 'Bu kelimedeki tecvid';
+
+  @override
+  String get tajweedRuleTitle => 'Tecvid kuralı';
+
+  @override
+  String get tajweedWhyHere => 'Neden burada';
+
+  @override
+  String get tajweedWhenApplies => 'Ne zaman uygulanır';
+
+  @override
+  String get tajweedHowToRead => 'Nasıl okunur';
+
+  @override
+  String get tajweedOccurrencesPage => 'Bu sayfada nerede';
+
+  @override
+  String get tajweedOccurrencesAyah => 'Bu ayette nerede';
+
+  @override
+  String get tajweedListen => 'Kelimeyi dinle';
+
+  @override
+  String get tajweedStop => 'Durdur';
+
+  @override
+  String get tajweedSlow => '0,75×';
+
+  @override
+  String get tajweedSlowLabel => 'Daha yavaş, 0,75×';
+
+  @override
+  String get tajweedClose => 'Kapat';
+
+  @override
+  String get tajweedReviewNote =>
+      'Bu açıklamalar bir tecvid hocası tarafından gözden geçiriliyor.';
+
+  @override
+  String get tajweedAudioError => 'Kelime çalınamadı.';
 }

@@ -2178,4 +2178,52 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get apiErrorUnknown => 'حاول مرة أخرى لاحقًا.';
+
+  @override
+  String get tajweedLegendPage => 'أحكام التجويد في هذه الصفحة';
+
+  @override
+  String get tajweedLegendAyah => 'أحكام التجويد في هذه الآية';
+
+  @override
+  String get tajweedWordTitle => 'التجويد في هذه الكلمة';
+
+  @override
+  String get tajweedRuleTitle => 'حكم التجويد';
+
+  @override
+  String get tajweedWhyHere => 'لماذا هنا';
+
+  @override
+  String get tajweedWhenApplies => 'متى يُطبَّق';
+
+  @override
+  String get tajweedHowToRead => 'كيف تقرأ';
+
+  @override
+  String get tajweedOccurrencesPage => 'مواضعه في هذه الصفحة';
+
+  @override
+  String get tajweedOccurrencesAyah => 'مواضعه في هذه الآية';
+
+  @override
+  String get tajweedListen => 'استمع إلى الكلمة';
+
+  @override
+  String get tajweedStop => 'إيقاف';
+
+  @override
+  String get tajweedSlow => '0.75×';
+
+  @override
+  String get tajweedSlowLabel => 'أبطأ، 0.75×';
+
+  @override
+  String get tajweedClose => 'إغلاق';
+
+  @override
+  String get tajweedReviewNote => 'تخضع هذه الشروح لمراجعة معلّم تجويد.';
+
+  @override
+  String get tajweedAudioError => 'تعذّر تشغيل الكلمة.';
 }

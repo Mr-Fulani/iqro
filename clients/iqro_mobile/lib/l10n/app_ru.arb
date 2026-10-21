@@ -668,5 +668,21 @@
   "apiErrorCurrentDevice": "Для текущего устройства используйте обычный выход.",
   "apiErrorDeviceNotFound": "Устройство уже отключено или недоступно.",
   "apiErrorCursorExpired": "История синхронизации устарела. Выполняется полная сверка данных.",
-  "apiErrorUnknown": "Повторите попытку позже."
+  "apiErrorUnknown": "Повторите попытку позже.",
+  "tajweedLegendPage": "Правила таджвида на странице",
+  "tajweedLegendAyah": "Правила таджвида в аяте",
+  "tajweedWordTitle": "Таджвид в слове",
+  "tajweedRuleTitle": "Правило таджвида",
+  "tajweedWhyHere": "Почему здесь",
+  "tajweedWhenApplies": "Когда действует",
+  "tajweedHowToRead": "Как читать",
+  "tajweedOccurrencesPage": "Где на этой странице",
+  "tajweedOccurrencesAyah": "Где в этом аяте",
+  "tajweedListen": "Послушать фрагмент",
+  "tajweedStop": "Остановить",
+  "tajweedSlow": "0,75×",
+  "tajweedSlowLabel": "Медленнее, 0,75×",
+  "tajweedClose": "Закрыть",
+  "tajweedReviewNote": "Пояснения проходят проверку у преподавателя таджвида.",
+  "tajweedAudioError": "Не удалось воспроизвести фрагмент."
 }

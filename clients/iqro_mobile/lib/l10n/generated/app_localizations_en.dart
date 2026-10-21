@@ -2197,4 +2197,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiErrorUnknown => 'Try again later.';
+
+  @override
+  String get tajweedLegendPage => 'Tajweed rules on this page';
+
+  @override
+  String get tajweedLegendAyah => 'Tajweed rules in this ayah';
+
+  @override
+  String get tajweedWordTitle => 'Tajweed in this word';
+
+  @override
+  String get tajweedRuleTitle => 'Tajweed rule';
+
+  @override
+  String get tajweedWhyHere => 'Why here';
+
+  @override
+  String get tajweedWhenApplies => 'When it applies';
+
+  @override
+  String get tajweedHowToRead => 'How to read';
+
+  @override
+  String get tajweedOccurrencesPage => 'Where on this page';
+
+  @override
+  String get tajweedOccurrencesAyah => 'Where in this ayah';
+
+  @override
+  String get tajweedListen => 'Listen to this word';
+
+  @override
+  String get tajweedStop => 'Stop';
+
+  @override
+  String get tajweedSlow => '0.75×';
+
+  @override
+  String get tajweedSlowLabel => 'Slower, 0.75×';
+
+  @override
+  String get tajweedClose => 'Close';
+
+  @override
+  String get tajweedReviewNote =>
+      'These explanations are being reviewed by a tajweed teacher.';
+
+  @override
+  String get tajweedAudioError => 'Could not play this word.';
 }

@@ -15,6 +15,7 @@ import '../audio/recitation_style_label.dart';
 import '../audio/reciter_portraits.dart';
 import '../quran/quran_models.dart';
 import 'memorization_repository.dart';
+import 'memorization_tajweed_text.dart';
 
 class MemorizationScreen extends ConsumerWidget {
   const MemorizationScreen({super.key});
@@ -967,13 +968,22 @@ class _PracticeDashboardState extends ConsumerState<_PracticeDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Expanded(
-            child: Text(
-              '${ayah.textUthmani}  ﴿${ayah.number}﴾',
-              textAlign: TextAlign.right,
-              textDirection: TextDirection.rtl,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontFamily: IqroTheme.arabicFontFamily,
-                height: 1.8,
+            child: MemorizationTajweedAyah(
+              ayah: ayah,
+              range: (
+                surah: plan.startAyah.surah,
+                start: plan.startAyah.ayah,
+                end: plan.endAyah.ayah,
+              ),
+              recitationId: hasRecitation ? plan.recitationId : null,
+              fallback: Text(
+                '${ayah.textUthmani}  ﴿${ayah.number}﴾',
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontFamily: IqroTheme.arabicFontFamily,
+                  height: 1.8,
+                ),
               ),
             ),
           ),

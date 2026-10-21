@@ -9,12 +9,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/theme/iqro_theme.dart';
+import '../tajweed/tajweed_models.dart';
+import '../tajweed/tajweed_sheet.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
 import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
 import 'foundation_mushaf_page.dart';
+
+/// The tajweed of a QF Mushaf 19 page with its rule reference.
+typedef _PageTajweed = ({TajweedReference reference, TajweedPage page});
 
 typedef MushafPageLayout = ({
   double width,
@@ -76,6 +82,8 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     this.surahs = const <Surah>[],
     this.divisions = const <QuranDivision>[],
     this.showPageLabels = true,
+    this.onTajweedWord,
+    this.tajweedRecitation,
     super.key,
   });
 
@@ -95,6 +103,14 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   /// under its controls, which show the same information; they keep their
   /// space so the page does not reflow.
   final bool showPageLabels;
+
+  /// Turns on tajweed for QF Mushaf 19 pages: the legend of the page's rules
+  /// under it and the card of a tapped coloured word. Such a tap selects its
+  /// ayah through this callback instead of [onSelectAyah].
+  final ValueChanged<QuranAyahReference>? onTajweedWord;
+
+  /// The reciter whose timings play a word from a tajweed card.
+  final TajweedRecitation? tajweedRecitation;
 
   @override
   ConsumerState<NativeMushafPage> createState() => _NativeMushafPageState();
@@ -226,9 +242,47 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     );
   }
 
+  /// The page's rules and their reference when tajweed applies to it.
+  _PageTajweed? _tajweed(MushafPageData pageData) {
+    if (widget.onTajweedWord == null ||
+        pageData.foundation?.sourceId != tajweedMushafId) {
+      return null;
+    }
+    final reference = ref.watch(tajweedRulesProvider).valueOrNull;
+    final page = ref.watch(tajweedPageProvider(widget.page)).valueOrNull;
+    return reference == null || page == null
+        ? null
+        : (reference: reference, page: page);
+  }
+
+  bool _openTajweedWord(
+    _PageTajweed tajweed,
+    QuranAyahReference ayah,
+    int position,
+  ) {
+    final word = tajweed.page.ayah(ayah.key)?.word(position);
+    if (word == null || word.rules.isEmpty) return false;
+    widget.onTajweedWord!(ayah);
+    unawaited(
+      showTajweedSheet(
+        context,
+        reference: tajweed.reference,
+        ayahs: tajweed.page.ayahs,
+        wholePage: true,
+        selection: TajweedWordSelection(ayah.key, position),
+        recitation: widget.tajweedRecitation,
+      ),
+    );
+    return true;
+  }
+
+  // The legend sits on the light paper in both app themes.
+  static final _paperTheme = IqroTheme.light();
+
   Widget _buildPage(MushafPageData pageData) {
     final viewport = MediaQuery.sizeOf(context);
     final portrait = viewport.height >= viewport.width;
+    final tajweed = _tajweed(pageData);
     final surahNumber = pageData.firstAyahReference?.surah;
     final surah = widget.surahs
         .where((s) => s.number == surahNumber)
@@ -273,8 +327,32 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             // Header/footer appear only in portrait. Preserve the raster subtree
             // when its sibling index changes, including its decoded frame.
             key: const ValueKey('native-mushaf-raster'),
-            child: _buildRaster(pageData),
+            child: _buildRaster(pageData, tajweed),
           ),
+          if (portrait && tajweed != null && tajweed.page.rules.isNotEmpty)
+            _pageLabel(
+              key: const ValueKey('mushaf-tajweed-legend'),
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 12, 0),
+              child: IgnorePointer(
+                ignoring: !widget.showPageLabels,
+                child: Theme(
+                  data: _paperTheme,
+                  child: TajweedLegend(
+                    title: context.l10n.tajweedLegendPage,
+                    rules: tajweed.reference.present(tajweed.page.rules),
+                    singleLine: true,
+                    onSelected: (code) => showTajweedSheet(
+                      context,
+                      reference: tajweed.reference,
+                      ayahs: tajweed.page.ayahs,
+                      wholePage: true,
+                      selection: TajweedRuleSelection(code),
+                      recitation: widget.tajweedRecitation,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (portrait)
             _pageLabel(
               key: const ValueKey('mushaf-page-footer'),
@@ -371,7 +449,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     );
   }
 
-  Widget _buildRaster(MushafPageData pageData) {
+  Widget _buildRaster(MushafPageData pageData, _PageTajweed? tajweed) {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -430,6 +508,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                             onSelect: widget.onSelectAyah,
                             onOpen: widget.onOpenAyah,
                             onBackgroundTap: widget.onBackgroundTap,
+                            onSelectWord: tajweed == null
+                                ? null
+                                : (ayah, position) =>
+                                      _openTajweedWord(tajweed, ayah, position),
                             surahs: widget.surahs,
                           ),
                         ),

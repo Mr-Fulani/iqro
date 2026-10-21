@@ -16,14 +16,18 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
+import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/mushaf_screen.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
+import 'package:iqro_mobile/features/tajweed/tajweed_models.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'tajweed_test_data.dart';
 
 void main() {
   testWidgets(
@@ -298,6 +302,25 @@ void main() {
     expect(find.text('Аят 5:85'), findsOneWidget);
   });
 
+  testWidgets('a coloured tajweed word selects without showing controls', (
+    tester,
+  ) async {
+    await _pump(tester, tajweed: true);
+    await _tapTajweedWord(tester, 2);
+    expect(find.text('Таджвид в слове'), findsOneWidget);
+    expect(find.text('Аят 112:4'), findsOneWidget);
+    expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
+    expect(find.text('Правила таджвида на странице'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Закрыть'));
+    await _settleFoundation(tester);
+    expect(find.text('Таджвид в слове'), findsNothing);
+    await _tapTajweedWord(tester, 1);
+    expect(find.text('Таджвид в слове'), findsNothing);
+    expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('page labels give way to the reader controls', (tester) async {
     await _pump(tester);
     // Every built page (the current one and its neighbours) follows suit.
@@ -335,11 +358,63 @@ Future<void> _tapAyah(WidgetTester tester, double y) async {
   await tester.pump(const Duration(milliseconds: 250));
 }
 
+Future<void> _tapTajweedWord(WidgetTester tester, int position) async {
+  final canvas = find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint && widget.painter is FoundationPagePainter,
+      )
+      .evaluate()
+      .where((element) {
+        final box = element.renderObject! as RenderBox;
+        final left = box.localToGlobal(Offset.zero).dx;
+        return left >= 0 && left < box.size.width;
+      })
+      .single;
+  final painter =
+      (canvas.widget as CustomPaint).painter! as FoundationPagePainter;
+  final word = painter.layout.words.firstWhere(
+    (word) => word.position == position,
+  );
+  await tester.tapAt(
+    (canvas.renderObject! as RenderBox).localToGlobal(word.rect.center),
+  );
+  await _settleFoundation(tester);
+}
+
+/// The page font loads on the real clock; let it finish between frames.
+Future<void> _settleFoundation(WidgetTester tester) async {
+  for (var frame = 0; frame < 6; frame++) {
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+Map<String, Object?> _foundationPage(int number) => {
+  'mushaf_id': 19,
+  'page_number': number,
+  'pages_count': 604,
+  'lines_per_page': 15,
+  'source_checksum_sha256': 'a' * 64,
+  'verse_mapping': {'112': '4'},
+  'rendering': {
+    'available': true,
+    'version': 2,
+    'mode': 'page-font',
+    'native_font_url': 'https://verses.quran.foundation/fonts/quran/p.ttf',
+  },
+  'words': page604Words,
+};
+
+Future<File> _font(Uri uri, String version) async =>
+    File('assets/fonts/AmiriQuran-Regular.ttf');
+
 Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   WidgetTester tester, {
   Set<String> bookmarks = const {},
   Map<int, int>? pageBuilds,
   bool savesReadingPlace = true,
+  bool tajweed = false,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
@@ -352,9 +427,36 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   final quran = _Quran(database.accountScope)..bookmarked.addAll(bookmarks);
   final audio = _AudioRepository();
   final controller = _Audio();
+  if (tajweed) {
+    // Every page shares one font; loaded once here, the pages find it ready.
+    await tester.runAsync(
+      () => loadFoundationPageResources(
+        MushafPageData.fromFoundation(_foundationPage(1)).foundation!,
+        _font,
+      ),
+    );
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        if (tajweed) ...[
+          selectedMushafIdentityProvider.overrideWithValue(
+            MushafIdentity.defaultEdition,
+          ),
+          mushafPageProvider.overrideWith(
+            (ref, page) async =>
+                MushafPageData.fromFoundation(_foundationPage(page)),
+          ),
+          tajweedRulesProvider.overrideWith(
+            (ref) async => TajweedReference.fromJson(tajweedRulesJson),
+          ),
+          tajweedPageProvider.overrideWith(
+            (ref, page) async => TajweedPage.fromJson({
+              ...tajweedPage604Json,
+              'page_number': page,
+            }, page),
+          ),
+        ],
         localDatabaseProvider.overrideWithValue(database),
         activeAccountScopeKeyProvider.overrideWith(
           (ref) => accountScopeKey(database.accountScope.current!),
@@ -371,10 +473,11 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
         ),
         planRepositoryProvider.overrideWithValue(plan),
         quranRepositoryProvider.overrideWithValue(quran),
-        mushafPageProvider.overrideWith((ref, page) async {
-          pageBuilds?.update(page, (count) => count + 1, ifAbsent: () => 1);
-          return _page(page);
-        }),
+        if (!tajweed)
+          mushafPageProvider.overrideWith((ref, page) async {
+            pageBuilds?.update(page, (count) => count + 1, ifAbsent: () => 1);
+            return _page(page);
+          }),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(surahs: <Surah>[], fromCache: true),
         ),
@@ -399,6 +502,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   );
   await tester.pump();
   await tester.pump();
+  if (tajweed) await _settleFoundation(tester);
   return (controller: controller, audio: audio, quran: quran);
 }
 
@@ -487,6 +591,8 @@ class _Quran implements QuranRepository {
   @override
   QuranRepository forMushaf(MushafIdentity identity) => this;
   @override
+  QuranRepository withFoundationVersion(String version) => this;
+  @override
   Future<AccountScopeSnapshot> captureAccount() => scope.capture();
   @override
   Future<ReadingPosition> position({
@@ -512,6 +618,8 @@ class _Quran implements QuranRepository {
   @override
   Future<File> cachedMushafPageAsset(MushafPageData page, MushafAsset asset) =>
       pendingImage.future;
+  @override
+  Future<File> foundationAsset(Uri uri, String version) => _font(uri, version);
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
