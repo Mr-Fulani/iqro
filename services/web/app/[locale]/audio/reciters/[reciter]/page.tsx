@@ -9,7 +9,8 @@ import {
   reciterName,
   reciterPath,
 } from "@/lib/audio-content";
-import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
+import { isLocale, localeTag, type Locale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import {
   getPublishedRecitationsForPerson,
   getPublishedReciter,

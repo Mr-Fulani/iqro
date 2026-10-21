@@ -28,7 +28,7 @@ import {
   storeLocalAyahAnnotation,
 } from "./sync-state";
 import { normalizeAyahHighlightColor } from "./ayah-annotations";
-import { Locale, MessageKey, translate } from "./i18n";
+import { Locale, MessageKey, Messages } from "./i18n";
 import { collectCursorPages } from "./cursor-pagination";
 
 // Backend max_page_size: audio catalogs 100, bookmarks 200.
@@ -1397,6 +1397,8 @@ export class ApiClient {
   private session: GuestBootstrapResponse | null = null;
   private refreshingPromise: Promise<string | null> | null = null;
   private locale: SupportedLocale = "ru";
+  // The current locale's strings, handed over by I18nProvider once they load.
+  private messages: Messages | null = null;
 
   constructor() {
     this.base = "";
@@ -1418,8 +1420,12 @@ export class ApiClient {
     return this.locale;
   }
 
+  public setMessages(messages: Messages): void {
+    this.messages = messages;
+  }
+
   private message(key: MessageKey): string {
-    return translate(this.locale, key);
+    return this.messages?.[key] ?? key;
   }
 
   public setSession(session: GuestBootstrapResponse | null) {

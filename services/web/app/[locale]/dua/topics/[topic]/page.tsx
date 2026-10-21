@@ -8,6 +8,7 @@ import { duaDisplayTitle } from "@/lib/dua-share";
 import { duaTopics, topicCategories, topicEntries, type DuaTopic } from "@/lib/dua-topics";
 import { getPublishedDuaCategoryData, getPublishedDuaInitialData } from "@/lib/public-content";
 import { createContentMetadata } from "@/lib/seo";
+import { translatorFor } from "@/lib/translate";
 
 export const revalidate = 3_600;
 
@@ -41,6 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
  */
 export default async function DuaThematicPage({ params }: { params: Promise<Params> }) {
   const { locale, topic } = resolve(await params);
+  const t = translatorFor(locale);
   const catalog = await getPublishedDuaInitialData(locale);
   const chapters = topicCategories(topic, catalog.categories)
     .sort((left, right) => left.source_number - right.source_number);
@@ -51,12 +53,13 @@ export default async function DuaThematicPage({ params }: { params: Promise<Para
       <div className="dua-page">
         <DuaTopBar
           locale={locale}
+          t={t}
           title={topic.title[locale]}
           subtitle={topic.description[locale]}
           backHref="/dua"
         />
         <div className="dua-chapter-list">
-          {chapters.map((chapter) => <DuaChapterRow key={chapter.id} chapter={chapter} locale={locale} />)}
+          {chapters.map((chapter) => <DuaChapterRow key={chapter.id} chapter={chapter} locale={locale} t={t} />)}
         </div>
       </div>
     );
@@ -74,7 +77,7 @@ export default async function DuaThematicPage({ params }: { params: Promise<Para
     : topic.description[locale];
   return (
     <div className="dua-page">
-      <DuaTopBar locale={locale} title={topic.title[locale]} backHref="/dua" />
+      <DuaTopBar locale={locale} t={t} title={topic.title[locale]} backHref="/dua" />
       <DuaChapterBanner title={banner} />
       <DuaFeed entries={entries} showPositions sideList />
     </div>

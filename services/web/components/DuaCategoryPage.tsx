@@ -2,7 +2,8 @@ import { DuaChapterBanner, DuaTopBar } from "@/components/DuaChrome";
 import { DuaFeed } from "@/components/DuaFeed";
 import { duaDisplayTitle } from "@/lib/dua-share";
 import { duaTopics, topicCategories } from "@/lib/dua-topics";
-import { translate, type Locale } from "@/lib/i18n";
+import { type Locale } from "@/lib/i18n";
+import { translate, translatorFor } from "@/lib/translate";
 import { getPublishedDuaInitialData, type PublishedDuaCategoryData } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { absoluteSiteUrl } from "@/lib/seo";
@@ -50,6 +51,7 @@ export async function DuaCategoryPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />
       <DuaTopBar
         locale={locale}
+        t={translatorFor(locale)}
         title={translate(locale, "dua.chapterNumber", { number: category.source_number })}
         subtitle={category.collection_title || category.collection}
         backHref={parent ? `/dua/topics/${parent.id}` : "/dua"}
