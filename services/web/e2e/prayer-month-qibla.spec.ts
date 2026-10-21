@@ -206,6 +206,26 @@ async function showMoscowQibla(page: Page, locale: keyof typeof moscowLabels = "
   await expect(page.getByTestId("prayer-qibla-arrow")).toHaveCount(1);
 }
 
+// Chrome 152+ exposes `requestPermission` too, yet still sends absolute orientation unasked.
+const emulateModernChrome = (page: Page) =>
+  page.addInitScript(() => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
+      configurable: true,
+      value: async () => "granted",
+    });
+  });
+
+// iOS Safari: motion access only from a tap, and no absolute orientation event.
+const emulateSafari = (page: Page, answer: "granted" | "denied") =>
+  page.addInitScript((result) => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
+      configurable: true,
+      value: async () => result,
+    });
+    delete (window as unknown as Record<string, unknown>).ondeviceorientationabsolute;
+    delete (Window.prototype as unknown as Record<string, unknown>).ondeviceorientationabsolute;
+  }, answer);
+
 const dialRotation = (page: Page) =>
   page
     .getByTestId("prayer-qibla-dial")
@@ -213,8 +233,11 @@ const dialRotation = (page: Page) =>
     .then((value) => Number(/^rotate\((-?[\d.e+-]+) 100 100\)$/.exec(value ?? "")?.[1]));
 
 test("the Qibla dial follows a live Android compass and lights up when the phone faces it", async ({ page }) => {
+  await emulateModernChrome(page);
   await mockPrayerApi(page);
   await showMoscowQibla(page);
+  // Chrome needs no tap even where it exposes requestPermission.
+  await expect(page.getByRole("button", { name: "Включить компас" })).toHaveCount(0);
   // The page moves magnetic headings to true north with the same model.
   const declination = magneticDeclination(MOSCOW.latitude, MOSCOW.longitude)!;
   const bearing = qiblaBearing(MOSCOW.latitude, MOSCOW.longitude)!;
@@ -250,12 +273,7 @@ test("the Qibla dial follows a live Android compass and lights up when the phone
 });
 
 test("on iPhone the compass starts from a tap and asks for calibration", async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
-      configurable: true,
-      value: async () => "granted",
-    });
-  });
+  await emulateSafari(page, "granted");
   await mockPrayerApi(page);
   await showMoscowQibla(page);
   const declination = magneticDeclination(MOSCOW.latitude, MOSCOW.longitude)!;
@@ -289,12 +307,7 @@ test("on iPhone the compass starts from a tap and asks for calibration", async (
 });
 
 test("a refused motion permission keeps the geographic bearing and says why", async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
-      configurable: true,
-      value: async () => "denied",
-    });
-  });
+  await emulateSafari(page, "denied");
   await mockPrayerApi(page);
   await showMoscowQibla(page, "en");
   await page.getByRole("button", { name: "Turn on the compass" }).click();

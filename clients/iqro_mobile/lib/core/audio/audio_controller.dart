@@ -1685,6 +1685,16 @@ class AudioController extends StateNotifier<IqroAudioState> {
     });
   }
 
+  /// Stops whichever standalone item [owner] started, if it is still the
+  /// current one.
+  Future<void> stopStandaloneOf(Object owner) {
+    final request = _standaloneRequest;
+    if (request == null || !identical(request.owner, owner)) {
+      return Future<void>.value();
+    }
+    return stopStandalone(request.mediaId, owner: owner);
+  }
+
   void _startStandalonePlayback(int generation, String mediaId) {
     if (!_ownsStandalone(generation, mediaId)) return;
     state = state.copyWith(

@@ -55,19 +55,32 @@ List<SalahMediaScene?> salahStepScenes(
 const salahSceneSpeeds = <double>[1, .75, .5];
 
 /// The lesson's 3D scene: it runs on the current step when the device can,
-/// and any failure leaves the stills for the rest of the visit.
+/// and any failure leaves the stills for the rest of the visit. Each step
+/// plays its pose once and holds the last frame; play then replays it.
+/// Mirrors nextSalahScenePlayback in services/web/lib/salah-3d.ts.
 class Salah3DController extends ChangeNotifier {
   bool _failed = false;
   bool _ready = false;
   bool _playing = true;
+  bool _ended = false;
   double _speed = 1;
-  int _resetCount = 0;
+  int _replayCount = 0;
 
   bool get failed => _failed;
   bool get ready => _ready;
+
+  /// Not paused; the pose may still have played to its end.
   bool get playing => _playing;
+
+  /// The pose has played once and holds its last frame.
+  bool get ended => _ended;
+
+  /// The pose is moving: neither paused nor played to its end.
+  bool get moving => _playing && !_ended;
   double get speed => _speed;
-  int get resetCount => _resetCount;
+
+  /// Grows whenever the current pose should play again from its start.
+  int get replayCount => _replayCount;
 
   void markReady() {
     if (_ready || _failed) return;
@@ -82,14 +95,35 @@ class Salah3DController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The next step loads its own scene.
-  void stepChanged() {
-    if (!_ready) return;
-    _ready = false;
+  void markEnded() {
+    if (_ended) return;
+    _ended = true;
     notifyListeners();
   }
 
+  /// The next step loads its own scene and plays its pose once, whether the
+  /// last one was paused or had ended.
+  void stepChanged() {
+    if (!_ready && _playing && !_ended) return;
+    _ready = false;
+    _playing = true;
+    _ended = false;
+    notifyListeners();
+  }
+
+  void replay() {
+    _playing = true;
+    _ended = false;
+    _replayCount++;
+    notifyListeners();
+  }
+
+  /// Play after the end is a replay.
   void togglePlaying() {
+    if (_ended) {
+      replay();
+      return;
+    }
     _playing = !_playing;
     notifyListeners();
   }
@@ -97,11 +131,6 @@ class Salah3DController extends ChangeNotifier {
   void cycleSpeed() {
     final next = salahSceneSpeeds.indexOf(_speed) + 1;
     _speed = salahSceneSpeeds[next % salahSceneSpeeds.length];
-    notifyListeners();
-  }
-
-  void resetView() {
-    _resetCount++;
     notifyListeners();
   }
 }
@@ -115,8 +144,9 @@ class Salah3DViewConfig {
     required this.running,
     required this.foreground,
     required this.speed,
-    required this.resetCount,
+    required this.replayCount,
     required this.onReady,
+    required this.onEnded,
     required this.onError,
   });
 
@@ -133,8 +163,13 @@ class Salah3DViewConfig {
   /// view follows it without waiting for a rebuild.
   final ValueListenable<bool> foreground;
   final double speed;
-  final int resetCount;
+
+  /// Changes when the pose should play again from its start.
+  final int replayCount;
   final VoidCallback onReady;
+
+  /// The pose has played once and holds its last frame.
+  final VoidCallback onEnded;
   final ValueChanged<String> onError;
 }
 
@@ -226,7 +261,7 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
     }
     _sync();
     if (old.speed != _config.speed) _run('salah.setSpeed(${_config.speed})');
-    if (old.resetCount != _config.resetCount) _run('salah.resetCamera()');
+    if (old.replayCount != _config.replayCount) _run('salah.replay()');
     if (old.step != _config.step) {
       _run('salah.show(${jsonEncode(_config.step)})');
     }
@@ -265,6 +300,8 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
         _shown = true;
         _sync();
         _config.onReady();
+      case 'ENDED':
+        _config.onEnded();
       case 'ERROR':
         _timeout?.cancel();
         _config.onError('${decoded['code']}');

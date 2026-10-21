@@ -163,7 +163,7 @@ export const MESSAGES = {
   "salah.play3d": message("Воспроизвести движение", "Play the movement", "تشغيل الحركة", "Hareketi oynat"),
   "salah.pause3d": message("Остановить движение", "Pause the movement", "إيقاف الحركة مؤقتًا", "Hareketi duraklat"),
   "salah.speed3d": message("Скорость движения: {speed}", "Movement speed: {speed}", "سرعة الحركة: {speed}", "Hareket hızı: {speed}"),
-  "salah.resetView3d": message("Вернуть исходный ракурс", "Reset the view", "إعادة زاوية العرض", "Görünümü sıfırla"),
+  "salah.replay3d": message("Повторить", "Replay", "إعادة الحركة", "Tekrar oynat"),
   "dua.title": message("Ду’а", "Dua", "الدعاء", "Dua"),
   "dua.description": message("Ду’а и азкары из проверяемых изданий: арабский оригинал, смысл, опубликованная транслитерация и ссылки на источники.", "Duas and adhkar from traceable editions: Arabic text, meaning, published transliteration, and source references.", "أدعية وأذكار من طبعات موثقة المصدر، مع النص العربي والمعنى والإحالات إلى المصادر.", "Kaynağı izlenebilir baskılardan dua ve zikirler: Arapça metin, anlam, yayımlanmış okunuş ve kaynaklar."),
   "dua.subtitle": message("Ду’а и азкары из проверяемых источников", "Duas and adhkar from traceable sources", "أدعية وأذكار من مصادر قابلة للتتبع", "Kaynağı izlenebilir dua ve zikirler"),

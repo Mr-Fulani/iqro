@@ -23,6 +23,7 @@ class SalahFormulaCard extends ConsumerStatefulWidget {
     required this.formula,
     required this.display,
     required this.audioTitle,
+    required this.audioOwner,
     super.key,
   });
 
@@ -31,6 +32,10 @@ class SalahFormulaCard extends ConsumerStatefulWidget {
 
   /// Title of the recording on the lock screen and in the mini player.
   final String audioTitle;
+
+  /// Owns the recording in the shared player: the lesson, which stops it
+  /// when the step is left.
+  final Object audioOwner;
 
   @override
   ConsumerState<SalahFormulaCard> createState() => _SalahFormulaCardState();
@@ -128,6 +133,7 @@ class _SalahFormulaCardState extends ConsumerState<SalahFormulaCard> {
               formula: formula,
               audio: audio,
               title: widget.audioTitle,
+              owner: widget.audioOwner,
             ),
           ],
         ],
@@ -145,19 +151,20 @@ class _FormulaAudioBar extends ConsumerStatefulWidget {
     required this.formula,
     required this.audio,
     required this.title,
+    required this.owner,
   });
 
   final SalahFormula formula;
   final SalahFormulaAudio audio;
   final String title;
+  final Object owner;
 
   @override
   ConsumerState<_FormulaAudioBar> createState() => _FormulaAudioBarState();
 }
 
 class _FormulaAudioBarState extends ConsumerState<_FormulaAudioBar> {
-  // Identifies this card's requests in the shared player.
-  final Object _owner = Object();
+  // This card started the recording that sounds.
   var _owned = false;
   var _failed = false;
   var _stopping = false;
@@ -244,7 +251,7 @@ class _FormulaAudioBarState extends ConsumerState<_FormulaAudioBar> {
                             .setStandaloneSpeed(
                               id,
                               nextPlaybackSpeed(view.speed),
-                              owner: _owner,
+                              owner: widget.owner,
                             ),
                       )
                     : null,
@@ -267,7 +274,7 @@ class _FormulaAudioBarState extends ConsumerState<_FormulaAudioBar> {
     final album = 'IQRO · ${context.l10n.salahTitle}';
     try {
       if (!reload && _owned && current?.mediaItem.id == id) {
-        await controller.toggleStandalone(id, owner: _owner);
+        await controller.toggleStandalone(id, owner: widget.owner);
         return;
       }
       _owned = true;
@@ -281,15 +288,15 @@ class _FormulaAudioBarState extends ConsumerState<_FormulaAudioBar> {
         contentType: 'salah',
         extras: <String, dynamic>{'formula': widget.formula.id},
         autoplay: startMs <= 0,
-        owner: _owner,
+        owner: widget.owner,
       );
       if (startMs > 0) {
         await controller.seekStandalone(
           id,
           Duration(milliseconds: startMs),
-          owner: _owner,
+          owner: widget.owner,
         );
-        await controller.toggleStandalone(id, owner: _owner);
+        await controller.toggleStandalone(id, owner: widget.owner);
       }
     } on Object {
       if (mounted) setState(() => _failed = true);
@@ -302,11 +309,11 @@ class _FormulaAudioBarState extends ConsumerState<_FormulaAudioBar> {
     _stopping = true;
     try {
       final controller = ref.read(audioControllerProvider.notifier);
-      await controller.toggleStandalone(_id, owner: _owner);
+      await controller.toggleStandalone(_id, owner: widget.owner);
       await controller.seekStandalone(
         _id,
         Duration(milliseconds: widget.audio.startMs ?? 0),
-        owner: _owner,
+        owner: widget.owner,
       );
     } finally {
       _stopping = false;

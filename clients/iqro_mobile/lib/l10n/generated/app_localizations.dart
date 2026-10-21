@@ -3666,11 +3666,11 @@ abstract class AppLocalizations {
   /// **'Movement speed: {speed}'**
   String salah3dSpeed(String speed);
 
-  /// No description provided for @salah3dResetView.
+  /// No description provided for @salah3dReplay.
   ///
   /// In en, this message translates to:
-  /// **'Reset the view'**
-  String get salah3dResetView;
+  /// **'Replay'**
+  String get salah3dReplay;
 
   /// No description provided for @salahOfflineTitle.
   ///

@@ -117,10 +117,6 @@ void main() {
           findsOneWidget,
         );
         expect(fake.last.speed, .75);
-        final resets = fake.last.resetCount;
-        await tester.tap(find.byTooltip('Вернуть исходный ракурс'));
-        await tester.pump();
-        expect(fake.last.resetCount, resets + 1);
 
         await _tapNext(tester);
         expect(find.text('Шаг 2 из 5'), findsOneWidget);
@@ -142,6 +138,59 @@ void main() {
         semantics.dispose();
       },
     );
+
+    testWidgets('a pose plays once, «Повторить» plays it again and the next '
+        'step plays its own', (tester) async {
+      final fake = _Fake3D();
+      await _pump(tester, location: '/salah/lesson/fajr', view3d: fake.build);
+      final replay = find.byTooltip('Повторить');
+      fake.last.onReady();
+      await tester.pump();
+      expect(replay, findsNothing);
+      expect(find.byTooltip('Остановить движение'), findsOneWidget);
+
+      // The scene says the pose has played: it holds, and the pause button
+      // turns into «Повторить».
+      fake.last.onEnded();
+      await tester.pump();
+      expect(replay, findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('salah-3d-play')),
+          matching: find.byIcon(Icons.replay),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Остановить движение'), findsNothing);
+      expect(find.byTooltip('Воспроизвести движение'), findsNothing);
+      expect(fake.last.running, isTrue);
+      final replays = fake.last.replayCount;
+
+      await tester.tap(replay);
+      await tester.pump();
+      expect(fake.last.replayCount, replays + 1);
+      expect(replay, findsNothing);
+      expect(find.byTooltip('Остановить движение'), findsOneWidget);
+
+      // Paused or ended, the next step plays its own pose once.
+      await tester.tap(find.byTooltip('Остановить движение'));
+      await tester.pump();
+      expect(fake.last.running, isFalse);
+      await _tapNext(tester);
+      expect(fake.last.step, 'qiyam');
+      expect(fake.last.running, isTrue);
+      fake.last.onReady();
+      fake.last.onEnded();
+      await tester.pump();
+      expect(replay, findsOneWidget);
+      await _tapNext(tester);
+      expect(fake.last.step, 'ruku');
+      expect(fake.last.running, isTrue);
+      fake.last.onReady();
+      await tester.pump();
+      expect(replay, findsNothing);
+      expect(find.byTooltip('Остановить движение'), findsOneWidget);
+    });
 
     testWidgets('a failure leaves the stills for the visit', (tester) async {
       final fake = _Fake3D();
@@ -202,6 +251,9 @@ void main() {
       fake.last.onReady();
       await tester.pump();
       expect(find.byTooltip('إيقاف الحركة مؤقتًا'), findsOneWidget);
+      fake.last.onEnded();
+      await tester.pump();
+      expect(find.byTooltip('إعادة الحركة'), findsOneWidget);
     });
   });
 
@@ -426,6 +478,91 @@ void main() {
     final standalone = harness.audio.state.standalone!;
     expect(standalone.mediaItem.id, 'salah:takbir');
     expect(standalone.mediaItem.extras?['content_type'], 'salah');
+  });
+
+  group('a step\'s recording', () {
+    final play = find.byKey(const ValueKey('salah-play-takbir'));
+
+    Future<void> listen(WidgetTester tester) async {
+      await tester.ensureVisible(play);
+      await tester.pumpAndSettle();
+      await tester.tap(play);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('stops when the step is left and starts over on return', (
+      tester,
+    ) async {
+      final harness = await _pump(tester, location: '/salah/lesson/fajr');
+      await listen(tester);
+      expect(harness.audio.state.standalone?.mediaItem.id, 'salah:takbir');
+
+      // The next step, by the button or a swipe: the shared player and its
+      // mini player let the recording go.
+      await _tapNext(tester);
+      expect(harness.audio.state.standalone, isNull);
+      await tester.tap(find.byKey(const ValueKey('salah-back')));
+      await tester.pumpAndSettle();
+      await listen(tester);
+      // Loaded anew: it plays from its start.
+      expect(harness.engine.setAudioSourceCalls, 2);
+      expect(harness.audio.state.standalone?.mediaItem.id, 'salah:takbir');
+      await tester.drag(
+        find.byKey(const ValueKey('salah-steps')),
+        const Offset(-600, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Шаг 2 из 5'), findsOneWidget);
+      expect(harness.audio.state.standalone, isNull);
+    });
+
+    testWidgets('stops when the app goes to the background', (tester) async {
+      final harness = await _pump(tester, location: '/salah/lesson/fajr');
+      await listen(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpAndSettle();
+      expect(harness.audio.state.standalone, isNotNull);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pumpAndSettle();
+      expect(harness.audio.state.standalone, isNull);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('stops when the lesson is left or covered', (tester) async {
+      final harness = await _pump(tester, location: '/salah/lesson/fajr');
+      final router = GoRouter.of(
+        tester.element(find.byType(SalahLessonScreen)),
+      );
+      await listen(tester);
+      router.push('/salah');
+      await tester.pumpAndSettle();
+      expect(harness.audio.state.standalone, isNull);
+      router.pop();
+      await tester.pumpAndSettle();
+
+      await listen(tester);
+      expect(harness.audio.state.standalone, isNotNull);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(SalahLessonScreen), findsNothing);
+      expect(harness.audio.state.standalone, isNull);
+    });
+
+    testWidgets('leaves other recordings alone', (tester) async {
+      final harness = await _pump(tester, location: '/salah/lesson/fajr');
+      final owner = Object();
+      await harness.audio.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.iqro.forum/dua/1.mp3',
+        title: 'Dua',
+        contentType: 'dua',
+        owner: owner,
+      );
+      await _tapNext(tester);
+      expect(harness.audio.state.standalone?.mediaItem.id, 'dua:1');
+    });
   });
 
   testWidgets('course home lists sections and opens the next lesson', (

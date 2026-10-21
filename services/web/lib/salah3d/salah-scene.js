@@ -3,10 +3,11 @@
    Kept close to the original so a new drop from the author can be compared line by line;
    the poses are the author's draft and are reviewed together with the course.
    Technical changes: module import/export instead of globals, SEGMENTS + setStep (one
-   course step's movement in a loop), rendering while the paused view is turned, the
-   pageScroll option (the page keeps vertical swipes and the wheel) and the WebGL context
-   released on dispose. The app's copy (clients/iqro_mobile/assets/salah3d)
-   is generated from this file by scripts/salah3d-app-assets.mjs. */
+   course step's movement, played once to its last frame; onEnd, replay), rendering while
+   the paused view is turned, the pageScroll option (the page keeps vertical swipes and
+   the wheel) and the WebGL context released on dispose. The app's copy
+   (clients/iqro_mobile/assets/salah3d) is generated from this file by
+   scripts/salah3d-app-assets.mjs. */
 /* eslint-disable @typescript-eslint/no-this-alias, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions -- author's code, kept as delivered */
 import * as THREE from 'three';
 // salah3d:body-start
@@ -1044,8 +1045,8 @@ import * as THREE from 'three';
     ['tash', 0.5, 1.5, 7]
   ];
   // One course step = the movement into one STEPS pose and its hold: [first, last] key of
-  // MAIN, plus the key shown when paused if it is not the last. Played in a loop with
-  // LEAD_IN seconds of the previous pose before it.
+  // MAIN, plus the key shown when paused if it is not the last. Played once, with LEAD_IN
+  // seconds of the previous pose before it, and held on its last frame.
   var SEGMENTS = {
     qiyam: [2, 2], takbir: [1, 1], ruku: [3, 4], itidal: [5, 6], sujud: [7, 10],
     jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23, 22], salam: [24, 27, 24]
@@ -1366,9 +1367,10 @@ import * as THREE from 'three';
     if (frozen) clock.t = opts.frozenTime;
 
     // [start, end] seconds of the course step being shown, or null for the whole cycle
-    var range = null;
+    var range = null, ended = false;
     function setStep(id) {
       var seg = id && tl.keys.length === MAIN.length ? SEGMENTS[id] : null;
+      ended = false;
       if (!seg) { range = null; kick(); return; }
       var first = tl.keys[seg[0]], prev = tl.keys[seg[0] - 1], last = tl.keys[seg[1]];
       range = [prev ? Math.max(prev.t1, first.t0 - LEAD_IN) : first.t0, last.t2];
@@ -1388,7 +1390,11 @@ import * as THREE from 'three';
       var dt = clock.last ? Math.min(0.05, (now - clock.last) / 1000) : 0;
       clock.last = now;
       if (!frozen) clock.t += dt * (opts.speed || 1);
-      if (range && clock.t >= range[1]) clock.t = range[0];
+      if (range && !frozen && clock.t >= range[1]) {
+        // the step's last frame: at range[1] itself the next key (and step) begins
+        clock.t = range[1] - 1e-3; frozen = ended = true;
+        if (opts.onEnd) try { opts.onEnd(); } catch (e) { }
+      }
       renderOnce();
       if (visible && !document.hidden && (!frozen || settling())) raf = requestAnimationFrame(frame);
     }
@@ -1419,7 +1425,9 @@ import * as THREE from 'three';
       duration: tl.dur,
       setTime: function (t) { clock.t = t; frozen = true; applyTrack(true); renderOnce(); applyTrack(true); renderOnce(); },
       setStep: setStep,
-      play: function () { frozen = false; kick(); },
+      play: function () { if (!ended) { frozen = false; kick(); } }, // an ended step waits for replay()
+      // from the start; a turned camera glides back
+      replay: function () { clock.t = range ? range[0] : 0; frozen = ended = false; manualUntil = 0; kick(); },
       pause: function () { frozen = true; },
       setSpeed: function (v) { opts.speed = +v || 1; },
       resetCamera: function () { onDbl(); },
