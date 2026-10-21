@@ -1041,7 +1041,7 @@
   // LEAD_IN seconds of the previous pose before it.
   var SEGMENTS = {
     qiyam: [2, 2], takbir: [1, 1], ruku: [3, 4], itidal: [5, 6], sujud: [7, 10],
-    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23], salam: [24, 27, 24]
+    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23, 22], salam: [24, 27, 24]
   };
   var LEAD_IN = 0.6;
 

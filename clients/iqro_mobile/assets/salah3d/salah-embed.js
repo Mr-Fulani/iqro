@@ -4,8 +4,9 @@
      {"type":"READY","version":"0.1.0"}     the first frame of the step is drawn
      {"type":"STEP_CHANGED","stepIndex":4,"stepId":"sujud"}
      {"type":"ERROR","code":"NO_WEBGL" | "SCRIPTS_NOT_LOADED" | "MOUNT_FAILED" | "CONTEXT_LOST"}
-   App -> page: salah.show(stepId, speed), salah.play(), salah.pause(), salah.setSpeed(0.5|0.75|1),
-   salah.resetCamera(), salah.dispose(). */
+   App -> page: salah.show(pose, speed, view), salah.play(), salah.pause(), salah.setSpeed(0.5|0.75|1),
+   salah.resetCamera(), salah.dispose(). The full view loops the pose's movement; the hand and
+   back views play their own short cycle. */
 (function () {
   'use strict';
   function send(msg) {
@@ -23,11 +24,12 @@
   canvas.addEventListener('webglcontextlost', function () { if (scene) send({ type: 'ERROR', code: 'CONTEXT_LOST' }); });
   function call(name, value) { if (scene) scene[name](value); }
   window.salah = {
-    show: function (step, speed) {
-      if (scene) { scene.setStep(step); return; }
+    show: function (step, speed, view) {
+      view = view || 'full';
+      if (scene) { if (view === 'full') scene.setStep(step); return; }
       try {
         scene = window.SalahScene.mount(canvas, {
-          view: 'full', step: step, speed: speed || 1,
+          view: view, step: view === 'full' ? step : null, speed: speed || 1,
           onStep: function (i, s) { send({ type: 'STEP_CHANGED', stepIndex: i, stepId: s ? s.id : null }); }
         });
       } catch (e) { send({ type: 'ERROR', code: 'MOUNT_FAILED' }); return; }

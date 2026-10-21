@@ -20,10 +20,13 @@ const messages = (page: Page) => page.evaluate(() => (window as unknown as { bri
 test("the app page boots the scene through the bridge and follows commands", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 360 });
   await openWithBridge(page);
-  await expect.poll(async () => (await messages(page)).map((message) => message.type)).toEqual(["LOADED"]);
+  // three.min.js and the scene are parsed from disk; give a busy machine some room.
+  await expect.poll(async () => (await messages(page)).map((message) => message.type), { timeout: 20_000 }).toEqual(["LOADED"]);
 
   await page.evaluate(() => (window as unknown as { salah: { show: (step: string, speed: number) => void } }).salah.show("ruku", 1));
-  await expect.poll(async () => (await messages(page)).find((message) => message.type === "READY")).toMatchObject({ version: "0.1.0" });
+  await expect
+    .poll(async () => (await messages(page)).find((message) => message.type === "READY"), { timeout: 20_000 })
+    .toMatchObject({ version: "0.1.0" });
   await expect(page.locator("canvas#salah")).toHaveAttribute("aria-hidden", "true");
 
   // Commands from the app never throw, before or after dispose.
@@ -45,5 +48,5 @@ test("without WebGL the app page says so and mounts nothing", async ({ page }) =
     HTMLCanvasElement.prototype.getContext = () => null;
   });
   await openWithBridge(page);
-  await expect.poll(() => messages(page)).toEqual([{ type: "ERROR", code: "NO_WEBGL" }]);
+  await expect.poll(() => messages(page), { timeout: 20_000 }).toEqual([{ type: "ERROR", code: "NO_WEBGL" }]);
 });

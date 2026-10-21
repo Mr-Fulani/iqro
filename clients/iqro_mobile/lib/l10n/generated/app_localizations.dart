@@ -3606,35 +3606,11 @@ abstract class AppLocalizations {
   /// **'Sunnah'**
   String get salahRulingSunnah;
 
-  /// No description provided for @salahVisual.
-  ///
-  /// In en, this message translates to:
-  /// **'Step illustration'**
-  String get salahVisual;
-
-  /// No description provided for @salahVisualPicture.
-  ///
-  /// In en, this message translates to:
-  /// **'Picture'**
-  String get salahVisualPicture;
-
-  /// No description provided for @salahVisual3d.
-  ///
-  /// In en, this message translates to:
-  /// **'3D'**
-  String get salahVisual3d;
-
   /// No description provided for @salah3dSchematic.
   ///
   /// In en, this message translates to:
   /// **'Schematic 3D illustration'**
   String get salah3dSchematic;
-
-  /// No description provided for @salah3dLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading 3D…'**
-  String get salah3dLoading;
 
   /// No description provided for @salah3dPlay.
   ///
@@ -3659,12 +3635,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset the view'**
   String get salah3dResetView;
-
-  /// No description provided for @salah3dUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'The 3D illustration is not available on this device, so the picture is shown.'**
-  String get salah3dUnavailable;
 
   /// No description provided for @salahOfflineTitle.
   ///

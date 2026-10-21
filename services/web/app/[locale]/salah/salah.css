@@ -217,7 +217,7 @@
   background: var(--bg-subtle);
 }
 
-/* The picture stays in the flow; the 3D canvas covers it once drawn. */
+/* The still stays in the flow; the running 3D scene covers it once drawn. */
 .salah-step-visual {
   display: grid;
   gap: 8px;
@@ -244,45 +244,6 @@
 
 .salah-3d-canvas:active {
   cursor: grabbing;
-}
-
-/* Pictures and the scene are not mirrored in RTL: the switch keeps to their empty top-right corner. */
-.salah-visual-switch {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1;
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  box-shadow: var(--shadow-sm);
-}
-
-.salah-visual-switch button {
-  min-width: 44px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.salah-visual-switch button[aria-pressed="true"] {
-  color: var(--text-inverse);
-  background: var(--primary);
-}
-
-.salah-visual-switch button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-gold) 46%, transparent);
-  outline-offset: 1px;
 }
 
 .salah-3d-caption {
@@ -312,12 +273,6 @@
   padding: 0;
   font-size: 18px;
   line-height: 1;
-}
-
-.salah-3d-notice {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
 }
 
 .salah-step-body {

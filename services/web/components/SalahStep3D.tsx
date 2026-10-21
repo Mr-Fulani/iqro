@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { nextSalahSceneSpeed, type SalahSceneSpeed, type SalahSceneStepId } from "../lib/salah-3d";
+import { nextSalahSceneSpeed, type SalahSceneSpeed, type SalahStepScene } from "../lib/salah-3d";
 import type { Salah3DStageProps } from "./Salah3DStage";
 
 function Salah3DLoadFailed({ onError }: Salah3DStageProps) {
@@ -11,8 +11,7 @@ function Salah3DLoadFailed({ onError }: Salah3DStageProps) {
   return null;
 }
 
-// three.js reaches the browser only after the visitor picks «3D»; a failed chunk
-// leaves the picture in place.
+// three.js stays out of the page load; a failed chunk leaves the still in place.
 const Salah3DStage = dynamic(
   () => import("./Salah3DStage").catch(() => ({ default: Salah3DLoadFailed })),
   { ssr: false },
@@ -29,18 +28,16 @@ function hasWebgl(): boolean {
   }
 }
 
+// The first sign of a visitor at the page starts the scene: the page itself loads light.
+const ENGAGE_EVENTS = ["pointerdown", "pointermove", "keydown", "touchstart", "wheel", "scroll"] as const;
+
 export type Salah3D = {
-  /** The current step offers «Picture / 3D». */
-  offered: boolean;
-  /** The current step shows the 3D scene instead of its picture. */
+  /** The current step shows the running scene over its still. */
   shown: boolean;
   ready: boolean;
   playing: boolean;
   speed: SalahSceneSpeed;
-  /** 3D has just failed on this step: the picture stays. */
-  notice: boolean;
   slot: (element: HTMLDivElement | null) => void;
-  choose: (threeD: boolean) => void;
   togglePlaying: () => void;
   cycleSpeed: () => void;
   resetView: () => void;
@@ -49,19 +46,17 @@ export type Salah3D = {
 };
 
 /**
- * The schematic 3D scene as an addition to the course pictures: off until chosen,
- * offered only with WebGL and without reduced motion, and the choice lasts while the
- * lesson stays open. Any failure brings the picture back for the rest of the visit.
+ * The schematic 3D scene in place of the pose stills: it starts once the visitor acts on the
+ * page, needs WebGL and no reduced motion, and any failure leaves the stills for the visit.
  */
-export function useSalah3D(sceneStep: SalahSceneStepId | null, stepSlug: string): Salah3D {
+export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolean): Salah3D {
   const [capable, setCapable] = useState(false);
+  const [engaged, setEngaged] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [chosen, setChosen] = useState(false);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<SalahSceneSpeed>(1);
   const [resetKey, setResetKey] = useState(0);
-  const [notice, setNotice] = useState(false);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -72,41 +67,43 @@ export function useSalah3D(sceneStep: SalahSceneStepId | null, stepSlug: string)
     return () => reduced.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => setNotice(false), [stepSlug]);
+  const wanted = capable && lessonHasScenes && !failed;
+  useEffect(() => {
+    if (!wanted || engaged) return;
+    const engage = () => {
+      if (hasWebgl()) setEngaged(true);
+      else setFailed(true);
+    };
+    for (const name of ENGAGE_EVENTS) window.addEventListener(name, engage, { once: true, passive: true });
+    return () => {
+      for (const name of ENGAGE_EVENTS) window.removeEventListener(name, engage);
+    };
+  }, [engaged, wanted]);
 
   const fail = useCallback(() => {
     setFailed(true);
-    setNotice(true);
     setReady(false);
   }, []);
   const markReady = useCallback(() => setReady(true), []);
 
-  const active = chosen && capable && !failed;
-  const choose = (threeD: boolean) => {
-    if (threeD && !hasWebgl()) {
-      fail();
-      return;
-    }
-    setChosen(threeD);
-    if (!threeD) setReady(false);
-  };
-
+  const active = wanted && engaged;
+  const view = scene?.view ?? "full";
   return {
-    offered: capable && !failed && sceneStep !== null,
-    shown: active && sceneStep !== null,
+    shown: active && scene !== null,
     ready,
     playing,
     speed,
-    notice,
     slot: setSlot,
-    choose,
     togglePlaying: () => setPlaying((value) => !value),
     cycleSpeed: () => setSpeed(nextSalahSceneSpeed),
     resetView: () => setResetKey((value) => value + 1),
     stage: active ? (
       <Salah3DStage
+        // A view is chosen when the scene mounts.
+        key={view}
         slot={slot}
-        step={sceneStep}
+        view={view}
+        step={scene && scene.view === "full" ? scene.pose : null}
         playing={playing}
         speed={speed}
         resetKey={resetKey}

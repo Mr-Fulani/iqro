@@ -1955,19 +1955,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get salahRulingSunnah => 'Sünnet';
 
   @override
-  String get salahVisual => 'Adım çizimi';
-
-  @override
-  String get salahVisualPicture => 'Resim';
-
-  @override
-  String get salahVisual3d => '3D';
-
-  @override
   String get salah3dSchematic => 'Şematik 3D çizim';
-
-  @override
-  String get salah3dLoading => '3D yükleniyor…';
 
   @override
   String get salah3dPlay => 'Hareketi oynat';
@@ -1982,10 +1970,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get salah3dResetView => 'Görünümü sıfırla';
-
-  @override
-  String get salah3dUnavailable =>
-      '3D çizim bu cihazda kullanılamıyor; resim gösteriliyor.';
 
   @override
   String get salahOfflineTitle => 'Çevrimdışı görseller';

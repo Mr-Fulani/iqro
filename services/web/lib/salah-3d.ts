@@ -1,39 +1,44 @@
-// Which course steps get the owner's schematic 3D scene (lib/salah3d, docs/salah/salah-3d.md)
-// as an alternative to their picture. The app mirrors this in salah_3d.dart.
+// Which course steps show the owner's schematic 3D scene (lib/salah3d, docs/salah/salah-3d.md):
+// those whose illustration is a still of a scene pose (`media.scene`). The app mirrors this
+// in salah_3d.dart.
 
-import type { SalahStep } from "./salah.ts";
+import type { SalahMedia, SalahSceneView, SalahStep } from "./salah.ts";
 import type { SalahSceneStepId } from "./salah3d/salah-scene.js";
 
 export type { SalahSceneStepId };
 
-/** Course `position` → the scene pose that shows it. */
-export const SALAH_SCENE_BY_POSITION: Readonly<Record<string, SalahSceneStepId>> = {
-  qiyam: "qiyam",
-  takbir: "takbir",
-  ruku: "ruku",
-  itidal: "itidal",
-  sujud: "sujud",
-  jalsa: "jalsa",
-  tashahhud: "tashahhud",
-  taslim: "salam",
-};
+/** The poses this build's scene can show; a newer course may name others (they stay pictures). */
+export const SALAH_SCENE_POSES: readonly SalahSceneStepId[] = [
+  "qiyam",
+  "takbir",
+  "ruku",
+  "itidal",
+  "sujud",
+  "jalsa",
+  "sujud2",
+  "tashahhud",
+  "salam",
+];
 
-/**
- * The scene step for each course step, or null where the scene has no such pose
- * (qunut, tawarruk, wudu) or the step has no picture to switch from.
- */
-export function salahSceneSteps(steps: readonly SalahStep[]): (SalahSceneStepId | null)[] {
-  let sitting: string | undefined;
+export type SalahStepScene = { pose: SalahSceneStepId; view: SalahSceneView };
+
+function sceneOf(step: SalahStep | undefined, media: Readonly<Record<string, SalahMedia>>) {
+  return step?.media ? media[step.media]?.scene : undefined;
+}
+
+/** The scene of each step, or null where its picture is all there is. */
+export function salahStepScenes(
+  steps: readonly SalahStep[],
+  media: Readonly<Record<string, SalahMedia>>,
+): (SalahStepScene | null)[] {
   return steps.map((step, index) => {
-    const position = step.position;
-    if (position === "tashahhud" || position === "tawarruk") sitting = position;
-    if (!step.media || !position || !Object.hasOwn(SALAH_SCENE_BY_POSITION, position)) return null;
-    const scene = SALAH_SCENE_BY_POSITION[position]!;
-    // The second prostration comes from the sitting between the two.
-    if (scene === "sujud" && steps[index - 1]?.position === "jalsa") return "sujud2";
-    // The scene greets from iftirash; after a tawarruk sitting its pose would be wrong.
-    if (scene === "salam" && sitting === "tawarruk") return null;
-    return scene;
+    const scene = sceneOf(step, media);
+    if (!scene || !SALAH_SCENE_POSES.includes(scene.pose as SalahSceneStepId)) return null;
+    // One picture serves both prostrations; the second rises from the sitting between them.
+    if (scene.pose === "sujud" && scene.view === "full" && sceneOf(steps[index - 1], media)?.pose === "jalsa") {
+      return { pose: "sujud2", view: "full" };
+    }
+    return { pose: scene.pose as SalahSceneStepId, view: scene.view };
   });
 }
 

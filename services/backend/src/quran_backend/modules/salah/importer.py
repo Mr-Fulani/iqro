@@ -128,7 +128,7 @@ def _upload_media(
 
 
 def _media_documents(version: SalahCourseVersion, language: str) -> dict[str, dict[str, Any]]:
-    alts = {asset["key"]: asset.get("alt", {}) for asset in version.snapshot.get("media", [])}
+    sources = {asset["key"]: asset for asset in version.snapshot.get("media", [])}
     media: dict[str, dict[str, Any]] = {}
     for asset in version.media.all():
         entry: dict[str, Any] = {
@@ -139,9 +139,13 @@ def _media_documents(version: SalahCourseVersion, language: str) -> dict[str, di
         if asset.width and asset.height:
             entry["width"] = asset.width
             entry["height"] = asset.height
-        alt = alts.get(asset.key, {}).get(language)
+        source = sources.get(asset.key, {})
+        alt = source.get("alt", {}).get(language)
         if alt:
             entry["alt"] = alt
+        if source.get("scene"):
+            # The picture is a still of this 3D pose; older clients just show the picture.
+            entry["scene"] = dict(source["scene"])
         media[asset.key] = entry
     return media
 

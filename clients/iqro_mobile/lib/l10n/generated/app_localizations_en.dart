@@ -1992,19 +1992,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salahRulingSunnah => 'Sunnah';
 
   @override
-  String get salahVisual => 'Step illustration';
-
-  @override
-  String get salahVisualPicture => 'Picture';
-
-  @override
-  String get salahVisual3d => '3D';
-
-  @override
   String get salah3dSchematic => 'Schematic 3D illustration';
-
-  @override
-  String get salah3dLoading => 'Loading 3D…';
 
   @override
   String get salah3dPlay => 'Play the movement';
@@ -2019,10 +2007,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get salah3dResetView => 'Reset the view';
-
-  @override
-  String get salah3dUnavailable =>
-      'The 3D illustration is not available on this device, so the picture is shown.';
 
   @override
   String get salahOfflineTitle => 'Pictures offline';

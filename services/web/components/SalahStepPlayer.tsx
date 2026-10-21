@@ -23,7 +23,7 @@ import {
   stepSlugFromLocation,
   writeSalahProgress,
 } from "../lib/salah";
-import { salahSceneSteps } from "../lib/salah-3d";
+import { salahStepScenes } from "../lib/salah-3d";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
 
 type Mode = "learn" | "practice";
@@ -117,40 +117,34 @@ function StepImage({ media, eager }: { media: SalahMedia; eager: boolean }) {
   );
 }
 
-/** The step's picture; on the current step also «Picture / 3D» and the 3D tools. */
+/**
+ * The step's picture. A still of the 3D scene says it is schematic and, once the scene
+ * runs on the current step, carries it over the still with its tools.
+ */
 function StepVisual({
   media,
   eager,
+  still,
   three,
   slot,
 }: {
   media: SalahMedia;
   eager: boolean;
+  still: boolean;
   three: Omit<Salah3D, "slot" | "stage"> | null;
   slot?: Salah3D["slot"];
 }) {
   const { formatNumber, t } = useI18n();
-  const shown = three?.shown ?? false;
   return (
     <figure className="salah-step-visual">
       <div className="salah-step-frame">
         <StepImage media={media} eager={eager} />
         {three?.shown ? <div className="salah-3d-slot" ref={slot} data-testid="salah-3d" /> : null}
-        {three?.offered ? (
-          <div className="salah-visual-switch" role="group" aria-label={t("salah.visual")}>
-            <button type="button" aria-pressed={!shown} onClick={() => three.choose(false)}>
-              {t("salah.visualPicture")}
-            </button>
-            <button type="button" aria-pressed={shown} onClick={() => three.choose(true)}>
-              {t("salah.visual3d")}
-            </button>
-          </div>
-        ) : null}
       </div>
-      {three?.shown ? (
+      {still ? (
         <figcaption className="salah-3d-caption">
           <span>{t("salah.schematic3d")}</span>
-          {three.ready ? (
+          {three?.shown && three.ready ? (
             <span className="salah-3d-tools">
               <button
                 type="button"
@@ -179,15 +173,8 @@ function StepVisual({
                 <span aria-hidden="true">↺</span>
               </button>
             </span>
-          ) : (
-            <span role="status">{t("salah.loading3d")}</span>
-          )}
+          ) : null}
         </figcaption>
-      ) : null}
-      {three?.notice ? (
-        <p className="salah-3d-notice" role="status">
-          {t("salah.unavailable3d")}
-        </p>
       ) : null}
     </figure>
   );
@@ -213,8 +200,8 @@ export function SalahStepPlayer({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const step = steps[index]!;
-  const sceneSteps = useMemo(() => salahSceneSteps(steps), [steps]);
-  const three = useSalah3D(sceneSteps[index] ?? null, step.slug);
+  const scenes = useMemo(() => salahStepScenes(steps, media), [media, steps]);
+  const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean));
   const practice = display.mode === "practice";
   const isLast = index === steps.length - 1;
 
@@ -468,6 +455,7 @@ export function SalahStepPlayer({
                 <StepVisual
                   media={image}
                   eager={itemIndex === index}
+                  still={scenes[itemIndex] !== null}
                   three={itemIndex === index ? three : null}
                   slot={three.slot}
                 />

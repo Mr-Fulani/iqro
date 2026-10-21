@@ -143,7 +143,10 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   late final ValueNotifier<int> _index;
   var _finishing = false;
   final _three = Salah3DController();
-  late final List<String?> _scenes = salahSceneSteps(_steps);
+  late final List<SalahMediaScene?> _scenes = salahStepScenes(
+    widget.document,
+    _steps,
+  );
 
   List<SalahStep> get _steps => widget.lesson.steps;
 
@@ -691,7 +694,7 @@ class _StepRepeatCounterState extends State<_StepRepeatCounter> {
   );
 }
 
-/// Where a step page stands in the lesson's 3D choice.
+/// Where a step page stands in the lesson's 3D scene.
 @immutable
 class _StepVisualState {
   const _StepVisualState({
@@ -704,13 +707,13 @@ class _StepVisualState {
   final int index;
   final ValueListenable<int> current;
 
-  /// The scene step for this page, or null when it has no 3D.
-  final String? scene;
+  /// The scene pose this page's picture is a still of, or null.
+  final SalahMediaScene? scene;
   final Salah3DController three;
 }
 
-/// The step picture; on the current page also «Picture / 3D» and, when 3D is
-/// chosen, the scene over the picture with its tools underneath.
+/// The step picture. A still of the 3D scene says it is schematic and, on
+/// the current page, gives way to the running scene with its tools.
 class _StepVisual extends StatelessWidget {
   const _StepVisual({
     required this.courseSlug,
@@ -726,78 +729,27 @@ class _StepVisual extends StatelessWidget {
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final three = state.three;
+    final scene = state.scene;
     return ListenableBuilder(
       listenable: Listenable.merge(<Listenable>[state.current, three]),
       builder: (context, _) {
-        final isCurrent = state.current.value == state.index;
-        final scene = state.scene;
-        final offered =
-            isCurrent && scene != null && !reduceMotion && !three.failed;
-        final shown = offered && three.chosen;
+        final runs =
+            scene != null &&
+            state.current.value == state.index &&
+            !reduceMotion &&
+            !three.failed;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _StepImage(
               courseSlug: courseSlug,
               media: media,
-              view: shown ? _Salah3DHost(scene: scene, three: three) : null,
-              toggle: offered ? _VisualSwitch(three: three) : null,
+              view: runs ? _Salah3DHost(scene: scene, three: three) : null,
             ),
-            if (shown) _Salah3DBar(three: three),
-            if (isCurrent && three.notice)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  context.l10n.salah3dUnavailable,
-                  key: const ValueKey('salah-3d-unavailable'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
+            if (scene != null) _Salah3DBar(three: three, tools: runs),
           ],
         );
       },
-    );
-  }
-}
-
-class _VisualSwitch extends StatelessWidget {
-  const _VisualSwitch({required this.three});
-
-  final Salah3DController three;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      container: true,
-      label: context.l10n.salahVisual,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface.withValues(alpha: .92),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: SegmentedButton<bool>(
-          key: const ValueKey('salah-visual-switch'),
-          showSelectedIcon: false,
-          style: const ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          segments: <ButtonSegment<bool>>[
-            ButtonSegment<bool>(
-              value: false,
-              label: Text(context.l10n.salahVisualPicture),
-            ),
-            ButtonSegment<bool>(
-              value: true,
-              label: Text(context.l10n.salahVisual3d),
-            ),
-          ],
-          selected: <bool>{three.chosen},
-          onSelectionChanged: (selection) => three.choose(selection.single),
-        ),
-      ),
     );
   }
 }
@@ -807,7 +759,7 @@ class _VisualSwitch extends StatelessWidget {
 class _Salah3DHost extends ConsumerStatefulWidget {
   const _Salah3DHost({required this.scene, required this.three});
 
-  final String scene;
+  final SalahMediaScene scene;
   final Salah3DController three;
 
   @override
@@ -816,9 +768,10 @@ class _Salah3DHost extends ConsumerStatefulWidget {
 
 class _Salah3DHostState extends ConsumerState<_Salah3DHost>
     with WidgetsBindingObserver {
-  var _foreground =
-      WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
-      WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden;
+  final _foreground = ValueNotifier<bool>(
+    WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden,
+  );
 
   @override
   void initState() {
@@ -829,13 +782,14 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _foreground.dispose();
     super.dispose();
   }
 
+  // Frames stop in the background, so this does not wait for a rebuild.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final foreground = state == AppLifecycleState.resumed;
-    if (foreground != _foreground) setState(() => _foreground = foreground);
+    _foreground.value = state == AppLifecycleState.resumed;
   }
 
   @override
@@ -845,11 +799,10 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
     return builder(
       context,
       Salah3DViewConfig(
-        step: widget.scene,
-        running:
-            three.playing &&
-            _foreground &&
-            TickerMode.valuesOf(context).enabled,
+        step: widget.scene.pose,
+        view: widget.scene.view,
+        running: three.playing && TickerMode.valuesOf(context).enabled,
+        foreground: _foreground,
         speed: three.speed,
         resetCount: three.resetCount,
         onReady: three.markReady,
@@ -861,9 +814,12 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
 
 /// «Schematic 3D illustration» and the tools of the scene.
 class _Salah3DBar extends StatelessWidget {
-  const _Salah3DBar({required this.three});
+  const _Salah3DBar({required this.three, required this.tools});
 
   final Salah3DController three;
+
+  /// The scene runs on this page: its tools appear once it is drawn.
+  final bool tools;
 
   @override
   Widget build(BuildContext context) {
@@ -871,79 +827,68 @@ class _Salah3DBar extends StatelessWidget {
     final theme = Theme.of(context);
     final speed =
         '${NumberFormat.decimalPattern(Localizations.localeOf(context).toLanguageTag()).format(three.speed)}×';
+    // As tall as its tools, so they do not move the step when they appear.
     return Padding(
       padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              l10n.salah3dSchematic,
-              key: const ValueKey('salah-3d-caption'),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l10n.salah3dSchematic,
+                key: const ValueKey('salah-3d-caption'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-          if (three.ready) ...<Widget>[
-            IconButton(
-              key: const ValueKey('salah-3d-play'),
-              tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
-              onPressed: three.togglePlaying,
-              icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
-            ),
-            Semantics(
-              label: l10n.salah3dSpeed(speed),
-              excludeSemantics: true,
-              button: true,
-              child: TextButton(
-                key: const ValueKey('salah-3d-speed'),
-                onPressed: three.cycleSpeed,
-                child: Text(speed),
+            if (tools && three.ready) ...<Widget>[
+              IconButton(
+                key: const ValueKey('salah-3d-play'),
+                tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
+                onPressed: three.togglePlaying,
+                icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
               ),
-            ),
-            IconButton(
-              key: const ValueKey('salah-3d-reset'),
-              tooltip: l10n.salah3dResetView,
-              onPressed: three.resetView,
-              icon: const Icon(Icons.threesixty),
-            ),
-          ] else ...<Widget>[
-            const SizedBox.square(
-              dimension: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 8),
-            Text(l10n.salah3dLoading, style: theme.textTheme.bodySmall),
+              Semantics(
+                label: l10n.salah3dSpeed(speed),
+                excludeSemantics: true,
+                button: true,
+                child: TextButton(
+                  key: const ValueKey('salah-3d-speed'),
+                  onPressed: three.cycleSpeed,
+                  child: Text(speed),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('salah-3d-reset'),
+                tooltip: l10n.salah3dResetView,
+                onPressed: three.resetView,
+                icon: const Icon(Icons.threesixty),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
 /// The step illustration in its declared proportions, never wider than its
-/// declared width and never taller than 40% of the screen. [view] covers the
-/// picture (the 3D scene); [toggle] sits in its top-right corner, which the
-/// pictures and the scene leave empty in either reading direction.
+/// declared width and never taller than 40% of the screen. [view] (the
+/// running 3D scene) covers the picture.
 class _StepImage extends ConsumerWidget {
-  const _StepImage({
-    required this.courseSlug,
-    required this.media,
-    this.view,
-    this.toggle,
-  });
+  const _StepImage({required this.courseSlug, required this.media, this.view});
 
   final String courseSlug;
   final SalahMedia media;
   final Widget? view;
-  final Widget? toggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
     final view = this.view;
-    final toggle = this.toggle;
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -985,7 +930,6 @@ class _StepImage extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(22),
                   child: view,
                 ),
-              if (toggle != null) Positioned(top: 8, right: 8, child: toggle),
             ],
           ),
         ),

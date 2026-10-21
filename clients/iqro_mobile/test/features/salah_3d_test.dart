@@ -3,84 +3,101 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/salah/salah_3d.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
 
-// The same cases as services/web/lib/salah-3d.test.ts: both clients offer 3D
-// on the same steps.
-SalahStep _step(String slug, String? position, {String? media = ''}) =>
-    SalahStep(
-      slug: 'lesson.$slug',
-      kind: 'action',
-      title: slug,
-      instruction: '',
-      position: position,
-      media: media == ''
-          ? (position == null ? null : 'position-$position')
-          : media,
-    );
+import 'salah_models_test.dart' show salahFixture;
 
+// The same cases as services/web/lib/salah-3d.test.ts: both clients show the
+// scene on the same steps.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('course positions map onto the scene poses and nothing else', () {
-    final steps = <SalahStep>[
-      _step('intention', 'qiyam'),
-      _step('takbir', 'takbir'),
-      _step('ruku', 'ruku'),
-      _step('itidal', 'itidal'),
-      _step('sujud-1', 'sujud'),
-      _step('jalsa', 'jalsa'),
-      _step('sujud-2', 'sujud'),
-      _step('tashahhud', 'tashahhud'),
-      _step('qunut', 'qunut'),
-      _step('taslim', 'taslim'),
-      _step('wudu-face', null, media: 'wudu-face'),
-      _step('intro', null),
+  SalahMedia picture(String key, [Object? scene]) =>
+      SalahMedia.fromJson(key, <String, Object?>{
+        'url': 'https://media.iqro.forum/$key.webp',
+        'width': 720,
+        'height': 720,
+        'scene': ?scene,
+      });
+  Map<String, Object?> still(String pose, [String view = 'full']) =>
+      <String, Object?>{'pose': pose, 'view': view};
+  SalahStep step(String slug, [String? media]) => SalahStep(
+    slug: 'lesson.$slug',
+    kind: 'action',
+    title: slug,
+    instruction: '',
+    media: media,
+  );
+
+  test('a step shows the scene pose its picture is a still of', () {
+    final media = <SalahMedia>[
+      picture('position-qiyam', still('qiyam')),
+      picture('position-ruku', still('ruku')),
+      picture('position-sujud', still('sujud')),
+      picture('position-jalsa', still('jalsa')),
+      picture('position-taslim', still('salam')),
+      picture('position-qunut'),
+      picture('position-hand', still('tashahhud', 'hand')),
+      picture('position-newer', still('prostration-on-a-chair')),
+      picture('position-broken', <String, Object?>{'pose': 'ruku'}),
     ];
-    expect(salahSceneSteps(steps), <String?>[
-      'qiyam', 'takbir', 'ruku', 'itidal', 'sujud', 'jalsa', 'sujud2', //
-      'tashahhud', null, 'salam', null, null,
+    final steps = <SalahStep>[
+      step('intention', 'position-qiyam'),
+      step('ruku', 'position-ruku'),
+      step('sujud-1', 'position-sujud'),
+      step('jalsa', 'position-jalsa'),
+      step('sujud-2', 'position-sujud'),
+      step('qunut', 'position-qunut'),
+      step('pointing', 'position-hand'),
+      step('newer', 'position-newer'),
+      step('broken', 'position-broken'),
+      step('taslim', 'position-taslim'),
+      step('intro'),
+    ];
+    final document = SalahCourseDocument.fromJson(salahFixture());
+    final course = SalahCourseDocument(
+      schemaVersion: document.schemaVersion,
+      course: document.course,
+      sections: document.sections,
+      lessons: document.lessons,
+      formulas: document.formulas,
+      media: <String, SalahMedia>{for (final item in media) item.key: item},
+    );
+    expect(salahStepScenes(course, steps), <SalahMediaScene?>[
+      const SalahMediaScene(pose: 'qiyam'),
+      const SalahMediaScene(pose: 'ruku'),
+      const SalahMediaScene(pose: 'sujud'),
+      const SalahMediaScene(pose: 'jalsa'),
+      // the second prostration rises from the sitting between the two
+      const SalahMediaScene(pose: 'sujud2'),
+      null,
+      const SalahMediaScene(pose: 'tashahhud', view: 'hand'),
+      // a pose this build does not know, or a malformed scene, stays a picture
+      null,
+      null,
+      const SalahMediaScene(pose: 'salam'),
+      null,
     ]);
   });
 
-  test('no picture, or the greeting after tawarruk, has no 3D', () {
-    expect(
-      salahSceneSteps(<SalahStep>[_step('ruku', 'ruku', media: null)]),
-      <String?>[null],
-    );
-    expect(
-      salahSceneSteps(<SalahStep>[
-        _step('first', 'tashahhud'),
-        _step('last', 'tawarruk'),
-        _step('salawat', 'tawarruk'),
-        _step('taslim', 'taslim'),
-      ]),
-      <String?>['tashahhud', null, null, null],
-    );
+  test('the controller cycles speeds and keeps the stills after a failure', () {
+    final three = Salah3DController();
+    expect(three.speed, 1);
+    three.cycleSpeed();
+    expect(three.speed, .75);
+    three.cycleSpeed();
+    expect(three.speed, .5);
+    three.cycleSpeed();
+    expect(three.speed, 1);
+
+    three.markReady();
+    expect(three.ready, isTrue);
+    three.stepChanged();
+    expect(three.ready, isFalse);
+    three.fail();
+    three.markReady();
+    expect(three.failed, isTrue);
+    expect(three.ready, isFalse);
+    three.dispose();
   });
-
-  test(
-    'the controller cycles speeds and stays on pictures after a failure',
-    () {
-      final three = Salah3DController();
-      expect(three.speed, 1);
-      three.cycleSpeed();
-      expect(three.speed, .75);
-      three.cycleSpeed();
-      expect(three.speed, .5);
-      three.cycleSpeed();
-      expect(three.speed, 1);
-
-      three.choose(true);
-      expect(three.chosen, isTrue);
-      three.fail();
-      expect(three.chosen, isFalse);
-      expect(three.notice, isTrue);
-      three.choose(true);
-      expect(three.chosen, isFalse);
-      three.stepChanged();
-      expect(three.notice, isFalse);
-      three.dispose();
-    },
-  );
 
   test('the offline page and its scripts are bundled', () async {
     final page = await rootBundle.loadString('assets/salah3d/index.html');

@@ -25,6 +25,12 @@ FORMULA_KINDS = frozenset({"dua", "quran", "inline"})
 WHEN_KEYS = frozenset(
     {"first_rakat", "last_rakat", "surah_after_fatiha", "sitting", "qunut", "recitation", "rakat"}
 )
+# Poses and views of the schematic 3D scene (docs/salah/salah-3d.md). An illustration with
+# `scene` is a still of that pose; clients that can run the scene show it instead.
+SCENE_POSES = frozenset(
+    {"qiyam", "takbir", "ruku", "itidal", "sujud", "sujud2", "jalsa", "tashahhud", "salam"}
+)
+SCENE_VIEWS = frozenset({"full", "hand", "back"})
 
 
 class SalahSnapshotError(ValueError):
@@ -176,7 +182,22 @@ def _check_media(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
             problems.append(f"Медиа «{key}»: не указан файл.")
         if str(asset.get("file", "")).endswith(".webp"):
             _localized(asset.get("alt"), f"Медиа «{key}».alt", problems)
+        if "scene" in asset:
+            _check_scene(key, asset, problems)
     return keys
+
+
+def _check_scene(key: str, asset: Mapping[str, Any], problems: list[str]) -> None:
+    scene = asset["scene"]
+    if not str(asset.get("file", "")).endswith(".webp"):
+        problems.append(f"Медиа «{key}».scene: сцену задают только картинке — её кадру.")
+    if not isinstance(scene, Mapping) or set(scene) != {"pose", "view"}:
+        problems.append(f"Медиа «{key}».scene: ожидается {{pose, view}}.")
+        return
+    if scene["pose"] not in SCENE_POSES:
+        problems.append(f"Медиа «{key}».scene: в сцене нет позы «{scene['pose']}».")
+    if scene["view"] not in SCENE_VIEWS:
+        problems.append(f"Медиа «{key}».scene: в сцене нет вида «{scene['view']}».")
 
 
 def _check_prayer_kinds(snapshot: Mapping[str, Any], problems: list[str]) -> set[str]:
