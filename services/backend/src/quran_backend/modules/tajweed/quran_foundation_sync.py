@@ -123,8 +123,8 @@ def quran_foundation_verse_words(environment: str) -> tuple[dict[str, VerseWords
         raise QuranFoundationError(
             "Synchronize Quran.Foundation Mushafs 19 and 4 before importing tajweed."
         )
-    v4_words = _verse_word_ids(mushafs[V4_MUSHAF_ID])
-    unicode_words = _verse_word_ids(mushafs[UNICODE_MUSHAF_ID])
+    v4_words, _ = _verse_word_ids(mushafs[V4_MUSHAF_ID])
+    unicode_words, unicode_ends = _verse_word_ids(mushafs[UNICODE_MUSHAF_ID])
     if set(v4_words) != set(unicode_words) or set(v4_words) != _published_verse_keys():
         raise QuranFoundationError(
             "Quran.Foundation Mushaf verses do not match the published Quran."
@@ -136,13 +136,20 @@ def quran_foundation_verse_words(environment: str) -> tuple[dict[str, VerseWords
         if len(page_numbers) != 1:
             raise QuranFoundationError(f"Verse {verse_key} spans several V4 pages.")
         texts = [text for _, _, text in unicode_rows]
-        # QF labels the ayah number of 2:181 as a word in both Mushafs; only a
-        # final number equal to the verse number is accepted as that marker.
+        unicode_ids = [word_id for _, word_id, _ in unicode_rows]
+        v4_ids = [word_id for _, word_id, _ in v4_words[verse_key]]
+        # QF labels the ayah number of 2:181 as a word in Mushaf 19 (and in older
+        # Mushaf 4 snapshots). Only a final number equal to the verse number, or
+        # the id Mushaf 4 marks as this ayah's end, is accepted as that marker.
+        ayah_ends = set(unicode_ends.get(verse_key, ()))
         if texts and texts[-1].translate(ARABIC_INDIC_DIGITS) == verse_key.partition(":")[2]:
             texts.pop()
+            ayah_ends.add(unicode_ids.pop())
+        if v4_ids and v4_ids[-1] in ayah_ends:
+            v4_ids.pop()
         if not texts or not all(has_letter(text) for text in texts):
             raise QuranFoundationError(f"Verse {verse_key} has a word without letters.")
-        if [row[1] for row in v4_words[verse_key]] != [row[1] for row in unicode_rows]:
+        if v4_ids != unicode_ids:
             raise QuranFoundationError(f"Verse {verse_key} has different QF word positions.")
         result[verse_key] = VerseWords(page_number=page_numbers.pop(), words=tuple(texts))
     checksum = hashlib.sha256(
@@ -152,12 +159,18 @@ def quran_foundation_verse_words(environment: str) -> tuple[dict[str, VerseWords
     return result, checksum
 
 
-def _verse_word_ids(mushaf: QuranFoundationMushaf) -> dict[str, list[tuple[int, int, str]]]:
+def _verse_word_ids(
+    mushaf: QuranFoundationMushaf,
+) -> tuple[dict[str, list[tuple[int, int, str]]], dict[str, set[int]]]:
+    """Each verse's words as (page, word id, text) by position, and its ayah-end ids."""
     verses: dict[str, dict[int, tuple[int, int, str]]] = {}
+    ends: dict[str, set[int]] = {}
     for page_number, words in mushaf.cached_pages.order_by("page_number").values_list(
         "page_number", "words"
     ):
         for word in words:
+            if word.get("char_type_name") == "end" and isinstance(word.get("verse_key"), str):
+                ends.setdefault(word["verse_key"], set()).add(int(word.get("word_id") or 0))
             if word.get("char_type_name") != "word":
                 continue
             verse_key = word.get("verse_key")
@@ -173,7 +186,7 @@ def _verse_word_ids(mushaf: QuranFoundationMushaf) -> dict[str, list[tuple[int, 
         if sorted(positions) != list(range(1, len(positions) + 1)):
             raise QuranFoundationError(f"Word positions of {verse_key} are not contiguous.")
         result[verse_key] = [positions[position] for position in sorted(positions)]
-    return result
+    return result, ends
 
 
 def normalize_tajweed_verses(
