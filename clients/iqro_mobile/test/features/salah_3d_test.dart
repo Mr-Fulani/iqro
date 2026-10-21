@@ -99,6 +99,43 @@ void main() {
     three.dispose();
   });
 
+  test('a step plays its pose once; replay and every new step play it from '
+      'the start', () {
+    // As in services/web/lib/salah-3d.test.ts.
+    final three = Salah3DController();
+    ({bool playing, bool ended, int run}) state() =>
+        (playing: three.playing, ended: three.ended, run: three.replayCount);
+    expect(state(), (playing: true, ended: false, run: 0));
+    expect(three.moving, isTrue);
+    three.markEnded();
+    expect(state(), (playing: true, ended: true, run: 0));
+    expect(three.moving, isFalse);
+    // play after the end is a replay
+    three.togglePlaying();
+    expect(state(), (playing: true, ended: false, run: 1));
+    three
+      ..markEnded()
+      ..replay();
+    expect(state(), (playing: true, ended: false, run: 2));
+    // a pause holds the movement where it is, play goes on from there
+    three.togglePlaying();
+    expect(state(), (playing: false, ended: false, run: 2));
+    expect(three.moving, isFalse);
+    three.togglePlaying();
+    expect(state(), (playing: true, ended: false, run: 2));
+    // the next step plays its own pose, paused or ended before; its own
+    // view starts it, so no replay is asked for
+    three
+      ..togglePlaying()
+      ..stepChanged();
+    expect(state(), (playing: true, ended: false, run: 2));
+    three
+      ..markEnded()
+      ..stepChanged();
+    expect(state(), (playing: true, ended: false, run: 2));
+    three.dispose();
+  });
+
   test('the offline page and its scripts are bundled', () async {
     final page = await rootBundle.loadString('assets/salah3d/index.html');
     for (final script in <String>[

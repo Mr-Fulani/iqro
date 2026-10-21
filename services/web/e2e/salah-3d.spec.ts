@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Locator, test, type Page } from "@playwright/test";
 
 // The pose illustrations are stills of the schematic 3D scene, which takes their place once
 // it can run (docs/salah/salah-3d.md).
@@ -29,8 +29,27 @@ const currentStep = (page: Page) => page.locator(".salah-step:not([hidden])");
 const SCENE_TIMEOUT = { timeout: 30_000 };
 // Any first action on the page starts the scene.
 const act = (page: Page) => page.mouse.move(5, 5);
+// A pose plays once: the takbir in about 2.5 s, the tashahhud in about 12 s. The scene takes
+// at most 0.05 s per frame, so on a busy machine's software WebGL it plays several times slower.
+const POSE_TIMEOUT = { timeout: 60_000 };
+// Once the pose has played, play turns into «Повторить».
+const replayButton = (step: Locator) => step.getByRole("button", { name: "Повторить", exact: true });
 
-test("the scene replaces the still once the visitor acts, follows the steps and pauses with the tab", async ({ page }) => {
+/** Whether the scene draws anything new between two looks a moment apart. */
+async function moving(canvas: Locator) {
+  const before = await canvas.screenshot();
+  await canvas.page().waitForTimeout(400);
+  return !before.equals(await canvas.screenshot());
+}
+
+function setTabHidden(page: Page, hidden: boolean) {
+  return page.evaluate((value) => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => value });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, hidden);
+}
+
+test("the scene replaces the still once the visitor acts and follows the steps", async ({ page }) => {
   const loaded = watchThree(page);
   await openLesson(page, "/ru/salah/fajr");
   const step = currentStep(page);
@@ -45,37 +64,71 @@ test("the scene replaces the still once the visitor acts, follows the steps and 
   await act(page);
   const canvas = step.locator("[data-testid='salah-3d'] canvas");
   await expect(canvas).toBeVisible(SCENE_TIMEOUT);
-  const pause = step.getByRole("button", { name: "Остановить движение" });
-  await expect(pause).toBeVisible();
-  await expect(canvas).toHaveAttribute("data-running", "true");
   expect(loaded.three).toBe(true);
   // The still underneath keeps describing the step.
   await expect(step.locator("img")).toHaveAttribute("alt", "Стоящий мужчина поднимает руки до плеч");
   await expect(canvas).toHaveAttribute("aria-hidden", "true");
-
-  await pause.click();
-  await expect(canvas).toHaveAttribute("data-running", "false");
-  await step.getByRole("button", { name: "Воспроизвести движение" }).click();
-  await expect(canvas).toHaveAttribute("data-running", "true");
-  await step.getByRole("button", { name: "Скорость движения: 1×" }).click();
-  await expect(step.getByRole("button", { name: "Скорость движения: 0,75×" })).toHaveText("0,75×");
 
   // One canvas moves along with the step.
   await page.getByRole("button", { name: "Далее" }).click();
   await expect(step).toHaveAttribute("data-step", "fajr.r1.fatiha");
   await expect(step.locator("[data-testid='salah-3d'] canvas")).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1);
+});
 
-  await page.evaluate(() => {
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await expect(page.locator("canvas")).toHaveAttribute("data-running", "false");
-  await page.evaluate(() => {
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
+test("a pose plays once, holds its last frame and plays again on «Повторить»", async ({ page }) => {
+  test.slow();
+  await openLesson(page, "/ru/salah/fajr");
+  await act(page);
+  const step = currentStep(page);
+  const canvas = step.locator("[data-testid='salah-3d'] canvas");
+  await expect(canvas).toHaveAttribute("data-running", "true", SCENE_TIMEOUT);
+  await expect(replayButton(step)).toHaveCount(0);
+
+  await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
+  await expect(canvas).toHaveAttribute("data-running", "false");
+  // The same button as pause and play, not one more: the tools are it and the speed.
+  await expect(step.locator(".salah-3d-tools button")).toHaveCount(2);
+  // No loop: the figure holds still.
+  await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(false);
+
+  await replayButton(step).click();
+  await expect(replayButton(step)).toHaveCount(0);
+  await expect(canvas).toHaveAttribute("data-running", "true");
+  expect(await moving(canvas)).toBe(true);
+  await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
+  await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(false);
+
+  // The next step plays its own pose once.
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expect(step).toHaveAttribute("data-step", "fajr.r1.fatiha");
   await expect(page.locator("canvas")).toHaveAttribute("data-running", "true");
+  await expect(replayButton(step)).toHaveCount(0);
+  await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
+  await expect(page.locator("canvas")).toHaveAttribute("data-running", "false");
+});
+
+test("pause, speed and a hidden tab hold the movement", async ({ page }) => {
+  await openLesson(page, "/ru/salah/fajr#fajr.r2.tashahhud");
+  await act(page);
+  const step = currentStep(page);
+  const canvas = step.locator("[data-testid='salah-3d'] canvas");
+  await expect(canvas).toHaveAttribute("data-running", "true", SCENE_TIMEOUT);
+
+  await step.getByRole("button", { name: "Остановить движение" }).click();
+  await expect(canvas).toHaveAttribute("data-running", "false");
+  await expect.poll(() => moving(canvas)).toBe(false);
+  // Paused is not ended.
+  await expect(replayButton(step)).toHaveCount(0);
+  await step.getByRole("button", { name: "Воспроизвести движение" }).click();
+  await expect(canvas).toHaveAttribute("data-running", "true");
+  await step.getByRole("button", { name: "Скорость движения: 1×" }).click();
+  await expect(step.getByRole("button", { name: "Скорость движения: 0,75×" })).toHaveText("0,75×");
+
+  await setTabHidden(page, true);
+  await expect(canvas).toHaveAttribute("data-running", "false");
+  await setTabHidden(page, false);
+  await expect(canvas).toHaveAttribute("data-running", "true");
 });
 
 test("without WebGL the still stays and three.js is never fetched", async ({ page }) => {
@@ -107,6 +160,7 @@ test("a failed scene download leaves the still", async ({ page }) => {
   const step = currentStep(page);
   await expect(step.locator("img")).toBeVisible();
   await expect(step.getByRole("button", { name: "Остановить движение" })).toHaveCount(0);
+  await expect(replayButton(step)).toHaveCount(0);
   await expect(page.locator("canvas")).toHaveCount(0);
 });
 
@@ -117,6 +171,7 @@ test("reduced motion keeps the still, and a picture without a scene stays a pict
   await act(page);
   await expect(currentStep(page).locator("figcaption")).toHaveText("Схематичная 3D-иллюстрация");
   await expect(page.locator("canvas")).toHaveCount(0);
+  await expect(replayButton(currentStep(page))).toHaveCount(0);
   await page.waitForLoadState("networkidle");
   expect(loaded.three).toBe(false);
 
@@ -130,10 +185,11 @@ test("reduced motion keeps the still, and a picture without a scene stays a pict
 });
 
 test("the Arabic page labels the scene and its tools in Arabic", async ({ page }) => {
+  test.slow();
   await openLesson(page, "/ar/salah/fajr");
   const step = currentStep(page);
   await expect(step.locator("figcaption")).toContainText("رسم توضيحي تخطيطي ثلاثي الأبعاد");
   await act(page);
   await expect(step.getByRole("button", { name: "إيقاف الحركة مؤقتًا" })).toBeVisible(SCENE_TIMEOUT);
-  await expect(step.getByRole("button", { name: "إعادة زاوية العرض" })).toBeVisible();
+  await expect(step.getByRole("button", { name: "إعادة الحركة" })).toBeVisible(POSE_TIMEOUT);
 });
