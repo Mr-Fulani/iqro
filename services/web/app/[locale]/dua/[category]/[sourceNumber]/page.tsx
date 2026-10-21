@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DuaEntryList } from "@/components/DuaEntryList";
+import { DuaChapterBanner, DuaTopBar } from "@/components/DuaChrome";
+import { DuaFeed } from "@/components/DuaFeed";
 import { duaDisplayTitle, duaShareTitle } from "@/lib/dua-share";
 import { isLocale, translate, type Locale } from "@/lib/i18n";
 import {
@@ -10,7 +10,6 @@ import {
   isDuaCollectionSlug,
   PublicContentNotFoundError,
 } from "@/lib/public-content";
-import { localizedPath } from "@/lib/routing";
 import { createContentMetadata } from "@/lib/seo";
 
 export const revalidate = 3_600;
@@ -86,49 +85,18 @@ export default async function LocalizedDuaEntryPage({
   const entry = await publishedEntry(route);
   const title = duaDisplayTitle(entry.category.title, route.locale);
 
+  // The app's du'a screen: «Ду’а» with the way back to the chapter, the
+  // chapter's title as a ribbon and the du'a as a card.
   return (
-    <div className="dua-page dua-topic-page">
-      <nav className="breadcrumbs" aria-label={translate(route.locale, "dua.topicBreadcrumbs")}>
-        <ol>
-          <li>
-            <Link href={localizedPath(route.locale, "/dua")}>
-              {translate(route.locale, "dua.allCategories")}
-            </Link>
-          </li>
-          <li>
-            <Link
-              href={localizedPath(
-                route.locale,
-                `/dua/${entry.collection}/categories/${entry.category.slug}`,
-              )}
-            >
-              {title}
-            </Link>
-          </li>
-          <li aria-current="page">#{entry.source_number}</li>
-        </ol>
-      </nav>
-
-      <header className="surface dua-topic-hero">
-        <div className="dua-topic-copy">
-          <p className="eyebrow">{translate(route.locale, "dua.eyebrow")}</p>
-          <h1>{title}</h1>
-          <p>#{entry.source_number}</p>
-        </div>
-        <Link
-          href={localizedPath(
-            route.locale,
-            `/dua/${entry.collection}/categories/${entry.category.slug}`,
-          )}
-          className="btn btn-secondary dua-topic-back"
-        >
-          <span aria-hidden="true">←</span> {translate(route.locale, "dua.backToTopics")}
-        </Link>
-      </header>
-
-      <section className="surface dua-topic-content">
-        <DuaEntryList entries={[entry]} headingLevel={2} />
-      </section>
+    <div className="dua-page">
+      <DuaTopBar
+        locale={route.locale}
+        title={translate(route.locale, "dua.title")}
+        backHref={`/dua/${entry.collection}/categories/${entry.category.slug}`}
+        titleIsHeading={false}
+      />
+      <DuaChapterBanner title={title} heading />
+      <DuaFeed entries={[entry]} />
     </div>
   );
 }
