@@ -924,7 +924,7 @@ test("audio keeps playing on ordinary navigation and pauses when opening Quran",
 test("global recitation and Dua audio take turns without overlapping", async ({ page }) => {
   // Keep the Dua media request pending: an empty or aborted body makes Chromium
   // fire a trusted media error right after the mocked play(), which resets the
-  // Dua button and races the aria-pressed assertions below.
+  // Dua button and races the assertions below.
   await page.route("**/audio/ar/1.mp3", () => {});
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
@@ -935,29 +935,29 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await expect(page).toHaveURL("/ru/dua");
   await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
 
-  await page.locator(".dua-category-chip").click();
+  await page.locator(".dua-topic-card").click();
   await expect(page).toHaveURL("/ru/dua/topics/sleep");
-  // Topic pages list duas; playback controls live on the individual dua page.
-  await page.getByRole("link", { name: /Слова поминания при пробуждении ото сна · #1/ }).click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
-  const duaAudio = page.locator(".dua-audio-panel audio");
-  const duaButton = page.locator(".dua-entry-tools .dua-icon-action").first();
+  // The topic lists its chapters; a chapter reads as cards with their audio.
+  await page.locator(".dua-chapter-row").first().click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
+  const duaAudio = page.locator("audio.dua-audio");
+  const duaButton = page.locator(".dua-action-play").first();
   await duaButton.click();
   await expect(duaAudio).toHaveAttribute(
     "src",
     "https://www.hisnmuslim.com/audio/ar/1.mp3",
   );
   await duaAudio.evaluate((element) => void (element as HTMLAudioElement).play());
-  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(duaButton).toHaveAccessibleName("Приостановить аудио");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 
   const globalAudio = player.locator("audio");
   await globalAudio.evaluate((element) => void (element as HTMLAudioElement).play());
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
-  await expect(duaButton).toHaveAttribute("aria-pressed", "false");
+  await expect(duaButton).toHaveAccessibleName("Прослушать ду’а");
 
   await duaButton.click();
-  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(duaButton).toHaveAccessibleName("Приостановить аудио");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 

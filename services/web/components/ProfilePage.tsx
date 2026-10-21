@@ -787,8 +787,6 @@ export default function ProfilePage() {
             ) : duaFavoriteEntries.length > 0 ? (
               <DuaEntryList
                 entries={duaFavoriteEntries}
-                headingLevel={3}
-                compact
                 onFavoriteChange={handleDuaFavoriteChange}
               />
             ) : (

@@ -167,6 +167,27 @@ const duaContent = {
   },
 };
 
+// A second chapter of the "sleep" topic: the topic then lists its chapters,
+// and this du'a has the basmala before a surah and is said three times.
+const bedtimeContent = {
+  ar: { title: "الذكر عند النوم", meaning: "", second: "" },
+  en: {
+    title: "BEFORE SLEEPING",
+    meaning: "Recite Surat al-Ikhlas three times.",
+    second: "In Your name, O Allah, I die and I live.",
+  },
+  ru: {
+    title: "СЛОВА ПОМИНАНИЯ ПЕРЕД СНОМ",
+    meaning: "Прочитать суру «Искренность» три раза.",
+    second: "С именем Твоим, о Аллах, я умираю и оживаю.",
+  },
+  tr: {
+    title: "UYUMADAN ÖNCE YAPILAN DUALAR",
+    meaning: "İhlâs sûresini üç kez okumak.",
+    second: "Allah'ım, Senin isminle ölür ve dirilirim.",
+  },
+};
+
 function duaSource(language) {
   const localized = duaContent[language] || duaContent.en;
   return {
@@ -223,6 +244,57 @@ function duaEntry(language) {
       source_version: "hisnmuslim-audio-test-v1",
     }],
   };
+}
+
+function bedtimeEntry(language) {
+  const localized = bedtimeContent[language] || bedtimeContent.en;
+  return {
+    id: "00000000-0000-7000-8000-000000000811",
+    source_number: 100,
+    slug: "bedtime-ikhlas",
+    collection: "hisn-al-muslim",
+    collection_version: "test-v1",
+    category: { source_number: 28, slug: "before-sleeping", title: localized.title },
+    arabic_text: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ﴿قُلْ هُوَ اللَّهُ أَحَدٌ﴾",
+    repetitions: 3,
+    repetition_label: "",
+    translation: {
+      language_code: language,
+      meaning_text: localized.meaning,
+      transliteration: "",
+    },
+    evidence: [{
+      kind: "hadith",
+      provider: "islamhouse",
+      source_name: "",
+      source_reference: "Al-Bukhari 5017.",
+      source_url: "",
+      grade: "",
+      external_id: "",
+      verification_status: "editorially_verified",
+    }],
+    source: duaSource(language),
+    audio: [],
+  };
+}
+
+function bedtimeSecondEntry(language) {
+  const localized = bedtimeContent[language] || bedtimeContent.en;
+  const first = bedtimeEntry(language);
+  return {
+    ...first,
+    id: "00000000-0000-7000-8000-000000000813",
+    source_number: 101,
+    slug: "bedtime-name",
+    arabic_text: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا",
+    repetitions: 1,
+    translation: { ...first.translation, meaning_text: localized.second },
+    evidence: [{ ...first.evidence[0], source_reference: "Al-Bukhari 6324." }],
+  };
+}
+
+function duaEntries(language) {
+  return [duaEntry(language), bedtimeEntry(language), bedtimeSecondEntry(language)];
 }
 
 function sendJson(response, status, body) {
@@ -334,18 +406,31 @@ const server = createServer(async (request, response) => {
       slug: "waking-up",
       title: localized.title,
       entry_count: 1,
+    }, {
+      id: "00000000-0000-7000-8000-000000000812",
+      collection: "hisn-al-muslim",
+      collection_title: localized.edition,
+      collection_version: "test-v1",
+      source_number: 28,
+      slug: "before-sleeping",
+      title: (bedtimeContent[language] || bedtimeContent.en).title,
+      entry_count: 2,
     }]);
   }
   if (path === "/api/v1/dua/entries") {
-    return sendJson(response, 200, { next: null, previous: null, results: [duaEntry(language)] });
+    const category = url.searchParams.get("category");
+    const query = url.searchParams.get("q")?.toLowerCase();
+    const results = duaEntries(language).filter((entry) =>
+      (!category || entry.category.slug === category)
+      && (!query || [entry.arabic_text, entry.translation.meaning_text]
+        .some((text) => text.toLowerCase().includes(query))));
+    return sendJson(response, 200, { next: null, previous: null, results });
   }
   if (path === "/api/v1/dua/entries/resolve") {
-    if (
-      url.searchParams.get("collection") === "hisn-al-muslim"
-      && url.searchParams.get("source_number") === "1"
-    ) {
-      return sendJson(response, 200, duaEntry(language));
-    }
+    const entry = duaEntries(language).find((item) =>
+      item.collection === url.searchParams.get("collection")
+      && String(item.source_number) === url.searchParams.get("source_number"));
+    if (entry) return sendJson(response, 200, entry);
     return sendJson(response, 404, { detail: "The published Dua entry was not found." });
   }
   if (path === "/api/v1/dua/entries/00000000-0000-7000-8000-000000000801") {
@@ -362,7 +447,7 @@ const server = createServer(async (request, response) => {
           is_favorite: true,
           created_at: publishedAt,
           ...(url.searchParams.get("include") === "entry"
-            ? { entry: duaEntry(language) }
+            ? { entry: duaEntries(language).find((item) => item.source_number === Number(sourceNumber)) }
             : {}),
         };
       }),

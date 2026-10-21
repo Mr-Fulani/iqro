@@ -156,15 +156,13 @@ test("published surah and ayah routes render indexable Quran text on the server"
   await expect(page.locator(".seo-single-ayah")).toContainText("بِسْمِ اللَّهِ");
 });
 
-test("published Dua catalog renders topic cards and provenance on the server", async ({ request }) => {
+test("published Dua catalog renders topic cards on the server", async ({ request }) => {
   const response = await request.get("/ru/dua");
 
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain("Сон и пробуждение");
   expect(html).not.toContain("الْحَمْدُ للَّهِ");
-  expect(html).toContain("Молитвы из Корана и Сунны");
-  expect(html).toContain("https://islamhouse.com/ru/books/888254");
   expect(html).toContain('href="/ru/dua/topics/sleep"');
 });
 
@@ -175,8 +173,10 @@ test("published Dua topic route is localized, indexable, and server rendered", a
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain("Слова поминания при пробуждении ото сна");
-  // Category pages list summaries that link to each dua; the Arabic text is
-  // asserted on the canonical entry route below.
+  // The chapter renders its du'a, each linking to its own page: no sitemap
+  // lists them, so crawlers reach them through these links.
+  expect(html).toContain('<p class="dua-arabic-line">');
+  expect(html).toContain("Al-Bukhari 6314; Muslim 2711.");
   expect(html).toContain('href="/ru/dua/hisn-al-muslim/1"');
   expect(html).toContain('"@type":"BreadcrumbList"');
 
@@ -191,7 +191,7 @@ test("published Dua topic route is localized, indexable, and server rendered", a
     `${siteUrl}/en/dua/hisn-al-muslim/categories/waking-up`,
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
-  await expect(page.locator(".dua-summary-row")).toHaveCount(1);
+  await expect(page.locator(".dua-card")).toHaveCount(1);
   expect((await request.get("/ru/dua/not-a-published-topic")).status()).toBe(404);
 });
 
