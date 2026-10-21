@@ -1512,6 +1512,42 @@ abstract class AppLocalizations {
   /// **'This is a geographic bearing, not a live compass. Align the top of the phone with north before following the arrow.'**
   String get qiblaNorthHint;
 
+  /// No description provided for @qiblaNorth.
+  ///
+  /// In en, this message translates to:
+  /// **'N'**
+  String get qiblaNorth;
+
+  /// No description provided for @qiblaLiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Device compass is on: hold the phone flat — the arrow shows the Qibla relative to its top.'**
+  String get qiblaLiveHint;
+
+  /// No description provided for @qiblaFacing.
+  ///
+  /// In en, this message translates to:
+  /// **'You are facing the Qibla'**
+  String get qiblaFacing;
+
+  /// No description provided for @qiblaCalibrationNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'The compass needs calibration'**
+  String get qiblaCalibrationNeeded;
+
+  /// No description provided for @qiblaCalibrationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the phone through the air in a figure eight a few times, away from metal and magnets, including magnetic cases.'**
+  String get qiblaCalibrationHint;
+
+  /// No description provided for @qiblaCompassUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The compass is not available on this device.'**
+  String get qiblaCompassUnavailable;
+
   /// No description provided for @prayerCalendar.
   ///
   /// In en, this message translates to:
@@ -3605,6 +3641,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sunnah'**
   String get salahRulingSunnah;
+
+  /// No description provided for @salah3dSchematic.
+  ///
+  /// In en, this message translates to:
+  /// **'Schematic 3D illustration'**
+  String get salah3dSchematic;
+
+  /// No description provided for @salah3dPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the movement'**
+  String get salah3dPlay;
+
+  /// No description provided for @salah3dPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause the movement'**
+  String get salah3dPause;
+
+  /// No description provided for @salah3dSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Movement speed: {speed}'**
+  String salah3dSpeed(String speed);
+
+  /// No description provided for @salah3dResetView.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset the view'**
+  String get salah3dResetView;
 
   /// No description provided for @salahOfflineTitle.
   ///

@@ -785,6 +785,26 @@ class AppLocalizationsRu extends AppLocalizations {
       'Это географическое направление, а не живой компас. Сначала совместите верх телефона с севером, затем следуйте стрелке.';
 
   @override
+  String get qiblaNorth => 'С';
+
+  @override
+  String get qiblaLiveHint =>
+      'Компас устройства включён: держите телефон горизонтально — стрелка показывает Киблу относительно его верха.';
+
+  @override
+  String get qiblaFacing => 'Вы смотрите на Киблу';
+
+  @override
+  String get qiblaCalibrationNeeded => 'Компас нужно откалибровать';
+
+  @override
+  String get qiblaCalibrationHint =>
+      'Поводите телефоном в воздухе восьмёркой несколько раз, подальше от металла и магнитов, в том числе магнитных чехлов.';
+
+  @override
+  String get qiblaCompassUnavailable => 'Компас на этом устройстве недоступен.';
+
+  @override
   String get prayerCalendar => 'Календарь намаза на месяц';
 
   @override
@@ -2013,6 +2033,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'Сунна';
+
+  @override
+  String get salah3dSchematic => 'Схематичная 3D-иллюстрация';
+
+  @override
+  String get salah3dPlay => 'Воспроизвести движение';
+
+  @override
+  String get salah3dPause => 'Остановить движение';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'Скорость движения: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'Вернуть исходный ракурс';
 
   @override
   String get salahOfflineTitle => 'Картинки без интернета';

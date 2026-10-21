@@ -773,6 +773,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu canlı pusula değil, coğrafi bir açıdır. Oku izlemeden önce telefonun üstünü kuzeye hizalayın.';
 
   @override
+  String get qiblaNorth => 'K';
+
+  @override
+  String get qiblaLiveHint =>
+      'Cihaz pusulası açık: telefonu yatay tutun — ok, kıbleyi telefonun üstüne göre gösterir.';
+
+  @override
+  String get qiblaFacing => 'Kıbleye dönüksünüz';
+
+  @override
+  String get qiblaCalibrationNeeded => 'Pusulanın kalibre edilmesi gerekiyor';
+
+  @override
+  String get qiblaCalibrationHint =>
+      'Telefonu havada birkaç kez sekiz çizerek hareket ettirin; metalden ve mıknatıslardan, mıknatıslı kılıflar dahil, uzak durun.';
+
+  @override
+  String get qiblaCompassUnavailable => 'Bu cihazda pusula kullanılamıyor.';
+
+  @override
   String get prayerCalendar => 'Aylık namaz takvimi';
 
   @override
@@ -1953,6 +1973,23 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get salahRulingSunnah => 'Sünnet';
+
+  @override
+  String get salah3dSchematic => 'Şematik 3D çizim';
+
+  @override
+  String get salah3dPlay => 'Hareketi oynat';
+
+  @override
+  String get salah3dPause => 'Hareketi duraklat';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'Hareket hızı: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'Görünümü sıfırla';
 
   @override
   String get salahOfflineTitle => 'Çevrimdışı görseller';

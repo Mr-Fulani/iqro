@@ -44,7 +44,9 @@ WEB_DIR := services/web
 PRODUCTION_ENV ?= services/backend/.env.production
 API_REPLICAS ?= 1
 WEB_REPLICAS ?= 1
-PRODUCTION_COMPOSE = DATABASE_API_REPLICAS=$(API_REPLICAS) PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml
+# Set to "-f compose.production.tls.yaml" on a single host that terminates TLS itself.
+PRODUCTION_COMPOSE_OVERLAY ?=
+PRODUCTION_COMPOSE = DATABASE_API_REPLICAS=$(API_REPLICAS) PRODUCTION_ENV_FILE=$(PRODUCTION_ENV) docker compose --env-file $(PRODUCTION_ENV) -f compose.production.yaml $(PRODUCTION_COMPOSE_OVERLAY)
 STAGING_ENV ?= ops/staging/staging.env
 STAGING_REVISION ?= $(shell cut -c1-7 .deployed-commit 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || printf unknown)
 STAGING_APP_VERSION ?= staging-$(STAGING_REVISION)

@@ -13,6 +13,33 @@ import 'package:iqro_mobile/core/network/api_exception.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('email verification', () {
+    test('a code request names the language of the code email', () async {
+      final storage = _storageWith(_activeSession());
+      late RequestOptions sent;
+      final repository = _repository(storage, (request) {
+        sent = request;
+        return _jsonResponse(<String, Object?>{
+          'challenge_id': 'challenge-1',
+          'expires_in': 600,
+          'expires_at': '2035-01-01T00:10:00Z',
+        }, 202);
+      });
+
+      final challenge = await repository.startEmailVerification(
+        ' Reader@Example.TEST ',
+        locale: 'ar',
+      );
+
+      expect(sent.path, '/auth/email/start');
+      expect(sent.data, <String, Object?>{
+        'email': 'reader@example.test',
+        'locale': 'ar',
+      });
+      expect(challenge.id, 'challenge-1');
+    });
+  });
+
   group('account deletion', () {
     test('a request adopts the pending status and keeps the tokens', () async {
       final storage = _storageWith(_activeSession());

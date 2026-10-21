@@ -4,7 +4,7 @@
 // pixels; the PNG is twice as dense, as in the app.
 
 export type ShareCardContent = {
-  /** «Аль-Бакара · 2:255». */
+  /** «Аль-Бакара · 2:255», or the du'a's chapter and number. */
   title: string;
   arabic: string;
   translation: string;
@@ -23,7 +23,7 @@ const HEIGHT = 675;
 const PIXEL_RATIO = 2;
 const GOLD = "#e2b665";
 const IVORY = "#f4edda";
-const SITE = "iqro.forum";
+const SITE = "www.iqro.forum";
 
 // Long passages get a smaller script so the whole text fits the card.
 function arabicSize(text: string): number {
@@ -40,7 +40,7 @@ function isRtl(text: string): boolean {
 
 // Greedy word wrap; the last allowed line ends with an ellipsis when text is left.
 function wrap(
-  context: CanvasRenderingContext2D,
+  context: Pick<CanvasRenderingContext2D, "measureText">,
   text: string,
   width: number,
   maxLines: number,
@@ -64,6 +64,28 @@ function wrap(
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/**
+ * The title ends with its reference after the last « · »: «Аль-Бакара · 2:255»,
+ * «… · #69». A title too long for its lines loses words of the name, never the
+ * reference.
+ */
+export function titleLines(
+  context: Pick<CanvasRenderingContext2D, "measureText">,
+  title: string,
+  width: number,
+  maxLines: number,
+): string[] {
+  const lines = wrap(context, title, width, Infinity);
+  if (lines.length <= maxLines) return lines;
+  const cut = title.lastIndexOf(" · ");
+  const words = cut < 0 ? [] : title.slice(0, cut).trim().split(/\s+/);
+  for (let count = words.length - 1; count > 0; count -= 1) {
+    const shortened = wrap(context, `${words.slice(0, count).join(" ")}…${title.slice(cut)}`, width, Infinity);
+    if (shortened.length <= maxLines) return shortened;
+  }
+  return wrap(context, title, width, maxLines);
 }
 
 function roundedRect(
@@ -201,13 +223,19 @@ function drawCard(
   const pageRtl = document.documentElement.dir === "rtl";
 
   // The seal and the title, in the reading direction of the page.
-  const title = block(context, content.title, fontFaces[1], 17 * 1.25, width - 56, 2);
+  context.font = fontFaces[1];
+  const title: Block = {
+    lines: titleLines(context, content.title, width - 56, 2),
+    font: fontFaces[1],
+    lineHeight: 17 * 1.25,
+    rtl: pageRtl,
+  };
   const headerHeight = Math.max(44, title.lines.length * title.lineHeight);
   if (logo) context.drawImage(logo, pageRtl ? right - 44 : left, top + (headerHeight - 44) / 2, 44, 44);
   context.fillStyle = GOLD;
   drawBlock(
     context,
-    { ...title, rtl: pageRtl },
+    title,
     pageRtl ? right - 56 : left + 56,
     top + (headerHeight - title.lines.length * title.lineHeight) / 2,
     pageRtl ? "right" : "left",

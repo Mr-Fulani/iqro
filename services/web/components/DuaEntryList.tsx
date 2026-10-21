@@ -1,22 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { api, type DuaEntry } from "../lib/api";
-import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
-import { useAuth } from "../lib/auth-context";
+import type { DuaEntry } from "../lib/api";
+import { duaEntryKey, duaEntryPath } from "../lib/dua-presentation";
+import { duaDisplayTitle } from "../lib/dua-share";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
-
-function entryKey(entry: DuaEntry): string {
-  return `${entry.collection}:${entry.source_number}`;
-}
-
-function entryAnchor(entry: DuaEntry): string {
-  return `dua-${entry.collection}-${entry.source_number}`;
-}
+import { useDuaAudio, useDuaFavorites, useDuaShare } from "./useDuaActions";
 
 function AudioIcon({ playing }: { playing: boolean }) {
   return (
@@ -33,335 +26,112 @@ function AudioIcon({ playing }: { playing: boolean }) {
   );
 }
 
+/** The profile's favourite du'a: a compact row each, with its actions. */
 export function DuaEntryList({
   entries,
-  headingLevel = 2,
   onFavoriteChange,
-  compact = false,
 }: {
   entries: DuaEntry[];
-  headingLevel?: 2 | 3;
   onFavoriteChange?: (entry: DuaEntry, isFavorite: boolean) => void;
-  compact?: boolean;
 }) {
-  const { isLoading: authLoading, loginGuest, session } = useAuth();
   const { formatNumber, locale, t } = useI18n();
-  const EntryHeading = headingLevel === 3 ? "h3" : "h2";
-  const [audioPlayerId] = useState(() => Symbol("dua-audio-player"));
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
-  const [favoriteBusyKeys, setFavoriteBusyKeys] = useState<Set<string>>(new Set());
-  const [favoriteErrors, setFavoriteErrors] = useState<Record<string, string>>({});
-  const [activeAudioKey, setActiveAudioKey] = useState<string | null>(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const favorites = useDuaFavorites();
+  const audio = useDuaAudio();
   const [shareStatus, setShareStatus] = useState("");
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || activeAudioKey === null) return;
-    return registerAudioPlayer(audioPlayerId, () => {
-      audio.pause();
-      setAudioPlaying(false);
-    });
-  }, [activeAudioKey, audioPlayerId]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      setFavoriteKeys(new Set());
-      return;
-    }
-    let mounted = true;
-    void api
-      .getDuaFavorites()
-      .then((snapshot) => {
-        if (!mounted) return;
-        setFavoriteKeys(
-          new Set(
-            snapshot.results
-              .filter((favorite) => favorite.is_favorite)
-              .map((favorite) => `${favorite.collection}:${favorite.source_number}`),
-          ),
-        );
-      })
-      .catch(() => {
-        // Keep the public catalog usable if personal state is temporarily unavailable.
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [authLoading, session]);
+  const share = useDuaShare(setShareStatus);
 
   const toggleFavorite = async (entry: DuaEntry) => {
-    const key = entryKey(entry);
-    if (favoriteBusyKeys.has(key)) return;
-    setFavoriteBusyKeys((current) => new Set(current).add(key));
-    setFavoriteErrors((current) => ({ ...current, [key]: "" }));
-    const wasFavorite = favoriteKeys.has(key);
-    const nextFavorite = !wasFavorite;
-    try {
-      if (!api.getSession() && !(await loginGuest())) {
-        throw new Error(t("dua.favoriteError"));
-      }
-      setFavoriteKeys((current) => {
-        const next = new Set(current);
-        if (nextFavorite) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-      const saved = await api.setDuaFavorite(
-        entry.collection,
-        entry.source_number,
-        nextFavorite,
-      );
-      setFavoriteKeys((current) => {
-        const next = new Set(current);
-        if (saved.is_favorite) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-      onFavoriteChange?.(entry, saved.is_favorite);
-    } catch (error) {
-      setFavoriteKeys((current) => {
-        const next = new Set(current);
-        if (wasFavorite) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-      setFavoriteErrors((current) => ({
-        ...current,
-        [key]: api.normalizeError(error) || t("dua.favoriteError"),
-      }));
-    } finally {
-      setFavoriteBusyKeys((current) => {
-        const next = new Set(current);
-        next.delete(key);
-        return next;
-      });
-    }
+    const saved = await favorites.toggle(entry);
+    if (saved !== null) onFavoriteChange?.(entry, saved);
   };
-
-  const toggleAudio = (entry: DuaEntry) => {
-    const key = entryKey(entry);
-    if (activeAudioKey !== key) {
-      claimAudioFocus(audioPlayerId);
-      setAudioError(null);
-      setAudioPlaying(false);
-      setActiveAudioKey(key);
-      return;
-    }
-    if (!audioRef.current) return;
-    if (!audioPlaying) {
-      claimAudioFocus(audioPlayerId);
-      void audioRef.current.play().catch(() => setAudioError(t("dua.audioError")));
-    } else {
-      audioRef.current.pause();
-    }
-  };
-
-  const shareEntry = async (entry: DuaEntry) => {
-    const url = new URL(localizedPath(locale, `/dua/${entry.collection}/${entry.source_number}`), window.location.origin).href;
-    const text = [
-      `${entry.category.title} · #${entry.source_number}`,
-      entry.arabic_text,
-      entry.translation?.meaning_text,
-      entry.source?.title,
-      ...entry.evidence.map((evidence) => evidence.source_reference),
-    ].filter(Boolean).join("\n\n");
-    setShareStatus("");
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: entry.category.title, text, url });
-      } else {
-        await navigator.clipboard.writeText(`${text}\n\n${url}`);
-        setShareStatus(t("dua.shareCopied"));
-      }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        setShareStatus(t("dua.shareError"));
-      }
-    }
-  };
-
-  if (entries.length === 0) {
-    return (
-      <div className="dua-empty">
-        <span aria-hidden="true">🤲</span>
-        <p>{t("dua.empty")}</p>
-      </div>
-    );
-  }
 
   return (
-    <div className={`dua-entry-list${compact ? " is-compact" : ""}`}>
+    <div className="dua-entry-list is-compact">
       {shareStatus ? <p role="status">{shareStatus}</p> : null}
       {entries.map((entry) => {
-        const key = entryKey(entry);
-        const audio = entry.audio?.[0];
-        const favorite = favoriteKeys.has(key);
-        const favoriteBusy = favoriteBusyKeys.has(key);
-        const audioActive = activeAudioKey === key;
+        const key = duaEntryKey(entry);
+        const asset = entry.audio?.[0];
+        const favorite = favorites.isFavorite(entry);
+        const audioActive = audio.activeKey === key;
+        const playing = audioActive && audio.playing;
         const readerName =
-          locale === "ar" && audio?.reader_name_ar ? audio.reader_name_ar : audio?.reader_name;
+          locale === "ar" && asset?.reader_name_ar ? asset.reader_name_ar : asset?.reader_name;
         return (
-          <article
-            className={`dua-entry-card${compact ? " is-compact" : ""}`}
-            id={entryAnchor(entry)}
-            key={entry.id}
-          >
+          <article className="dua-entry-card is-compact" key={entry.id}>
             <header className="dua-entry-head">
               <div>
                 <span className="dua-entry-number">#{formatNumber(entry.source_number)}</span>
-                <EntryHeading>
-                  <Link
-                    className="dua-entry-title-link"
-                    href={localizedPath(
-                      locale,
-                      `/dua/${entry.collection}/${entry.source_number}`,
-                    )}
-                  >
-                    {entry.category.title}
+                <h3>
+                  <Link className="dua-entry-title-link" href={localizedPath(locale, duaEntryPath(entry))}>
+                    {duaDisplayTitle(entry.category.title, locale)}
                   </Link>
-                </EntryHeading>
+                </h3>
               </div>
-              <div className="dua-entry-tools">
-                <div className="dua-entry-actions">
-                  <button type="button" className="btn btn-sm btn-secondary" onClick={() => void shareEntry(entry)}>
-                    {t("dua.share")}
-                  </button>
-                  {audio ? (
-                    <button
-                      type="button"
-                      className={`dua-icon-action ${audioActive ? "is-active" : ""}`}
-                      onClick={() => toggleAudio(entry)}
-                      aria-label={
-                        audioActive && audioPlaying ? t("dua.pauseAudio") : t("dua.playAudio")
-                      }
-                      title={
-                        audioActive && audioPlaying ? t("dua.pauseAudio") : t("dua.playAudio")
-                      }
-                      aria-pressed={audioActive && audioPlaying}
-                    >
-                      <AudioIcon playing={audioActive && audioPlaying} />
-                    </button>
-                  ) : null}
+              <div className="dua-entry-actions">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  aria-haspopup="dialog"
+                  onClick={() => share.open(entry)}
+                >
+                  {t("dua.share")}
+                </button>
+                {asset ? (
                   <button
                     type="button"
-                    className={`dua-icon-action dua-favorite-action ${favorite ? "is-active" : ""}`}
-                    onClick={() => void toggleFavorite(entry)}
-                    aria-label={favorite ? t("dua.removeFavorite") : t("dua.addFavorite")}
-                    title={favorite ? t("dua.removeFavorite") : t("dua.addFavorite")}
-                    aria-pressed={favorite}
-                    aria-busy={favoriteBusy}
-                    disabled={favoriteBusy || authLoading}
+                    className={`dua-icon-action ${audioActive ? "is-active" : ""}`}
+                    onClick={() => audio.toggle(entry)}
+                    aria-label={playing ? t("dua.pauseAudio") : t("dua.playAudio")}
+                    title={playing ? t("dua.pauseAudio") : t("dua.playAudio")}
+                    aria-pressed={playing}
                   >
-                    <FavoriteBookmarkIcon active={favorite} />
+                    <AudioIcon playing={playing} />
                   </button>
-                </div>
-                {!compact ? (
-                  <span className="status-chip">
-                    {entry.repetition_label
-                      ? t("dua.repeatSequence", {
-                          count: entry.repetition_label
-                            .split(" · ")
-                            .map((value) => formatNumber(Number(value)))
-                            .join(" · "),
-                        })
-                      : entry.repetitions === 1
-                        ? t("dua.repeatOnce")
-                        : t("dua.repeatCount", { count: formatNumber(entry.repetitions) })}
-                  </span>
                 ) : null}
+                <button
+                  type="button"
+                  className={`dua-icon-action dua-favorite-action ${favorite ? "is-active" : ""}`}
+                  onClick={() => void toggleFavorite(entry)}
+                  aria-label={favorite ? t("dua.removeFavorite") : t("dua.addFavorite")}
+                  title={favorite ? t("dua.removeFavorite") : t("dua.addFavorite")}
+                  aria-pressed={favorite}
+                  aria-busy={favorites.isBusy(entry)}
+                  disabled={favorites.isBusy(entry)}
+                >
+                  <FavoriteBookmarkIcon active={favorite} />
+                </button>
               </div>
             </header>
 
-            {favoriteErrors[key] ? (
+            {favorites.errorOf(entry) ? (
               <p className="dua-action-error" role="alert">
-                {favoriteErrors[key]}
+                {favorites.errorOf(entry)}
               </p>
             ) : null}
 
-            {audioActive && audio ? (
+            {audioActive && asset ? (
               <div className="dua-audio-panel">
                 <audio
-                  ref={audioRef}
-                  src={audio.url}
+                  key={audio.elementKey}
+                  {...audio.elementProps}
                   controls
-                  autoPlay
-                  preload="none"
                   controlsList="nodownload"
-                  onPlay={() => {
-                    claimAudioFocus(audioPlayerId);
-                    setAudioPlaying(true);
-                  }}
-                  onPause={() => setAudioPlaying(false)}
-                  onEnded={() => setAudioPlaying(false)}
-                  onError={() => {
-                    setAudioPlaying(false);
-                    setAudioError(t("dua.audioError"));
-                  }}
                 >
                   {t("dua.audioUnsupported")}
                 </audio>
                 <p>
                   {t("dua.audioReader", { reader: readerName || "—" })}{" "}
-                  <a href={audio.source_url} target="_blank" rel="noreferrer">
+                  <a href={asset.source_url} target="_blank" rel="noreferrer">
                     {t("dua.audioSource")} ↗
                   </a>
                 </p>
-                {audioError ? <span role="alert">{audioError}</span> : null}
+                {audio.failed ? <span role="alert">{t("dua.audioError")}</span> : null}
               </div>
-            ) : null}
-
-            {!compact ? (
-              <>
-                <p className="dua-arabic" lang="ar" dir="rtl">
-                  {entry.arabic_text}
-                </p>
-
-                {entry.translation?.transliteration ? (
-                  <div className="dua-translation-block">
-                    <span>{t("dua.transliteration")}</span>
-                    <p>{entry.translation.transliteration}</p>
-                  </div>
-                ) : null}
-
-                {locale !== "ar" && entry.translation ? (
-                  <div className="dua-translation-block dua-meaning">
-                    <span>{t("dua.meaning")}</span>
-                    <p>{entry.translation.meaning_text}</p>
-                  </div>
-                ) : null}
-
-                <details className="dua-provenance">
-                  <summary>{t("dua.sourceAndEvidence")}</summary>
-                  <div className="dua-provenance-body">
-                    {entry.evidence.map((evidence, index) => (
-                      <div key={`${evidence.source_reference}-${index}`}>
-                        <strong>{evidence.source_reference}</strong>
-                        <span>
-                          {evidence.verification_status === "editorially_verified"
-                            ? t("dua.editoriallyVerified")
-                            : t("dua.sourceOnly")}
-                        </span>
-                      </div>
-                    ))}
-                    {entry.source ? (
-                      <p>
-                        {t("dua.sourceEdition")}: {entry.source.title}.{" "}
-                        <a href={entry.source.source_url} target="_blank" rel="noreferrer">
-                          {t("dua.openSource")} ↗
-                        </a>
-                      </p>
-                    ) : null}
-                  </div>
-                </details>
-              </>
             ) : null}
           </article>
         );
       })}
+      {share.dialog}
     </div>
   );
 }

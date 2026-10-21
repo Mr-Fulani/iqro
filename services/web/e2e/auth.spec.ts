@@ -115,7 +115,10 @@ test("verified email login returns to the previous page without persisting token
   await expect(page).toHaveURL(/\/login$/);
 
   await page.getByLabel("Email").fill("reader@example.com");
+  const emailStart = page.waitForRequest("**/api/web-auth/email/start");
   await page.getByRole("button", { name: "Получить код" }).click();
+  // The backend writes the code email in the language of the page.
+  expect((await emailStart).postDataJSON()).toEqual({ email: "reader@example.com", locale: "ru" });
   await expect(page.getByText(/Код отправлен на reader@example.com/)).toBeVisible();
 
   await page.getByLabel("Код из письма").fill("123456");

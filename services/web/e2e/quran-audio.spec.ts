@@ -924,7 +924,7 @@ test("audio keeps playing on ordinary navigation and pauses when opening Quran",
 test("global recitation and Dua audio take turns without overlapping", async ({ page }) => {
   // Keep the Dua media request pending: an empty or aborted body makes Chromium
   // fire a trusted media error right after the mocked play(), which resets the
-  // Dua button and races the aria-pressed assertions below.
+  // Dua button and races the assertions below.
   await page.route("**/audio/ar/1.mp3", () => {});
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
@@ -935,29 +935,29 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await expect(page).toHaveURL("/ru/dua");
   await expect(player.getByText("Пауза при переходе · позиция сохранена", { exact: true })).toBeVisible();
 
-  await page.locator(".dua-category-chip").click();
+  await page.locator(".dua-topic-card").click();
   await expect(page).toHaveURL("/ru/dua/topics/sleep");
-  // Topic pages list duas; playback controls live on the individual dua page.
-  await page.getByRole("link", { name: /Слова поминания при пробуждении ото сна · #1/ }).click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
-  const duaAudio = page.locator(".dua-audio-panel audio");
-  const duaButton = page.locator(".dua-entry-tools .dua-icon-action").first();
+  // The topic lists its chapters; a chapter reads as cards with their audio.
+  await page.locator(".dua-chapter-row").first().click();
+  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/categories/waking-up");
+  const duaAudio = page.locator("audio.dua-audio");
+  const duaButton = page.locator(".dua-action-play").first();
   await duaButton.click();
   await expect(duaAudio).toHaveAttribute(
     "src",
     "https://www.hisnmuslim.com/audio/ar/1.mp3",
   );
   await duaAudio.evaluate((element) => void (element as HTMLAudioElement).play());
-  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(duaButton).toHaveAccessibleName("Приостановить аудио");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 
   const globalAudio = player.locator("audio");
   await globalAudio.evaluate((element) => void (element as HTMLAudioElement).play());
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
-  await expect(duaButton).toHaveAttribute("aria-pressed", "false");
+  await expect(duaButton).toHaveAccessibleName("Прослушать ду’а");
 
   await duaButton.click();
-  await expect(duaButton).toHaveAttribute("aria-pressed", "true");
+  await expect(duaButton).toHaveAccessibleName("Приостановить аудио");
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 
@@ -1889,6 +1889,32 @@ test("an ayah picture is drawn again when its font arrives late", async ({ page 
   await expect(picture).toBeVisible({ timeout: 10_000 });
   const first = await picture.getAttribute("src");
   await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
+});
+
+test("without the share dialog's code an ayah still goes as text, and the next press loads it", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const shared = await captureWebShare(page);
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
+
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
+  await expect.poll(shared).toEqual({
+    title: "Аль-Анам · 6:1",
+    text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+    files: 0,
+  });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("#quran-ayah-6-1")).toBeVisible();
+
+  await page.unroute("**/_next/static/chunks/**");
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  await expect(page.getByRole("dialog", { name: "Поделиться аятом" })
+    .getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });
 
 test("an ayah picture that cannot be drawn is reported and the link still copies", async ({ page }) => {

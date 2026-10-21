@@ -4,8 +4,11 @@ import uuid
 
 from celery import shared_task
 from django.conf import settings
-from django.core.mail import send_mail
 
+from quran_backend.modules.feedback.emails import (
+    send_operator_notification_email,
+    send_reporter_notification_email,
+)
 from quran_backend.modules.feedback.models import (
     FeedbackMessage,
     FeedbackTicket,
@@ -37,23 +40,11 @@ def send_feedback_operator_notification_task(
     except ValueError, FeedbackTicket.DoesNotExist, FeedbackMessage.DoesNotExist:
         return "missing"
 
-    event_label = "Новое обращение" if event == "created" else "Новое сообщение пользователя"
-    admin_url = f"{settings.PUBLIC_SITE_URL}/admin/feedback/feedbackticket/{ticket.id}/change/"
-    delivered = send_mail(
-        subject=f"[IQRO] {event_label}: {ticket.public_id}",
-        message=(
-            f"{event_label}\n\n"
-            f"Номер: {ticket.public_id}\n"
-            f"Категория: {ticket.get_category_display()}\n"
-            f"Тема: {ticket.subject}\n"
-            f"Команда: {ticket.team or 'не назначена'}\n"
-            f"Email пользователя: {ticket.reporter.email or 'не подтверждён'}\n\n"
-            f"Сообщение:\n{message.body}\n\n"
-            f"Открыть в административной панели:\n{admin_url}"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[recipient],
-        fail_silently=False,
+    delivered = send_operator_notification_email(
+        recipient=recipient,
+        ticket=ticket,
+        message=message,
+        event=event,
     )
     if delivered != 1:
         raise RuntimeError("Feedback operator notification was not accepted by the email backend.")
@@ -79,17 +70,7 @@ def send_feedback_reporter_notification_task(message_id: str) -> str:
     if not recipient:
         return "disabled"
 
-    profile_url = f"{settings.PUBLIC_SITE_URL}/{ticket.locale}/profile#feedback"
-    delivered = send_mail(
-        subject=f"Ответ по обращению {ticket.public_id}",
-        message=(
-            f"По вашему обращению «{ticket.subject}» появился ответ команды IQRO.\n\n"
-            f"Откройте личный кабинет, чтобы прочитать сообщение и ответить:\n{profile_url}"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[recipient],
-        fail_silently=False,
-    )
+    delivered = send_reporter_notification_email(recipient=recipient, ticket=ticket)
     if delivered != 1:
         raise RuntimeError("Feedback reporter notification was not accepted by the email backend.")
     return "sent"

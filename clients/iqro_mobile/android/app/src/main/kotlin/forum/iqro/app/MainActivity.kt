@@ -13,12 +13,15 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.view.Surface
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
     private var lastPagePulse = 0L
+    private var qiblaCompass: QiblaCompassStreamHandler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         moveSalahStepToQuery(intent)
@@ -55,7 +58,25 @@ class MainActivity : AudioServiceActivity() {
                     }
                 }
             }
+        val compass = QiblaCompassStreamHandler(applicationContext, ::displayRotation)
+        qiblaCompass = compass
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/qibla_compass")
+            .setStreamHandler(compass)
     }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        qiblaCompass?.onCancel(null)
+        qiblaCompass = null
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun displayRotation(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.rotation ?: Surface.ROTATION_0
+        } else {
+            windowManager.defaultDisplay.rotation
+        }
 
     private fun refreshNotificationIcons() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
