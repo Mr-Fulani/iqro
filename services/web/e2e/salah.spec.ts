@@ -158,6 +158,96 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("step notes open from «?» and «!» and close with Escape, a click outside or another step", async ({ page }) => {
+  await openLesson(page, "/ru/salah/fajr#fajr.r1.ruku");
+  const step = page.locator(".salah-step:not([hidden])");
+  await expect(step.getByTestId("salah-note-icon")).toHaveCount(2);
+  const help = step.getByRole("button", { name: "Справка", exact: true });
+  const warning = step.getByRole("button", { name: "Важно", exact: true });
+  await expect(help).toHaveText("?");
+  await expect(warning).toHaveText("!");
+  await expect(help).toHaveAttribute("aria-expanded", "false");
+  await expect(step.getByRole("dialog")).toHaveCount(0);
+
+  await help.click();
+  const helpNote = step.getByRole("dialog", { name: "Справка" });
+  await expect(helpNote).toBeVisible();
+  await expect(helpNote).toContainText("Спина и голова на одной линии");
+  await expect(help).toHaveAttribute("aria-expanded", "true");
+  await expect(helpNote).toBeFocused();
+  // The popover stays inside the step, whatever the width.
+  const [noteBox, stepBox] = [await helpNote.boundingBox(), await step.boundingBox()];
+  expect(noteBox!.x).toBeGreaterThanOrEqual(stepBox!.x);
+  expect(noteBox!.x + noteBox!.width).toBeLessThanOrEqual(stepBox!.x + stepBox!.width + 1);
+  await page.keyboard.press("Escape");
+  await expect(helpNote).toBeHidden();
+  await expect(help).toBeFocused();
+
+  // Keyboard only: Enter opens, Tab reaches «close», Enter closes and returns focus.
+  await page.keyboard.press("Enter");
+  await expect(helpNote).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(helpNote.getByRole("button", { name: "Закрыть заметку" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(helpNote).toBeHidden();
+  await expect(help).toBeFocused();
+
+  // One note at a time; a click outside closes it.
+  await warning.click();
+  await help.click();
+  await expect(step.getByRole("dialog")).toHaveCount(1);
+  await warning.click();
+  const warningNote = step.getByRole("dialog", { name: "Важно" });
+  await expect(warningNote).toContainText("без него ракаат не засчитывается");
+  await counter(page).click();
+  await expect(warningNote).toBeHidden();
+
+  // Turning the step closes it; the next visit starts closed.
+  await warning.click();
+  await page.keyboard.press("ArrowRight");
+  await expect(counter(page)).toHaveText("Шаг 4 из 5 · Ракаат 2");
+  await page.keyboard.press("ArrowLeft");
+  await expect(counter(page)).toHaveText("Шаг 3 из 5 · Ракаат 1");
+  await expect(step.getByRole("dialog")).toHaveCount(0);
+
+  // Practice shows only the picture, the Arabic and the audio.
+  await page.getByRole("button", { name: "Практика" }).click();
+  await expect(step.getByTestId("salah-note-icon")).toHaveCount(0);
+});
+
+test("notes are in the server HTML and mirrored on the Arabic page", async ({ page, request }) => {
+  const html = await (await request.get("/ru/salah/fajr")).text();
+  expect(html).toContain("Спина и голова на одной линии: не опускайте голову и не задирайте её.");
+
+  await openLesson(page, "/ar/salah/fajr#fajr.r1.ruku");
+  const step = page.locator(".salah-step:not([hidden])");
+  const icons = step.getByTestId("salah-note-icon");
+  await expect(icons.first()).toHaveAttribute("aria-label", "توضيح");
+  // Right to left: the first note's icon is the rightmost.
+  const [first, second] = [await icons.nth(0).boundingBox(), await icons.nth(1).boundingBox()];
+  expect(first!.x).toBeGreaterThan(second!.x);
+  await icons.nth(1).click();
+  const note = step.getByRole("dialog", { name: "تنبيه مهم" });
+  await expect(note).toBeVisible();
+  const [noteBox, stepBox] = [await note.boundingBox(), await step.boundingBox()];
+  expect(noteBox!.x).toBeGreaterThanOrEqual(stepBox!.x);
+  expect(noteBox!.x + noteBox!.width).toBeLessThanOrEqual(stepBox!.x + stepBox!.width + 1);
+  await page.keyboard.press("Escape");
+  await expect(note).toBeHidden();
+});
+
+test("a step's own voice-over plays in the step and stops with the step", async ({ page }) => {
+  await openLesson(page, "/ru/salah/fajr#fajr.r1.ruku");
+  const step = page.locator(".salah-step:not([hidden])");
+  const voice = step.getByTestId("salah-step-audio");
+  await expect(voice).toHaveAccessibleName("Озвучка шага: Слушать");
+  await voice.click();
+  await expect(step.locator("audio")).toHaveAttribute("src", /audio-ruku-ru-[0-9a-f]+\.m4a$/);
+  await expect(page.locator("audio")).toHaveCount(1);
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expect(page.locator("audio")).toHaveCount(0);
+});
+
 test("progress resumes the lesson, restarts a missing step and keeps completion", async ({ page }) => {
   await openLesson(page, "/ru/salah/fajr");
   await page.getByRole("button", { name: "Далее" }).click();

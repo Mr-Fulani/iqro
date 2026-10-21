@@ -320,6 +320,130 @@
   line-height: 1.6;
 }
 
+/* «?» and «!» notes of a step: small icons by the title, a popover under it. */
+.salah-step-head {
+  position: relative;
+}
+
+.salah-notes {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.salah-note-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1.5px solid var(--primary-border);
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+/* Darker than --warning: the glyph is text and needs 4.5:1 on the subtle fill. */
+.salah-note-icon.is-warning {
+  border-color: var(--warning);
+  background: var(--warning-subtle);
+  color: #92400e;
+}
+
+.salah-note-icon:hover,
+.salah-note-icon[aria-expanded="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+.salah-note-icon.is-warning:hover,
+.salah-note-icon.is-warning[aria-expanded="true"] {
+  border-color: #b45309;
+  background: #b45309;
+  color: var(--text-inverse);
+}
+
+.salah-note-icon:focus-visible,
+.salah-note-close:focus-visible,
+.salah-note-popover:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Under the whole head, so it never leaves the step on a narrow screen. */
+.salah-note-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline: 0;
+  z-index: 5;
+  display: grid;
+  gap: 6px;
+  max-width: 40rem;
+  padding: 12px 14px;
+  border: 1px solid var(--primary-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.salah-note-popover[hidden] {
+  display: none;
+}
+
+.salah-note-popover.is-warning {
+  border-color: var(--warning);
+}
+
+.salah-note-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.salah-note-popover.is-warning .salah-note-popover-head strong {
+  color: #92400e;
+}
+
+.salah-note-close {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.salah-note-close:hover {
+  background: var(--panel-hover);
+  color: var(--text-primary);
+}
+
+.salah-step-audio {
+  display: grid;
+  gap: 8px;
+}
+
+.salah-step-audio .salah-formula-tools span {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 .salah-formula {
   display: grid;
   gap: 8px;

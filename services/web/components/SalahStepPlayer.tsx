@@ -15,6 +15,7 @@ import {
   recordSalahStep,
   resumeStepIndex,
   type SalahFormula,
+  type SalahFormulaAudio,
   type SalahLessonBundle,
   type SalahMedia,
   type SalahRuling,
@@ -25,6 +26,7 @@ import {
 } from "../lib/salah";
 import { salahStepScenes } from "../lib/salah-3d";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
+import { SalahStepNotes } from "./SalahStepNotes";
 
 type Mode = "learn" | "practice";
 type Display = { mode: Mode; transliteration: boolean; translation: boolean };
@@ -306,6 +308,67 @@ export function SalahStepPlayer({
     }
   };
 
+  // One clip plays at a time: a formula's or the step's own voice-over.
+  const audioPanel = (clip: SalahFormulaAudio, range: { start: number; end: number | null }) => (
+    <div className="dua-audio-panel salah-audio-panel">
+      <audio
+        ref={audioRef}
+        src={clip.url}
+        controls
+        autoPlay
+        preload="none"
+        controlsList="nodownload"
+        onLoadedMetadata={(event) => {
+          if (range.start > 0) event.currentTarget.currentTime = range.start;
+        }}
+        onTimeUpdate={(event) => {
+          const audio = event.currentTarget;
+          if (range.end !== null && audio.currentTime >= range.end) {
+            audio.pause();
+            audio.currentTime = range.start;
+          }
+        }}
+        onPlay={() => {
+          claimAudioFocus(audioPlayerId);
+          setAudioPlaying(true);
+        }}
+        onPause={() => setAudioPlaying(false)}
+        onEnded={() => setAudioPlaying(false)}
+        onError={() => {
+          setAudioPlaying(false);
+          setAudioError(t("salah.audioError"));
+        }}
+      >
+        {t("salah.audioUnsupported")}
+      </audio>
+      {audioError ? <span role="alert">{audioError}</span> : null}
+    </div>
+  );
+
+  const renderStepAudio = (owner: SalahStep, audio: SalahFormulaAudio) => {
+    const key = `${owner.slug}:step`;
+    const active = activeAudio === key;
+    return (
+      <div className="salah-step-audio">
+        <div className="salah-formula-tools">
+          <button
+            type="button"
+            className={`dua-icon-action${active ? " is-active" : ""}`}
+            onClick={() => toggleAudio(key)}
+            aria-label={`${t("salah.stepAudio")}: ${active && audioPlaying ? t("salah.pauseAudio") : t("salah.playAudio")}`}
+            title={active && audioPlaying ? t("salah.pauseAudio") : t("salah.playAudio")}
+            aria-pressed={active && audioPlaying}
+            data-testid="salah-step-audio"
+          >
+            <AudioIcon playing={active && audioPlaying} />
+          </button>
+          <span>{t("salah.stepAudio")}</span>
+        </div>
+        {active ? audioPanel(audio, formulaAudioRange(audio)) : null}
+      </div>
+    );
+  };
+
   const renderFormula = (owner: SalahStep, id: string, formula: SalahFormula) => {
     const key = `${owner.slug}:${id}`;
     const active = activeAudio === key;
@@ -338,41 +401,7 @@ export function SalahStepPlayer({
             />
           ) : null}
         </div>
-        {active && formula.audio && range ? (
-          <div className="dua-audio-panel salah-audio-panel">
-            <audio
-              ref={audioRef}
-              src={formula.audio.url}
-              controls
-              autoPlay
-              preload="none"
-              controlsList="nodownload"
-              onLoadedMetadata={(event) => {
-                if (range.start > 0) event.currentTarget.currentTime = range.start;
-              }}
-              onTimeUpdate={(event) => {
-                const audio = event.currentTarget;
-                if (range.end !== null && audio.currentTime >= range.end) {
-                  audio.pause();
-                  audio.currentTime = range.start;
-                }
-              }}
-              onPlay={() => {
-                claimAudioFocus(audioPlayerId);
-                setAudioPlaying(true);
-              }}
-              onPause={() => setAudioPlaying(false)}
-              onEnded={() => setAudioPlaying(false)}
-              onError={() => {
-                setAudioPlaying(false);
-                setAudioError(t("salah.audioError"));
-              }}
-            >
-              {t("salah.audioUnsupported")}
-            </audio>
-            {audioError ? <span role="alert">{audioError}</span> : null}
-          </div>
-        ) : null}
+        {active && formula.audio && range ? audioPanel(formula.audio, range) : null}
       </article>
     );
   };
@@ -466,9 +495,13 @@ export function SalahStepPlayer({
                   {!practice && isSalahRuling(item.ruling) ? (
                     <span className={`status-chip salah-ruling is-${item.ruling}`}>{t(RULING_LABELS[item.ruling])}</span>
                   ) : null}
+                  {!practice && item.notes?.length ? (
+                    <SalahStepNotes notes={item.notes} active={itemIndex === index} />
+                  ) : null}
                 </div>
                 {!practice ? <p className="salah-instruction">{item.instruction}</p> : null}
                 {!practice && item.details ? <p className="salah-details">{item.details}</p> : null}
+                {item.audio ? renderStepAudio(item, item.audio) : null}
                 {repeatTarget ? (
                   <RepetitionCounter
                     target={repeatTarget}
