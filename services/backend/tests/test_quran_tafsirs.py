@@ -150,6 +150,10 @@ def _snapshot() -> dict[str, Any]:
     }
 
 
+def _record(**overrides: Any) -> dict[str, Any]:
+    return _snapshot()["records"][0] | overrides
+
+
 @pytest.mark.django_db
 def test_bootstrap_publishes_grouped_tafsir_and_checkpoint() -> None:
     now = datetime(2026, 8, 28, 10, tzinfo=UTC)
@@ -219,11 +223,101 @@ def test_bootstrap_resolves_empty_group_rows_to_their_source_text(
 
 
 @pytest.mark.django_db
-def test_bootstrap_rejects_an_unresolved_empty_group_row() -> None:
+@override_settings(QURAN_QF_ENV="production")
+def test_bootstrap_resolves_unreferenced_range_members_to_the_range_text(
+    api_client: APIClient,
+) -> None:
+    # Ibn Kathir (Abridged, 169) 104:2-9 and 105:2-5 carry no group_tafsir_id.
+    snapshot = _snapshot()
+    snapshot["records"].append(
+        _record(id=1002, verse_id=2, verse_key="1:2", group_tafsir_id=None, text="")
+    )
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=snapshot),
+        expected_verse_keys={"1:1", "1:2"},
+    )
+
+    assert AyahTafsir.objects.get(verse_key="1:2").provider_group_id == 1001
+    response = api_client.get("/api/v1/quran/tafsirs/16/surahs/1")
+    assert response.json()[1]["text"] == "Краткое объяснение"
+
+
+@pytest.mark.django_db
+def test_bootstrap_skips_an_ayah_the_provider_left_without_text() -> None:
+    # Al-Sa'di (91) 16:64 is empty and its group_tafsir_id is its own verse ID.
+    snapshot = _snapshot()
+    snapshot["records"][0].update(group_verse_key_to="1:1", group_verses_count=1, end_verse_id=1)
+    snapshot["records"].append(
+        _record(
+            id=1002,
+            verse_id=2,
+            verse_key="1:2",
+            group_tafsir_id=2,
+            group_verse_key_from="1:2",
+            group_verse_key_to="1:2",
+            group_verses_count=1,
+            start_verse_id=2,
+            end_verse_id=2,
+            text="",
+        )
+    )
+
+    result = sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=snapshot),
+        expected_verse_keys={"1:1", "1:2"},
+    )
+
+    assert result.records_imported == 1
+    version = TafsirEditionVersion.objects.get()
+    assert version.record_count == 1
+    assert version.covered_ayah_count == 1
+    assert list(AyahTafsir.objects.values_list("verse_key", flat=True)) == ["1:1"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("second_text", "group_tafsir_id"),
+    [
+        ("", 1002),  # names an empty row instead of the range text
+        ("Другое объяснение", None),  # two range texts and no reference
+    ],
+)
+def test_bootstrap_rejects_an_unresolved_empty_group_row(
+    second_text: str,
+    group_tafsir_id: int | None,
+) -> None:
+    group = {
+        "group_verse_key_to": "1:3",
+        "group_verses_count": 3,
+        "end_verse_id": 3,
+    }
+    snapshot = _snapshot()
+    snapshot["records"] = [
+        _record(**group),
+        _record(id=1002, verse_id=2, verse_key="1:2", group_tafsir_id=1001, text=second_text)
+        | group,
+        _record(id=1003, verse_id=3, verse_key="1:3", group_tafsir_id=group_tafsir_id, text="")
+        | group,
+    ]
+
+    with pytest.raises(QuranFoundationError, match=r"unresolved grouped Tafsir text for 1:3\."):
+        sync_quran_foundation_tafsirs(
+            resource_ids=(16,),
+            client=FakeTafsirClient(snapshot=snapshot),
+            expected_verse_keys={"1:1", "1:2", "1:3"},
+        )
+    assert not TafsirEditionVersion.objects.exists()
+
+
+@pytest.mark.django_db
+def test_bootstrap_rejects_a_snapshot_without_any_tafsir_text() -> None:
     snapshot = _snapshot()
     snapshot["records"][0]["text"] = ""
 
-    with pytest.raises(QuranFoundationError, match="unresolved grouped Tafsir"):
+    with pytest.raises(QuranFoundationError, match="has no Tafsir text"):
         sync_quran_foundation_tafsirs(
             resource_ids=(16,),
             client=FakeTafsirClient(snapshot=snapshot),
