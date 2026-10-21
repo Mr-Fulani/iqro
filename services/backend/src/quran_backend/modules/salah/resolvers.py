@@ -215,10 +215,14 @@ class FormulaResolver:
 
     def _resolve(self, formula: Mapping[str, Any], language: str) -> dict[str, Any]:
         result = self._resolve_one(formula, language)
+        source = formula["source"]
         # A recording uploaded for the course replaces the source's one.
-        own = self._media.get(audio_media_key(formula["source"], language) or "")
+        own = self._media.get(audio_media_key(source, language) or "")
         if own:
             result["audio"] = {"url": own["url"]}
+        caption = (source.get("caption") or {}).get(language)
+        if isinstance(caption, str) and caption.strip():
+            result["caption"] = caption.strip()
         return result
 
     def _resolve_one(self, formula: Mapping[str, Any], language: str) -> dict[str, Any]:
@@ -250,9 +254,12 @@ class FormulaResolver:
             surah, start, end = source["surah"], source["ayah_from"], source["ayah_to"]
             ayahs = self._quran_ayahs[surah]
             translations = self._quran_translations.get(language, {})
+            # The canonical text stays as published; the course may word the meaning its own way.
+            override = source.get("translations", {}).get(language, {})
             result = {
                 "arabic": " ".join(f"{ayahs[n]} {_ayah_marker(n)}" for n in range(start, end + 1)),
-                "translation": " ".join(
+                "translation": override.get("meaning")
+                or " ".join(
                     translations[(surah, n)]
                     for n in range(start, end + 1)
                     if (surah, n) in translations
@@ -260,6 +267,8 @@ class FormulaResolver:
                 "repetitions": 1,
                 "source": {"kind": "quran", "surah": surah, "ayah_from": start, "ayah_to": end},
             }
+            if override.get("transliteration"):
+                result["transliteration"] = override["transliteration"]
             audio = self._quran_audio.get((surah, start, end))
             if audio:
                 result["audio"] = audio

@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load static admin_urls %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'salah/editor.css' %}">{% endblock %}
+{% block bodyclass %}{{ block.super }} salah-editor-page{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; <a href="{% url 'admin:salah_salahcourseversion_editor' original.pk %}?node={{ node.id|urlencode }}">Редактор</a>
+  &rsaquo; Удаление
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="se se-structure-page">
+  <h1>{{ title }}?</h1>
+  <section class="se-block se-delete-notes" aria-labelledby="se-delete-title">
+    <h3 id="se-delete-title">Что удалится и где это видно</h3>
+    <ul>{% for note in notes %}<li>{{ note }}</li>{% endfor %}</ul>
+  </section>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="node" value="{{ node.id }}">
+    <input type="hidden" name="revision" value="{{ revision }}">
+    <div class="se-actions">
+      <button type="submit" class="button se-danger">Да, удалить из черновика</button>
+      <a class="button" href="{% url 'admin:salah_salahcourseversion_editor' original.pk %}?node={{ node.id|urlencode }}">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

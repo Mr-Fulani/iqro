@@ -65,8 +65,9 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 - `course`: slug, version, methodology, source_title.
 - `formulas[]`: формулы.
   - `{id, source: {kind: "dua", collection, source_number, arabic?, translations?{lang: {meaning?, transliteration?}}}}`. Необязательные `arabic` и `translations` заменяют текст «Хисн аль-Муслим», когда для намаза нужна другая форма; ссылка на источник и аудио остаются. Без замены компилятор сам берёт часть внутри ((…)) и убирает пометки вида «- 3 раза» или «(three times)»: число повторов показывает счётчик.
-  - `{id, source: {kind: "quran", surah, ayah_from, ayah_to}}`
+  - `{id, source: {kind: "quran", surah, ayah_from, ayah_to, translations?{lang: {meaning?, transliteration?}}}}`. Арабский текст аятов всегда из опубликованного мусхафа. Необязательный `translations` заменяет перевод издания своим и добавляет транслитерацию.
   - `{id, source: {kind: "inline", arabic, translations{lang: {meaning, transliteration}}, audio_media?}}` — только для коротких формул, которых нет в «Хисн аль-Муслим»: такбир, та'аввуз, «амин», таслим, слова между праздничными такбирами, праздничный такбир. `audio_media` — key записи из `media[]`.
+  - У источника любого вида может быть `caption?{lang}` — подпись источника («Аль-Бухари, 797»). Её можно не указывать совсем; если она есть, то на всех языках.
   - У источника любого вида могут быть `audio_media?` (своя запись для всех языков) и `audio_media_languages?{lang: key}` (своя запись языка). Своя запись заменяет запись «Хисн аль-Муслим» или Корана; запись языка звучит вместо общей.
 - `media[]`: `{key, file, scene?: {pose, view}, alt{lang}}`. `scene` — картинка является кадром этой позы 3D-сцены (`salah-3d.md`): `pose` из поз сцены, `view` — `full`, `hand` или `back`. Картинки (`.webp`, alt обязателен) и записи (`.mp3`, `.m4a`) лежат в `salah/data/media/`. Команда импорта загружает их в объектное хранилище под неизменяемым ключом; отсутствующий файл пропускается, и картинку потом загружают в админке («Версии курса» → черновик → «Открыть иллюстрации»: любой PNG, JPEG или WebP обрезается до квадрата и сжимается в WebP 720×720).
 - `sections[]`: `{slug, title{lang}, lessons[]}`.
@@ -144,7 +145,7 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
       repeat?: n
     }]
   }],
-  "formulas": {id: {arabic, transliteration?, translation, repetitions,
+  "formulas": {id: {arabic, transliteration?, translation, caption?, repetitions,
                     audio?: {url, start_ms?, end_ms?, segments?: [{ayah, start_ms, end_ms}]},
                     source: {kind: "dua", collection, source_number}
                           | {kind: "quran", surah, ayah_from, ayah_to}
@@ -154,7 +155,7 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 }
 ```
 
-Все тексты уже на языке запроса. Клиент не выбирает перевод, не собирает последовательность и не знает фикха. `notes` и `audio` у шага появились без смены `schema_version`: прежние клиенты их не видят и работают как раньше. Записи (озвучка шагов, свои записи формул) не входят в `media` документа — там только картинки, которые клиенты проверяют на размеры.
+Все тексты уже на языке запроса. Клиент не выбирает перевод, не собирает последовательность и не знает фикха. `notes` и `audio` у шага и `caption` у формулы появились без смены `schema_version`: прежние клиенты их не видят и работают как раньше. Записи (озвучка шагов, свои записи формул) не входят в `media` документа — там только картинки, которые клиенты проверяют на размеры.
 
 ## 7. Клиенты
 

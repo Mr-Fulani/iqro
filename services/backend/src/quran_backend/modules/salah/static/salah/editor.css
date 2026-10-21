@@ -343,6 +343,7 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--body-bg);
+  color: var(--body-fg);
   font-size: 11px;
   text-align: center;
 }
@@ -784,4 +785,236 @@
 .se-phone audio {
   width: 100%;
   height: 36px;
+}
+
+/* Structure: add, remove, reorder ------------------------------------------ */
+.se-tree-hint {
+  margin: 0;
+}
+
+/* The buttons float over the row's end while the pointer is on it, so the tree
+   keeps one line per place. Without hover (touch) they stay in the row. */
+.se-tree-item:not(:has(> details)),
+.se-tree-item summary {
+  position: relative;
+}
+
+.se-tree-item .se-tree-ops {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--body-bg);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 18%);
+  transform: translateY(-50%);
+}
+
+.se-tree-item:hover > .se-tree-ops,
+.se-tree-item:hover > details > summary > .se-tree-ops,
+.se-tree-ops:focus-within {
+  display: inline-flex;
+}
+
+/* A nested item's buttons show only for the row under the pointer. */
+.se-tree-item:hover .se-tree-item:not(:hover) > .se-tree-ops,
+.se-tree-item:hover .se-tree-item:not(:hover) > details > summary > .se-tree-ops,
+.se-tree-item:has(.se-tree-item:hover) > details > summary > .se-tree-ops {
+  display: none;
+}
+
+.se-tree-ops:focus-within {
+  display: inline-flex !important;
+}
+
+@media (hover: none) {
+  .se-tree-item .se-tree-ops,
+  .se-tree-item:hover .se-tree-item:not(:hover) > .se-tree-ops {
+    position: static;
+    display: inline-flex;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+.se-tree-op,
+.se-tree-handle {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--hairline-color);
+  border-radius: 5px;
+  background: var(--body-bg);
+  color: var(--body-quiet-color);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.se-tree-op:hover,
+.se-tree-op:focus-visible {
+  border-color: var(--secondary, #417690);
+  color: var(--body-fg);
+}
+
+.se-tree-op:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.se-tree-op.is-danger:hover,
+.se-tree-op.is-danger:focus-visible {
+  border-color: var(--error-fg, #ba2121);
+  color: var(--error-fg, #ba2121);
+}
+
+.se-tree-handle {
+  border-style: dashed;
+  cursor: grab;
+}
+
+.se-tree-item.is-dragging {
+  opacity: 0.45;
+}
+
+.se-tree-item.is-drop-before > a,
+.se-tree-item.is-drop-before > details > summary {
+  box-shadow: inset 0 3px 0 var(--secondary, #417690);
+}
+
+.se-tree-item.is-drop-after > a,
+.se-tree-item.is-drop-after > details > summary {
+  box-shadow: inset 0 -3px 0 var(--secondary, #417690);
+}
+
+.se-tree-add {
+  margin-top: 8px;
+}
+
+.se-structure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--se-gap);
+}
+
+.se-structure-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.se .button.se-danger,
+.se-danger {
+  border: 1px solid var(--error-fg, #ba2121);
+  background: var(--body-bg);
+  color: var(--error-fg, #ba2121);
+}
+
+.se .button.se-danger:hover,
+.se-danger:hover {
+  background: var(--error-fg, #ba2121);
+  color: var(--body-bg);
+}
+
+.se-structure-page {
+  max-width: 1100px;
+}
+
+.se-delete-notes ul {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+.se-delete-notes li {
+  margin-bottom: 6px;
+  line-height: 1.5;
+  list-style: disc;
+}
+
+.se-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 16px;
+}
+
+/* Step properties and formula texts ---------------------------------------- */
+.se-props-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 10px;
+}
+
+.se-prop {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+}
+
+.se-prop label,
+.se-prop legend {
+  font-weight: 600;
+}
+
+.se-prop select,
+.se-prop input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.se-prop input[type="number"] {
+  width: 7em;
+}
+
+.se-prop-formulas {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-inline-start: 22px;
+}
+
+.se-prop-formulas li {
+  list-style: decimal;
+}
+
+.se-prop-formulas select {
+  width: min(100%, 520px);
+}
+
+.se-source-text {
+  margin: 4px 0 0;
+  color: var(--body-quiet-color);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.se-source-text .se-arabic {
+  font-size: 18px;
+}
+
+.se-formula-arabic textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 22px;
+}
+
+.se .button.se-revert {
+  margin-inline-start: 8px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 400;
 }

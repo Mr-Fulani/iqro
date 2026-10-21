@@ -212,6 +212,7 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await expect(step).toHaveAttribute("data-step", "fajr.r1.ruku");
   await expect(step.locator(".salah-transliteration")).toBeVisible();
   await expect(step.locator(".salah-translation")).toHaveText("Слава моему Великому Господу! -3 раза");
+  await expect(step.locator(".salah-formula-caption")).toHaveText("«Хисн аль-Муслим», № 33");
   const counterGroup = step.getByRole("group", { name: "Повторить 3 раза" });
   await expect(counterGroup).toHaveCount(1);
   for (let repetition = 0; repetition < 3; repetition += 1) {
@@ -229,6 +230,7 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await page.getByRole("button", { name: "Практика" }).click();
   await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");
   await expect(step.locator(".salah-instruction")).toHaveCount(0);
+  await expect(step.locator(".salah-formula-caption")).toHaveCount(0);
   await expect(step.locator(".salah-arabic")).toBeVisible();
   await expect(step.locator("img")).toBeVisible();
   await page.reload();

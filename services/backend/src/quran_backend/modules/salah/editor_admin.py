@@ -59,18 +59,17 @@ from quran_backend.modules.salah.models import (
     SalahMediaAsset,
     SalahPublicationStatus,
 )
-from quran_backend.modules.salah.resolvers import SalahFormulaError
-from quran_backend.modules.salah.snapshot import SalahSnapshotError, snapshot_checksum
+from quran_backend.modules.salah.resolvers import FormulaResolver, SalahFormulaError
+from quran_backend.modules.salah.snapshot import (
+    SalahSnapshotError,
+    integrity_problems,
+    snapshot_checksum,
+)
 
 logger = logging.getLogger(__name__)
 
 VERSION_NAME = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._-]{0,63}$")
-RULING_LABELS = {
-    "shart": "Условие (шарт)",
-    "rukn": "Столп (рукн)",
-    "wajib": "Обязательно (ваджиб)",
-    "sunnah": "Сунна",
-}
+RULING_LABELS = editor.RULING_LABELS
 KIND_LABELS = {
     "course": "Курс",
     "section": "Раздел",
@@ -115,6 +114,14 @@ def readonly_reason(user: Any, version: SalahCourseVersion) -> str:
     return ""
 
 
+def _formula_label(formula_id: str, compiled: dict[str, Any]) -> str:
+    """«ruku-tasbih — Пречист мой Великий Господь»: the id and the course's translation."""
+    meaning = str((compiled.get(formula_id) or {}).get("translation") or "")
+    if len(meaning) > 70:
+        meaning = meaning[:69].rstrip() + "…"
+    return f"{formula_id} — {meaning}" if meaning else formula_id
+
+
 def free_version_name(version: SalahCourseVersion, base: str) -> str:
     taken = set(version.course.versions.values_list("version", flat=True))
     if base not in taken:
@@ -125,7 +132,7 @@ def free_version_name(version: SalahCourseVersion, base: str) -> str:
     return f"{base}-{number}"
 
 
-def _language_names() -> dict[str, str]:
+def language_names() -> dict[str, str]:
     return {code: str(name) for code, name in settings.LANGUAGES}
 
 
@@ -217,7 +224,7 @@ class SalahEditorAdminMixin:
         revision: str | None = None,
     ) -> TemplateResponse:
         errors = errors or {}
-        names = _language_names()
+        names = language_names()
         editable = editor_editable(request.user, version)
         tree = editor.editor_tree(snapshot, languages)
         ids = editor.flat_ids(tree)
@@ -230,6 +237,7 @@ class SalahEditorAdminMixin:
         node_missing = editor.node_missing(node, languages)
         course_missing = editor.course_missing(snapshot, languages)
         assets = {asset.key: asset for asset in version.media.all()}
+        sources = self._source_texts(node, languages)
         language_rows = [
             {
                 "code": code,
@@ -259,7 +267,7 @@ class SalahEditorAdminMixin:
             "node_kind": KIND_LABELS[node.kind],
             "node_path": self._path(snapshot, node),
             "revision": revision or editor.node_revision(snapshot, node),
-            "fields": self._fields(node, languages, names, posted, errors),
+            "fields": self._fields(node, languages, names, posted, errors, sources=sources),
             "notes": self._notes(node, languages, names, posted, errors),
             "note_kinds": list(editor.NOTE_KIND_LABELS.items()),
             "audio_groups": self._audio_groups(
@@ -274,7 +282,31 @@ class SalahEditorAdminMixin:
             "when": editor.describe_when(node.data.get("when", {})) if node.template_id else "",
             "variants": editor.variant_descriptions(snapshot, node),
             "sync_variants": posted is None or posted.get("sync_variants") == "on",
-            "formula": self._formula_info(snapshot, version, node, languages, names),
+            "formula": self._formula_info(
+                snapshot,
+                version,
+                node,
+                languages,
+                names,
+                posted=posted,
+                errors=errors,
+                sources=sources or {},
+            ),
+            "properties": self._properties(snapshot, version, node, posted, errors),
+            "section_choices": [
+                (section["slug"], editor.localized_title(section.get("title"), section["slug"]))
+                for section in snapshot.get("sections", [])
+            ],
+            "lesson_section": next(
+                (
+                    section["slug"]
+                    for section in snapshot.get("sections", [])
+                    if node.kind == "lesson" and node.data["slug"] in section.get("lessons", [])
+                ),
+                "",
+            ),
+            "structure_url": reverse("admin:salah_salahcourseversion_structure", args=[version.pk]),
+            "can_add_step": node.kind == "lesson" and not node.data.get("prayer"),
             "lesson_steps": self._lesson_steps(snapshot, node),
             "prev_id": ids[position - 1] if position > 0 else None,
             "next_id": ids[position + 1] if position + 1 < len(ids) else None,
@@ -329,20 +361,26 @@ class SalahEditorAdminMixin:
         return trail
 
     @staticmethod
-    def _fields(
+    def _fields(  # noqa: PLR0913 - the form's texts, as stored or as sent back
         node: editor.EditorNode,
         languages: list[str],
         names: dict[str, str],
         posted: Any,
         errors: dict[str, str],
+        *,
+        sources: dict[str, dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         rows = []
         for text_field in node.fields:
-            stored = node.data.get(text_field.name) or {}
+            stored = editor.node_texts(node, text_field.name)
+            source_key = {"meaning": "translation"}.get(text_field.name, text_field.name)
             values = []
             for code in languages:
                 name = f"text-{text_field.name}-{code}"
                 value = posted.get(name, "") if posted is not None else stored.get(code, "")
+                source_text = ""
+                if sources is not None and text_field.name != "caption":
+                    source_text = (sources.get(code) or {}).get(source_key, "")
                 values.append(
                     {
                         "name": name,
@@ -351,13 +389,34 @@ class SalahEditorAdminMixin:
                         "dir": "rtl" if code == "ar" else "ltr",
                         "value": value,
                         "error": errors.get(name, ""),
+                        "source": source_text,
                     }
                 )
             filled = [bool(str(item["value"]).strip()) for item in values]
             for item, has_text in zip(values, filled, strict=True):
-                item["missing"] = not has_text and (text_field.required or any(filled))
-            rows.append({"field": text_field, "values": values})
+                item["missing"] = (
+                    text_field.counted and not has_text and (text_field.required or any(filled))
+                )
+            # A du'a's or ayahs' text the course words its own way can go back to the source.
+            revertible = sources is not None and any(filled) and text_field.name != "caption"
+            rows.append({"field": text_field, "values": values, "revertible": revertible})
         return rows
+
+    @staticmethod
+    def _source_texts(
+        node: editor.EditorNode, languages: list[str]
+    ) -> dict[str, dict[str, Any]] | None:
+        """A du'a's or ayahs' own texts, without the course's wording over them."""
+        if node.kind != "formula" or (node.data.get("source") or {}).get("kind") == "inline":
+            return None
+        own = {"translations", "arabic", "caption", "audio_media", "audio_media_languages"}
+        source = {key: value for key, value in node.data["source"].items() if key not in own}
+        try:
+            resolver = FormulaResolver([{"id": node.title, "source": source}], {})
+            return {code: resolver.resolve(code)[node.title] for code in languages}
+        except SalahFormulaError:
+            logger.warning("Salah editor: the source of formula %s is unavailable", node.title)
+            return {}
 
     @staticmethod
     def _notes(
@@ -496,15 +555,23 @@ class SalahEditorAdminMixin:
         return groups
 
     @staticmethod
-    def _formula_info(
+    def _formula_info(  # noqa: PLR0913 - what the formula page shows besides its texts
         snapshot: dict[str, Any],
         version: SalahCourseVersion,
         node: editor.EditorNode,
         languages: list[str],
         names: dict[str, str],
+        *,
+        posted: Any,
+        errors: dict[str, str],
+        sources: dict[str, dict[str, Any]],
     ) -> dict[str, Any] | None:
         if node.kind != "formula":
             return None
+        own_arabic, arabic_editable = editor.formula_arabic(node)
+        source_arabic = next(
+            (value.get("arabic", "") for value in sources.values() if value.get("arabic")), ""
+        )
         source = node.data.get("source") or {}
         kind = source.get("kind")
         if kind == "dua":
@@ -524,6 +591,11 @@ class SalahEditorAdminMixin:
         first = next((value for value in compiled.values() if value), {})
         return {
             "origin": origin,
+            "kind": kind,
+            "arabic_editable": arabic_editable,
+            "arabic_value": posted.get("formula-arabic", "") if posted is not None else own_arabic,
+            "arabic_error": errors.get("formula-arabic", ""),
+            "source_arabic": source_arabic,
             "arabic": first.get("arabic", ""),
             "audio_url": (first.get("audio") or {}).get("url", ""),
             "translations": [
@@ -539,6 +611,52 @@ class SalahEditorAdminMixin:
                 (step.id, f"{step.lesson['slug'] if step.lesson else ''}: {step.title}")
                 for step in editor.formula_steps(snapshot, node.title)
             ],
+        }
+
+    @staticmethod
+    def _properties(
+        snapshot: dict[str, Any],
+        version: SalahCourseVersion,
+        node: editor.EditorNode,
+        posted: Any,
+        errors: dict[str, str],
+    ) -> dict[str, Any] | None:
+        """A step's kind, ruling, picture, formulas and repetitions, as stored or as sent."""
+        if node.kind != "step":
+            return None
+        data = node.data
+        if posted is not None and "prop-kind" in posted:
+            current = {
+                "kind": posted.get("prop-kind", ""),
+                "ruling": posted.get("prop-ruling", ""),
+                "media": posted.get("prop-media", ""),
+                "formulas": [value for value in posted.getlist("prop-formula") if value],
+                "repeat": posted.get("prop-repeat", ""),
+            }
+        else:
+            current = {
+                "kind": data.get("kind", ""),
+                "ruling": data.get("ruling") or "",
+                "media": data.get("media") or "",
+                "formulas": list(data.get("formulas", [])),
+                "repeat": data.get("repeat") or "",
+            }
+        document = version.documents.filter(language=editor.SOURCE_LANGUAGE).first()
+        compiled = (document.payload if document else {}).get("formulas", {})
+        return {
+            **current,
+            "kinds": list(editor.STEP_KIND_LABELS.items()),
+            "rulings": list(editor.RULING_LABELS.items()),
+            "images": editor.step_images(snapshot),
+            "all_formulas": [
+                (formula["id"], _formula_label(formula["id"], compiled))
+                for formula in snapshot.get("formulas", [])
+            ],
+            "errors": {
+                key.removeprefix("prop-"): value
+                for key, value in errors.items()
+                if key.startswith("prop-")
+            },
         }
 
     @staticmethod
@@ -614,7 +732,7 @@ class SalahEditorAdminMixin:
     ) -> HttpResponse:
         snapshot = copy.deepcopy(version.snapshot)
         node = editor.find_node(snapshot, node_id)
-        edit = editor.parse_node_form(node, request.POST, languages)
+        edit = editor.parse_node_form(node, request.POST, languages, snapshot=snapshot)
         errors = dict(edit.errors)
         owners = {owner_key for owner_key, *_ in self._audio_owners(snapshot, node)}
         uploads: dict[str, UploadedFile] = {}
@@ -752,6 +870,11 @@ class SalahEditorAdminMixin:
             )
         sync = request.POST.get("sync_variants") == "on"
         synced = editor.apply_node_edit(snapshot, node, edit, languages, sync_variants=sync)
+        problems = integrity_problems(snapshot)
+        if problems:
+            raise _SaveRefusedError(
+                "Ничего не сохранено: правка сломала бы курс — " + "; ".join(problems)
+            )
         self._write_audio(
             locked, snapshot, node, checked=checked, deletes=deletes, languages=languages, sync=sync
         )

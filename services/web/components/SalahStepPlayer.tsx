@@ -401,6 +401,7 @@ export function SalahStepPlayer({
           <p className="salah-transliteration">{formula.transliteration}</p>
         ) : null}
         {showTranslation ? <p className="salah-translation">{formula.translation}</p> : null}
+        {!practice && formula.caption ? <p className="salah-formula-caption">{formula.caption}</p> : null}
         <div className="salah-formula-tools">
           {formula.audio ? (
             <button

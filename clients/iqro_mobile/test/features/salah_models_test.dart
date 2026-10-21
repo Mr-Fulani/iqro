@@ -113,6 +113,8 @@ void main() {
     expect(tasbih.repetitions, 3);
     expect(tasbih.source.collection, 'hisn-al-muslim');
     expect(tasbih.source.sourceNumber, 33);
+    expect(tasbih.caption, '«Хисн аль-Муслим», № 33');
+    expect(fatiha.caption, isNull);
     expect(document.formulas['taslim']!.audio, isNull);
 
     final media = document.media['wudu-face']!;
