@@ -4067,6 +4067,52 @@ input:focus, select:focus, textarea:focus {
   stroke-width: 2;
 }
 
+/* Live compass: the ring lights up while the phone faces the Qibla (as in the app). */
+.prayer-qibla.is-facing .prayer-qibla-ring {
+  fill: color-mix(in srgb, var(--primary) 22%, transparent);
+  stroke-width: 4;
+}
+
+.prayer-qibla-phone {
+  fill: var(--text-primary);
+}
+
+.prayer-qibla.is-facing .prayer-qibla-phone {
+  fill: var(--primary);
+}
+
+.prayer-qibla-status {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.prayer-qibla-status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prayer-qibla-status svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.prayer-qibla-status .is-facing {
+  color: var(--primary);
+}
+
+.prayer-qibla-status .is-calibrate {
+  color: var(--danger);
+}
+
+.prayer-qibla-enable {
+  align-self: flex-start;
+}
+
 /* -------------------------------------------------------------------------
    Audio Player UI
 ------------------------------------------------------------------------- */
