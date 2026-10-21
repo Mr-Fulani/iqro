@@ -366,7 +366,11 @@ class AuthRepository {
     try {
       final response = await _dio.post<Object?>(
         '/auth/email/start',
-        data: <String, Object?>{'email': email.trim().toLowerCase()},
+        // The code email is written in the app's interface language.
+        data: <String, Object?>{
+          'email': email.trim().toLowerCase(),
+          'locale': locale,
+        },
         options: Options(
           headers: <String, Object?>{'Authorization': 'Bearer $token'},
         ),

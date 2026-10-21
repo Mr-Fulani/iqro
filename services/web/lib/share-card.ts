@@ -23,7 +23,7 @@ const HEIGHT = 675;
 const PIXEL_RATIO = 2;
 const GOLD = "#e2b665";
 const IVORY = "#f4edda";
-const SITE = "iqro.forum";
+const SITE = "www.iqro.forum";
 
 // Long passages get a smaller script so the whole text fits the card.
 function arabicSize(text: string): number {

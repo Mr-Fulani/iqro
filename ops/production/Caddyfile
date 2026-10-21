@@ -1,0 +1,39 @@
+{
+	email {$PRODUCTION_ACME_EMAIL}
+	admin off
+	http_port 8080
+	https_port 8443
+	servers :8443 {
+		protocols h1 h2
+	}
+}
+
+# One canonical origin: www answers only with a redirect.
+www.{$PRODUCTION_HOST} {
+	redir https://{$PRODUCTION_HOST}{uri} permanent
+}
+
+{$PRODUCTION_HOST} {
+	encode zstd gzip
+
+	# Admin surah uploads answer only after the file is stored and checked.
+	@surah_upload path_regexp ^/admin/audio/recitationedition/[^/]+/surahs/upload/$
+	reverse_proxy @surah_upload gateway:8080 {
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 600s
+		}
+	}
+
+	reverse_proxy gateway:8080 {
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 30s
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

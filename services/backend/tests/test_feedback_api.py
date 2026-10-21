@@ -131,6 +131,27 @@ def test_ticket_create_retry_is_idempotent_and_changed_reuse_conflicts() -> None
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("send_locale", [True, False])
+def test_turkish_ticket_keeps_turkish_locale(send_locale: bool) -> None:
+    user = User.objects.create_user(preferred_locale="tr")
+    payload = _ticket_payload()
+    if send_locale:
+        payload["locale"] = "tr"
+    else:
+        del payload["locale"]
+
+    response = _authenticated_client(user).post(
+        reverse("feedback:ticket-list"),
+        payload,
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["locale"] == "tr"
+    assert user.feedback_tickets.get().locale == "tr"
+
+
+@pytest.mark.django_db
 def test_ticket_list_detail_and_public_messages_are_user_isolated() -> None:
     owner = User.objects.create_user()
     stranger = User.objects.create_user()

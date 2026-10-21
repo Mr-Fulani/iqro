@@ -132,7 +132,7 @@ class FeedbackTicketCreateSerializer(serializers.Serializer[Any]):
     category = serializers.ChoiceField(choices=FeedbackCategory.choices)
     subject = serializers.CharField(max_length=160)
     message = serializers.CharField(max_length=4000)
-    locale = serializers.ChoiceField(choices=("ar", "en", "ru"), required=False)
+    locale = serializers.ChoiceField(choices=("ar", "en", "ru", "tr"), required=False)
     contact_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     context = FeedbackContextInputSerializer(required=False)  # type: ignore[assignment]
 
