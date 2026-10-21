@@ -1943,6 +1943,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get salahShowTranslation => 'Meal';
 
   @override
+  String get salahStepAudio => 'Adımın seslendirmesi';
+
+  @override
+  String get salahNotes => 'Bu adımla ilgili notlar';
+
+  @override
+  String get salahNoteHelp => 'Açıklama';
+
+  @override
+  String get salahNoteWarning => 'Önemli';
+
+  @override
+  String get salahNoteClose => 'Notu kapat';
+
+  @override
   String salahMinutes(int count) {
     return '$count dk';
   }

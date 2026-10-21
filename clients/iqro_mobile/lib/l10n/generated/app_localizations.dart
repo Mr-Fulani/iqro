@@ -3582,6 +3582,36 @@ abstract class AppLocalizations {
   /// **'Translation'**
   String get salahShowTranslation;
 
+  /// No description provided for @salahStepAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Step voice-over'**
+  String get salahStepAudio;
+
+  /// No description provided for @salahNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes on this step'**
+  String get salahNotes;
+
+  /// No description provided for @salahNoteHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get salahNoteHelp;
+
+  /// No description provided for @salahNoteWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get salahNoteWarning;
+
+  /// No description provided for @salahNoteClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close the note'**
+  String get salahNoteClose;
+
   /// No description provided for @salahMinutes.
   ///
   /// In en, this message translates to:

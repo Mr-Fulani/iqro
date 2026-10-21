@@ -2003,6 +2003,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get salahShowTranslation => 'Перевод';
 
   @override
+  String get salahStepAudio => 'Озвучка шага';
+
+  @override
+  String get salahNotes => 'Заметки к шагу';
+
+  @override
+  String get salahNoteHelp => 'Справка';
+
+  @override
+  String get salahNoteWarning => 'Важно';
+
+  @override
+  String get salahNoteClose => 'Закрыть заметку';
+
+  @override
   String salahMinutes(int count) {
     return '$count мин';
   }
