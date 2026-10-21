@@ -1,7 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { type ReactNode, useCallback, useEffect, useReducer, useState } from "react";
+import { lazy, type ReactNode, Suspense, useCallback, useEffect, useReducer, useState } from "react";
 
 import {
   nextSalahScenePlayback,
@@ -17,10 +16,12 @@ function Salah3DLoadFailed({ onError }: Salah3DStageProps) {
   return null;
 }
 
-// three.js stays out of the page load; a failed chunk leaves the still in place.
-const Salah3DStage = dynamic(
-  () => import("./Salah3DStage").catch(() => ({ default: Salah3DLoadFailed })),
-  { ssr: false },
+// three.js stays out of the page load; a failed chunk leaves the still in place. The stage
+// renders only in the browser, once the visitor acts on the page. React.lazy rather than
+// next/dynamic keeps the lesson's own chunk small enough to carry this import's loader, so
+// the page does not pay one more request for it (scripts/lighthouse-budget.mjs).
+const Salah3DStage = lazy(() =>
+  import("./Salah3DStage").catch(() => ({ default: Salah3DLoadFailed })),
 );
 
 function hasWebgl(): boolean {
@@ -116,19 +117,21 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
     togglePlaying: () => dispatch("toggle"),
     cycleSpeed: () => setSpeed(nextSalahSceneSpeed),
     stage: active ? (
-      <Salah3DStage
-        // A view is chosen when the scene mounts.
-        key={view}
-        slot={slot}
-        view={view}
-        step={scene && scene.view === "full" ? scene.pose : null}
-        playing={playing}
-        run={playback.run}
-        speed={speed}
-        onReady={markReady}
-        onEnded={markEnded}
-        onError={fail}
-      />
+      <Suspense fallback={null}>
+        <Salah3DStage
+          // A view is chosen when the scene mounts.
+          key={view}
+          slot={slot}
+          view={view}
+          step={scene && scene.view === "full" ? scene.pose : null}
+          playing={playing}
+          run={playback.run}
+          speed={speed}
+          onReady={markReady}
+          onEnded={markEnded}
+          onError={fail}
+        />
+      </Suspense>
     ) : null,
   };
 }
