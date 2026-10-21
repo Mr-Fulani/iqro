@@ -212,7 +212,7 @@ def test_email_start_invalidates_challenge_when_delivery_fails(api_client: APICl
     session, _guest_payload = _bootstrap(api_client)
 
     with patch(
-        "quran_backend.modules.accounts.email_auth.send_mail",
+        "quran_backend.modules.accounts.email_auth.send_login_code_email",
         return_value=0,
     ):
         response = api_client.post(

@@ -164,6 +164,7 @@ class EmailChallengeStartView(PrivateNoStoreResponseMixin, APIView):
             user=request.user,
             device=request.auth.device,
             email=serializer.validated_data["email"],
+            locale=serializer.validated_data.get("locale"),
         )
         return Response(
             {

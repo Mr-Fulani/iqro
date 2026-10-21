@@ -1615,7 +1615,8 @@ export class ApiClient {
   public async startEmailChallenge(email: string): Promise<EmailChallenge> {
     return this.webAuthRequest<EmailChallenge>("/email/start", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      // The code email is written in the language of the page that asked for it.
+      body: JSON.stringify({ email, locale: this.locale }),
     });
   }
 

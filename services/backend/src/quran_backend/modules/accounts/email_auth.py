@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
 
+from quran_backend.modules.accounts.emails import send_login_code_email
 from quran_backend.modules.accounts.exceptions import (
     AccountLinkUnavailable,
     EmailChallengeDeliveryFailed,
@@ -55,7 +55,13 @@ class EmailVerificationResult:
 
 
 @sensitive_variables("code")
-def start_email_challenge(*, user: User, device: Device, email: str) -> EmailChallengeStartResult:
+def start_email_challenge(
+    *,
+    user: User,
+    device: Device,
+    email: str,
+    locale: str | None = None,
+) -> EmailChallengeStartResult:
     normalized_email = email.strip().lower()
     now = timezone.now()
     expires_in = _positive_int_setting(
@@ -105,15 +111,12 @@ def start_email_challenge(*, user: User, device: Device, email: str) -> EmailCha
         )
 
     try:
-        delivered = send_mail(
-            subject="Код входа в Quran Platform",
-            message=(
-                f"Ваш одноразовый код: {code}\n\n"
-                f"Он действует {max(1, expires_in // 60)} мин. "
-                "Если вы не запрашивали вход, проигнорируйте письмо."
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[normalized_email],
+        # Clients that predate the locale field fall back to the installation's language.
+        delivered = send_login_code_email(
+            email=normalized_email,
+            code=code,
+            ttl_seconds=expires_in,
+            locale=locale or locked_device.locale,
         )
     except Exception as exc:
         EmailAuthChallenge.objects.filter(id=challenge.id).update(invalidated_at=timezone.now())
