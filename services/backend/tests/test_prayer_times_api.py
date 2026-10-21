@@ -539,6 +539,9 @@ def test_calculation_throttle_uses_hmac_identity_and_returns_private_429(
 ) -> None:
     cache.clear()
     monkeypatch.setattr(PrayerCalculationThrottle, "get_rate", lambda _self: "1/minute")
+    # A fixed window resets on the minute; pin the clock mid-window so both
+    # requests always share it.
+    monkeypatch.setattr(PrayerCalculationThrottle, "timer", lambda _self: 1_800_000_030.0)
     request = APIRequestFactory().post(
         reverse("prayer_times:calculate"),
         _calculation_payload(prayer_method_config),
