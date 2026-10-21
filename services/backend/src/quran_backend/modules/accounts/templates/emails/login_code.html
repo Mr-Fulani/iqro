@@ -1,0 +1,21 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 class="iq-title" style="margin:0 0 16px 0; font-size:24px; line-height:32px; font-weight:700; color:#0f172a;">{{ title }}</h1>
+<p class="iq-text" style="margin:0 0 24px 0; font-size:16px; line-height:26px; color:#334155;">{{ intro_html }}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+  <tr>
+    <td class="iq-code-box" align="center" bgcolor="#ecfdf5" style="background-color:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:22px 12px; text-align:center;">
+      <span class="iq-code" dir="ltr" style="font-family:SFMono-Regular, Menlo, Consolas, Liberation Mono, Courier New, monospace; font-size:38px; line-height:44px; font-weight:700; letter-spacing:10px; color:#065f46;">{{ code }}</span>
+    </td>
+  </tr>
+</table>
+<p class="iq-text" style="margin:20px 0 24px 0; font-size:15px; line-height:24px; font-weight:600; color:#334155;">{{ expires }}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td class="iq-rule" style="border-top:1px solid #e2e8f0; padding-top:20px;">
+      <p class="iq-muted" style="margin:0 0 10px 0; font-size:14px; line-height:22px; color:#475569;">{{ ignore }}</p>
+      <p class="iq-muted" style="margin:0; font-size:14px; line-height:22px; color:#475569;">{{ security }}</p>
+    </td>
+  </tr>
+</table>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% autoescape off %}IQRO
+
+{% block content %}{% endblock %}
+
+--
+{{ reason }}
+
+{{ site_label }}: {{ home_url }}
+{{ privacy_label }}: {{ privacy_url }}
+{{ support_label }}: {% if support_email %}{{ support_email }}{% else %}{{ support_url }}{% endif %}
+{% endautoescape %}
