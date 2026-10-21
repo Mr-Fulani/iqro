@@ -143,6 +143,13 @@ class QuranFoundationClient:
             raise QuranFoundationError("Quran.Foundation returned an invalid Tafsir catalog.")
         return [row for row in tafsirs if isinstance(row, dict)]
 
+    def get_uthmani_tajweed(self) -> list[dict[str, Any]]:
+        payload = self._get_json("/content/api/v4/quran/verses/uthmani_tajweed", query={})
+        verses = payload.get("verses")
+        if not isinstance(verses, list) or not all(isinstance(row, dict) for row in verses):
+            raise QuranFoundationError("Quran.Foundation returned invalid tajweed verses.")
+        return verses
+
     def get_ayah_recitation_audio(self, recitation_id: int) -> dict[str, Any]:
         if recitation_id <= 0:
             raise QuranFoundationError("Ayah recitation IDs must be positive.")

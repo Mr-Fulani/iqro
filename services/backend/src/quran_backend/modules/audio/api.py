@@ -42,6 +42,7 @@ from quran_backend.modules.audio.serializers import (
     AudioVariantAyahResponseSerializer,
     AudioVariantTrackResponseSerializer,
     AyahAudioSegmentSerializer,
+    AyahAudioWordSegmentSerializer,
     AyahPlaybackSerializer,
     OfflineAudioManifestQuerySerializer,
     OfflineAudioManifestSerializer,
@@ -475,7 +476,7 @@ class AyahPlaybackView(PublicReadOnlyViewMixin, APIView):
         return Response(
             {
                 "track": AudioTrackSerializer(segment.track).data,
-                "segment": AyahAudioSegmentSerializer(segment).data,
+                "segment": AyahAudioWordSegmentSerializer(segment).data,
             }
         )
 

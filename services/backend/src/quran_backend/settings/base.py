@@ -272,6 +272,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.quran.apps.QuranConfig",
     "quran_backend.modules.translations.apps.TranslationsConfig",
     "quran_backend.modules.tafsirs.apps.TafsirsConfig",
+    "quran_backend.modules.tajweed.apps.TajweedConfig",
     "quran_backend.modules.audio.apps.AudioConfig",
     "quran_backend.modules.prayer_times.apps.PrayerTimesConfig",
     "quran_backend.modules.reading.apps.ReadingConfig",

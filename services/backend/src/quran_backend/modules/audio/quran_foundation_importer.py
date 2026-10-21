@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
@@ -40,6 +40,8 @@ class PreparedSegment:
     ayah_number: int
     start_ms: int
     end_ms: int
+    # QF word timings [(position, start_ms, end_ms)]; not part of the timing checksum.
+    words: tuple[tuple[int, int, int], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -284,6 +286,7 @@ def import_quran_foundation_recitation(
                     ayah=ayah_by_key[(prepared_track.surah_number, segment.ayah_number)],
                     start_ms=segment.start_ms,
                     end_ms=segment.end_ms,
+                    word_segments=[list(word) for word in segment.words],
                 )
                 for segment in prepared_track.segments
             ]
@@ -332,12 +335,36 @@ def _prepare_track(
     if size_bytes <= 0:
         raise QuranFoundationError("Audio metadata contains an invalid file size.")
 
-    timestamps = audio_file.get("timestamps")
-    if not isinstance(timestamps, list) or not timestamps:
-        raise QuranFoundationError(f"Surah {surah_number} has no ayah timestamps.")
     expected_ayah_numbers = sorted(
         ayah_number for surah, ayah_number in ayahs if surah == surah_number
     )
+    segments, canonical = prepare_ayah_timeline(
+        audio_file.get("timestamps"),
+        surah_number,
+        expected_ayah_numbers,
+    )
+    duration_ms = segments[-1].end_ms
+    bitrate_kbps = max(1, round(size_bytes * 8 / duration_ms))
+    return (
+        PreparedTrack(
+            surah_number=surah_number,
+            duration_ms=duration_ms,
+            size_bytes=size_bytes,
+            bitrate_kbps=bitrate_kbps,
+            external_url=external_url,
+            segments=tuple(segments),
+        ),
+        {"surah": surah_number, "segments": canonical},
+    )
+
+
+def prepare_ayah_timeline(
+    timestamps: object,
+    surah_number: int,
+    expected_ayah_numbers: list[int],
+) -> tuple[list[PreparedSegment], list[dict[str, int | str]]]:
+    if not isinstance(timestamps, list) or not timestamps:
+        raise QuranFoundationError(f"Surah {surah_number} has no ayah timestamps.")
     segments: list[PreparedSegment] = []
     canonical: list[dict[str, int | str]] = []
     previous_start = -1
@@ -365,33 +392,43 @@ def _prepare_track(
                 f"start={start_ms}, end={end_ms}."
             )
         if segments and start_ms < segments[-1].end_ms:
-            previous = segments[-1]
-            segments[-1] = PreparedSegment(
-                ayah_number=previous.ayah_number,
-                start_ms=previous.start_ms,
-                end_ms=start_ms,
-            )
+            segments[-1] = replace(segments[-1], end_ms=start_ms)
             canonical[-1]["end_ms"] = start_ms
         previous_start = start_ms
         previous_end = end_ms
-        segments.append(PreparedSegment(verse_ayah, start_ms, end_ms))
+        segments.append(
+            PreparedSegment(
+                verse_ayah,
+                start_ms,
+                end_ms,
+                _word_timings(timestamp.get("segments")),
+            )
+        )
         canonical.append({"verse_key": verse_key, "start_ms": start_ms, "end_ms": end_ms})
     if [segment.ayah_number for segment in segments] != expected_ayah_numbers:
         raise QuranFoundationError(f"Surah {surah_number} does not cover every canonical ayah.")
+    return segments, canonical
 
-    duration_ms = segments[-1].end_ms
-    bitrate_kbps = max(1, round(size_bytes * 8 / duration_ms))
-    return (
-        PreparedTrack(
-            surah_number=surah_number,
-            duration_ms=duration_ms,
-            size_bytes=size_bytes,
-            bitrate_kbps=bitrate_kbps,
-            external_url=external_url,
-            segments=tuple(segments),
-        ),
-        {"surah": surah_number, "segments": canonical},
-    )
+
+def _word_timings(value: object) -> tuple[tuple[int, int, int], ...]:
+    """Keep QF word timings only when every row is a well-formed triple."""
+    if not isinstance(value, list):
+        return ()
+    words: list[tuple[int, int, int]] = []
+    for row in value:
+        if (
+            not isinstance(row, list)
+            or len(row) != 3
+            or not all(isinstance(item, int) and not isinstance(item, bool) for item in row)
+        ):
+            return ()
+        position, start_ms, end_ms = row
+        if position < 1 or start_ms < 0 or end_ms <= start_ms:
+            return ()
+        words.append((position, start_ms, end_ms))
+    if len({position for position, _, _ in words}) != len(words):
+        return ()
+    return tuple(sorted(words))
 
 
 def _reciter_by_id(rows: list[dict[str, Any]], reciter_id: int) -> dict[str, Any]:

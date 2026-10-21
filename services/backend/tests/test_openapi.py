@@ -252,6 +252,28 @@ def test_openapi_declares_tafsir_and_account_reader_preferences() -> None:
     assert request["properties"]["base_revision"]["minimum"] == 0
 
 
+def test_openapi_declares_cached_tajweed_rules_and_word_timings() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    for path in (
+        "/api/v1/quran/tajweed/rules",
+        "/api/v1/quran/tajweed/pages/{page}",
+        "/api/v1/quran/tajweed/surahs/{surah}/ayahs/{ayah}",
+    ):
+        responses = paths[path]["get"]["responses"]
+        assert set(responses["200"]["headers"]) == {"ETag", "Cache-Control"}
+        assert "304" in responses
+    components = schema["components"]["schemas"]
+    fragment = components["TajweedFragmentSchema"]["properties"]
+    assert {"code", "start", "end", "joins_previous", "joins_next", "variant"} == fragment.keys()
+    assert "words" in components["AyahAudioWordSegment"]["properties"]
+    assert "words" not in components["AyahAudioSegment"]["properties"]
+
+
 def test_openapi_declares_public_audio_catalog_and_bounded_cursors() -> None:
     schema = cast(
         dict[str, Any],

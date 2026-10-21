@@ -330,6 +330,8 @@ def verified_audio_segments() -> QuerySet[AyahAudioSegment]:
                 ayah_lookup="ayah__",
             )
         )
+        # Word timings are only served for one ayah at a time.
+        .defer("word_segments")
         .order_by("start_ms", "id")
     )
 
@@ -359,6 +361,7 @@ def public_ayah_segments(
 ) -> QuerySet[AyahAudioSegment]:
     return (
         verified_audio_segments()
+        .defer(None)
         .filter(
             track__in=public_surah_tracks(recitation_id, surah_number),
             ayah__surah__number=surah_number,
