@@ -7,7 +7,7 @@ import { api, type DuaEntry } from "../lib/api";
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useAuth } from "../lib/auth-context";
 import { contentShareText, shareTextOnly, type ContentShareText } from "../lib/content-share";
-import { duaShareText, duaShareTitle } from "../lib/dua-share";
+import { duaDisplayTitle, duaShareText, duaShareTitle } from "../lib/dua-share";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
@@ -242,7 +242,7 @@ export function DuaEntryList({
                       `/dua/${entry.collection}/${entry.source_number}`,
                     )}
                   >
-                    {entry.category.title}
+                    {duaDisplayTitle(entry.category.title, locale)}
                   </Link>
                 </EntryHeading>
               </div>

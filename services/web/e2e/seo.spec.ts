@@ -161,7 +161,7 @@ test("published Dua catalog renders topic cards and provenance on the server", a
 
   expect(response.ok()).toBe(true);
   const html = await response.text();
-  expect(html).toContain("Слова поминания при пробуждении ото сна");
+  expect(html).toContain("Сон и пробуждение");
   expect(html).not.toContain("الْحَمْدُ للَّهِ");
   expect(html).toContain("Молитвы из Корана и Сунны");
   expect(html).toContain("https://islamhouse.com/ru/books/888254");
