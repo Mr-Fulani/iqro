@@ -530,6 +530,64 @@ export type QuranFoundationMushafPage = {
   words: QuranFoundationMushafWord[];
 };
 
+/** Localized texts keyed by interface language (ru, en, ar, tr). */
+export type TajweedTexts = Record<string, string>;
+
+export type TajweedRuleVariant = {
+  code: string;
+  name: TajweedTexts;
+  why: TajweedTexts;
+  how: TajweedTexts;
+};
+
+export type TajweedRule = TajweedRuleVariant & {
+  arabic_name: string;
+  /** Colour of the rule in the QCF V4 tajweed Mushaf palette. */
+  color: string;
+  variants: TajweedRuleVariant[];
+};
+
+export type TajweedReference = {
+  version: string;
+  review_status: "pending_teacher_review" | string;
+  languages: string[];
+  rules: TajweedRule[];
+};
+
+/** A rule inside one word: `start`/`end` are offsets into the word text. */
+export type TajweedFragment = {
+  code: string;
+  start: number;
+  end: number;
+  joins_previous?: boolean;
+  joins_next?: boolean;
+  variant?: string;
+};
+
+export type TajweedWord = {
+  /** Quran.Foundation `position_in_verse`, the same word as the QCF V4 glyph. */
+  position: number;
+  text: string;
+  rules: TajweedFragment[];
+};
+
+export type TajweedAyah = {
+  verse_key: string;
+  surah_number: number;
+  ayah_number: number;
+  page_number: number;
+  rules: string[];
+  /** Only the words that carry rules. */
+  words: TajweedWord[];
+};
+
+export type TajweedPage = {
+  page_number: number;
+  rules: string[];
+  ayahs: TajweedAyah[];
+  source: { name: string; url: string; attribution: string };
+};
+
 export type QuranDivision = {
   id: string;
   number: number;
@@ -647,6 +705,8 @@ export type AyahAudioSegment = {
   ayah_number: number;
   start_ms: number;
   end_ms: number;
+  /** Word timings `[position, start_ms, end_ms]`; only in single-ayah playback. */
+  words?: [number, number, number][];
 };
 
 export type SurahPlayback = {
@@ -1804,6 +1864,14 @@ export class ApiClient {
     return this.request<QuranFoundationMushafPage>(
       `/api/v1/quran/foundation/mushafs/${mushafId}/pages/${pageNumber}`,
     );
+  }
+
+  public async getTajweedRules(): Promise<TajweedReference> {
+    return this.request<TajweedReference>("/api/v1/quran/tajweed/rules");
+  }
+
+  public async getTajweedPage(pageNumber: number): Promise<TajweedPage> {
+    return this.request<TajweedPage>(`/api/v1/quran/tajweed/pages/${pageNumber}`);
   }
 
   public async getJuzList(edition: string): Promise<Juz[]> {

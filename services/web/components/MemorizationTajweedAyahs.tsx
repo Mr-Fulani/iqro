@@ -1,20 +1,35 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   Ayah,
   QuranFoundationMushaf,
   QuranFoundationMushafPage,
+  type TajweedAyah,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { isAllowedQuranFontUrl } from "../lib/quran-font";
+import {
+  isTajweedMushaf,
+  ruleText,
+  tajweedWordIndex,
+  tajweedWordKey,
+  type TajweedSelection,
+} from "../lib/tajweed";
+import { TajweedLegend } from "./TajweedLegend";
+import { useTajweed as useTajweedRules } from "./useTajweed";
+
+const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
 
 type MemorizationTajweedAyahsProps = {
   ayahs: Ayah[];
   hiddenAyahs: Set<number>;
   playingAyah: number | null;
   onReveal: (ayahNumber: number) => void;
+  /** The plan's reciter, whose word timings play in the tajweed card. */
+  recitationId?: string | null;
 };
 
 type TajweedWord = {
@@ -22,6 +37,8 @@ type TajweedWord = {
   text: string;
   fontFamily: string;
   isAyahEnd: boolean;
+  /** Quran.Foundation position of a word in its ayah; null for the ayah end. */
+  position: number | null;
 };
 
 type LoadState = "loading" | "ready" | "fallback";
@@ -59,16 +76,6 @@ function verseKeyById(page: QuranFoundationMushafPage): Map<number, string> {
   );
 }
 
-function tajweedMushaf(catalog: QuranFoundationMushaf[]): QuranFoundationMushaf | undefined {
-  return catalog.find(
-    (item) =>
-      item.default_font_name === "v4-tajweed" &&
-      item.rendering.available &&
-      item.rendering.mode === "page-font" &&
-      item.rendering.color_format === "COLRv1",
-  );
-}
-
 function fontFamily(mushafId: number, pageNumber: number): string {
   return `memorization-tajweed-${mushafId}-page-${pageNumber}`;
 }
@@ -78,8 +85,10 @@ export function MemorizationTajweedAyahs({
   hiddenAyahs,
   playingAyah,
   onReveal,
+  recitationId = null,
 }: MemorizationTajweedAyahsProps) {
-  const { formatNumber, t } = useI18n();
+  const { formatNumber, locale, t } = useI18n();
+  const [card, setCard] = useState<{ selection: TajweedSelection; ayahs: TajweedAyah[] } | null>(null);
   const [mushaf, setMushaf] = useState<QuranFoundationMushaf | null>(null);
   const [pages, setPages] = useState<QuranFoundationMushafPage[]>([]);
   const [readyPages, setReadyPages] = useState<Set<number>>(new Set());
@@ -97,7 +106,7 @@ export function MemorizationTajweedAyahs({
     api.getQuranFoundationMushafs()
       .then((catalog) => {
         if (cancelled) return;
-        const selected = tajweedMushaf(catalog);
+        const selected = catalog.find(isTajweedMushaf);
         if (!selected) {
           setState("fallback");
           return;
@@ -201,6 +210,7 @@ export function MemorizationTajweedAyahs({
           text: word.text,
           fontFamily: fontFamily(mushaf.source_id, page.page_number),
           isAyahEnd: word.char_type_name === "end",
+          position: word.char_type_name === "word" ? word.position_in_verse : null,
         });
         result.set(ayahNumber, current);
       }
@@ -210,61 +220,112 @@ export function MemorizationTajweedAyahs({
 
   const allPagesReady = pageNumbers.every((pageNumber) => readyPages.has(pageNumber));
   const useTajweed = state === "ready" && allPagesReady;
+  const rules = useTajweedRules(pageNumbers, Boolean(mushaf));
+  const ruleAyahs = useMemo(
+    () => new Map((rules?.pages.flatMap((page) => page.ayahs) ?? []).map((ayah) => [ayah.verse_key, ayah])),
+    [rules],
+  );
+  const ruleWords = useMemo(() => tajweedWordIndex([...ruleAyahs.values()]), [ruleAyahs]);
 
   return (
-    <div
-      className="memorization-ayah-list"
-      lang="ar"
-      dir="rtl"
-      data-testid="memorization-tajweed"
-      data-tajweed-status={useTajweed ? "ready" : state}
-    >
-      {!useTajweed && (
-        <p className="field-help memorization-tajweed-status" lang={undefined} dir="auto">
-          {state === "loading" ? t("memorization.tajweedLoading") : t("memorization.tajweedFallback")}
-        </p>
+    <>
+      <div
+        className="memorization-ayah-list"
+        lang="ar"
+        dir="rtl"
+        data-testid="memorization-tajweed"
+        data-tajweed-status={useTajweed ? "ready" : state}
+      >
+        {!useTajweed && (
+          <p className="field-help memorization-tajweed-status" lang={undefined} dir="auto">
+            {state === "loading" ? t("memorization.tajweedLoading") : t("memorization.tajweedFallback")}
+          </p>
+        )}
+        {ayahs.map((ayah) => {
+          const hidden = hiddenAyahs.has(ayah.number);
+          const tajweedWords = wordsByAyah.get(ayah.number) || [];
+          const verseKey = `${ayah.surah_number}:${ayah.number}`;
+          const ruleAyah = ruleAyahs.get(verseKey);
+          return (
+            <article
+              key={ayah.id}
+              className={`memorization-ayah-card${ayah.number === playingAyah ? " is-playing" : ""}`}
+              aria-current={ayah.number === playingAyah ? "true" : undefined}
+            >
+              <span className="memorization-ayah-number">{formatNumber(ayah.number)}</span>
+              {hidden ? (
+                <button
+                  type="button"
+                  className="memorization-reveal"
+                  onClick={() => onReveal(ayah.number)}
+                >
+                  {t("memorization.revealAyah", { ayah: formatNumber(ayah.number) })}
+                </button>
+              ) : useTajweed && tajweedWords.length > 0 ? (
+                <p
+                  className="memorization-arabic memorization-tajweed-text"
+                  aria-label={ayah.text_uthmani}
+                  translate="no"
+                >
+                  {tajweedWords.map((word) => {
+                    const ruled = word.position === null ? undefined
+                      : ruleWords.get(tajweedWordKey(verseKey, word.position));
+                    if (ruled && rules && ruleAyah && word.position !== null) {
+                      const position = word.position;
+                      const names = ruled.rules.map((fragment) => ruleText(rules.reference, fragment.code, locale)?.name);
+                      return (
+                        <button
+                          type="button"
+                          className="memorization-tajweed-word has-tajweed"
+                          style={{ fontFamily: `"${word.fontFamily}", serif` }}
+                          aria-label={`${ruled.text}: ${[...new Set(names)].join(", ")}`}
+                          aria-haspopup="dialog"
+                          data-word-position={position}
+                          onClick={() => setCard({ selection: { kind: "word", verseKey, position }, ayahs: [ruleAyah] })}
+                          key={word.key}
+                        >
+                          {word.text}
+                        </button>
+                      );
+                    }
+                    return (
+                      <span
+                        className={`memorization-tajweed-word${word.isAyahEnd ? " is-ayah-end" : ""}`}
+                        style={{ fontFamily: `"${word.fontFamily}", serif` }}
+                        aria-hidden="true"
+                        key={word.key}
+                      >
+                        {word.text}
+                      </span>
+                    );
+                  })}
+                </p>
+              ) : (
+                <p className="memorization-arabic">{ayah.text_uthmani}</p>
+              )}
+              {!hidden && useTajweed && rules && ruleAyah && (
+                <TajweedLegend
+                  reference={rules.reference}
+                  codes={ruleAyah.rules}
+                  title={t("tajweed.legendAyah")}
+                  onSelectRule={(code) => setCard({ selection: { kind: "rule", code }, ayahs: [ruleAyah] })}
+                />
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {card && rules && (
+        <TajweedCard
+          reference={rules.reference}
+          ayahs={card.ayahs}
+          selection={card.selection}
+          scope="ayah"
+          recitationId={recitationId}
+          onSelect={(selection) => setCard({ ...card, selection })}
+          onClose={() => setCard(null)}
+        />
       )}
-      {ayahs.map((ayah) => {
-        const hidden = hiddenAyahs.has(ayah.number);
-        const tajweedWords = wordsByAyah.get(ayah.number) || [];
-        return (
-          <article
-            key={ayah.id}
-            className={`memorization-ayah-card${ayah.number === playingAyah ? " is-playing" : ""}`}
-            aria-current={ayah.number === playingAyah ? "true" : undefined}
-          >
-            <span className="memorization-ayah-number">{formatNumber(ayah.number)}</span>
-            {hidden ? (
-              <button
-                type="button"
-                className="memorization-reveal"
-                onClick={() => onReveal(ayah.number)}
-              >
-                {t("memorization.revealAyah", { ayah: formatNumber(ayah.number) })}
-              </button>
-            ) : useTajweed && tajweedWords.length > 0 ? (
-              <p
-                className="memorization-arabic memorization-tajweed-text"
-                aria-label={ayah.text_uthmani}
-                translate="no"
-              >
-                {tajweedWords.map((word) => (
-                  <span
-                    className={`memorization-tajweed-word${word.isAyahEnd ? " is-ayah-end" : ""}`}
-                    style={{ fontFamily: `"${word.fontFamily}", serif` }}
-                    aria-hidden="true"
-                    key={word.key}
-                  >
-                    {word.text}
-                  </span>
-                ))}
-              </p>
-            ) : (
-              <p className="memorization-arabic">{ayah.text_uthmani}</p>
-            )}
-          </article>
-        );
-      })}
-    </div>
+    </>
   );
 }
