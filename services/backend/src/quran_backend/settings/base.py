@@ -247,6 +247,14 @@ if QURAN_QF_AUDIO_STALE_AFTER_HOURS < QURAN_QF_AUDIO_REFRESH_DAYS * 24:
     )
 QURAN_OPERATIONS_TOKEN = os.getenv("QURAN_OPERATIONS_TOKEN", "")
 WEB_CONTENT_REVALIDATION_URL = os.getenv("WEB_CONTENT_REVALIDATION_URL", "")
+# Announcement buttons may lead off-site only to these hosts (HTTPS, via /go).
+ANNOUNCEMENT_EXTERNAL_HOSTS = frozenset(
+    host.lower()
+    for host in env_list(
+        "ANNOUNCEMENT_EXTERNAL_HOSTS",
+        "iqro.forum,play.google.com,apps.apple.com",
+    )
+)
 WEB_CONTENT_REVALIDATION_SECRET = os.getenv("WEB_CONTENT_REVALIDATION_SECRET", "")
 PUBLIC_API_CACHE_PURGE_URL = os.getenv("PUBLIC_API_CACHE_PURGE_URL", "")
 WEB_CONTENT_REVALIDATION_TIMEOUT_SECONDS = positive_env_int(
@@ -284,6 +292,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.website.apps.WebsiteConfig",
     "quran_backend.modules.calendar.apps.CalendarConfig",
     "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
+    "quran_backend.modules.announcements.apps.AnnouncementsConfig",
 ]
 
 MIDDLEWARE = [
@@ -556,6 +565,7 @@ REST_FRAMEWORK: dict[str, Any] = {
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
         "share_event": os.getenv("QURAN_SHARE_EVENT_RATE", "120/hour"),
+        "announcement_event": os.getenv("QURAN_ANNOUNCEMENT_EVENT_RATE", "120/minute"),
         "referral_link": os.getenv("QURAN_REFERRAL_LINK_RATE", "30/hour"),
         "referral_redirect": os.getenv("QURAN_REFERRAL_REDIRECT_RATE", "300/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
@@ -708,6 +718,10 @@ CELERY_BEAT_SCHEDULE = {
     "dispatch-web-push-reminders-every-30-seconds": {
         "task": "reminders.dispatch_web_push_due",
         "schedule": 30.0,
+    },
+    "revalidate-announcement-windows-every-5-minutes": {
+        "task": "announcements.revalidate_window_changes",
+        "schedule": 300.0,
     },
 }
 

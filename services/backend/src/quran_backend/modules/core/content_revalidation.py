@@ -103,3 +103,12 @@ def enqueue_social_profiles_change(*, action: str) -> None:
             "action": action,
         }
     )
+
+
+def enqueue_announcements_change(*, action: str) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "site.announcements.changed",
+            "action": action,
+        }
+    )
