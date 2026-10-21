@@ -18,6 +18,7 @@ from quran_backend.modules.accounts.models import (
     User,
     UserStatus,
 )
+from quran_backend.modules.announcements.models import AnnouncementReceipt
 from quran_backend.modules.audio.models import AudioPlaybackPosition
 from quran_backend.modules.dua.models import DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
@@ -117,6 +118,7 @@ def merge_guest_into_account(
     _merge_reading_state(source=source, target=target, counts=counts)
     _merge_memorization_state(source=source, target=target, counts=counts)
     _merge_dua_favorites(source=source, target=target, counts=counts)
+    _merge_announcement_receipts(source=source, target=target, counts=counts)
     _merge_reminders(source=source, target=target, counts=counts)
     _merge_prayer_profile(source=source, target=target, counts=counts)
     _merge_audio_playback(source=source, target=target, counts=counts)
@@ -286,6 +288,31 @@ def _merge_dua_favorites(*, source: User, target: User, counts: dict[str, int]) 
             favorite.user = target
             favorite.save(update_fields=["user", "updated_at"])
     counts["dua_favorites"] = len(favorites)
+
+
+def _merge_announcement_receipts(*, source: User, target: User, counts: dict[str, int]) -> None:
+    receipts = list(
+        AnnouncementReceipt.objects.select_for_update().filter(user=source).order_by("id")
+    )
+    for receipt in receipts:
+        existing = (
+            AnnouncementReceipt.objects.select_for_update()
+            .filter(user=target, announcement_id=receipt.announcement_id)
+            .first()
+        )
+        if existing is None:
+            receipt.user = target
+            receipt.save(update_fields=["user", "updated_at"])
+            continue
+        # Marks only move forward: keep the earliest moment each one was set.
+        for name in ("read_at", "dismissed_at"):
+            moments = [
+                value for value in (getattr(existing, name), getattr(receipt, name)) if value
+            ]
+            setattr(existing, name, min(moments) if moments else None)
+        existing.save(update_fields=["read_at", "dismissed_at", "updated_at"])
+        receipt.delete()
+    counts["announcement_receipts"] = len(receipts)
 
 
 def _memorization_plan_rank(plan: MemorizationPlan) -> tuple[Any, ...]:

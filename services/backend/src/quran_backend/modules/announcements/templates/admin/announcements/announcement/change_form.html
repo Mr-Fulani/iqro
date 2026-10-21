@@ -1,0 +1,87 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .announcement-tabs { display: flex; gap: 2px; flex-wrap: wrap; margin: 12px 0 0; border-bottom: 1px solid var(--border-color, #ccc); }
+  .announcement-tabs button { padding: 8px 14px; border: 1px solid var(--border-color, #ccc); border-bottom: 0; border-radius: 4px 4px 0 0; background: var(--darkened-bg, #f8f8f8); color: var(--body-fg, #333); cursor: pointer; font: inherit; }
+  .announcement-tabs button[aria-selected="true"] { background: var(--body-bg, #fff); font-weight: 700; margin-bottom: -1px; border-bottom: 1px solid var(--body-bg, #fff); }
+  .announcement-tabs .mark-ok { color: #2e7d32; }
+  .announcement-tabs .mark-missing { color: #8a5a00; font-weight: 700; }
+  .announcement-signoff { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+</style>
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+  {% if show_signoff %}
+    <div class="submit-row announcement-signoff">
+      {% if show_submit_review %}<input type="submit" name="_submit_review" value="На проверку">{% endif %}
+      {% if show_religious_review %}<input type="submit" name="_religious_review" value="Подписать религиозную проверку">{% endif %}
+      {% if show_publish %}<input type="submit" class="default" name="_publish" value="Подписать и опубликовать">{% endif %}
+      {% if show_withdraw %}<input type="submit" name="_withdraw" value="Снять с публикации">{% endif %}
+      {% if show_archive %}<input type="submit" name="_archive" value="В архив">{% endif %}
+      <input type="submit" name="_duplicate" value="Дублировать в новый черновик">
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}{{ block.super }}
+{{ language_names|json_script:"announcement-language-names" }}
+<script>
+(function () {
+  // The four languages are four stacked inline forms; show them as tabs.
+  var names = JSON.parse(document.getElementById("announcement-language-names").textContent);
+  var group = document.querySelector(".announcement-languages");
+  if (!group) return;
+  var forms = Array.prototype.filter.call(
+    group.querySelectorAll(".inline-related"),
+    function (form) { return !form.classList.contains("empty-form"); }
+  );
+  if (!forms.length) return;
+  var bar = document.createElement("div");
+  bar.className = "announcement-tabs";
+  bar.setAttribute("role", "tablist");
+  function language(form) {
+    var select = form.querySelector("select[name$='-language']");
+    if (select && select.value) return select.value;
+    var text = form.querySelector(".field-language .readonly");
+    return text ? text.textContent.trim() : "";
+  }
+  function filled(form) {
+    var title = form.querySelector("[name$='-title']");
+    var summary = form.querySelector("[name$='-summary']");
+    return Boolean(title && title.value.trim() && summary && summary.value.trim());
+  }
+  var buttons = forms.map(function (form, index) {
+    var code = language(form);
+    var button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    var label = document.createElement("span");
+    label.textContent = (names[code] || code) + " ";
+    if (code === "ar") label.lang = "ar";
+    var mark = document.createElement("span");
+    button.appendChild(label);
+    button.appendChild(mark);
+    function refresh() {
+      var ok = filled(form);
+      mark.textContent = ok ? "✓" : "!";
+      mark.className = ok ? "mark-ok" : "mark-missing";
+    }
+    refresh();
+    form.addEventListener("input", refresh);
+    button.addEventListener("click", function () { select(index); });
+    bar.appendChild(button);
+    return button;
+  });
+  function select(active) {
+    forms.forEach(function (form, index) { form.hidden = index !== active; });
+    buttons.forEach(function (button, index) {
+      button.setAttribute("aria-selected", index === active ? "true" : "false");
+    });
+  }
+  forms[0].parentNode.insertBefore(bar, forms[0]);
+  select(0);
+})();
+</script>
+{% endblock %}
