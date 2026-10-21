@@ -1,0 +1,9 @@
+{% extends "emails/base.txt" %}
+{% block content %}{{ title }}
+
+{{ intro }}
+
+{% for label, value in details %}{{ label }}: {{ value }}
+{% endfor %}
+{{ button_label }}:
+{{ button_url }}{% endblock %}

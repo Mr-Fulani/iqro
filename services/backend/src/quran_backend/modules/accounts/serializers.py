@@ -85,6 +85,11 @@ class DeviceRecoveryResponseSerializer(GuestBootstrapResponseSerializer):
 
 class EmailChallengeStartRequestSerializer(serializers.Serializer[dict[str, str]]):
     email = serializers.EmailField(max_length=254)
+    locale = serializers.ChoiceField(
+        choices=SUPPORTED_LOCALES,
+        required=False,
+        help_text="Language of the code email. Defaults to the installation locale.",
+    )
 
     def validate_email(self, value: str) -> str:
         return value.strip().lower()

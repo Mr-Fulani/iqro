@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{{ subject }}</title>
+<style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; }
+  a { text-decoration: underline; }
+  @media only screen and (max-width: 620px) {
+    .iq-container { width: 100% !important; }
+    .iq-pad { padding: 28px 22px !important; }
+    .iq-code { font-size: 30px !important; letter-spacing: 6px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .iq-bg { background-color: #0b1120 !important; }
+    .iq-card { background-color: #111827 !important; border-color: #1f2937 !important; border-top-color: #059669 !important; }
+    .iq-title { color: #f8fafc !important; }
+    .iq-text { color: #cbd5e1 !important; }
+    .iq-muted { color: #94a3b8 !important; }
+    .iq-link { color: #34d399 !important; }
+    .iq-panel { background-color: #0f172a !important; border-color: #1f2937 !important; }
+    .iq-code-box { background-color: #022c22 !important; border-color: #065f46 !important; }
+    .iq-code { color: #6ee7b7 !important; }
+    .iq-rule { border-color: #1f2937 !important; }
+  }
+</style>
+</head>
+<body class="iq-bg" style="margin:0; padding:0; background-color:#f1f5f9;">
+<div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">{{ preheader }}</div>
+<table role="presentation" class="iq-bg" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f5f9" style="background-color:#f1f5f9; border-collapse:collapse;">
+  <tr>
+    <td align="center" style="padding:32px 12px;">
+      <table role="presentation" class="iq-container" width="600" cellpadding="0" cellspacing="0" border="0" dir="{{ dir }}" style="width:600px; max-width:600px; border-collapse:separate;">
+        <tr>
+          <td align="center" style="padding:0 0 20px 0;">
+            <a href="{{ home_url }}" style="text-decoration:none;"><img src="{{ logo_url }}" width="96" height="96" alt="{{ logo_alt }}" style="display:block; width:96px; height:96px; border:0; outline:none; text-decoration:none; font-family:{{ font_stack }}; font-size:20px; font-weight:700; color:#991b1b;"></a>
+          </td>
+        </tr>
+        <tr>
+          <td class="iq-card" bgcolor="#ffffff" style="background-color:#ffffff; border:1px solid #e2e8f0; border-top:4px solid #047857; border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="iq-pad iq-text" dir="{{ dir }}" align="{{ align }}" style="padding:36px 40px; text-align:{{ align }}; font-family:{{ font_stack }}; color:#334155;">
+{% block content %}{% endblock %}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td class="iq-muted" dir="{{ dir }}" align="center" style="padding:24px 24px 8px 24px; text-align:center; font-family:{{ font_stack }}; color:#475569;">
+            <p class="iq-muted" style="margin:0 0 12px 0; font-size:13px; line-height:20px; color:#475569;">
+              <a class="iq-link" href="{{ home_url }}" style="color:#047857; text-decoration:underline;">{{ site_label }}</a>
+              &nbsp;&middot;&nbsp;
+              <a class="iq-link" href="{{ privacy_url }}" style="color:#047857; text-decoration:underline;">{{ privacy_label }}</a>
+              &nbsp;&middot;&nbsp;
+              {{ support_label }}: <a class="iq-link" href="{{ support_url }}" style="color:#047857; text-decoration:underline;">{% if support_email %}<span dir="ltr">{{ support_email }}</span>{% else %}{{ site_label }}{% endif %}</a>
+            </p>
+            <p class="iq-muted" style="margin:0 0 8px 0; font-size:12px; line-height:18px; color:#475569;">{{ reason_html|default:reason }}</p>
+            <p class="iq-muted" style="margin:0; font-size:12px; line-height:18px; color:#475569;">{{ tagline }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
