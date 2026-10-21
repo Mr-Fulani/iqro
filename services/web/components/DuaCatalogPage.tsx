@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DuaTopicIcon } from "./DuaTopicIcon";
 import { DuaTopicSelector } from "./DuaTopicSelector";
+import { duaDisplayTitle } from "../lib/dua-share";
 import { duaTopics, topicCategories, topicEntryCount } from "../lib/dua-topics";
 import {
   api,
@@ -202,13 +203,13 @@ export default function DuaPage({
                   `/dua/${category.collection}/categories/${category.slug}`,
                 )}
                 className="dua-category-chip"
-                aria-label={t("dua.openTopic", { topic: category.title })}
+                aria-label={t("dua.openTopic", { topic: duaDisplayTitle(category.title, locale) })}
               >
                 <span className="dua-category-card-head">
                   <DuaTopicIcon sourceNumber={category.source_number} slug={category.slug} />
                   <span className="dua-category-number">{formatNumber(category.source_number)}</span>
                 </span>
-                <span className="dua-category-title">{category.title}</span>
+                <span className="dua-category-title">{duaDisplayTitle(category.title, locale)}</span>
                 {!selectedCollection && collections.length > 1 ? (
                   <span className="dua-category-collection">
                     {category.collection_title || category.collection}
