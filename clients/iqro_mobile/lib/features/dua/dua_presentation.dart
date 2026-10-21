@@ -85,15 +85,21 @@ ContentShare duaContentShare(
     }
   }
   return ContentShare(
-    title: '${duaDisplayTitle(entry.categoryTitle)} · #${entry.sourceNumber}',
+    title:
+        '${duaDisplayTitle(entry.categoryTitle, locale)} · #${entry.sourceNumber}',
     arabic: entry.arabicText,
-    translation: entry.meaning,
+    translation: duaMeaning(entry, locale),
     note: repetition.isEmpty ? '' : '$repetitionLabel: $repetition',
     reference: provenance.join(' · '),
     url: duaShareUrl(locale, entry.collection, entry.sourceNumber),
     readInIqro: readInIqro,
   );
 }
+
+/// The du'a's meaning in the interface language. Arabic shows none: there the
+/// meaning repeats the du'a itself.
+String duaMeaning(DuaEntry entry, String locale) =>
+    locale == 'ar' ? '' : entry.meaning;
 
 String duaAudioPlaybackId(DuaEntry entry, DuaAudioAsset asset, int assetIndex) {
   final assetId = asset.id.trim();
@@ -110,19 +116,33 @@ final _firstLetter = RegExp(r'\p{L}', unicode: true);
 
 /// Titles some sources print in capitals, in sentence case. The names that
 /// keep a capital — Allah, the Quran, the Prophet — get it back; titles in
-/// ordinary case or in scripts without case stay as they are.
-String duaDisplayTitle(String title) {
+/// ordinary case or in scripts without case stay as they are. Case follows
+/// the locale, so Turkish capitals keep their dotless and dotted i.
+String duaDisplayTitle(String title, String locale) {
   // Capitals with a lowercase gloss, «… МОЛИТВЫ (ду'ау-ль-истифтах)», count
   // as capitals too.
   final upper = RegExp(r'\p{Lu}', unicode: true).allMatches(title).length;
   final small = RegExp(r'\p{Ll}', unicode: true).allMatches(title).length;
   if (upper <= small) return title;
-  final lower = title.toLowerCase().replaceAllMapped(
+  final lower = _lowerCase(title, locale).replaceAllMapped(
     _caseWords,
     (match) =>
-        '${match[1]}${match[2]![0].toUpperCase()}${match[2]!.substring(1)}',
+        '${match[1]}${_upperCase(match[2]![0], locale)}${match[2]!.substring(1)}',
   );
   final first = _firstLetter.firstMatch(lower);
   if (first == null) return lower;
-  return lower.replaceRange(first.start, first.end, first[0]!.toUpperCase());
+  return lower.replaceRange(
+    first.start,
+    first.end,
+    _upperCase(first[0]!, locale),
+  );
 }
+
+// Dart's case mapping knows no locale; Turkish pairs I with ı and İ with i.
+String _lowerCase(String text, String locale) => locale == 'tr'
+    ? text.replaceAll('I', 'ı').replaceAll('İ', 'i').toLowerCase()
+    : text.toLowerCase();
+
+String _upperCase(String text, String locale) => locale == 'tr'
+    ? text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase()
+    : text.toUpperCase();

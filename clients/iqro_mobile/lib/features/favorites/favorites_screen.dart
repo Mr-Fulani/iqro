@@ -195,6 +195,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                         entry.available
                                             ? duaDisplayTitle(
                                                 entry.categoryTitle,
+                                                locale,
                                               )
                                             : context.l10n.duaUnavailable,
                                       ),

@@ -330,6 +330,27 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('an Arabic du\'a shows its text once, without a meaning', (
+      tester,
+    ) async {
+      const arabic = 'الحمد لله الذي أحيانا';
+      final entry = _entry(
+        categoryTitle: 'أذكار الاستيقاظ من النوم',
+        arabicText: arabic,
+        meaning: arabic,
+      );
+      await _pumpDetail(
+        tester,
+        locale: const Locale('ar'),
+        load: (_) async => entry,
+      );
+
+      expect(find.byKey(const ValueKey('dua-arabic')), findsOneWidget);
+      expect(find.text(arabic), findsOneWidget);
+      expect(find.byKey(const ValueKey('dua-meaning')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a topic of several chapters lists them, each opens a feed', (
       tester,
     ) async {
@@ -867,6 +888,7 @@ Future<void> _pumpDetail(
   WidgetTester tester, {
   required Future<DuaEntry> Function(String id) load,
   DuaEntry? initialEntry,
+  Locale locale = const Locale('ru'),
 }) async {
   final database = await _openTestDatabase(tester);
   await tester.pumpWidget(
@@ -879,7 +901,7 @@ Future<void> _pumpDetail(
         ),
       ],
       child: _TestApp(
-        locale: const Locale('ru'),
+        locale: locale,
         home: DuaEntryRouteScreen(
           entryId: '0194f11e-972b-7b07-a772-5b7651ab78ea',
           initialEntry: initialEntry,
