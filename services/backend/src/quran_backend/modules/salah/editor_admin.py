@@ -22,6 +22,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.http import (
     Http404,
@@ -616,11 +617,15 @@ class SalahEditorAdminMixin:
         edit = editor.parse_node_form(node, request.POST, languages)
         errors = dict(edit.errors)
         owners = {owner_key for owner_key, *_ in self._audio_owners(snapshot, node)}
-        uploads = {
-            name: uploaded
-            for name, uploaded in request.FILES.items()
-            if name.startswith("audio__") and self._audio_field(name, owners, languages)
-        }
+        uploads: dict[str, UploadedFile] = {}
+        for name in request.FILES:
+            uploaded = request.FILES.get(name)
+            if (
+                uploaded is not None
+                and name.startswith("audio__")
+                and self._audio_field(name, owners, languages)
+            ):
+                uploads[name] = uploaded
         deletes = {
             name.removeprefix("audio_delete__")
             for name in request.POST

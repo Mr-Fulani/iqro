@@ -68,7 +68,7 @@ def compile_document(
             if notes:
                 compiled["notes"] = notes
             audio_key = audio_media_key(step, language)
-            if audio_key in media:
+            if audio_key is not None and audio_key in media:
                 compiled["audio"] = {"url": media[audio_key]["url"]}
             compiled["formulas"] = [
                 formula_id for formula_id in step.get("formulas", []) if formula_id in formulas

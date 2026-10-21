@@ -113,7 +113,8 @@ class EditorNode:
         if self.kind == "step":
             return self.data
         if self.kind == "formula":
-            return self.data["source"]
+            source: dict[str, Any] = self.data["source"]
+            return source
         return None
 
 
@@ -406,7 +407,7 @@ def describe_when(when: Mapping[str, Any]) -> str:
             parts.append("с сурой после Фатихи" if value else "без суры после Фатихи")
         elif key == "sitting":
             values = value if isinstance(value, list) else [value]
-            parts.append(" или ".join(_WHEN_SITTINGS.get(item, item) for item in values))
+            parts.append(" или ".join(_WHEN_SITTINGS.get(str(item), str(item)) for item in values))
         elif key == "qunut":
             parts.append("с кунутом" if value else "без кунута")
     return " · ".join(parts) or "во всех ракаатах"
@@ -530,22 +531,22 @@ def parse_node_form(
         order = [uid for uid in str(data.get("notes_order", "")).split(",") if uid.strip()]
         for uid in order:
             prefix = f"note-{uid.strip()}"
-            text = {
+            note_text = {
                 language: clean_text(str(data.get(f"{prefix}-text-{language}", "")))
                 for language in languages
             }
-            if not any(text.values()):
+            if not any(note_text.values()):
                 # An added note left empty is simply not kept.
                 continue
             kind = data.get(f"{prefix}-kind")
             if kind not in NOTE_KINDS:
                 errors[f"{prefix}-kind"] = "Выберите тип заметки: справка «?» или важно «!»."
-            for language, value in text.items():
+            for language, value in note_text.items():
                 if len(value) > NOTE_MAX_LENGTH:
                     errors[f"{prefix}-text-{language}"] = (
                         f"Слишком длинно: {len(value)} знаков, допустимо до {NOTE_MAX_LENGTH}."
                     )
-            notes.append({"kind": kind, "text": text, "uid": uid.strip()})
+            notes.append({"kind": kind, "text": note_text, "uid": uid.strip()})
     return NodeEdit(texts=texts, notes=notes, errors=errors)
 
 
