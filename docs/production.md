@@ -127,12 +127,13 @@ curl --fail http://127.0.0.1:3000/sitemaps/quran/sitemap.xml
 curl --fail http://127.0.0.1:3000/ru/quran/madani-hafs/surah/1
 curl --fail http://127.0.0.1:3000/sitemaps/audio/sitemap.xml
 curl --fail http://127.0.0.1:3000/ru/audio/reciters
-python3 ops/load/smoke.py --base-url https://iqro.forum
+python3 ops/load/smoke.py --base-url https://iqro.forum --concurrency 4
 ```
 
 API отвечает только на хосты из `DJANGO_ALLOWED_HOSTS`, поэтому запрос к API через
 `127.0.0.1` без заголовка `Host` получает 400. Smoke запускается по публичному адресу и
-не с самого сервера: запросы с одного IP упираются в лимит gateway и получают 429.
+не с самого сервера и с `--concurrency 4`: gateway пропускает 20 запросов к API в секунду
+с одного IP, а при параллельности по умолчанию (10) часть ответов будет 429.
 
 Курс «Обучение намазу» после первой выкладки нужно импортировать и опубликовать отдельно:
 [operations.md, «Курс „Обучение намазу“»](operations.md) и [tech-debt.md, 1.5](tech-debt.md).
