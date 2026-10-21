@@ -469,6 +469,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.5"
+  geomag:
+    dependency: "direct main"
+    description:
+      name: geomag
+      sha256: "016ee0cda540fdca6ad26ee8ab598f24959b59f1cc0e1f9ab1bae0bac3594d45"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   glob:
     dependency: transitive
     description:
