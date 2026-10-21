@@ -2015,6 +2015,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get salahRulingSunnah => 'Сунна';
 
   @override
+  String get salahVisual => 'Иллюстрация шага';
+
+  @override
+  String get salahVisualPicture => 'Картинка';
+
+  @override
+  String get salahVisual3d => '3D';
+
+  @override
+  String get salah3dSchematic => 'Схематичная 3D-иллюстрация';
+
+  @override
+  String get salah3dLoading => 'Загрузка 3D…';
+
+  @override
+  String get salah3dPlay => 'Воспроизвести движение';
+
+  @override
+  String get salah3dPause => 'Остановить движение';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'Скорость движения: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'Вернуть исходный ракурс';
+
+  @override
+  String get salah3dUnavailable =>
+      '3D-иллюстрация недоступна на этом устройстве — показана картинка.';
+
+  @override
   String get salahOfflineTitle => 'Картинки без интернета';
 
   @override

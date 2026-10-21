@@ -1980,6 +1980,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get salahRulingSunnah => 'سنة';
 
   @override
+  String get salahVisual => 'رسم الخطوة';
+
+  @override
+  String get salahVisualPicture => 'صورة';
+
+  @override
+  String get salahVisual3d => 'ثلاثي الأبعاد';
+
+  @override
+  String get salah3dSchematic => 'رسم توضيحي تخطيطي ثلاثي الأبعاد';
+
+  @override
+  String get salah3dLoading => 'جارٍ تحميل الرسم ثلاثي الأبعاد…';
+
+  @override
+  String get salah3dPlay => 'تشغيل الحركة';
+
+  @override
+  String get salah3dPause => 'إيقاف الحركة مؤقتًا';
+
+  @override
+  String salah3dSpeed(String speed) {
+    return 'سرعة الحركة: $speed';
+  }
+
+  @override
+  String get salah3dResetView => 'إعادة زاوية العرض';
+
+  @override
+  String get salah3dUnavailable =>
+      'الرسم ثلاثي الأبعاد غير متاح على هذا الجهاز، لذلك تُعرض الصورة.';
+
+  @override
   String get salahOfflineTitle => 'الصور دون إنترنت';
 
   @override

@@ -39,6 +39,7 @@ import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
 import '../features/reminders/reminder_repository.dart';
+import '../features/salah/salah_3d.dart';
 import '../features/salah/salah_display.dart';
 import '../features/salah/salah_models.dart';
 import '../features/salah/salah_offline_repository.dart';
@@ -965,6 +966,11 @@ final salahProgressProvider = FutureProvider.autoDispose
     });
 final salahDisplayProvider = StateProvider<SalahDisplay>(
   (ref) => const SalahDisplay(),
+);
+
+/// Draws a step's schematic 3D scene; tests swap the WebView for a stand-in.
+final salah3DViewBuilderProvider = Provider<Salah3DViewBuilder>(
+  (ref) => buildSalah3DWebView,
 );
 
 /// Step illustrations, kept in the image disk cache after the first view.

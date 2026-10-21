@@ -64,6 +64,7 @@ dependencies:
   workmanager: ^0.10.9
   home_widget: 0.9.4
   video_player: 2.11.1
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:
@@ -99,6 +100,9 @@ flutter:
     - assets/player_backgrounds/
     - assets/plan/
     - assets/fonts/AmiriQuran-OFL.txt
+    # Schematic 3D scene of the prayer course (docs/salah/salah-3d.md): the
+    # owner's scene on three.js r149 (MIT, assets/salah3d/LICENSE-three.txt).
+    - assets/salah3d/
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
   # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.

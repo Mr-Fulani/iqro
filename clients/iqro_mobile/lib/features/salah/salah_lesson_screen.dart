@@ -1,14 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'salah_3d.dart';
 import 'salah_display.dart';
 import 'salah_formula_card.dart';
 import 'salah_models.dart';
@@ -139,6 +142,8 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   // rebuilt when it changes.
   late final ValueNotifier<int> _index;
   var _finishing = false;
+  final _three = Salah3DController();
+  late final List<String?> _scenes = salahSceneSteps(_steps);
 
   List<SalahStep> get _steps => widget.lesson.steps;
 
@@ -160,11 +165,13 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   void dispose() {
     _pages.dispose();
     _index.dispose();
+    _three.dispose();
     super.dispose();
   }
 
   void _onPageChanged(int index) {
     _index.value = index;
+    _three.stepChanged();
     unawaited(_record(index));
     _precache(index + 1);
   }
@@ -301,6 +308,12 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
                     document: widget.document,
                     lesson: lesson,
                     step: _steps[index],
+                    visual: _StepVisualState(
+                      index: index,
+                      current: _index,
+                      scene: _scenes[index],
+                      three: _three,
+                    ),
                   ),
                 ),
               ),
@@ -546,6 +559,7 @@ class _StepPage extends ConsumerWidget {
     required this.document,
     required this.lesson,
     required this.step,
+    required this.visual,
     super.key,
   });
 
@@ -553,6 +567,7 @@ class _StepPage extends ConsumerWidget {
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
+  final _StepVisualState visual;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -570,7 +585,7 @@ class _StepPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (media != null) ...<Widget>[
-            _StepImage(courseSlug: courseSlug, media: media),
+            _StepVisual(courseSlug: courseSlug, media: media, state: visual),
             const SizedBox(height: 16),
           ],
           Text(
@@ -676,51 +691,302 @@ class _StepRepeatCounterState extends State<_StepRepeatCounter> {
   );
 }
 
-/// The step illustration in its declared proportions, never wider than its
-/// declared width and never taller than 40% of the screen.
-class _StepImage extends ConsumerWidget {
-  const _StepImage({required this.courseSlug, required this.media});
+/// Where a step page stands in the lesson's 3D choice.
+@immutable
+class _StepVisualState {
+  const _StepVisualState({
+    required this.index,
+    required this.current,
+    required this.scene,
+    required this.three,
+  });
+
+  final int index;
+  final ValueListenable<int> current;
+
+  /// The scene step for this page, or null when it has no 3D.
+  final String? scene;
+  final Salah3DController three;
+}
+
+/// The step picture; on the current page also «Picture / 3D» and, when 3D is
+/// chosen, the scene over the picture with its tools underneath.
+class _StepVisual extends StatelessWidget {
+  const _StepVisual({
+    required this.courseSlug,
+    required this.media,
+    required this.state,
+  });
 
   final String courseSlug;
   final SalahMedia media;
+  final _StepVisualState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final three = state.three;
+    return ListenableBuilder(
+      listenable: Listenable.merge(<Listenable>[state.current, three]),
+      builder: (context, _) {
+        final isCurrent = state.current.value == state.index;
+        final scene = state.scene;
+        final offered =
+            isCurrent && scene != null && !reduceMotion && !three.failed;
+        final shown = offered && three.chosen;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _StepImage(
+              courseSlug: courseSlug,
+              media: media,
+              view: shown ? _Salah3DHost(scene: scene, three: three) : null,
+              toggle: offered ? _VisualSwitch(three: three) : null,
+            ),
+            if (shown) _Salah3DBar(three: three),
+            if (isCurrent && three.notice)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  context.l10n.salah3dUnavailable,
+                  key: const ValueKey('salah-3d-unavailable'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _VisualSwitch extends StatelessWidget {
+  const _VisualSwitch({required this.three});
+
+  final Salah3DController three;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      container: true,
+      label: context.l10n.salahVisual,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface.withValues(alpha: .92),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SegmentedButton<bool>(
+          key: const ValueKey('salah-visual-switch'),
+          showSelectedIcon: false,
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          segments: <ButtonSegment<bool>>[
+            ButtonSegment<bool>(
+              value: false,
+              label: Text(context.l10n.salahVisualPicture),
+            ),
+            ButtonSegment<bool>(
+              value: true,
+              label: Text(context.l10n.salahVisual3d),
+            ),
+          ],
+          selected: <bool>{three.chosen},
+          onSelectionChanged: (selection) => three.choose(selection.single),
+        ),
+      ),
+    );
+  }
+}
+
+/// Runs the scene only while it plays, the app is in the foreground and the
+/// lesson is the visible route.
+class _Salah3DHost extends ConsumerStatefulWidget {
+  const _Salah3DHost({required this.scene, required this.three});
+
+  final String scene;
+  final Salah3DController three;
+
+  @override
+  ConsumerState<_Salah3DHost> createState() => _Salah3DHostState();
+}
+
+class _Salah3DHostState extends ConsumerState<_Salah3DHost>
+    with WidgetsBindingObserver {
+  var _foreground =
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed;
+    if (foreground != _foreground) setState(() => _foreground = foreground);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final three = widget.three;
+    final builder = ref.watch(salah3DViewBuilderProvider);
+    return builder(
+      context,
+      Salah3DViewConfig(
+        step: widget.scene,
+        running:
+            three.playing &&
+            _foreground &&
+            TickerMode.valuesOf(context).enabled,
+        speed: three.speed,
+        resetCount: three.resetCount,
+        onReady: three.markReady,
+        onError: (_) => three.fail(),
+      ),
+    );
+  }
+}
+
+/// «Schematic 3D illustration» and the tools of the scene.
+class _Salah3DBar extends StatelessWidget {
+  const _Salah3DBar({required this.three});
+
+  final Salah3DController three;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final speed =
+        '${NumberFormat.decimalPattern(Localizations.localeOf(context).toLanguageTag()).format(three.speed)}×';
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              l10n.salah3dSchematic,
+              key: const ValueKey('salah-3d-caption'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          if (three.ready) ...<Widget>[
+            IconButton(
+              key: const ValueKey('salah-3d-play'),
+              tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
+              onPressed: three.togglePlaying,
+              icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
+            ),
+            Semantics(
+              label: l10n.salah3dSpeed(speed),
+              excludeSemantics: true,
+              button: true,
+              child: TextButton(
+                key: const ValueKey('salah-3d-speed'),
+                onPressed: three.cycleSpeed,
+                child: Text(speed),
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('salah-3d-reset'),
+              tooltip: l10n.salah3dResetView,
+              onPressed: three.resetView,
+              icon: const Icon(Icons.threesixty),
+            ),
+          ] else ...<Widget>[
+            const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+            Text(l10n.salah3dLoading, style: theme.textTheme.bodySmall),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The step illustration in its declared proportions, never wider than its
+/// declared width and never taller than 40% of the screen. [view] covers the
+/// picture (the 3D scene); [toggle] sits in its top-right corner, which the
+/// pictures and the scene leave empty in either reading direction.
+class _StepImage extends ConsumerWidget {
+  const _StepImage({
+    required this.courseSlug,
+    required this.media,
+    this.view,
+    this.toggle,
+  });
+
+  final String courseSlug;
+  final SalahMedia media;
+  final Widget? view;
+  final Widget? toggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(salahCourseImageProvider(courseSlug))(media);
     final maxHeight = MediaQuery.sizeOf(context).height * .4;
-    return Semantics(
-      image: true,
-      label: media.alt,
-      child: ExcludeSemantics(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: media.width > 0
-                  ? media.width.toDouble()
-                  : double.infinity,
-              maxHeight: maxHeight,
-            ),
-            child: AspectRatio(
-              key: ValueKey('salah-image-${media.key}'),
-              aspectRatio: media.aspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Image(
-                  image: image,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stack) => ColoredBox(
-                    color: context.iqroColors.sand,
-                    child: Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: context.iqroColors.gold,
+    final view = this.view;
+    final toggle = this.toggle;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: media.width > 0 ? media.width.toDouble() : double.infinity,
+          maxHeight: maxHeight,
+        ),
+        child: AspectRatio(
+          key: ValueKey('salah-image-${media.key}'),
+          aspectRatio: media.aspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              Semantics(
+                image: true,
+                label: media.alt,
+                child: ExcludeSemantics(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image(
+                      image: image,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (context, error, stack) => ColoredBox(
+                        color: context.iqroColors.sand,
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: context.iqroColors.gold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+              if (view != null)
+                ClipRRect(
+                  key: const ValueKey('salah-3d-view'),
+                  borderRadius: BorderRadius.circular(22),
+                  child: view,
+                ),
+              if (toggle != null) Positioned(top: 8, right: 8, child: toggle),
+            ],
           ),
         ),
       ),
