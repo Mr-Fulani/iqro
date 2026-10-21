@@ -24,7 +24,7 @@
       {% if note %}
         {% for value in note.values %}
           <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
-            <label for="id-{{ value.name }}">{{ value.language }}<span class="se-missing-mark"> — не переведено</span></label>
+            <label for="id-{{ value.name }}"><bdi>{{ value.language }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
             <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="2" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="1200" data-preview="note" placeholder="Не переведено"{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
             <span class="se-length" aria-hidden="true"></span>
             {% if value.error %}<p class="se-error">{{ value.error }}</p>{% endif %}
@@ -33,7 +33,7 @@
       {% else %}
         {% for language in languages %}
           <div class="se-lang is-missing" data-lang="{{ language.code }}">
-            <label for="id-note-__uid__-text-{{ language.code }}">{{ language.name }}<span class="se-missing-mark"> — не переведено</span></label>
+            <label for="id-note-__uid__-text-{{ language.code }}"><bdi>{{ language.name }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
             <textarea id="id-note-__uid__-text-{{ language.code }}" name="note-__uid__-text-{{ language.code }}" rows="2" lang="{{ language.code }}" dir="{{ language.dir }}" data-max="1200" data-preview="note" placeholder="Не переведено"></textarea>
             <span class="se-length" aria-hidden="true"></span>
           </div>

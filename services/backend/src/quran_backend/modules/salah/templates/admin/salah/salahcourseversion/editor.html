@@ -57,7 +57,7 @@
     {% if course_missing_total %}
       <span>Во всём курсе не переведено:</span>
       {% for language in languages %}
-        <span class="se-missing-lang{% if language.course_missing %} has-missing{% endif %}">{{ language.name }}: <b>{{ language.course_missing }}</b></span>
+        <span class="se-missing-lang{% if language.course_missing %} has-missing{% endif %}"><bdi>{{ language.name }}</bdi>: <b>{{ language.course_missing }}</b></span>
       {% endfor %}
       {% if next_missing_id %}<a class="button" href="?node={{ next_missing_id|urlencode }}">Следующий непереведённый →</a>{% endif %}
     {% else %}
@@ -161,7 +161,7 @@
             <div class="se-tabs" role="tablist" aria-label="Язык текстов">
               {% for language in languages %}
                 <button type="button" role="tab" class="se-tab" data-lang="{{ language.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
-                  {{ language.name }} <span class="se-count{% if language.missing %} has-missing{% endif %}" data-count-lang="{{ language.code }}" title="Не переведено">{{ language.missing }}</span>
+                  <bdi>{{ language.name }}</bdi> <span class="se-count{% if language.missing %} has-missing{% endif %}" data-count-lang="{{ language.code }}" title="Не переведено">{{ language.missing }}</span>
                 </button>
               {% endfor %}
             </div>
@@ -172,7 +172,7 @@
                 <div class="se-langs">
                   {% for value in row.values %}
                     <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
-                      <label for="id-{{ value.name }}">{{ value.language }}<span class="se-missing-mark"> — не переведено</span></label>
+                      <label for="id-{{ value.name }}"><bdi>{{ value.language }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
                       <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="{{ row.field.rows }}" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="{{ row.field.max_length }}" data-preview="{{ row.field.name }}" placeholder="Не переведено"{% if value.error %} aria-invalid="true" aria-describedby="err-{{ value.name }}"{% endif %}{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
                       <span class="se-length" aria-hidden="true"></span>
                       {% if value.error %}<p class="se-error" id="err-{{ value.name }}">{{ value.error }}</p>{% endif %}
@@ -211,7 +211,7 @@
               <tbody>
                 {% for slot in group.slots %}
                   <tr class="{% if slot.error %}has-error{% endif %}">
-                    <th scope="row">{{ slot.label }}</th>
+                    <th scope="row"><bdi>{{ slot.label }}</bdi>{% if slot.slot != "all" %} ({{ slot.slot }}){% endif %}</th>
                     <td class="se-audio-now">
                       {% if slot.url %}
                         <audio controls preload="none" src="{{ slot.url }}"></audio>

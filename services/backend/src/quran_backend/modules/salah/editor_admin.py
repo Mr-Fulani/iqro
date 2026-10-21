@@ -472,7 +472,7 @@ class SalahEditorAdminMixin:
                         "slot": slot,
                         "label": "Для всех языков"
                         if slot == editor.AUDIO_ALL
-                        else f"{names.get(slot, slot)} ({slot})",
+                        else names.get(slot, slot),
                         "key": key or "",
                         "url": public_audio_url(asset.object_key) if asset else "",
                         "kib": _kib(asset.bytes) if asset else None,

@@ -330,8 +330,12 @@
   if (search && missingOnly) {
     search.addEventListener("input", filterTree);
     missingOnly.addEventListener("change", filterTree);
+    // Only the tree scrolls to the open place; the page stays where it is.
     const current = tree.querySelector('[aria-current="page"]');
-    if (current) current.scrollIntoView({ block: "center" });
+    if (current) {
+      const offset = current.getBoundingClientRect().top - tree.getBoundingClientRect().top;
+      tree.scrollTop += offset - tree.clientHeight / 2;
+    }
   }
 
   // Live preview of a step ---------------------------------------------------
