@@ -1,0 +1,27 @@
+{% extends "admin/change_form.html" %}
+
+{% block field_sets %}
+{% if salah_editor %}
+  <fieldset class="module aligned">
+    <h2>Редактирование курса</h2>
+    <div class="form-row">
+      {% if salah_editor.editable %}
+        <p>
+          <a class="button default" href="{{ salah_editor.url }}">Открыть редактор курса</a>
+          <span class="help">Тексты на всех языках, заметки «?» и «!», озвучка шагов и формул.</span>
+        </p>
+      {% else %}
+        <p>{{ salah_editor.reason }}</p>
+        <p>
+          <a class="button" href="{{ salah_editor.url }}">Открыть курс (только чтение)</a>
+          {% if salah_editor.copy_url %}
+            <a class="button default" href="{{ salah_editor.copy_url }}">Создать черновик из этой версии</a>
+          {% endif %}
+        </p>
+      {% endif %}
+      <p><a href="{{ salah_editor.download_url }}">Скачать снимок курса (JSON)</a></p>
+    </div>
+  </fieldset>
+{% endif %}
+{{ block.super }}
+{% endblock %}

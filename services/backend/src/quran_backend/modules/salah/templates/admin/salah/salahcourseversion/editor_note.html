@@ -1,0 +1,44 @@
+{# One note of a step; with note=None it is the template a new note is cloned from (uid "__uid__"). #}
+<li class="se-note{% if note.kind == 'warning' %} is-warning{% endif %}" data-uid="{% if note %}{{ note.uid }}{% else %}__uid__{% endif %}"{% if editable %} draggable="false"{% endif %}>
+  <div class="se-note-head">
+    {% if editable %}<span class="se-note-handle" title="Перетащить" aria-hidden="true">⠿</span>{% endif %}
+    <span class="se-note-icon" aria-hidden="true">{% if note.kind == 'warning' %}!{% else %}?{% endif %}</span>
+    <label>Тип
+      <select name="note-{% if note %}{{ note.uid }}{% else %}__uid__{% endif %}-kind" class="se-note-kind"{% if note.kind_error %} aria-invalid="true"{% endif %}{% if not editable %} disabled{% endif %}>
+        {% for value, label in note_kinds %}
+          <option value="{{ value }}"{% if note.kind == value or not note and forloop.first %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if editable %}
+      <span class="se-note-tools">
+        <button type="button" class="button se-note-up" aria-label="Поднять заметку выше">↑</button>
+        <button type="button" class="button se-note-down" aria-label="Опустить заметку ниже">↓</button>
+        <button type="button" class="button se-note-remove" aria-label="Удалить заметку">Удалить</button>
+      </span>
+    {% endif %}
+  </div>
+  {% if note.kind_error %}<p class="se-error">{{ note.kind_error }}</p>{% endif %}
+  <div class="se-field" data-required="1" data-field="note">
+    <div class="se-langs">
+      {% if note %}
+        {% for value in note.values %}
+          <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
+            <label for="id-{{ value.name }}"><bdi>{{ value.language }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
+            <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="2" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="1200" data-preview="note" placeholder="Не переведено"{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
+            <span class="se-length" aria-hidden="true"></span>
+            {% if value.error %}<p class="se-error">{{ value.error }}</p>{% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        {% for language in languages %}
+          <div class="se-lang is-missing" data-lang="{{ language.code }}">
+            <label for="id-note-__uid__-text-{{ language.code }}"><bdi>{{ language.name }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
+            <textarea id="id-note-__uid__-text-{{ language.code }}" name="note-__uid__-text-{{ language.code }}" rows="2" lang="{{ language.code }}" dir="{{ language.dir }}" data-max="1200" data-preview="note" placeholder="Не переведено"></textarea>
+            <span class="se-length" aria-hidden="true"></span>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</li>

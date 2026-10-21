@@ -1,9 +1,11 @@
 """Admin of the prayer-learning course.
 
-Content is edited as a snapshot in git and imported with
-`manage.py import_salah_course`; here the owner reads the compiled course,
-uploads the illustrations of a draft, signs off the religious content and
-publishes. Versions are otherwise read-only.
+A version starts as a snapshot imported from git (`manage.py
+import_salah_course`) or as a draft copied from another version here. The
+owner edits a draft in the course editor (`editor_admin.py`): texts in every
+language, «?» and «!» notes, recordings; uploads its illustrations, signs off
+the religious content and publishes. Signed and published versions are
+read-only.
 """
 
 from __future__ import annotations
@@ -22,7 +24,16 @@ from django.utils.html import format_html, format_html_join
 
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.object_storage import ObjectStorageError
-from quran_backend.modules.salah.importer import compile_version, publish_salah_version
+from quran_backend.modules.salah.editor_admin import (
+    SalahEditorAdminMixin,
+    editor_editable,
+    readonly_reason,
+)
+from quran_backend.modules.salah.importer import (
+    compile_version,
+    publish_salah_version,
+    sign_salah_version,
+)
 from quran_backend.modules.salah.media_upload import (
     IMAGE_SIDE,
     MAX_SOURCE_MIB,
@@ -54,10 +65,11 @@ class SalahCourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 
 @admin.register(SalahCourseVersion)
-class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ("__str__", "status", "signed", "published_at")
+class SalahCourseVersionAdmin(SalahEditorAdminMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("__str__", "status", "signed", "published_at", "editor_link")
     list_filter = ("status", "course")
     actions = ("sign_versions", "publish_versions", "recompile_versions")
+    change_form_template = "admin/salah/salahcourseversion/change_form.html"
     readonly_fields = (
         "course",
         "version",
@@ -92,6 +104,39 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def signed(self, obj: SalahCourseVersion) -> bool:
         return obj.is_signed
 
+    @admin.display(description="Редактор")
+    def editor_link(self, obj: SalahCourseVersion) -> str:
+        label = "Редактировать" if obj.status == SalahPublicationStatus.DRAFT else "Открыть"
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse("admin:salah_salahcourseversion_editor", args=[obj.pk]),
+            label,
+        )
+
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """The way into the editor above the fields, and why a version is read-only."""
+        version = self.get_object(request, unquote(object_id))
+        context = dict(extra_context or {})
+        if version is not None:
+            context["salah_editor"] = {
+                "url": reverse("admin:salah_salahcourseversion_editor", args=[version.pk]),
+                "editable": editor_editable(request.user, version),
+                "reason": readonly_reason(request.user, version),
+                "copy_url": reverse("admin:salah_salahcourseversion_new_draft", args=[version.pk])
+                if request.user.has_perm("salah.add_salahcourseversion")
+                else "",
+                "download_url": reverse(
+                    "admin:salah_salahcourseversion_snapshot", args=[version.pk]
+                ),
+            }
+        return super().change_view(request, object_id, form_url, context)
+
     @admin.display(description="Иллюстрации")
     def illustrations(self, obj: SalahCourseVersion) -> str:
         keys = {asset["key"] for asset in image_keys(obj)}
@@ -110,6 +155,7 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 self.admin_site.admin_view(self.media_view),
                 name="salah_salahcourseversion_media",
             ),
+            *self.editor_urls(),
             *super().get_urls(),
         ]
 
@@ -120,9 +166,7 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             raise Http404
         if not request.user.has_perm("salah.view_salahcourseversion"):
             raise PermissionDenied
-        editable = version.status == SalahPublicationStatus.DRAFT and request.user.has_perm(
-            "salah.change_salahcourseversion"
-        )
+        editable = editor_editable(request.user, version)
         if request.method == "POST":
             if not editable:
                 raise PermissionDenied
@@ -225,9 +269,19 @@ class SalahCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     @admin.action(description="Подписать: религиозная проверка пройдена")
     def sign_versions(self, request: HttpRequest, queryset: QuerySet[SalahCourseVersion]) -> None:
         for version in queryset.filter(status=SalahPublicationStatus.DRAFT):
-            version.sign(request.user)
-            compile_version(version)
-            self.message_user(request, f"{version}: подписана.", messages.SUCCESS)
+            try:
+                sign_salah_version(version, request.user)
+            except (SalahSnapshotError, SalahFormulaError) as error:
+                problems = list(dict.fromkeys(str(error).splitlines()))
+                more = f" И ещё {len(problems) - 5}." if len(problems) > 5 else ""
+                self.message_user(
+                    request,
+                    f"{version}: не подписана. {'; '.join(problems[:5])}.{more} "
+                    "Откройте редактор: он покажет, что не переведено.",
+                    messages.ERROR,
+                )
+            else:
+                self.message_user(request, f"{version}: подписана.", messages.SUCCESS)
 
     @admin.action(description="Опубликовать")
     def publish_versions(

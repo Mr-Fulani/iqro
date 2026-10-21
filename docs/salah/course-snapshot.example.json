@@ -112,6 +112,10 @@
     {
       "key": "audio-takbir",
       "file": "media/takbir.m4a"
+    },
+    {
+      "key": "audio-ruku-ru",
+      "file": "media/ruku-ru.m4a"
     }
   ],
   "sections": [
@@ -218,7 +222,30 @@
           "formulas": [
             "ruku-tasbih"
           ],
-          "repeat": 3
+          "repeat": 3,
+          "notes": [
+            {
+              "kind": "help",
+              "text": {
+                "ru": "Спина и голова на одной линии: не опускайте голову и не задирайте её.",
+                "en": "Keep your back and head in one line: neither drop the head nor raise it.",
+                "ar": "اجعل ظهرك ورأسك مستويين، فلا تخفض رأسك ولا ترفعه.",
+                "tr": "Sırtınız ve başınız aynı hizada olsun: başınızı ne indirin ne kaldırın."
+              }
+            },
+            {
+              "kind": "warning",
+              "text": {
+                "ru": "Руку' — столп: без него ракаат не засчитывается.",
+                "en": "Ruku' is a pillar: without it the rak'ah does not count.",
+                "ar": "الركوع ركن، لا تصح الركعة بدونه.",
+                "tr": "Rükû rükündür: o olmadan rekât geçerli olmaz."
+              }
+            }
+          ],
+          "audio_media_languages": {
+            "ru": "audio-ruku-ru"
+          }
         },
         {
           "slug": "tashahhud",

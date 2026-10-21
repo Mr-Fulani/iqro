@@ -11,6 +11,54 @@ Map<String, Object?> salahFixture() =>
         as Map<String, Object?>;
 
 void main() {
+  test('a step carries its «?» and «!» notes and its own voice-over', () {
+    final document = SalahCourseDocument.fromJson(salahFixture());
+    final steps = document.lesson('fajr')!.steps;
+    final ruku = steps.firstWhere((step) => step.slug == 'fajr.r1.ruku');
+
+    expect(ruku.notes.map((note) => note.kind), <SalahNoteKind>[
+      SalahNoteKind.help,
+      SalahNoteKind.warning,
+    ]);
+    expect(ruku.notes.first.text, startsWith('Спина и голова'));
+    expect(ruku.audio?.url, endsWith('.m4a'));
+    expect(steps.first.notes, isEmpty);
+    expect(steps.first.audio, isNull);
+  });
+
+  test('malformed notes and recordings are left out', () {
+    final step = SalahStep.fromJson(<String, Object?>{
+      'slug': 'fajr.r1.ruku',
+      'title': 'Руку',
+      'instruction': '',
+      'notes': <Object?>[
+        <String, Object?>{'kind': 'warning', 'text': 'Важно'},
+        <String, Object?>{'kind': 'tip', 'text': 'Новый вид'},
+        <String, Object?>{'kind': 'help', 'text': '  '},
+        'text',
+        null,
+      ],
+      'audio': <String, Object?>{'url': ''},
+    });
+
+    expect(
+      step.notes.map((note) => (note.kind, note.text)),
+      <(SalahNoteKind, String)>[
+        (SalahNoteKind.warning, 'Важно'),
+        (SalahNoteKind.help, 'Новый вид'),
+      ],
+    );
+    expect(step.audio, isNull);
+    expect(
+      SalahStep.fromJson(<String, Object?>{
+        'slug': 'a.b',
+        'notes': 'broken',
+        'audio': 'broken',
+      }).notes,
+      isEmpty,
+    );
+  });
+
   test('parses the contract example document', () {
     final document = SalahCourseDocument.fromJson(salahFixture());
 

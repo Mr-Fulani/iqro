@@ -24,6 +24,7 @@ from quran_backend.modules.audio.selectors import (
 from quran_backend.modules.audio.serializers import audio_asset_payload, public_audio_url
 from quran_backend.modules.dua.models import DuaAudioAsset, DuaCollection, DuaEntry
 from quran_backend.modules.quran.models import Ayah, QuranEdition
+from quran_backend.modules.salah.snapshot import audio_media_key
 from quran_backend.modules.translations.models import AyahTranslation
 from quran_backend.modules.translations.selectors import published_translation_editions
 
@@ -210,7 +211,15 @@ class FormulaResolver:
     # Resolution
 
     def resolve(self, language: str) -> dict[str, dict[str, Any]]:
-        return {formula["id"]: self._resolve_one(formula, language) for formula in self._formulas}
+        return {formula["id"]: self._resolve(formula, language) for formula in self._formulas}
+
+    def _resolve(self, formula: Mapping[str, Any], language: str) -> dict[str, Any]:
+        result = self._resolve_one(formula, language)
+        # A recording uploaded for the course replaces the source's one.
+        own = self._media.get(audio_media_key(formula["source"], language) or "")
+        if own:
+            result["audio"] = {"url": own["url"]}
+        return result
 
     def _resolve_one(self, formula: Mapping[str, Any], language: str) -> dict[str, Any]:
         source = formula["source"]
@@ -264,7 +273,4 @@ class FormulaResolver:
         }
         if translations.get("transliteration"):
             result["transliteration"] = translations["transliteration"]
-        audio_key = source.get("audio_media")
-        if audio_key and audio_key in self._media:
-            result["audio"] = {"url": self._media[audio_key]["url"]}
         return result

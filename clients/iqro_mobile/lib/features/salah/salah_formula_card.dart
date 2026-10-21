@@ -142,6 +142,52 @@ class _SalahFormulaCardState extends ConsumerState<SalahFormulaCard> {
   }
 }
 
+/// The step's own voice-over, in the same bar as a formula's recording.
+class SalahStepAudioBar extends StatelessWidget {
+  const SalahStepAudioBar({
+    required this.step,
+    required this.audio,
+    required this.title,
+    required this.audioOwner,
+    super.key,
+  });
+
+  final SalahStep step;
+  final SalahFormulaAudio audio;
+
+  /// Title of the recording on the lock screen and in the mini player.
+  final String title;
+
+  /// Owns the recording in the shared player, as for a formula: the lesson,
+  /// which stops it when the step is left.
+  final Object audioOwner;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: <Widget>[
+      Text(
+        context.l10n.salahStepAudio,
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
+      const SizedBox(height: 6),
+      _FormulaAudioBar(
+        // The media id `salah:step:<slug>` never meets a formula's.
+        formula: SalahFormula(
+          id: 'step:${step.slug}',
+          arabic: '',
+          translation: '',
+          source: const SalahFormulaSource(kind: 'step'),
+          audio: audio,
+        ),
+        audio: audio,
+        title: title,
+        owner: audioOwner,
+      ),
+    ],
+  );
+}
+
 typedef _AudioView = ({bool playing, bool loading, double speed});
 
 /// Play and speed of one formula. Only this bar listens to the player, and

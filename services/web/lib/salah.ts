@@ -37,6 +37,10 @@ export type SalahSection = {
   lessons: string[];
 };
 
+/** «?» opens a help note, «!» a warning; a newer kind opens like a help note. */
+export type SalahNoteKind = "help" | "warning";
+export type SalahStepNote = { kind: SalahNoteKind; text: string };
+
 export type SalahStep = {
   slug: string;
   kind: SalahStepKind;
@@ -46,6 +50,9 @@ export type SalahStep = {
   title: string;
   instruction: string;
   details?: string;
+  notes?: SalahStepNote[];
+  /** The step's own voice-over, in the document's language. */
+  audio?: SalahFormulaAudio;
   media?: string;
   formulas: string[];
   repeat?: number;
@@ -158,6 +165,19 @@ function isSalahMediaScene(value: unknown): value is SalahMediaScene {
   return isRecord(value) && typeof value.pose === "string" && typeof value.view === "string" && SALAH_SCENE_VIEWS.has(value.view);
 }
 
+/** The notes a step can show: empty or malformed ones are dropped. */
+export function parseSalahStepNotes(value: unknown): SalahStepNote[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((note): SalahStepNote[] =>
+    isRecord(note) && typeof note.text === "string" && note.text.trim()
+      ? [{ kind: note.kind === "warning" ? "warning" : "help", text: note.text }]
+      : []);
+}
+
+function parseStepAudio(value: unknown): SalahFormulaAudio | undefined {
+  return isRecord(value) && typeof value.url === "string" && value.url.trim() ? { url: value.url } : undefined;
+}
+
 export function isSalahSlug(value: string): boolean {
   return value.length <= 64 && SLUG_PATTERN.test(value);
 }
@@ -231,10 +251,16 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
         throw new SalahDocumentError(`steps.${stepSlug}.instruction must be a string`);
       }
       const stepFormulas = Array.isArray(step.formulas) ? step.formulas : [];
+      const { notes: rawNotes, audio: rawAudio, ...rest } = step as SalahStep & { notes?: unknown; audio?: unknown };
+      const notes = parseSalahStepNotes(rawNotes);
+      const audio = parseStepAudio(rawAudio);
       return {
-        ...(step as SalahStep),
+        ...rest,
         formulas: stepFormulas.filter((id): id is string => typeof id === "string" && id in formulas),
         media: typeof step.media === "string" && step.media in media ? step.media : undefined,
+        // Absent rather than empty, so the lesson bundle stays small.
+        ...(notes.length ? { notes } : {}),
+        ...(audio ? { audio } : {}),
       };
     });
     return { ...(lesson as SalahLesson), steps };

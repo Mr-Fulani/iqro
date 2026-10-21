@@ -17,7 +17,8 @@ from django.utils import timezone
 from quran_backend.modules.audio.validators import validate_relative_object_key, validate_sha256
 from quran_backend.modules.core.models import BaseModel
 
-SALAH_LANGUAGES = ("ru", "en", "ar", "tr")
+# Every language of the project: a course text is written in each of them.
+SALAH_LANGUAGES = tuple(code for code, _name in settings.LANGUAGES)
 
 
 class SalahPublicationStatus(models.TextChoices):
@@ -128,7 +129,11 @@ class SalahCompiledDocument(BaseModel):
 
 
 class SalahMediaAsset(BaseModel):
-    """An illustration or short recording, stored under an immutable key."""
+    """An illustration or short recording, stored under an immutable key.
+
+    A draft made from another version shares its stored files: the rows are
+    copied, the objects are immutable.
+    """
 
     version = models.ForeignKey(SalahCourseVersion, on_delete=models.CASCADE, related_name="media")
     key = models.SlugField(max_length=96)
@@ -136,6 +141,7 @@ class SalahMediaAsset(BaseModel):
     content_type = models.CharField(max_length=64)
     width = models.PositiveSmallIntegerField(null=True, blank=True)
     height = models.PositiveSmallIntegerField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
     bytes = models.PositiveIntegerField()
     sha256 = models.CharField(max_length=64, validators=[validate_sha256])
 

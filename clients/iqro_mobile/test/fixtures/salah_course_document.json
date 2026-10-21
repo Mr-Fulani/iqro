@@ -119,7 +119,12 @@
           "details": "Произнести тасбих один раз — ваджиб, до трёх раз — сунна.",
           "media": "position-ruku",
           "formulas": ["ruku-tasbih"],
-          "repeat": 3
+          "repeat": 3,
+          "notes": [
+            {"kind": "help", "text": "Спина и голова на одной линии: не опускайте голову и не задирайте её."},
+            {"kind": "warning", "text": "Руку' — столп: без него ракаат не засчитывается."}
+          ],
+          "audio": {"url": "https://media.iqro.forum/salah/hanbali-umdah/2026-10-18/audio-ruku-ru-8c41d2e07b9a.m4a"}
         },
         {
           "slug": "fajr.r2.tashahhud",

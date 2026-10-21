@@ -445,7 +445,7 @@ def test_import_creates_a_draft_with_documents_and_immutable_media(
     assert version.status == SalahPublicationStatus.DRAFT
     assert sorted(version.documents.values_list("language", flat=True)) == ["ar", "en", "ru", "tr"]
     assert {spec.key.split("/")[-1].rsplit("-", 1)[0] for spec in uploader.calls} == {
-        "position-takbir", "position-ruku", "position-tashahhud", "audio-takbir",
+        "position-takbir", "position-ruku", "position-tashahhud", "audio-takbir", "audio-ruku-ru",
     }  # fmt: skip
     ruku = version.media.get(key="position-ruku")
     assert (ruku.width, ruku.height) == (720, 720)
@@ -631,8 +631,21 @@ def test_formulas_resolve_from_the_published_hisn_al_muslim() -> None:
                     },
                 },
             },
+            {
+                "id": "ruku-own",
+                "source": {
+                    "kind": "dua",
+                    "collection": "hisn-al-muslim",
+                    "source_number": 33,
+                    "audio_media": "audio-own",
+                    "audio_media_languages": {"en": "audio-own-en"},
+                },
+            },
         ],
-        {},
+        {
+            "audio-own": {"url": "https://media.iqro.forum/salah/own.m4a"},
+            "audio-own-en": {"url": "https://media.iqro.forum/salah/own-en.mp3"},
+        },
     )
 
     ru = resolver.resolve("ru")
@@ -654,6 +667,11 @@ def test_formulas_resolve_from_the_published_hisn_al_muslim() -> None:
         "transliteration": "Аллаху акбар",
         "repetitions": 1,
         "source": {"kind": "inline"},
+    }
+    # The course's own recording replaces Hisn's; a language may have its own voice.
+    assert ru["ruku-own"]["audio"] == {"url": "https://media.iqro.forum/salah/own.m4a"}
+    assert resolver.resolve("en")["ruku-own"]["audio"] == {
+        "url": "https://media.iqro.forum/salah/own-en.mp3"
     }
 
 
