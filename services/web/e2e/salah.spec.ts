@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type ElementHandle, expect, test, type Page } from "@playwright/test";
 
 const progressKey = "salah.progress.hanbali-umdah";
 
@@ -119,6 +119,83 @@ test("arrow keys are mirrored on the Arabic RTL page", async ({ page }) => {
   await expect(step).toHaveAttribute("data-step", "fajr.r1.fatiha");
   await expect(page.getByRole("button", { name: /التالي/ })).toContainText("←");
   await expect(step.locator(".salah-arabic")).toHaveAttribute("lang", "ar");
+});
+
+/** Seconds of silence as a WAV file: a recording the browser can play offline. */
+function silentWav(seconds: number) {
+  const rate = 8000;
+  const bytes = rate * seconds * 2;
+  const wav = Buffer.alloc(44 + bytes);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + bytes, 4);
+  wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20); // PCM
+  wav.writeUInt16LE(1, 22); // mono
+  wav.writeUInt32LE(rate, 24);
+  wav.writeUInt32LE(rate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(bytes, 40);
+  return wav;
+}
+
+test("a step's recording stops when the visitor leaves the step and starts over on return", async ({ page }) => {
+  await page.route(/\.(mp3|m4a)(\?|$)/, (route) => route.fulfill({ contentType: "audio/wav", body: silentWav(8) }));
+  await openLesson(page, "/ru/salah/fajr");
+  const step = page.locator(".salah-step:not([hidden])");
+  const listen = async () => {
+    await step.getByRole("button", { name: "Слушать" }).click();
+    return (await step.locator("audio").elementHandle())!;
+  };
+  // Where the clip is, or -1 while it is silent.
+  const position = (audio: ElementHandle) =>
+    audio.evaluate((element) => ((element as HTMLAudioElement).paused ? -1 : (element as HTMLAudioElement).currentTime));
+  // The first click also starts the 3D scene, which can hold the page for a few seconds.
+  const STARTED = { timeout: 15_000 };
+  const sounding = () =>
+    page.evaluate(() => [...document.querySelectorAll("audio")].filter((element) => !element.paused).length);
+
+  let audio = await listen();
+  await expect.poll(() => position(audio), STARTED).toBeGreaterThan(3);
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expect.poll(() => position(audio)).toBe(-1);
+  await expect(page.locator("audio")).toHaveCount(0);
+
+  // Back on the step, the clip plays from its start.
+  await page.getByRole("button", { name: "Назад" }).click();
+  await expect(step).toHaveAttribute("data-step", "fajr.r1.takbir");
+  audio = await listen();
+  await expect.poll(() => position(audio), STARTED).toBeGreaterThan(0);
+  expect(await position(audio)).toBeLessThan(2.5);
+
+  // Another step's clip never sounds alongside.
+  await page.getByRole("button", { name: "Далее" }).click();
+  const fatiha = await listen();
+  await expect.poll(() => position(fatiha), STARTED).toBeGreaterThan(0);
+  expect(await position(audio)).toBe(-1);
+  expect(await sounding()).toBe(1);
+
+  // Hiding the page stops it, like the app going to the background.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => position(fatiha)).toBe(-1);
+  await expect(page.locator("audio")).toHaveCount(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
+  // So does leaving the lesson by a link.
+  audio = await listen();
+  await expect.poll(() => position(audio), STARTED).toBeGreaterThan(0);
+  await page.locator('main a[href="/ru/salah"]').first().click();
+  await expect(page).toHaveURL(/\/ru\/salah$/);
+  await expect.poll(() => position(audio)).toBe(-1);
+  expect(await sounding()).toBe(0);
 });
 
 test("formula cards play audio, count repetitions and switch text and modes", async ({ page }) => {

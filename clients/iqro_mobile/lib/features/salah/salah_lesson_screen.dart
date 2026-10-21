@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
+import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -136,7 +137,8 @@ class SalahStepPlayer extends ConsumerStatefulWidget {
   ConsumerState<SalahStepPlayer> createState() => _SalahStepPlayerState();
 }
 
-class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
+class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
+    with WidgetsBindingObserver {
   late final PageController _pages;
 
   // The header and the buttons follow the page; the pager itself is not
@@ -149,11 +151,19 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
     _steps,
   );
 
+  // The lesson owns the recordings of its steps in the shared player: leaving
+  // a step stops whichever of them sounds, and it starts over on return.
+  final _audioOwner = Object();
+  // Kept for dispose, when ref can no longer be read.
+  late AudioController _audio;
+
   List<SalahStep> get _steps => widget.lesson.steps;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _audio = ref.read(audioControllerProvider.notifier);
     final initial = widget.initialIndex.clamp(0, _steps.length - 1);
     _pages = PageController(initialPage: initial);
     _index = ValueNotifier<int>(initial);
@@ -166,15 +176,39 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Another screen over the lesson leaves the step too.
+    if (!TickerMode.valuesOf(context).enabled) _stopAudio();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _stopAudio();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopAudio();
     _pages.dispose();
     _index.dispose();
     _three.dispose();
     super.dispose();
   }
 
+  void _stopAudio() {
+    // In dispose the element is already unmounted and ref is gone.
+    if (context.mounted) _audio = ref.read(audioControllerProvider.notifier);
+    unawaited(_audio.stopStandaloneOf(_audioOwner));
+  }
+
   void _onPageChanged(int index) {
     _index.value = index;
+    _stopAudio();
     _three.stepChanged();
     unawaited(_record(index));
     _precache(index + 1);
@@ -312,6 +346,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer> {
                     document: widget.document,
                     lesson: lesson,
                     step: _steps[index],
+                    audioOwner: _audioOwner,
                     visual: _StepVisualState(
                       index: index,
                       current: _index,
@@ -563,6 +598,7 @@ class _StepPage extends ConsumerWidget {
     required this.document,
     required this.lesson,
     required this.step,
+    required this.audioOwner,
     required this.visual,
     super.key,
   });
@@ -571,6 +607,7 @@ class _StepPage extends ConsumerWidget {
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
+  final Object audioOwner;
   final _StepVisualState visual;
 
   @override
@@ -654,6 +691,7 @@ class _StepPage extends ConsumerWidget {
               step: step,
               audio: audio,
               title: '${lesson.title} · ${step.title}',
+              audioOwner: audioOwner,
             ),
           ],
           // A repeated action without a counted formula (washing the face
@@ -669,6 +707,7 @@ class _StepPage extends ConsumerWidget {
               formula: formula,
               display: display,
               audioTitle: '${lesson.title} · ${step.title}',
+              audioOwner: audioOwner,
             ),
           ],
         ],
@@ -820,8 +859,9 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
         running: three.playing && TickerMode.valuesOf(context).enabled,
         foreground: _foreground,
         speed: three.speed,
-        resetCount: three.resetCount,
+        replayCount: three.replayCount,
         onReady: three.markReady,
+        onEnded: three.markEnded,
         onError: (code) {
           debugPrint('Salah 3D falls back to the still: $code');
           three.fail();
@@ -863,11 +903,23 @@ class _Salah3DBar extends StatelessWidget {
               ),
             ),
             if (tools && three.ready) ...<Widget>[
+              // Pause while the pose moves, play when paused, replay once it
+              // has played.
               IconButton(
                 key: const ValueKey('salah-3d-play'),
-                tooltip: three.playing ? l10n.salah3dPause : l10n.salah3dPlay,
+                tooltip: three.ended
+                    ? l10n.salah3dReplay
+                    : three.moving
+                    ? l10n.salah3dPause
+                    : l10n.salah3dPlay,
                 onPressed: three.togglePlaying,
-                icon: Icon(three.playing ? Icons.pause : Icons.play_arrow),
+                icon: Icon(
+                  three.ended
+                      ? Icons.replay
+                      : three.moving
+                      ? Icons.pause
+                      : Icons.play_arrow,
+                ),
               ),
               Semantics(
                 label: l10n.salah3dSpeed(speed),
@@ -878,12 +930,6 @@ class _Salah3DBar extends StatelessWidget {
                   onPressed: three.cycleSpeed,
                   child: Text(speed),
                 ),
-              ),
-              IconButton(
-                key: const ValueKey('salah-3d-reset'),
-                tooltip: l10n.salah3dResetView,
-                onPressed: three.resetView,
-                icon: const Icon(Icons.threesixty),
               ),
             ],
           ],

@@ -5,7 +5,13 @@ import test from "node:test";
 
 import { APP_ASSETS_DIRECTORY, salah3dAppAssets } from "../scripts/salah3d-app-assets.ts";
 import { parseSalahCourseDocument, type SalahMedia, type SalahStep } from "./salah.ts";
-import { nextSalahSceneSpeed, SALAH_SCENE_POSES, salahStepScenes } from "./salah-3d.ts";
+import {
+  nextSalahScenePlayback,
+  nextSalahSceneSpeed,
+  SALAH_SCENE_PLAYBACK,
+  SALAH_SCENE_POSES,
+  salahStepScenes,
+} from "./salah-3d.ts";
 import { MAIN, SEGMENTS, type SalahSceneStepId, STEPS } from "./salah3d/salah-scene.js";
 
 const picture = { url: "https://media.example/p.webp", width: 720, height: 720, bytes: 1, sha256: "0", alt: "" };
@@ -84,6 +90,29 @@ test("the speed button cycles through the scene's speeds", () => {
   assert.equal(nextSalahSceneSpeed(1), 0.75);
   assert.equal(nextSalahSceneSpeed(0.75), 0.5);
   assert.equal(nextSalahSceneSpeed(0.5), 1);
+});
+
+test("a step plays its pose once; replay and every new step play it from the start", () => {
+  // the same cases as clients/iqro_mobile/test/features/salah_3d_test.dart
+  let state = SALAH_SCENE_PLAYBACK;
+  assert.deepEqual(state, { playing: true, ended: false, run: 0 });
+  state = nextSalahScenePlayback(state, "ended");
+  assert.deepEqual(state, { playing: true, ended: true, run: 0 });
+  // play after the end is a replay
+  assert.deepEqual(nextSalahScenePlayback(state, "toggle"), { playing: true, ended: false, run: 1 });
+  state = nextSalahScenePlayback(state, "replay");
+  assert.deepEqual(state, { playing: true, ended: false, run: 1 });
+  // a pause holds the movement where it is, play goes on from there
+  state = nextSalahScenePlayback(state, "toggle");
+  assert.deepEqual(state, { playing: false, ended: false, run: 1 });
+  assert.deepEqual(nextSalahScenePlayback(state, "toggle"), { playing: true, ended: false, run: 1 });
+  // the next step plays its own pose, paused or ended before
+  assert.deepEqual(nextSalahScenePlayback(state, "step"), { playing: true, ended: false, run: 2 });
+  assert.deepEqual(nextSalahScenePlayback(nextSalahScenePlayback(state, "ended"), "step"), {
+    playing: true,
+    ended: false,
+    run: 2,
+  });
 });
 
 test("every pose has a segment of the cycle made of that pose's keys", () => {

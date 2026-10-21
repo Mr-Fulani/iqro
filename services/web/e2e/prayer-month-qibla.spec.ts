@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, Page, test } from "@playwright/test";
+import { magneticDeclination } from "../lib/geomag.ts";
+import { qiblaBearing } from "../lib/qibla.ts";
 
 type AppParityCase = { id: string; utc_minutes: number[][] };
 
@@ -175,4 +177,129 @@ test("a failed calculation keeps the previous day, Qibla and month together", as
   await expect(page.getByText("Часовой пояс: Asia/Riyadh")).toBeVisible();
   await page.getByRole("tab", { name: "Месяц" }).click();
   await expect(page.getByText("Часовой пояс: Asia/Riyadh")).toBeVisible();
+});
+
+const MOSCOW = { latitude: 55.7558, longitude: 37.6173 };
+
+const moscowLabels = {
+  ru: {
+    atKaaba: "Вы у Каабы — молитесь лицом к ней",
+    quickCity: "Быстрый выбор города",
+    city: "Москва (Россия)",
+    calculate: "Рассчитать расписание",
+  },
+  en: {
+    atKaaba: "You are at the Kaaba — face it directly",
+    quickCity: "Quick city selection",
+    city: "Moscow (Russia)",
+    calculate: "Calculate schedule",
+  },
+};
+
+async function showMoscowQibla(page: Page, locale: keyof typeof moscowLabels = "ru") {
+  const labels = moscowLabels[locale];
+  await page.goto(`/${locale}/prayer`);
+  // The first automatic calculation (Makkah by default) finishes restoring the form.
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText(labels.atKaaba);
+  await page.getByLabel(labels.quickCity).selectOption({ label: labels.city });
+  await page.getByRole("button", { name: labels.calculate }).click();
+  await expect(page.getByTestId("prayer-qibla-arrow")).toHaveCount(1);
+}
+
+const dialRotation = (page: Page) =>
+  page
+    .getByTestId("prayer-qibla-dial")
+    .getAttribute("transform")
+    .then((value) => Number(/^rotate\((-?[\d.e+-]+) 100 100\)$/.exec(value ?? "")?.[1]));
+
+test("the Qibla dial follows a live Android compass and lights up when the phone faces it", async ({ page }) => {
+  await mockPrayerApi(page);
+  await showMoscowQibla(page);
+  // The page moves magnetic headings to true north with the same model.
+  const declination = magneticDeclination(MOSCOW.latitude, MOSCOW.longitude)!;
+  const bearing = qiblaBearing(MOSCOW.latitude, MOSCOW.longitude)!;
+  const pointPhone = (trueHeading: number) =>
+    page.evaluate((alpha) => {
+      window.dispatchEvent(
+        new DeviceOrientationEvent("deviceorientationabsolute", { alpha, beta: 20, gamma: -10, absolute: true }),
+      );
+    }, (((360 - (trueHeading - declination)) % 360) + 360) % 360);
+
+  const qibla = page.getByTestId("prayer-qibla");
+  await pointPhone(bearing + 90);
+  await expect(page.getByTestId("prayer-qibla-hint")).toHaveText(
+    "Компас устройства включён: держите телефон горизонтально — стрелка показывает Киблу относительно его верха.",
+  );
+  await expect.poll(() => dialRotation(page)).toBeCloseTo(-(bearing + 90), 0);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("");
+  await expect(qibla).not.toHaveClass(/is-facing/);
+  // Without accuracy reports the page cannot tell a bad calibration, so it explains the fix.
+  await expect(qibla.getByText("Если стрелка неточна", { exact: false })).toBeVisible();
+
+  await pointPhone(bearing + 2);
+  await expect.poll(() => dialRotation(page)).toBeCloseTo(-(bearing + 2), 0);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("Вы смотрите на Киблу");
+  await expect(qibla).toHaveClass(/is-facing/);
+  // Hysteresis: a small drift past 3° keeps the state, leaving the 5° band drops it.
+  await pointPhone(bearing - 4);
+  await expect.poll(() => dialRotation(page)).toBeCloseTo(-(bearing - 4), 0);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("Вы смотрите на Киблу");
+  await pointPhone(bearing - 8);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("");
+  await expect(qibla).not.toHaveClass(/is-facing/);
+});
+
+test("on iPhone the compass starts from a tap and asks for calibration", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
+      configurable: true,
+      value: async () => "granted",
+    });
+  });
+  await mockPrayerApi(page);
+  await showMoscowQibla(page);
+  const declination = magneticDeclination(MOSCOW.latitude, MOSCOW.longitude)!;
+  const bearing = qiblaBearing(MOSCOW.latitude, MOSCOW.longitude)!;
+  const pointPhone = (trueHeading: number, accuracy: number) =>
+    page.evaluate(
+      ([heading, headingAccuracy]) => {
+        const event = Object.assign(new Event("deviceorientation"), { alpha: 0, beta: 0, gamma: 0 });
+        Object.defineProperties(event, {
+          webkitCompassHeading: { value: heading },
+          webkitCompassAccuracy: { value: headingAccuracy },
+        });
+        window.dispatchEvent(event);
+      },
+      [(((trueHeading - declination) % 360) + 360) % 360, accuracy],
+    );
+
+  await expect(page.getByTestId("prayer-qibla-hint")).toHaveText(/^Это географическое направление/);
+  await page.getByRole("button", { name: "Включить компас" }).click();
+  await expect(page.getByRole("button", { name: "Включить компас" })).toHaveCount(0);
+
+  await pointPhone(bearing, -1);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("Компас нужно откалибровать");
+  await expect(page.getByTestId("prayer-qibla-hint")).toHaveText(/^Поводите телефоном в воздухе восьмёркой/);
+  await expect(page.getByTestId("prayer-qibla")).not.toHaveClass(/is-facing/);
+
+  await pointPhone(bearing, 10);
+  await expect(page.getByTestId("prayer-qibla-status")).toHaveText("Вы смотрите на Киблу");
+  await expect.poll(() => dialRotation(page)).toBeCloseTo(-bearing, 0);
+  await expect(page.getByText("Если стрелка неточна", { exact: false })).toHaveCount(0);
+});
+
+test("a refused motion permission keeps the geographic bearing and says why", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
+      configurable: true,
+      value: async () => "denied",
+    });
+  });
+  await mockPrayerApi(page);
+  await showMoscowQibla(page, "en");
+  await page.getByRole("button", { name: "Turn on the compass" }).click();
+  await expect(page.getByTestId("prayer-qibla-hint")).toHaveText(
+    /^No access to motion sensors: allow it in the browser settings and reload the page\. This is a geographic bearing/,
+  );
+  await expect(page.getByTestId("prayer-qibla-dial")).toHaveAttribute("transform", "rotate(0 100 100)");
 });

@@ -50,3 +50,34 @@ test("without WebGL the app page says so and mounts nothing", async ({ page }) =
   await openWithBridge(page);
   await expect.poll(() => messages(page), { timeout: 20_000 }).toEqual([{ type: "ERROR", code: "NO_WEBGL" }]);
 });
+
+test("the app page plays the step once, says so and replays on request", async ({ page }) => {
+  // Software WebGL on a busy machine plays the 2.5 s takbir several times slower.
+  test.slow();
+  await page.setViewportSize({ width: 360, height: 360 });
+  await openWithBridge(page);
+  await expect.poll(async () => (await messages(page)).map((message) => message.type), { timeout: 20_000 }).toEqual(["LOADED"]);
+  type Salah = Record<"show" | "play" | "replay", (step?: string, speed?: number) => void>;
+  const ended = async () => (await messages(page)).filter((message) => message.type === "ENDED").length;
+
+  // The takbir takes about 2.5 s.
+  await page.evaluate(() => (window as unknown as { salah: Salah }).salah.show("takbir", 1));
+  await expect.poll(ended, { timeout: 60_000 }).toBe(1);
+  const canvas = page.locator("canvas#salah");
+  const moving = async () => {
+    const before = await canvas.screenshot();
+    await page.waitForTimeout(400);
+    return !before.equals(await canvas.screenshot());
+  };
+  // The camera settles on the last frame, then nothing moves.
+  await expect.poll(moving, { timeout: 60_000 }).toBe(false);
+  // Play (as after the app comes back to the foreground) leaves an ended step on its last frame.
+  await page.evaluate(() => (window as unknown as { salah: Salah }).salah.play());
+  expect(await moving()).toBe(false);
+  expect(await ended()).toBe(1);
+
+  await page.evaluate(() => (window as unknown as { salah: Salah }).salah.replay());
+  expect(await moving()).toBe(true);
+  await expect.poll(ended, { timeout: 60_000 }).toBe(2);
+  expect((await messages(page)).filter((message) => message.type === "ERROR")).toEqual([]);
+});

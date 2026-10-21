@@ -15,7 +15,18 @@ import {
 } from "./prayer-engine.ts";
 import type { LocalPrayerMethod } from "./prayer-engine.ts";
 import { isValidPrayerAdjustment, isValidPrayerDate } from "./prayer-input.ts";
-import { distanceToKaabaMeters, headingFromOrientation, qiblaBearing } from "./qibla.ts";
+import { magneticDeclination } from "./geomag.ts";
+import {
+  angleDifference,
+  compassReadingFromOrientation,
+  distanceToKaabaMeters,
+  facesQibla,
+  HeadingSmoother,
+  headingFromOrientation,
+  headingFromRotationMatrix,
+  qiblaBearing,
+  rotationMatrixFromOrientation,
+} from "./qibla.ts";
 
 type BackendFixture = {
   cases: Array<{
@@ -229,12 +240,88 @@ test("Qibla bearing is a normalized geographic bearing", () => {
   assert.equal(qiblaBearing(Number.NaN, 0), null);
 });
 
+const assertAngle = (actual: number | null, expected: number) =>
+  assert.ok(
+    actual !== null && Math.abs(angleDifference(actual, expected)) < 1e-9,
+    `expected ${expected}°, got ${actual}°`,
+  );
+
 test("compass heading uses only absolute orientation", () => {
-  assert.equal(headingFromOrientation({ alpha: 90, absolute: true }), 270);
-  assert.equal(headingFromOrientation({ alpha: 90, absolute: true }, 90), 0);
+  assertAngle(headingFromOrientation({ alpha: 90, absolute: true }), 270);
+  assertAngle(headingFromOrientation({ alpha: 90, absolute: true }, 90), 0);
+  assertAngle(headingFromOrientation({ alpha: 0, absolute: true }, 270), 270);
   assert.equal(headingFromOrientation({ alpha: 90, absolute: false }), null);
   assert.equal(headingFromOrientation({ alpha: null, absolute: true }), null);
   assert.equal(headingFromOrientation({ alpha: 10, webkitCompassHeading: 45 }), 45);
+  assert.equal(headingFromOrientation({ alpha: 10, webkitCompassHeading: -1 }), null);
+});
+
+test("compass heading of the screen top survives tilt, as in the app", () => {
+  // Pitch and roll leave the projected top edge in place; upright, the back of the phone leads.
+  assertAngle(headingFromOrientation({ alpha: 30, beta: 60, gamma: -40, absolute: true }), 330);
+  assertAngle(headingFromOrientation({ alpha: 30, beta: 90, gamma: 0, absolute: true }), 330);
+  // The same matrix layout as Android's SensorManager: a phone lying flat with its top east.
+  const flatEast = rotationMatrixFromOrientation(270, 0, 0);
+  assertAngle(headingFromRotationMatrix(flatEast), 90);
+  assert.equal(headingFromRotationMatrix([1, 2, 3]), null);
+});
+
+test("compass readings move to true north and flag iOS calibration", () => {
+  const android = compassReadingFromOrientation({ alpha: 360 - 170, absolute: true }, 0, 12);
+  assert.ok(android && Math.abs(android.heading - 182) < 1e-9);
+  assert.equal(android.needsCalibration, false);
+  assert.equal(android.accuracyKnown, false);
+  const ios = (accuracy: number) =>
+    compassReadingFromOrientation({ alpha: 0, webkitCompassHeading: 355, webkitCompassAccuracy: accuracy }, 0, 10);
+  assert.ok(Math.abs(ios(10)!.heading - 5) < 1e-9);
+  assert.deepEqual(
+    [ios(10)!.needsCalibration, ios(30)!.needsCalibration, ios(31)!.needsCalibration, ios(-1)!.needsCalibration],
+    [false, false, true, true],
+  );
+  assert.equal(compassReadingFromOrientation({ alpha: 5, absolute: false }, 0, 10), null);
+});
+
+test("facing the Qibla holds within the release band and never while uncalibrated", () => {
+  assert.equal(facesQibla(173.5, 176.35, false, false), true);
+  assert.equal(facesQibla(172, 176.35, false, false), false);
+  assert.equal(facesQibla(172, 176.35, true, false), true);
+  assert.equal(facesQibla(171, 176.35, true, false), false);
+  assert.equal(facesQibla(176.35, 176.35, false, true), false);
+  assert.equal(facesQibla(359, 1, false, false), true);
+});
+
+test("heading smoother eases toward the sensor and never spins the long way round", () => {
+  const smoother = new HeadingSmoother(200);
+  assert.equal(smoother.step(350, 0), 350);
+  const halfway = smoother.step(10, 200 * Math.LN2);
+  assert.ok(Math.abs(halfway - 360) < 1e-9, `${halfway}`);
+  const next = smoother.step(10, 10_000);
+  assert.ok(Math.abs(next - 370) < 1e-9, `${next}`);
+  assert.equal(smoother.value, next);
+});
+
+// The app's geomag package (WMM2025) for the same instants: local midnight at UTC+3.
+const appDeclinations: Array<[number, number, string, number]> = [
+  [55.7558, 37.6173, "2026-06-15", 12.113085440196249],
+  [55.7558, 37.6173, "2028-01-01", 12.25956522288158],
+  [21.4225, 39.8262, "2026-06-15", 3.504613672404009],
+  [41.0082, 28.9784, "2026-06-15", 6.061925795828186],
+  [41.2995, 69.2401, "2026-06-15", 5.683996731397475],
+  [40.7128, -74.006, "2026-06-15", -12.476293996124271],
+  [-6.2088, 106.8456, "2028-01-01", 0.6781455105450899],
+  [64.1466, -21.9426, "2028-01-01", -10.688150435061141],
+  [-33.9249, 18.4241, "2026-06-15", -26.72969358885945],
+];
+
+test("magnetic declination matches the app's World Magnetic Model", () => {
+  for (const [latitude, longitude, date, expected] of appDeclinations) {
+    const actual = magneticDeclination(latitude, longitude, new Date(`${date}T00:00:00+03:00`));
+    // The app counts the year from local January 1; the site from UTC, three hours apart.
+    assert.ok(actual !== null && Math.abs(actual - expected) < 2e-4, `${latitude},${longitude} ${date}: ${actual}`);
+  }
+  assert.equal(magneticDeclination(91, 0), null);
+  assert.equal(magneticDeclination(0, Number.NaN), null);
+  assert.ok(Number.isFinite(magneticDeclination(90, 0)));
 });
 
 test("prayer input follows the backend serializer limits", () => {

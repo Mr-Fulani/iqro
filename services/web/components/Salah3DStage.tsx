@@ -10,13 +10,15 @@ export type Salah3DStageProps = {
   /** The current step's place for the canvas; null when the step has no 3D. */
   slot: HTMLElement | null;
   view: SalahSceneView;
-  /** The pose whose movement loops (the full view only). */
+  /** The pose whose movement plays once (the full view only). */
   step: SalahSceneStepId | null;
   playing: boolean;
+  /** Changes when the pose should play from its start: a new step or a replay. */
+  run: number;
   speed: number;
-  /** Changes when the visitor asks for the starting view again. */
-  resetKey: number;
   onReady: () => void;
+  /** The pose has played and holds its last frame. */
+  onEnded: () => void;
   onError: () => void;
 };
 
@@ -26,9 +28,20 @@ type Stage = { canvas: HTMLCanvasElement; scene: SalahScene };
  * One canvas and scene for the whole lesson: the canvas moves into the current step's
  * slot, so stepping on keeps the WebGL context instead of building a new one per step.
  */
-export default function Salah3DStage({ slot, view, step, playing, speed, resetKey, onReady, onError }: Salah3DStageProps) {
+export default function Salah3DStage({
+  slot,
+  view,
+  step,
+  playing,
+  run,
+  speed,
+  onReady,
+  onEnded,
+  onError,
+}: Salah3DStageProps) {
   const [stage, setStage] = useState<Stage | null>(null);
   const ready = useEffectEvent(onReady);
+  const ended = useEffectEvent(onEnded);
   const failed = useEffectEvent(onError);
   const initial = useEffectEvent(() => ({ view, step, speed }));
 
@@ -39,7 +52,7 @@ export default function Salah3DStage({ slot, view, step, playing, speed, resetKe
     canvas.setAttribute("aria-hidden", "true");
     let scene: SalahScene;
     try {
-      scene = mount(canvas, { pageScroll: true, ...initial() });
+      scene = mount(canvas, { pageScroll: true, ...initial(), onEnd: () => ended() });
     } catch {
       failed();
       return;
@@ -68,19 +81,21 @@ export default function Salah3DStage({ slot, view, step, playing, speed, resetKe
     };
   }, [slot, stage]);
 
+  // A new pose puts the camera in place at once; replaying the same pose lets it glide back.
   useEffect(() => {
     if (stage && step) stage.scene.setStep(step);
   }, [stage, step]);
+
+  // Every step, and a replay, plays the pose from its start.
+  useEffect(() => {
+    if (stage && step) stage.scene.replay();
+  }, [run, stage, step]);
 
   useEffect(() => {
     stage?.scene.setSpeed(speed);
   }, [speed, stage]);
 
-  useEffect(() => {
-    if (resetKey) stage?.scene.resetCamera();
-  }, [resetKey, stage]);
-
-  // Runs only while chosen, shown in a step and the tab is visible.
+  // Runs only while moving, shown in a step and the tab is visible.
   useEffect(() => {
     if (!stage) return;
     const sync = () => {

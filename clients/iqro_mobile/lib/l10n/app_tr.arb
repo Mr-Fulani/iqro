@@ -617,7 +617,7 @@
   "salah3dPlay": "Hareketi oynat",
   "salah3dPause": "Hareketi duraklat",
   "salah3dSpeed": "Hareket hızı: {speed}",
-  "salah3dResetView": "Görünümü sıfırla",
+  "salah3dReplay": "Tekrar oynat",
   "salahOfflineTitle": "Çevrimdışı görseller",
   "salahOfflineImages": "Kursun görselleri",
   "salahOfflineSaved": "Bu cihaza kaydedildi",

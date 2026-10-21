@@ -3,10 +3,12 @@
      {"type":"LOADED"}                      scripts ran and WebGL works; waiting for salah.show()
      {"type":"READY","version":"0.1.0"}     the first frame of the step is drawn
      {"type":"STEP_CHANGED","stepIndex":4,"stepId":"sujud"}
+     {"type":"ENDED"}                       the step's movement has played and holds its last frame
      {"type":"ERROR","code":"NO_WEBGL" | "SCRIPTS_NOT_LOADED" | "MOUNT_FAILED" | "CONTEXT_LOST"}
-   App -> page: salah.show(pose, speed, view), salah.play(), salah.pause(), salah.setSpeed(0.5|0.75|1),
-   salah.resetCamera(), salah.dispose(). The full view loops the pose's movement; the hand and
-   back views play their own short cycle. */
+   App -> page: salah.show(pose, speed, view), salah.play(), salah.pause(), salah.replay(),
+   salah.setSpeed(0.5|0.75|1), salah.resetCamera(), salah.dispose(). The full view plays the
+   pose's movement once (play() does not restart it, replay() does); the hand and back views
+   loop their own short cycle. */
 (function () {
   'use strict';
   function send(msg) {
@@ -30,13 +32,15 @@
       try {
         scene = window.SalahScene.mount(canvas, {
           view: view, step: view === 'full' ? step : null, speed: speed || 1,
-          onStep: function (i, s) { send({ type: 'STEP_CHANGED', stepIndex: i, stepId: s ? s.id : null }); }
+          onStep: function (i, s) { send({ type: 'STEP_CHANGED', stepIndex: i, stepId: s ? s.id : null }); },
+          onEnd: function () { send({ type: 'ENDED' }); }
         });
       } catch (e) { send({ type: 'ERROR', code: 'MOUNT_FAILED' }); return; }
       requestAnimationFrame(function () { send({ type: 'READY', version: window.SalahScene.version }); });
     },
     play: function () { call('play'); },
     pause: function () { call('pause'); },
+    replay: function () { call('replay'); },
     setSpeed: function (v) { call('setSpeed', [0.5, 0.75, 1].indexOf(v) >= 0 ? v : 1); },
     resetCamera: function () { call('resetCamera'); },
     dispose: function () { var s = scene; scene = null; if (s) s.dispose(); }
