@@ -53,8 +53,8 @@ test("every mapped pose has a segment of the cycle made of that pose's keys", ()
   for (const scene of Object.values(SALAH_SCENE_BY_POSITION).concat("sujud2")) {
     assert.ok(ids.includes(scene), scene);
   }
-  for (const [id, [first, last]] of Object.entries(SEGMENTS)) {
-    assert.ok(first <= last && last < MAIN.length, id);
+  for (const [id, [first, last, paused = last]] of Object.entries(SEGMENTS)) {
+    assert.ok(first <= paused && paused <= last && last < MAIN.length, id);
     for (let key = first; key <= last; key++) assert.equal(MAIN[key]![3], ids.indexOf(id as never), `${id} key ${key}`);
   }
 });

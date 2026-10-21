@@ -1037,10 +1037,11 @@
     ['tash', 0.5, 1.5, 7]
   ];
   // One course step = the movement into one STEPS pose and its hold: [first, last] key of
-  // MAIN. Played in a loop with LEAD_IN seconds of the previous pose before it.
+  // MAIN, plus the key shown when paused if it is not the last. Played in a loop with
+  // LEAD_IN seconds of the previous pose before it.
   var SEGMENTS = {
     qiyam: [2, 2], takbir: [1, 1], ruku: [3, 4], itidal: [5, 6], sujud: [7, 10],
-    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23], salam: [24, 27]
+    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23], salam: [24, 27, 24]
   };
   var LEAD_IN = 0.6;
 
@@ -1364,7 +1365,8 @@
       if (!seg) { range = null; kick(); return; }
       var first = tl.keys[seg[0]], prev = tl.keys[seg[0] - 1], last = tl.keys[seg[1]];
       range = [prev ? Math.max(prev.t1, first.t0 - LEAD_IN) : first.t0, last.t2];
-      clock.t = frozen ? last.t1 : range[0]; manualUntil = 0; // paused: show the pose itself
+      clock.t = frozen ? tl.keys[seg[2] != null ? seg[2] : seg[1]].t1 : range[0]; // paused: the pose itself
+      manualUntil = 0;
       applyTrack(true); kick();
     }
     setStep(opts.step);

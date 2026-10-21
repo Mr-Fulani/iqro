@@ -36,7 +36,8 @@ export type SalahScene = {
 
 export const VERSION: string;
 export const STEPS: SalahSceneStep[];
-export const SEGMENTS: Record<SalahSceneStepId, [number, number]>;
+/** [first key, last key, key shown when paused (default: last)] of MAIN. */
+export const SEGMENTS: Record<SalahSceneStepId, [number, number, number?]>;
 /** The full cycle: [pose, transition s, hold s, STEPS index, blend options?]. */
 export const MAIN: [string, number, number, number, object?][];
 /** Throws when the browser cannot create a WebGL context. */
