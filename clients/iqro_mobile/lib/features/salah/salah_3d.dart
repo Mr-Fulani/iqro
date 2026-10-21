@@ -164,8 +164,11 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
   // Horizontal drags turn the figure and pinches zoom; vertical drags still
   // scroll the step.
   static final _gestures = <Factory<OneSequenceGestureRecognizer>>{
-    Factory<OneSequenceGestureRecognizer>(HorizontalDragGestureRecognizer.new),
-    Factory<OneSequenceGestureRecognizer>(ScaleGestureRecognizer.new),
+    // One factory per recognizer type, or the platform view asserts.
+    Factory<HorizontalDragGestureRecognizer>(
+      HorizontalDragGestureRecognizer.new,
+    ),
+    Factory<ScaleGestureRecognizer>(ScaleGestureRecognizer.new),
   };
 
   Salah3DViewConfig get _config => widget.config;
@@ -188,6 +191,9 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFFF1EDE4))
       ..addJavaScriptChannel('SalahBridge', onMessageReceived: _onMessage)
+      ..setOnConsoleMessage((message) {
+        if (kDebugMode) debugPrint('Salah 3D page: ${message.message}');
+      })
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) =>
@@ -256,7 +262,7 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
         );
       case 'READY':
         _timeout?.cancel();
-        setState(() => _shown = true);
+        _shown = true;
         _sync();
         _config.onReady();
       case 'ERROR':
@@ -265,15 +271,10 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
     }
   }
 
+  // Always drawn: a transparent WebView may not get animation frames. The
+  // still covers it until the first frame is ready.
   @override
-  Widget build(BuildContext context) {
-    // Hidden until the first frame is drawn: the picture underneath shows.
-    return ExcludeSemantics(
-      child: AnimatedOpacity(
-        opacity: _shown ? 1 : 0,
-        duration: const Duration(milliseconds: 200),
-        child: WebViewWidget(controller: _web, gestureRecognizers: _gestures),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: WebViewWidget(controller: _web, gestureRecognizers: _gestures),
+  );
 }

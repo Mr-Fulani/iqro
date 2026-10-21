@@ -745,6 +745,7 @@ class _StepVisual extends StatelessWidget {
               courseSlug: courseSlug,
               media: media,
               view: runs ? _Salah3DHost(scene: scene, three: three) : null,
+              stillOnTop: !(runs && three.ready),
             ),
             if (scene != null) _Salah3DBar(three: three, tools: runs),
           ],
@@ -806,7 +807,10 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
         speed: three.speed,
         resetCount: three.resetCount,
         onReady: three.markReady,
-        onError: (_) => three.fail(),
+        onError: (code) {
+          debugPrint('Salah 3D falls back to the still: $code');
+          three.fail();
+        },
       ),
     );
   }
@@ -876,13 +880,20 @@ class _Salah3DBar extends StatelessWidget {
 
 /// The step illustration in its declared proportions, never wider than its
 /// declared width and never taller than 40% of the screen. [view] (the
-/// running 3D scene) covers the picture.
+/// running 3D scene) lies under the picture, which fades out once the scene
+/// has drawn ([stillOnTop] false).
 class _StepImage extends ConsumerWidget {
-  const _StepImage({required this.courseSlug, required this.media, this.view});
+  const _StepImage({
+    required this.courseSlug,
+    required this.media,
+    this.view,
+    this.stillOnTop = true,
+  });
 
   final String courseSlug;
   final SalahMedia media;
   final Widget? view;
+  final bool stillOnTop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -901,22 +912,35 @@ class _StepImage extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
+              if (view != null)
+                ClipRRect(
+                  key: const ValueKey('salah-3d-view'),
+                  borderRadius: BorderRadius.circular(22),
+                  child: view,
+                ),
               Semantics(
                 image: true,
                 label: media.alt,
-                child: ExcludeSemantics(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: Image(
-                      image: image,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                      errorBuilder: (context, error, stack) => ColoredBox(
-                        color: context.iqroColors.sand,
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: context.iqroColors.gold,
+                child: IgnorePointer(
+                  ignoring: !stillOnTop,
+                  child: AnimatedOpacity(
+                    opacity: stillOnTop ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: ExcludeSemantics(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image(
+                          image: image,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder: (context, error, stack) => ColoredBox(
+                            color: context.iqroColors.sand,
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: context.iqroColors.gold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -924,12 +948,6 @@ class _StepImage extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (view != null)
-                ClipRRect(
-                  key: const ValueKey('salah-3d-view'),
-                  borderRadius: BorderRadius.circular(22),
-                  child: view,
-                ),
             ],
           ),
         ),
