@@ -1,251 +1,269 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { DuaTopicIcon } from "./DuaTopicIcon";
-import { DuaTopicSelector } from "./DuaTopicSelector";
-import { duaTopics, topicCategories, topicEntryCount } from "../lib/dua-topics";
-import {
-  api,
-  DuaCategory,
-  DuaCollection,
-} from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+
+import { api, type DuaCategory, type DuaEntry } from "../lib/api";
+import { useAuth } from "../lib/auth-context";
+import { collectCursorPages } from "../lib/cursor-pagination";
+import { duaChaptersMatching } from "../lib/dua-search";
+import { duaDisplayTitle } from "../lib/dua-share";
+import { duaTopics, topicCategories, topicEntryCount, type DuaTopic } from "../lib/dua-topics";
 import { useI18n } from "../lib/i18n-context";
 import type { PublishedDuaInitialData } from "../lib/public-content";
 import { localizedPath } from "../lib/routing";
+import { DuaChapterRow, DuaEmpty, DuaError, DuaLoading, DuaTopBar } from "./DuaChrome";
+import { DuaEntrySummaryList } from "./DuaEntrySummaryList";
+import { DuaChevronIcon, DuaSearchIcon } from "./DuaIcons";
+import { DuaThematicIcon } from "./DuaThematicIcon";
 
-export default function DuaPage({
-  initialData,
+const SEARCH_DELAY_MS = 350;
+
+type SearchState =
+  | { status: "idle" }
+  | { status: "loading"; query: string }
+  | { status: "error"; query: string }
+  | { status: "done"; query: string; entries: DuaEntry[] };
+
+/** _DuaTopicCard and _DuaFavoritesCard: icon, title, description, count. */
+function DuaTopicCard({
+  href,
+  icon,
+  title,
+  description,
+  count,
 }: {
-  initialData?: PublishedDuaInitialData;
+  href: string;
+  icon: string;
+  title: string;
+  description: string;
+  count: string;
 }) {
-  const { formatNumber, locale, t } = useI18n();
-  const [collections, setCollections] = useState<DuaCollection[]>(initialData?.collections ?? []);
-  const [categories, setCategories] = useState<DuaCategory[]>(initialData?.categories ?? []);
+  return (
+    <Link className="dua-topic-card" href={href}>
+      <DuaThematicIcon topic={icon} />
+      <span className="dua-topic-card-title">{title}</span>
+      <span className="dua-topic-card-description">{description}</span>
+      <span className="dua-topic-card-count">{count}</span>
+    </Link>
+  );
+}
+
+/** _DuaTopicTile: a topic a search found, as a row. */
+function DuaTopicTile({ topic, count }: { topic: DuaTopic; count: string }) {
+  const { locale } = useI18n();
+  return (
+    <Link className="dua-topic-tile" href={localizedPath(locale, `/dua/topics/${topic.id}`)}>
+      <DuaThematicIcon topic={topic.id} />
+      <span className="dua-topic-tile-text">
+        <span className="dua-topic-card-title">{topic.title[locale]}</span>
+        <span className="dua-topic-card-count">{count}</span>
+      </span>
+      <DuaChevronIcon />
+    </Link>
+  );
+}
+
+/**
+ * The app's du'a catalog (_DuaCatalog): a search field over a grid of topics,
+ * the favourites first. Typing searches chapters, topics and the du'a
+ * themselves, as the app does.
+ */
+export default function DuaPage({ initialData }: { initialData?: PublishedDuaInitialData }) {
+  const { locale, t } = useI18n();
+  const { isLoading: authLoading, session } = useAuth();
+  const [categories, setCategories] = useState<DuaCategory[] | null>(initialData?.categories ?? null);
+  const [catalogFailed, setCatalogFailed] = useState(false);
+  // A server render brings the catalog; without one it loads here.
+  const [catalogAttempt, setCatalogAttempt] = useState(initialData ? 0 : 1);
+  const [favoritesCount, setFavoritesCount] = useState(0);
   const [query, setQuery] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
-  const [selectedCollection, setSelectedCollection] = useState("");
-  const [catalogLoading, setCatalogLoading] = useState(!initialData);
-  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
-  const [error, setError] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  const [search, setSearch] = useState<SearchState>({ status: "idle" });
+
+  // The query lives in the address, so «Back» from a du'a returns to it.
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get("q")?.trim() ?? "";
+    if (!initial) return;
+    setQuery(initial);
+    if (initial.length >= 2) setSubmittedQuery(initial);
+  }, []);
 
   useEffect(() => {
+    if (catalogAttempt === 0) return;
     let active = true;
-    setCatalogLoading(true);
-    Promise.all([api.getDuaCollections(locale), api.getDuaCategories(locale)])
-      .then(([nextCollections, nextCategories]) => {
-        if (!active) return;
-        setCollections(nextCollections);
-        setCategories(nextCategories);
-        setSelectedCollection((current) =>
-          current && nextCollections.some((item) => item.slug === current)
-            ? current
-            : "",
-        );
-        setError("");
+    setCatalogFailed(false);
+    api.getDuaCategories(locale)
+      .then((items) => {
+        if (active) setCategories(items);
       })
       .catch(() => {
-        if (active) setError(t("dua.unavailable"));
-      })
-      .finally(() => {
-        if (active) setCatalogLoading(false);
+        if (active) setCatalogFailed(true);
       });
     return () => {
       active = false;
     };
-  }, [catalogReloadKey, locale, t]);
+  }, [catalogAttempt, locale]);
 
-  const visibleCategories = useMemo(() => {
-    const normalizedQuery = appliedQuery.toLocaleLowerCase(locale).trim();
-    return categories.filter((category) => {
-      if (selectedCollection && category.collection !== selectedCollection) return false;
-      if (!normalizedQuery) return true;
-      return category.title.toLocaleLowerCase(locale).includes(normalizedQuery)
-        || String(category.source_number) === normalizedQuery;
-    });
-  }, [appliedQuery, categories, locale, selectedCollection]);
+  useEffect(() => {
+    if (authLoading || !session) {
+      setFavoritesCount(0);
+      return;
+    }
+    let active = true;
+    api.getDuaFavorites()
+      .then((snapshot) => {
+        if (active) setFavoritesCount(snapshot.results.filter((item) => item.is_favorite).length);
+      })
+      .catch(() => {
+        // The catalog stays usable without personal state.
+      });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, session]);
 
-  const visibleTopics = useMemo(() => {
-    const normalizedQuery = appliedQuery.toLocaleLowerCase(locale).trim();
-    return duaTopics.filter((topic) => {
-      if (selectedCollection && topic.collection !== selectedCollection) return false;
-      if (!topicCategories(topic, categories).length) return false;
-      return !normalizedQuery || topic.title[locale].toLocaleLowerCase(locale).includes(normalizedQuery)
-        || topic.description[locale].toLocaleLowerCase(locale).includes(normalizedQuery)
-        || topicCategories(topic, visibleCategories).length > 0;
-    });
-  }, [appliedQuery, categories, locale, selectedCollection, visibleCategories]);
-  const otherCategories = visibleCategories.filter(
-    (category) => !duaTopics.some((topic) => topicCategories(topic, [category]).length > 0),
-  );
+  useEffect(() => {
+    if (submittedQuery.length < 2) {
+      setSearch({ status: "idle" });
+      return;
+    }
+    let active = true;
+    setSearch({ status: "loading", query: submittedQuery });
+    collectCursorPages((cursor) => api.getDuaEntries({
+      language: locale,
+      q: submittedQuery,
+      cursor,
+      page_size: 100,
+    }), 10)
+      .then((entries) => {
+        if (active) setSearch({ status: "done", query: submittedQuery, entries });
+      })
+      .catch(() => {
+        if (active) setSearch({ status: "error", query: submittedQuery });
+      });
+    return () => {
+      active = false;
+    };
+  }, [locale, searchAttempt, submittedQuery]);
 
-  const summaryCollections = useMemo(
-    () => selectedCollection
-      ? collections.filter((item) => item.slug === selectedCollection)
-      : collections,
-    [collections, selectedCollection],
-  );
-  const summaryEntryCount = summaryCollections.reduce(
-    (total, item) => total + item.entry_count,
-    0,
-  );
-  const summaryCategoryCount = summaryCollections.reduce(
-    (total, item) => total + item.category_count,
-    0,
-  );
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setAppliedQuery(query.trim());
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    const next = value.trim();
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("q", next);
+    else url.searchParams.delete("q");
+    window.history.replaceState(window.history.state, "", url);
+    if (next.length < 2) setSubmittedQuery("");
   };
 
-  const resetFilters = () => {
-    setQuery("");
-    setAppliedQuery("");
-  };
+  useEffect(() => {
+    const next = query.trim();
+    if (next.length < 2 || next === submittedQuery) return;
+    const timer = window.setTimeout(() => setSubmittedQuery(next), SEARCH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [query, submittedQuery]);
+
+  const items = useMemo(() => categories ?? [], [categories]);
+  const count = (value: number) => t("dua.count", { count: value });
+  const trimmed = query.trim();
+
+  let body;
+  if (trimmed) {
+    if (trimmed.length < 2) {
+      body = <DuaEmpty message={t("dua.searchMinCharacters")} />;
+    } else {
+      // The server matches the words of each du'a, so a query such as «сон»
+      // misses «сна». Chapters and topics whose names match come first.
+      const needle = trimmed.toLowerCase();
+      const chapters = duaChaptersMatching(trimmed, items);
+      const topics = duaTopics.filter((topic) => topicCategories(topic, items).length > 0
+        && (topic.title[locale].toLowerCase().includes(needle)
+          || topic.description[locale].toLowerCase().includes(needle)));
+      const pending = trimmed !== submittedQuery || search.status === "loading" || search.status === "idle";
+      const leading = chapters.length + topics.length;
+      body = (
+        <div className="dua-search-results">
+          {chapters.map((chapter) => <DuaChapterRow key={chapter.id} chapter={chapter} locale={locale} />)}
+          {topics.map((topic) => (
+            <DuaTopicTile key={topic.id} topic={topic} count={count(topicEntryCount(topic, items))} />
+          ))}
+          {pending ? (
+            <DuaLoading locale={locale} />
+          ) : search.status === "error" ? (
+            <DuaError locale={locale} onRetry={() => setSearchAttempt((value) => value + 1)} />
+          ) : search.status === "done" && search.entries.length > 0 ? (
+            <DuaEntrySummaryList entries={search.entries} locale={locale} />
+          ) : leading === 0 ? (
+            <DuaEmpty message={t("dua.notFound")} />
+          ) : null}
+        </div>
+      );
+    }
+  } else if (categories === null) {
+    body = catalogFailed
+      ? <DuaError locale={locale} onRetry={() => setCatalogAttempt((value) => value + 1)} />
+      : <DuaLoading locale={locale} />;
+  } else if (items.length === 0) {
+    body = <DuaEmpty message={t("dua.noCategories")} />;
+  } else {
+    const topics = duaTopics.filter((topic) => topicCategories(topic, items).length > 0);
+    const other = items.filter((category) =>
+      !duaTopics.some((topic) => topicCategories(topic, [category]).length > 0));
+    body = (
+      <>
+        <div className="dua-topic-grid">
+          {favoritesCount > 0 ? (
+            <DuaTopicCard
+              href={localizedPath(locale, "/dua/favorites")}
+              icon="favorites"
+              title={t("dua.favorites")}
+              description={t("dua.favoritesSubtitle")}
+              count={count(favoritesCount)}
+            />
+          ) : null}
+          {topics.map((topic) => (
+            <DuaTopicCard
+              key={topic.id}
+              href={localizedPath(locale, `/dua/topics/${topic.id}`)}
+              icon={topic.id}
+              title={topic.title[locale]}
+              description={topic.description[locale]}
+              count={count(topicEntryCount(topic, items))}
+            />
+          ))}
+        </div>
+        {other.map((category) => (
+          <Link
+            key={category.id}
+            className="dua-plain-card"
+            href={localizedPath(locale, `/dua/${category.collection}/categories/${category.slug}`)}
+          >
+            {duaDisplayTitle(category.title, locale)}
+          </Link>
+        ))}
+      </>
+    );
+  }
 
   return (
     <div className="dua-page">
-      <section className="surface dua-hero">
-        <div className="surface-head">
-          <div>
-            <h1 className="surface-title">{t("dua.title")}</h1>
-            <p className="surface-subtitle">{t("dua.description")}</p>
-          </div>
-        </div>
-
-        <div className="dua-catalog-summary">
-          <div>
-            <strong>{formatNumber(summaryEntryCount)}</strong>
-            <span>{t("dua.entriesAvailable")}</span>
-          </div>
-          <div>
-            <strong>{formatNumber(summaryCategoryCount)}</strong>
-            <span>{t("dua.categoriesAvailable")}</span>
-          </div>
-          <p>{t("dua.starterNotice")}</p>
-        </div>
-
-        {summaryCollections.map((collection) => collection.source ? (
-          <p className="dua-source-lead" key={collection.slug}>
-            {t("dua.sourceEdition")}: {collection.source.title} · {collection.source.author}.{" "}
-            <a href={collection.source.source_url} target="_blank" rel="noreferrer">
-              {t("dua.openSource")} ↗
-            </a>
-          </p>
-        ) : null)}
-      </section>
-
-      <section className="surface dua-browser" aria-busy={catalogLoading}>
-        <DuaTopicSelector />
-        <form className="dua-search" onSubmit={handleSearch}>
-          <label className="sr-only" htmlFor="dua-collection-filter">
-            {t("dua.collectionFilter")}
-          </label>
-          <select
-            id="dua-collection-filter"
-            value={selectedCollection}
-            onChange={(event) => setSelectedCollection(event.target.value)}
-            aria-label={t("dua.collectionFilter")}
-          >
-            <option value="">{t("dua.allCollections")}</option>
-            {collections.map((collection) => (
-              <option key={collection.slug} value={collection.slug}>
-                {collection.source?.title || collection.slug}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="dua-search-input">{t("dua.searchLabel")}</label>
-          <input
-            id="dua-search-input"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("dua.searchPlaceholder")}
-            maxLength={120}
-          />
-          <button className="btn btn-primary" type="submit">{t("dua.searchButton")}</button>
-          {appliedQuery ? (
-            <button className="btn btn-secondary" type="button" onClick={resetFilters}>
-              {t("dua.resetFilters")}
-            </button>
-          ) : null}
-        </form>
-
-        <div className="dua-category-section">
-          <header>
-            <h2>{t("dua.topicsTitle")}</h2>
-            <p>{t("dua.categoryFilter")}</p>
-          </header>
-          <div className="dua-category-list" aria-label={t("dua.categoryFilter")}>
-            {visibleTopics.map((topic) => (
-              <Link
-                key={topic.id}
-                href={localizedPath(locale, `/dua/topics/${topic.id}`)}
-                className="dua-category-chip dua-thematic-card"
-                aria-label={t("dua.openTopic", { topic: topic.title[locale] })}
-              >
-                <DuaTopicIcon sourceNumber={topic.chapter_numbers[0] || 0} slug={topic.id} />
-                <span className="dua-category-title">{topic.title[locale]}</span>
-                <span className="dua-topic-description">{topic.description[locale]}</span>
-                <span className="dua-category-meta">
-                  <small>{t("dua.categoryEntryCount", { count: formatNumber(topicEntryCount(topic, categories)) })}</small>
-                  <span className="dua-category-arrow" aria-hidden="true">{locale === "ar" ? "←" : "→"}</span>
-                </span>
-              </Link>
-            ))}
-            {otherCategories.map((category) => (
-              <Link
-                key={category.id}
-                href={localizedPath(
-                  locale,
-                  `/dua/${category.collection}/categories/${category.slug}`,
-                )}
-                className="dua-category-chip"
-                aria-label={t("dua.openTopic", { topic: category.title })}
-              >
-                <span className="dua-category-card-head">
-                  <DuaTopicIcon sourceNumber={category.source_number} slug={category.slug} />
-                  <span className="dua-category-number">{formatNumber(category.source_number)}</span>
-                </span>
-                <span className="dua-category-title">{category.title}</span>
-                {!selectedCollection && collections.length > 1 ? (
-                  <span className="dua-category-collection">
-                    {category.collection_title || category.collection}
-                  </span>
-                ) : null}
-                <span className="dua-category-meta">
-                  <small>
-                    {t("dua.categoryEntryCount", { count: formatNumber(category.entry_count) })}
-                  </small>
-                  <span className="dua-category-arrow" aria-hidden="true">
-                    {locale === "ar" ? "←" : "→"}
-                  </span>
-                </span>
-              </Link>
-            ))}
-          </div>
-          {!catalogLoading && visibleTopics.length === 0 && otherCategories.length === 0 ? (
-            <div className="dua-empty">
-              <span aria-hidden="true">⌕</span>
-              <p>{t("dua.noTopics")}</p>
-            </div>
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="alert alert-error" role="alert">
-            <span>{error}</span>
-            <button
-              className="btn btn-sm btn-secondary"
-              type="button"
-              onClick={() => setCatalogReloadKey((current) => current + 1)}
-            >
-              {t("dua.retry")}
-            </button>
-          </div>
-        ) : null}
-      </section>
+      <DuaTopBar locale={locale} title={t("dua.title")} subtitle={t("dua.subtitle")} />
+      <label className="dua-search">
+        <DuaSearchIcon />
+        <span className="sr-only">{t("dua.search")}</span>
+        <input
+          className="dua-search-input"
+          type="search"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder={t("dua.search")}
+          maxLength={120}
+          enterKeyHint="search"
+        />
+      </label>
+      {body}
     </div>
   );
 }
