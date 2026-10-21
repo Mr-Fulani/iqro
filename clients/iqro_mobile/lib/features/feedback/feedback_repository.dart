@@ -73,7 +73,7 @@ class FeedbackRepository {
         'category': category,
         'subject': subject.trim(),
         'message': message.trim(),
-        'locale': _backendLocale(_locale()),
+        'locale': _locale(),
         if (contactEmail != null && contactEmail.trim().isNotEmpty)
           'contact_email': contactEmail.trim().toLowerCase(),
         'context': context,
@@ -173,9 +173,4 @@ class FeedbackRepository {
       'os_version': osVersion,
     };
   }
-
-  String _backendLocale(String locale) => switch (locale) {
-    'ar' || 'en' || 'ru' => locale,
-    _ => 'en',
-  };
 }
