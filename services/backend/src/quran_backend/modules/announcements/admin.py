@@ -1,0 +1,905 @@
+# Operator-facing text is intentionally Russian.
+# ruff: noqa: RUF001
+"""Admin of announcements: texts in four languages, a live preview, sign-off.
+
+Drafts are edited freely. «Подписать и опубликовать» checks the texts, the action
+and the channels; published announcements are read-only and can only be taken
+down, archived or duplicated into a new draft.
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable
+from typing import Any, ClassVar, cast
+
+from django import forms
+from django.contrib import admin, messages
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+from django.db.models import Case, Q, QuerySet, Sum, Value, When
+from django.forms.models import BaseInlineFormSet
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.urls import reverse
+from django.utils.html import format_html, format_html_join
+
+from quran_backend.modules.accounts.models import User
+from quran_backend.modules.announcements.media import (
+    MAX_IMAGE_KIB,
+    AnnouncementMediaError,
+    upload_announcement_image,
+)
+from quran_backend.modules.announcements.models import (
+    LANGUAGE_NAMES,
+    LANGUAGES,
+    MAX_STEPS,
+    PLATFORMS,
+    ActionType,
+    Announcement,
+    AnnouncementSettings,
+    AnnouncementStatus,
+    AnnouncementStep,
+    AnnouncementTranslation,
+)
+from quran_backend.modules.announcements.routes import SCREENS
+from quran_backend.modules.announcements.services import (
+    AnnouncementNotReadyError,
+    archive,
+    duplicate,
+    is_sensitive,
+    publish,
+    readiness,
+    sign_religious_review,
+    submit_for_review,
+    uses_image,
+    withdraw,
+)
+from quran_backend.modules.audio.models import Reciter
+from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.content_revalidation import enqueue_announcements_change
+from quran_backend.modules.core.object_storage import ObjectStorageError
+
+logger = logging.getLogger(__name__)
+
+PLATFORM_NAMES = {"web": "Сайт", "android": "Android", "ios": "iOS"}
+# Preview only; the site and the app label kinds through their own dictionaries.
+KIND_EYEBROWS = {
+    "reciter": {"ru": "Новый чтец", "en": "New reciter", "ar": "قارئ جديد", "tr": "Yeni kari"},
+    "feature": {"ru": "Что нового", "en": "What's new", "ar": "ما الجديد", "tr": "Yenilikler"},
+    "app_release": {
+        "ru": "Новая версия",
+        "en": "New version",
+        "ar": "إصدار جديد",
+        "tr": "Yeni sürüm",
+    },
+    "content": {
+        "ru": "Новое содержание",
+        "en": "New content",
+        "ar": "محتوى جديد",
+        "tr": "Yeni içerik",
+    },
+    "fundraising": {
+        "ru": "Поддержать проект",
+        "en": "Support the project",
+        "ar": "ادعم المشروع",
+        "tr": "Projeyi destekle",
+    },
+    "general": {"ru": "Объявление", "en": "Announcement", "ar": "إعلان", "tr": "Duyuru"},
+}
+
+
+class ReciterChoiceField(forms.ModelChoiceField):  # type: ignore[type-arg]
+    def label_from_instance(self, obj: Reciter) -> str:
+        return f"{obj.name_ru} · {obj.name_ar}"
+
+
+class AnnouncementAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    action_reciter = ReciterChoiceField(
+        queryset=Reciter.objects.filter(is_active=True).order_by("name_ru"),
+        required=False,
+        label="Чтец",
+        help_text="Кнопка «Послушать» откроет этого чтеца в плеере.",
+    )
+    image_upload = forms.FileField(
+        required=False,
+        label="Загрузить картинку",
+        help_text=(
+            f"WebP или JPEG до {MAX_IMAGE_KIB} КБ. Сервер сам сделает миниатюру 96×96 "
+            "для пузыря. У объявления о чтеце можно не загружать: возьмётся его портрет."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg"}),
+    )
+    remove_image = forms.BooleanField(required=False, label="Убрать картинку")
+    audience_languages = forms.MultipleChoiceField(
+        required=False,
+        label="Языки аудитории",
+        choices=[(code, LANGUAGE_NAMES[code]) for code in LANGUAGES],
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Ничего не отмечено — все языки, на которых заполнен текст.",
+    )
+    audience_platforms = forms.MultipleChoiceField(
+        label="Платформы",
+        choices=[(code, PLATFORM_NAMES[code]) for code in PLATFORMS],
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Сбор средств в приложениях не показывается в любом случае.",
+    )
+
+    class Meta:
+        model = Announcement
+        fields = (
+            "kind",
+            "priority",
+            "starts_at",
+            "ends_at",
+            "pinned",
+            "needs_religious_review",
+            "action_type",
+            "action_reciter",
+            "action_surah",
+            "action_ayah",
+            "action_slug",
+            "action_url",
+            "audience_languages",
+            "audience_platforms",
+            "app_version_min",
+            "app_version_max",
+            "audience_auth",
+            "channel_bubble",
+            "channel_home_card",
+            "channel_modal",
+            "channel_web_push",
+            "bubble_frequency",
+            "bubble_max_impressions",
+            "bubble_icon",
+            "review_note",
+        )
+        help_texts: ClassVar[dict[str, str]] = {
+            "action_slug": (
+                "Урок: slug из курса намаза, например wudu. Раздел: "
+                + ", ".join(f"{code} ({screen.label})" for code, screen in SCREENS.items())
+                + "."
+            ),
+        }
+
+    _uploaded: Any = None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        if not self.instance._state.adding:
+            self.initial["audience_languages"] = list(self.instance.audience_languages or [])
+            self.initial["audience_platforms"] = list(self.instance.audience_platforms or [])
+        else:
+            self.initial.setdefault("audience_platforms", list(PLATFORMS))
+
+    def clean_action_reciter(self) -> Any:
+        reciter = self.cleaned_data.get("action_reciter")
+        return reciter.pk if reciter is not None else None
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        uploaded = cleaned.get("image_upload")
+        if uploaded and cleaned.get("remove_image"):
+            self.add_error("remove_image", "Либо загрузите новую картинку, либо уберите текущую.")
+        elif uploaded and not self.errors:
+            try:
+                self._uploaded = upload_announcement_image(uploaded)
+            except AnnouncementMediaError as exc:
+                self.add_error("image_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Announcement image upload failed")
+                self.add_error("image_upload", "Не удалось сохранить картинку. Повторите позже.")
+        return cleaned
+
+    def save(self, commit: bool = True) -> Announcement:
+        instance = cast(Announcement, super().save(commit=False))
+        # Published announcements render these as read-only; keep their values then.
+        if "audience_languages" in self.fields:
+            instance.audience_languages = list(self.cleaned_data.get("audience_languages") or [])
+        if "audience_platforms" in self.fields:
+            instance.audience_platforms = list(self.cleaned_data.get("audience_platforms") or [])
+        if self._uploaded is not None:
+            instance.image_object_key = self._uploaded.object_key
+            instance.image_width = self._uploaded.width
+            instance.image_height = self._uploaded.height
+            instance.thumb_object_key = self._uploaded.thumb_object_key
+        elif self.cleaned_data.get("remove_image"):
+            instance.image_object_key = ""
+            instance.image_width = None
+            instance.image_height = None
+            instance.thumb_object_key = ""
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
+
+
+def _step_field_names(order: int) -> tuple[str, str]:
+    return f"step_{order}_title", f"step_{order}_text"
+
+
+class AnnouncementTranslationForm(forms.ModelForm):  # type: ignore[type-arg]
+    class Meta:
+        model = AnnouncementTranslation
+        fields = ("language", "title", "summary", "body", "cta_label", "image_alt", "push_title")
+        widgets: ClassVar[dict[str, Any]] = {
+            "body": forms.Textarea(attrs={"rows": 4}),
+            "summary": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        steps = list(self.instance.steps or []) if not self.instance._state.adding else []
+        for order in range(1, MAX_STEPS + 1):
+            title_name, text_name = _step_field_names(order)
+            step = steps[order - 1] if order <= len(steps) else {"title": "", "text": ""}
+            self.fields[title_name] = forms.CharField(
+                label=f"Шаг {order}: заголовок",
+                max_length=50,
+                required=False,
+                initial=step["title"],
+            )
+            self.fields[text_name] = forms.CharField(
+                label=f"Шаг {order}: текст",
+                max_length=200,
+                required=False,
+                initial=step["text"],
+                widget=forms.Textarea(attrs={"rows": 2}),
+            )
+        # Each language is its own tab; the language itself is fixed.
+        self.fields["language"].disabled = True
+        language = self.initial.get("language") or self.instance.language
+        if language == "ar":
+            for field in self.fields.values():
+                if isinstance(field.widget, (forms.TextInput, forms.Textarea)):
+                    field.widget.attrs.update({"dir": "rtl", "lang": "ar"})
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        steps = []
+        gap = False
+        for order in range(1, MAX_STEPS + 1):
+            title_name, text_name = _step_field_names(order)
+            title = (cleaned.get(title_name) or "").strip()
+            text = (cleaned.get(text_name) or "").strip()
+            if not title and not text:
+                gap = True
+                continue
+            if gap:
+                self.add_error(title_name, "Заполняйте шаги по порядку, без пропусков.")
+            if not title:
+                self.add_error(title_name, "У шага нужен заголовок.")
+            steps.append({"title": title, "text": text})
+        self.instance.steps = steps
+        return cleaned
+
+
+class AnnouncementTranslationFormSet(BaseInlineFormSet):  # type: ignore[type-arg]
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        instance = kwargs.get("instance")
+        existing = (
+            set(instance.translations.values_list("language", flat=True))
+            if instance is not None and not instance._state.adding
+            else set()
+        )
+        kwargs["initial"] = [{"language": code} for code in LANGUAGES if code not in existing]
+        super().__init__(*args, **kwargs)
+
+
+class AnnouncementTranslationInline(admin.StackedInline):  # type: ignore[type-arg]
+    model = AnnouncementTranslation
+    form = AnnouncementTranslationForm
+    formset = AnnouncementTranslationFormSet
+    max_num = len(LANGUAGES)
+    can_delete = False
+    verbose_name = "текст"
+    verbose_name_plural = "Тексты на языках"
+    classes = ("announcement-languages",)
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[AnnouncementTranslation]:
+        # Tabs follow the interface order (ru, en, ar, tr), not the alphabet.
+        order = Case(
+            *(When(language=code, then=Value(index)) for index, code in enumerate(LANGUAGES))
+        )
+        return cast(
+            QuerySet[AnnouncementTranslation], super().get_queryset(request).order_by(order)
+        )
+
+    def get_extra(
+        self,
+        request: HttpRequest,  # noqa: ARG002 - Django's signature
+        obj: Any = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> int:
+        if obj is None:
+            return len(LANGUAGES)
+        return len(LANGUAGES) - int(obj.translations.count())
+
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if obj is not None and not obj.is_editable:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if obj is not None and not obj.is_editable:
+            return False
+        return super().has_add_permission(request, obj)
+
+
+class AnnouncementStepForm(forms.ModelForm):  # type: ignore[type-arg]
+    image_upload = forms.FileField(
+        required=False,
+        label="Загрузить иллюстрацию",
+        help_text=f"WebP или JPEG до {MAX_IMAGE_KIB} КБ.",
+        widget=forms.ClearableFileInput(attrs={"accept": "image/webp,image/jpeg"}),
+    )
+
+    class Meta:
+        model = AnnouncementStep
+        fields = ("order",)
+
+    _uploaded: Any = None
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        uploaded = cleaned.get("image_upload")
+        if not uploaded and not self.instance.image_object_key:
+            if cleaned.get("order"):
+                self.add_error("image_upload", "Загрузите иллюстрацию шага.")
+            return cleaned
+        if uploaded and not self.errors:
+            try:
+                self._uploaded = upload_announcement_image(uploaded, with_thumbnail=False)
+            except AnnouncementMediaError as exc:
+                self.add_error("image_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Announcement step upload failed")
+                self.add_error("image_upload", "Не удалось сохранить картинку. Повторите позже.")
+        return cleaned
+
+    def save(self, commit: bool = True) -> AnnouncementStep:
+        instance = cast(AnnouncementStep, super().save(commit=False))
+        if self._uploaded is not None:
+            instance.image_object_key = self._uploaded.object_key
+            instance.image_width = self._uploaded.width
+            instance.image_height = self._uploaded.height
+        if commit:
+            instance.save()
+        return instance
+
+
+class AnnouncementStepInline(admin.TabularInline):  # type: ignore[type-arg]
+    model = AnnouncementStep
+    form = AnnouncementStepForm
+    extra = 0
+    max_num = MAX_STEPS
+    verbose_name = "иллюстрация шага"
+    verbose_name_plural = "Иллюстрации шагов (необязательно)"
+    readonly_fields = ("picture",)
+    fields = ("order", "image_upload", "picture")
+
+    @admin.display(description="Сейчас")
+    def picture(self, obj: AnnouncementStep) -> str:
+        if not obj.image_object_key:
+            return "—"
+        return format_html(
+            '<img src="{}" alt="" style="height:64px;border-radius:8px">',
+            public_audio_url(obj.image_object_key),
+        )
+
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if obj is not None and not obj.is_editable:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if obj is not None and not obj.is_editable:
+            return False
+        return super().has_add_permission(request, obj)
+
+    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if obj is not None and not obj.is_editable:
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+def _image_url(announcement: Announcement) -> str | None:
+    if announcement.thumb_object_key:
+        return public_audio_url(announcement.thumb_object_key)
+    if announcement.image_object_key:
+        return public_audio_url(announcement.image_object_key)
+    reciter = announcement.reciter
+    if announcement.action_type == ActionType.RECITER and reciter and reciter.portrait_object_key:
+        return public_audio_url(reciter.portrait_object_key)
+    return None
+
+
+@admin.register(Announcement)
+class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    form = AnnouncementAdminForm
+    change_form_template = "admin/announcements/announcement/change_form.html"
+    inlines = (AnnouncementTranslationInline, AnnouncementStepInline)
+    list_display = (
+        "title_ru",
+        "kind",
+        "status_badge",
+        "period",
+        "languages",
+        "channels",
+        "impressions",
+        "clicks",
+        "ctr",
+        "dismisses",
+    )
+    list_filter = ("status", "kind", "source")
+    search_fields = ("translations__title",)
+    date_hierarchy = "starts_at"
+    actions = ("withdraw_selected", "archive_selected")
+    readonly_fields = (
+        "status",
+        "source",
+        "preview",
+        "readiness_report",
+        "current_image",
+        "stats_summary",
+        "religious_reviewed_by",
+        "religious_reviewed_at",
+        "created_by",
+        "reviewed_by",
+        "reviewed_at",
+        "published_at",
+        "withdrawn_at",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Проверка и предпросмотр",
+            {"fields": ("status", "readiness_report", "preview")},
+        ),
+        (
+            "Основное",
+            {
+                "fields": (
+                    "kind",
+                    "priority",
+                    ("starts_at", "ends_at"),
+                    "pinned",
+                    "needs_religious_review",
+                ),
+            },
+        ),
+        (
+            "Картинка и кнопка",
+            {
+                "fields": (
+                    "current_image",
+                    "image_upload",
+                    "remove_image",
+                    "action_type",
+                    "action_reciter",
+                    ("action_surah", "action_ayah"),
+                    "action_slug",
+                    "action_url",
+                ),
+            },
+        ),
+        (
+            "Аудитория",
+            {
+                "fields": (
+                    "audience_languages",
+                    "audience_platforms",
+                    ("app_version_min", "app_version_max"),
+                    "audience_auth",
+                ),
+            },
+        ),
+        (
+            "Каналы и частота",
+            {
+                "fields": (
+                    "channel_bubble",
+                    ("bubble_frequency", "bubble_max_impressions"),
+                    "bubble_icon",
+                    "channel_home_card",
+                    "channel_modal",
+                    "channel_web_push",
+                ),
+                "description": (
+                    "Лента «Что нового» — всегда. Пузырь на телефоне (сайт и приложение) "
+                    "лопается по нажатию и раскрывает окно; один пузырь одновременно. "
+                    "Окно с шагами и push подписывает только владелец."
+                ),
+            },
+        ),
+        (
+            "Подписи",
+            {
+                "fields": (
+                    "review_note",
+                    "religious_reviewed_by",
+                    "religious_reviewed_at",
+                    "created_by",
+                    "reviewed_by",
+                    "reviewed_at",
+                    "published_at",
+                    "withdrawn_at",
+                ),
+            },
+        ),
+        ("Счётчики", {"fields": ("stats_summary",)}),
+        (
+            "Служебные данные",
+            {"fields": ("source", "created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Announcement]:
+        def total(event: str) -> Sum:
+            return Sum("daily_stats__count", filter=Q(daily_stats__event=event))
+
+        return cast(
+            QuerySet[Announcement],
+            super()
+            .get_queryset(request)
+            .prefetch_related("translations")
+            .annotate(
+                impression_total=total("impression"),
+                click_total=total("click"),
+                dismiss_total=total("dismiss"),
+            ),
+        )
+
+    def get_readonly_fields(self, _request: HttpRequest, obj: Any = None) -> tuple[str, ...]:
+        if obj is not None and not obj.is_editable:
+            editable = [name for name in self.form.Meta.fields if name != "review_note"]
+            return (*self.readonly_fields, *editable)
+        return self.readonly_fields
+
+    def get_fieldsets(self, request: HttpRequest, obj: Any = None) -> Any:
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj is not None and not obj.is_editable:
+            hidden = {"image_upload", "remove_image"}
+            return [
+                (
+                    title,
+                    {
+                        **options,
+                        "fields": [
+                            field
+                            for field in options["fields"]
+                            if not (isinstance(field, str) and field in hidden)
+                        ],
+                    },
+                )
+                for title, options in fieldsets
+            ]
+        return fieldsets
+
+    def save_model(self, request: HttpRequest, obj: Announcement, form: Any, change: bool) -> None:
+        if not change:
+            obj.created_by = cast(User, request.user)
+        super().save_model(request, obj, form, change)
+
+    # List columns
+
+    @admin.display(description="Заголовок")
+    def title_ru(self, obj: Announcement) -> str:
+        return str(obj)
+
+    @admin.display(description="Статус", ordering="status")
+    def status_badge(self, obj: Announcement) -> str:
+        colors = {
+            AnnouncementStatus.DRAFT: ("#fff3c4", "#6b4b00"),
+            AnnouncementStatus.IN_REVIEW: ("#e1eef5", "#205067"),
+            AnnouncementStatus.PUBLISHED: ("#e3f3e5", "#1b5e20"),
+        }
+        background, color = colors.get(AnnouncementStatus(obj.status), ("#eeeeee", "#555555"))
+        auto = " · авто" if obj.source == "auto" else ""
+        return format_html(
+            '<span style="padding:2px 7px;border-radius:4px;background:{};color:{};'
+            'font-weight:700;font-size:11px;text-transform:uppercase">{}{}</span>',
+            background,
+            color,
+            obj.get_status_display(),
+            auto,
+        )
+
+    @admin.display(description="Период", ordering="starts_at")
+    def period(self, obj: Announcement) -> str:
+        return f"{obj.starts_at:%d.%m}–{obj.display_until:%d.%m}"
+
+    @admin.display(description="Языки")
+    def languages(self, obj: Announcement) -> str:
+        filled = {item.language for item in obj.translations.all() if item.is_filled}
+        return format_html_join(
+            " ",
+            '<span style="{}">{}</span>',
+            (
+                (
+                    "" if code in filled else "color:#8a5a00;font-weight:700",
+                    code + ("" if code in filled else "!"),
+                )
+                for code in LANGUAGES
+            ),
+        )
+
+    @admin.display(description="Каналы")
+    def channels(self, obj: Announcement) -> str:
+        names = [
+            name
+            for enabled, name in (
+                (obj.channel_bubble, "пузырь"),
+                (obj.channel_home_card, "карточка"),
+                (obj.channel_modal, "окно"),
+                (obj.channel_web_push, "push"),
+            )
+            if enabled
+        ]
+        return ", ".join([*names, "лента"])
+
+    @admin.display(description="Показы")
+    def impressions(self, obj: Any) -> int:
+        return int(obj.impression_total or 0)
+
+    @admin.display(description="Клики")
+    def clicks(self, obj: Any) -> int:
+        return int(obj.click_total or 0)
+
+    @admin.display(description="CTR")
+    def ctr(self, obj: Any) -> str:
+        shown = int(obj.impression_total or 0)
+        if not shown:
+            return "—"
+        return f"{100 * int(obj.click_total or 0) / shown:.1f} %".replace(".", ",")
+
+    @admin.display(description="Закрытия")
+    def dismisses(self, obj: Any) -> int:
+        return int(obj.dismiss_total or 0)
+
+    # Read-only panels
+
+    @admin.display(description="Картинка сейчас")
+    def current_image(self, obj: Announcement) -> str:
+        url = _image_url(obj)
+        if url is None:
+            return "Нет. Пузырь покажет иконку."
+        source = "своя" if obj.image_object_key else "портрет чтеца"
+        return format_html(
+            '<img src="{}" alt="" style="width:64px;height:64px;object-fit:cover;'
+            'border-radius:50%;vertical-align:middle"> <span style="color:#666">{}</span>',
+            url,
+            source,
+        )
+
+    @admin.display(description="Готовность к подписи")
+    def readiness_report(self, obj: Announcement) -> str:
+        if obj._state.adding:
+            return "Сохраните черновик, чтобы увидеть проверку."
+        report = readiness(obj)
+        rows = [("#ba2121", "✗", problem) for problem in report.problems]
+        rows += [("#8a5a00", "!", note) for note in report.notes]
+        if report.ready:
+            rows.insert(0, ("#2e7d32", "✓", "Готово к подписи."))
+        if is_sensitive(obj):
+            rows.append(
+                (
+                    "#205067",
+                    "i",
+                    "Подписывает только владелец: сбор, окно, push или критический приоритет.",
+                )
+            )
+        return format_html(
+            '<ul style="margin:0;padding:0;list-style:none">{}</ul>',
+            format_html_join(
+                "",
+                '<li style="padding:2px 0">'
+                '<b style="color:{};display:inline-block;width:16px">{}</b>{}</li>',
+                rows,
+            ),
+        )
+
+    @admin.display(description="Как увидят — окно из пузыря")
+    def preview(self, obj: Announcement) -> str:
+        if obj._state.adding:
+            return "Появится после сохранения черновика."
+        translations = {item.language: item for item in obj.translations.all() if item.is_filled}
+        if not translations:
+            return "Заполните заголовок и «Кратко» хотя бы на одном языке."
+        image = _image_url(obj) if uses_image(obj) or obj.image_object_key else None
+        cards = []
+        for code in LANGUAGES:
+            translation = translations.get(code)
+            if translation is None:
+                continue
+            direction = "rtl" if code == "ar" else "ltr"
+            picture = (
+                format_html(
+                    '<img src="{}" alt="" style="width:76px;height:76px;object-fit:cover;'
+                    'border-radius:50%;box-shadow:0 0 0 4px #d9eee7">',
+                    image,
+                )
+                if image
+                else ""
+            )
+            steps = format_html_join(
+                "",
+                "<li><b>{}</b> {}</li>",
+                ((step["title"], step["text"]) for step in translation.steps or []),
+            )
+            button = (
+                format_html(
+                    '<div style="margin-top:10px;padding:10px;border-radius:14px;'
+                    'background:#0b5d4a;color:#fff;font-weight:700;text-align:center">{}</div>',
+                    translation.cta_label,
+                )
+                if obj.action_type != ActionType.NONE
+                else ""
+            )
+            cards.append(
+                format_html(
+                    '<div dir="{}" lang="{}" style="width:300px;padding:16px;border-radius:24px;'
+                    "background:#fffdf8;border:1px solid #dcd8ce;color:#17201d;"
+                    'font:14px/1.5 system-ui,sans-serif">'
+                    '<div style="font-size:12px;color:#4b5b53;margin-bottom:8px">{}</div>'
+                    '<div style="text-align:center">{}'
+                    '<div style="font-size:11px;font-weight:800;color:#0b5d4a;'
+                    'margin-top:8px">{}</div>'
+                    '<div style="font-size:19px;font-weight:700">{}</div>'
+                    '<div style="color:#4b5b53">{}</div></div>'
+                    '<ol style="margin:8px 0 0;padding-inline-start:20px">{}</ol>{}</div>',
+                    direction,
+                    code,
+                    LANGUAGE_NAMES[code],
+                    picture,
+                    KIND_EYEBROWS[obj.kind][code],
+                    translation.title,
+                    translation.summary,
+                    steps,
+                    button,
+                )
+            )
+        return format_html(
+            '<div style="display:flex;flex-wrap:wrap;gap:16px;padding:16px;'
+            'background:#f7f4ec;border-radius:8px">{}</div>',
+            format_html_join("", "{}", ((card,) for card in cards)),
+        )
+
+    @admin.display(description="Показы, клики и закрытия по платформам")
+    def stats_summary(self, obj: Announcement) -> str:
+        if obj._state.adding:
+            return "—"
+        rows = (
+            obj.daily_stats.values("platform", "event")
+            .annotate(total=Sum("count"))
+            .order_by("platform", "event")
+        )
+        if not rows:
+            return "Пока ничего. Хранятся только суммы по дням, без людей и устройств."
+        return format_html_join(
+            "",
+            "<div>{}: {} — {}</div>",
+            (
+                (PLATFORM_NAMES.get(row["platform"], row["platform"]), row["event"], row["total"])
+                for row in rows
+            ),
+        )
+
+    # Sign-off buttons on the change form
+
+    def render_change_form(  # noqa: PLR0913, PLR0917 - Django's signature
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: Announcement | None = None,
+    ) -> HttpResponse:
+        user = request.user
+        status = obj.status if obj is not None else None
+        can_publish = user.has_perm("announcements.publish_announcement")
+        editable = obj is not None and obj.is_editable
+        context.update(
+            {
+                "show_signoff": obj is not None,
+                "show_submit_review": status == AnnouncementStatus.DRAFT,
+                "show_religious_review": bool(
+                    obj is not None
+                    and editable
+                    and obj.needs_religious_review
+                    and obj.religious_reviewed_at is None
+                    and user.has_perm("announcements.review_religious_content")
+                ),
+                "show_publish": editable and can_publish,
+                "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
+                "show_archive": can_publish
+                and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
+                "language_names": LANGUAGE_NAMES,
+            }
+        )
+        return super().render_change_form(request, context, add, change, form_url, obj)
+
+    def response_change(self, request: HttpRequest, obj: Announcement) -> HttpResponse:
+        operations: dict[str, tuple[Callable[[], object], str]] = {
+            "_submit_review": (lambda: submit_for_review(obj), "Отправлено на проверку."),
+            "_religious_review": (
+                lambda: sign_religious_review(obj, cast(User, request.user)),
+                "Религиозная проверка подписана.",
+            ),
+            "_publish": (
+                lambda: publish(obj, cast(User, request.user)),
+                "Подписано и опубликовано. Сайт обновится в течение минуты.",
+            ),
+            "_withdraw": (lambda: withdraw(obj, cast(User, request.user)), "Снято с публикации."),
+            "_archive": (lambda: archive(obj, cast(User, request.user)), "Перенесено в архив."),
+        }
+        if "_duplicate" in request.POST:
+            copy = duplicate(obj, cast(User, request.user))
+            self.message_user(request, "Создан новый черновик-копия.", messages.SUCCESS)
+            return HttpResponseRedirect(
+                reverse("admin:announcements_announcement_change", args=(copy.pk,))
+            )
+        for name, (operation, success) in operations.items():
+            if name not in request.POST:
+                continue
+            try:
+                operation()
+            except PermissionDenied:
+                self.message_user(
+                    request,
+                    "Нет права на это действие. Сбор, окно, push и обязательное обновление "
+                    "подписывает только владелец.",
+                    messages.ERROR,
+                )
+            except AnnouncementNotReadyError as error:
+                for problem in error.problems:
+                    self.message_user(request, problem, messages.ERROR)
+            else:
+                self.log_change(request, obj, success)
+                self.message_user(request, success, messages.SUCCESS)
+            return HttpResponseRedirect(request.path)
+        return super().response_change(request, obj)
+
+    @admin.action(description="Снять с публикации")
+    def withdraw_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        for announcement in queryset.filter(status=AnnouncementStatus.PUBLISHED):
+            try:
+                withdraw(announcement, cast(User, request.user))
+            except PermissionDenied:
+                self.message_user(request, "Нет права снимать объявления.", messages.ERROR)
+                return
+            self.message_user(request, f"{announcement}: снято.", messages.SUCCESS)
+
+    @admin.action(description="Перенести в архив")
+    def archive_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        for announcement in queryset.filter(
+            status__in=(AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN)
+        ):
+            try:
+                archive(announcement, cast(User, request.user))
+            except PermissionDenied:
+                self.message_user(request, "Нет права архивировать объявления.", messages.ERROR)
+                return
+            self.message_user(request, f"{announcement}: в архиве.", messages.SUCCESS)
+
+
+@admin.register(AnnouncementSettings)
+class AnnouncementSettingsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("__str__", "updated_at")
+    fields = ("is_enabled",)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return not AnnouncementSettings.objects.exists() and super().has_add_permission(request)
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: AnnouncementSettings,
+        form: Any,
+        change: bool,
+    ) -> None:
+        super().save_model(request, obj, form, change)
+        enqueue_announcements_change(action="enabled" if obj.is_enabled else "disabled")

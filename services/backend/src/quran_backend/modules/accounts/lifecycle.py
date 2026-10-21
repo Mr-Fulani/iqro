@@ -260,6 +260,9 @@ def _validate_recent_reauthentication(
 
 
 def _finalize_account(*, user: User, deleted_at: datetime) -> None:
+    from quran_backend.modules.announcements.models import (  # noqa: PLC0415
+        AnnouncementReceipt,
+    )
     from quran_backend.modules.feedback.models import (  # noqa: PLC0415
         FeedbackAudit,
         FeedbackMessage,
@@ -311,6 +314,7 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
     SyncOperation.objects.filter(user=user).delete()
     UserSyncCursor.objects.filter(user=user).delete()
     Consent.objects.filter(user=user).delete()
+    AnnouncementReceipt.objects.filter(user=user).delete()
 
     EmailAuthChallenge.objects.filter(Q(requester=user) | Q(result_user=user)).delete()
     Device.objects.filter(user=user).delete()
