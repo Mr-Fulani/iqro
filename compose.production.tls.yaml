@@ -1,0 +1,38 @@
+# Single-host S0 production: Caddy terminates TLS in front of the gateway and
+# obtains certificates for PRODUCTION_HOST and www.PRODUCTION_HOST.
+# Caddy appends the client IP to X-Forwarded-For, so DJANGO_NUM_PROXIES=2
+# (Caddy + gateway). Used through PRODUCTION_COMPOSE_OVERLAY in the Makefile.
+services:
+  tls-proxy:
+    image: ${PRODUCTION_CADDY_IMAGE:-quran-platform-caddy:${APP_VERSION:-local}}
+    build:
+      context: ./ops/staging/caddy
+    restart: unless-stopped
+    environment:
+      PRODUCTION_HOST: ${PRODUCTION_HOST:?Set PRODUCTION_HOST in the production env file}
+      PRODUCTION_ACME_EMAIL: ${PRODUCTION_ACME_EMAIL:?Set PRODUCTION_ACME_EMAIL in the production env file}
+    ports:
+      - "80:8080/tcp"
+      - "443:8443/tcp"
+      - "443:8443/udp"
+    volumes:
+      - ./ops/production/Caddyfile:/etc/caddy/Caddyfile:ro
+      - production-caddy-data:/data
+      - production-caddy-config:/config
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    depends_on:
+      gateway:
+        condition: service_healthy
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+
+volumes:
+  production-caddy-data:
+  production-caddy-config:

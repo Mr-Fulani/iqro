@@ -121,17 +121,35 @@ reverse proxy на том же сервере. Для публичного за�
 
 ```bash
 curl --fail http://127.0.0.1:3000/healthz
-curl --fail --header 'X-Forwarded-Proto: https' \
+curl --fail --header 'Host: iqro.forum' --header 'X-Forwarded-Proto: https' \
   http://127.0.0.1:3000/api/v1/health/ready
 curl --fail http://127.0.0.1:3000/sitemaps/quran/sitemap.xml
 curl --fail http://127.0.0.1:3000/ru/quran/madani-hafs/surah/1
 curl --fail http://127.0.0.1:3000/sitemaps/audio/sitemap.xml
 curl --fail http://127.0.0.1:3000/ru/audio/reciters
-python3 ops/load/smoke.py --base-url http://127.0.0.1:3000
+python3 ops/load/smoke.py --base-url https://iqro.forum --concurrency 4
 ```
+
+API отвечает только на хосты из `DJANGO_ALLOWED_HOSTS`, поэтому запрос к API через
+`127.0.0.1` без заголовка `Host` получает 400. Smoke запускается по публичному адресу и
+не с самого сервера и с `--concurrency 4`: gateway пропускает 20 запросов к API в секунду
+с одного IP, а при параллельности по умолчанию (10) часть ответов будет 429.
 
 Курс «Обучение намазу» после первой выкладки нужно импортировать и опубликовать отдельно:
 [operations.md, «Курс „Обучение намазу“»](operations.md) и [tech-debt.md, 1.5](tech-debt.md).
+
+### 2.1. Один сервер с собственным HTTPS
+
+Если перед сервером нет внешнего TLS-прокси, его роль выполняет Caddy из
+`compose.production.tls.yaml`: он получает сертификаты Let's Encrypt для `PRODUCTION_HOST` и
+`www.PRODUCTION_HOST`, перенаправляет `www` на основной домен и добавляет IP клиента в
+`X-Forwarded-For`. В env задать `PRODUCTION_HOST`, `PRODUCTION_ACME_EMAIL` и
+`DJANGO_NUM_PROXIES=2` (Caddy + gateway), открыть порты 80 и 443, DNS-записи сайта держать в
+режиме DNS only, пока Caddy получает сертификат. Все make-цели production принимают надстройку:
+
+```bash
+make production-up PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"
+```
 
 Для временной проверки только на loopback без TLS можно установить
 `DJANGO_SECURE_SSL_REDIRECT=false`. В реальном окружении значение должно оставаться
