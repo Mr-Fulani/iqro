@@ -816,11 +816,6 @@
     flex: 1 1 100px;
   }
 
-  .dua-hero {
-    background: var(--accent-gold-subtle);
-  }
-
-  .dua-category-chip,
   .dua-entry-card {
     border-radius: 22px;
     background: var(--panel);

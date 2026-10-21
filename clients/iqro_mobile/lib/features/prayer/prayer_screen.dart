@@ -16,6 +16,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../audio/mini_player.dart';
 import 'prayer_repository.dart';
 import 'prayer_places.dart';
+import 'qibla_compass_sheet.dart';
 
 class PrayerScreen extends ConsumerStatefulWidget {
   const PrayerScreen({super.key});
@@ -392,7 +393,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
             if (qibla != null) ...<Widget>[
               const SizedBox(height: 14),
               IqroCard(
-                onTap: () => _showQibla(qibla, locationName),
+                onTap: () => _showQibla(_location!, locationName),
                 child: Row(
                   children: <Widget>[
                     SizedBox(
@@ -800,71 +801,15 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     }
   }
 
-  Future<void> _showQibla(double bearing, String locationName) =>
+  Future<void> _showQibla(PrayerLocation location, String locationName) =>
       showModalBottomSheet<void>(
         context: context,
         useSafeArea: true,
-        builder: (context) => Padding(
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                context.l10n.qiblaDirection,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 6),
-              Text(locationName, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 26),
-              SizedBox(
-                width: 190,
-                height: 190,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      const Positioned(top: 10, child: Text('N')),
-                      Transform.rotate(
-                        angle: bearing * math.pi / 180,
-                        child: Icon(
-                          Icons.navigation_rounded,
-                          size: 104,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                '${bearing.round()}° ${context.l10n.fromGeographicNorth}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                context.l10n.qiblaNorthHint,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        isScrollControlled: true,
+        builder: (context) => QiblaCompassSheet(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          locationName: locationName,
         ),
       );
 

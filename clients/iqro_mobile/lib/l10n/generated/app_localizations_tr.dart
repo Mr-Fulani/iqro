@@ -773,6 +773,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu canlı pusula değil, coğrafi bir açıdır. Oku izlemeden önce telefonun üstünü kuzeye hizalayın.';
 
   @override
+  String get qiblaNorth => 'K';
+
+  @override
+  String get qiblaLiveHint =>
+      'Cihaz pusulası açık: telefonu yatay tutun — ok, kıbleyi telefonun üstüne göre gösterir.';
+
+  @override
+  String get qiblaFacing => 'Kıbleye dönüksünüz';
+
+  @override
+  String get qiblaCalibrationNeeded => 'Pusulanın kalibre edilmesi gerekiyor';
+
+  @override
+  String get qiblaCalibrationHint =>
+      'Telefonu havada birkaç kez sekiz çizerek hareket ettirin; metalden ve mıknatıslardan, mıknatıslı kılıflar dahil, uzak durun.';
+
+  @override
+  String get qiblaCompassUnavailable => 'Bu cihazda pusula kullanılamıyor.';
+
+  @override
   String get prayerCalendar => 'Aylık namaz takvimi';
 
   @override

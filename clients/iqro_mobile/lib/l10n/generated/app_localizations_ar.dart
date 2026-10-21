@@ -770,6 +770,26 @@ class AppLocalizationsAr extends AppLocalizations {
       'هذا اتجاه جغرافي وليس بوصلة مباشرة. حاذِ أعلى الهاتف مع الشمال أولًا ثم اتبع السهم.';
 
   @override
+  String get qiblaNorth => 'ش';
+
+  @override
+  String get qiblaLiveHint =>
+      'بوصلة الجهاز مفعّلة: أمسك الهاتف أفقيًا — يشير السهم إلى القبلة بالنسبة إلى أعلاه.';
+
+  @override
+  String get qiblaFacing => 'أنت متجه إلى القبلة';
+
+  @override
+  String get qiblaCalibrationNeeded => 'البوصلة تحتاج إلى معايرة';
+
+  @override
+  String get qiblaCalibrationHint =>
+      'حرّك الهاتف في الهواء على شكل رقم ثمانية عدة مرات، بعيدًا عن المعادن والمغناطيس، بما في ذلك الأغطية المغناطيسية.';
+
+  @override
+  String get qiblaCompassUnavailable => 'البوصلة غير متاحة على هذا الجهاز.';
+
+  @override
   String get prayerCalendar => 'تقويم الصلاة الشهري';
 
   @override

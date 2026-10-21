@@ -126,7 +126,7 @@ class FeedbackTicket(BaseModel):
                 name="feedback_ticket_reporter_request_unique",
             ),
             models.CheckConstraint(
-                condition=models.Q(locale__in=["ar", "en", "ru"]),
+                condition=models.Q(locale__in=["ar", "en", "ru", "tr"]),
                 name="feedback_ticket_supported_locale",
             ),
         ]

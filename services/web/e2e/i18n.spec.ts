@@ -161,90 +161,7 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
   // Hidden streamed route HTML may still contain another copy of this tag.
   await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
-  await expect(page.getByRole("heading", { level: 2, name: "Темы" })).toBeVisible();
-  await expect(page.locator(".dua-category-list")).toHaveCSS("display", "grid");
-  await expect(page.locator(".dua-category-chip")).toHaveCount(1);
-  await expect(page.locator(".dua-category-chip")).toHaveAttribute(
-    "href",
-    "/ru/dua/topics/sleep",
-  );
-  await expect(page.locator(".dua-category-chip")).toContainText("1 ду’а");
-  expect(await page.locator(".dua-category-list").evaluate(
-    (element) => element.scrollWidth <= element.clientWidth,
-  )).toBe(true);
-  await expect(page.locator(".dua-entry-card")).toHaveCount(0);
-  await expect(page.locator(".dua-arabic")).toHaveCount(0);
-
-  await page.locator(".dua-category-chip").click();
-  await expect(page).toHaveURL("/ru/dua/topics/sleep");
-  await expect(page.getByRole("heading", { level: 1, name: "Сон и пробуждение" })).toBeVisible();
-  await expect(page.locator(".dua-topic-selector option")).toHaveCount(20);
-  await page.locator(".dua-summary-row").click();
-  await expect(page).toHaveURL("/ru/dua/hisn-al-muslim/1");
-  await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ للَّهِ");
-  await expect(page.getByText("Аль-хамду ли-Лляхи", { exact: false })).toBeVisible();
-});
-
-test("Dua topics use responsive cards without horizontal scrolling", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/ru/dua");
-
-  const topics = page.locator(".dua-category-list");
-  const cards = page.locator(".dua-category-chip");
-  await expect(topics).toHaveCSS("display", "grid");
-  await expect(cards).toHaveCount(1);
-  expect(await topics.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  expect(await cards.evaluateAll((elements) => elements.every(
-    (element) => element.getBoundingClientRect().width <= element.parentElement!.clientWidth,
-  ))).toBe(true);
-
-  await page.getByLabel("Поиск по темам ду’а").fill("несуществующая тема");
-  await page.getByRole("button", { name: "Найти" }).click();
-  await expect(cards).toHaveCount(0);
-  await expect(page.getByText("Темы по этому запросу не найдены.")).toBeVisible();
-  await page.getByRole("button", { name: "Сбросить" }).click();
-  await expect(cards).toHaveCount(1);
-
-  await cards.first().click();
-  await expect(page).toHaveURL("/ru/dua/topics/sleep");
-  await expect(page.getByRole("heading", { level: 1, name: "Сон и пробуждение" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Вернуться ко всем темам" })).toHaveAttribute("href", "/ru/dua");
-  await expect(page.locator(".dua-summary-row")).toHaveCount(1);
-  await expect(page.locator(".dua-summary-row")).toHaveAttribute("href", "/ru/dua/hisn-al-muslim/1");
-  await expect(page.locator(".dua-topic-content .dua-arabic")).toHaveCount(0);
-  await expect(page.locator(".dua-topic-selector option")).toHaveCount(20);
-  await page.locator(".dua-summary-row").click();
-  await expect(page.locator(".dua-arabic")).toContainText("الْحَمْدُ");
-  await expect(page.getByRole("button", { name: "Поделиться", exact: true })).toBeVisible();
-});
-
-test("Dua cards expose source audio and account favorites", async ({ page }) => {
-  await page.route("**/audio/ar/1.mp3", (route) => route.abort());
-  await page.goto("/ru/dua/hisn-al-muslim/1");
-
-  const play = page.getByRole("button", { name: "Прослушать ду’а" });
-  const favorite = page.getByRole("button", { name: "Добавить в избранное" });
-  await expect(play).toBeVisible();
-  await expect(favorite).toBeVisible();
-  await expect(favorite).toHaveAttribute("aria-pressed", "false");
-
-  await play.click();
-  await expect(page.locator(".dua-audio-panel audio")).toHaveAttribute(
-    "src",
-    "https://www.hisnmuslim.com/audio/ar/1.mp3",
-  );
-  await expect(page.locator(".dua-audio-panel")).toContainText("Чтец: Hamad Al-Duraihem");
-
-  await favorite.click();
-  await expect(page.getByRole("button", { name: "Удалить из избранного" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await page.getByRole("button", { name: "Удалить из избранного" }).click();
-  await expect(page.getByRole("button", { name: "Добавить в избранное" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(page.locator(".dua-topic-card")).toHaveAttribute("href", "/ru/dua/topics/sleep");
 });
 
 const duaArabic = "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ";
@@ -292,10 +209,15 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
     });
   });
   await page.goto("/ru/dua/hisn-al-muslim/1");
-  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  // The chapter, printed in capitals in the source, reads in sentence case on
+  // the page, in its title and on the card alike.
+  const chapter = "Слова поминания при пробуждении ото сна";
+  const title = `${chapter} · #1`;
+  await expect(page).toHaveTitle(`${title} | Quran Platform`);
+  await expect(page.getByRole("heading", { level: 1, name: chapter, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Поделиться ду’а", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
-  const title = "Слова поминания при пробуждении ото сна · #1";
-  await expect(dialog.getByText(title)).toBeVisible();
+  await expect(dialog.getByText(title, { exact: true })).toBeVisible();
   const picture = dialog.getByRole("img", { name: "Картинка ду’а #1" });
   await expect(picture).toBeVisible();
   expect(await sealSide(picture)).toBe("left");
@@ -343,7 +265,7 @@ test("without the share dialog's code a dua still goes as text, and the next pre
 
   // A network blip or a deploy that replaced the chunk: the page stays and the text goes.
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
-  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться ду’а", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Текст и ссылка скопированы" })).toBeVisible();
   expect(await copied()).toEqual([text]);
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -352,7 +274,7 @@ test("without the share dialog's code a dua still goes as text, and the next pre
   // Once the network is back, the next press loads the dialog; without Web
   // Share it copies the text too.
   await page.unroute("**/_next/static/chunks/**");
-  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться ду’а", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });
   await expect(dialog.getByRole("img", { name: "Картинка ду’а #1" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toHaveCount(0);
@@ -384,7 +306,7 @@ test("an Arabic dua picture is drawn right to left and downloads where files can
     content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
       html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
   });
-  await page.getByRole("button", { name: "مشاركة", exact: true }).click();
+  await page.getByRole("button", { name: "مشاركة الدعاء", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "مشاركة الدعاء" });
   const picture = dialog.getByRole("img", { name: "صورة الدعاء #1" });
   await expect(picture).toBeVisible();

@@ -357,6 +357,9 @@ def test_dua_search_throttle_hashes_ip_skips_browse_and_returns_private_429(
     throttle_cache = caches["throttling"]
     throttle_cache.clear()
     monkeypatch.setattr(DuaSearchRateThrottle, "get_rate", lambda _self: "1/minute")
+    # A fixed window resets on the minute; pin the clock mid-window so both
+    # searches always share it.
+    monkeypatch.setattr(DuaSearchRateThrottle, "timer", lambda _self: 1_800_000_030.0)
     remote_address = "203.0.113.91"
     request = Request(
         APIRequestFactory().get(
