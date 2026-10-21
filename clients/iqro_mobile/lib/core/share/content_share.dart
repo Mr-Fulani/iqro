@@ -255,7 +255,7 @@ class ShareCard extends StatelessWidget {
                   Container(height: 1, color: _gold.withValues(alpha: .4)),
                   const SizedBox(height: 10),
                   const Text(
-                    'iqro.forum',
+                    'www.iqro.forum',
                     style: TextStyle(
                       color: _gold,
                       fontSize: 14,
