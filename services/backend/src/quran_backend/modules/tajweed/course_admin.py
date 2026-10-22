@@ -1,0 +1,613 @@
+# Russian interface strings intentionally contain Cyrillic letters.
+# ruff: noqa: RUF001
+"""Admin of the tajweed course: draft → editor → sign-off → publication.
+
+A version starts as the snapshot imported from git (`manage.py
+import_tajweed_course`) or as a draft copied from another version here. The
+editor changes the texts of a draft in every language and the few lesson
+settings (minutes, letters, preferred examples); the structure of the course
+changes only in git. Signed and published versions are read-only.
+"""
+
+from __future__ import annotations
+
+import copy
+import re
+from collections.abc import Mapping
+from typing import Any
+
+from django.conf import settings
+from django.contrib import admin, messages
+from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
+from django.db.models import QuerySet
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseNotAllowed,
+    HttpResponseRedirect,
+)
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils import timezone
+from django.utils.html import format_html, format_html_join
+from django.utils.http import urlencode
+
+from quran_backend.modules.tajweed.course import (
+    COLOR,
+    LESSON_TEXTS,
+    VERSION_NAME,
+    TajweedCourseError,
+    missing_texts,
+    snapshot_json,
+)
+from quran_backend.modules.tajweed.course_publication import (
+    compile_course_version,
+    copy_tajweed_course,
+    publish_tajweed_course,
+    save_course_draft,
+    sign_tajweed_course,
+)
+from quran_backend.modules.tajweed.models import (
+    TAJWEED_COURSE_LANGUAGES,
+    TajweedCourse,
+    TajweedCourseDocument,
+    TajweedCourseStatus,
+    TajweedCourseVersion,
+)
+from quran_backend.modules.tajweed.rules import RULES_BY_CODE
+
+TEXT_LABELS = {
+    "title": "Название",
+    "summary": "Кратко",
+    "explanation": "Объяснение правила",
+    "how": "Как читать",
+    "name": "Название",
+}
+REVIEW_LABELS = {
+    "pending_teacher_review": "На проверке у преподавателя: показывать пометку",
+    "reviewed": "Проверено преподавателем",
+}
+SHOWN_PROBLEMS = 12
+
+
+def editor_languages() -> list[str]:
+    """Russian first: the course is written in it and translated from it."""
+    return sorted(TAJWEED_COURSE_LANGUAGES, key=lambda code: (code != "ru", code))
+
+
+def editor_editable(user: Any, version: TajweedCourseVersion) -> bool:
+    return (
+        version.status == TajweedCourseStatus.DRAFT
+        and not version.is_signed
+        and user.has_perm("tajweed.change_tajweedcourseversion")
+    )
+
+
+def readonly_reason(user: Any, version: TajweedCourseVersion) -> str:
+    if version.status == TajweedCourseStatus.PUBLISHED:
+        return (
+            "Версия опубликована: её показывают приложение и сайт, поэтому она не меняется. "
+            "Чтобы что-то поправить, создайте из неё черновик."
+        )
+    if version.status == TajweedCourseStatus.WITHDRAWN:
+        return "Версия отозвана: её заменила более новая. Из неё можно сделать новый черновик."
+    if version.is_signed:
+        return (
+            "Черновик подписан и ждёт публикации: подписанный текст не меняется. "
+            "Чтобы поправить, создайте из него новый черновик и подпишите его заново."
+        )
+    if not user.has_perm("tajweed.change_tajweedcourseversion"):
+        return "У вас право только на просмотр курса."
+    return ""
+
+
+def free_version_name(version: TajweedCourseVersion, base: str) -> str:
+    taken = set(version.course.versions.values_list("version", flat=True))
+    if base not in taken:
+        return base
+    number = 2
+    while f"{base}-{number}" in taken:
+        number += 1
+    return f"{base}-{number}"
+
+
+def _node(snapshot: Mapping[str, Any], node_id: str) -> tuple[str, dict[str, Any]] | None:
+    """(kind, snapshot object) for `course`, `target:<key>`, `section:<slug>`, `lesson:<slug>`."""
+    kind, _, key = node_id.partition(":")
+    if kind == "course":
+        return kind, snapshot["course"]
+    collection, field = {
+        "target": ("targets", "key"),
+        "section": ("sections", "slug"),
+        "lesson": ("lessons", "slug"),
+    }.get(kind, ("", ""))
+    for item in snapshot.get(collection, []) if collection else []:
+        if item.get(field) == key:
+            return kind, item
+    return None
+
+
+def _text_fields(kind: str) -> tuple[str, ...]:
+    return {
+        "course": ("title", "summary"),
+        "target": ("name",),
+        "section": ("title",),
+        "lesson": LESSON_TEXTS,
+    }[kind]
+
+
+@admin.register(TajweedCourse)
+class TajweedCourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("slug", "active_version")
+    readonly_fields = ("slug", "active_version", "created_at", "updated_at")
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+
+@admin.register(TajweedCourseVersion)
+class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("__str__", "status", "signed", "published_at", "editor_link")
+    list_filter = ("status", "course")
+    actions = ("sign_versions", "publish_versions", "recompile_versions")
+    change_form_template = "admin/tajweed/tajweedcourseversion/change_form.html"
+    readonly_fields = (
+        "course",
+        "version",
+        "status",
+        "checksum_sha256",
+        "reviewed_by",
+        "reviewed_at",
+        "review_note",
+        "published_at",
+        "documents_summary",
+    )
+    exclude = ("snapshot", "schema_version")
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: TajweedCourseVersion | None = None
+    ) -> bool:
+        return False if obj is not None else super().has_change_permission(request, obj)
+
+    def has_delete_permission(
+        self, _request: HttpRequest, obj: TajweedCourseVersion | None = None
+    ) -> bool:
+        return obj is None or obj.status == TajweedCourseStatus.DRAFT
+
+    @admin.display(boolean=True, description="Подписана")
+    def signed(self, obj: TajweedCourseVersion) -> bool:
+        return obj.is_signed
+
+    @admin.display(description="Редактор")
+    def editor_link(self, obj: TajweedCourseVersion) -> str:
+        label = "Редактировать" if obj.status == TajweedCourseStatus.DRAFT else "Открыть"
+        return format_html('<a href="{}">{}</a>', self._editor_url(obj), label)
+
+    @admin.display(description="Документы по языкам")
+    def documents_summary(self, obj: TajweedCourseVersion) -> str:
+        rows = [
+            (document.language, f"{document.bytes / 1024:.0f} КБ")
+            for document in obj.documents.all()
+        ]
+        return format_html_join(", ", "{}: {}", rows) or "—"
+
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        version = self.get_object(request, unquote(object_id))
+        context = dict(extra_context or {})
+        if version is not None:
+            context["tajweed_editor"] = {
+                "url": self._editor_url(version),
+                "editable": editor_editable(request.user, version),
+                "reason": readonly_reason(request.user, version),
+                "copy_url": reverse(
+                    "admin:tajweed_tajweedcourseversion_new_draft", args=[version.pk]
+                )
+                if request.user.has_perm("tajweed.add_tajweedcourseversion")
+                else "",
+                "download_url": reverse(
+                    "admin:tajweed_tajweedcourseversion_snapshot", args=[version.pk]
+                ),
+            }
+        return super().change_view(request, object_id, form_url, context)
+
+    def get_urls(self) -> list[Any]:
+        view = self.admin_site.admin_view
+        return [
+            path(
+                "<path:object_id>/editor/",
+                view(self.editor_view),
+                name="tajweed_tajweedcourseversion_editor",
+            ),
+            path(
+                "<path:object_id>/new-draft/",
+                view(self.new_draft_view),
+                name="tajweed_tajweedcourseversion_new_draft",
+            ),
+            path(
+                "<path:object_id>/snapshot.json",
+                view(self.snapshot_view),
+                name="tajweed_tajweedcourseversion_snapshot",
+            ),
+            path(
+                "<path:object_id>/review/",
+                view(self.review_view),
+                name="tajweed_tajweedcourseversion_review",
+            ),
+            *super().get_urls(),
+        ]
+
+    # Editor -------------------------------------------------------------
+
+    def _version(self, request: HttpRequest, object_id: str) -> TajweedCourseVersion:
+        version: TajweedCourseVersion | None = self.get_object(request, unquote(object_id))
+        if version is None:
+            raise Http404
+        if not request.user.has_perm("tajweed.view_tajweedcourseversion"):
+            raise PermissionDenied
+        return version
+
+    @staticmethod
+    def _editor_url(version: TajweedCourseVersion, node_id: str = "course") -> str:
+        url = reverse("admin:tajweed_tajweedcourseversion_editor", args=[version.pk])
+        return f"{url}?{urlencode({'node': node_id})}"
+
+    def editor_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        version = self._version(request, object_id)
+        node_id = str(request.GET.get("node") or request.POST.get("node") or "course")
+        found = _node(version.snapshot, node_id)
+        if found is None:
+            raise Http404
+        kind, _ = found
+        editable = editor_editable(request.user, version)
+        posted: Mapping[str, Any] | None = None
+        if request.method == "POST":
+            if not editable:
+                raise PermissionDenied
+            posted = request.POST
+            if self._save(request, version, node_id):
+                return HttpResponseRedirect(self._editor_url(version, node_id))
+        return self._render(
+            request, version, node_id=node_id, kind=kind, editable=editable, posted=posted
+        )
+
+    def _save(self, request: HttpRequest, version: TajweedCourseVersion, node_id: str) -> bool:
+        snapshot = copy.deepcopy(version.snapshot)
+        found = _node(snapshot, node_id)
+        if found is None:
+            raise Http404
+        kind, target = found
+        data = request.POST
+        for field in _text_fields(kind):
+            texts = dict(target.get(field) or {})
+            for language in TAJWEED_COURSE_LANGUAGES:
+                texts[language] = str(data.get(f"{field}__{language}", "")).strip()
+            target[field] = texts
+        problems: list[str] = []
+        if kind == "course":
+            target["review_status"] = str(data.get("review_status", ""))
+        elif kind == "target":
+            target["arabic_name"] = str(data.get("arabic_name", "")).strip()
+            target["color"] = str(data.get("color", "")).strip().upper()
+            if not COLOR.match(target["color"]):
+                problems.append("Цвет: в виде #RRGGBB.")
+        elif kind == "lesson":
+            try:
+                target["minutes"] = int(str(data.get("minutes", "")))
+            except ValueError:
+                problems.append("Минуты: целое число.")
+            target["letters"] = str(data.get("letters", "")).strip()
+            target["examples"] = [
+                key for key in re.split(r"[\s,]+", str(data.get("examples", ""))) if key
+            ]
+        try:
+            if problems:
+                raise TajweedCourseError(problems)
+            save_course_draft(version, snapshot)
+        except TajweedCourseError as error:
+            shown = "; ".join(error.problems[:SHOWN_PROBLEMS])
+            messages.error(request, f"Не сохранено: {shown}")
+            return False
+        self.log_change(request, version, f"Изменено в редакторе: {node_id}.")
+        messages.success(request, "Сохранено. Документы курса пересобраны.")
+        return True
+
+    def _render(  # noqa: PLR0913 - the form shows what a refused save sent
+        self,
+        request: HttpRequest,
+        version: TajweedCourseVersion,
+        *,
+        node_id: str,
+        kind: str,
+        editable: bool,
+        posted: Mapping[str, Any] | None,
+    ) -> HttpResponse:
+        snapshot = version.snapshot
+        _, item = _node(snapshot, node_id) or ("", {})
+        names = dict(settings.LANGUAGES)
+        languages = editor_languages()
+
+        def value(name: str, stored: object) -> str:
+            return str(posted.get(name, "")) if posted is not None else str(stored or "")
+
+        fields = [
+            {
+                "name": field,
+                "label": TEXT_LABELS[field],
+                "multiline": field in {"explanation", "how", "summary"},
+                "values": [
+                    {
+                        "code": language,
+                        "label": names.get(language, language),
+                        "input": f"{field}__{language}",
+                        "value": value(
+                            f"{field}__{language}", (item.get(field) or {}).get(language)
+                        ),
+                        "rtl": language == "ar",
+                    }
+                    for language in languages
+                ],
+            }
+            for field in _text_fields(kind)
+        ]
+        settings_fields: list[dict[str, Any]] = []
+        if kind == "course":
+            settings_fields.append(
+                {
+                    "name": "review_status",
+                    "label": "Проверка преподавателем",
+                    "choices": [
+                        (code, label, value("review_status", item.get("review_status")) == code)
+                        for code, label in REVIEW_LABELS.items()
+                    ],
+                }
+            )
+        elif kind == "target":
+            settings_fields += [
+                {
+                    "name": "arabic_name",
+                    "label": "Арабское название",
+                    "value": value("arabic_name", item.get("arabic_name")),
+                    "rtl": True,
+                },
+                {
+                    "name": "color",
+                    "label": "Цвет подсветки (#RRGGBB)",
+                    "value": value("color", item.get("color")),
+                },
+            ]
+        elif kind == "lesson":
+            target = str(item.get("target", ""))
+            rule = RULES_BY_CODE.get(target)
+            settings_fields += [
+                {
+                    "name": "minutes",
+                    "label": "Минут на урок",
+                    "value": value("minutes", item.get("minutes")),
+                },
+                {
+                    "name": "letters",
+                    "label": "Буквы правила",
+                    "rtl": True,
+                    "value": value("letters", item.get("letters")),
+                },
+                {
+                    "name": "examples",
+                    "label": "Свои примеры: ключи аятов через запятую",
+                    "value": value("examples", ", ".join(item.get("examples", []))),
+                },
+            ]
+            settings_fields.append(
+                {
+                    "name": "",
+                    "label": "Цель урока",
+                    "static": f"{target}"
+                    + (
+                        f" — класс Quran.Foundation «{rule.name['ru']}»"
+                        if rule
+                        else " — выводится из букв (course_markers.py)"
+                    ),
+                }
+            )
+        missing = missing_texts(snapshot)
+        tree = [{"id": "course", "label": "Курс", "indent": 0}]
+        tree += [
+            {
+                "id": f"target:{target['key']}",
+                "label": f"Цель: {target['name'].get('ru') or target['key']}",
+                "indent": 1,
+            }
+            for target in snapshot.get("targets", [])
+        ]
+        lessons = {lesson["slug"]: lesson for lesson in snapshot.get("lessons", [])}
+        for section in snapshot.get("sections", []):
+            tree.append(
+                {
+                    "id": f"section:{section['slug']}",
+                    "label": section["title"].get("ru") or section["slug"],
+                    "indent": 0,
+                }
+            )
+            tree += [
+                {
+                    "id": f"lesson:{slug}",
+                    "label": lessons[slug]["title"].get("ru") or slug,
+                    "indent": 1,
+                }
+                for slug in section["lessons"]
+                if slug in lessons
+            ]
+        return TemplateResponse(
+            request,
+            "admin/tajweed/tajweedcourseversion/editor.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "original": version,
+                "title": f"Редактор курса {version}",
+                "node_id": node_id,
+                "tree": tree,
+                "fields": fields,
+                "settings_fields": settings_fields,
+                "editable": editable,
+                "readonly_reason": readonly_reason(request.user, version),
+                "status_label": self._status_label(version),
+                "missing": [
+                    (names.get(code, code), missing[code]) for code in languages if missing[code]
+                ],
+                "can_copy": request.user.has_perm("tajweed.add_tajweedcourseversion"),
+                "can_review": request.user.has_perm("tajweed.change_tajweedcourseversion"),
+            },
+            status=400 if posted is not None else 200,
+        )
+
+    @staticmethod
+    def _status_label(version: TajweedCourseVersion) -> str:
+        if version.status == TajweedCourseStatus.DRAFT:
+            return "Черновик, подписан" if version.is_signed else "Черновик"
+        return str(TajweedCourseStatus(version.status).label)
+
+    # New draft, download, review ---------------------------------------
+
+    def new_draft_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        source = self._version(request, object_id)
+        if not request.user.has_perm("tajweed.add_tajweedcourseversion"):
+            raise PermissionDenied
+        name = free_version_name(source, timezone.localdate().isoformat())
+        error = ""
+        if request.method == "POST":
+            name = str(request.POST.get("version", "")).strip()
+            if not VERSION_NAME.match(name):
+                error = "Имя версии: латинские буквы, цифры, точка, дефис, до 64 знаков."
+            elif source.course.versions.filter(version=name).exists():
+                error = f"Версия «{name}» уже есть. Выберите другое имя."
+            else:
+                draft = copy_tajweed_course(source, name)
+                self.log_addition(request, draft, f"Черновик из версии {source.version}.")
+                messages.success(
+                    request,
+                    f"Создан черновик {draft}: копия версии {source.version}. "
+                    "Исходная версия не изменилась.",
+                )
+                return HttpResponseRedirect(self._editor_url(draft))
+        return TemplateResponse(
+            request,
+            "admin/tajweed/tajweedcourseversion/new_draft.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "original": source,
+                "title": f"Новый черновик из версии {source.version}",
+                "name": name,
+                "error": error,
+            },
+            status=400 if error else 200,
+        )
+
+    def snapshot_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """The snapshot as JSON, to keep it in git like `tajweed-course-v1.json`."""
+        version = self._version(request, object_id)
+        response = HttpResponse(
+            snapshot_json(version.snapshot), content_type="application/json; charset=utf-8"
+        )
+        filename = f"{version.course.slug}-{version.version}.json"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    def review_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """Sign-off and publication from the editor's status bar."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        version = self._version(request, object_id)
+        if not request.user.has_perm("tajweed.change_tajweedcourseversion"):
+            raise PermissionDenied
+        action = request.POST.get("action")
+        back = HttpResponseRedirect(self._editor_url(version, request.POST.get("node") or "course"))
+        if action == "sign":
+            if not editor_editable(request.user, version):
+                messages.error(request, "Подписать можно только неподписанный черновик.")
+            else:
+                self._sign(request, version)
+        elif action == "publish":
+            try:
+                publish_tajweed_course(version)
+            except TajweedCourseError as error:
+                messages.error(request, f"Не опубликовано: {error}")
+            else:
+                self.log_change(request, version, "Опубликована из редактора.")
+                messages.success(
+                    request,
+                    f"{version} опубликована: приложение и сайт покажут её "
+                    "в течение нескольких минут.",
+                )
+        return back
+
+    def _sign(self, request: HttpRequest, version: TajweedCourseVersion) -> bool:
+        try:
+            sign_tajweed_course(version, request.user)
+        except TajweedCourseError as error:
+            problems = list(dict.fromkeys(error.problems))
+            more = (
+                f" И ещё {len(problems) - SHOWN_PROBLEMS}."
+                if len(problems) > SHOWN_PROBLEMS
+                else ""
+            )
+            messages.error(
+                request, f"{version}: не подписана. {'; '.join(problems[:SHOWN_PROBLEMS])}.{more}"
+            )
+            return False
+        self.log_change(request, version, "Подписана.")
+        messages.success(request, f"{version}: подписана. Теперь её можно опубликовать.")
+        return True
+
+    # Actions -------------------------------------------------------------
+
+    @admin.action(description="Подписать: тексты проверены")
+    def sign_versions(self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]) -> None:
+        for version in queryset.filter(status=TajweedCourseStatus.DRAFT, reviewed_at=None):
+            self._sign(request, version)
+
+    @admin.action(description="Опубликовать")
+    def publish_versions(
+        self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]
+    ) -> None:
+        for version in queryset:
+            try:
+                publish_tajweed_course(version)
+            except TajweedCourseError as error:
+                self.message_user(request, f"{version}: {error}", messages.ERROR)
+            else:
+                self.message_user(request, f"{version}: опубликована.", messages.SUCCESS)
+
+    @admin.action(description="Пересобрать документы")
+    def recompile_versions(
+        self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]
+    ) -> None:
+        for version in queryset.filter(status=TajweedCourseStatus.DRAFT):
+            compile_course_version(version)
+            self.message_user(request, f"{version}: пересобрана.", messages.SUCCESS)
+
+
+@admin.register(TajweedCourseDocument)
+class TajweedCourseDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("version", "language", "bytes")
+    list_filter = ("language",)
+    readonly_fields = ("version", "language", "checksum_sha256", "bytes", "payload")
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: TajweedCourseDocument | None = None
+    ) -> bool:
+        return False if obj is not None else super().has_change_permission(request, obj)

@@ -229,7 +229,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex: 1 1 auto;
   flex-wrap: nowrap;
   min-width: 0;
@@ -242,7 +242,7 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 10px;
   border-radius: var(--radius-full);
   font-size: 14px;
   font-weight: 500;
@@ -6378,20 +6378,20 @@ a.footer-store-badge:hover {
 /* -------------------------------------------------------------------------
    Responsive Breakpoints
 ------------------------------------------------------------------------- */
-/* Nine labelled menu items fit a narrow desktop only with tighter spacing. */
+/* Ten labelled menu items fit a narrow desktop only with tighter spacing. */
 @media (min-width: 1001px) and (max-width: 1200px) {
   .app-menu {
     gap: 2px;
   }
 
   .menu-link {
-    gap: 4px;
-    padding-inline: 8px;
+    gap: 3px;
+    padding-inline: 5px;
     font-size: 13px;
   }
 }
 
-/* Until the container reaches its 1200px cap, nine labelled links fill the
+/* Until the container reaches its 1200px cap, ten labelled links fill the
    menu, so the announced "soon" item would push it past the header. */
 @media (min-width: 1001px) and (max-width: 1235px) {
   .menu-link-soon {

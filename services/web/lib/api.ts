@@ -1880,6 +1880,27 @@ export class ApiClient {
     return this.request<TajweedPage>(`/api/v1/quran/tajweed/pages/${pageNumber}`);
   }
 
+  public async getTajweedLessonExamples(
+    course: string,
+    lesson: string,
+    offset: number,
+    limit: number,
+  ): Promise<unknown> {
+    return this.request<unknown>(
+      `/api/v1/tajweed/courses/${encodeURIComponent(course)}/lessons/${encodeURIComponent(lesson)}`
+        + `/examples?offset=${offset}&limit=${limit}`,
+    );
+  }
+
+  /** Merges the local lesson progress with the account's; the answer is the merged progress. */
+  public async mergeTajweedProgress(course: string, progress: { lessons: object }): Promise<unknown> {
+    return this.request<unknown>(`/api/v1/me/tajweed/progress/${encodeURIComponent(course)}`, {
+      method: "PUT",
+      body: JSON.stringify({ lessons: progress.lessons }),
+      cache: "no-store",
+    });
+  }
+
   public async getJuzList(edition: string): Promise<Juz[]> {
     return this.request<Juz[]>(`/api/v1/quran/editions/${edition}/juz`);
   }

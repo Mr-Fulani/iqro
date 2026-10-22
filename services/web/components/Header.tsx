@@ -37,6 +37,7 @@ export function Header() {
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
     { href: "/salah", label: t("nav.salah"), icon: "🧎" },
+    { href: "/tajweed", label: t("nav.tajweed"), icon: "🎙️" },
     { href: "/calendar", label: t("calendar.title"), icon: "☾" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];

@@ -1,0 +1,110 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .te { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .te-tree { list-style: none; margin: 0; padding: 0; }
+  .te-tree li { margin: 0; padding: 2px 0; }
+  .te-tree li.is-indented { padding-inline-start: 16px; }
+  .te-tree a[aria-current="page"] { font-weight: 700; }
+  .te-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .te-head form { display: inline; }
+  .te-note { padding: 8px 12px; border-inline-start: 4px solid var(--message-warning-bg, #ffc); background: var(--darkened-bg); margin-bottom: 16px; }
+  .te-field { margin-bottom: 20px; }
+  .te-field h3 { margin: 0 0 6px; }
+  .te-lang { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; margin-bottom: 6px; align-items: start; }
+  .te-lang textarea, .te-lang input, .te-setting input { width: 100%; box-sizing: border-box; }
+  .te-lang textarea { min-height: 72px; }
+  .te-lang.is-empty label::after { content: " — нет текста"; color: var(--error-fg, #ba2121); }
+  .te-setting { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
+  @media (max-width: 767px) { .te, .te-lang, .te-setting { grid-template-columns: minmax(0, 1fr); } }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; Редактор
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div class="te-head">
+    <p><strong>{{ status_label }}</strong>
+      {% if original.reviewed_at %} · подписана {{ original.reviewed_at|date:"d.m.Y H:i" }}{% endif %}
+      {% if original.published_at %} · опубликована {{ original.published_at|date:"d.m.Y H:i" }}{% endif %}
+    </p>
+    <p>
+      <a class="button" href="{% url 'admin:tajweed_tajweedcourseversion_snapshot' original.pk %}">Скачать JSON</a>
+      {% if can_copy %}<a class="button" href="{% url 'admin:tajweed_tajweedcourseversion_new_draft' original.pk %}">Создать черновик из этой версии</a>{% endif %}
+      {% if can_review %}
+        <form method="post" action="{% url 'admin:tajweed_tajweedcourseversion_review' original.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="node" value="{{ node_id }}">
+          {% if editable %}
+            <button type="submit" name="action" value="sign" class="button">Подписать</button>
+          {% elif original.is_signed and original.status == "draft" %}
+            <button type="submit" name="action" value="publish" class="button default">Опубликовать</button>
+          {% endif %}
+        </form>
+      {% endif %}
+    </p>
+  </div>
+  {% if not editable %}<div class="te-note" role="note"><strong>Только чтение.</strong> {{ readonly_reason }}</div>{% endif %}
+  {% if missing %}
+    <div class="te-note" role="note">Не переведено во всём курсе:
+      {% for name, count in missing %}<bdi>{{ name }}</bdi>: <b>{{ count }}</b>{% if not forloop.last %}, {% endif %}{% endfor %}.
+      Подписать можно, когда переведено всё.</div>
+  {% endif %}
+  <div class="te">
+    <nav aria-label="Содержание курса">
+      <ul class="te-tree">
+        {% for entry in tree %}
+          <li{% if entry.indent %} class="is-indented"{% endif %}><a href="?node={{ entry.id|urlencode }}"{% if entry.id == node_id %} aria-current="page"{% endif %}>{{ entry.label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="node" value="{{ node_id }}">
+      <fieldset {% if not editable %}disabled{% endif %}>
+        {% for field in fields %}
+          <div class="te-field">
+            <h3>{{ field.label }}</h3>
+            {% for lang in field.values %}
+              <div class="te-lang{% if not lang.value %} is-empty{% endif %}">
+                <label for="id_{{ lang.input }}"><bdi>{{ lang.label }}</bdi></label>
+                {% if field.multiline %}
+                  <textarea id="id_{{ lang.input }}" name="{{ lang.input }}" lang="{{ lang.code }}"{% if lang.rtl %} dir="rtl"{% endif %}>{{ lang.value }}</textarea>
+                {% else %}
+                  <input type="text" id="id_{{ lang.input }}" name="{{ lang.input }}" value="{{ lang.value }}" lang="{{ lang.code }}"{% if lang.rtl %} dir="rtl"{% endif %}>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+        {% for setting in settings_fields %}
+          <div class="te-setting">
+            <label{% if setting.name %} for="id_{{ setting.name }}"{% endif %}>{{ setting.label }}</label>
+            {% if setting.choices %}
+              <select id="id_{{ setting.name }}" name="{{ setting.name }}">
+                {% for code, label, selected in setting.choices %}<option value="{{ code }}"{% if selected %} selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            {% elif setting.static %}
+              <span>{{ setting.static }}</span>
+            {% else %}
+              <input type="text" id="id_{{ setting.name }}" name="{{ setting.name }}" value="{{ setting.value }}"{% if setting.rtl %} dir="rtl"{% endif %}>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </fieldset>
+      {% if editable %}<div class="submit-row"><input type="submit" class="default" value="Сохранить"></div>{% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

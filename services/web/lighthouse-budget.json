@@ -19,7 +19,9 @@
       "template": "published-surah"
     },
     { "path": "/ru/salah/fajr", "locale": "ru", "direction": "ltr", "template": "salah-lesson" },
-    { "path": "/ar/salah/fajr", "locale": "ar", "direction": "rtl", "template": "salah-lesson" }
+    { "path": "/ar/salah/fajr", "locale": "ar", "direction": "rtl", "template": "salah-lesson" },
+    { "path": "/ru/tajweed/izhar", "locale": "ru", "direction": "ltr", "template": "tajweed-lesson" },
+    { "path": "/ar/tajweed/izhar", "locale": "ar", "direction": "rtl", "template": "tajweed-lesson" }
   ],
   "categories": {
     "performance": 0.75,

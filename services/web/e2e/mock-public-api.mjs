@@ -148,6 +148,21 @@ function salahCourse(language) {
   return document;
 }
 
+// The tajweed course contract example and real lesson examples from the Quran.Foundation
+// markup (docs/tajweed/course.md); the language follows the request.
+const tajweedCourseExample = JSON.parse(
+  readFileSync(new URL("../../../docs/tajweed/course-document.example.json", import.meta.url), "utf8"),
+);
+const tajweedCourseExamples = JSON.parse(
+  readFileSync(new URL("./fixtures/tajweed-course-examples.json", import.meta.url), "utf8"),
+);
+
+function tajweedCourse(language) {
+  const document = structuredClone(tajweedCourseExample);
+  document.course.language = language;
+  return document;
+}
+
 function salahImage(label) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">`
     + `<rect width="720" height="720" fill="#ecfdf5"/><circle cx="360" cy="230" r="70" fill="#a7f3d0"/>`
@@ -471,6 +486,39 @@ const server = createServer(async (request, response) => {
     const requested = url.searchParams.get("language");
     if (!salahLanguages.has(requested)) return sendJson(response, 400, { detail: "Unsupported language." });
     return sendJson(response, 200, salahCourse(requested));
+  }
+  if (path === "/api/v1/tajweed/courses") {
+    const { course } = tajweedCourseExample;
+    return sendJson(response, 200, [{
+      slug: course.slug,
+      version: course.version,
+      languages: [...salahLanguages],
+      published_at: course.published_at,
+    }]);
+  }
+  if (path === "/api/v1/tajweed/courses/tajweed") {
+    const requested = url.searchParams.get("language");
+    if (!salahLanguages.has(requested)) return sendJson(response, 400, { detail: "Unsupported language." });
+    return sendJson(response, 200, tajweedCourse(requested));
+  }
+  const tajweedExamples = path.match(/^\/api\/v1\/tajweed\/courses\/tajweed\/lessons\/([a-z-]+)\/examples$/);
+  if (tajweedExamples) {
+    const lesson = tajweedCourseExamples[tajweedExamples[1]];
+    if (!lesson) return sendJson(response, 404, { detail: "No such lesson." });
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 4);
+    const examples = lesson.examples.slice(offset, offset + limit);
+    return sendJson(response, 200, {
+      lesson: tajweedExamples[1],
+      target: lesson.target,
+      offset,
+      next_offset: offset + limit < lesson.examples.length ? offset + limit : null,
+      examples,
+    });
+  }
+  if (path === "/api/v1/me/tajweed/progress/tajweed") {
+    const input = request.method === "PUT" ? await readJson(request) : { lessons: {} };
+    return sendJson(response, 200, { course: "tajweed", lessons: input.lessons ?? {} });
   }
   const salahMedia = path.match(/^\/media\/salah\/hanbali-umdah\/[^/]+\/([a-z-]+)-[0-9a-f]+\.webp$/);
   if (salahMedia) {

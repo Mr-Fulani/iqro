@@ -148,6 +148,7 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
     "/ru/audio",
     "/ru/prayer",
     "/ru/salah",
+    "/ru/tajweed",
     "/ru/calendar",
     "/ru/profile",
   ]);

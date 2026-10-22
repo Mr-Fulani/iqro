@@ -52,6 +52,8 @@ from quran_backend.modules.reading.services import (
 )
 from quran_backend.modules.reminders.models import ReminderRule, RetiredReminderId
 from quran_backend.modules.reminders.services import reminder_sync_snapshot
+from quran_backend.modules.tajweed.models import TajweedCourseProgress
+from quran_backend.modules.tajweed.progress import merge_lessons
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +120,7 @@ def merge_guest_into_account(
     _merge_reading_state(source=source, target=target, counts=counts)
     _merge_memorization_state(source=source, target=target, counts=counts)
     _merge_dua_favorites(source=source, target=target, counts=counts)
+    _merge_tajweed_progress(source=source, target=target, counts=counts)
     _merge_announcement_receipts(source=source, target=target, counts=counts)
     _merge_reminders(source=source, target=target, counts=counts)
     _merge_prayer_profile(source=source, target=target, counts=counts)
@@ -288,6 +291,26 @@ def _merge_dua_favorites(*, source: User, target: User, counts: dict[str, int]) 
             favorite.user = target
             favorite.save(update_fields=["user", "updated_at"])
     counts["dua_favorites"] = len(favorites)
+
+
+def _merge_tajweed_progress(*, source: User, target: User, counts: dict[str, int]) -> None:
+    rows = list(
+        TajweedCourseProgress.objects.select_for_update().filter(user=source).order_by("course")
+    )
+    for row in rows:
+        existing = (
+            TajweedCourseProgress.objects.select_for_update()
+            .filter(user=target, course=row.course)
+            .first()
+        )
+        if existing is None:
+            row.user = target
+            row.save(update_fields=["user", "updated_at"])
+            continue
+        existing.lessons = merge_lessons(existing.lessons, row.lessons)
+        existing.save(update_fields=["lessons", "updated_at"])
+        row.delete()
+    counts["tajweed_progress"] = len(rows)
 
 
 def _merge_announcement_receipts(*, source: User, target: User, counts: dict[str, int]) -> None:

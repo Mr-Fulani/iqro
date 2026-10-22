@@ -1,0 +1,365 @@
+/* -------------------------------------------------------------------------
+   Tajweed course (/tajweed)
+------------------------------------------------------------------------- */
+.tajweed-course-page {
+  display: grid;
+  gap: 20px;
+}
+
+.tajweed-course-hero {
+  display: grid;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--panel) 55%, var(--primary-subtle));
+}
+
+.tajweed-course-hero h1 {
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.2;
+}
+
+.tajweed-course-hero > p:not(.eyebrow) {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.tajweed-course-hero .tajweed-review-note {
+  margin: 0;
+}
+
+.tajweed-course-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.tajweed-course-progress-copy {
+  display: grid;
+  gap: 6px;
+  min-width: min(260px, 100%);
+  font-weight: 600;
+}
+
+.tajweed-course-progress-copy p {
+  margin: 0;
+}
+
+.tajweed-course-progress-copy progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--primary);
+}
+
+.tajweed-course-section {
+  display: grid;
+  gap: 14px;
+}
+
+.tajweed-course-section h2 {
+  font-size: 20px;
+}
+
+.tajweed-course-lessons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tajweed-course-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tajweed-course-card:hover,
+.tajweed-course-card:focus-visible {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+.tajweed-course-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tajweed-course-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.tajweed-course-card p {
+  margin: 0;
+}
+
+.tajweed-course-summary {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.tajweed-course-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.tajweed-course-status {
+  flex-shrink: 0;
+  padding: 3px 9px;
+}
+
+/* Lesson ----------------------------------------------------------------- */
+.tajweed-lesson {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tajweed-lesson-status {
+  display: grid;
+  gap: 6px;
+}
+
+.tajweed-lesson-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tajweed-lesson-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tajweed-lesson-step {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tajweed-lesson-step[hidden] {
+  display: none;
+}
+
+.tajweed-lesson-step h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 20px;
+}
+
+.tajweed-lesson-step h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.tajweed-lesson-step p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.tajweed-lesson-arabic-name {
+  color: var(--text-secondary);
+  font-family: var(--font-arabic);
+  font-size: 1.15rem;
+}
+
+.tajweed-lesson-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tajweed-lesson-letters li {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-family: var(--font-arabic);
+  font-size: 1.6rem;
+}
+
+.tajweed-course-ayah {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-family: var(--font-arabic);
+  font-size: 1.75rem;
+  line-height: 2.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.tajweed-course-word {
+  border-radius: 6px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tajweed-course-word.is-lit {
+  background: color-mix(in srgb, var(--tajweed-color) 18%, transparent);
+  box-shadow: inset 0 -2px 0 var(--tajweed-color);
+}
+
+.tajweed-course-word.is-reading {
+  background: var(--primary-subtle);
+  box-shadow: 0 0 0 2px var(--primary-border);
+}
+
+.tajweed-course-word mark,
+.tajweed-lesson-word mark {
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tajweed-color);
+}
+
+button.tajweed-course-word {
+  min-height: 44px;
+  margin: 2px 0;
+  padding: 0 4px;
+  border: 1px dashed var(--border-strong, var(--border));
+  background: var(--panel);
+  color: var(--text-primary);
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+button.tajweed-course-word:hover {
+  background: var(--panel-hover);
+}
+
+button.tajweed-course-word:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+button.tajweed-course-word.is-wrong {
+  border-style: solid;
+  border-color: var(--danger-border);
+  color: var(--text-muted);
+}
+
+button.tajweed-course-word.is-lit {
+  border-style: solid;
+  border-color: var(--tajweed-color);
+}
+
+.tajweed-lesson-reference {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.tajweed-lesson-word {
+  font-family: var(--font-arabic);
+  font-size: 2.25rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.tajweed-lesson-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tajweed-lesson-tools .tajweed-audio {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.tajweed-lesson-feedback {
+  min-height: 1.6em;
+  font-weight: 600;
+}
+
+.tajweed-lesson-feedback.is-correct {
+  color: var(--primary-text);
+}
+
+.tajweed-lesson-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.tajweed-lesson-nav .btn {
+  min-height: 44px;
+  min-width: 120px;
+}
+
+.tajweed-lesson-completed {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-md);
+  background: var(--success-subtle);
+}
+
+.tajweed-lesson-completed > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tajweed-course-card,
+  .tajweed-course-word {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .tajweed-course-ayah {
+    padding: 10px 8px;
+    font-size: 1.5rem;
+  }
+
+  .tajweed-lesson-nav {
+    position: sticky;
+    bottom: var(--mobile-nav-space, 72px);
+    z-index: 2;
+    padding: 10px 0;
+    background: var(--panel);
+  }
+
+  .tajweed-lesson-nav .btn {
+    flex: 1;
+    min-width: 0;
+  }
+}

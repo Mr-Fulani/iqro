@@ -1,0 +1,857 @@
+{
+  "schema_version": 1,
+  "course": {
+    "slug": "tajweed",
+    "version": "2026-10-22",
+    "review_status": "pending_teacher_review",
+    "title": {
+      "ru": "Таджвид",
+      "en": "Tajweed",
+      "ar": "التجويد",
+      "tr": "Tecvid"
+    },
+    "summary": {
+      "ru": "Правила чтения Корана по риваяту Хафса шаг за шагом: объяснение, примеры из аятов с прослушиванием и упражнение в каждом уроке.",
+      "en": "The rules of Quran recitation in the riwaya of Hafs, step by step: an explanation, examples from the verses to listen to and an exercise in every lesson.",
+      "ar": "أحكام تلاوة القرآن برواية حفص خطوةً خطوة: شرح ميسّر، وأمثلة من الآيات للاستماع، وتمرين في كل درس.",
+      "tr": "Hafs rivayetine göre Kur'an okuma kuralları adım adım: her derste açıklama, dinlenebilen ayet örnekleri ve bir alıştırma."
+    }
+  },
+  "targets": [
+    {
+      "key": "izhar",
+      "rule": null,
+      "color": "#7B5EA7",
+      "arabic_name": "الإظهار الحلقي",
+      "name": {
+        "ru": "Изхар",
+        "en": "Izhar",
+        "ar": "الإظهار الحلقي",
+        "tr": "İzhâr"
+      }
+    },
+    {
+      "key": "izhar_shafawi",
+      "rule": null,
+      "color": "#7B5EA7",
+      "arabic_name": "الإظهار الشفوي",
+      "name": {
+        "ru": "Изхар шафави",
+        "en": "Labial izhar",
+        "ar": "الإظهار الشفوي",
+        "tr": "İzhâr-ı şefevî"
+      }
+    },
+    {
+      "key": "madd_muttasil",
+      "rule": "madda_obligatory",
+      "color": "#F40000",
+      "arabic_name": "المد الواجب المتصل",
+      "name": {
+        "ru": "Мадд муттасыль",
+        "en": "Connected madd",
+        "ar": "المد الواجب المتصل",
+        "tr": "Medd-i muttasıl"
+      }
+    },
+    {
+      "key": "madd_munfasil",
+      "rule": "madda_obligatory",
+      "color": "#F40000",
+      "arabic_name": "المد المنفصل",
+      "name": {
+        "ru": "Мадд мунфасыль",
+        "en": "Separated madd",
+        "ar": "المد المنفصل",
+        "tr": "Medd-i munfasıl"
+      }
+    },
+    {
+      "key": "laam_qamariyah",
+      "rule": null,
+      "color": "#7B5EA7",
+      "arabic_name": "اللام القمرية",
+      "name": {
+        "ru": "Лям камария",
+        "en": "Lam qamariyyah",
+        "ar": "اللام القمرية",
+        "tr": "Kamerî lâm"
+      }
+    }
+  ],
+  "sections": [
+    {
+      "slug": "noon-sakinah",
+      "title": {
+        "ru": "Нун с сукуном и танвин",
+        "en": "Noon with sukun and tanween",
+        "ar": "أحكام النون الساكنة والتنوين",
+        "tr": "Sakin nûn ve tenvin"
+      },
+      "lessons": [
+        "izhar",
+        "idgham-ghunnah",
+        "idgham-without-ghunnah",
+        "iqlab",
+        "ikhfa"
+      ]
+    },
+    {
+      "slug": "meem-sakinah",
+      "title": {
+        "ru": "Мим с сукуном",
+        "en": "Meem with sukun",
+        "ar": "أحكام الميم الساكنة",
+        "tr": "Sakin mîm"
+      },
+      "lessons": [
+        "ikhfa-shafawi",
+        "idgham-shafawi",
+        "izhar-shafawi"
+      ]
+    },
+    {
+      "slug": "ghunnah",
+      "title": {
+        "ru": "Гунна",
+        "en": "Ghunnah",
+        "ar": "الغنة",
+        "tr": "Gunne"
+      },
+      "lessons": [
+        "ghunnah"
+      ]
+    },
+    {
+      "slug": "qalqalah",
+      "title": {
+        "ru": "Калькаля",
+        "en": "Qalqalah",
+        "ar": "القلقلة",
+        "tr": "Kalkale"
+      },
+      "lessons": [
+        "qalqalah"
+      ]
+    },
+    {
+      "slug": "madd",
+      "title": {
+        "ru": "Мадды",
+        "en": "Madd",
+        "ar": "المدود",
+        "tr": "Medler"
+      },
+      "lessons": [
+        "madd-natural",
+        "madd-connected",
+        "madd-separated",
+        "madd-necessary",
+        "madd-permissible"
+      ]
+    },
+    {
+      "slug": "similar-letters",
+      "title": {
+        "ru": "Слияние схожих букв",
+        "en": "Merging similar letters",
+        "ar": "إدغام المتجانسين والمتقاربين",
+        "tr": "Benzer harflerin idğâmı"
+      },
+      "lessons": [
+        "idgham-mutajanisayn",
+        "idgham-mutaqaribayn"
+      ]
+    },
+    {
+      "slug": "hamzat-wasl",
+      "title": {
+        "ru": "Хамзату-ль-васль",
+        "en": "Hamzat al-wasl",
+        "ar": "همزة الوصل",
+        "tr": "Vasl hemzesi"
+      },
+      "lessons": [
+        "hamzat-wasl"
+      ]
+    },
+    {
+      "slug": "lam",
+      "title": {
+        "ru": "Лунные и солнечные буквы",
+        "en": "Moon and sun letters",
+        "ar": "اللام القمرية والشمسية",
+        "tr": "Kamerî ve şemsî harfler"
+      },
+      "lessons": [
+        "lam-qamariyah",
+        "lam-shamsiyah"
+      ]
+    },
+    {
+      "slug": "silent-letters",
+      "title": {
+        "ru": "Непроизносимые буквы",
+        "en": "Silent letters",
+        "ar": "الحروف التي لا تُنطق",
+        "tr": "Okunmayan harfler"
+      },
+      "lessons": [
+        "silent-letters"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "slug": "izhar",
+      "target": "izhar",
+      "minutes": 4,
+      "title": {
+        "ru": "Изхар — нун звучит ясно",
+        "en": "Izhar — a clear noon",
+        "ar": "الإظهار الحلقي: النون واضحة",
+        "tr": "İzhâr — nûn açık okunur"
+      },
+      "summary": {
+        "ru": "Перед шестью гортанными буквами нун с сукуном и танвин звучат чётко, без задержки в носу.",
+        "en": "Before the six throat letters, a noon with sukun or a tanween is said clearly, with no nasal hold.",
+        "ar": "تُظهر النون الساكنة والتنوين قبل حروف الحلق الستة دون إطالة الغنة.",
+        "tr": "Altı boğaz harfinden önce sakin nûn ve tenvin, genizde tutulmadan açıkça okunur."
+      },
+      "explanation": {
+        "ru": "Изхар (الإظهار) значит «ясность». Правило действует, когда после нуна с сукуном (نْ) или танвина стоит одна из шести гортанных букв: ء ه ع ح غ خ. Встреча бывает внутри слова (يَنْهَوْنَ) или на стыке слов (مَنْ ءَامَنَ, عَلِيمٌ حَكِيمٌ).\n\nЭти буквы рождаются в горле, далеко от места нуна, поэтому нун не сливается с ними и не прячется. Слышен обычный чёткий звук «н», без затянутого носового звука (гунны).\n\nПодсказка: в мусхафе над таким нуном стоит знак сукуна.",
+        "en": "Izhar (الإظهار) means “clarity”. The rule applies when a noon with sukun (نْ) or a tanween is followed by one of the six throat letters: ء ه ع ح غ خ. This happens inside a word (يَنْهَوْنَ) or across two words (مَنْ ءَامَنَ, عَلِيمٌ حَكِيمٌ).\n\nThese letters come from the throat, far from where the noon is made, so the noon neither merges with them nor hides. You hear an ordinary, clear “n” with no prolonged nasal sound (ghunnah).\n\nTip: in the Mushaf such a noon carries a sukun sign.",
+        "ar": "الإظهار لغةً البيان. ويكون إذا جاء بعد النون الساكنة (نْ) أو التنوين حرفٌ من حروف الحلق الستة: ء ه ع ح غ خ، في كلمة واحدة (يَنْهَوْنَ) أو في كلمتين (مَنْ ءَامَنَ، عَلِيمٌ حَكِيمٌ).\n\nوهذه الحروف تخرج من الحلق بعيدًا عن مخرج النون، فلا تُدغم النون فيها ولا تُخفى، بل تُنطق واضحةً دون إطالة الغنة.\n\nتنبيه: تُرسم على النون في المصحف علامة السكون في هذه الحالة.",
+        "tr": "İzhâr (الإظهار) “açıklık” demektir. Sakin nûndan (نْ) veya tenvinden sonra altı boğaz harfinden biri geldiğinde uygulanır: ء ه ع ح غ خ. Bu, bir kelimenin içinde (يَنْهَوْنَ) ya da iki kelime arasında (مَنْ ءَامَنَ, عَلِيمٌ حَكِيمٌ) olur.\n\nBu harfler boğazdan, nûnun mahrecinden uzakta çıkar; bu yüzden nûn onlara katılmaz ve gizlenmez. Genizde uzatılmayan, normal ve net bir “n” sesi duyulur.\n\nİpucu: Mushaf'ta böyle bir nûnun üzerinde sükûn işareti bulunur."
+      },
+      "how": {
+        "ru": "Произнесите нун полностью: кончик языка касается десны над верхними передними зубами, звук короткий, не тяните его через нос. Сразу переходите к гортанной букве, без паузы и без лишнего гласного между ними.",
+        "en": "Pronounce the noon fully: the tip of the tongue touches the gum ridge behind the upper front teeth, and the sound is short — do not hold it in the nose. Move straight on to the throat letter, with no pause and no extra vowel in between.",
+        "ar": "انطق النون كاملةً بطرف اللسان مع لثة الثنايا العليا، نطقًا قصيرًا دون إطالة الغنة، ثم انتقل مباشرةً إلى الحرف الحلقي دون سكت ولا حركة زائدة بينهما.",
+        "tr": "Nûnu tam söyleyin: dilin ucu üst ön dişlerin diş etine değer, ses kısadır, genizde uzatmayın. Duraksamadan ve araya ünlü katmadan doğrudan boğaz harfine geçin."
+      },
+      "letters": "ء ه ع ح غ خ",
+      "examples": []
+    },
+    {
+      "slug": "idgham-ghunnah",
+      "target": "idgham_ghunnah",
+      "minutes": 4,
+      "title": {
+        "ru": "Идгам с гунной — слияние с носовым звуком",
+        "en": "Idgham with ghunnah — merging with a nasal sound",
+        "ar": "الإدغام بغنة",
+        "tr": "Gunneli idğâm — genizden sesle kaynaştırma"
+      },
+      "summary": {
+        "ru": "Нун с сукуном или танвин в конце слова сливается с буквами ي ن م و, оставляя носовой звук.",
+        "en": "A noon with sukun or a tanween at the end of a word merges into ي ن م و, keeping a nasal sound.",
+        "ar": "تُدغم النون الساكنة والتنوين في آخر الكلمة في حروف «ينمو» مع بقاء الغنة.",
+        "tr": "Kelime sonundaki sakin nûn veya tenvin, ي ن م و harflerine gunneyle katılır."
+      },
+      "explanation": {
+        "ru": "Идгам (الإدغام) значит «вставить одно в другое». Если слово кончается нуном с сукуном или танвином, а следующее начинается с одной из букв ي ن م و (их запоминают словом يَنْمُو), нун сливается с этой буквой. Она звучит удвоенной, а носовой звук (гунна) сохраняется: مَن يَقُولُ, خَيْرًا يَرَهُۥ, مِن مَّالٍ.\n\nПравило действует только на стыке двух слов. Внутри одного слова нун перед و или ي читается ясно: دُنْيَا, صِنْوَانٌ.\n\nС ن и م слияние полное. С و и ي оно неполное: часть носового звука нуна остаётся.",
+        "en": "Idgham (الإدغام) means “inserting one thing into another”. If a word ends in a noon with sukun or a tanween and the next word begins with one of ي ن م و (remembered as يَنْمُو), the noon merges into that letter. The letter sounds doubled, and the nasal sound (ghunnah) stays: مَن يَقُولُ, خَيْرًا يَرَهُۥ, مِن مَّالٍ.\n\nThe rule works only across two words. Inside one word a noon before و or ي is read clearly: دُنْيَا, صِنْوَانٌ.\n\nWith ن and م the merging is complete. With و and ي it is partial: part of the noon's nasal sound remains.",
+        "ar": "الإدغام لغةً إدخال الشيء في الشيء. فإذا انتهت الكلمة بنون ساكنة أو تنوين، وابتدأت التالية بأحد حروف «يَنْمُو» (ي ن م و)، أُدغمت النون في ذلك الحرف فصار مشدّدًا مع بقاء الغنة: مَن يَقُولُ، خَيْرًا يَرَهُۥ، مِن مَّالٍ.\n\nولا يكون ذلك إلا في كلمتين، أما في الكلمة الواحدة فتُظهر النون قبل الواو والياء: دُنْيَا، صِنْوَانٌ.\n\nوالإدغام في النون والميم كامل، وفي الواو والياء ناقص تبقى معه غنة النون.",
+        "tr": "İdğâm (الإدغام) “bir şeyi diğerine katmak” demektir. Kelime sakin nûn veya tenvinle biter ve sonraki kelime ي ن م و harflerinden biriyle (يَنْمُو diye ezberlenir) başlarsa, nûn o harfe katılır. Harf şeddeli okunur, genizden gelen ses (gunne) kalır: مَن يَقُولُ, خَيْرًا يَرَهُۥ, مِن مَّالٍ.\n\nBu kural yalnızca iki kelime arasında geçerlidir. Tek kelimede و veya ي'den önceki nûn açık okunur: دُنْيَا, صِنْوَانٌ.\n\nن ve م ile katma tamdır. و ve ي ile eksiktir: nûnun genizden gelen sesinin bir kısmı kalır."
+      },
+      "how": {
+        "ru": "Не произносите нун отдельно: сразу переходите к следующей букве, удваивая её, и держите носовой звук 2 хараката. Харака — время одного короткого гласного; две хараката — примерно как неспешно загнуть два пальца.",
+        "en": "Do not say the noon on its own: go straight to the next letter, doubling it, and hold the nasal sound for 2 counts (harakat). One haraka is the time of one short vowel; two take about as long as folding two fingers at a calm pace.",
+        "ar": "لا تنطق النون مستقلةً، بل انتقل مباشرةً إلى الحرف التالي مشدّدًا مع غنة بمقدار حركتين. والحركة زمن نطق حركة قصيرة واحدة، وتُقدَّر بقبض الإصبع أو بسطه بتأنٍّ.",
+        "tr": "Nûnu ayrıca söylemeyin: şeddeleyerek doğrudan sonraki harfe geçin ve genizden gelen sesi 2 hareke tutun. Bir hareke, kısa bir ünlünün süresidir; iki hareke, sakin bir tempoda iki parmağı bükmek kadar sürer."
+      },
+      "letters": "ي ن م و",
+      "examples": []
+    },
+    {
+      "slug": "idgham-without-ghunnah",
+      "target": "idgham_wo_ghunnah",
+      "minutes": 3,
+      "title": {
+        "ru": "Идгам без гунны — полное слияние",
+        "en": "Idgham without ghunnah — complete merging",
+        "ar": "الإدغام بغير غنة",
+        "tr": "Gunnesiz idğâm — tam kaynaştırma"
+      },
+      "summary": {
+        "ru": "Перед ل и ر нун с сукуном и танвин полностью исчезают, без носового звука.",
+        "en": "Before ل and ر, a noon with sukun or a tanween disappears completely, with no nasal sound.",
+        "ar": "تُدغم النون الساكنة والتنوين في اللام والراء إدغامًا كاملًا بلا غنة.",
+        "tr": "ل ve ر'dan önce sakin nûn ve tenvin, genizden ses vermeden tamamen kaybolur."
+      },
+      "explanation": {
+        "ru": "Если слово кончается нуном с сукуном или танвином, а следующее начинается с ل или ر, нун полностью растворяется в этой букве. Носового звука (гунны) нет, а ل или ر звучит удвоенной, как с шаддой: مِن رَّبِّهِمْ, هُدًى لِّلْمُتَّقِينَ, وَلَمْ يَكُن لَّهُۥ.\n\nВ мусхафе на следующей букве стоит шадда — подсказка, что нун читать не нужно.\n\nИсключение в риваяте Хафса: в مَنْ ۜ رَاقٍ (75:27) делается короткая пауза без вдоха (сакт), поэтому слияния нет.",
+        "en": "If a word ends in a noon with sukun or a tanween and the next word begins with ل or ر, the noon dissolves completely into that letter. There is no nasal sound (ghunnah), and ل or ر sounds doubled, as if it had a shadda: مِن رَّبِّهِمْ, هُدًى لِّلْمُتَّقِينَ, وَلَمْ يَكُن لَّهُۥ.\n\nIn the Mushaf the next letter carries a shadda — a hint that the noon is not read.\n\nAn exception in the riwaya of Hafs: in مَنْ ۜ رَاقٍ (75:27) you make a brief pause without taking a breath (sakt), so there is no merging.",
+        "ar": "إذا انتهت الكلمة بنون ساكنة أو تنوين وابتدأت التالية باللام أو الراء، أُدغمت النون فيهما إدغامًا كاملًا بلا غنة، فتُنطق اللام أو الراء مشدّدة: مِن رَّبِّهِمْ، هُدًى لِّلْمُتَّقِينَ، وَلَمْ يَكُن لَّهُۥ.\n\nوتُرسم الشدّة في المصحف على الحرف التالي دلالةً على أن النون لا تُنطق.\n\nويُستثنى في رواية حفص: مَنْ ۜ رَاقٍ (القيامة: 27)، ففيها سكتة لطيفة بلا تنفّس تمنع الإدغام.",
+        "tr": "Kelime sakin nûn veya tenvinle biter ve sonraki kelime ل veya ر ile başlarsa, nûn o harfe tamamen katılır. Genizden ses (gunne) yoktur; ل veya ر şeddeliymiş gibi iki kat okunur: مِن رَّبِّهِمْ, هُدًى لِّلْمُتَّقِينَ, وَلَمْ يَكُن لَّهُۥ.\n\nMushaf'ta sonraki harfin üzerinde şedde bulunur; bu, nûnun okunmadığını gösterir.\n\nHafs rivayetinde bir istisna: مَنْ ۜ رَاقٍ (75:27) ifadesinde nefes almadan kısa bir duraklama (sekte) yapılır, bu yüzden idğâm olmaz."
+      },
+      "how": {
+        "ru": "Пропустите нун и сразу читайте ل или ر с удвоением. Не задерживайте звук в носу и не делайте паузы между словами.",
+        "en": "Skip the noon and read ل or ر doubled straight away. Do not hold any sound in the nose and do not pause between the words.",
+        "ar": "اترك النون وانطق اللام أو الراء مشدّدةً مباشرةً، دون غنة ودون فصل بين الكلمتين.",
+        "tr": "Nûnu atlayın ve hemen şeddeli ل veya ر okuyun. Sesi genizde tutmayın ve kelimeler arasında durmayın."
+      },
+      "letters": "ل ر",
+      "examples": []
+    },
+    {
+      "slug": "iqlab",
+      "target": "iqlab",
+      "minutes": 3,
+      "title": {
+        "ru": "Икляб — нун превращается в мим",
+        "en": "Iqlab — the noon turns into a meem",
+        "ar": "الإقلاب: قلب النون ميمًا",
+        "tr": "İklâb — nûn mîme dönüşür"
+      },
+      "summary": {
+        "ru": "Перед ب нун с сукуном и танвин читаются как скрытый мим с носовым звуком.",
+        "en": "Before ب, a noon with sukun or a tanween is read as a hidden meem with a nasal sound.",
+        "ar": "تُقلب النون الساكنة والتنوين قبل الباء ميمًا مخفاة مع الغنة.",
+        "tr": "ب'den önce sakin nûn ve tenvin, gunneli gizli bir mîm olarak okunur."
+      },
+      "explanation": {
+        "ru": "Икляб (الإقلاب) значит «превращение». Если после нуна с сукуном или танвина стоит ب — в том же слове или в начале следующего, — нун превращается в мим: أَنۢبِئْهُم, مِنۢ بَعْدِ, سَمِيعُۢ بَصِيرٌ.\n\nВ мусхафе такое место отмечено маленькой буквой мим ۢ над нуном или вместо второго знака танвина. Видите её — читайте мим, а не нун.\n\nПолучившийся мим читается скрыто и с гунной, так же как в правиле «Ихфа шафави» (мим перед ب).",
+        "en": "Iqlab (الإقلاب) means “turning into”. If a noon with sukun or a tanween is followed by ب — in the same word or at the start of the next — the noon turns into a meem: أَنۢبِئْهُم, مِنۢ بَعْدِ, سَمِيعُۢ بَصِيرٌ.\n\nThe Mushaf marks the place with a small meem ۢ above the noon or in place of the second tanween stroke. When you see it, read meem, not noon.\n\nThis meem is read hidden, with ghunnah, just as in the rule “Labial ikhfa” (meem before ب).",
+        "ar": "الإقلاب لغةً تحويل الشيء عن وجهه. فإذا جاء بعد النون الساكنة أو التنوين باءٌ، في كلمة أو في كلمتين، قُلبت النون ميمًا: أَنۢبِئْهُم، مِنۢ بَعْدِ، سَمِيعُۢ بَصِيرٌ.\n\nويُعلَّم موضعه في المصحف بميم صغيرة ۢ فوق النون أو بدل الحركة الثانية من التنوين، فإذا رأيتها فاقرأ ميمًا لا نونًا.\n\nوتُخفى هذه الميم مع الغنة كما في الإخفاء الشفوي (الميم قبل الباء).",
+        "tr": "İklâb (الإقلاب) “çevirme” demektir. Sakin nûndan veya tenvinden sonra ب gelirse — aynı kelimede ya da sonraki kelimenin başında — nûn mîme dönüşür: أَنۢبِئْهُم, مِنۢ بَعْدِ, سَمِيعُۢ بَصِيرٌ.\n\nMushaf'ta bu yer, nûnun üzerinde ya da tenvinin ikinci işaretinin yerinde küçük bir mîm ۢ ile gösterilir. Onu görünce nûn değil mîm okuyun.\n\nBu mîm, “İhfâ-i şefevî” kuralındaki gibi (ب'den önce mîm) gizli ve gunneli okunur."
+      },
+      "how": {
+        "ru": "Мягко сомкните губы, без нажима, и тяните носовой звук 2 хараката. Затем раскройте губы на ب. Следите, чтобы перед мимом не проскользнул звук «н».",
+        "en": "Close your lips lightly, without pressing, and hold the nasal sound for 2 counts. Then open them on ب. Make sure no “n” sound slips in before the meem.",
+        "ar": "أطبق الشفتين برفق دون ضغط مع غنة بمقدار حركتين، ثم افتحهما بالباء. واحذر أن يظهر صوت النون قبل الميم.",
+        "tr": "Dudaklarınızı bastırmadan hafifçe kapatın ve genizden gelen sesi 2 hareke tutun. Sonra ب ile açın. Mîmden önce “n” sesi kaçmamasına dikkat edin."
+      },
+      "letters": "ب",
+      "examples": []
+    },
+    {
+      "slug": "ikhfa",
+      "target": "ikhafa",
+      "minutes": 5,
+      "title": {
+        "ru": "Ихфа — скрытый нун",
+        "en": "Ikhfa — the hidden noon",
+        "ar": "الإخفاء: النون المخفاة",
+        "tr": "İhfâ — gizli nûn"
+      },
+      "summary": {
+        "ru": "Перед 15 буквами нун с сукуном и танвин звучат скрыто, через нос, 2 хараката.",
+        "en": "Before 15 letters, a noon with sukun or a tanween is hidden and voiced through the nose for 2 counts.",
+        "ar": "تُخفى النون الساكنة والتنوين قبل خمسة عشر حرفًا مع غنة بمقدار حركتين.",
+        "tr": "15 harften önce sakin nûn ve tenvin gizlenir ve 2 hareke genizden okunur."
+      },
+      "explanation": {
+        "ru": "Ихфа (الإخفاء) значит «скрытие». Правило действует, когда после нуна с сукуном или танвина стоит одна из 15 букв: ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك — внутри слова (أَنتُمْ, يُنفِقُونَ) или на стыке слов (مِن قَبْلِ, رِيحًا صَرْصَرًا).\n\nЭто середина между ясным нуном (изхар) и полным слиянием (идгам): нун не выговаривается, но и не исчезает — от него остаётся носовой звук (гунна).\n\nГунна подстраивается под следующую букву: перед «толстыми» ص ض ط ظ ق она звучит плотнее, перед остальными — легче.",
+        "en": "Ikhfa (الإخفاء) means “hiding”. The rule applies when a noon with sukun or a tanween is followed by one of 15 letters: ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك — inside a word (أَنتُمْ, يُنفِقُونَ) or across words (مِن قَبْلِ, رِيحًا صَرْصَرًا).\n\nIt sits between a clear noon (izhar) and full merging (idgham): the noon is not articulated, yet it does not vanish — its nasal sound (ghunnah) remains.\n\nThe ghunnah takes on the colour of the next letter: before the heavy letters ص ض ط ظ ق it sounds fuller, before the others lighter.",
+        "ar": "الإخفاء لغةً الستر. ويكون إذا جاء بعد النون الساكنة أو التنوين أحدُ خمسة عشر حرفًا: ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك، في كلمة واحدة (أَنتُمْ، يُنفِقُونَ) أو في كلمتين (مِن قَبْلِ، رِيحًا صَرْصَرًا).\n\nوهو حالة بين الإظهار والإدغام: لا تُنطق النون من مخرجها، ولا تزول بالكلية، بل تبقى غنتها.\n\nوتتبع الغنة الحرفَ التالي: فتُفخَّم قبل حروف الاستعلاء ص ض ط ظ ق، وتُرقَّق قبل غيرها.",
+        "tr": "İhfâ (الإخفاء) “gizleme” demektir. Sakin nûndan veya tenvinden sonra şu 15 harften biri geldiğinde uygulanır: ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك — kelime içinde (أَنتُمْ, يُنفِقُونَ) veya iki kelime arasında (مِن قَبْلِ, رِيحًا صَرْصَرًا).\n\nİzhâr ile idğâm arasında bir durumdur: nûn mahrecinden söylenmez ama tamamen de kaybolmaz; genizden gelen sesi (gunne) kalır.\n\nGunne sonraki harfe uyar: kalın harfler ص ض ط ظ ق'dan önce dolgun, diğerlerinden önce ince okunur."
+      },
+      "how": {
+        "ru": "Не прижимайте язык к месту нуна. Подготовьте рот к следующей букве, тяните носовой звук 2 хараката и затем произнесите эту букву. Следите, чтобы гунна не звучала как «нг» и чтобы гласный перед ней не растягивался.",
+        "en": "Do not press your tongue on the noon's spot. Get your mouth ready for the next letter, hold the nasal sound for 2 counts, then say that letter. Do not let the ghunnah sound like “ng”, and do not stretch the vowel before it.",
+        "ar": "لا تُلصق اللسان بمخرج النون، بل هيّئ فمك للحرف التالي مع غنة بمقدار حركتين، ثم انطق الحرف. واحذر من خلط الغنة بصوت حرف آخر، ومن إشباع الحركة التي قبلها.",
+        "tr": "Dilinizi nûnun mahrecine dayamayın. Ağzınızı sonraki harfe hazırlayın, genizden gelen sesi 2 hareke tutun, sonra o harfi okuyun. Gunnenin “ng” gibi çıkmamasına ve önceki ünlünün uzamamasına dikkat edin."
+      },
+      "letters": "ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك",
+      "examples": []
+    },
+    {
+      "slug": "ikhfa-shafawi",
+      "target": "ikhafa_shafawi",
+      "minutes": 3,
+      "title": {
+        "ru": "Ихфа шафави — мим перед ب",
+        "en": "Labial ikhfa — meem before ب",
+        "ar": "الإخفاء الشفوي: الميم قبل الباء",
+        "tr": "İhfâ-i şefevî — ب'den önce mîm"
+      },
+      "summary": {
+        "ru": "Мим с сукуном перед ب звучит скрыто: губы смыкаются мягко, гунна — 2 хараката.",
+        "en": "A meem with sukun before ب is hidden: the lips close lightly and the ghunnah lasts 2 counts.",
+        "ar": "تُخفى الميم الساكنة قبل الباء بإطباق خفيف للشفتين مع غنة بمقدار حركتين.",
+        "tr": "ب'den önce sakin mîm gizli okunur: dudaklar hafifçe kapanır, gunne 2 hareke sürer."
+      },
+      "explanation": {
+        "ru": "Шафави (شفوي) значит «губной»: и мим, и ب произносятся губами. Если слово кончается мимом с сукуном, а следующее начинается с ب, мим читается скрыто, с носовым звуком (гунной): تَرْمِيهِم بِحِجَارَةٍ, وَمَا هُم بِمُؤْمِنِينَ.\n\nВ мусхафе над таким мимом нет знака сукуна — подсказка, что мим не читается ясно.\n\nЗвучит так же, как икляб: там нун сначала превращается в мим, а затем читается по этому правилу.",
+        "en": "Shafawi (شفوي) means “of the lips”: both meem and ب are made with the lips. If a word ends in a meem with sukun and the next word begins with ب, the meem is read hidden, with a nasal sound (ghunnah): تَرْمِيهِم بِحِجَارَةٍ, وَمَا هُم بِمُؤْمِنِينَ.\n\nIn the Mushaf such a meem has no sukun sign — a hint that it is not read clearly.\n\nIt sounds the same as iqlab: there the noon first turns into a meem and is then read by this rule.",
+        "ar": "سُمّي شفويًّا لأن الميم والباء تخرجان من الشفتين. فإذا انتهت الكلمة بميم ساكنة وابتدأت التالية بالباء، أُخفيت الميم مع الغنة: تَرْمِيهِم بِحِجَارَةٍ، وَمَا هُم بِمُؤْمِنِينَ.\n\nولا يُرسم السكون على هذه الميم في المصحف، دلالةً على أنها لا تُظهر.\n\nوهو في النطق كالإقلاب، إذ تُقلب النون هناك ميمًا ثم تُخفى على هذا الوجه.",
+        "tr": "Şefevî (شفوي) “dudakla ilgili” demektir: mîm de ب de dudaklardan çıkar. Kelime sakin mîmle biter ve sonraki kelime ب ile başlarsa, mîm gizli ve genizden sesle (gunne) okunur: تَرْمِيهِم بِحِجَارَةٍ, وَمَا هُم بِمُؤْمِنِينَ.\n\nMushaf'ta böyle bir mîmin üzerinde sükûn işareti yoktur; bu, mîmin açık okunmadığını gösterir.\n\nSesi iklâb ile aynıdır: orada nûn önce mîme dönüşür, sonra bu kurala göre okunur."
+      },
+      "how": {
+        "ru": "Сомкните губы мягко, без нажима, и тяните носовой звук 2 хараката. Затем раскройте губы на ب. Не сжимайте губы с силой и не произносите мим отдельно от ب.",
+        "en": "Close your lips lightly, without pressing, and hold the nasal sound for 2 counts. Then open them on ب. Do not squeeze the lips hard and do not say the meem separately from ب.",
+        "ar": "أطبق الشفتين إطباقًا خفيفًا دون ضغط مع غنة بمقدار حركتين، ثم افتحهما بالباء. ولا تضغط الشفتين بقوة، ولا تفصل الميم عن الباء.",
+        "tr": "Dudaklarınızı bastırmadan hafifçe kapatın ve genizden gelen sesi 2 hareke tutun. Sonra ب ile açın. Dudakları sıkıca bastırmayın ve mîmi ب'den ayrı söylemeyin."
+      },
+      "letters": "ب",
+      "examples": []
+    },
+    {
+      "slug": "idgham-shafawi",
+      "target": "idgham_shafawi",
+      "minutes": 3,
+      "title": {
+        "ru": "Идгам шафави — мим перед мимом",
+        "en": "Labial idgham — meem before meem",
+        "ar": "الإدغام الشفوي: الميم قبل الميم",
+        "tr": "İdğâm-ı şefevî — mîmden önce mîm"
+      },
+      "summary": {
+        "ru": "Мим с сукуном перед другим мимом сливается с ним в один удвоенный мим с гунной.",
+        "en": "A meem with sukun before another meem merges with it into one doubled meem with ghunnah.",
+        "ar": "تُدغم الميم الساكنة في الميم المتحركة فتصيران ميمًا مشدّدة مع الغنة.",
+        "tr": "Sakin mîm, başka bir mîmden önce onunla birleşip gunneli tek şeddeli mîm olur."
+      },
+      "explanation": {
+        "ru": "Если после мима с сукуном стоит огласованный мим, два мима сливаются в один удвоенный, как мим с шаддой. Классическое название — малый идгам одинаковых букв (إدغام المثلين الصغير). Например: لَهُم مَّا يَشَآءُونَ, كَم مِّن فِئَةٍ.\n\nНосовой звук (гунна) здесь обязателен: удвоенный мим всегда читается с гунной.\n\nВ мусхафе над первым мимом нет знака сукуна, а на втором стоит шадда — подсказка к слиянию.",
+        "en": "If a meem with sukun is followed by a voweled meem, the two merge into one doubled meem, like a meem with shadda. Its classical name is the minor idgham of identical letters (إدغام المثلين الصغير). For example: لَهُم مَّا يَشَآءُونَ, كَم مِّن فِئَةٍ.\n\nThe nasal sound (ghunnah) is required here: a doubled meem is always read with ghunnah.\n\nIn the Mushaf the first meem has no sukun sign and the second carries a shadda — a hint to merge them.",
+        "ar": "إذا جاء بعد الميم الساكنة ميمٌ متحركة أُدغمت الأولى في الثانية فصارتا ميمًا واحدة مشدّدة، ويُسمّى أيضًا إدغام المثلين الصغير. مثل: لَهُم مَّا يَشَآءُونَ، كَم مِّن فِئَةٍ.\n\nوالغنة هنا واجبة، لأن الميم المشدّدة تُنطق بالغنة دائمًا.\n\nولا يُرسم السكون على الميم الأولى في المصحف، وتُرسم الشدّة على الثانية دلالةً على الإدغام.",
+        "tr": "Sakin mîmden sonra harekeli bir mîm gelirse, iki mîm birleşip şeddeli tek bir mîm olur. Klasik adı küçük misleyn idğâmıdır (إدغام المثلين الصغير). Örnek: لَهُم مَّا يَشَآءُونَ, كَم مِّن فِئَةٍ.\n\nBurada gunne zorunludur: şeddeli mîm her zaman gunneyle okunur.\n\nMushaf'ta ilk mîmin üzerinde sükûn işareti yoktur, ikincisinde şedde vardır; bu, birleştirmeye işarettir."
+      },
+      "how": {
+        "ru": "Не произносите первый мим отдельно. Сомкните губы один раз, тяните носовой звук 2 хараката и раскройте губы уже на огласовке второго мима.",
+        "en": "Do not say the first meem separately. Close your lips once, hold the nasal sound for 2 counts, and open them on the vowel of the second meem.",
+        "ar": "لا تنطق الميم الأولى مستقلةً، بل أطبق الشفتين مرة واحدة مع غنة بمقدار حركتين، ثم افتحهما بحركة الميم الثانية.",
+        "tr": "İlk mîmi ayrıca söylemeyin. Dudaklarınızı bir kez kapatın, genizden gelen sesi 2 hareke tutun ve ikinci mîmin harekesiyle açın."
+      },
+      "letters": "م",
+      "examples": []
+    },
+    {
+      "slug": "izhar-shafawi",
+      "target": "izhar_shafawi",
+      "minutes": 3,
+      "title": {
+        "ru": "Изхар шафави — мим звучит ясно",
+        "en": "Labial izhar — a clear meem",
+        "ar": "الإظهار الشفوي: الميم واضحة",
+        "tr": "İzhâr-ı şefevî — mîm açık okunur"
+      },
+      "summary": {
+        "ru": "Мим с сукуном перед любой буквой, кроме م и ب, читается ясно и коротко.",
+        "en": "A meem with sukun before any letter except م and ب is read clearly and briefly.",
+        "ar": "تُظهر الميم الساكنة قبل جميع الحروف عدا الميم والباء.",
+        "tr": "Sakin mîm, م ve ب dışındaki her harften önce açık ve kısa okunur."
+      },
+      "explanation": {
+        "ru": "Изхар шафави — «ясный губной звук». Правило действует, когда после мима с сукуном стоит любая буква, кроме م и ب. Встреча бывает внутри слова (ٱلْحَمْدُ, أَمْوَٰلَ) и на стыке слов (لَكُمْ دِينُكُمْ, عَلَيْهِمْ وَلَا).\n\nМим произносится чисто и коротко: губы смыкаются и сразу размыкаются, носовой звук не затягивается.\n\nБудьте особенно внимательны перед و и ف: و тоже произносится губами, а ف — губой и зубами, поэтому мим легко «спрятать». Делать этого нельзя.",
+        "en": "Labial izhar means “a clear lip sound”. The rule applies when a meem with sukun is followed by any letter except م and ب. This happens inside a word (ٱلْحَمْدُ, أَمْوَٰلَ) and across words (لَكُمْ دِينُكُمْ, عَلَيْهِمْ وَلَا).\n\nThe meem is pronounced cleanly and briefly: the lips close and open at once, and the nasal sound is not held.\n\nTake extra care before و and ف: و is also made with the lips, and ف with the lip and teeth, so it is easy to “hide” the meem. This must not be done.",
+        "ar": "الإظهار الشفوي إظهار الميم الساكنة إذا جاء بعدها أيّ حرف غير الميم والباء، في كلمة واحدة (ٱلْحَمْدُ، أَمْوَٰلَ) أو في كلمتين (لَكُمْ دِينُكُمْ، عَلَيْهِمْ وَلَا).\n\nفتُنطق الميم واضحةً قصيرة: تنطبق الشفتان ثم تنفتحان مباشرة دون إطالة الغنة.\n\nويشتدّ الإظهار عند الواو والفاء، لأن الواو تخرج من الشفتين والفاء من الشفة والأسنان، فيسهل إخفاء الميم عندهما خطأً.",
+        "tr": "İzhâr-ı şefevî “açık dudak sesi” demektir. Sakin mîmden sonra م ve ب dışında herhangi bir harf geldiğinde uygulanır. Bu, kelime içinde (ٱلْحَمْدُ, أَمْوَٰلَ) ve iki kelime arasında (لَكُمْ دِينُكُمْ, عَلَيْهِمْ وَلَا) olur.\n\nMîm temiz ve kısa söylenir: dudaklar kapanır ve hemen açılır, genizden gelen ses uzatılmaz.\n\nو ve ف'den önce özellikle dikkatli olun: و da dudaklardan, ف ise dudak ve dişlerden çıkar; bu yüzden mîmi “gizlemek” kolaydır. Bunu yapmamalısınız."
+      },
+      "how": {
+        "ru": "Сомкните губы, произнесите короткий мим и сразу переходите к следующей букве. Не тяните носовой звук и не добавляйте гласного после мима. Перед و и ف доводите мим до конца и только потом переходите дальше.",
+        "en": "Close your lips, say a short meem and move straight on to the next letter. Do not hold the nasal sound and do not add a vowel after the meem. Before و and ف, complete the meem fully before moving on.",
+        "ar": "أطبق الشفتين وانطق الميم ساكنةً قصيرة، ثم انتقل إلى الحرف التالي مباشرة، دون إطالة الغنة ودون تحريك الميم. وأتمَّ نطقها قبل الواو والفاء.",
+        "tr": "Dudaklarınızı kapatın, kısa bir mîm söyleyin ve hemen sonraki harfe geçin. Genizden gelen sesi uzatmayın ve mîmden sonra ünlü eklemeyin. و ve ف'den önce mîmi tam söyleyip sonra geçin."
+      },
+      "letters": "ء ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل ه و ي",
+      "examples": []
+    },
+    {
+      "slug": "ghunnah",
+      "target": "ghunnah",
+      "minutes": 3,
+      "title": {
+        "ru": "Гунна — нун и мим с шаддой",
+        "en": "Ghunnah — noon and meem with shadda",
+        "ar": "الغنة: النون والميم المشدّدتان",
+        "tr": "Gunne — şeddeli nûn ve mîm"
+      },
+      "summary": {
+        "ru": "Нун и мим с шаддой всегда звучат с носовым звуком длиной 2 хараката.",
+        "en": "A noon or meem with shadda always carries a nasal sound lasting 2 counts.",
+        "ar": "تُنطق النون والميم المشدّدتان بغنة بمقدار حركتين دائمًا.",
+        "tr": "Şeddeli nûn ve mîm her zaman 2 hareke süren genizden bir sesle okunur."
+      },
+      "explanation": {
+        "ru": "Гунна (الغنة) — носовой звук, который есть в буквах ن и م. Сильнее всего он звучит, когда на нуне или миме стоит шадда: نّ или مّ. Например: إِنَّ, ثُمَّ, ٱلنَّاسِ, مِمَّا.\n\nШадда значит, что буква удвоена: первая её половина — с сукуном, вторая — с огласовкой. Гунна тянется на первой половине.\n\nПравило действует и в середине, и в конце слова; гунна сохраняется даже при остановке на таком слове (ثُمَّ).",
+        "en": "Ghunnah (الغنة) is the nasal sound that the letters ن and م carry. It is strongest when the noon or meem has a shadda: نّ or مّ. For example: إِنَّ, ثُمَّ, ٱلنَّاسِ, مِمَّا.\n\nA shadda means the letter is doubled: its first half has a sukun, its second half a vowel. The ghunnah is held on that first half.\n\nThe rule applies in the middle and at the end of a word; the ghunnah stays even when you stop on such a word (ثُمَّ).",
+        "ar": "الغنة صوت أغنّ يخرج من الخيشوم، وهي صفة لازمة للنون والميم، وأكمل ما تكون إذا شُدّدتا: نّ مّ. مثل: إِنَّ، ثُمَّ، ٱلنَّاسِ، مِمَّا.\n\nوالحرف المشدّد حرفان: أولهما ساكن والثاني متحرك، وتُمدّ الغنة على الأول منهما.\n\nويكون ذلك في وسط الكلمة وآخرها، وتبقى الغنة عند الوقف على مثل: ثُمَّ.",
+        "tr": "Gunne (الغنة), ن ve م harflerinde bulunan genizden gelen sestir. Nûn veya mîm şeddeli olduğunda en güçlü hâlini alır: نّ ya da مّ. Örnek: إِنَّ, ثُمَّ, ٱلنَّاسِ, مِمَّا.\n\nŞedde, harfin iki kat olduğunu gösterir: ilk yarısı sakin, ikinci yarısı harekelidir. Gunne bu ilk yarıda uzatılır.\n\nKural kelimenin ortasında da sonunda da geçerlidir; böyle bir kelimede durduğunuzda da gunne korunur (ثُمَّ)."
+      },
+      "how": {
+        "ru": "Удерживайте носовой звук 2 хараката, затем произнесите огласовку. Проверка: если зажать нос, звук прервётся — значит, он идёт через нос, как нужно. Не сокращайте гунну и не тяните её дольше.",
+        "en": "Hold the nasal sound for 2 counts, then say the vowel. A check: if you pinch your nose, the sound stops — so it is coming through the nose as it should. Do not cut the ghunnah short or stretch it longer.",
+        "ar": "أمسك الغنة بمقدار حركتين ثم انطق الحركة. وللتحقق: لو أمسكت أنفك لانقطع الصوت، وذلك دليل على خروجه من الخيشوم. ولا تنقص الغنة عن حركتين ولا تزد عليهما.",
+        "tr": "Genizden gelen sesi 2 hareke tutun, sonra harekeyi söyleyin. Kontrol: burnunuzu tutarsanız ses kesilir; bu, sesin olması gerektiği gibi genizden geldiğini gösterir. Gunneyi kısaltmayın ve daha uzun tutmayın."
+      },
+      "letters": "ن م",
+      "examples": []
+    },
+    {
+      "slug": "qalqalah",
+      "target": "qalaqah",
+      "minutes": 4,
+      "title": {
+        "ru": "Калькаля — отскок звука",
+        "en": "Qalqalah — the echoing bounce",
+        "ar": "القلقلة",
+        "tr": "Kalkale — sesin yankılanması"
+      },
+      "summary": {
+        "ru": "Буквы ق ط ب ج د с сукуном произносятся с лёгким отскоком — коротким эхом.",
+        "en": "The letters ق ط ب ج د with sukun are pronounced with a light bounce — a short echo.",
+        "ar": "تُنطق حروف «قطب جد» الساكنة بنبرة قلقلة خفيفة.",
+        "tr": "Sakin ق ط ب ج د harfleri hafif bir yankıyla okunur."
+      },
+      "explanation": {
+        "ru": "Калькаля (القلقلة) значит «встряхивание». В пяти буквах ق ط ب ج د (их запоминают фразой قُطْبُ جَدٍّ) звук рождается из плотной смычки. Когда такая буква стоит с сукуном, смычку размыкают коротким толчком, иначе буква не будет слышна.\n\nСукун бывает постоянным: внутри слова (يَجْعَلُونَ) или в конце слова при слитном чтении (قَدْ أَفْلَحَ). Бывает и временным: при остановке последняя буква теряет огласовку (ٱلْفَلَقِ → ٱلْفَلَقْ). Тогда отскок звучит сильнее всего.",
+        "en": "Qalqalah (القلقلة) means “shaking”. In the five letters ق ط ب ج د (remembered as قُطْبُ جَدٍّ) the sound is born from a firm closure. When such a letter has a sukun, the closure is released with a short push, otherwise the letter would not be heard.\n\nThe sukun can be permanent: inside a word (يَجْعَلُونَ) or at the end of a word in connected reading (قَدْ أَفْلَحَ). It can also be temporary: when you stop, the last letter loses its vowel (ٱلْفَلَقِ → ٱلْفَلَقْ). Then the bounce is strongest.",
+        "ar": "القلقلة لغةً الاضطراب. وحروفها خمسة يجمعها قولهم: «قُطْبُ جَدٍّ» (ق ط ب ج د)، وفيها انحباس قوي للصوت، فإذا سكنت احتاجت إلى نبرة تفتح المخرج، وإلا لم يظهر الحرف.\n\nوالسكون إما أصلي: في وسط الكلمة (يَجْعَلُونَ) أو في آخرها وصلًا (قَدْ أَفْلَحَ)، وإما عارض للوقف (ٱلْفَلَقِ ← ٱلْفَلَقْ)، والقلقلة عند الوقف أقوى.",
+        "tr": "Kalkale (القلقلة) “sarsılma” demektir. Beş harfte — ق ط ب ج د (قُطْبُ جَدٍّ diye ezberlenir) — ses sıkı bir kapanmadan doğar. Bu harf sakin olduğunda kapanma kısa bir itişle açılır; aksi hâlde harf duyulmaz.\n\nSükûn kalıcı olabilir: kelime içinde (يَجْعَلُونَ) veya bağlayarak okurken kelime sonunda (قَدْ أَفْلَحَ). Geçici de olabilir: dururken son harf harekesini kaybeder (ٱلْفَلَقِ → ٱلْفَلَقْ). O zaman yankı en güçlüdür."
+      },
+      "how": {
+        "ru": "Произнесите букву, дайте ей короткий отскок и сразу переходите дальше. Отскок — это эхо, а не гласный: не превращайте его в «а», «и» или «у». При остановке на букве калькали в конце слова делайте отскок отчётливее.",
+        "en": "Say the letter, give it a short bounce and move on at once. The bounce is an echo, not a vowel: do not turn it into “a”, “i” or “u”. When you stop on a qalqalah letter at the end of a word, make the bounce clearer.",
+        "ar": "انطق الحرف بنبرة قصيرة ثم انتقل مباشرة. والقلقلة صدى لا حركة، فلا تجعلها فتحة ولا كسرة ولا ضمة. وعند الوقف على حرف القلقلة في آخر الكلمة تكون النبرة أوضح.",
+        "tr": "Harfi söyleyin, ona kısa bir yankı verin ve hemen devam edin. Yankı bir ünlü değildir: onu “a”, “i” ya da “u” sesine çevirmeyin. Kelime sonundaki kalkale harfinde dururken yankıyı daha belirgin yapın."
+      },
+      "letters": "ق ط ب ج د",
+      "examples": []
+    },
+    {
+      "slug": "madd-natural",
+      "target": "madda_normal",
+      "minutes": 4,
+      "title": {
+        "ru": "Мадд табии — естественное удлинение",
+        "en": "Natural madd — the basic lengthening",
+        "ar": "المد الطبيعي",
+        "tr": "Medd-i tabîî — doğal uzatma"
+      },
+      "summary": {
+        "ru": "Буквы мадда ا و ي тянутся на 2 хараката — это основа всех остальных маддов.",
+        "en": "The madd letters ا و ي are lengthened for 2 counts — the basis of every other madd.",
+        "ar": "تُمدّ حروف المد ا و ي حركتين، وهو أصل المدود كلها.",
+        "tr": "Medd harfleri ا و ي 2 hareke uzatılır; bu, diğer bütün medlerin temelidir."
+      },
+      "explanation": {
+        "ru": "Мадд (المد) — удлинение гласного звука. Букв мадда три: ا после фатхи (قَالَ), و с сукуном после даммы (يَقُولُ), ي с сукуном после кясры (قِيلَ). Их роль играют и малые знаки: алиф ـٰ (ٱلرَّحْمَٰنِ), а также вав ۥ и йа ۦ после хаъ местоимения (لَهُۥ, بِهِۦ).\n\nЕсли после буквы мадда нет ни хамзы, ни сукуна, это мадд табии — естественный. Он длится 2 хараката; харака — время одного короткого гласного.\n\nОстальные мадды начинаются с этих же 2 харакатов и удлиняются, когда за буквой мадда идёт хамза или сукун. О них — следующие уроки.",
+        "en": "Madd (المد) means lengthening a vowel. There are three madd letters: ا after a fatha (قَالَ), و with sukun after a damma (يَقُولُ), and ي with sukun after a kasra (قِيلَ). Small signs play the same role: the dagger alif ـٰ (ٱلرَّحْمَٰنِ), and the small waw ۥ and ya ۦ after the pronoun ha (لَهُۥ, بِهِۦ).\n\nIf a madd letter is followed by neither a hamza nor a sukun, it is the natural madd. It lasts 2 counts; one count (haraka) is the time of one short vowel.\n\nAll other madds start from these same 2 counts and grow longer when a hamza or a sukun follows the madd letter. They are the next lessons.",
+        "ar": "المد إطالة الصوت بحرف من حروف المد الثلاثة: الألف بعد فتح (قَالَ)، والواو الساكنة بعد ضم (يَقُولُ)، والياء الساكنة بعد كسر (قِيلَ). ويقوم مقامها الألف الصغيرة ـٰ (ٱلرَّحْمَٰنِ)، والواو والياء الصغيرتان بعد هاء الضمير (لَهُۥ، بِهِۦ).\n\nفإن لم يأتِ بعد حرف المد همز ولا سكون فهو المد الطبيعي، ومقداره حركتان، والحركة زمن نطق حركة قصيرة.\n\nوسائر المدود تبدأ من هاتين الحركتين وتزيد عليهما إذا جاء بعد حرف المد همز أو سكون، وهي موضوع الدروس التالية.",
+        "tr": "Medd (المد) ünlü sesi uzatmaktır. Üç medd harfi vardır: üstünden sonra ا (قَالَ), ötreden sonra sakin و (يَقُولُ), esreden sonra sakin ي (قِيلَ). Küçük işaretler de aynı görevi görür: küçük elif ـٰ (ٱلرَّحْمَٰنِ) ile zamir hâsından sonraki küçük vâv ۥ ve yâ ۦ (لَهُۥ, بِهِۦ).\n\nMedd harfinden sonra ne hemze ne de sükûn gelirse bu medd-i tabîîdir. 2 hareke sürer; bir hareke, kısa bir ünlünün süresidir.\n\nDiğer medler aynı 2 harekeyle başlar ve medd harfinden sonra hemze ya da sükûn gelince uzar. Onlar sonraki derslerdedir."
+      },
+      "how": {
+        "ru": "Тяните гласный ровно 2 хараката: короче — и долгий звук пропадёт, длиннее — и появится лишнее удлинение. Удобно мысленно загибать два пальца в спокойном темпе. Держите один темп во всём чтении.",
+        "en": "Hold the vowel for exactly 2 counts: shorter and the long sound is lost, longer and you add a lengthening that is not there. It helps to fold two fingers in your mind at a calm pace. Keep one pace throughout your recitation.",
+        "ar": "مُدّ الصوت حركتين تمامًا: فإن نقصت ضاع المد، وإن زدت أضفت مدًّا ليس في الكلمة. ويُستعان على ذلك بقبض إصبعين بتأنٍّ، مع الثبات على سرعة واحدة في التلاوة كلها.",
+        "tr": "Ünlüyü tam 2 hareke uzatın: kısa tutarsanız uzun ses kaybolur, uzun tutarsanız kelimede olmayan bir uzatma eklersiniz. Sakin bir tempoda içinizden iki parmak bükmek yardımcı olur. Okuma boyunca aynı tempoyu koruyun."
+      },
+      "letters": "ا و ي",
+      "examples": []
+    },
+    {
+      "slug": "madd-connected",
+      "target": "madd_muttasil",
+      "minutes": 4,
+      "title": {
+        "ru": "Мадд муттасыль — связанный мадд",
+        "en": "Connected madd (muttasil)",
+        "ar": "المد الواجب المتصل",
+        "tr": "Medd-i muttasıl — bitişik medd"
+      },
+      "summary": {
+        "ru": "Буква мадда и хамза в одном слове: тяните 4 или 5 харакатов.",
+        "en": "A madd letter and a hamza in the same word: lengthen for 4 or 5 counts.",
+        "ar": "حرف المد والهمز في كلمة واحدة: يُمدّ أربع حركات أو خمسًا.",
+        "tr": "Medd harfi ve hemze aynı kelimede: 4 veya 5 hareke uzatın."
+      },
+      "explanation": {
+        "ru": "Обычный мадд длится 2 хараката. Но если сразу за буквой мадда в том же слове стоит хамза (ء أ ؤ ئ), мадд становится связанным — муттасыль (المتصل): جَآءَ, ٱلسَّمَآءِ, سُوٓءَ, سِيٓـَٔتْ.\n\nЕго называют также ваджиб — «обязательный»: все чтецы тянут его дольше естественного мадда. В мусхафе над буквой мадда стоит волнистый знак удлинения ـٓ.\n\nВ цветном мусхафе он окрашен тем же красным, что и мунфасыль (следующий урок). Разница — в том, где стоит хамза: здесь она в том же слове.",
+        "en": "An ordinary madd lasts 2 counts. But if a hamza (ء أ ؤ ئ) comes right after the madd letter in the same word, the madd becomes connected — muttasil (المتصل): جَآءَ, ٱلسَّمَآءِ, سُوٓءَ, سِيٓـَٔتْ.\n\nIt is also called wajib, “obligatory”: every reciter lengthens it beyond the natural madd. In the Mushaf a wavy lengthening sign ـٓ stands over the madd letter.\n\nIn the coloured Mushaf it has the same red as munfasil (the next lesson). The difference is where the hamza is: here it is in the same word.",
+        "ar": "المد الطبيعي حركتان، فإذا جاء بعد حرف المد همزٌ (ء أ ؤ ئ) في الكلمة نفسها صار مدًّا متصلًا: جَآءَ، ٱلسَّمَآءِ، سُوٓءَ، سِيٓـَٔتْ.\n\nويُسمّى واجبًا لاتفاق القرّاء على مدّه زيادةً على المد الطبيعي، وتُرسم فوق حرف المد في المصحف علامة المد ـٓ.\n\nويُلوَّن في مصحف التجويد بالأحمر نفسه الذي يُلوَّن به المنفصل (الدرس التالي)، والفرق بينهما موضع الهمز، وهو هنا في الكلمة نفسها.",
+        "tr": "Normal medd 2 hareke sürer. Ama aynı kelimede medd harfinin hemen ardından hemze (ء أ ؤ ئ) gelirse medd, bitişik medd — muttasıl (المتصل) — olur: جَآءَ, ٱلسَّمَآءِ, سُوٓءَ, سِيٓـَٔتْ.\n\nBuna vâcib, yani “zorunlu” medd de denir: bütün kurrâ onu doğal medden uzun okur. Mushaf'ta medd harfinin üzerinde dalgalı medd işareti ـٓ bulunur.\n\nRenkli Mushaf'ta munfasıl ile aynı kırmızıyla boyanır (sonraki ders). Fark, hemzenin yerindedir: burada hemze aynı kelimededir."
+      },
+      "how": {
+        "ru": "По риваяту Хафса через аш-Шатыбию тяните 4 или 5 харакатов. Выберите одну длину и держите её во всём чтении. Если вы останавливаетесь на слове, которое кончается хамзой (ٱلسَّمَآءْ), допустимо и 6.",
+        "en": "In the riwaya of Hafs via ash-Shatibiyya, lengthen for 4 or 5 counts. Pick one length and keep it throughout your recitation. If you stop on a word that ends in a hamza (ٱلسَّمَآءْ), 6 is also allowed.",
+        "ar": "يُمدّ في رواية حفص من طريق الشاطبية أربع حركات أو خمسًا، مع التزام مقدار واحد في التلاوة كلها. وإذا وقفت على كلمة آخرها همز (ٱلسَّمَآءْ) جاز المد ست حركات أيضًا.",
+        "tr": "Şâtıbiyye tarikiyle Hafs rivayetinde 4 veya 5 hareke uzatın. Bir uzunluk seçin ve okuma boyunca onu koruyun. Hemzeyle biten bir kelimede durursanız (ٱلسَّمَآءْ) 6 hareke de caizdir."
+      },
+      "letters": "ا و ي ء",
+      "examples": []
+    },
+    {
+      "slug": "madd-separated",
+      "target": "madd_munfasil",
+      "minutes": 4,
+      "title": {
+        "ru": "Мадд мунфасыль — разделённый мадд",
+        "en": "Separated madd (munfasil)",
+        "ar": "المد المنفصل",
+        "tr": "Medd-i munfasıl — ayrı medd"
+      },
+      "summary": {
+        "ru": "Буква мадда в конце слова, а хамза — в начале следующего: 4 или 5 харакатов.",
+        "en": "A madd letter ends one word and a hamza starts the next: 4 or 5 counts.",
+        "ar": "حرف المد في آخر كلمة والهمز في أول التالية: أربع حركات أو خمس.",
+        "tr": "Medd harfi bir kelimenin sonunda, hemze sonrakinin başında: 4 veya 5 hareke."
+      },
+      "explanation": {
+        "ru": "Обычный мадд длится 2 хараката. Если слово кончается буквой мадда, а следующее начинается с хамзы, получается разделённый мадд — мунфасыль (المنفصل): بِمَآ أُنزِلَ, إِنَّآ أَعْطَيْنَٰكَ, فِىٓ أَنفُسِكُمْ.\n\nСюда относятся и слова, написанные слитно: يَـٰٓأَيُّهَا, هَـٰٓؤُلَآءِ. И мадд силя кубра: хаъ местоимения перед хамзой (مَالَهُۥٓ أَخْلَدَهُۥ).\n\nЭтот мадд действует только при слитном чтении. Если остановиться на первом слове, хамзы после него уже нет.",
+        "en": "An ordinary madd lasts 2 counts. If a word ends in a madd letter and the next word begins with a hamza, you get the separated madd — munfasil (المنفصل): بِمَآ أُنزِلَ, إِنَّآ أَعْطَيْنَٰكَ, فِىٓ أَنفُسِكُمْ.\n\nWords written joined also belong here: يَـٰٓأَيُّهَا, هَـٰٓؤُلَآءِ. So does the major silah: the pronoun ha before a hamza (مَالَهُۥٓ أَخْلَدَهُۥ).\n\nThis madd applies only when you read on. If you stop on the first word, no hamza follows it any more.",
+        "ar": "المد الطبيعي حركتان، فإذا انتهت الكلمة بحرف مد وابتدأت التالية بهمز كان مدًّا منفصلًا: بِمَآ أُنزِلَ، إِنَّآ أَعْطَيْنَٰكَ، فِىٓ أَنفُسِكُمْ.\n\nويلحق به ما اتصل رسمًا وانفصل حكمًا: يَـٰٓأَيُّهَا، هَـٰٓؤُلَآءِ، وكذلك الصلة الكبرى: هاء الضمير قبل الهمز (مَالَهُۥٓ أَخْلَدَهُۥ).\n\nولا يثبت هذا المد إلا في الوصل، فإذا وقفت على الكلمة الأولى لم يبقَ بعدها همز.",
+        "tr": "Normal medd 2 hareke sürer. Kelime medd harfiyle biter ve sonraki kelime hemzeyle başlarsa ayrı medd — munfasıl (المنفصل) — olur: بِمَآ أُنزِلَ, إِنَّآ أَعْطَيْنَٰكَ, فِىٓ أَنفُسِكُمْ.\n\nBitişik yazılan kelimeler de buraya girer: يَـٰٓأَيُّهَا, هَـٰٓؤُلَآءِ. Sıla-i kübrâ da öyledir: hemzeden önceki zamir hâsı (مَالَهُۥٓ أَخْلَدَهُۥ).\n\nBu medd yalnızca bağlayarak okurken geçerlidir. İlk kelimede durursanız ardından artık hemze gelmez."
+      },
+      "how": {
+        "ru": "По риваяту Хафса через аш-Шатыбию тяните 4 или 5 харакатов. Держите одну длину во всём чтении и не делайте мунфасыль длиннее муттасыля. При остановке на первом слове тяните 2 хараката, а силя не читается вовсе.",
+        "en": "In the riwaya of Hafs via ash-Shatibiyya, lengthen for 4 or 5 counts. Keep one length throughout and never make munfasil longer than muttasil. If you stop on the first word, hold 2 counts, and the silah is not read at all.",
+        "ar": "يُمدّ في رواية حفص من طريق الشاطبية أربع حركات أو خمسًا، مع التسوية في التلاوة كلها، ولا يزيد المنفصل على المتصل. فإن وقفت على الكلمة الأولى مددت حركتين، وتسقط الصلة.",
+        "tr": "Şâtıbiyye tarikiyle Hafs rivayetinde 4 veya 5 hareke uzatın. Okuma boyunca tek bir uzunluk tutun ve munfasılı muttasıldan uzun yapmayın. İlk kelimede durursanız 2 hareke uzatın; sıla ise hiç okunmaz."
+      },
+      "letters": "ا و ي ء",
+      "examples": []
+    },
+    {
+      "slug": "madd-necessary",
+      "target": "madda_necessary",
+      "minutes": 5,
+      "title": {
+        "ru": "Мадд лязим — всегда 6 харакатов",
+        "en": "Necessary madd — always 6 counts",
+        "ar": "المد اللازم",
+        "tr": "Medd-i lâzım — her zaman 6 hareke"
+      },
+      "summary": {
+        "ru": "После буквы мадда постоянный сукун или шадда — тяните 6 харакатов.",
+        "en": "A permanent sukun or shadda after a madd letter: lengthen for 6 counts.",
+        "ar": "سكون أصلي أو شدّة بعد حرف المد: يُمدّ ست حركات.",
+        "tr": "Medd harfinden sonra aslî sükûn veya şedde: 6 hareke uzatın."
+      },
+      "explanation": {
+        "ru": "Обычный мадд длится 2 хараката. Если же сразу после буквы мадда стоит постоянный сукун или шадда — и при слитном чтении, и при остановке, — мадд становится лязим, «обязательным» (اللازم), и тянется на 6 харакатов: ٱلضَّآلِّينَ, ٱلطَّآمَّةُ, دَآبَّةٍ.\n\nОн есть и в буквах в начале сур, если название буквы — три звука с маддом посередине: لٓ مٓ صٓ قٓ نٓ سٓ كٓ (الٓمٓ, قٓ). В мусхафе над ними стоит знак ـٓ.\n\nБуквы حٰ يٰ طٰ هٰ رٰ тянутся лишь на 2 хараката, а у ع (كٓهيعٓصٓ, عٓسٓقٓ) допустимо 4 или 6.",
+        "en": "An ordinary madd lasts 2 counts. But if a permanent sukun or shadda comes right after the madd letter — both when reading on and when stopping — the madd becomes lazim, “necessary” (اللازم), and is held for 6 counts: ٱلضَّآلِّينَ, ٱلطَّآمَّةُ, دَآبَّةٍ.\n\nIt also occurs in the letters at the start of surahs whose names are three sounds with a madd in the middle: لٓ مٓ صٓ قٓ نٓ سٓ كٓ (الٓمٓ, قٓ). The Mushaf marks them with ـٓ.\n\nThe letters حٰ يٰ طٰ هٰ رٰ take only 2 counts, while ع (كٓهيعٓصٓ, عٓسٓقٓ) may take 4 or 6.",
+        "ar": "المد الطبيعي حركتان، فإذا جاء بعد حرف المد سكون أصلي أو شدّة، ثابتان وصلًا ووقفًا، صار مدًّا لازمًا يُمدّ ست حركات: ٱلضَّآلِّينَ، ٱلطَّآمَّةُ، دَآبَّةٍ.\n\nويكون أيضًا في الحروف المقطّعة في أوائل السور إذا كان هجاء الحرف ثلاثة أحرف أوسطها حرف مد: لٓ مٓ صٓ قٓ نٓ سٓ كٓ (الٓمٓ، قٓ)، وتُرسم فوقها علامة المد ـٓ.\n\nأما حٰ يٰ طٰ هٰ رٰ فتُمدّ حركتين فقط، ويجوز في العين (كٓهيعٓصٓ، عٓسٓقٓ) أربع حركات أو ست.",
+        "tr": "Normal medd 2 hareke sürer. Ama medd harfinin hemen ardından, hem bağlayarak okurken hem dururken kalan aslî bir sükûn veya şedde gelirse medd, lâzım — “gerekli” (اللازم) — olur ve 6 hareke uzatılır: ٱلضَّآلِّينَ, ٱلطَّآمَّةُ, دَآبَّةٍ.\n\nSure başlarındaki harflerde de bulunur; harfin adı, ortasında medd olan üç sesten oluşuyorsa: لٓ مٓ صٓ قٓ نٓ سٓ كٓ (الٓمٓ, قٓ). Mushaf'ta üzerlerinde ـٓ işareti vardır.\n\nحٰ يٰ طٰ هٰ رٰ harfleri yalnızca 2 hareke uzatılır; ع ise (كٓهيعٓصٓ, عٓسٓقٓ) 4 veya 6 hareke okunabilir."
+      },
+      "how": {
+        "ru": "Тяните ровно 6 харакатов — втрое дольше естественного мадда. Эта длина одинакова у всех чтецов, сокращать её нельзя. Держите звук ровным до самой шадды или буквы с сукуном и не делайте перед ней паузы.",
+        "en": "Hold exactly 6 counts — three times the natural madd. All reciters agree on this length; it must not be shortened. Keep the sound steady right up to the shadda or the letter with sukun, with no pause before it.",
+        "ar": "مُدّه ست حركات تامّة، أي ثلاثة أضعاف المد الطبيعي، وهو مقدار متفق عليه لا يجوز قصره. وأبقِ الصوت مستويًا حتى الحرف المشدّد أو الساكن دون سكت قبله.",
+        "tr": "Tam 6 hareke uzatın — doğal meddin üç katı. Bu uzunlukta bütün kurrâ birleşir; kısaltılmaz. Sesi şeddeli ya da sakin harfe kadar düz tutun ve öncesinde durmayın."
+      },
+      "letters": "ا و ي",
+      "examples": []
+    },
+    {
+      "slug": "madd-permissible",
+      "target": "madda_permissible",
+      "minutes": 4,
+      "title": {
+        "ru": "Мадд джаиз — удлинение при остановке",
+        "en": "Permissible madd — lengthening at a stop",
+        "ar": "المد الجائز: العارض للسكون",
+        "tr": "Medd-i câiz — durakta uzatma"
+      },
+      "summary": {
+        "ru": "При остановке после буквы мадда или лина можно тянуть 2, 4 или 6 харакатов.",
+        "en": "When you stop after a madd or leen letter, you may lengthen for 2, 4 or 6 counts.",
+        "ar": "عند الوقف بعد حرف مد أو لين يجوز المد حركتين أو أربعًا أو ستًّا.",
+        "tr": "Medd veya lîn harfinden sonra durunca 2, 4 veya 6 hareke uzatılabilir."
+      },
+      "explanation": {
+        "ru": "Когда вы останавливаетесь на слове, его последняя буква теряет огласовку и становится сакин. Если перед ней стоит буква мадда, получается мадд из-за временного сукуна — арид (المد العارض للسكون): ٱلرَّحِيمْ, نَسْتَعِينْ, ٱلْعَٰلَمِينْ. Его называют джаиз — «допустимый»: длину выбирает чтец.\n\nТо же бывает с буквами лин — و или ي с сукуном после фатхи: خَوْفْ, ٱلْبَيْتْ.\n\nПри слитном чтении сукуна нет: буква мадда остаётся обычным маддом в 2 хараката, а лин не тянется вовсе.",
+        "en": "When you stop on a word, its last letter loses its vowel and takes a sukun. If a madd letter stands before it, you get the madd caused by a temporary sukun — ʿarid (المد العارض للسكون): ٱلرَّحِيمْ, نَسْتَعِينْ, ٱلْعَٰلَمِينْ. It is called jaʾiz, “permissible”, because the reciter chooses the length.\n\nThe same happens with the leen letters — و or ي with sukun after a fatha: خَوْفْ, ٱلْبَيْتْ.\n\nIn connected reading there is no sukun: the madd letter stays an ordinary 2-count madd, and a leen letter is not lengthened at all.",
+        "ar": "إذا وقفت على كلمة سكن آخرها للوقف، فإن كان قبله حرف مد صار مدًّا عارضًا للسكون: ٱلرَّحِيمْ، نَسْتَعِينْ، ٱلْعَٰلَمِينْ. ويُسمّى جائزًا لأن القارئ يختار مقداره.\n\nومثله حرفا اللين، وهما الواو والياء الساكنتان بعد فتح: خَوْفْ، ٱلْبَيْتْ.\n\nأما في الوصل فلا سكون، فيبقى حرف المد مدًّا طبيعيًّا بمقدار حركتين، ولا يُمدّ حرف اللين.",
+        "tr": "Bir kelimede durduğunuzda son harf harekesini kaybeder ve sakin olur. Ondan önce bir medd harfi varsa, geçici sükûndan doğan medd — ârız (المد العارض للسكون) — oluşur: ٱلرَّحِيمْ, نَسْتَعِينْ, ٱلْعَٰلَمِينْ. Buna câiz, yani “caiz olan” medd denir, çünkü uzunluğu okuyan seçer.\n\nAynısı lîn harflerinde de olur — üstünden sonra sakin و veya ي: خَوْفْ, ٱلْبَيْتْ.\n\nBağlayarak okurken sükûn yoktur: medd harfi 2 harekelik normal medd olarak kalır, lîn harfi ise hiç uzatılmaz."
+      },
+      "how": {
+        "ru": "При остановке тяните 2, 4 или 6 харакатов. Выберите одну длину и держите её во всём чтении. Без остановки читайте как обычно: мадд — 2 хараката, лин — без удлинения.",
+        "en": "When stopping, lengthen for 2, 4 or 6 counts. Choose one length and keep it throughout your recitation. Without a stop, read as usual: a madd for 2 counts, a leen letter with no lengthening.",
+        "ar": "عند الوقف مُدّ حركتين أو أربعًا أو ستًّا، والتزم وجهًا واحدًا في التلاوة كلها. وفي الوصل اقرأ كالمعتاد: المد حركتان، واللين بلا مد.",
+        "tr": "Dururken 2, 4 veya 6 hareke uzatın. Bir uzunluk seçin ve okuma boyunca onu koruyun. Durmadan okurken her zamanki gibi okuyun: medd 2 hareke, lîn uzatılmadan."
+      },
+      "letters": "ا و ي",
+      "examples": []
+    },
+    {
+      "slug": "idgham-mutajanisayn",
+      "target": "idgham_mutajanisayn",
+      "minutes": 4,
+      "title": {
+        "ru": "Идгам мутаджанисайн — буквы одного выхода",
+        "en": "Idgham of kindred letters",
+        "ar": "إدغام المتجانسين",
+        "tr": "Mütecâniseyn idğâmı — aynı mahreçli harfler"
+      },
+      "summary": {
+        "ru": "Из двух букв с одним местом выхода первая, с сукуном, сливается со второй.",
+        "en": "Of two letters with the same point of articulation, the first, with sukun, merges into the second.",
+        "ar": "يُدغم الحرف الساكن في حرف يتّحد معه مخرجًا ويختلف عنه صفةً.",
+        "tr": "Mahreci aynı iki harften sakin olan ilki ikincisine katılır."
+      },
+      "explanation": {
+        "ru": "Мутаджанисайн (المتجانسان) — «однородные»: две буквы рождаются в одном месте, но отличаются признаками. Если первая стоит с сукуном, а вторая с огласовкой, первая переходит во вторую: قَد تَّبَيَّنَ (د → ت), قَالَت طَّآئِفَةٌ (ت → ط), إِذ ظَّلَمُوٓا۟ (ذ → ظ), يَلْهَث ذَّٰلِكَ (ث → ذ), ٱرْكَب مَّعَنَا (ب → م).\n\nВ мусхафе над первой буквой нет сукуна, а на второй стоит шадда.\n\nОсобый случай — ط перед ت (بَسَطتَ, أَحَطتُ): слияние неполное, «толстота» ط сохраняется.",
+        "en": "Mutajanisayn (المتجانسان) means “of the same kind”: two letters made at the same point but with different qualities. If the first has a sukun and the second a vowel, the first passes into the second: قَد تَّبَيَّنَ (د → ت), قَالَت طَّآئِفَةٌ (ت → ط), إِذ ظَّلَمُوٓا۟ (ذ → ظ), يَلْهَث ذَّٰلِكَ (ث → ذ), ٱرْكَب مَّعَنَا (ب → م).\n\nIn the Mushaf the first letter has no sukun and the second carries a shadda.\n\nA special case is ط before ت (بَسَطتَ, أَحَطتُ): the merging is partial and the heaviness of ط remains.",
+        "ar": "المتجانسان حرفان اتّحدا مخرجًا واختلفا صفةً. فإذا سكن الأول وتحرّك الثاني أُدغم الأول في الثاني: قَد تَّبَيَّنَ (د في ت)، قَالَت طَّآئِفَةٌ (ت في ط)، إِذ ظَّلَمُوٓا۟ (ذ في ظ)، يَلْهَث ذَّٰلِكَ (ث في ذ)، ٱرْكَب مَّعَنَا (ب في م).\n\nولا يُرسم السكون على الأول في المصحف، وتُرسم الشدّة على الثاني.\n\nويُستثنى الطاء قبل التاء (بَسَطتَ، أَحَطتُ)، فالإدغام فيه ناقص تبقى معه صفة الإطباق.",
+        "tr": "Mütecâniseyn (المتجانسان) “aynı cinsten” demektir: iki harf aynı yerden çıkar ama sıfatları farklıdır. İlki sakin, ikincisi harekeli olursa ilki ikincisine katılır: قَد تَّبَيَّنَ (د → ت), قَالَت طَّآئِفَةٌ (ت → ط), إِذ ظَّلَمُوٓا۟ (ذ → ظ), يَلْهَث ذَّٰلِكَ (ث → ذ), ٱرْكَب مَّعَنَا (ب → م).\n\nMushaf'ta ilk harfin üzerinde sükûn yoktur, ikincisinde şedde vardır.\n\nÖzel bir durum, ت'den önceki ط'dır (بَسَطتَ, أَحَطتُ): katma eksiktir, ط'nın kalınlığı korunur."
+      },
+      "how": {
+        "ru": "Не произносите первую букву: сразу читайте вторую с удвоением. Если вторая — мим (ٱرْكَب مَّعَنَا), удвоенный мим звучит с гунной 2 хараката. В بَسَطتَ сохраните «толстоту» ط, но звучать должна ت.",
+        "en": "Do not pronounce the first letter: read the second one doubled straight away. If the second is a meem (ٱرْكَب مَّعَنَا), the doubled meem has a ghunnah of 2 counts. In بَسَطتَ keep the heaviness of ط, but the sound you make is ت.",
+        "ar": "لا تنطق الحرف الأول، بل انطق الثاني مشدّدًا مباشرة، فإن كان ميمًا (ٱرْكَب مَّعَنَا) فبغنة بمقدار حركتين. وفي بَسَطتَ أبقِ إطباق الطاء وانطق تاءً.",
+        "tr": "İlk harfi söylemeyin: doğrudan ikincisini şeddeli okuyun. İkinci harf mîm ise (ٱرْكَب مَّعَنَا), şeddeli mîm 2 hareke gunneyle okunur. بَسَطتَ kelimesinde ط'nın kalınlığını koruyun ama ت sesini çıkarın."
+      },
+      "letters": "د ت ط ذ ظ ث ب م",
+      "examples": []
+    },
+    {
+      "slug": "idgham-mutaqaribayn",
+      "target": "idgham_mutaqaribayn",
+      "minutes": 3,
+      "title": {
+        "ru": "Идгам мутакарибайн — буквы близкого выхода",
+        "en": "Idgham of close letters",
+        "ar": "إدغام المتقاربين",
+        "tr": "Mütekâribeyn idğâmı — mahreci yakın harfler"
+      },
+      "summary": {
+        "ru": "Из двух букв с близким местом выхода первая, с сукуном, сливается со второй.",
+        "en": "Of two letters with close points of articulation, the first, with sukun, merges into the second.",
+        "ar": "يُدغم الحرف الساكن في حرف يقاربه مخرجًا.",
+        "tr": "Mahrecleri yakın iki harften sakin olan ilki ikincisine katılır."
+      },
+      "explanation": {
+        "ru": "Мутакарибайн (المتقاربان) — «близкие»: места выхода двух букв находятся рядом. В риваяте Хафса так сливаются ل перед ر (قُل رَّبِّ, بَل رَّفَعَهُ ٱللَّهُ) и ق перед ك в слове نَخْلُقكُّم (77:20).\n\nВ мусхафе на второй букве стоит шадда — подсказка к слиянию.\n\nИсключение: в بَلْ ۜ رَانَ (83:14) по риваяту Хафса делается короткая пауза без вдоха (сакт), поэтому ل читается ясно.",
+        "en": "Mutaqaribayn (المتقاربان) means “close”: the two letters are made at neighbouring points. In the riwaya of Hafs this merging happens with ل before ر (قُل رَّبِّ, بَل رَّفَعَهُ ٱللَّهُ) and with ق before ك in the word نَخْلُقكُّم (77:20).\n\nIn the Mushaf the second letter carries a shadda — a hint to merge.\n\nAn exception: in بَلْ ۜ رَانَ (83:14) the riwaya of Hafs has a brief pause without breath (sakt), so ل is read clearly.",
+        "ar": "المتقاربان حرفان تقاربا مخرجًا، ويُدغم منهما في رواية حفص: اللام في الراء (قُل رَّبِّ، بَل رَّفَعَهُ ٱللَّهُ)، والقاف في الكاف في كلمة نَخْلُقكُّم (المرسلات: 20).\n\nوتُرسم الشدّة على الحرف الثاني في المصحف دلالةً على الإدغام.\n\nويُستثنى بَلْ ۜ رَانَ (المطففين: 14)، ففيها لحفص سكتة لطيفة بلا تنفّس، فتُظهر اللام.",
+        "tr": "Mütekâribeyn (المتقاربان) “yakın olanlar” demektir: iki harfin mahrecleri birbirine yakındır. Hafs rivayetinde bu katma, ر'dan önceki ل'da (قُل رَّبِّ, بَل رَّفَعَهُ ٱللَّهُ) ve نَخْلُقكُّم (77:20) kelimesinde ك'dan önceki ق'da olur.\n\nMushaf'ta ikinci harfin üzerinde şedde bulunur; bu, katmaya işarettir.\n\nİstisna: بَلْ ۜ رَانَ (83:14) ifadesinde Hafs rivayetine göre nefes almadan kısa bir duraklama (sekte) yapılır, bu yüzden ل açık okunur."
+      },
+      "how": {
+        "ru": "Не произносите первую букву: сразу читайте вторую с удвоением. В قُل رَّبِّ звучит удвоенная ر, в نَخْلُقكُّم — удвоенная ك (это предпочтительный способ чтения).",
+        "en": "Do not pronounce the first letter: read the second one doubled straight away. In قُل رَّبِّ you hear a doubled ر, in نَخْلُقكُّم a doubled ك (the preferred way of reading it).",
+        "ar": "لا تنطق الحرف الأول، بل انطق الثاني مشدّدًا مباشرة: راءً مشدّدة في قُل رَّبِّ، وكافًا مشدّدة في نَخْلُقكُّم على الوجه المقدَّم.",
+        "tr": "İlk harfi söylemeyin: doğrudan ikincisini şeddeli okuyun. قُل رَّبِّ ifadesinde şeddeli ر, نَخْلُقكُّم kelimesinde şeddeli ك duyulur (tercih edilen okuyuş)."
+      },
+      "letters": "ل ر ق ك",
+      "examples": []
+    },
+    {
+      "slug": "hamzat-wasl",
+      "target": "ham_wasl",
+      "minutes": 5,
+      "title": {
+        "ru": "Хамзату-ль-васль — соединительная хамза",
+        "en": "Hamzat al-wasl — the connecting hamza",
+        "ar": "همزة الوصل",
+        "tr": "Vasl hemzesi — bağlayıcı hemze"
+      },
+      "summary": {
+        "ru": "Хамза ٱ в начале слова звучит, только если с этого слова начинают чтение.",
+        "en": "The hamza ٱ at the start of a word is heard only when you begin reading from that word.",
+        "ar": "تُنطق همزة الوصل ٱ عند الابتداء بالكلمة وتسقط في الوصل.",
+        "tr": "Kelime başındaki ٱ hemzesi yalnızca okumaya o kelimeden başlarken okunur."
+      },
+      "explanation": {
+        "ru": "Хамзату-ль-васль (همزة الوصل) — соединительная хамза. В мусхафе это алиф со значком: ٱ. Она нужна, чтобы начать слово, первая буква которого стоит с сукуном: ٱلْحَمْدُ, ٱهْدِنَا, ٱبْنَ.\n\nЕсли слово читается слитно с предыдущим, хамза пропадает, и предыдущий гласный переходит прямо на букву после неё: بِسْمِ ٱللَّهِ, وَٱلْقَمَرِ. Если предыдущее слово кончается буквой мадда, она при этом не тянется: فِى ٱلْأَرْضِ.\n\nНачиная чтение с такого слова, хамзу произносят с фатхой, кясрой или даммой.",
+        "en": "Hamzat al-wasl (همزة الوصل) is the connecting hamza. In the Mushaf it is an alif with a small mark: ٱ. It lets you start a word whose first letter has a sukun: ٱلْحَمْدُ, ٱهْدِنَا, ٱبْنَ.\n\nIf the word is joined to the previous one, the hamza drops and the previous vowel passes straight to the letter after it: بِسْمِ ٱللَّهِ, وَٱلْقَمَرِ. If the previous word ends in a madd letter, that letter is then not lengthened: فِى ٱلْأَرْضِ.\n\nWhen you start reading from such a word, the hamza is pronounced with a fatha, kasra or damma.",
+        "ar": "همزة الوصل همزة يُتوصَّل بها إلى النطق بالساكن في أول الكلمة، وتُرسم في المصحف ألفًا عليها علامة: ٱ، مثل: ٱلْحَمْدُ، ٱهْدِنَا، ٱبْنَ.\n\nفإذا وُصلت الكلمة بما قبلها سقطت الهمزة، وانتقل الصوت من حركة ما قبلها إلى الحرف الذي بعدها: بِسْمِ ٱللَّهِ، وَٱلْقَمَرِ. وإن انتهت الكلمة السابقة بحرف مد سقط المد لفظًا: فِى ٱلْأَرْضِ.\n\nوعند الابتداء بالكلمة تُنطق الهمزة مفتوحةً أو مكسورةً أو مضمومة.",
+        "tr": "Vasl hemzesi (همزة الوصل) bağlayıcı hemzedir. Mushaf'ta üzerinde küçük bir işaret olan elif olarak yazılır: ٱ. İlk harfi sakin olan bir kelimeye başlamayı sağlar: ٱلْحَمْدُ, ٱهْدِنَا, ٱبْنَ.\n\nKelime öncekine bağlanınca hemze düşer ve önceki ünlü doğrudan ondan sonraki harfe geçer: بِسْمِ ٱللَّهِ, وَٱلْقَمَرِ. Önceki kelime bir medd harfiyle bitiyorsa o harf uzatılmaz: فِى ٱلْأَرْضِ.\n\nOkumaya böyle bir kelimeden başlarken hemze üstün, esre veya ötreyle okunur."
+      },
+      "how": {
+        "ru": "Перед ال хамзу читайте с фатхой (ٱلْحَمْدُ). В глаголе — с даммой, если третья буква с даммой (ٱنظُرْ, ٱدْعُ), иначе с кясрой (ٱهْدِنَا, ٱعْلَمُوا۟). В существительных — с кясрой (ٱبْنَ, ٱسْمُهُۥ). При слитном чтении хамзу пропускайте.",
+        "en": "Before ال, pronounce the hamza with fatha (ٱلْحَمْدُ). In a verb, use damma if the third letter has a damma (ٱنظُرْ, ٱدْعُ), otherwise kasra (ٱهْدِنَا, ٱعْلَمُوا۟). In nouns, use kasra (ٱبْنَ, ٱسْمُهُۥ). When reading on, skip the hamza.",
+        "ar": "ابدأ بها مفتوحةً في «ال» (ٱلْحَمْدُ)، ومضمومةً في الفعل إذا كان ثالثه مضمومًا ضمًّا لازمًا (ٱنظُرْ، ٱدْعُ)، ومكسورةً إن كان ثالثه مفتوحًا أو مكسورًا (ٱهْدِنَا، ٱعْلَمُوا۟)، ومكسورةً في الأسماء (ٱبْنَ، ٱسْمُهُۥ). وفي الوصل لا تُنطق.",
+        "tr": "ال'den önce hemzeyi üstünle okuyun (ٱلْحَمْدُ). Fiilde üçüncü harf ötreliyse ötreyle (ٱنظُرْ, ٱدْعُ), değilse esreyle (ٱهْدِنَا, ٱعْلَمُوا۟). İsimlerde esreyle (ٱبْنَ, ٱسْمُهُۥ). Bağlayarak okurken hemzeyi okumayın."
+      },
+      "letters": "ٱ",
+      "examples": []
+    },
+    {
+      "slug": "lam-qamariyah",
+      "target": "laam_qamariyah",
+      "minutes": 3,
+      "title": {
+        "ru": "Лям камария — лунные буквы",
+        "en": "Lam qamariyyah — the moon letters",
+        "ar": "اللام القمرية",
+        "tr": "Kamerî lâm — kamerî harfler"
+      },
+      "summary": {
+        "ru": "Перед 14 «лунными» буквами лям артикля ال произносится ясно.",
+        "en": "Before the 14 moon letters, the lam of ال is pronounced clearly.",
+        "ar": "تُظهر لام «ال» قبل الحروف القمرية الأربعة عشر.",
+        "tr": "14 kamerî harften önce ال takısının lâmı açıkça okunur."
+      },
+      "explanation": {
+        "ru": "Многие существительные начинаются с артикля ال. Его лям читается по-разному в зависимости от следующей буквы. Если после него стоит одна из 14 «лунных» букв — أ ب غ ح ج ك و خ ف ع ق ي م ه, — лям произносится ясно, с сукуном. Такой лям называют лунным (اللام القمرية) — по слову ٱلْقَمَر, «луна».\n\nНапример: ٱلْحَمْدُ, ٱلْكِتَٰبُ, ٱلْيَوْمَ, ٱلْمُفْلِحُونَ. Буквы запоминают фразой ابْغِ حَجَّكَ وَخَفْ عَقِيمَهُ.\n\nВ мусхафе над таким лямом стоит знак сукуна, а следующая буква без шадды.",
+        "en": "Many nouns begin with the article ال. Its lam is read differently depending on the next letter. If one of the 14 moon letters follows — أ ب غ ح ج ك و خ ف ع ق ي م ه — the lam is pronounced clearly, with a sukun. It is called the moon lam (اللام القمرية), after the word ٱلْقَمَر, “the moon”.\n\nFor example: ٱلْحَمْدُ, ٱلْكِتَٰبُ, ٱلْيَوْمَ, ٱلْمُفْلِحُونَ. The letters are remembered with the phrase ابْغِ حَجَّكَ وَخَفْ عَقِيمَهُ.\n\nIn the Mushaf such a lam carries a sukun sign and the next letter has no shadda.",
+        "ar": "تدخل «ال» على كثير من الأسماء، ويختلف حكم لامها بحسب الحرف الذي بعدها. فإن جاء بعدها أحد الحروف القمرية الأربعة عشر (أ ب غ ح ج ك و خ ف ع ق ي م ه) وجب إظهار اللام ساكنةً، وتُسمّى اللام القمرية نسبةً إلى ٱلْقَمَر.\n\nمثل: ٱلْحَمْدُ، ٱلْكِتَٰبُ، ٱلْيَوْمَ، ٱلْمُفْلِحُونَ. ويجمع حروفَها قولُهم: «ابْغِ حَجَّكَ وَخَفْ عَقِيمَهُ».\n\nويُرسم السكون على اللام في المصحف، ولا شدّة على الحرف الذي بعدها.",
+        "tr": "Birçok isim ال takısıyla başlar. Bu takının lâmı, sonraki harfe göre farklı okunur. Ardından 14 kamerî harften biri gelirse — أ ب غ ح ج ك و خ ف ع ق ي م ه — lâm sükûnla açıkça okunur. Buna kamerî lâm (اللام القمرية) denir; adını “ay” anlamındaki ٱلْقَمَر kelimesinden alır.\n\nÖrnek: ٱلْحَمْدُ, ٱلْكِتَٰبُ, ٱلْيَوْمَ, ٱلْمُفْلِحُونَ. Harfler ابْغِ حَجَّكَ وَخَفْ عَقِيمَهُ ifadesiyle ezberlenir.\n\nMushaf'ta böyle bir lâmın üzerinde sükûn işareti bulunur, sonraki harf şeddesizdir."
+      },
+      "how": {
+        "ru": "Произнесите лям коротко и ясно: кончик языка касается десны над верхними передними зубами. Затем сразу переходите к следующей букве, не удваивая её и не добавляя гласного после ляма.",
+        "en": "Say the lam briefly and clearly: the tip of the tongue touches the gum ridge behind the upper front teeth. Then move straight to the next letter, without doubling it or adding a vowel after the lam.",
+        "ar": "انطق اللام ساكنةً واضحةً من طرف اللسان مع لثة الثنايا العليا، ثم انتقل إلى الحرف التالي دون تشديده ودون تحريك اللام.",
+        "tr": "Lâmı kısa ve net söyleyin: dilin ucu üst ön dişlerin diş etine değer. Sonra sonraki harfi şeddelemeden ve lâmdan sonra ünlü eklemeden hemen ona geçin."
+      },
+      "letters": "أ ب غ ح ج ك و خ ف ع ق ي م ه",
+      "examples": []
+    },
+    {
+      "slug": "lam-shamsiyah",
+      "target": "laam_shamsiyah",
+      "minutes": 3,
+      "title": {
+        "ru": "Лям шамсия — солнечные буквы",
+        "en": "Lam shamsiyyah — the sun letters",
+        "ar": "اللام الشمسية",
+        "tr": "Şemsî lâm — şemsî harfler"
+      },
+      "summary": {
+        "ru": "Перед 14 «солнечными» буквами лям артикля ال не произносится, а буква удваивается.",
+        "en": "Before the 14 sun letters, the lam of ال is silent and the next letter is doubled.",
+        "ar": "تُدغم لام «ال» في الحروف الشمسية الأربعة عشر فلا تُنطق.",
+        "tr": "14 şemsî harften önce ال takısının lâmı okunmaz, sonraki harf şeddelenir."
+      },
+      "explanation": {
+        "ru": "Если после артикля ال стоит одна из 14 «солнечных» букв — ت ث د ذ ر ز س ش ص ض ط ظ ل ن, — лям сливается с ней и не звучит, а сама буква читается удвоенной, с шаддой. Такой лям называют солнечным (اللام الشمسية) — по слову ٱلشَّمْس, «солнце».\n\nНапример: ٱلشَّمْسِ, ٱلنَّاسِ, ٱلرَّحْمَٰنِ, ٱلصِّرَٰطَ. Сюда же относится лям перед лямом: ٱللَّطِيفُ.\n\nВ мусхафе над лямом нет знака сукуна, а на следующей букве стоит шадда.",
+        "en": "If one of the 14 sun letters follows the article ال — ت ث د ذ ر ز س ش ص ض ط ظ ل ن — the lam merges into it and is not heard, and that letter is read doubled, with a shadda. This lam is called the sun lam (اللام الشمسية), after the word ٱلشَّمْس, “the sun”.\n\nFor example: ٱلشَّمْسِ, ٱلنَّاسِ, ٱلرَّحْمَٰنِ, ٱلصِّرَٰطَ. A lam before a lam also belongs here: ٱللَّطِيفُ.\n\nIn the Mushaf the lam has no sukun sign and the next letter carries a shadda.",
+        "ar": "إذا جاء بعد «ال» أحد الحروف الشمسية الأربعة عشر (ت ث د ذ ر ز س ش ص ض ط ظ ل ن) أُدغمت اللام فيه فلم تُنطق، ونُطق الحرف بعدها مشدّدًا، وتُسمّى اللام الشمسية نسبةً إلى ٱلشَّمْس.\n\nمثل: ٱلشَّمْسِ، ٱلنَّاسِ، ٱلرَّحْمَٰنِ، ٱلصِّرَٰطَ، ومنه اللام قبل اللام: ٱللَّطِيفُ.\n\nولا يُرسم السكون على اللام في المصحف، وتُرسم الشدّة على الحرف الذي بعدها.",
+        "tr": "ال takısından sonra 14 şemsî harften biri gelirse — ت ث د ذ ر ز س ش ص ض ط ظ ل ن — lâm o harfe katılır ve duyulmaz; harf ise şeddeli, iki kat okunur. Bu lâma şemsî lâm (اللام الشمسية) denir; adını “güneş” anlamındaki ٱلشَّمْس kelimesinden alır.\n\nÖrnek: ٱلشَّمْسِ, ٱلنَّاسِ, ٱلرَّحْمَٰنِ, ٱلصِّرَٰطَ. Lâmdan önceki lâm da buraya girer: ٱللَّطِيفُ.\n\nMushaf'ta lâmın üzerinde sükûn işareti yoktur, sonraki harfte şedde bulunur."
+      },
+      "how": {
+        "ru": "Пропустите лям: после хамзы или предыдущего гласного сразу читайте следующую букву с удвоением (وَٱلشَّمْسِ). Начиная с такого слова, произнесите хамзу с фатхой и сразу удвоенную букву.",
+        "en": "Skip the lam: after the hamza or the previous vowel, read the next letter doubled straight away (وَٱلشَّمْسِ). When you start from such a word, say the hamza with fatha and then the doubled letter at once.",
+        "ar": "لا تنطق اللام، بل انتقل من الهمزة أو من حركة ما قبلها إلى الحرف الشمسي مشدّدًا (وَٱلشَّمْسِ). وعند الابتداء بالكلمة انطق الهمزة مفتوحةً ثم الحرف المشدّد مباشرة.",
+        "tr": "Lâmı atlayın: hemzeden ya da önceki ünlüden sonra hemen sonraki harfi şeddeli okuyun (وَٱلشَّمْسِ). Böyle bir kelimeyle başlarken hemzeyi üstünle, ardından hemen şeddeli harfi okuyun."
+      },
+      "letters": "ت ث د ذ ر ز س ش ص ض ط ظ ل ن",
+      "examples": []
+    },
+    {
+      "slug": "silent-letters",
+      "target": "slnt",
+      "minutes": 4,
+      "title": {
+        "ru": "Непроизносимые буквы",
+        "en": "Silent letters",
+        "ar": "الحروف التي لا تُنطق",
+        "tr": "Okunmayan harfler"
+      },
+      "summary": {
+        "ru": "Некоторые буквы мусхафа пишутся, но не читаются: их нужно пропускать.",
+        "en": "Some letters in the Mushaf are written but not read: skip them.",
+        "ar": "في المصحف حروف تُكتب ولا تُنطق، فتُتجاوز عند القراءة.",
+        "tr": "Mushaf'taki bazı harfler yazılır ama okunmaz; onları atlayın."
+      },
+      "explanation": {
+        "ru": "Мусхаф записан османским письмом (الرسم العثماني), и в нём есть буквы, которые пишутся, но не произносятся. Чаще всего это алиф после вав множественного числа (قَالُوا۟, ءَامَنُوا۟), вав в أُو۟لَـٰٓئِكَ и أُو۟لُوا۟, алиф в مِا۟ئَةٍ.\n\nТакие буквы помечены маленьким кружком ۟: буква под ним не читается ни при слитном чтении, ни при остановке.\n\nАлиф с вытянутым нулём ۠ (أَنَا۠, لَّـٰكِنَّا۠) не читается при слитном чтении, но произносится при остановке.",
+        "en": "The Mushaf is written in the Uthmani script (الرسم العثماني), which has letters that are written but not pronounced. Most often these are the alif after the plural waw (قَالُوا۟, ءَامَنُوا۟), the waw in أُو۟لَـٰٓئِكَ and أُو۟لُوا۟, and the alif in مِا۟ئَةٍ.\n\nSuch letters carry a small circle ۟: the letter under it is read neither when reading on nor when stopping.\n\nAn alif with an oval zero ۠ (أَنَا۠, لَّـٰكِنَّا۠) is silent when reading on but pronounced when stopping.",
+        "ar": "كُتب المصحف بالرسم العثماني، وفيه حروف تُكتب ولا تُنطق، وأكثرها: الألف بعد واو الجماعة (قَالُوا۟، ءَامَنُوا۟)، والواو في أُو۟لَـٰٓئِكَ وأُو۟لُوا۟، والألف في مِا۟ئَةٍ.\n\nوتُعلَّم هذه الحروف بصفر مستدير ۟ فوقها، دلالةً على أنها لا تُنطق وصلًا ولا وقفًا.\n\nأما الألف التي عليها صفر مستطيل ۠ (أَنَا۠، لَّـٰكِنَّا۠) فتسقط في الوصل وتثبت في الوقف.",
+        "tr": "Mushaf, resm-i Osmânî (الرسم العثماني) ile yazılmıştır; bu imlada yazılan ama okunmayan harfler vardır. En sık görülenler: çoğul vâvından sonraki elif (قَالُوا۟, ءَامَنُوا۟), أُو۟لَـٰٓئِكَ ve أُو۟لُوا۟ kelimelerindeki vâv, مِا۟ئَةٍ kelimesindeki elif.\n\nBu harflerin üzerinde küçük yuvarlak bir sıfır ۟ bulunur: altındaki harf ne bağlayarak okurken ne de dururken okunur.\n\nÜzerinde dikdörtgen sıfır ۠ olan elif (أَنَا۠, لَّـٰكِنَّا۠) bağlayarak okurken okunmaz, dururken okunur."
+      },
+      "how": {
+        "ru": "Просто пропустите такую букву и читайте дальше по огласовкам: قَالُوا۟ кончается долгим «у». Алиф с вытянутым нулём ۠ при слитном чтении пропустите, а при остановке произнесите как долгое «а».",
+        "en": "Simply skip such a letter and read on by the vowel marks: قَالُوا۟ ends in a long “u”. Skip an alif with an oval zero ۠ when reading on, and pronounce it as a long “a” when stopping.",
+        "ar": "تجاوز هذا الحرف واقرأ ما بعده بحسب الحركات، فتنتهي قَالُوا۟ بواو مدّية. أما الألف ذات الصفر المستطيل ۠ فاحذفها وصلًا، وانطقها ألفًا ممدودة وقفًا.",
+        "tr": "Böyle bir harfi atlayın ve harekelere göre okumaya devam edin: قَالُوا۟ uzun bir “u” ile biter. Üzerinde dikdörtgen sıfır ۠ olan elifi bağlayarak okurken atlayın, dururken uzun “a” olarak okuyun."
+      },
+      "letters": "ا و ي",
+      "examples": []
+    }
+  ]
+}

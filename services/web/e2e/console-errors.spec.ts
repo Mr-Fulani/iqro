@@ -10,6 +10,8 @@ const PAGES = [
   "/ru/quran/madani-hafs/surah/1",
   "/ru/prayer",
   "/ru/salah/fajr",
+  "/ru/tajweed",
+  "/ru/tajweed/izhar",
   "/ru/dua",
   "/ru/news",
 ];
@@ -27,6 +29,7 @@ const MOCK_GAPS = [
   "/api/v1/quran/foundation/mushafs",
   "/api/v1/quran/tafsirs",
   "/api/v1/quran/translations",
+  "/api/v1/recitations/00000000-0000-7000-8000-000000000701/ayahs/",
   "https://audio.example.test/",
 ];
 
