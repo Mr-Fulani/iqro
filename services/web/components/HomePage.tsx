@@ -24,6 +24,8 @@ import {
   loadPrayerLocationPreference,
 } from "../lib/prayer-location";
 import { SurahNameArt } from "./SurahNameArt";
+import { AnnouncementCard } from "./announcements/AnnouncementCard";
+import type { Announcement } from "../lib/announcements";
 
 const HERO_SLIDES = [
   { src: "/images/home/hero-kaaba.webp", label: "home.heroKaaba" as const },
@@ -34,7 +36,13 @@ const HERO_SLIDES = [
   { src: "/images/home/hero-quba-mosque.webp", label: "home.heroQubaMosque" as const },
 ];
 
-export default function HomePage({ initialData }: { initialData?: PublishedHomeInitialData }) {
+export default function HomePage({
+  initialData,
+  announcements = [],
+}: {
+  initialData?: PublishedHomeInitialData;
+  announcements?: Announcement[];
+}) {
   // The first hero slide is the LCP element; as a CSS background it would
   // otherwise be fetched late and at low priority.
   preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high" });
@@ -219,6 +227,8 @@ export default function HomePage({ initialData }: { initialData?: PublishedHomeI
           </button>
         </div>
       </section>
+
+      <AnnouncementCard items={announcements} />
 
       <TodayReadingCard />
 

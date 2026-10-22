@@ -14,6 +14,12 @@ import type {
   SupportedLocale,
   Surah,
 } from "./api";
+import {
+  parseAnnouncementFeed,
+  parseAnnouncements,
+  type Announcement,
+  type AnnouncementFeedPage,
+} from "./announcements";
 import { parsePlayerBackgrounds } from "./player-backgrounds";
 import type { PlayerBackground } from "./player-backgrounds";
 import {
@@ -386,6 +392,27 @@ export const getPublishedSocialProfiles = cache(async (): Promise<SocialProfile[
   ]);
   return assertSocialProfiles(profiles);
 });
+
+// The same answer for every visitor; read and closed marks are applied in the browser.
+export const getPublishedActiveAnnouncements = cache(
+  async (locale: SupportedLocale): Promise<Announcement[]> => {
+    const payload = await fetchPublishedJson<unknown>(
+      `/api/v1/announcements/active?platform=web&locale=${locale}`,
+      ["site:announcements"],
+    );
+    return parseAnnouncements(payload);
+  },
+);
+
+export const getPublishedAnnouncementFeed = cache(
+  async (locale: SupportedLocale): Promise<AnnouncementFeedPage> => {
+    const payload = await fetchPublishedJson<unknown>(
+      `/api/v1/announcements?platform=web&locale=${locale}`,
+      ["site:announcements"],
+    );
+    return parseAnnouncementFeed(payload);
+  },
+);
 
 export const getPublishedPlayerBackgrounds = cache(async (): Promise<PlayerBackground[]> => {
   const backgrounds = await fetchPublishedJson<unknown>("/api/v1/player-backgrounds", [

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import HomePage from "../../components/HomePage";
 import { isLocale } from "../../lib/i18n";
-import { getPublishedHomeInitialData } from "../../lib/public-content";
+import type { Announcement } from "../../lib/announcements";
+import {
+  getPublishedActiveAnnouncements,
+  getPublishedHomeInitialData,
+} from "../../lib/public-content";
 import { createRootMetadata } from "../../lib/seo";
 import { notFound } from "next/navigation";
 
@@ -28,5 +32,11 @@ export default async function LocalizedHomePage({
   } catch (error) {
     console.error("Home catalog server rendering is temporarily unavailable", error);
   }
-  return <HomePage initialData={initialData} />;
+  let announcements: Announcement[] = [];
+  try {
+    announcements = await getPublishedActiveAnnouncements(locale);
+  } catch (error) {
+    console.error("Announcements are temporarily unavailable", error);
+  }
+  return <HomePage initialData={initialData} announcements={announcements} />;
 }

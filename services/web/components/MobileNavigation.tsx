@@ -6,8 +6,11 @@ import type { ReactNode } from "react";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { forAudience, isFinished } from "../lib/announcements";
+import { useAuth } from "../lib/auth-context";
+import { useActiveAnnouncements, useAnnouncementState } from "./announcements/announcement-store";
 
-type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "dua" | "calendar" | "notes" | "profile" | "names";
+type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "dua" | "calendar" | "notes" | "profile" | "names" | "news";
 
 function NavigationIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -22,6 +25,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-14 5h3m4 0h3" /></>,
     notes: <><path d="M5 3h10l4 4v14H5Z" /><path d="M9 11h6M9 15h6" /></>,
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
+    news: <><path d="M12 3l1.8 4.6L18 9.5l-4.2 1.9L12 16l-1.8-4.6L6 9.5l4.2-1.9z" /><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" /></>,
     names: <><rect x="5" y="5" width="14" height="14" rx="1" /><rect x="5" y="5" width="14" height="14" rx="1" transform="rotate(45 12 12)" /></>,
   };
   return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
@@ -32,6 +36,11 @@ export function MobileNavigation() {
   const pathname = usePathname();
   const route = stripLocalePrefix(pathname);
   const { locale, t } = useI18n();
+  const { session } = useAuth();
+  const announcementState = useAnnouncementState();
+  const unreadNews = forAudience(useActiveAnnouncements(locale), session?.user.status === "active").some(
+    (item) => !isFinished(item, announcementState),
+  );
   const tabs = [
     { href: "/", label: t("nav.home"), icon: "home" },
     { href: "/quran", label: t("nav.quran"), icon: "quran" },
@@ -39,6 +48,7 @@ export function MobileNavigation() {
     { href: "/audio", label: t("nav.audio"), icon: "audio" },
   ] as const;
   const more = [
+    { href: "/news", label: t("news.title"), icon: "news" },
     { href: "/prayer", label: t("nav.prayer"), icon: "prayer" },
     { href: "/salah", label: t("nav.salah"), icon: "salah" },
     { href: "/calendar", label: t("calendar.title"), icon: "calendar" },
@@ -64,7 +74,10 @@ export function MobileNavigation() {
         }
       }}>
         <summary className={`mobile-tab${more.some((item) => active(item.href)) ? " is-active" : ""}`}>
-          <span className="mobile-tab-icon"><NavigationIcon name="more" /></span>
+          <span className="mobile-tab-icon">
+            <NavigationIcon name="more" />
+            {unreadNews ? <span className="mobile-tab-dot" aria-hidden="true" /> : null}
+          </span>
           <span>{t("nav.more")}</span>
         </summary>
         <div className="mobile-more-panel">
@@ -75,6 +88,9 @@ export function MobileNavigation() {
               <IntentPrefetchLink key={item.href} href={localizedPath(locale, item.href)} aria-current={active(item.href) ? "page" : undefined}>
                 <span className="mobile-more-icon"><NavigationIcon name={item.icon} /></span>
                 <span>{item.label}</span>
+                {item.href === "/news" && unreadNews ? (
+                  <span className="mobile-more-new" role="img" aria-label={t("news.unread")} />
+                ) : null}
                 <span className="mobile-more-chevron" aria-hidden="true">›</span>
               </IntentPrefetchLink>
             ))}

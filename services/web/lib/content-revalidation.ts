@@ -187,6 +187,7 @@ export function revalidateContentChange(change: ContentChange): void {
   if (change.type === "site.announcements.changed") {
     expireTag("site:announcements");
     revalidatePath("/[locale]", "page");
+    revalidatePath("/[locale]/news", "page");
     return;
   }
 

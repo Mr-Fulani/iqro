@@ -7226,3 +7226,612 @@ svg.track-surah-name-ar {
     border-radius: 28px 28px 0 0;
   }
 }
+
+/* Announcements: the desktop card, the phone bubble, the window and «What's new». */
+.announcement-card {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding-inline-end: 64px;
+  border-color: var(--primary-border);
+  background-image: linear-gradient(100deg, var(--primary-subtle) 0%, var(--panel) 42%);
+}
+
+[dir="rtl"] .announcement-card {
+  background-image: linear-gradient(260deg, var(--primary-subtle) 0%, var(--panel) 42%);
+}
+
+.announcement-card-text {
+  flex: 1 1 420px;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.announcement-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.announcement-chip {
+  padding: 2px 10px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.announcement-card-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.announcement-summary {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.announcement-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.announcement-picture {
+  display: grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #6ee7b7 0%, #059669 45%, #064e3b 100%);
+  color: #ecfdf5;
+  box-shadow: 0 0 0 5px var(--primary-subtle);
+}
+
+.announcement-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.announcement-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.announcement-close:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.announcement-card-close {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+}
+
+.news-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.news-link.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-inverse);
+}
+
+.news-link-count {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--text-inverse);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.news-link.is-active .news-link-count {
+  background: var(--text-inverse);
+  color: var(--primary);
+}
+
+/* The bubble lives in the phone header only. */
+.announcement-bubble-slot {
+  position: relative;
+  display: none;
+  width: 52px;
+  height: 52px;
+  flex: none;
+}
+
+.announcement-bubble {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255, 255, 255, 0.95) 0 7%, rgba(255, 255, 255, 0) 17%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12) 52%, rgba(145, 215, 195, 0.5) 78%, rgba(196, 150, 71, 0.35) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.85),
+    inset -5px -7px 12px rgba(11, 93, 74, 0.22),
+    0 8px 18px rgba(7, 62, 52, 0.2);
+  animation: announcement-bob 3.4s ease-in-out infinite;
+}
+
+.announcement-bubble:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.announcement-bubble-rim {
+  position: absolute;
+  inset: -1px;
+  padding: 2.5px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #91d7c3, #f3d7a1, #c4b5fd, #7dd3fc, #91d7c3);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.9;
+  pointer-events: none;
+  animation: announcement-spin 5s linear infinite;
+}
+
+.announcement-bubble-face {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #6ee7b7 0%, #059669 45%, #064e3b 100%);
+  color: #ecfdf5;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8);
+}
+
+.announcement-bubble-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.announcement-bubble-count {
+  position: absolute;
+  top: -3px;
+  inset-inline-end: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--bg);
+  border-radius: var(--radius-full);
+  background: var(--accent-gold);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.announcement-bubble.is-popping {
+  animation: announcement-pop 0.32s ease-out forwards;
+}
+
+.announcement-bubble-burst {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(145, 215, 195, 0.95);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: announcement-burst 0.34s ease-out forwards;
+}
+
+.announcement-bubble-burst .drop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 50%;
+  background: #91d7c3;
+  animation: announcement-drop 0.38s ease-out forwards;
+}
+
+.announcement-bubble-burst .drop-1 { --dx: -30px; --dy: -22px; }
+.announcement-bubble-burst .drop-2 { --dx: 30px; --dy: -24px; }
+.announcement-bubble-burst .drop-3 { --dx: -34px; --dy: 16px; }
+.announcement-bubble-burst .drop-4 { --dx: 32px; --dy: 20px; }
+.announcement-bubble-burst .drop-5 { --dx: 0px; --dy: -36px; background: #f3d7a1; }
+.announcement-bubble-burst .drop-6 { --dx: -4px; --dy: 34px; background: #c4b5fd; }
+
+@keyframes announcement-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.04); }
+}
+
+@keyframes announcement-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes announcement-pop {
+  0% { transform: scale(1); opacity: 1; }
+  45% { transform: scale(1.3); opacity: 0.85; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+@keyframes announcement-burst {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(2.3); opacity: 0; }
+}
+
+@keyframes announcement-drop {
+  from { transform: translate(0, 0) scale(1); opacity: 1; }
+  to { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; }
+}
+
+@keyframes announcement-grow {
+  from { transform: scale(0.08); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.announcement-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(86dvh, 760px);
+  padding: 16px 20px 20px;
+  border: 0;
+  border-radius: 28px;
+  background: var(--panel);
+  color: var(--text-primary);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.35);
+}
+
+.announcement-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.announcement-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.announcement-dialog-counter {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.announcement-dialog .announcement-close {
+  background: var(--bg-subtle);
+}
+
+.announcement-dialog-page {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 4px 4px 0;
+  text-align: center;
+}
+
+.announcement-dialog-page h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.announcement-dialog-page .eyebrow {
+  margin: 6px 0 0;
+}
+
+.announcement-body {
+  display: grid;
+  gap: 8px;
+  max-width: 60ch;
+  color: var(--text-secondary);
+  text-align: start;
+}
+
+.announcement-body p,
+.announcement-body ul {
+  margin: 0;
+}
+
+.announcement-steps {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 6px 0 0;
+  padding-inline-start: 22px;
+  text-align: start;
+}
+
+.announcement-steps li {
+  display: grid;
+  gap: 2px;
+}
+
+.announcement-steps img {
+  width: 100%;
+  height: auto;
+  margin-bottom: 6px;
+  border-radius: 16px;
+}
+
+.announcement-steps span {
+  color: var(--text-secondary);
+}
+
+.announcement-date {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.announcement-cta {
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.announcement-dialog-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.announcement-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.announcement-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 8px;
+  background: var(--border-strong);
+}
+
+.announcement-dots span.is-active {
+  width: 22px;
+  background: var(--primary);
+}
+
+.announcement-pager-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.announcement-pager-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--primary);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.announcement-pager-button:disabled {
+  color: var(--border-strong);
+  border-color: var(--border);
+  cursor: default;
+}
+
+[dir="rtl"] .announcement-pager-button span {
+  transform: scaleX(-1);
+}
+
+.news-page {
+  display: grid;
+  gap: 20px;
+}
+
+.news-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.news-feed {
+  display: grid;
+  gap: 14px;
+}
+
+.news-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.news-filter {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.news-filter.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+  font-weight: 600;
+}
+
+.news-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.news-item {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  padding-inline-start: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.news-item.is-unread {
+  border-color: var(--primary-border);
+}
+
+.news-unread-dot {
+  position: absolute;
+  top: 26px;
+  inset-inline-start: 12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border-focus);
+}
+
+.news-item-text {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.news-item-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.news-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.news-empty {
+  color: var(--text-muted);
+}
+
+.news-more {
+  justify-self: center;
+}
+
+@media (max-width: 768px) {
+  /* Phones get the bubble in the header instead of the card and the header link. */
+  .announcement-card,
+  .header-actions .news-link {
+    display: none;
+  }
+
+  .announcement-bubble-slot {
+    display: block;
+  }
+
+  .announcement-dialog--bubble {
+    margin: 84px 12px auto;
+    transform-origin: calc(100% - 40px) -40px;
+    animation: announcement-grow 0.36s cubic-bezier(0.2, 0.9, 0.25, 1.08) both;
+  }
+
+  [dir="rtl"] .announcement-dialog--bubble {
+    margin: 84px 12px auto;
+    transform-origin: 40px -40px;
+  }
+
+  .news-item {
+    padding: 14px;
+    padding-inline-start: 26px;
+  }
+
+  .news-title {
+    font-size: 28px;
+  }
+
+  .mobile-more-new,
+  .mobile-tab-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--border-focus);
+  }
+
+  .mobile-tab-icon {
+    position: relative;
+  }
+
+  .mobile-tab-dot {
+    position: absolute;
+    top: 4px;
+    inset-inline-end: 14px;
+    border: 2px solid var(--panel);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-bubble,
+  .announcement-bubble-rim,
+  .announcement-bubble.is-popping,
+  .announcement-bubble-burst,
+  .announcement-bubble-burst .drop,
+  .announcement-dialog--bubble {
+    animation: none;
+  }
+}
