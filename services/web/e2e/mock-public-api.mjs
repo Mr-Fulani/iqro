@@ -14,6 +14,99 @@ const port = Number(process.env.MOCK_PUBLIC_API_PORT || 3199);
 const publishedAt = "2026-08-24T00:00:00Z";
 const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
 const duaFavoriteKeys = new Set();
+const announcementReceipts = new Map();
+const announcementEvents = [];
+
+const announcementTexts = {
+  ru: {
+    reciter: ["Новый чтец: Хани ар-Рифаи", "Полное чтение Корана, 114 сур.", "Послушать"],
+    feature: ["Живой компас Киблы", "Направление на Каабу в реальном времени.", "Открыть компас"],
+    general: ["Курс намаза обновлён", "Новые уроки и озвучка шагов.", ""],
+  },
+  en: {
+    reciter: ["New reciter: Hani ar-Rifai", "The whole Quran, 114 surahs.", "Listen"],
+    feature: ["Live Qibla compass", "The direction of the Kaaba in real time.", "Open the compass"],
+    general: ["The prayer course is updated", "New lessons and voiced steps.", ""],
+  },
+  ar: {
+    reciter: ["قارئ جديد: هاني الرفاعي", "تلاوة كاملة للقرآن: 114 سورة.", "استمع"],
+    feature: ["بوصلة القبلة المباشرة", "اتجاه الكعبة لحظة بلحظة.", "افتح البوصلة"],
+    general: ["تحديث دورة الصلاة", "دروس جديدة وخطوات مسموعة.", ""],
+  },
+  tr: {
+    reciter: ["Yeni kâri: Hani er-Rifai", "Kur'an'ın tamamı, 114 sure.", "Dinle"],
+    feature: ["Canlı kıble pusulası", "Kâbe'nin yönü anında.", "Pusulayı aç"],
+    general: ["Namaz kursu güncellendi", "Yeni dersler ve seslendirilmiş adımlar.", ""],
+  },
+};
+
+function announcementFixtures(locale) {
+  const texts = announcementTexts[locale] || announcementTexts.ru;
+  const base = {
+    priority: "normal",
+    pinned: false,
+    ends_at: "2099-01-01T00:00:00Z",
+    surfaces: { bubble: true, home_card: true, modal: false },
+    audience: { auth: "all" },
+    body: "",
+    image: null,
+    steps: [],
+  };
+  return [
+    {
+      ...base,
+      id: "019a0000-0000-7000-8000-00000000a001",
+      kind: "reciter",
+      starts_at: "2026-10-21T08:00:00Z",
+      bubble: { icon: "portrait", frequency: "daily", max_impressions: 5 },
+      title: texts.reciter[0],
+      summary: texts.reciter[1],
+      action: {
+        type: "reciter",
+        label: texts.reciter[2],
+        web_path: `/${locale}/audio?reciter=${reciters[0].id}&play=1`,
+        app_route: `/audio/reciter/${reciters[0].id}?play=1`,
+        external_url: null,
+      },
+      version: "a1",
+    },
+    {
+      ...base,
+      id: "019a0000-0000-7000-8000-00000000a002",
+      kind: "feature",
+      starts_at: "2026-10-20T08:00:00Z",
+      bubble: { icon: "sparkle", frequency: "daily", max_impressions: 5 },
+      title: texts.feature[0],
+      summary: texts.feature[1],
+      steps: [
+        { title: "1", text: "", image_url: null, width: null, height: null },
+        { title: "2", text: "", image_url: null, width: null, height: null },
+      ],
+      action: {
+        type: "screen",
+        label: texts.feature[2],
+        web_path: `/${locale}/prayer?qibla=1`,
+        app_route: "/prayer?qibla=1",
+        external_url: null,
+      },
+      version: "a2",
+    },
+    {
+      ...base,
+      id: "019a0000-0000-7000-8000-00000000a003",
+      kind: "general",
+      starts_at: "2026-09-01T08:00:00Z",
+      ends_at: "2026-09-15T08:00:00Z",
+      surfaces: { bubble: false, home_card: false, modal: false },
+      bubble: { icon: "megaphone", frequency: "daily", max_impressions: 5 },
+      title: texts.general[0],
+      summary: texts.general[1],
+      body: "**Уроки** по шагам.\n\n- вуду\n- фаджр",
+      action: { type: "none", label: "", web_path: null, app_route: null, external_url: null },
+      version: "a3",
+    },
+  ];
+}
 
 const playerBackgrounds = [
   {
@@ -465,6 +558,45 @@ const server = createServer(async (request, response) => {
       is_favorite: Boolean(input.is_favorite),
       created_at: input.is_favorite ? publishedAt : null,
     });
+  }
+  if (path === "/api/v1/announcements/active") {
+    const items = announcementFixtures(url.searchParams.get("locale"));
+    return sendJson(response, 200, { enabled: true, results: items.filter((item) => item.surfaces.home_card) });
+  }
+  if (path === "/api/v1/announcements") {
+    const kind = url.searchParams.get("kind");
+    const items = announcementFixtures(url.searchParams.get("locale"));
+    return sendJson(response, 200, {
+      next_cursor: null,
+      results: kind ? items.filter((item) => item.kind === kind) : items,
+    });
+  }
+  if (path === "/api/v1/announcements/events" && request.method === "POST") {
+    const input = await readJson(request);
+    announcementEvents.push(...(input.events || []));
+    return sendJson(response, 202, { accepted: (input.events || []).length });
+  }
+  if (path === "/__test__/announcement-events") {
+    return sendJson(response, 200, { events: announcementEvents });
+  }
+  if (path === "/api/v1/me/announcement-receipts") {
+    return sendJson(response, 200, { results: [...announcementReceipts.values()] });
+  }
+  const receiptMatch = path.match(/^\/api\/v1\/me\/announcement-receipts\/([0-9a-f-]+)$/);
+  if (receiptMatch && request.method === "PUT") {
+    const input = await readJson(request);
+    const previous = announcementReceipts.get(receiptMatch[1]) || {
+      announcement_id: receiptMatch[1],
+      read_at: null,
+      dismissed_at: null,
+    };
+    const receipt = {
+      ...previous,
+      read_at: previous.read_at || (input.read ? publishedAt : null),
+      dismissed_at: previous.dismissed_at || (input.dismissed ? publishedAt : null),
+    };
+    announcementReceipts.set(receiptMatch[1], receipt);
+    return sendJson(response, 200, receipt);
   }
   if (path === "/api/v1/site/social-profiles") return sendJson(response, 200, socialProfiles);
   if (path === "/api/v1/player-backgrounds") return sendJson(response, 200, playerBackgrounds);

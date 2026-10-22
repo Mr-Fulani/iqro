@@ -7,6 +7,10 @@ import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
+import { forAudience, isFinished } from "../lib/announcements";
+import { AnnouncementBubble } from "./announcements/AnnouncementBubble";
+import { AnnouncementIcon } from "./announcements/AnnouncementParts";
+import { useActiveAnnouncements, useAnnouncementState } from "./announcements/announcement-store";
 
 export function Header() {
   const pathname = usePathname();
@@ -15,6 +19,10 @@ export function Header() {
   const routePathname = stripLocalePrefix(pathname);
   const isActiveAccount = session?.user.status === "active";
   const isPendingDeletion = session?.user.status === "pending_deletion";
+  const announcementState = useAnnouncementState();
+  const unread = forAudience(useActiveAnnouncements(locale), isActiveAccount).filter(
+    (item) => !isFinished(item, announcementState),
+  ).length;
   const statusClassName = isPendingDeletion
     ? "muted"
     : isActiveAccount
@@ -76,6 +84,16 @@ export function Header() {
       </nav>
 
       <div className="header-actions">
+        <IntentPrefetchLink
+          href={localizedPath(locale, "/news")}
+          className={`news-link${routePathname === "/news" ? " is-active" : ""}`}
+          aria-label={unread ? t("news.unreadLink", { count: unread }) : t("news.title")}
+          data-testid="header-news-link"
+        >
+          <AnnouncementIcon name="sparkle" size={16} />
+          <span>{t("news.title")}</span>
+          {unread ? <span className="news-link-count" aria-hidden="true">{unread}</span> : null}
+        </IntentPrefetchLink>
         <LanguageSwitcher />
         <div className={`status-chip ${statusClassName}`}>
           <span className="status-dot" aria-hidden="true"></span>
@@ -85,6 +103,8 @@ export function Header() {
               ? t("auth.account")
               : t("auth.guest")}
         </div>
+
+        {routePathname === "/" ? <AnnouncementBubble /> : null}
 
         {(isActiveAccount || isPendingDeletion) && (
           <button
