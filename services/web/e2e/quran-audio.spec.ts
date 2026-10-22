@@ -1599,7 +1599,7 @@ test("tajweed breakdown in Arabic turns steps with the left arrow", async ({ pag
   await expect(breakdown.getByRole("button", { name: "التالي" })).toBeVisible();
 });
 
-test("tajweed chips float in the phone reader and open a bottom sheet", async ({ page }) => {
+test("tajweed chips sit under the sheet in the phone reader and go with its controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installTajweedMocks(page);
   await page.goto("/ru/quran?surah=6");
@@ -1608,12 +1608,14 @@ test("tajweed chips float in the phone reader and open a bottom sheet", async ({
   const enterReader = page.getByRole("button", { name: "Открыть читалку" });
   if (await enterReader.isVisible()) await enterReader.click();
   const legend = page.getByTestId("tajweed-legend");
-  // Like the page labels in the app, the chips give way to the open reader menu.
-  await expect(legend).toBeHidden();
-  await page.getByRole("button", { name: "Свернуть меню читалки" }).click();
+  // The chips come with the reader controls, right under the sheet, as in the app.
   await expect(legend).toBeVisible();
-  const legendBox = await legend.boundingBox();
-  expect((legendBox?.y ?? 0) + (legendBox?.height ?? 0)).toBeLessThanOrEqual(844);
+  await expectLegendUnderSheet(page);
+  // Reading with the controls folded shows the page alone.
+  await page.getByRole("button", { name: "Свернуть меню читалки" }).click();
+  await expect(legend).toBeHidden();
+  await page.getByRole("button", { name: "Меню читалки" }).click();
+  await expect(legend).toBeVisible();
   await legend.getByRole("button", { name: "Мадд табии" }).click();
   const card = page.getByRole("dialog", { name: "Правило таджвида" });
   await expect(card).toBeVisible();
@@ -1647,14 +1649,47 @@ async function openPhoneReader(page: Page, path: string) {
   // A development server hydrates the reader before it turns immersive; production opens it directly.
   const enterReader = page.locator(".reader-launch").filter({ visible: true });
   if (await enterReader.count()) await enterReader.click();
-  await foldReaderMenu(page);
 }
 
-/** The chips and the breakdown float over the page once the reader menu folds. */
+/** Folds the reader controls; the chips go with them. */
 async function foldReaderMenu(page: Page) {
-  const fold = page.locator(".reader-actions:not(.is-folded) .reader-action-buttons > button:last-child")
-    .filter({ visible: true });
-  if (await fold.count()) await fold.click();
+  await page.locator(".reader-actions:not(.is-folded) .reader-action-buttons > button:last-child").click();
+}
+
+/**
+ * The legend follows the sheet in the reader's scroller and never covers it:
+ * scrolled to its end, it stays clear of the reader bar below.
+ */
+async function expectLegendUnderSheet(page: Page) {
+  const boxes = () => page.evaluate(() => {
+    const box = (selector: string) => {
+      const rect = document.querySelector(selector)!.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+    };
+    const stage = document.querySelector(".is-reader-immersive .mushaf-page-container")!;
+    return {
+      sheet: box(".is-reader-immersive .qf-mushaf-sheet"),
+      legend: box(".is-reader-immersive .mushaf-tajweed-legend"),
+      bar: box(".reader-actions"),
+      stageTop: stage.getBoundingClientRect().top + parseFloat(getComputedStyle(stage).paddingTop),
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+  });
+  let { sheet, legend } = await boxes();
+  expect(legend.top).toBeGreaterThanOrEqual(sheet.bottom - 1);
+  expect(legend.top - sheet.bottom).toBeLessThan(16);
+  await page.locator(".is-reader-immersive .mushaf-page-container")
+    .evaluate((element) => element.scrollTo({ top: element.scrollHeight, behavior: "instant" }));
+  const end = await boxes();
+  ({ sheet, legend } = end);
+  expect(legend.top).toBeGreaterThanOrEqual(sheet.bottom - 1);
+  expect(legend.bottom).toBeLessThanOrEqual(end.bar.top + 1);
+  expect(legend.left).toBeGreaterThanOrEqual(0);
+  expect(legend.right).toBeLessThanOrEqual(end.width);
+  // No empty band under the chips: a portrait page and its chips are centred
+  // above the reader bar, a scrolled landscape page ends right above it.
+  expect(end.bar.top - legend.bottom).toBeLessThanOrEqual(Math.max(16, sheet.top - end.stageTop) + 1);
 }
 
 /** Every box stays inside the screen; nothing scrolls the page sideways. */
@@ -1683,38 +1718,46 @@ async function swipeDown(page: Page, x: number, y: number, distance: number) {
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
-for (const [width, height] of [[360, 740], [390, 844], [412, 915], [740, 360]]) {
-  test.describe(`tajweed on a ${width}×${height} phone`, () => {
+const phones: [number, number, string][] = [
+  [360, 740, "ar"], [740, 360, "ar"], [390, 844, "ru"], [844, 390, "ru"], [412, 915, "ru"], [915, 412, "ru"],
+];
+for (const [width, height, locale] of phones) {
+  test.describe(`tajweed on a ${width}×${height} phone (${locale})`, () => {
     test.use({ viewport: { width, height }, isMobile: true, hasTouch: true });
 
-    test("the legend scrolls inside the screen and the sheets fit and close", async ({ page }) => {
-      await openPhoneReader(page, "/ru/quran?surah=6");
+    test("the legend sits under the sheet, scrolls inside the screen and hides while reading", async ({ page }) => {
+      await openPhoneReader(page, `/${locale}/quran?surah=6`);
       const legend = page.getByTestId("tajweed-legend");
-      // A short landscape screen keeps the reader menu over the page and no chips.
-      if (!(await legend.isVisible())) {
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-        return;
-      }
+      await expect(legend).toBeVisible();
+      await expectLegendUnderSheet(page);
       const list = legend.locator(".tajweed-legend-list");
       await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-legend-list");
       const hidden = await list.evaluate((element) => element.scrollWidth - element.clientWidth);
       if (hidden > 1) {
         // The row fades where chips are hidden, and every chip can be scrolled to.
+        await list.evaluate((element) => element.scrollTo({ left: 0 }));
         await expect(list).toHaveAttribute("data-overflow", "end");
         expect(await list.evaluate((element) => getComputedStyle(element).maskImage)).toContain("gradient");
-        await list.evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
+        await list.evaluate((element) => element.scrollTo({
+          left: getComputedStyle(element).direction === "rtl" ? -element.scrollWidth : element.scrollWidth,
+        }));
         await expect(list).toHaveAttribute("data-overflow", "start");
         await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-chip[data-rule='laam_shamsiyah']");
       }
 
       await legend.getByRole("button", { name: "Лям шамсия" }).click();
-      const card = page.getByRole("dialog", { name: "Правило таджвида" });
+      const card = page.getByTestId("tajweed-card");
       await expect(card).toBeVisible();
       await expectInsideScreen(page, "[data-testid='tajweed-card']");
       // A swipe down from the handle closes the sheet, as in the app.
       const handle = await card.getByTestId("tajweed-sheet-handle").boundingBox();
       await swipeDown(page, handle!.x + 40, handle!.y + handle!.height / 2, 200);
       await expect(card).toHaveCount(0);
+
+      // Reading with the controls folded: no chips over or under the page.
+      await foldReaderMenu(page);
+      await expect(legend).toBeHidden();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   });
 }
@@ -1726,7 +1769,6 @@ test.describe("tajweed breakdown on a narrow phone", () => {
     await openPhoneReader(page, "/ar/quran?surah=6");
     await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end')
       .filter({ visible: true }).first().click();
-    await foldReaderMenu(page);
     await page.getByTestId("tajweed-breakdown-open-reader").click();
     const breakdown = page.getByTestId("tajweed-breakdown");
     await expect(breakdown).toBeVisible();
@@ -3380,24 +3422,24 @@ test("explicit page jump cancels the pending verse after changing layout", async
 test.describe("Landscape Mushaf bottom space", () => {
   test.use({ isMobile: true, hasTouch: true });
 
-  // Below the last line: the sheet's own margin, then only the visible bottom
-  // overlays (reader bar, tajweed chips) and a small gap.
+  // Below the last line: the sheet's own margin, the tajweed chips that follow
+  // the sheet while the controls show, then only the reader bar and a small gap.
   const expectFittedBottom = async (page: Page) => {
     const stage = page.locator(".mushaf-page-container").filter({ visible: true });
     await expect(stage.locator(".qf-mushaf-line").last()).toBeVisible();
     await expect.poll(() => stage.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
       const end = element.getBoundingClientRect().bottom;
-      const line = [...element.querySelectorAll(".qf-mushaf-line")].at(-1)!.getBoundingClientRect();
       const sheet = element.querySelector(".qf-mushaf-sheet")!.getBoundingClientRect();
-      const overlays = [...document.querySelectorAll(".reader-actions, .mushaf-tajweed-legend")]
+      const overlays = [...document.querySelectorAll(".reader-actions")]
         .filter((overlay) => overlay.getClientRects().length > 0)
         .map((overlay) => end - overlay.getBoundingClientRect().top);
       const reserve = Math.max(0, ...overlays);
-      const lastLine = end - line.bottom;
-      const spareBelowLastLine = Math.round(lastLine - (sheet.bottom - line.bottom) - reserve);
+      const legend = element.querySelector(".mushaf-tajweed-legend");
+      const content = legend?.getClientRects().length ? legend.getBoundingClientRect().bottom : sheet.bottom;
+      const spareBelowLastLine = Math.round(end - content - reserve);
       return {
-        clearOfOverlays: lastLine >= reserve,
+        clearOfOverlays: end - content >= reserve,
         spareBelowLastLine,
         withinGap: spareBelowLastLine >= 0 && spareBelowLastLine <= 16,
         horizontalScroll: element.scrollWidth - element.clientWidth
@@ -3426,12 +3468,14 @@ test.describe("Landscape Mushaf bottom space", () => {
     });
   }
 
-  test("folded controls leave room for the tajweed legend", async ({ page }) => {
+  test("the tajweed legend follows the sheet and goes with the controls", async ({ page }) => {
     await installTajweedMocks(page);
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/ru/quran?surah=6&page=128");
+    const legend = page.getByTestId("tajweed-legend");
+    await expect(legend).toBeVisible();
     await expectBothControlStates(page);
-    await expect(page.getByTestId("tajweed-legend")).toBeVisible();
+    await expect(legend).toBeHidden();
   });
 
   test("a portrait reader turned to landscape fits a 16-line RTL page", async ({ page }) => {
