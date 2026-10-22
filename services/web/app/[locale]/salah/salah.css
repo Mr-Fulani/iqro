@@ -446,13 +446,27 @@
   background: var(--bg-subtle);
 }
 
+/* On a phone the formulas sit below the step's picture, under the first screen: their font
+   (Amiri, about 130 KB) waits until the page has loaded, so the picture and the title come
+   first; the system Arabic font shows meanwhile. A wider screen shows a formula at once and
+   uses Amiri from the first paint. */
 .salah-arabic {
   color: #16251f;
-  font-family: var(--font-arabic);
+  font-family: "Scheherazade New", "Traditional Arabic", serif;
   /* rem-based so the browser font-size setting scales the Arabic text. */
   font-size: clamp(1.6rem, 3vw, 2.1rem);
   line-height: 2;
   text-align: center;
+}
+
+.salah-player.has-formula-font .salah-arabic {
+  font-family: var(--font-arabic);
+}
+
+@media (min-width: 900px) {
+  .salah-arabic {
+    font-family: var(--font-arabic);
+  }
 }
 
 .salah-transliteration {

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SalahStepPlayer } from "@/components/SalahStepPlayer";
-import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
+import { isLocale, localeTag, type Locale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import { getPublishedSalahCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import {

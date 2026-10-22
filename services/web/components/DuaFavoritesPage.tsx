@@ -47,13 +47,13 @@ export function DuaFavoritesPage() {
 
   return (
     <div className="dua-page">
-      <DuaTopBar locale={locale} title={t("dua.favorites")} subtitle={t("dua.favoritesSubtitle")} backHref="/dua" />
+      <DuaTopBar locale={locale} t={t} title={t("dua.favorites")} subtitle={t("dua.favoritesSubtitle")} backHref="/dua" />
       {entries ? (
         <DuaFeed entries={entries} showPositions sideList onFavoriteChange={onFavoriteChange} />
       ) : failed ? (
-        <DuaError locale={locale} onRetry={() => setAttempt((value) => value + 1)} />
+        <DuaError t={t} onRetry={() => setAttempt((value) => value + 1)} />
       ) : (
-        <DuaLoading locale={locale} />
+        <DuaLoading t={t} />
       )}
     </div>
   );

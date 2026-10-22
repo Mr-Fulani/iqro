@@ -3,7 +3,8 @@ import { existsSync } from "node:fs";
 import test from "node:test";
 
 import type { ReadingPlanner, ReadingToday } from "./api";
-import { SUPPORTED_LOCALES, translate } from "./i18n.ts";
+import { SUPPORTED_LOCALES } from "./i18n.ts";
+import { translate } from "./translate.ts";
 import {
   PALM_IMAGE_WIDTHS,
   PALM_MOODS,

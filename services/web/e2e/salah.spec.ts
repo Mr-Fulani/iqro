@@ -325,6 +325,18 @@ test("a step's own voice-over plays in the step and stops with the step", async 
   await expect(page.locator("audio")).toHaveCount(0);
 });
 
+test("on a phone the formulas' Arabic font waits for the page to load", async ({ page, request }) => {
+  // The server sends the player without the switch: the font is not fetched for the first paint.
+  const html = await (await request.get("/ru/salah/fajr")).text();
+  expect(html).toContain('class="surface salah-player"');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openLesson(page, "/ru/salah/fajr");
+  await expect(page.getByTestId("salah-player")).toHaveClass(/\bhas-formula-font\b/);
+  const arabic = page.locator(".salah-step:not([hidden]) .salah-arabic").first();
+  await expect.poll(() => arabic.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(/Amiri/);
+});
+
 test("progress resumes the lesson, restarts a missing step and keeps completion", async ({ page }) => {
   await openLesson(page, "/ru/salah/fajr");
   await page.getByRole("button", { name: "Далее" }).click();

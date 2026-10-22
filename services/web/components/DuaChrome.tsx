@@ -2,23 +2,26 @@ import Link from "next/link";
 
 import type { DuaCategory } from "../lib/api";
 import { duaDisplayTitle } from "../lib/dua-share";
-import { translate, type Locale } from "../lib/i18n";
+import type { Locale, Translate } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
 import { DuaBackIcon, DuaChevronIcon, DuaCloudOffIcon, DuaMihrabIcon } from "./DuaIcons";
 
 // The frame of the app's du'a screens (dua_screen.dart): the top bar, the
 // chapter ribbon, chapter rows and the empty, error and loading states. No
-// hooks, so pages render them on the server and the catalog on the client.
+// hooks, so pages render them on the server and the catalog on the client;
+// each side passes its own `t` (translatorFor on the server, useI18n in the client).
 
 /** IqroTopBar: back arrow, title and a one-line subtitle. */
 export function DuaTopBar({
   locale,
+  t,
   title,
   subtitle,
   backHref,
   titleIsHeading = true,
 }: {
   locale: Locale;
+  t: Translate;
   title: string;
   subtitle?: string;
   backHref?: string;
@@ -29,7 +32,7 @@ export function DuaTopBar({
   return (
     <header className="dua-topbar">
       {backHref ? (
-        <Link className="dua-back" href={localizedPath(locale, backHref)} aria-label={translate(locale, "common.back")}>
+        <Link className="dua-back" href={localizedPath(locale, backHref)} aria-label={t("common.back")}>
           <DuaBackIcon />
         </Link>
       ) : null}
@@ -48,7 +51,7 @@ export function DuaChapterBanner({ title, heading = false }: { title: string; he
 }
 
 /** _DuaChapterRow: «Глава N» and the chapter's title. */
-export function DuaChapterRow({ chapter, locale }: { chapter: DuaCategory; locale: Locale }) {
+export function DuaChapterRow({ chapter, locale, t }: { chapter: DuaCategory; locale: Locale; t: Translate }) {
   return (
     <Link
       className="dua-chapter-row"
@@ -57,7 +60,7 @@ export function DuaChapterRow({ chapter, locale }: { chapter: DuaCategory; local
       <span className="dua-chapter-row-icon"><DuaMihrabIcon /></span>
       <span className="dua-chapter-row-text">
         <span className="dua-chapter-row-number">
-          {translate(locale, "dua.chapterNumber", { number: chapter.source_number })}
+          {t("dua.chapterNumber", { number: chapter.source_number })}
         </span>
         <span className="dua-chapter-row-title">{duaDisplayTitle(chapter.title, locale)}</span>
       </span>
@@ -77,24 +80,24 @@ export function DuaEmpty({ message }: { message: string }) {
 }
 
 /** IqroAsyncError: the cloud, what failed and «Повторить». */
-export function DuaError({ locale, onRetry }: { locale: Locale; onRetry: () => void }) {
+export function DuaError({ t, onRetry }: { t: Translate; onRetry: () => void }) {
   return (
     <div className="dua-state" role="alert">
       <DuaCloudOffIcon />
-      <p>{translate(locale, "dua.networkError")}</p>
+      <p>{t("dua.networkError")}</p>
       <button type="button" className="dua-retry" onClick={onRetry}>
-        {translate(locale, "dua.retry")}
+        {t("dua.retry")}
       </button>
     </div>
   );
 }
 
 /** IqroLoading. */
-export function DuaLoading({ locale }: { locale: Locale }) {
+export function DuaLoading({ t }: { t: Translate }) {
   return (
     <div className="dua-state" role="status" aria-live="polite">
       <span className="dua-spinner" aria-hidden="true" />
-      <span className="sr-only">{translate(locale, "common.loading")}</span>
+      <span className="sr-only">{t("common.loading")}</span>
     </div>
   );
 }
