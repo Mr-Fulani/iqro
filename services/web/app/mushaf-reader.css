@@ -162,6 +162,7 @@ body:has(.quran-reader-boot) .app-footer {
 
 .is-reader-immersive .mushaf-reader-toolbar,
 .is-reader-immersive .mushaf-page-navigation,
+.is-reader-immersive .mushaf-page-arrow-rail,
 .is-reader-immersive .qf-mushaf-meta,
 .is-reader-immersive .qf-mushaf-attribution,
 .is-reader-immersive .quran-page-jump .btn {
@@ -186,6 +187,9 @@ body:has(.quran-reader-boot) .app-footer {
   overscroll-behavior: contain;
   touch-action: pan-y pinch-zoom;
 }
+
+/* The stage box would break the full-height reader viewport. */
+.is-reader-immersive .mushaf-page-stage { display: contents; }
 
 .mushaf-page-transition {
   position: relative;
@@ -268,7 +272,8 @@ body:has(.quran-reader-boot) .app-footer {
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-container {
   align-items: flex-start;
-  padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+  /* MushafReaderLayout measures the visible bottom overlays. */
+  padding-bottom: calc(var(--reader-bottom-reserve, calc(120px + env(safe-area-inset-bottom, 0px))) + 8px);
 }
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-transition {

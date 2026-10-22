@@ -310,7 +310,8 @@ def _merge_announcement_receipts(*, source: User, target: User, counts: dict[str
                 value for value in (getattr(existing, name), getattr(receipt, name)) if value
             ]
             setattr(existing, name, min(moments) if moments else None)
-        existing.save(update_fields=["read_at", "dismissed_at", "updated_at"])
+        existing.wave = max(existing.wave, receipt.wave)
+        existing.save(update_fields=["read_at", "dismissed_at", "wave", "updated_at"])
         receipt.delete()
     counts["announcement_receipts"] = len(receipts)
 

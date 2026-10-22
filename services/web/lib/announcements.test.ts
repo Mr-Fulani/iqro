@@ -8,6 +8,7 @@ import {
   cardAnnouncement,
   emptyState,
   forAudience,
+  isFinished,
   markDismissed,
   markRead,
   mergeReceipts,
@@ -162,3 +163,50 @@ test("the body supports paragraphs, lists and bold only", () => {
     { text: " внизу", bold: false },
   ]);
 });
+
+test("a mark hides the announcement only in its own wave", () => {
+  const first = item();
+  let state = markDismissed(emptyState(), ID_A, NOW, 1);
+  assert.equal(isFinished(first, state), true);
+  assert.equal(cardAnnouncement([first], state), null);
+
+  // «Показать снова»: the same announcement in wave 2 is back on the home screen.
+  const again = item({ wave: 2 });
+  assert.equal(isFinished(again, state), false);
+  assert.equal(cardAnnouncement([again], state)?.id, ID_A);
+  state = markDismissed(state, ID_A, NOW + DAY, 2);
+  assert.equal(isFinished(again, state), true);
+  assert.equal(state.dismissed[ID_A], new Date(NOW).toISOString());
+
+  // Marks saved before waves existed count as wave 1; the feed's "read" stays.
+  const legacy = parseState(JSON.stringify({ read: { [ID_A]: "2026-10-21T10:00:00Z" } }));
+  assert.equal(isFinished(first, legacy), true);
+  assert.equal(isFinished(again, legacy), false);
+  assert.equal(markRead(legacy, ID_A, NOW, 2).read[ID_A], "2026-10-21T10:00:00Z");
+});
+
+test("the bubble's frequency and limit start over in each wave", () => {
+  const first = item();
+  const noSession = new Set<string>();
+  let state = emptyState();
+  for (let day = 0; day < 3; day += 1) state = recordBubbleShown(state, [first], NOW + day * DAY, noSession);
+  assert.deepEqual(bubbleAnnouncements([first], state, NOW + 10 * DAY, noSession), []);
+
+  const again = item({ wave: 2 });
+  assert.equal(bubbleAnnouncements([again], state, NOW + 10 * DAY, noSession).length, 1);
+  state = recordBubbleShown(state, [again], NOW + 10 * DAY, noSession);
+  assert.deepEqual(state.bubble[ID_A], { shown: 1, last: new Date(NOW + 10 * DAY).toISOString(), wave: 2 });
+});
+
+test("receipts and impressions carry the wave", () => {
+  const merged = mergeReceipts(emptyState(), {
+    results: [{ announcement_id: ID_A, read_at: null, dismissed_at: "2026-10-20T00:00:00Z", wave: 3 }],
+  });
+  assert.equal(isFinished(item({ wave: 3 }), merged), true);
+  assert.equal(isFinished(item({ wave: 4 }), merged), false);
+
+  const first = takeImpression(emptyState(), ID_A, "card", NOW, 1);
+  assert.equal(takeImpression(first.state, ID_A, "card", NOW, 2).fresh, true);
+  assert.equal(parseAnnouncements({ results: [payload()] })[0].wave, 1);
+});
+

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const siteUrl =
   process.env.PLAYWRIGHT_BASE_URL ||
-  `http://127.0.0.1:${process.env.PLAYWRIGHT_PRODUCTION === "1" ? 3101 : 3100}`;
+  `http://127.0.0.1:${process.env.PLAYWRIGHT_WEB_PORT || (process.env.PLAYWRIGHT_PRODUCTION === "1" ? 3101 : 3100)}`;
 
 // These tests intentionally cold-compile many dynamic App Router segments. Running them
 // serially avoids Turbopack development artifacts being read while another worker rewrites them.

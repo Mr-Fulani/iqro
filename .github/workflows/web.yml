@@ -22,7 +22,9 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Dev and production e2e (230+ tests) plus Lighthouse run back to back; 25 minutes
+    # was no longer enough on GitHub runners (runs took 22–27 min in October 2026).
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: services/web

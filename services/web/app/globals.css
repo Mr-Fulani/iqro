@@ -3756,24 +3756,70 @@ input:focus, select:focus, textarea:focus {
 }
 
 .mushaf-page-navigation {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
   margin-top: 16px;
 }
 
-.mushaf-page-navigation .btn:first-child {
-  justify-self: start;
-}
-
-.mushaf-page-navigation .btn:last-child {
-  justify-self: end;
-}
-
 .mushaf-page-navigation-status {
+  display: block;
   font-weight: 600;
   text-align: center;
+}
+
+/* Page-turn arrows sit in the margins beside the sheet, at the middle of the
+   screen while the tall page scrolls past. Physical sides on purpose: an RTL
+   interface must not mirror them a second time. */
+.mushaf-page-stage {
+  position: relative;
+  padding-inline: 56px;
+}
+
+.mushaf-page-arrow-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+}
+
+.mushaf-page-arrow-rail.is-next {
+  left: 0;
+}
+
+.mushaf-page-arrow-rail.is-previous {
+  right: 0;
+}
+
+.mushaf-page-arrow {
+  position: sticky;
+  top: calc(50vh - 22px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  color: var(--text-secondary);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mushaf-page-arrow:hover,
+.mushaf-page-arrow:focus-visible {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  opacity: 1;
+}
+
+.mushaf-page-arrow:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.mushaf-page-arrow:disabled {
+  visibility: hidden;
 }
 
 @media (max-width: 600px) {
@@ -3877,21 +3923,7 @@ input:focus, select:focus, textarea:focus {
   }
 
   .mushaf-page-navigation {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 10px 10px 12px;
-  }
-
-  .mushaf-page-navigation-status {
-    grid-column: 1 / -1;
-    grid-row: 1;
-  }
-
-  .mushaf-page-navigation .btn {
-    grid-row: 2;
-    width: 100%;
-    min-width: 0;
-    padding-inline: 10px;
-    white-space: normal;
   }
 }
 

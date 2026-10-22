@@ -3376,3 +3376,131 @@ test("explicit page jump cancels the pending verse after changing layout", async
   await expect(page.locator('.qf-mushaf-view[data-mushaf-id="1"]')).toHaveAttribute("data-page-number", "1");
   await expect(page.locator("#mushaf-page-jump")).toHaveValue("1");
 });
+
+test.describe("Landscape Mushaf bottom space", () => {
+  test.use({ isMobile: true, hasTouch: true });
+
+  // Below the last line: the sheet's own margin, then only the visible bottom
+  // overlays (reader bar, tajweed chips) and a small gap.
+  const expectFittedBottom = async (page: Page) => {
+    const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+    await expect(stage.locator(".qf-mushaf-line").last()).toBeVisible();
+    await expect.poll(() => stage.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      const end = element.getBoundingClientRect().bottom;
+      const line = [...element.querySelectorAll(".qf-mushaf-line")].at(-1)!.getBoundingClientRect();
+      const sheet = element.querySelector(".qf-mushaf-sheet")!.getBoundingClientRect();
+      const overlays = [...document.querySelectorAll(".reader-actions, .mushaf-tajweed-legend")]
+        .filter((overlay) => overlay.getClientRects().length > 0)
+        .map((overlay) => end - overlay.getBoundingClientRect().top);
+      const reserve = Math.max(0, ...overlays);
+      const lastLine = end - line.bottom;
+      const spareBelowLastLine = Math.round(lastLine - (sheet.bottom - line.bottom) - reserve);
+      return {
+        clearOfOverlays: lastLine >= reserve,
+        spareBelowLastLine,
+        withinGap: spareBelowLastLine >= 0 && spareBelowLastLine <= 16,
+        horizontalScroll: element.scrollWidth - element.clientWidth
+          + document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    })).toMatchObject({ clearOfOverlays: true, withinGap: true, horizontalScroll: 0 });
+  };
+
+  const expectBothControlStates = async (page: Page) => {
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    await expect(layout).toHaveAttribute("data-reader-orientation", "landscape");
+    await expect(layout).toHaveClass(/is-reader-immersive/);
+    await expectFittedBottom(page);
+    await layout.locator(".mushaf-page-container").tap({ position: { x: 5, y: 5 } });
+    await expect(layout.locator(".reader-actions")).toHaveClass(/is-folded/);
+    await expectFittedBottom(page);
+    await expect(layout.locator(".mushaf-page-arrow")).toHaveCount(2);
+    for (const arrow of await layout.locator(".mushaf-page-arrow").all()) await expect(arrow).toBeHidden();
+  };
+
+  for (const viewport of [{ width: 740, height: 360 }, { width: 844, height: 390 }, { width: 915, height: 412 }]) {
+    test(`${viewport.width}x${viewport.height} leaves no empty band below the page`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.goto("/ru/quran?surah=6&page=128");
+      await expectBothControlStates(page);
+    });
+  }
+
+  test("folded controls leave room for the tajweed legend", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/ru/quran?surah=6&page=128");
+    await expectBothControlStates(page);
+    await expect(page.getByTestId("tajweed-legend")).toBeVisible();
+  });
+
+  test("a portrait reader turned to landscape fits a 16-line RTL page", async ({ page }) => {
+    await page.route("**/api/v1/quran/foundation/mushafs", (route) =>
+      route.fulfill({ json: foundationMushafs.map((mushaf) => ({ ...mushaf, lines_per_page: 16 })) }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/ar/quran?surah=6&page=128");
+    const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+    await expect(stage.locator(".qf-mushaf-sheet")).toHaveAttribute("style", /repeat\(16,/);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expectBothControlStates(page);
+  });
+});
+
+test.describe("Desktop Mushaf page arrows", () => {
+  for (const { locale, next, previous } of [
+    { locale: "ru", next: "Следующая страница", previous: "Предыдущая страница" },
+    { locale: "ar", next: "الصفحة التالية", previous: "الصفحة السابقة" },
+  ]) {
+    test(`${locale} turns pages with small arrows beside the sheet, next on the left`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto(`/${locale}/quran?surah=6&page=128`);
+      const surface = page.locator(".mushaf-reader-surface");
+      const view = surface.locator(".qf-mushaf-view");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      await expect(surface.locator(".mushaf-page-navigation button")).toHaveCount(0);
+      await expect(surface.locator(".mushaf-page-navigation-status")).toBeVisible();
+
+      const nextArrow = surface.getByRole("button", { name: `${next} (129)`, exact: true });
+      const previousArrow = surface.getByRole("button", { name: `${previous} (127)`, exact: true });
+      const sheet = (await surface.locator(".qf-mushaf-sheet").boundingBox())!;
+      const nextBox = (await nextArrow.boundingBox())!;
+      const previousBox = (await previousArrow.boundingBox())!;
+      // In the margins, mirrored by the Mushaf rather than by the interface direction.
+      expect(nextBox.x + nextBox.width).toBeLessThanOrEqual(sheet.x);
+      expect(previousBox.x).toBeGreaterThanOrEqual(sheet.x + sheet.width);
+      for (const box of [nextBox, previousBox]) {
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y + box.height / 2).toBeCloseTo(400, 0);
+      }
+      expect(await nextArrow.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(1);
+
+      await nextArrow.click();
+      await expect(view).toHaveAttribute("data-page-number", "129");
+      await page.keyboard.press("Tab");
+      const back = surface.getByRole("button", { name: `${previous} (128)`, exact: true });
+      await expect(back).toBeFocused();
+      expect(await back.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
+      await expect(back).toHaveCSS("outline-style", "solid");
+      await page.keyboard.press("Enter");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+
+      await surface.locator(".mushaf-page-container").focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(view).toHaveAttribute("data-page-number", "129");
+      await page.keyboard.press("ArrowLeft");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280);
+    });
+  }
+
+  test("the first page hides the arrow toward the previous page", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/ru/quran?surah=1&page=1");
+    const surface = page.locator(".mushaf-reader-surface");
+    await expect(surface.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "1");
+    await expect(surface.getByRole("button", { name: "Следующая страница (2)", exact: true })).toBeVisible();
+    await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeDisabled();
+    await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeHidden();
+  });
+});

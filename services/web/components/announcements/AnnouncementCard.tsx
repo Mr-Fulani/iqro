@@ -21,20 +21,22 @@ import {
   useReceiptSync,
 } from "./announcement-store";
 import { AnnouncementDialog } from "./AnnouncementDialog";
-import { AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
+import { AnnouncementDate, AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
 
 // Runs before the first paint: a card this visitor already closed or read must
 // not flash and then collapse the page (the home page is cached for everyone).
-const hideScript = (id: string) =>
-  `(function(){try{var s=JSON.parse(localStorage.getItem(${JSON.stringify(ANNOUNCEMENT_STORAGE_KEY)})||"{}");` +
-  `if((s.read&&s.read[${JSON.stringify(id)}])||(s.dismissed&&s.dismissed[${JSON.stringify(id)}])){` +
-  `var c=document.currentScript.previousElementSibling;if(c)c.hidden=true}}catch(e){}})();`;
+// The same rule as finishedWave(): a mark hides it only in the wave it was made in.
+const hideScript = (id: string, wave: number) =>
+  `(function(){try{var s=JSON.parse(localStorage.getItem(${JSON.stringify(ANNOUNCEMENT_STORAGE_KEY)})||"{}"),` +
+  `i=${JSON.stringify(id)},w=s.waves&&s.waves[i];` +
+  `if(typeof w!=="number")w=(s.read&&s.read[i])||(s.dismissed&&s.dismissed[i])?1:0;` +
+  `if(w>=${wave}){var c=document.currentScript.previousElementSibling;if(c)c.hidden=true}}catch(e){}})();`;
 
 const DESKTOP = "(min-width: 769px)";
 
 /** The desktop card under the hero; phones get the bubble in the header instead. */
 export function AnnouncementCard({ items }: { items: Announcement[] }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const { session } = useAuth();
   const state = useAnnouncementState();
   const [explained, setExplained] = useState<Announcement | null>(null);
@@ -80,7 +82,7 @@ export function AnnouncementCard({ items }: { items: Announcement[] }) {
         <div className="announcement-card-text">
           <div className="announcement-card-meta">
             <span className="announcement-chip">{t(KIND_LABELS[item.kind])}</span>
-            <time dateTime={item.starts_at}>{formatDate(item.starts_at, { day: "numeric", month: "long" })}</time>
+            <AnnouncementDate item={item} />
           </div>
           <h2 id={`announcement-${item.id}`} className="announcement-card-title">{item.title}</h2>
           <p className="announcement-summary">{item.summary}</p>
@@ -112,7 +114,7 @@ export function AnnouncementCard({ items }: { items: Announcement[] }) {
           ×
         </button>
       </section>
-      <script dangerouslySetInnerHTML={{ __html: hideScript(item.id) }} suppressHydrationWarning />
+      <script dangerouslySetInnerHTML={{ __html: hideScript(item.id, item.wave) }} suppressHydrationWarning />
       {dialog}
     </>
   );

@@ -98,10 +98,11 @@ def published_announcement(announcement_id: uuid.UUID, *, now: datetime) -> Anno
     return published_announcements().filter(pk=announcement_id, starts_at__lte=now).first()
 
 
-def published_ids(candidates: set[uuid.UUID]) -> set[uuid.UUID]:
-    return set(
+def published_waves(candidates: set[uuid.UUID]) -> dict[uuid.UUID, int]:
+    """The current wave of each published announcement among the candidates."""
+    return dict(
         Announcement.objects.filter(
             pk__in=candidates,
             status=AnnouncementStatus.PUBLISHED,
-        ).values_list("pk", flat=True)
+        ).values_list("pk", "wave")
     )
