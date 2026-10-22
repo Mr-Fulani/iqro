@@ -85,7 +85,8 @@ export function HighlightedWord({
 
 /**
  * The sheet the tajweed cards open in: a bottom sheet on a phone, a dialog on a
- * wide screen. Esc and a tap on the shade close it; focus returns to the opener.
+ * wide screen. Esc, a tap on the shade and, on a touch screen, a swipe down
+ * from the handle close it; focus returns to the opener.
  * The title takes focus when the sheet opens and whenever `focusKey` changes.
  * Content that closes the sheet itself calls `close()` on `dialogRef`.
  */
@@ -113,6 +114,7 @@ export function TajweedDialog({
   const dialog = dialogRef ?? own;
   const heading = useRef<HTMLHeadingElement | null>(null);
   const opener = useRef<Element | null>(null);
+  const drag = useRef<{ pointer: number; startY: number; offset: number } | null>(null);
   const titleId = useId();
 
   useEffect(() => {
@@ -152,7 +154,35 @@ export function TajweedDialog({
       }}
       data-testid={testId}
     >
-      <div className="tajweed-sheet-head">
+      <div
+        className="tajweed-sheet-head"
+        // Like the app's bottom sheet: dragging the handle down far enough closes it.
+        onPointerDown={(event) => {
+          if (event.pointerType === "mouse" || (event.target as Element).closest("button")) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drag.current = { pointer: event.pointerId, startY: event.clientY, offset: 0 };
+        }}
+        onPointerMove={(event) => {
+          const current = drag.current;
+          const element = dialog.current;
+          if (!current || current.pointer !== event.pointerId || !element) return;
+          current.offset = Math.max(0, event.clientY - current.startY);
+          element.style.transform = `translateY(${current.offset}px)`;
+        }}
+        onPointerUp={(event) => {
+          const current = drag.current;
+          const element = dialog.current;
+          drag.current = null;
+          if (!current || current.pointer !== event.pointerId || !element) return;
+          element.style.transform = "";
+          if (current.offset > Math.min(120, element.offsetHeight / 4)) element.close();
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+          if (dialog.current) dialog.current.style.transform = "";
+        }}
+        data-testid="tajweed-sheet-handle"
+      >
         <span className="tajweed-sheet-handle" aria-hidden="true" />
         <button
           type="button"

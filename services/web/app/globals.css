@@ -6978,6 +6978,8 @@ svg.track-surah-name-ar {
 
 .tajweed-legend {
   display: grid;
+  /* The column keeps the container's width, so a long row of chips scrolls instead of spilling out. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 12px;
 }
@@ -6996,6 +6998,27 @@ svg.track-surah-name-ar {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* A row that scrolls fades out where more chips are hidden, instead of cutting one off. */
+.tajweed-legend-list[data-overflow] {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  --fade: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
+
+.tajweed-legend[dir="rtl"] .tajweed-legend-list[data-overflow] {
+  --fade: linear-gradient(to left, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+}
+
+.tajweed-legend-list[data-overflow~="start"] {
+  --fade-start: 32px;
+}
+
+.tajweed-legend-list[data-overflow~="end"] {
+  --fade-end: 32px;
 }
 
 .tajweed-chip {
@@ -7052,6 +7075,7 @@ svg.track-surah-name-ar {
   display: flex;
   justify-content: center;
   padding: 14px 0 10px;
+  touch-action: none;
 }
 
 .tajweed-sheet-handle {
@@ -7318,6 +7342,16 @@ svg.track-surah-name-ar {
 .tajweed-step-nav .btn {
   flex: 1;
   min-height: 44px;
+}
+
+/* «Back» and «Next» stay in reach while a long step scrolls in the sheet. */
+.tajweed-breakdown .tajweed-step-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-bottom: 8px;
+  background: var(--panel);
+  box-shadow: 0 -12px 12px -12px color-mix(in srgb, var(--text-primary) 18%, transparent);
 }
 
 .tajweed-keyboard-hint {

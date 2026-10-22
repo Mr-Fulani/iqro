@@ -506,6 +506,14 @@ test("coloured memorization text explains a tapped tajweed word", async ({ page 
   // Each coloured ayah has its step-by-step breakdown with the plan's reciter.
   const breakdowns = page.getByTestId("tajweed-breakdown-open");
   await expect(breakdowns).toHaveCount(2);
+  // On a narrow phone the chips and the button stay inside the screen.
+  await page.setViewportSize({ width: 360, height: 740 });
+  for (const box of await page.locator(".memorization-ayah-card .tajweed-chip, [data-testid='tajweed-breakdown-open']")
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect()))) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(360);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await breakdowns.first().click();
   const breakdown = page.getByRole("dialog", { name: /^Разбор таджвида/ });
   await expect(breakdown.getByTestId("tajweed-step-counter")).toHaveText("1 из 1: Хамзату-ль-васль");

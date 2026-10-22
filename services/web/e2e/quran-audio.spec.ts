@@ -1623,6 +1623,121 @@ test("tajweed chips float in the phone reader and open a bottom sheet", async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+// More rules than a phone row holds, so the legend has to scroll.
+const extraRules = [
+  ["ikhafa", "Ихфа", "#09B000"],
+  ["ghunnah", "Гунна", "#09B000"],
+  ["ham_wasl", "Хамзату-ль-васль", "#9FA5A5"],
+  ["laam_shamsiyah", "Лям шамсия", "#9FA5A5"],
+].map(([code, name, color]) => ({
+  code, arabic_name: name, color, name: tajweedTexts(name, name), why: tajweedTexts("—", "—"),
+  how: tajweedTexts("—", "—"), variants: [],
+}));
+
+async function openPhoneReader(page: Page, path: string) {
+  await installTajweedMocks(page);
+  await page.route("**/api/v1/quran/tajweed/rules", (route) => route.fulfill({
+    json: { ...tajweedReference, rules: [...tajweedReference.rules, ...extraRules] },
+  }));
+  await page.route("**/api/v1/quran/tajweed/pages/128", (route) => route.fulfill({
+    json: { ...tajweedPage128, rules: [...tajweedPage128.rules, ...extraRules.map((rule) => rule.code)] },
+  }));
+  await page.goto(path);
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+  // A development server hydrates the reader before it turns immersive; production opens it directly.
+  const enterReader = page.locator(".reader-launch").filter({ visible: true });
+  if (await enterReader.count()) await enterReader.click();
+  await foldReaderMenu(page);
+}
+
+/** The chips and the breakdown float over the page once the reader menu folds. */
+async function foldReaderMenu(page: Page) {
+  const fold = page.locator(".reader-actions:not(.is-folded) .reader-action-buttons > button:last-child")
+    .filter({ visible: true });
+  if (await fold.count()) await fold.click();
+}
+
+/** Every box stays inside the screen; nothing scrolls the page sideways. */
+async function expectInsideScreen(page: Page, selector: string) {
+  const boxes = await page.locator(selector).evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: Math.round(rect.left), right: Math.round(rect.right), width: window.innerWidth };
+  }));
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.width);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+}
+
+/** A real touch drag, so the sheet sees touch pointer events. */
+async function swipeDown(page: Page, x: number, y: number, distance: number) {
+  const client = await page.context().newCDPSession(page);
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (let step = 1; step <= 6; step += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove", touchPoints: [{ x, y: y + (distance * step) / 6 }],
+    });
+  }
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+}
+
+for (const [width, height] of [[360, 740], [390, 844], [412, 915], [740, 360]]) {
+  test.describe(`tajweed on a ${width}×${height} phone`, () => {
+    test.use({ viewport: { width, height }, isMobile: true, hasTouch: true });
+
+    test("the legend scrolls inside the screen and the sheets fit and close", async ({ page }) => {
+      await openPhoneReader(page, "/ru/quran?surah=6");
+      const legend = page.getByTestId("tajweed-legend");
+      // A short landscape screen keeps the reader menu over the page and no chips.
+      if (!(await legend.isVisible())) {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        return;
+      }
+      const list = legend.locator(".tajweed-legend-list");
+      await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-legend-list");
+      const hidden = await list.evaluate((element) => element.scrollWidth - element.clientWidth);
+      if (hidden > 1) {
+        // The row fades where chips are hidden, and every chip can be scrolled to.
+        await expect(list).toHaveAttribute("data-overflow", "end");
+        expect(await list.evaluate((element) => getComputedStyle(element).maskImage)).toContain("gradient");
+        await list.evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
+        await expect(list).toHaveAttribute("data-overflow", "start");
+        await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-chip[data-rule='laam_shamsiyah']");
+      }
+
+      await legend.getByRole("button", { name: "Лям шамсия" }).click();
+      const card = page.getByRole("dialog", { name: "Правило таджвида" });
+      await expect(card).toBeVisible();
+      await expectInsideScreen(page, "[data-testid='tajweed-card']");
+      // A swipe down from the handle closes the sheet, as in the app.
+      const handle = await card.getByTestId("tajweed-sheet-handle").boundingBox();
+      await swipeDown(page, handle!.x + 40, handle!.y + handle!.height / 2, 200);
+      await expect(card).toHaveCount(0);
+    });
+  });
+}
+
+test.describe("tajweed breakdown on a narrow phone", () => {
+  test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
+
+  test("fits the screen in Arabic and keeps its buttons in reach", async ({ page }) => {
+    await openPhoneReader(page, "/ar/quran?surah=6");
+    await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end')
+      .filter({ visible: true }).first().click();
+    await foldReaderMenu(page);
+    await page.getByTestId("tajweed-breakdown-open-reader").click();
+    const breakdown = page.getByTestId("tajweed-breakdown");
+    await expect(breakdown).toBeVisible();
+    await expectInsideScreen(page, "[data-testid='tajweed-breakdown'], .tajweed-breakdown-ayah, .tajweed-step-nav");
+    const next = breakdown.locator(".tajweed-step-nav .btn-primary");
+    await expect(next).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await expect(breakdown).toHaveCount(0);
+  });
+});
+
 test("source surah headings are filled from the pinned QUL heading font", async ({ page }) => {
   const font = syntheticHeadingFont();
   const checksum = createHash("sha256").update(font).digest("hex");
