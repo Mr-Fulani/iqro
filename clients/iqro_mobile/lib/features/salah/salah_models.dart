@@ -357,6 +357,7 @@ class SalahFormula {
     required this.translation,
     required this.source,
     this.transliteration,
+    this.caption,
     this.repetitions = 1,
     this.audio,
   });
@@ -370,6 +371,8 @@ class SalahFormula {
       arabic: _string(json['arabic']),
       transliteration: _optional(json['transliteration']),
       translation: _string(json['translation']),
+      // A malformed caption leaves the formula without one, as on the site.
+      caption: json['caption'] is String ? _optional(json['caption']) : null,
       repetitions: repetitions < 1 ? 1 : repetitions,
       audio: audio is Map ? SalahFormulaAudio.fromJson(audio) : null,
       source: SalahFormulaSource.fromJson(json['source']),
@@ -380,6 +383,9 @@ class SalahFormula {
   final String arabic;
   final String? transliteration;
   final String translation;
+
+  /// Where the words come from, in the course's words: «Хисн аль-Муслим», № 33.
+  final String? caption;
   final int repetitions;
   final SalahFormulaAudio? audio;
   final SalahFormulaSource source;

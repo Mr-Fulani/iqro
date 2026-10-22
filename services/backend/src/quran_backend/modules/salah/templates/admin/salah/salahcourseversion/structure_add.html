@@ -1,0 +1,96 @@
+{% extends "admin/base_site.html" %}
+{% load static admin_urls %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'salah/editor.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'salah/editor.js' %}" defer></script>{% endblock %}
+{% block bodyclass %}{{ block.super }} salah-editor-page{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; <a href="{% url 'admin:salah_salahcourseversion_editor' original.pk %}?node={{ back|urlencode }}">Редактор</a>
+  &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="se se-structure-page" data-editable="1">
+  <h1>{{ title }} <span class="se-version">в черновике {{ original }}</span></h1>
+  <form method="post" class="se-form" id="se-form" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add-{{ kind }}">
+    <input type="hidden" name="revision" value="{{ revision }}">
+    {% if lesson %}<input type="hidden" name="lesson" value="{{ lesson }}">{% endif %}
+    {% if after %}<input type="hidden" name="after" value="{{ after }}">{% endif %}
+
+    <section class="se-block" aria-labelledby="se-where-title">
+      <h3 id="se-where-title">Куда</h3>
+      {% if kind == "section" %}
+        <p>Раздел встанет в конец курса. Порядок разделов меняется стрелками или перетаскиванием в содержании.</p>
+      {% elif kind == "lesson" %}
+        <p class="se-prop">
+          <label for="id-section">Раздел</label>
+          <select name="section" id="id-section">
+            {% for value, label in section_choices %}<option value="{{ value }}"{% if value == section %} selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <span class="se-small">Урок встанет в конец раздела.</span>
+        </p>
+        <fieldset class="se-prop">
+          <legend>Вид урока</legend>
+          {% for value, label in lesson_kinds %}
+            <label class="se-choice"><input type="radio" name="kind" value="{{ value }}"{% if value == lesson_kind %} checked{% endif %}> {{ label }}</label>
+          {% endfor %}
+          <p class="help">«По шагам» — ученик проходит шаги по одному, «Статья» — шаги показываются одной страницей. Урок-молитва собирается из шаблона и здесь не создаётся.</p>
+        </fieldset>
+        <p class="se-prop">
+          <label for="id-slug">Адрес урока <span class="se-optional">необязательно</span></label>
+          <input type="text" name="slug" id="id-slug" value="{{ slug }}" maxlength="64" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="например, night-prayer" dir="ltr" aria-describedby="id-slug-help">
+          <span class="help" id="id-slug-help">Пусто — адрес из названия латиницей. Он виден в ссылке /ru/salah/<b>адрес</b>; после публикации его лучше не менять.</span>
+        </p>
+      {% else %}
+        <p>Урок «{{ lesson_title }}»{% if after_title %}, сразу после шага «{{ after_title }}»{% else %}, в конец урока{% endif %}.</p>
+        {% if shared %}<div class="se-shared" role="note"><p><strong>Шаг будет общим.</strong> {{ shared }}</p></div>{% endif %}
+        <p class="se-prop">
+          <label for="id-step-kind">Тип шага</label>
+          <select name="step_kind" id="id-step-kind">
+            {% for value, label in step_kinds %}<option value="{{ value }}"{% if value == step_kind %} selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <span class="se-small">Картинку, формулы и хукм шага выберете на его странице после добавления.</span>
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="se-block se-texts" aria-labelledby="se-texts-title">
+      <h3 id="se-texts-title">Тексты</h3>
+      <p class="help">Заполните хотя бы название на одном языке. Остальные языки можно перевести потом: пустые поля сразу попадут в счётчик «не переведено», а подписать версию можно, когда переведено всё.</p>
+      {% for row in fields %}
+        <div class="se-field" data-required="{{ row.field.required|yesno:'1,0' }}" data-counted="1" data-field="{{ row.field.name }}">
+          <div class="se-field-label">{{ row.field.label }}</div>
+          {% if row.field.help %}<p class="help">{{ row.field.help }}</p>{% endif %}
+          <div class="se-langs">
+            {% for value in row.values %}
+              <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
+                <label for="id-{{ value.name }}"><bdi>{{ value.language }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
+                <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="{{ row.field.rows }}" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="{{ row.field.max_length }}" placeholder="Не переведено"{% if value.error %} aria-invalid="true" aria-describedby="err-{{ value.name }}"{% endif %}>{{ value.value }}</textarea>
+                <span class="se-length" aria-hidden="true"></span>
+                {% if value.error %}<p class="se-error" id="err-{{ value.name }}">{{ value.error }}</p>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+
+    <div class="se-actions">
+      <button type="submit" class="button default" name="save" value="1">Добавить в черновик</button>
+      <a class="button" href="{% url 'admin:salah_salahcourseversion_editor' original.pk %}?node={{ back|urlencode }}">Отмена</a>
+      <span class="se-small">На сайте и в приложении появится только после подписи и публикации.</span>
+    </div>
+  </form>
+</div>
+{% endblock %}

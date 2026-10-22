@@ -146,6 +146,14 @@ def template_counts_rakats(template: Mapping[str, Any]) -> bool:
     return template.get("counts_rakats", True) is not False
 
 
+# What a draft may still lack while it is written: the sign-off asks for it, a save does not.
+_MISSING_TEXT = "нет текста на «"
+_NO_STEPS = ": нет шагов."
+_NO_ARABIC = ": нет арабского текста."
+_NO_LESSONS = ": нет уроков."
+_COMPLETENESS_MARKERS = (_MISSING_TEXT, _NO_STEPS, _NO_ARABIC, _NO_LESSONS)
+
+
 def _localized(
     value: Any, where: str, problems: list[str], *, languages: Iterable[str] = SALAH_LANGUAGES
 ) -> None:
@@ -155,7 +163,16 @@ def _localized(
     for language in languages:
         text = value.get(language)
         if not isinstance(text, str) or not text.strip():
-            problems.append(f"{where}: нет текста на «{language}».")
+            problems.append(f"{where}: {_MISSING_TEXT}{language}».")
+
+
+def _optional_localized(value: Any, where: str, problems: list[str]) -> None:
+    """Empty in every language is fine; once written, every language is due."""
+    if isinstance(value, Mapping) and not any(
+        isinstance(text, str) and text.strip() for text in value.values()
+    ):
+        return
+    _localized(value, where, problems)
 
 
 def _check_course(snapshot: Mapping[str, Any], problems: list[str]) -> None:
@@ -185,12 +202,14 @@ def _check_formula_source(formula_id: str, source: Mapping[str, Any], problems: 
             problems.append(f"{where}: для Корана нужны surah, ayah_from, ayah_to.")
     else:
         if not isinstance(source.get("arabic"), str) or not source["arabic"].strip():
-            problems.append(f"{where}: нет арабского текста.")
+            problems.append(f"{where}{_NO_ARABIC}")
         translations = source.get("translations") or {}
         meanings = {
             language: translations.get(language, {}).get("meaning") for language in SALAH_LANGUAGES
         }
         _localized(meanings, f"{where}.translations", problems)
+    if source.get("caption") is not None:
+        _optional_localized(source["caption"], f"{where}.caption", problems)
 
 
 def _check_formulas(snapshot: Mapping[str, Any], audio: set[str], problems: list[str]) -> set[str]:
@@ -372,7 +391,7 @@ def _check_lessons(
             problems.append(f"{where}: блок prayer допустим лишь в уроках-молитвах.")
         steps = expand_lesson_steps(lesson, templates)
         if not steps:
-            problems.append(f"{where}: нет шагов.")
+            problems.append(f"{where}{_NO_STEPS}")
         _check_steps(steps, known, problems)
     return slugs
 
@@ -382,6 +401,8 @@ def _check_sections(snapshot: Mapping[str, Any], lessons: set[str], problems: li
     for section in snapshot.get("sections", []):
         where = f"Раздел «{section.get('slug')}»"
         _localized(section.get("title"), f"{where}.title", problems)
+        if not section.get("lessons"):
+            problems.append(f"{where}{_NO_LESSONS}")
         for lesson_slug in section.get("lessons", []):
             if lesson_slug not in lessons:
                 problems.append(f"{where}: нет урока «{lesson_slug}».")
@@ -389,6 +410,20 @@ def _check_sections(snapshot: Mapping[str, Any], lessons: set[str], problems: li
     problems.extend(
         f"Урок «{slug}» не входит ни в один раздел." for slug in sorted(lessons - listed)
     )
+
+
+def integrity_problems(snapshot: Mapping[str, Any]) -> list[str]:
+    """What even a draft being written may not have: a broken reference, a duplicate, an
+    unknown kind. Untranslated texts and an empty lesson wait for the sign-off."""
+    try:
+        validate_snapshot(snapshot)
+    except SalahSnapshotError as error:
+        return [
+            problem
+            for problem in error.problems
+            if not any(marker in problem for marker in _COMPLETENESS_MARKERS)
+        ]
+    return []
 
 
 def validate_snapshot(snapshot: Mapping[str, Any]) -> None:
