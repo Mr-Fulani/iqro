@@ -32,6 +32,8 @@
         <span class="announcement-publish__badge announcement-publish__badge--{{ publish_panel.tone }}">{{ publish_panel.state }}</span>
         <span>{{ publish_panel.hint }}</span>
       </div>
+      {% if publish_panel.revised %}<div>{{ publish_panel.revised }}</div>{% endif %}
+      {% if publish_panel.original_url %}<div><a href="{{ publish_panel.original_url }}">Опубликованная версия</a></div>{% endif %}
       {% if publish_panel.missing %}
         <div class="announcement-publish__missing">
           <b>Чтобы опубликовать, осталось:</b>
@@ -43,6 +45,12 @@
       {% endif %}
       {% if publish_panel.owner_only %}
         <div>Сбор средств, окно с шагами, push и критический приоритет публикует только владелец.</div>
+      {% endif %}
+      {% if publish_panel.show_reshow %}
+        <div>«Показать снова на главной» вернёт карточку и пузырь всем, кто объявление уже закрыл или прочитал{% if publish_panel.waves %} (сейчас волна {{ publish_panel.waves }}){% endif %}. В ленте «Что нового» оно есть всегда.</div>
+      {% endif %}
+      {% if publish_panel.show_reshow_on_publish %}
+        <label><input type="checkbox" name="_reshow_on_publish"> Показать снова тем, кто уже закрыл или прочитал — карточкой и пузырём на главной</label>
       {% endif %}
       <div class="announcement-publish__buttons">{% include "admin/announcements/announcement/publish_buttons.html" %}</div>
     </section>

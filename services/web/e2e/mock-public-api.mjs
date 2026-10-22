@@ -16,6 +16,8 @@ const unavailableInstallationId = "00000000-0000-7000-8000-000000000999";
 const duaFavoriteKeys = new Set();
 const announcementReceipts = new Map();
 const announcementEvents = [];
+// «Показать снова» in the admin: the wave of each announcement, 1 unless raised.
+const announcementWaves = new Map();
 
 const announcementTexts = {
   ru: {
@@ -41,6 +43,10 @@ const announcementTexts = {
 };
 
 function announcementFixtures(locale) {
+  return announcementItems(locale).map((item) => ({ ...item, wave: announcementWaves.get(item.id) || 1 }));
+}
+
+function announcementItems(locale) {
   const texts = announcementTexts[locale] || announcementTexts.ru;
   const base = {
     priority: "normal",
@@ -580,6 +586,16 @@ const server = createServer(async (request, response) => {
   if (path === "/__test__/announcement-events") {
     return sendJson(response, 200, { events: announcementEvents });
   }
+  if (path === "/__test__/announcements/show-again" && request.method === "POST") {
+    const id = url.searchParams.get("id");
+    announcementWaves.set(id, (announcementWaves.get(id) || 1) + 1);
+    return sendJson(response, 200, { id, wave: announcementWaves.get(id) });
+  }
+  if (path === "/__test__/announcements/reset" && request.method === "POST") {
+    announcementWaves.clear();
+    announcementReceipts.clear();
+    return sendJson(response, 200, { reset: true });
+  }
   if (path === "/api/v1/me/announcement-receipts") {
     return sendJson(response, 200, { results: [...announcementReceipts.values()] });
   }
@@ -590,11 +606,13 @@ const server = createServer(async (request, response) => {
       announcement_id: receiptMatch[1],
       read_at: null,
       dismissed_at: null,
+      wave: 1,
     };
     const receipt = {
       ...previous,
       read_at: previous.read_at || (input.read ? publishedAt : null),
       dismissed_at: previous.dismissed_at || (input.dismissed ? publishedAt : null),
+      wave: input.read || input.dismissed ? Math.max(previous.wave, input.wave || 1) : previous.wave,
     };
     announcementReceipts.set(receiptMatch[1], receipt);
     return sendJson(response, 200, receipt);

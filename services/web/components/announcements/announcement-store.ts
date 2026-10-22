@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "../../lib/api";
 import {
   emptyState,
+  isFinished,
   loadState,
   markDismissed,
   markRead,
@@ -54,7 +55,7 @@ export function updateAnnouncementState(
   update(change);
 }
 
-function sendReceipt(id: string, body: { read?: boolean; dismissed?: boolean }): void {
+function sendReceipt(id: string, body: { read?: boolean; dismissed?: boolean; wave: number }): void {
   if (!api.getSession()?.access_token) return;
   void api
     .request(`/api/v1/me/announcement-receipts/${id}`, { method: "PUT", body: JSON.stringify(body) })
@@ -64,28 +65,28 @@ function sendReceipt(id: string, body: { read?: boolean; dismissed?: boolean }):
 }
 
 export function readAnnouncement(item: Announcement, surface: AnnouncementSurface, opened = false): void {
-  if (opened) trackAnnouncementEvent(item.id, surface, "open");
-  if (current().read[item.id]) return;
-  update((value) => markRead(value, item.id, Date.now()));
-  sendReceipt(item.id, { read: true });
+  if (opened) trackAnnouncementEvent(item.id, surface, "open", item.wave);
+  if (current().read[item.id] && isFinished(item, current())) return;
+  update((value) => markRead(value, item.id, Date.now(), item.wave));
+  sendReceipt(item.id, { read: true, wave: item.wave });
 }
 
 export function clickAnnouncement(item: Announcement, surface: AnnouncementSurface): void {
-  trackAnnouncementEvent(item.id, surface, "click");
+  trackAnnouncementEvent(item.id, surface, "click", item.wave);
   readAnnouncement(item, surface);
 }
 
 export function dismissAnnouncement(item: Announcement, surface: AnnouncementSurface): void {
-  trackAnnouncementEvent(item.id, surface, "dismiss");
-  update((value) => markDismissed(value, item.id, Date.now()));
-  sendReceipt(item.id, { dismissed: true });
+  trackAnnouncementEvent(item.id, surface, "dismiss", item.wave);
+  update((value) => markDismissed(value, item.id, Date.now(), item.wave));
+  sendReceipt(item.id, { dismissed: true, wave: item.wave });
 }
 
 export function countImpression(item: Announcement, surface: AnnouncementSurface): void {
-  const result = takeImpression(current(), item.id, surface, Date.now());
+  const result = takeImpression(current(), item.id, surface, Date.now(), item.wave);
   if (!result.fresh) return;
   update(() => result.state);
-  trackAnnouncementEvent(item.id, surface, "impression");
+  trackAnnouncementEvent(item.id, surface, "impression", item.wave);
 }
 
 function loadActive(locale: Locale): Promise<Announcement[]> {

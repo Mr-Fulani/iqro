@@ -4,7 +4,13 @@
 
 One announcement carries its texts in every interface language, an optional
 image or step-by-step illustrations, one action, a display window, an audience
-and the surfaces it may use. Published announcements are signed and read-only.
+and the surfaces it may use. A published announcement is not edited in place:
+an edit is a draft of its own (`edit_of`) that replaces the published content in
+one transaction and raises `revision`, so the audience never sees half an edit.
+
+Closing or reading an announcement takes it off the home screen for good, unless
+the admin brings it back: each «Показать снова» starts a new `wave`, and a mark
+only hides the announcement in the wave it was made in. The feed keeps it always.
 """
 
 from __future__ import annotations
@@ -344,6 +350,32 @@ class Announcement(BaseModel):
     review_note = models.TextField("Примечание проверяющего", blank=True, max_length=2000)
     published_at = models.DateTimeField("Опубликовано", null=True, blank=True, editable=False)
     withdrawn_at = models.DateTimeField("Снято", null=True, blank=True, editable=False)
+    edit_of = models.OneToOneField(
+        "self",
+        verbose_name="Правка объявления",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="pending_edit",
+        editable=False,
+    )
+    # Raised by every published edit: clients can tell a changed announcement from
+    # the one a person has already read.
+    revision = models.PositiveIntegerField("Редакция", default=1, editable=False)
+    # Raised by every «Показать снова»: marks made in an earlier wave stop hiding it.
+    wave = models.PositiveIntegerField("Волна показа", default=1, editable=False)
+    revised_at = models.DateTimeField(
+        "Изменено после публикации", null=True, blank=True, editable=False
+    )
+    revised_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Изменил",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        editable=False,
+    )
 
     class Meta:
         db_table = "announcement"
@@ -391,6 +423,10 @@ class Announcement(BaseModel):
     @property
     def is_editable(self) -> bool:
         return self.status in {AnnouncementStatus.DRAFT, AnnouncementStatus.IN_REVIEW}
+
+    @property
+    def is_edit(self) -> bool:
+        return self.edit_of_id is not None
 
     @property
     def reciter(self) -> Reciter | None:
@@ -534,6 +570,46 @@ class AnnouncementStep(BaseModel):
         return f"Шаг {self.order}"
 
 
+class WaveReason(models.TextChoices):
+    PUBLISHED = "published", "Первая публикация"
+    EDIT = "edit", "Правка с повторным показом"
+    RESHOW = "reshow", "Показать снова"
+
+
+class AnnouncementWave(BaseModel):
+    """One time the announcement was put on the home screen of the whole audience."""
+
+    announcement = models.ForeignKey(
+        Announcement,
+        on_delete=models.CASCADE,
+        related_name="waves",
+    )
+    number = models.PositiveIntegerField("Номер волны")
+    reason = models.CharField("Повод", max_length=16, choices=WaveReason)
+    revision = models.PositiveIntegerField("Редакция")
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Запустил",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    class Meta:
+        db_table = "announcement_wave"
+        ordering = ("announcement", "number")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("announcement", "number"),
+                name="announcement_wave_number_unique",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Волна {self.number}"
+
+
 class AnnouncementReceipt(BaseModel):
     """What a signed-in person has read or closed; synced between their devices."""
 
@@ -549,6 +625,8 @@ class AnnouncementReceipt(BaseModel):
     )
     read_at = models.DateTimeField(null=True, blank=True)
     dismissed_at = models.DateTimeField(null=True, blank=True)
+    # The latest wave in which the person read or closed it: hidden until the next one.
+    wave = models.PositiveIntegerField(default=1)
 
     class Meta:
         db_table = "announcement_receipt"
@@ -588,19 +666,23 @@ class AnnouncementDailyStat(models.Model):
     platform = models.CharField(max_length=8, choices=[(code, code) for code in PLATFORMS])
     surface = models.CharField(max_length=8, choices=StatSurface)
     event = models.CharField(max_length=12, choices=StatEvent)
+    wave = models.PositiveIntegerField(default=1)
     count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "announcement_daily_stat"
         constraints = [
             models.UniqueConstraint(
-                fields=("date", "announcement", "platform", "surface", "event"),
-                name="announcement_daily_stat_unique",
+                fields=("date", "announcement", "wave", "platform", "surface", "event"),
+                name="announcement_daily_stat_wave_unique",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.date} {self.platform} {self.surface} {self.event}: {self.count}"
+        return (
+            f"{self.date} волна {self.wave} {self.platform} {self.surface} {self.event}: "
+            f"{self.count}"
+        )
 
 
 class AnnouncementSettings(BaseModel):

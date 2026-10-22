@@ -32,6 +32,8 @@ from quran_backend.modules.announcements.models import (
     AnnouncementSettings,
     AnnouncementStatus,
     AnnouncementTranslation,
+    AnnouncementWave,
+    WaveReason,
 )
 from quran_backend.modules.announcements.routes import SCREENS, external_url_allowed
 from quran_backend.modules.core.content_revalidation import enqueue_announcements_change
@@ -42,6 +44,7 @@ logger = logging.getLogger(__name__)
 PUBLISH_PERMISSION = "announcements.publish_announcement"
 SENSITIVE_PERMISSION = "announcements.publish_sensitive_announcement"
 RELIGIOUS_PERMISSION = "announcements.review_religious_content"
+CHANGE_PERMISSION = "announcements.change_announcement"
 
 
 class AnnouncementNotReadyError(ValueError):
@@ -232,12 +235,23 @@ def publish(
     user: User,
     *,
     thumbnail: Callable[[str], str] = portrait_thumbnail,
+    reshow: bool = False,
 ) -> Announcement:
+    """Publish a draft, or an edit of a published announcement.
+
+    `reshow` (edits only): bring it back to the home screen of those who closed it.
+    """
     _require(user, PUBLISH_PERMISSION)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if not locked.is_editable:
         raise AnnouncementNotReadyError(["Объявление уже опубликовано или снято."])
-    if is_sensitive(locked):
+    original = None
+    if locked.edit_of_id is not None:
+        original = Announcement.objects.select_for_update().get(pk=locked.edit_of_id)
+        if original.status != AnnouncementStatus.PUBLISHED:
+            raise AnnouncementNotReadyError([EDIT_OF_UNPUBLISHED])
+    # Taking push or a window off an owner-only announcement is the owner's call too.
+    if is_sensitive(locked) or (original is not None and is_sensitive(original)):
         _require(user, SENSITIVE_PERMISSION)
     checks_religion = user.has_perm(RELIGIOUS_PERMISSION)
     result = readiness(locked, publisher_checks_religion=checks_religion)
@@ -264,11 +278,55 @@ def publish(
     if locked.needs_religious_review and locked.religious_reviewed_at is None:
         locked.religious_reviewed_by = user
         locked.religious_reviewed_at = now
+    if original is not None:
+        return _apply_edit(locked, original, user, now, reshow=reshow)
     locked.status = AnnouncementStatus.PUBLISHED
     locked.reviewed_by = user
     locked.reviewed_at = now
     locked.published_at = now
+    locked.wave = 1
     locked.save()
+    _record_wave(locked, user, WaveReason.PUBLISHED)
+    enqueue_announcements_change(action="published")
+    return locked
+
+
+def _record_wave(announcement: Announcement, user: User, reason: WaveReason) -> None:
+    AnnouncementWave.objects.create(
+        announcement=announcement,
+        number=announcement.wave,
+        reason=reason,
+        revision=announcement.revision,
+        started_by=user,
+    )
+
+
+@transaction.atomic
+def reshow(announcement: Announcement, user: User) -> Announcement:
+    """Put it back on the home screen of everyone who already read or closed it."""
+    _require(user, PUBLISH_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if is_sensitive(locked):
+        _require(user, SENSITIVE_PERMISSION)
+    now = timezone.now()
+    problem = None
+    if locked.status != AnnouncementStatus.PUBLISHED:
+        problem = "Показать снова можно только опубликованное объявление."
+    elif not (locked.channel_bubble or locked.channel_home_card):
+        problem = "Нет ни пузыря, ни карточки: на главной его не показать."
+    elif locked.starts_at > now:
+        problem = "Объявление ещё не началось: его и так увидят все."
+    elif locked.display_until <= now:
+        problem = (
+            f"Срок показа на главной закончился "
+            f"{timezone.localtime(locked.display_until):%d.%m.%Y}. Продлите его правкой и "
+            "опубликуйте снова с отметкой «Показать снова»."
+        )
+    if problem:
+        raise AnnouncementNotReadyError([problem])
+    locked.wave += 1
+    locked.save(update_fields=["wave", "updated_at"])
+    _record_wave(locked, user, WaveReason.RESHOW)
     enqueue_announcements_change(action="published")
     return locked
 
@@ -298,19 +356,59 @@ def archive(announcement: Announcement, user: User) -> None:
         enqueue_announcements_change(action="archived")
 
 
-@transaction.atomic
-def duplicate(announcement: Announcement, user: User) -> Announcement:
-    """A fresh draft with the same content; read receipts stay with the original."""
-    source = Announcement.objects.get(pk=announcement.pk)
-    copy = Announcement.objects.get(pk=announcement.pk)
+# What an edit of a published announcement may change. Status, signatures and the
+# date of the first publication stay with the original.
+EDITABLE_FIELDS = (
+    "kind",
+    "priority",
+    "starts_at",
+    "ends_at",
+    "pinned",
+    "channel_bubble",
+    "channel_home_card",
+    "channel_modal",
+    "channel_web_push",
+    "bubble_frequency",
+    "bubble_max_impressions",
+    "bubble_icon",
+    "action_type",
+    "action_reciter",
+    "action_surah",
+    "action_ayah",
+    "action_slug",
+    "action_url",
+    "image_object_key",
+    "image_width",
+    "image_height",
+    "thumb_object_key",
+    "audience_languages",
+    "audience_platforms",
+    "app_version_min",
+    "app_version_max",
+    "audience_auth",
+    "needs_religious_review",
+    "religious_reviewed_by",
+    "religious_reviewed_at",
+    "review_note",
+)
+
+EDIT_OF_UNPUBLISHED = (
+    "Исходное объявление уже снято или в архиве. Сделайте копию-черновик и опубликуйте её."
+)
+
+
+def _copy(source: Announcement, user: User, **values: Any) -> Announcement:
+    """A new draft with the content of `source`, its texts and step pictures."""
+    copy = Announcement.objects.get(pk=source.pk)
     copy.pk = uuid.uuid7()
     copy._state.adding = True
     copy.status = AnnouncementStatus.DRAFT
     copy.source = "manual"
     copy.auto_key = None
-    copy.starts_at = max(source.starts_at, timezone.now())
-    copy.ends_at = None
     copy.created_by = user
+    copy.edit_of = None
+    copy.revision = 1
+    copy.wave = 1
     for name in (
         "religious_reviewed_by",
         "religious_reviewed_at",
@@ -318,9 +416,13 @@ def duplicate(announcement: Announcement, user: User) -> Announcement:
         "reviewed_at",
         "published_at",
         "withdrawn_at",
+        "revised_at",
+        "revised_by",
     ):
         setattr(copy, name, None)
     copy.review_note = ""
+    for name, value in values.items():
+        setattr(copy, name, value)
     copy.save()
     for translation in source.translations.all():
         translation.pk = uuid.uuid7()
@@ -335,6 +437,71 @@ def duplicate(announcement: Announcement, user: User) -> Announcement:
     return copy
 
 
+@transaction.atomic
+def duplicate(announcement: Announcement, user: User) -> Announcement:
+    """A fresh draft with the same content; read receipts stay with the original."""
+    source = Announcement.objects.get(pk=announcement.pk)
+    return _copy(source, user, starts_at=max(source.starts_at, timezone.now()), ends_at=None)
+
+
+@transaction.atomic
+def start_edit(announcement: Announcement, user: User) -> Announcement:
+    """The draft of changes to a published announcement; the audience keeps the old one.
+
+    One edit at a time: a second call returns the edit already started.
+    """
+    _require(user, CHANGE_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.status != AnnouncementStatus.PUBLISHED:
+        raise AnnouncementNotReadyError(["Изменить можно только опубликованное объявление."])
+    existing = Announcement.objects.filter(edit_of=locked).first()
+    if existing is not None:
+        return existing
+    return _copy(locked, user, edit_of=locked)
+
+
+@transaction.atomic
+def cancel_edit(announcement: Announcement, user: User) -> Announcement:
+    """Throw an unpublished edit away; returns the published announcement it belonged to."""
+    _require(user, CHANGE_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    original = locked.edit_of
+    if original is None or not locked.is_editable:
+        raise AnnouncementNotReadyError(["Это не правка опубликованного объявления."])
+    locked.delete()
+    return original
+
+
+def _apply_edit(
+    edit: Announcement,
+    original: Announcement,
+    user: User,
+    now: Any,
+    *,
+    reshow: bool,
+) -> Announcement:
+    """Swap the published content for the edit in the caller's transaction."""
+    for name in EDITABLE_FIELDS:
+        setattr(original, name, getattr(edit, name))
+    original.reviewed_by = user
+    original.reviewed_at = now
+    original.revision += 1
+    original.revised_at = now
+    original.revised_by = user
+    if reshow:
+        original.wave += 1
+    original.translations.all().delete()
+    original.step_images.all().delete()
+    edit.translations.update(announcement=original)
+    edit.step_images.update(announcement=original)
+    edit.delete()
+    original.save()
+    if reshow:
+        _record_wave(original, user, WaveReason.EDIT)
+    enqueue_announcements_change(action="published")
+    return original
+
+
 def announcements_enabled() -> bool:
     settings_row = AnnouncementSettings.objects.first()
     return settings_row is None or settings_row.is_enabled
@@ -347,14 +514,23 @@ def set_receipt(
     announcement: Announcement,
     read: bool,
     dismissed: bool,
+    wave: int | None = None,
 ) -> AnnouncementReceipt:
-    """Marks only move forward, so two devices can never un-read an announcement."""
+    """Marks only move forward, so two devices can never un-read an announcement.
+
+    `wave` is the wave the device showed it in (the current one if not sent): the
+    mark hides the announcement on the home screen until the next wave.
+    """
     receipt, _ = AnnouncementReceipt.objects.select_for_update().get_or_create(
         user=user,
         announcement=announcement,
     )
     now = timezone.now()
     changed = []
+    seen_wave = min(wave or announcement.wave, announcement.wave)
+    if (read or dismissed) and seen_wave > receipt.wave:
+        receipt.wave = seen_wave
+        changed.append("wave")
     if read and receipt.read_at is None:
         receipt.read_at = now
         changed.append("read_at")
@@ -371,27 +547,32 @@ def receipt_snapshot(receipt: AnnouncementReceipt) -> dict[str, Any]:
         "announcement_id": str(receipt.announcement_id),
         "read_at": receipt.read_at,
         "dismissed_at": receipt.dismissed_at,
+        "wave": receipt.wave,
     }
 
 
 def record_events(
     *,
     platform: str,
-    events: Iterable[tuple[uuid.UUID, str, str]],
-    published_ids: set[uuid.UUID],
+    events: Iterable[tuple[uuid.UUID, str, str, int | None]],
+    published_waves: dict[uuid.UUID, int],
     today: date | None = None,
 ) -> int:
-    """Add the batch to the daily sums of published announcements; return accepted events."""
+    """Add the batch to the daily sums of published announcements; return accepted events.
+
+    Each event counts in the wave the device reported, or the current one.
+    """
     day = today or timezone.localdate()
     totals = Counter(
-        (announcement_id, surface, event)
-        for announcement_id, surface, event in events
-        if announcement_id in published_ids
+        (announcement_id, _event_wave(wave, published_waves[announcement_id]), surface, event)
+        for announcement_id, surface, event, wave in events
+        if announcement_id in published_waves
     )
-    for (announcement_id, surface, event), count in totals.items():
+    for (announcement_id, wave, surface, event), count in totals.items():
         lookup = {
             "date": day,
             "announcement_id": announcement_id,
+            "wave": wave,
             "platform": platform,
             "surface": surface,
             "event": event,
@@ -405,3 +586,7 @@ def record_events(
         except IntegrityError:
             AnnouncementDailyStat.objects.filter(**lookup).update(count=F("count") + count)
     return sum(totals.values())
+
+
+def _event_wave(reported: int | None, current: int) -> int:
+    return reported if reported is not None and 1 <= reported <= current else current
