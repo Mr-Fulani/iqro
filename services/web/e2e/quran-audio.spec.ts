@@ -3184,6 +3184,8 @@ test.describe("Landscape Mushaf bottom space", () => {
     await layout.locator(".mushaf-page-container").tap({ position: { x: 5, y: 5 } });
     await expect(layout.locator(".reader-actions")).toHaveClass(/is-folded/);
     await expectFittedBottom(page);
+    await expect(layout.locator(".mushaf-page-arrow")).toHaveCount(2);
+    for (const arrow of await layout.locator(".mushaf-page-arrow").all()) await expect(arrow).toBeHidden();
   };
 
   for (const viewport of [{ width: 740, height: 360 }, { width: 844, height: 390 }, { width: 915, height: 412 }]) {
@@ -3211,5 +3213,64 @@ test.describe("Landscape Mushaf bottom space", () => {
     await expect(stage.locator(".qf-mushaf-sheet")).toHaveAttribute("style", /repeat\(16,/);
     await page.setViewportSize({ width: 844, height: 390 });
     await expectBothControlStates(page);
+  });
+});
+
+test.describe("Desktop Mushaf page arrows", () => {
+  for (const { locale, next, previous } of [
+    { locale: "ru", next: "Следующая страница", previous: "Предыдущая страница" },
+    { locale: "ar", next: "الصفحة التالية", previous: "الصفحة السابقة" },
+  ]) {
+    test(`${locale} turns pages with small arrows beside the sheet, next on the left`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto(`/${locale}/quran?surah=6&page=128`);
+      const surface = page.locator(".mushaf-reader-surface");
+      const view = surface.locator(".qf-mushaf-view");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      await expect(surface.locator(".mushaf-page-navigation button")).toHaveCount(0);
+      await expect(surface.locator(".mushaf-page-navigation-status")).toBeVisible();
+
+      const nextArrow = surface.getByRole("button", { name: `${next} (129)`, exact: true });
+      const previousArrow = surface.getByRole("button", { name: `${previous} (127)`, exact: true });
+      const sheet = (await surface.locator(".qf-mushaf-sheet").boundingBox())!;
+      const nextBox = (await nextArrow.boundingBox())!;
+      const previousBox = (await previousArrow.boundingBox())!;
+      // In the margins, mirrored by the Mushaf rather than by the interface direction.
+      expect(nextBox.x + nextBox.width).toBeLessThanOrEqual(sheet.x);
+      expect(previousBox.x).toBeGreaterThanOrEqual(sheet.x + sheet.width);
+      for (const box of [nextBox, previousBox]) {
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y + box.height / 2).toBeCloseTo(400, 0);
+      }
+      expect(await nextArrow.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(1);
+
+      await nextArrow.click();
+      await expect(view).toHaveAttribute("data-page-number", "129");
+      await page.keyboard.press("Tab");
+      const back = surface.getByRole("button", { name: `${previous} (128)`, exact: true });
+      await expect(back).toBeFocused();
+      expect(await back.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
+      await expect(back).toHaveCSS("outline-style", "solid");
+      await page.keyboard.press("Enter");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+
+      await surface.locator(".mushaf-page-container").focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(view).toHaveAttribute("data-page-number", "129");
+      await page.keyboard.press("ArrowLeft");
+      await expect(view).toHaveAttribute("data-page-number", "128");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280);
+    });
+  }
+
+  test("the first page hides the arrow toward the previous page", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/ru/quran?surah=1&page=1");
+    const surface = page.locator(".mushaf-reader-surface");
+    await expect(surface.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "1");
+    await expect(surface.getByRole("button", { name: "Следующая страница (2)", exact: true })).toBeVisible();
+    await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeDisabled();
+    await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeHidden();
   });
 });
