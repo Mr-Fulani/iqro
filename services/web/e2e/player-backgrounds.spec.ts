@@ -218,8 +218,9 @@ test("sound bars never push the player buttons onto another line", async ({ page
     player.getByRole("button", { name: "Свернуть плеер", exact: true }),
   ];
 
-  // Portrait tablets: the bars take their own line above the controls.
-  for (const width of [768, 810, 820]) {
+  // Portrait tablets wider than the phone player (which takes over up to 768 px):
+  // the bars take their own line above the controls.
+  for (const width of [810, 820]) {
     await page.setViewportSize({ width, height: 1024 });
     const row = await top(controls[0]);
     for (const control of controls) expect(Math.abs((await top(control)) - row)).toBeLessThan(8);
