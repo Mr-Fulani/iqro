@@ -2297,42 +2297,66 @@ function QuranContent() {
               ›
             </button>
           </div>
-          <MushafGestureSurface
-            onTurnPage={turnMushafPage}
-            label={t("quran.madaniPage", { page: currentPage })}
-          >
-            {selectedFoundationMushaf ? (
-              pageError || foundationIndexError ? (
-                <div className="alert alert-error" role="alert">
-                  {t("quran.mushafUnavailable")}
-                  <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>{t("errorPage.retry")}</button>
+          <div className="mushaf-page-stage">
+            <MushafGestureSurface
+              onTurnPage={turnMushafPage}
+              label={t("quran.madaniPage", { page: currentPage })}
+            >
+              {selectedFoundationMushaf ? (
+                pageError || foundationIndexError ? (
+                  <div className="alert alert-error" role="alert">
+                    {t("quran.mushafUnavailable")}
+                    <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>{t("errorPage.retry")}</button>
+                  </div>
+                ) : foundationPageLoading || !versePages ? (
+                  <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
+                ) : foundationMushafPage ? (
+                  <MushafPageTurn
+                    direction={pageTurnDirection}
+                    pageId={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
+                    key={selectedFoundationMushaf.source_id}
+                  >
+                    <QuranFoundationMushafPageView
+                      mushaf={selectedFoundationMushaf}
+                      page={foundationMushafPage}
+                      surahs={surahs}
+                      selectedAyahKey={selectedMushafAyah}
+                      playingAyahKey={playingMushafAyah}
+                      highlightColors={ayahHighlightColors}
+                      annotationLabels={ayahAnnotationLabels}
+                      onSelectAyah={handleSelectMushafAyah}
+                      tajweedWords={tajweedWords}
+                      onSelectTajweedWord={handleSelectTajweedWord}
+                    />
+                  </MushafPageTurn>
+                ) : null
+              ) : (
+                <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
+              )}
+            </MushafGestureSurface>
+            {/* Next lies to the left as in a printed Mushaf, in every interface language. */}
+            {(["next", "previous"] as const).map((direction) => {
+              const label = direction === "next"
+                ? t("quran.nextPage", { page: currentPage + 1 })
+                : t("quran.previousPage", { page: currentPage - 1 });
+              return (
+                <div className={`mushaf-page-arrow-rail is-${direction}`} key={direction}>
+                  <button
+                    className="mushaf-page-arrow"
+                    type="button"
+                    onClick={() => turnMushafPage(direction)}
+                    disabled={direction === "next" ? currentPage >= mushafPageCount : currentPage <= 1}
+                    aria-label={label}
+                    title={label}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d={direction === "next" ? "m15 6-6 6 6 6" : "m9 6 6 6-6 6"} />
+                    </svg>
+                  </button>
                 </div>
-              ) : foundationPageLoading || !versePages ? (
-                <div className="qf-mushaf-page-loading">{t("quran.qfPageLoading")}</div>
-              ) : foundationMushafPage ? (
-                <MushafPageTurn
-                  direction={pageTurnDirection}
-                  pageId={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
-                  key={selectedFoundationMushaf.source_id}
-                >
-                  <QuranFoundationMushafPageView
-                    mushaf={selectedFoundationMushaf}
-                    page={foundationMushafPage}
-                    surahs={surahs}
-                    selectedAyahKey={selectedMushafAyah}
-                    playingAyahKey={playingMushafAyah}
-                    highlightColors={ayahHighlightColors}
-                    annotationLabels={ayahAnnotationLabels}
-                    onSelectAyah={handleSelectMushafAyah}
-                    tajweedWords={tajweedWords}
-                    onSelectTajweedWord={handleSelectTajweedWord}
-                  />
-                </MushafPageTurn>
-              ) : null
-            ) : (
-              <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
-            )}
-          </MushafGestureSurface>
+              );
+            })}
+          </div>
 
           {selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) && (
             <div className="mushaf-ayah-actions">
@@ -2372,23 +2396,9 @@ function QuranContent() {
           )}
 
           <div className="mushaf-page-navigation">
-            <button
-              className="btn btn-secondary"
-              onClick={() => turnMushafPage("previous")}
-              disabled={currentPage <= 1}
-            >
-              {t("quran.previousPage", { page: currentPage - 1 })}
-            </button>
             <span className="mushaf-page-navigation-status">
               {t("quran.pageOf", { page: currentPage, count: mushafPageCount })}
             </span>
-            <button
-              className="btn btn-secondary"
-              onClick={() => turnMushafPage("next")}
-              disabled={currentPage >= mushafPageCount}
-            >
-              {t("quran.nextPage", { page: currentPage + 1 })}
-            </button>
           </div>
           <MushafReaderPanel name="notes" label={t("quran.readerNotes")}>
             {translationEnabled && (

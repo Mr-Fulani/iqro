@@ -111,17 +111,40 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
     const element = root.current;
     const stage = element?.querySelector<HTMLElement>(".mushaf-page-container");
     if (!immersive || !element || !stage) return;
+    // A landscape page scrolls past the bottom overlays (reader bar, tajweed
+    // chips): keep only their current height free below it, not a fixed band.
+    const reserveBottom = () => {
+      const bottom = stage.getBoundingClientRect().bottom;
+      const tops = [...element.querySelectorAll<HTMLElement>(".reader-actions, .mushaf-tajweed-legend")]
+        .filter((overlay) => overlay.getClientRects().length > 0)
+        .map((overlay) => overlay.getBoundingClientRect().top);
+      element.style.setProperty("--reader-bottom-reserve", `${Math.ceil(Math.max(0, ...tops.map((top) => bottom - top)))}px`);
+    };
     // Observe the actual reader box after rotation/browser-bar changes, rather
     // than retaining a width calculated against the previous viewport.
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      const sheetWidth = landscape ? width : Math.min(width, height * pageRatio);
-      element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target !== stage) continue;
+        const { width, height } = entry.contentRect;
+        const sheetWidth = landscape ? width : Math.min(width, height * pageRatio);
+        element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
+      }
+      reserveBottom();
     });
+    const observeOverlays = () => {
+      element.querySelectorAll(".reader-actions, .mushaf-tajweed-legend").forEach((overlay) => observer.observe(overlay));
+    };
+    // The tajweed legend mounts with each page's rules.
+    const overlays = new MutationObserver(observeOverlays);
+    const surface = element.querySelector(".mushaf-reader-surface");
+    if (surface) overlays.observe(surface, { childList: true });
     observer.observe(stage);
+    observeOverlays();
     return () => {
+      overlays.disconnect();
       observer.disconnect();
       element.style.removeProperty("--reader-sheet-width");
+      element.style.removeProperty("--reader-bottom-reserve");
     };
   }, [immersive, landscape, pageRatio]);
 
