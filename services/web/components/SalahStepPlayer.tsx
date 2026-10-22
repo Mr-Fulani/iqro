@@ -205,6 +205,7 @@ export function SalahStepPlayer({
   const [activeAudio, setActiveAudio] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [formulaFont, setFormulaFont] = useState(false);
   const step = steps[index]!;
   const scenes = useMemo(() => salahStepScenes(steps, media), [media, steps]);
   const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean), index);
@@ -273,6 +274,17 @@ export function SalahStepPlayer({
     };
     document.addEventListener("visibilitychange", stop);
     return () => document.removeEventListener("visibilitychange", stop);
+  }, []);
+
+  // The formulas' font comes after the page has loaded (salah.css, .has-formula-font).
+  useEffect(() => {
+    const loaded = () => setFormulaFont(true);
+    if (document.readyState === "complete") {
+      loaded();
+      return;
+    }
+    window.addEventListener("load", loaded, { once: true });
+    return () => window.removeEventListener("load", loaded);
   }, []);
 
   const go = useCallback((delta: number) => {
@@ -433,7 +445,7 @@ export function SalahStepPlayer({
 
   return (
     <section
-      className={`surface salah-player${practice ? " is-practice" : ""}`}
+      className={`surface salah-player${practice ? " is-practice" : ""}${formulaFont ? " has-formula-font" : ""}`}
       aria-label={lesson.title}
       aria-busy={!ready}
       data-testid="salah-player"
