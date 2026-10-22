@@ -7010,6 +7010,8 @@ svg.track-surah-name-ar {
 
 .tajweed-legend {
   display: grid;
+  /* The column keeps the container's width, so a long row of chips scrolls instead of spilling out. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 12px;
 }
@@ -7028,6 +7030,27 @@ svg.track-surah-name-ar {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* A row that scrolls fades out where more chips are hidden, instead of cutting one off. */
+.tajweed-legend-list[data-overflow] {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  --fade: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
+
+.tajweed-legend[dir="rtl"] .tajweed-legend-list[data-overflow] {
+  --fade: linear-gradient(to left, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+}
+
+.tajweed-legend-list[data-overflow~="start"] {
+  --fade-start: 32px;
+}
+
+.tajweed-legend-list[data-overflow~="end"] {
+  --fade-end: 32px;
 }
 
 .tajweed-chip {
@@ -7084,6 +7107,7 @@ svg.track-surah-name-ar {
   display: flex;
   justify-content: center;
   padding: 14px 0 10px;
+  touch-action: none;
 }
 
 .tajweed-sheet-handle {
@@ -7245,9 +7269,154 @@ svg.track-surah-name-ar {
   font-size: 0.75rem;
 }
 
+/* Tajweed breakdown: one ayah, rule by rule, with the step's words lit. */
+.tajweed-sheet-title small {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.tajweed-breakdown-ayah {
+  margin: 12px 0 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-size: 1.75rem;
+  line-height: 2;
+  text-align: center;
+}
+
+.tajweed-breakdown-word {
+  border-radius: 6px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tajweed-breakdown-word.is-step {
+  background: color-mix(in srgb, var(--tajweed-color) 18%, transparent);
+  box-shadow: inset 0 -2px 0 var(--tajweed-color);
+}
+
+.tajweed-breakdown-word.is-reading {
+  background: var(--primary-subtle);
+  box-shadow: 0 0 0 2px var(--primary-border);
+}
+
+.tajweed-breakdown-listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tajweed-breakdown-status {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tajweed-breakdown-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tajweed-breakdown-progress {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--border);
+}
+
+.tajweed-breakdown-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: inline-size 0.2s ease;
+}
+
+.tajweed-step {
+  margin-top: 12px;
+}
+
+.tajweed-step-word {
+  text-align: center;
+}
+
+.tajweed-breakdown-summary {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.tajweed-breakdown-summary h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tajweed-breakdown-back {
+  margin-bottom: 12px;
+}
+
+.tajweed-step-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.tajweed-step-nav .btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+/* «Back» and «Next» stay in reach while a long step scrolls in the sheet. */
+.tajweed-breakdown .tajweed-step-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-bottom: 8px;
+  background: var(--panel);
+  box-shadow: 0 -12px 12px -12px color-mix(in srgb, var(--text-primary) 18%, transparent);
+}
+
+.tajweed-keyboard-hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* The legend and the breakdown go under the coloured ayah, in the interface language. */
+.memorization-ayah-card:has(.tajweed-legend) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.memorization-tajweed-breakdown {
+  align-self: self-start;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tajweed-breakdown-word,
+  .tajweed-breakdown-progress > span {
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .mushaf-tajweed-legend {
     padding-inline: 16px;
+  }
+
+  .tajweed-keyboard-hint {
+    display: none;
   }
 
   .tajweed-sheet {

@@ -81,7 +81,7 @@ class TajweedLegend extends StatelessWidget {
       for (final rule in rules)
         ActionChip(
           key: ValueKey('tajweed-chip-${rule.code}'),
-          avatar: _RuleDot(rule.color),
+          avatar: TajweedRuleDot(rule.color),
           label: Text(tajweedText(rule.name, locale)),
           visualDensity: VisualDensity.compact,
           onPressed: () => onSelected(rule.code),
@@ -404,76 +404,27 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
     String code,
     String? variant,
     String locale,
-  ) {
-    final rule = widget.reference.rule(code)!;
-    final name = tajweedText(rule.name, locale);
-    final variantName = rule.variant(variant)?.name;
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            _RuleDot(rule.color),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                variantName == null
-                    ? name
-                    : '$name · ${tajweedText(variantName, locale)}',
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-          ],
-        ),
-        if (locale != 'ar' || rule.arabicName != name)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 22),
-            child: Text(
-              rule.arabicName,
-              textDirection: TextDirection.rtl,
-              style: _arabic(context, 20),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _label(BuildContext context, String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+  ) => TajweedRuleHeading(
+    reference: widget.reference,
+    code: code,
+    variant: variant,
   );
+
+  Widget _label(BuildContext context, String text) =>
+      tajweedLabel(context, text);
 
   TajweedVariant _texts(String code, String? variant) {
     final rule = widget.reference.rule(code)!;
     return rule.variant(variant) ?? rule;
   }
 
-  /// Explanations quote letters and Uthmani marks such as ۥ.
-  TextStyle? _body(BuildContext context) => Theme.of(context)
-      .textTheme
-      .bodyMedium
-      ?.copyWith(fontFamilyFallback: const [IqroTheme.arabicFontFamily]);
+  TextStyle? _body(BuildContext context) => tajweedBodyStyle(context);
 
-  TextStyle _arabic(BuildContext context, double size) => TextStyle(
-    fontFamily: IqroTheme.arabicFontFamily,
-    fontSize: size,
-    height: 1.7,
-    color: IqroTheme.arabicInk(context),
-  );
+  TextStyle _arabic(BuildContext context, double size) =>
+      tajweedArabicStyle(context, size);
 
   TextSpan _highlighted(String text, Iterable<TajweedFragment> fragments) =>
-      TextSpan(
-        children: <InlineSpan>[
-          for (final run in tajweedRuns(text, fragments))
-            TextSpan(
-              text: run.text,
-              style: run.code == null
-                  ? null
-                  : TextStyle(color: widget.reference.rule(run.code!)?.color),
-            ),
-        ],
-      );
+      tajweedHighlighted(widget.reference, text, fragments);
 
   /// The tapped word with the letters of one of its rules, joined with the
   /// neighbouring word when the rule crosses into it.
@@ -493,14 +444,8 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
     ]);
   }
 
-  TextSpan _spans(List<TajweedPart> parts) => TextSpan(
-    children: <InlineSpan>[
-      for (final (index, part) in parts.indexed) ...<InlineSpan>[
-        if (index > 0) const TextSpan(text: ' '),
-        _highlighted(part.word.text, part.fragments),
-      ],
-    ],
-  );
+  TextSpan _spans(List<TajweedPart> parts) =>
+      tajweedPartsSpan(widget.reference, parts);
 
   Future<_WordAudio?> _wordAudio(TajweedAyah ayah) {
     final repository = ref.read(audioRepositoryProvider);
@@ -550,8 +495,107 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
   }
 }
 
-class _RuleDot extends StatelessWidget {
-  const _RuleDot(this.color);
+/// A rule's name with its colour dot (and variant), then its Arabic name.
+class TajweedRuleHeading extends StatelessWidget {
+  const TajweedRuleHeading({
+    required this.reference,
+    required this.code,
+    this.variant,
+    super.key,
+  });
+
+  final TajweedReference reference;
+  final String code;
+  final String? variant;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final rule = reference.rule(code)!;
+    final name = tajweedText(rule.name, locale);
+    final variantName = rule.variant(variant)?.name;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            TajweedRuleDot(rule.color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                variantName == null
+                    ? name
+                    : '$name · ${tajweedText(variantName, locale)}',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+        if (locale != 'ar' || rule.arabicName != name)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 22),
+            child: Text(
+              rule.arabicName,
+              textDirection: TextDirection.rtl,
+              style: tajweedArabicStyle(context, 20),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+Widget tajweedLabel(BuildContext context, String text) => Padding(
+  padding: const EdgeInsets.only(bottom: 4),
+  child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+);
+
+/// Explanations quote letters and Uthmani marks such as ۥ.
+TextStyle? tajweedBodyStyle(BuildContext context) => Theme.of(context)
+    .textTheme
+    .bodyMedium
+    ?.copyWith(fontFamilyFallback: const [IqroTheme.arabicFontFamily]);
+
+TextStyle tajweedArabicStyle(BuildContext context, double size) => TextStyle(
+  fontFamily: IqroTheme.arabicFontFamily,
+  fontSize: size,
+  height: 1.7,
+  color: IqroTheme.arabicInk(context),
+);
+
+/// A word with the letters of [fragments] in their rules' colours.
+TextSpan tajweedHighlighted(
+  TajweedReference reference,
+  String text,
+  Iterable<TajweedFragment> fragments,
+) => TextSpan(
+  children: <InlineSpan>[
+    for (final run in tajweedRuns(text, fragments))
+      TextSpan(
+        text: run.text,
+        style: run.code == null
+            ? null
+            : TextStyle(color: reference.rule(run.code!)?.color),
+      ),
+  ],
+);
+
+/// Words in reading order, each with its own rule letters coloured.
+TextSpan tajweedPartsSpan(
+  TajweedReference reference,
+  List<TajweedPart> parts,
+) => TextSpan(
+  children: <InlineSpan>[
+    for (final (index, part) in parts.indexed) ...<InlineSpan>[
+      if (index > 0) const TextSpan(text: ' '),
+      tajweedHighlighted(reference, part.word.text, part.fragments),
+    ],
+  ],
+);
+
+class TajweedRuleDot extends StatelessWidget {
+  const TajweedRuleDot(this.color, {super.key});
   final Color color;
 
   @override

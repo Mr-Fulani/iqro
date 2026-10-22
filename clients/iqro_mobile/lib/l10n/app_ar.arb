@@ -685,5 +685,19 @@
   "tajweedSlowLabel": "أبطأ، 0.75×",
   "tajweedClose": "إغلاق",
   "tajweedReviewNote": "تخضع هذه الشروح لمراجعة معلّم تجويد.",
-  "tajweedAudioError": "تعذّر تشغيل الكلمة."
+  "tajweedAudioError": "تعذّر تشغيل الكلمة.",
+  "tajweedBreakdown": "شرح التجويد",
+  "tajweedPlayAyah": "استمع إلى الآية كاملة",
+  "tajweedStepOf": "{current} من {total}",
+  "tajweedStepNumber": "الخطوة {number}",
+  "tajweedPrevious": "السابق",
+  "tajweedNext": "التالي",
+  "tajweedToSummary": "الخلاصة",
+  "tajweedDone": "تم",
+  "tajweedSummary": "الخلاصة",
+  "tajweedSummaryTitle": "الأحكام الواردة في هذه الآية",
+  "tajweedRestart": "ابدأ من جديد",
+  "tajweedBackToSummary": "العودة إلى الخلاصة",
+  "tajweedNextStep": "الخطوة التالية",
+  "tajweedPreviousStep": "الخطوة السابقة"
 }

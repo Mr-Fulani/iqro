@@ -27,11 +27,15 @@ class AyahActionSheet extends ConsumerStatefulWidget {
   const AyahActionSheet({
     required this.reference,
     required this.page,
+    this.onTajweedBreakdown,
     super.key,
   });
 
   final QuranAyahReference reference;
   final int page;
+
+  /// Opens the ayah's tajweed breakdown; null where the page has no tajweed.
+  final VoidCallback? onTajweedBreakdown;
 
   @override
   ConsumerState<AyahActionSheet> createState() => _AyahActionSheetState();
@@ -257,6 +261,18 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
       ),
       child: Column(
         children: <Widget>[
+          if (widget.onTajweedBreakdown case final open?) ...<Widget>[
+            _ActionTile(
+              key: const ValueKey('ayah-tajweed-breakdown'),
+              icon: Icons.school_outlined,
+              title: context.l10n.tajweedBreakdown,
+              onTap: () {
+                Navigator.pop(context);
+                open();
+              },
+            ),
+            const Divider(height: 1),
+          ],
           _ActionTile(
             icon: Icons.repeat_rounded,
             title: context.l10n.repeatSelectedAyah,
@@ -1432,6 +1448,7 @@ class _NoteEditorSheetState extends State<_NoteEditorSheet> {
 
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
+    super.key,
     required this.icon,
     required this.title,
     this.subtitle,

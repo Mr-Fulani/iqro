@@ -685,5 +685,19 @@
   "tajweedSlowLabel": "Daha yavaş, 0,75×",
   "tajweedClose": "Kapat",
   "tajweedReviewNote": "Bu açıklamalar bir tecvid hocası tarafından gözden geçiriliyor.",
-  "tajweedAudioError": "Kelime çalınamadı."
+  "tajweedAudioError": "Kelime çalınamadı.",
+  "tajweedBreakdown": "Tecvid incelemesi",
+  "tajweedPlayAyah": "Ayetin tamamını dinle",
+  "tajweedStepOf": "{current} / {total}",
+  "tajweedStepNumber": "Adım {number}",
+  "tajweedPrevious": "Geri",
+  "tajweedNext": "İleri",
+  "tajweedToSummary": "Özet",
+  "tajweedDone": "Tamam",
+  "tajweedSummary": "Özet",
+  "tajweedSummaryTitle": "Bu ayette geçen kurallar",
+  "tajweedRestart": "Baştan başla",
+  "tajweedBackToSummary": "Özete dön",
+  "tajweedNextStep": "Sonraki adım",
+  "tajweedPreviousStep": "Önceki adım"
 }

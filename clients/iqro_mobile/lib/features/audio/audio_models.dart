@@ -551,7 +551,12 @@ class SurahPlayback {
 
 /// One timed ayah of a recitation with the timings of its words.
 class AyahPlayback {
-  const AyahPlayback({required this.track, required this.words});
+  const AyahPlayback({
+    required this.track,
+    required this.words,
+    this.start,
+    this.end,
+  });
 
   factory AyahPlayback.fromJson(Map<String, Object?> json) {
     final words = <int, ({Duration start, Duration end})>{};
@@ -571,10 +576,22 @@ class AyahPlayback {
         ),
       );
     }
-    return AyahPlayback(track: AudioTrack.fromPlayback(json), words: words);
+    final start = segment is Map ? segment['start_ms'] : null;
+    final end = segment is Map ? segment['end_ms'] : null;
+    final timed = start is int && end is int && start >= 0 && end > start;
+    return AyahPlayback(
+      track: AudioTrack.fromPlayback(json),
+      words: words,
+      start: timed ? Duration(milliseconds: start) : null,
+      end: timed ? Duration(milliseconds: end) : null,
+    );
   }
 
   final AudioTrack track;
+
+  /// `[start, end)` of the whole ayah in [track]; null when it is not timed.
+  final Duration? start;
+  final Duration? end;
 
   /// `[start, end)` in [track] of each timed word, by its position in the ayah.
   final Map<int, ({Duration start, Duration end})> words;

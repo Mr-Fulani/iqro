@@ -2284,4 +2284,50 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tajweedAudioError => 'Не удалось воспроизвести фрагмент.';
+
+  @override
+  String get tajweedBreakdown => 'Разбор таджвида';
+
+  @override
+  String get tajweedPlayAyah => 'Прослушать весь аят';
+
+  @override
+  String tajweedStepOf(int current, int total) {
+    return '$current из $total';
+  }
+
+  @override
+  String tajweedStepNumber(int number) {
+    return 'Шаг $number';
+  }
+
+  @override
+  String get tajweedPrevious => 'Назад';
+
+  @override
+  String get tajweedNext => 'Далее';
+
+  @override
+  String get tajweedToSummary => 'Итог';
+
+  @override
+  String get tajweedDone => 'Готово';
+
+  @override
+  String get tajweedSummary => 'Итог';
+
+  @override
+  String get tajweedSummaryTitle => 'Правила, которые встретились в аяте';
+
+  @override
+  String get tajweedRestart => 'Начать сначала';
+
+  @override
+  String get tajweedBackToSummary => 'К итогу';
+
+  @override
+  String get tajweedNextStep => 'Следующий шаг';
+
+  @override
+  String get tajweedPreviousStep => 'Предыдущий шаг';
 }

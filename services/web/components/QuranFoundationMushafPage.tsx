@@ -10,7 +10,7 @@ import type {
 import { useI18n } from "../lib/i18n-context";
 import { isAllowedQuranWordImageUrl, isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 import { fitMushafLines, qulGridRow } from "../lib/mushaf-line-layout";
-import { tajweedWordKey } from "../lib/tajweed";
+import { tajweedWordKey, type TajweedGlyph } from "../lib/tajweed";
 import {
   loadedSurahHeaderGlyphs,
   loadSurahHeaderGlyphs,
@@ -106,6 +106,25 @@ function verseKeyById(page: QuranFoundationMushafPage): Map<number, string> {
   return new Map(
     verseIds.slice(0, verseKeys.length).map((verseId, index) => [verseId, verseKeys[index]]),
   );
+}
+
+/** One ayah of a page in the page font's glyphs, in reading order. */
+export function ayahGlyphs(
+  mushaf: QuranFoundationMushaf,
+  page: QuranFoundationMushafPage,
+  verseKey: string,
+): TajweedGlyph[] {
+  const keys = verseKeyById(page);
+  const fontFamily = quranFontFamily(mushaf.source_id, page);
+  return [...page.words]
+    .sort((left, right) => left.position_in_page - right.position_in_page || left.id - right.id)
+    .filter((word) => word.verse_id !== null && keys.get(word.verse_id) === verseKey)
+    .map((word) => ({
+      key: String(word.id),
+      text: word.text,
+      fontFamily,
+      position: word.char_type_name === "word" ? word.position_in_verse : null,
+    }));
 }
 
 function wordsByLine(

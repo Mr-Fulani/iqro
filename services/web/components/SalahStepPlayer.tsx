@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { preload } from "react-dom";
 
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
@@ -27,6 +27,8 @@ import {
 import { salahStepScenes } from "../lib/salah-3d";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
 import { SalahStepNotes } from "./SalahStepNotes";
+import { StepNav } from "./StepNav";
+import { useStepNavigation } from "./useStepNavigation";
 
 type Mode = "learn" | "practice";
 type Display = { mode: Mode; transliteration: boolean; translation: boolean };
@@ -196,7 +198,7 @@ export function SalahStepPlayer({
   const { direction, formatNumber, locale, t } = useI18n();
   const { lesson, formulas, media, courseVersion } = bundle;
   const steps = lesson.steps;
-  const [index, setIndex] = useState(0);
+  const { index, setIndex, go, onKeyDown } = useStepNavigation(steps.length, direction);
   const [ready, setReady] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [display, setDisplay] = useState<Display>(DEFAULT_DISPLAY);
@@ -229,7 +231,7 @@ export function SalahStepPlayer({
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [lesson, steps]);
+  }, [lesson, setIndex, steps]);
 
   // Keep the step in the address (shareable) and in local progress.
   useEffect(() => {
@@ -287,28 +289,16 @@ export function SalahStepPlayer({
     return () => window.removeEventListener("load", loaded);
   }, []);
 
-  const go = useCallback((delta: number) => {
-    setIndex((current) => Math.min(steps.length - 1, Math.max(0, current + delta)));
-  }, [steps.length]);
-
   const finish = () => {
     writeSalahProgress(recordSalahStep(readSalahProgress(), lesson.slug, step.slug, courseVersion, { completed: true }));
     setCompleted(true);
   };
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, audio, video, [contenteditable]")) return;
-      const forward = event.key === (direction === "rtl" ? "ArrowLeft" : "ArrowRight");
-      event.preventDefault();
-      go(forward ? 1 : -1);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [direction, go]);
+    const listener = (event: KeyboardEvent) => { onKeyDown(event); };
+    document.addEventListener("keydown", listener);
+    return () => document.removeEventListener("keydown", listener);
+  }, [onKeyDown]);
 
   const updateDisplay = (patch: Partial<Display>) => {
     setDisplay((current) => {
@@ -441,8 +431,6 @@ export function SalahStepPlayer({
 
   const rakats = lesson.prayer?.rakats ?? 0;
   const currentRakat = step.rakat ?? 0;
-  const backArrow = direction === "rtl" ? "→" : "←";
-  const nextArrow = direction === "rtl" ? "←" : "→";
 
   return (
     <section
@@ -549,20 +537,15 @@ export function SalahStepPlayer({
       </ol>
       {three.stage}
 
-      <div className="salah-step-nav">
-        <button type="button" className="btn btn-secondary" onClick={() => go(-1)} disabled={index === 0}>
-          <span aria-hidden="true">{backArrow}</span> {t("salah.previous")}
-        </button>
-        {isLast ? (
-          <button type="button" className="btn btn-primary" onClick={finish}>
-            {t("salah.finish")}
-          </button>
-        ) : (
-          <button type="button" className="btn btn-primary" onClick={() => go(1)}>
-            {t("salah.next")} <span aria-hidden="true">{nextArrow}</span>
-          </button>
-        )}
-      </div>
+      <StepNav
+        className="salah-step-nav"
+        backLabel={t("salah.previous")}
+        nextLabel={isLast ? t("salah.finish") : t("salah.next")}
+        onBack={() => go(-1)}
+        onNext={isLast ? finish : () => go(1)}
+        isFirst={index === 0}
+        isLast={isLast}
+      />
       <p className="salah-keyboard-hint">{t("salah.keyboardHint")}</p>
 
       {completed && isLast ? (

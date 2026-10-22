@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
+import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'salah_3d.dart';
@@ -139,11 +139,7 @@ class SalahStepPlayer extends ConsumerStatefulWidget {
 
 class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     with WidgetsBindingObserver {
-  late final PageController _pages;
-
-  // The header and the buttons follow the page; the pager itself is not
-  // rebuilt when it changes.
-  late final ValueNotifier<int> _index;
+  late final IqroStepController _pager;
   var _finishing = false;
   final _three = Salah3DController();
   late final List<SalahMediaScene?> _scenes = salahStepScenes(
@@ -165,8 +161,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     WidgetsBinding.instance.addObserver(this);
     _audio = ref.read(audioControllerProvider.notifier);
     final initial = widget.initialIndex.clamp(0, _steps.length - 1);
-    _pages = PageController(initialPage: initial);
-    _index = ValueNotifier<int>(initial);
+    _pager = IqroStepController(initialIndex: initial);
     unawaited(_record(initial));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -194,8 +189,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopAudio();
-    _pages.dispose();
-    _index.dispose();
+    _pager.dispose();
     _three.dispose();
     super.dispose();
   }
@@ -207,7 +201,6 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   }
 
   void _onPageChanged(int index) {
-    _index.value = index;
     _stopAudio();
     _three.stepChanged();
     unawaited(_record(index));
@@ -244,23 +237,10 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     }
   }
 
-  void _goTo(int index) {
-    if (index < 0 || index >= _steps.length || !_pages.hasClients) return;
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _pages.jumpToPage(index);
-    } else {
-      unawaited(
-        _pages.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-        ),
-      );
-    }
-  }
+  void _goTo(int index) => _pager.goTo(context, index, _steps.length);
 
   void _next() {
-    final index = _index.value;
+    final index = _pager.index.value;
     if (index >= _steps.length - 1) {
       unawaited(_finish());
     } else {
@@ -268,7 +248,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     }
   }
 
-  void _previous() => _goTo(_index.value - 1);
+  void _previous() => _goTo(_pager.index.value - 1);
 
   Future<void> _finish() async {
     if (_finishing) return;
@@ -316,7 +296,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
               child: _ModeSwitch(),
             ),
             ValueListenableBuilder<int>(
-              valueListenable: _index,
+              valueListenable: _pager.index,
               builder: (context, index, _) => _LessonHeader(
                 lesson: lesson,
                 step: _steps[index],
@@ -324,46 +304,42 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
               ),
             ),
             Expanded(
-              child: Semantics(
-                key: const ValueKey('salah-step-actions'),
-                container: true,
-                customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
-                  CustomSemanticsAction(label: context.l10n.salahNextStep):
-                      _next,
-                  CustomSemanticsAction(label: context.l10n.salahPreviousStep):
-                      _previous,
-                },
-                // PageView follows the reading direction: in RTL the next
-                // step comes from the left.
-                child: PageView.builder(
-                  key: const ValueKey('salah-steps'),
-                  controller: _pages,
-                  itemCount: _steps.length,
-                  onPageChanged: _onPageChanged,
-                  itemBuilder: (context, index) => _StepPage(
-                    key: ValueKey(_steps[index].slug),
-                    courseSlug: widget.courseSlug,
-                    document: widget.document,
-                    lesson: lesson,
-                    step: _steps[index],
-                    audioOwner: _audioOwner,
-                    visual: _StepVisualState(
-                      index: index,
-                      current: _index,
-                      scene: _scenes[index],
-                      three: _three,
-                    ),
+              child: IqroStepPager(
+                controller: _pager,
+                keyPrefix: 'salah',
+                nextLabel: context.l10n.salahNextStep,
+                previousLabel: context.l10n.salahPreviousStep,
+                onNext: _next,
+                onPrevious: _previous,
+                itemCount: _steps.length,
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, index) => _StepPage(
+                  key: ValueKey(_steps[index].slug),
+                  courseSlug: widget.courseSlug,
+                  document: widget.document,
+                  lesson: lesson,
+                  step: _steps[index],
+                  audioOwner: _audioOwner,
+                  visual: _StepVisualState(
+                    index: index,
+                    current: _pager.index,
+                    scene: _scenes[index],
+                    three: _three,
                   ),
                 ),
               ),
             ),
             ValueListenableBuilder<int>(
-              valueListenable: _index,
-              builder: (context, index, _) => _StepButtons(
+              valueListenable: _pager.index,
+              builder: (context, index, _) => IqroStepButtons(
+                keyPrefix: 'salah',
                 isFirst: index == 0,
                 isLast: index == _steps.length - 1,
                 onBack: _previous,
                 onNext: _next,
+                backLabel: context.l10n.salahBack,
+                nextLabel: context.l10n.salahNext,
+                finishLabel: context.l10n.salahFinish,
               ),
             ),
           ],
@@ -541,52 +517,6 @@ class _RakatDot extends StatelessWidget {
             : scheme.primary.withValues(alpha: current ? 1 : .45),
         border: Border.all(color: scheme.primary, width: 1.5),
         borderRadius: BorderRadius.circular(6),
-      ),
-    );
-  }
-}
-
-class _StepButtons extends StatelessWidget {
-  const _StepButtons({
-    required this.isFirst,
-    required this.isLast,
-    required this.onBack,
-    required this.onNext,
-  });
-
-  final bool isFirst;
-  final bool isLast;
-  final VoidCallback onBack;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget label(String text) =>
-        Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: OutlinedButton.icon(
-              key: const ValueKey('salah-back'),
-              onPressed: isFirst ? null : onBack,
-              icon: const Icon(Icons.arrow_back),
-              label: label(context.l10n.salahBack),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton.icon(
-              key: const ValueKey('salah-next'),
-              onPressed: onNext,
-              icon: Icon(isLast ? Icons.check : Icons.arrow_forward),
-              label: label(
-                isLast ? context.l10n.salahFinish : context.l10n.salahNext,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1484,6 +1484,121 @@ test("tajweed Mushaf explains a tapped word, its letters and its sound", async (
   await expect(wordCard).toHaveCount(0);
 });
 
+// The media stubs above never leave `paused`; these tests follow it through play and pause.
+async function trackPausedMedia(page: Page) {
+  await page.evaluate(() => {
+    const playing = new WeakSet<HTMLMediaElement>();
+    const play = HTMLMediaElement.prototype.play;
+    const pause = HTMLMediaElement.prototype.pause;
+    Object.defineProperty(HTMLMediaElement.prototype, "paused", {
+      configurable: true,
+      get(this: HTMLMediaElement) { return !playing.has(this); },
+    });
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      playing.add(this);
+      return play.call(this);
+    };
+    HTMLMediaElement.prototype.pause = function (this: HTMLMediaElement) {
+      playing.delete(this);
+      pause.call(this);
+    };
+  });
+}
+
+async function openBreakdown(page: Page, path: string, name: RegExp) {
+  await installTajweedMocks(page);
+  await page.goto(path);
+  const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+  await expect(view).toHaveAttribute("data-font-status", "ready");
+  await trackPausedMedia(page);
+  // The ayah number selects the ayah; its menu offers the breakdown.
+  await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
+  const open = page.getByTestId("tajweed-breakdown-open");
+  await open.click();
+  const breakdown = page.getByRole("dialog", { name });
+  await expect(breakdown).toBeVisible();
+  return { open, breakdown };
+}
+
+test("tajweed breakdown walks an ayah rule by rule and sums it up", async ({ page }) => {
+  const { open, breakdown } = await openBreakdown(page, "/ru/quran?surah=6", /^Разбор таджвида/);
+  await expect(open).toHaveAccessibleName("Разбор таджвида: Аят 6:2");
+  const counter = breakdown.getByTestId("tajweed-step-counter");
+  const lit = breakdown.locator(".tajweed-breakdown-word.is-step");
+
+  // Step 1: the idgham joins two words, lit together in the ayah.
+  await expect(counter).toHaveText("1 из 2: Идгам без гунны");
+  await expect(counter).toHaveAttribute("aria-live", "polite");
+  await expect(lit).toHaveCount(2);
+  await expect(lit.nth(0)).toHaveAttribute("data-word-position", "3");
+  await expect(lit.nth(1)).toHaveAttribute("data-word-position", "4");
+  const step = breakdown.locator(".tajweed-step");
+  await expect(step.getByRole("heading", { name: "Идгам без гунны" })).toBeVisible();
+  expect((await step.locator(".tajweed-letters").textContent())?.replaceAll("\u200d", "")).toBe("يَكُن لَّهُۥ");
+  await expect(step.getByText("Нун с сукуном перед ل или ر.")).toBeVisible();
+  await expect(step.getByText("Сразу читайте удвоенную ل.")).toBeVisible();
+  await expect(breakdown.getByRole("button", { name: "Назад" })).toBeDisabled();
+
+  // The fragment plays both words of the rule, slowed down when asked.
+  await breakdown.getByRole("button", { name: "Медленнее, 0,75×" }).click();
+  await breakdown.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await expect(breakdown.getByRole("button", { name: "Остановить" })).toBeVisible();
+  const fragment = breakdown.locator(".tajweed-audio audio");
+  expect(await fragment.evaluate((audio: HTMLAudioElement) => ({
+    rate: audio.playbackRate,
+    start: audio.currentTime,
+    paused: audio.paused,
+  }))).toEqual({ rate: 0.75, start: 1, paused: false });
+
+  // The next step stops the sound and starts its own from the beginning.
+  await page.keyboard.press("ArrowRight");
+  await expect(counter).toHaveText("2 из 2: Мадд табии");
+  expect(await fragment.evaluate((audio: HTMLAudioElement) => audio.paused)).toBe(true);
+  await expect(breakdown.getByRole("button", { name: "Послушать фрагмент" })).toBeVisible();
+  await expect(step.getByRole("heading", { name: "Мадд табии · Мадд силя сугра" })).toBeVisible();
+  await expect(lit).toHaveCount(1);
+  await expect(lit).toHaveAttribute("data-word-position", "4");
+  await expect(breakdown.getByRole("button", { name: "Медленнее, 0,75×" })).toHaveAttribute("aria-pressed", "true");
+
+  // The whole ayah lights the word being recited.
+  await breakdown.getByRole("button", { name: "Прослушать весь аят" }).click();
+  const ayahAudio = breakdown.getByTestId("tajweed-ayah-audio");
+  expect(await ayahAudio.evaluate((audio: HTMLAudioElement) => [audio.currentTime, audio.paused])).toEqual([1, false]);
+  await ayahAudio.evaluate((audio: HTMLAudioElement) => { audio.currentTime = 1.5; });
+  await expect(breakdown.locator(".tajweed-breakdown-word.is-reading")).toHaveAttribute("data-word-position", "4");
+  await ayahAudio.evaluate((audio: HTMLAudioElement) => { audio.currentTime = 2; });
+  await expect(breakdown.getByRole("button", { name: "Прослушать весь аят" })).toBeVisible();
+  await expect(breakdown.locator(".tajweed-breakdown-word.is-reading")).toHaveCount(0);
+
+  // The summary lists the rules met; each opens its card, whose places lead back to their steps.
+  await breakdown.getByRole("button", { name: "Итог" }).click();
+  await expect(counter).toHaveText("Итог");
+  const summary = breakdown.getByTestId("tajweed-summary");
+  await expect(summary.getByRole("button")).toHaveText(["Идгам без гунны", "Мадд табии", "Начать сначала"]);
+  await summary.getByRole("button", { name: "Идгам без гунны" }).click();
+  await expect(breakdown.getByText("Когда действует")).toBeVisible();
+  await expect(breakdown.getByText("Где в этом аяте")).toBeVisible();
+  await breakdown.getByRole("button", { name: /Шаг 1/ }).click();
+  await expect(counter).toHaveText("1 из 2: Идгам без гунны");
+
+  await page.keyboard.press("Escape");
+  await expect(breakdown).toHaveCount(0);
+  await expect(open).toBeFocused();
+});
+
+test("tajweed breakdown in Arabic turns steps with the left arrow", async ({ page }) => {
+  const { breakdown } = await openBreakdown(page, "/ar/quran?surah=6", /^شرح التجويد/);
+  await expect(breakdown).toHaveAttribute("dir", "rtl");
+  const counter = breakdown.getByTestId("tajweed-step-counter");
+  const first = await counter.textContent();
+  await page.keyboard.press("ArrowLeft");
+  await expect(counter).not.toHaveText(first ?? "");
+  await expect(breakdown.locator(".tajweed-step")).toHaveAttribute("data-step", "2");
+  await page.keyboard.press("ArrowRight");
+  await expect(breakdown.locator(".tajweed-step")).toHaveAttribute("data-step", "1");
+  await expect(breakdown.getByRole("button", { name: "التالي" })).toBeVisible();
+});
+
 test("tajweed chips float in the phone reader and open a bottom sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installTajweedMocks(page);
@@ -1506,6 +1621,121 @@ test("tajweed chips float in the phone reader and open a bottom sheet", async ({
   expect(box?.width).toBe(390);
   expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+// More rules than a phone row holds, so the legend has to scroll.
+const extraRules = [
+  ["ikhafa", "Ихфа", "#09B000"],
+  ["ghunnah", "Гунна", "#09B000"],
+  ["ham_wasl", "Хамзату-ль-васль", "#9FA5A5"],
+  ["laam_shamsiyah", "Лям шамсия", "#9FA5A5"],
+].map(([code, name, color]) => ({
+  code, arabic_name: name, color, name: tajweedTexts(name, name), why: tajweedTexts("—", "—"),
+  how: tajweedTexts("—", "—"), variants: [],
+}));
+
+async function openPhoneReader(page: Page, path: string) {
+  await installTajweedMocks(page);
+  await page.route("**/api/v1/quran/tajweed/rules", (route) => route.fulfill({
+    json: { ...tajweedReference, rules: [...tajweedReference.rules, ...extraRules] },
+  }));
+  await page.route("**/api/v1/quran/tajweed/pages/128", (route) => route.fulfill({
+    json: { ...tajweedPage128, rules: [...tajweedPage128.rules, ...extraRules.map((rule) => rule.code)] },
+  }));
+  await page.goto(path);
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+  // A development server hydrates the reader before it turns immersive; production opens it directly.
+  const enterReader = page.locator(".reader-launch").filter({ visible: true });
+  if (await enterReader.count()) await enterReader.click();
+  await foldReaderMenu(page);
+}
+
+/** The chips and the breakdown float over the page once the reader menu folds. */
+async function foldReaderMenu(page: Page) {
+  const fold = page.locator(".reader-actions:not(.is-folded) .reader-action-buttons > button:last-child")
+    .filter({ visible: true });
+  if (await fold.count()) await fold.click();
+}
+
+/** Every box stays inside the screen; nothing scrolls the page sideways. */
+async function expectInsideScreen(page: Page, selector: string) {
+  const boxes = await page.locator(selector).evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: Math.round(rect.left), right: Math.round(rect.right), width: window.innerWidth };
+  }));
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.width);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+}
+
+/** A real touch drag, so the sheet sees touch pointer events. */
+async function swipeDown(page: Page, x: number, y: number, distance: number) {
+  const client = await page.context().newCDPSession(page);
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (let step = 1; step <= 6; step += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove", touchPoints: [{ x, y: y + (distance * step) / 6 }],
+    });
+  }
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+}
+
+for (const [width, height] of [[360, 740], [390, 844], [412, 915], [740, 360]]) {
+  test.describe(`tajweed on a ${width}×${height} phone`, () => {
+    test.use({ viewport: { width, height }, isMobile: true, hasTouch: true });
+
+    test("the legend scrolls inside the screen and the sheets fit and close", async ({ page }) => {
+      await openPhoneReader(page, "/ru/quran?surah=6");
+      const legend = page.getByTestId("tajweed-legend");
+      // A short landscape screen keeps the reader menu over the page and no chips.
+      if (!(await legend.isVisible())) {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        return;
+      }
+      const list = legend.locator(".tajweed-legend-list");
+      await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-legend-list");
+      const hidden = await list.evaluate((element) => element.scrollWidth - element.clientWidth);
+      if (hidden > 1) {
+        // The row fades where chips are hidden, and every chip can be scrolled to.
+        await expect(list).toHaveAttribute("data-overflow", "end");
+        expect(await list.evaluate((element) => getComputedStyle(element).maskImage)).toContain("gradient");
+        await list.evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
+        await expect(list).toHaveAttribute("data-overflow", "start");
+        await expectInsideScreen(page, ".mushaf-tajweed-legend .tajweed-chip[data-rule='laam_shamsiyah']");
+      }
+
+      await legend.getByRole("button", { name: "Лям шамсия" }).click();
+      const card = page.getByRole("dialog", { name: "Правило таджвида" });
+      await expect(card).toBeVisible();
+      await expectInsideScreen(page, "[data-testid='tajweed-card']");
+      // A swipe down from the handle closes the sheet, as in the app.
+      const handle = await card.getByTestId("tajweed-sheet-handle").boundingBox();
+      await swipeDown(page, handle!.x + 40, handle!.y + handle!.height / 2, 200);
+      await expect(card).toHaveCount(0);
+    });
+  });
+}
+
+test.describe("tajweed breakdown on a narrow phone", () => {
+  test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
+
+  test("fits the screen in Arabic and keeps its buttons in reach", async ({ page }) => {
+    await openPhoneReader(page, "/ar/quran?surah=6");
+    await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end')
+      .filter({ visible: true }).first().click();
+    await foldReaderMenu(page);
+    await page.getByTestId("tajweed-breakdown-open-reader").click();
+    const breakdown = page.getByTestId("tajweed-breakdown");
+    await expect(breakdown).toBeVisible();
+    await expectInsideScreen(page, "[data-testid='tajweed-breakdown'], .tajweed-breakdown-ayah, .tajweed-step-nav");
+    const next = breakdown.locator(".tajweed-step-nav .btn-primary");
+    await expect(next).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await expect(breakdown).toHaveCount(0);
+  });
 });
 
 test("source surah headings are filled from the pinned QUL heading font", async ({ page }) => {
