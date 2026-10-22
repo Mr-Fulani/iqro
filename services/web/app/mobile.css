@@ -617,8 +617,13 @@
 
   .is-mushaf-mode .quran-page-jump .btn,
   .mushaf-reader-toolbar-button,
-  .mushaf-page-navigation {
+  .mushaf-page-navigation,
+  .mushaf-page-arrow-rail {
     display: none;
+  }
+
+  .mushaf-page-stage {
+    padding-inline: 0;
   }
 
   .mushaf-reader-toolbar {
