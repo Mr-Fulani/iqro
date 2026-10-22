@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   bubbleAnnouncements,
   forAudience,
@@ -38,6 +38,8 @@ export function AnnouncementBubble() {
   const [openedAt, setOpenedAt] = useState(0);
   const [phase, setPhase] = useState<"idle" | "popping" | "open">("idle");
   const [opened, setOpened] = useState<Announcement[]>([]);
+  // Rises with two big bobs only the first time it shows in this visit.
+  const [entering, setEntering] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useReceiptSync(session?.user.id);
 
@@ -58,6 +60,10 @@ export function AnnouncementBubble() {
         : [],
     [active, openedAt, session, shownThisSession, state],
   );
+
+  useLayoutEffect(() => {
+    if (shownThisSession && items.some((item) => !shownThisSession.has(item.id))) setEntering(true);
+  }, [items, shownThisSession]);
 
   useEffect(() => {
     if (!shownThisSession || !items.length) return;
@@ -83,7 +89,7 @@ export function AnnouncementBubble() {
     <div className="announcement-bubble-slot">
       <button
         type="button"
-        className={`announcement-bubble${phase === "popping" ? " is-popping" : ""}`}
+        className={`announcement-bubble${phase === "popping" ? " is-popping" : entering ? " is-entering" : ""}`}
         aria-label={t("news.bubble", { count: items.length })}
         data-testid="announcement-bubble"
         onClick={() => {
@@ -98,9 +104,9 @@ export function AnnouncementBubble() {
         <span className="announcement-bubble-face" aria-hidden="true">
           {portrait ? (
             // eslint-disable-next-line @next/next/no-img-element -- the server-made 96 px thumbnail.
-            <img src={portrait} alt="" width={34} height={34} />
+            <img src={portrait} alt="" width={46} height={46} />
           ) : (
-            <AnnouncementIcon name={first.bubble.icon === "portrait" ? "headphones" : first.bubble.icon} size={20} />
+            <AnnouncementIcon name={first.bubble.icon === "portrait" ? "headphones" : first.bubble.icon} size={26} />
           )}
         </span>
         {items.length > 1 ? <span className="announcement-bubble-count" aria-hidden="true">{items.length}</span> : null}
