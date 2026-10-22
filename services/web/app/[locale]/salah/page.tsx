@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { SalahCourseProgress, SalahLessonStatusBadge } from "@/components/SalahCourseProgress";
-import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
+import { isLocale, localeTag, type Locale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import { getPublishedSalahCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { orderedLessons, SALAH_COURSE_SLUG, type SalahLesson } from "@/lib/salah";

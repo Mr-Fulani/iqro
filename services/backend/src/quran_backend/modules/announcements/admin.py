@@ -1,10 +1,10 @@
 # Operator-facing text is intentionally Russian.
 # ruff: noqa: RUF001
-"""Admin of announcements: texts in four languages, a live preview, sign-off.
+"""Admin of announcements: texts in four languages, a live preview, publishing.
 
-Drafts are edited freely. «Подписать и опубликовать» checks the texts, the action
-and the channels; published announcements are read-only and can only be taken
-down, archived or duplicated into a new draft.
+The «Публикация» panel on top of the form says what the announcement is now, what
+is still missing and offers one button, «Сохранить и опубликовать». Published
+announcements are read-only and can only be taken down, archived or duplicated.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from django.db.models import Case, Q, QuerySet, Sum, Value, When
 from django.forms.models import BaseInlineFormSet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
 from quran_backend.modules.accounts.models import User
@@ -42,6 +43,9 @@ from quran_backend.modules.announcements.models import (
 )
 from quran_backend.modules.announcements.routes import SCREENS
 from quran_backend.modules.announcements.services import (
+    PUBLISH_PERMISSION,
+    RELIGIOUS_PERMISSION,
+    SENSITIVE_PERMISSION,
     AnnouncementNotReadyError,
     archive,
     duplicate,
@@ -153,6 +157,10 @@ class AnnouncementAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "review_note",
         )
         help_texts: ClassVar[dict[str, str]] = {
+            "needs_religious_review": (
+                "Тогда текст перед публикацией проверяет человек из группы «Проверяющий "
+                "религиозные тексты». Владелец подтверждает проверку сам, когда публикует."
+            ),
             "action_slug": (
                 "Урок: slug из курса намаза, например wudu. Раздел: "
                 + ", ".join(f"{code} ({screen.label})" for code, screen in SCREENS.items())
@@ -223,6 +231,9 @@ class AnnouncementTranslationForm(forms.ModelForm):  # type: ignore[type-arg]
         widgets: ClassVar[dict[str, Any]] = {
             "body": forms.Textarea(attrs={"rows": 4}),
             "summary": forms.Textarea(attrs={"rows": 2}),
+        }
+        help_texts: ClassVar[dict[str, str]] = {
+            "summary": "Карточка на компьютере, текст для экранного диктора у пузыря и push.",
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -401,6 +412,107 @@ class AnnouncementStepInline(admin.TabularInline):  # type: ignore[type-arg]
         return super().has_delete_permission(request, obj)
 
 
+OPERATIONS: dict[str, tuple[Callable[[Announcement, User], object], str]] = {
+    "_publish": (publish, "Опубликовано. На сайте и в приложении появится в течение минуты."),
+    "_submit_review": (
+        lambda announcement, _user: submit_for_review(announcement),
+        "Отправлено владельцу на публикацию.",
+    ),
+    "_religious_review": (
+        sign_religious_review,
+        "Отмечено: религиозный текст проверен.",
+    ),
+    "_withdraw": (withdraw, "Снято с публикации."),
+    "_archive": (archive, "Перенесено в архив."),
+}
+
+
+def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, Any]:
+    """What the announcement is now, what is still missing and which buttons apply."""
+    can_publish = user.has_perm(PUBLISH_PERMISSION)
+    if announcement is None:
+        return {
+            "state": "Новое объявление",
+            "tone": "draft",
+            "hint": (
+                "Заполните тексты и нажмите «Сохранить и опубликовать». "
+                "«Сохранить» оставит его черновиком — на сайте его не будет видно."
+            ),
+            "missing": [],
+            "notes": [],
+            "show_publish": can_publish,
+        }
+    status = announcement.status
+    editable = announcement.is_editable
+    can_publish_this = can_publish and (
+        not is_sensitive(announcement) or user.has_perm(SENSITIVE_PERMISSION)
+    )
+    checks_religion = user.has_perm(RELIGIOUS_PERMISSION)
+    report = (
+        readiness(
+            announcement,
+            publisher_checks_religion=checks_religion and can_publish_this,
+        )
+        if editable
+        else None
+    )
+    now = timezone.now()
+    if status == AnnouncementStatus.PUBLISHED and announcement.starts_at > now:
+        state, tone = "Запланировано", "scheduled"
+        hint = f"Появится {timezone.localtime(announcement.starts_at):%d.%m.%Y в %H:%M}."
+    elif status == AnnouncementStatus.PUBLISHED:
+        state, tone = "Опубликовано", "published"
+        hint = (
+            f"На главной сайта и приложения до "
+            f"{timezone.localtime(announcement.display_until):%d.%m.%Y}, в ленте — дальше."
+        )
+    else:
+        state, tone, hint = PANEL_STATES[AnnouncementStatus(status)]
+    if editable and report is not None and not report.problems and can_publish_this:
+        hint = "Всё готово: нажмите «Сохранить и опубликовать»."
+    return {
+        "state": state,
+        "tone": tone,
+        "hint": hint,
+        "missing": report.problems if report else [],
+        "notes": report.notes if report else [],
+        "owner_only": editable and can_publish and not can_publish_this,
+        "show_publish": editable and can_publish_this,
+        "show_submit_review": status == AnnouncementStatus.DRAFT and not can_publish_this,
+        "show_religious_review": bool(
+            editable
+            and not can_publish_this
+            and checks_religion
+            and announcement.needs_religious_review
+            and announcement.religious_reviewed_at is None
+        ),
+        "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
+        "show_archive": can_publish
+        and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
+        "show_duplicate": True,
+    }
+
+
+PANEL_STATES = {
+    AnnouncementStatus.DRAFT: (
+        "Черновик",
+        "draft",
+        "На сайте и в приложении не видно, пока вы не опубликуете.",
+    ),
+    AnnouncementStatus.IN_REVIEW: (
+        "Ждёт публикации",
+        "draft",
+        "Редактор подготовил объявление; опубликовать его может владелец.",
+    ),
+    AnnouncementStatus.WITHDRAWN: (
+        "Снято",
+        "off",
+        "Не показывается. Можно перенести в архив или сделать копию для новой публикации.",
+    ),
+    AnnouncementStatus.ARCHIVED: ("В архиве", "off", "Убрано и из ленты «Что нового»."),
+}
+
+
 def _image_url(announcement: Announcement) -> str | None:
     if announcement.thumb_object_key:
         return public_audio_url(announcement.thumb_object_key)
@@ -432,12 +544,11 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ("status", "kind", "source")
     search_fields = ("translations__title",)
     date_hierarchy = "starts_at"
-    actions = ("withdraw_selected", "archive_selected")
+    actions = ("publish_selected", "withdraw_selected", "archive_selected")
     readonly_fields = (
         "status",
         "source",
         "preview",
-        "readiness_report",
         "current_image",
         "stats_summary",
         "religious_reviewed_by",
@@ -451,10 +562,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "updated_at",
     )
     fieldsets = (
-        (
-            "Проверка и предпросмотр",
-            {"fields": ("status", "readiness_report", "preview")},
-        ),
+        ("Как увидят", {"fields": ("preview",)}),
         (
             "Основное",
             {
@@ -507,21 +615,20 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "description": (
                     "Лента «Что нового» — всегда. Пузырь на телефоне (сайт и приложение) "
                     "лопается по нажатию и раскрывает окно; один пузырь одновременно. "
-                    "Окно с шагами и push подписывает только владелец."
+                    "Окно с шагами и push публикует только владелец."
                 ),
             },
         ),
         (
-            "Подписи",
+            "Кто и когда",
             {
                 "fields": (
                     "review_note",
-                    "religious_reviewed_by",
-                    "religious_reviewed_at",
                     "created_by",
                     "reviewed_by",
-                    "reviewed_at",
                     "published_at",
+                    "religious_reviewed_by",
+                    "religious_reviewed_at",
                     "withdrawn_at",
                 ),
             },
@@ -671,33 +778,6 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             source,
         )
 
-    @admin.display(description="Готовность к подписи")
-    def readiness_report(self, obj: Announcement) -> str:
-        if obj._state.adding:
-            return "Сохраните черновик, чтобы увидеть проверку."
-        report = readiness(obj)
-        rows = [("#ba2121", "✗", problem) for problem in report.problems]
-        rows += [("#8a5a00", "!", note) for note in report.notes]
-        if report.ready:
-            rows.insert(0, ("#2e7d32", "✓", "Готово к подписи."))
-        if is_sensitive(obj):
-            rows.append(
-                (
-                    "#205067",
-                    "i",
-                    "Подписывает только владелец: сбор, окно, push или критический приоритет.",
-                )
-            )
-        return format_html(
-            '<ul style="margin:0;padding:0;list-style:none">{}</ul>',
-            format_html_join(
-                "",
-                '<li style="padding:2px 0">'
-                '<b style="color:{};display:inline-block;width:16px">{}</b>{}</li>',
-                rows,
-            ),
-        )
-
     @admin.display(description="Как увидят — окно из пузыря")
     def preview(self, obj: Announcement) -> str:
         if obj._state.adding:
@@ -784,7 +864,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             ),
         )
 
-    # Sign-off buttons on the change form
+    # The «Публикация» panel on top of the form
 
     def render_change_form(  # noqa: PLR0913, PLR0917 - Django's signature
         self,
@@ -795,70 +875,82 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         form_url: str = "",
         obj: Announcement | None = None,
     ) -> HttpResponse:
-        user = request.user
-        status = obj.status if obj is not None else None
-        can_publish = user.has_perm("announcements.publish_announcement")
-        editable = obj is not None and obj.is_editable
         context.update(
             {
-                "show_signoff": obj is not None,
-                "show_submit_review": status == AnnouncementStatus.DRAFT,
-                "show_religious_review": bool(
-                    obj is not None
-                    and editable
-                    and obj.needs_religious_review
-                    and obj.religious_reviewed_at is None
-                    and user.has_perm("announcements.review_religious_content")
-                ),
-                "show_publish": editable and can_publish,
-                "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
-                "show_archive": can_publish
-                and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
+                "publish_panel": _publish_panel(cast(User, request.user), obj),
                 "language_names": LANGUAGE_NAMES,
             }
         )
         return super().render_change_form(request, context, add, change, form_url, obj)
 
+    def response_add(
+        self,
+        request: HttpRequest,
+        obj: Announcement,
+        post_url_continue: str | None = None,
+    ) -> HttpResponse:
+        if "_publish" in request.POST:
+            self._run(request, obj, "_publish")
+            return HttpResponseRedirect(
+                reverse("admin:announcements_announcement_change", args=(obj.pk,))
+            )
+        return super().response_add(request, obj, post_url_continue)
+
     def response_change(self, request: HttpRequest, obj: Announcement) -> HttpResponse:
-        operations: dict[str, tuple[Callable[[], object], str]] = {
-            "_submit_review": (lambda: submit_for_review(obj), "Отправлено на проверку."),
-            "_religious_review": (
-                lambda: sign_religious_review(obj, cast(User, request.user)),
-                "Религиозная проверка подписана.",
-            ),
-            "_publish": (
-                lambda: publish(obj, cast(User, request.user)),
-                "Подписано и опубликовано. Сайт обновится в течение минуты.",
-            ),
-            "_withdraw": (lambda: withdraw(obj, cast(User, request.user)), "Снято с публикации."),
-            "_archive": (lambda: archive(obj, cast(User, request.user)), "Перенесено в архив."),
-        }
         if "_duplicate" in request.POST:
             copy = duplicate(obj, cast(User, request.user))
             self.message_user(request, "Создан новый черновик-копия.", messages.SUCCESS)
             return HttpResponseRedirect(
                 reverse("admin:announcements_announcement_change", args=(copy.pk,))
             )
-        for name, (operation, success) in operations.items():
-            if name not in request.POST:
-                continue
+        for name in OPERATIONS:
+            if name in request.POST:
+                self._run(request, obj, name)
+                return HttpResponseRedirect(request.path)
+        return super().response_change(request, obj)
+
+    def _run(self, request: HttpRequest, obj: Announcement, name: str) -> None:
+        operation, success = OPERATIONS[name]
+        try:
+            operation(obj, cast(User, request.user))
+        except PermissionDenied:
+            self.message_user(
+                request,
+                "Нет права на это действие. Сбор средств, окно с шагами, push и обязательное "
+                "обновление публикует только владелец.",
+                messages.ERROR,
+            )
+        except AnnouncementNotReadyError as error:
+            self.message_user(
+                request,
+                "Объявление сохранено, но не опубликовано. Что осталось:",
+                messages.WARNING,
+            )
+            for problem in error.problems:
+                self.message_user(request, problem, messages.ERROR)
+        else:
+            self.log_change(request, obj, success)
+            self.message_user(request, success, messages.SUCCESS)
+
+    @admin.action(description="Опубликовать")
+    def publish_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        for announcement in queryset.filter(
+            status__in=(AnnouncementStatus.DRAFT, AnnouncementStatus.IN_REVIEW)
+        ):
             try:
-                operation()
+                publish(announcement, cast(User, request.user))
             except PermissionDenied:
                 self.message_user(
-                    request,
-                    "Нет права на это действие. Сбор, окно, push и обязательное обновление "
-                    "подписывает только владелец.",
-                    messages.ERROR,
+                    request, f"{announcement}: публикует только владелец.", messages.ERROR
                 )
             except AnnouncementNotReadyError as error:
-                for problem in error.problems:
-                    self.message_user(request, problem, messages.ERROR)
+                self.message_user(
+                    request,
+                    f"{announcement}: не опубликовано — {'; '.join(error.problems)}",
+                    messages.ERROR,
+                )
             else:
-                self.log_change(request, obj, success)
-                self.message_user(request, success, messages.SUCCESS)
-            return HttpResponseRedirect(request.path)
-        return super().response_change(request, obj)
+                self.message_user(request, f"{announcement}: опубликовано.", messages.SUCCESS)
 
     @admin.action(description="Снять с публикации")
     def withdraw_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:

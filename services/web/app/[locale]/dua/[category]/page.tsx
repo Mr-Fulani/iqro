@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { DuaCategoryPage } from "@/components/DuaCategoryPage";
 import { duaDisplayTitle } from "@/lib/dua-share";
-import { isLocale, translate, type Locale } from "@/lib/i18n";
+import { isLocale, type Locale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import {
   getPublishedDuaCategoryData,
   isDuaCategorySlug,

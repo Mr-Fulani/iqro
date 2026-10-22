@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { locale as rootLocale } from "next/root-params";
-import { DEFAULT_LOCALE, isLocale, translate } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import { localizedPath } from "@/lib/routing";
 
 export default async function NotFound() {

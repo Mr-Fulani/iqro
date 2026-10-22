@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { DuaChapterBanner, DuaTopBar } from "@/components/DuaChrome";
 import { DuaFeed } from "@/components/DuaFeed";
 import { duaDisplayTitle, duaShareTitle } from "@/lib/dua-share";
-import { isLocale, translate, type Locale } from "@/lib/i18n";
+import { isLocale, type Locale } from "@/lib/i18n";
+import { translate, translatorFor } from "@/lib/translate";
 import {
   getPublishedDuaEntryByReference,
   isDuaCollectionSlug,
@@ -91,6 +92,7 @@ export default async function LocalizedDuaEntryPage({
     <div className="dua-page">
       <DuaTopBar
         locale={route.locale}
+        t={translatorFor(route.locale)}
         title={translate(route.locale, "dua.title")}
         backHref={`/dua/${entry.collection}/categories/${entry.category.slug}`}
         titleIsHeading={false}

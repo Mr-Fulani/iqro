@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { NewsFeed } from "../../../components/announcements/NewsFeed";
 import type { AnnouncementFeedPage } from "../../../lib/announcements";
-import { isLocale, translate } from "../../../lib/i18n";
+import { isLocale } from "../../../lib/i18n";
+import { translate } from "../../../lib/translate";
 import { getPublishedAnnouncementFeed } from "../../../lib/public-content";
 import { createPageMetadata } from "../../../lib/seo";
 
