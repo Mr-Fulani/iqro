@@ -268,7 +268,8 @@ body:has(.quran-reader-boot) .app-footer {
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-container {
   align-items: flex-start;
-  padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+  /* MushafReaderLayout measures the visible bottom overlays. */
+  padding-bottom: calc(var(--reader-bottom-reserve, calc(120px + env(safe-area-inset-bottom, 0px))) + 8px);
 }
 
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-transition {
