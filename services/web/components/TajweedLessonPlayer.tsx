@@ -66,15 +66,17 @@ function loadCourseRecitation(): Promise<string | null> {
   return courseRecitation;
 }
 
-function useCourseRecitation(): string | null {
+/** The course reciter, looked up once a step has something to play. */
+function useCourseRecitation(needed: boolean): string | null {
   const [recitationId, setRecitationId] = useState<string | null>(null);
   useEffect(() => {
+    if (!needed) return;
     let cancelled = false;
     void loadCourseRecitation().then((id) => {
       if (!cancelled) setRecitationId(id);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [needed]);
   return recitationId;
 }
 
@@ -189,7 +191,6 @@ export function TajweedLessonPlayer({
   const [slow, setSlow] = useState(false);
   const [readingMs, setReadingMs] = useState<number | null>(null);
   const sync = useTajweedProgressSync(courseSlug);
-  const recitationId = useCourseRecitation();
 
   const loaded = examples.status === "ready" ? examples : null;
   const shownCount = loaded?.shown.length ?? 1;
@@ -205,6 +206,7 @@ export function TajweedLessonPlayer({
     ? (answer.found !== null ? findExample?.occurrences[answer.found] ?? null : null)
     : example?.occurrences[0] ?? null;
   const current = slug === "find" ? findExample : example;
+  const recitationId = useCourseRecitation(current !== null);
   const audio = useAyahAudio(recitationId, current?.verse_key ?? "");
   const fragmentPlayer = useClipPlayer();
   const ayahPlayer = useClipPlayer(setReadingMs);
