@@ -131,9 +131,13 @@ void main() {
     );
     expect(badge.height, 22);
     expect(badge.width, greaterThanOrEqualTo(22));
-    // Beside the settings button, not over it or the page.
+    // Beside the settings button, not over it, the status bar or the page.
     final settings = tester.getRect(find.byIcon(Icons.settings));
-    expect(tester.getRect(_bubble).right, lessThanOrEqualTo(settings.left));
+    final bubble = tester.getRect(_bubble);
+    final bar = tester.getRect(find.byType(AppBar));
+    expect(bubble.right, lessThanOrEqualTo(settings.left));
+    expect(bubble.top, greaterThanOrEqualTo(bar.top));
+    expect(bubble.bottom, lessThanOrEqualTo(bar.bottom + 8));
     expect(
       tester.getSemantics(find.bySemanticsLabel('Новое: 2. Открыть')),
       matchesSemantics(

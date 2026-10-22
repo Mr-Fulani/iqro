@@ -61,6 +61,8 @@ class _AnnouncementBubbleHostState extends State<AnnouncementBubbleHost> {
             showWhenUnlinked: false,
             targetAnchor: Alignment.center,
             followerAnchor: Alignment.center,
+            // Its bob rises up to 8 px: kept clear of the status bar.
+            offset: const Offset(0, 4),
             child: const AnnouncementBubble(),
           ),
         ),
