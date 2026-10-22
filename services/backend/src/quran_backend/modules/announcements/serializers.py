@@ -59,6 +59,8 @@ def announcement_payload(announcement: Announcement, locale: str) -> dict[str, A
         "id": str(announcement.id),
         # Raised by each published edit; lets clients decide whether to show it again.
         "revision": announcement.revision,
+        # Raised by «Показать снова»: a mark from an earlier wave no longer hides it.
+        "wave": announcement.wave,
         "kind": announcement.kind,
         "priority": announcement.priority,
         "pinned": announcement.pinned,
@@ -152,6 +154,7 @@ class AnnouncementAudienceSerializer(serializers.Serializer[Any]):
 class AnnouncementSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     revision = serializers.IntegerField(min_value=1)
+    wave = serializers.IntegerField(min_value=1)
     kind = serializers.ChoiceField(choices=AnnouncementKind.choices)
     priority = serializers.ChoiceField(choices=AnnouncementPriority.choices)
     pinned = serializers.BooleanField()
@@ -183,6 +186,7 @@ class AnnouncementReceiptSerializer(serializers.Serializer[Any]):
     announcement_id = serializers.UUIDField()
     read_at = serializers.DateTimeField(allow_null=True)
     dismissed_at = serializers.DateTimeField(allow_null=True)
+    wave = serializers.IntegerField(min_value=1)
 
 
 class AnnouncementReceiptListSerializer(serializers.Serializer[Any]):
@@ -192,12 +196,14 @@ class AnnouncementReceiptListSerializer(serializers.Serializer[Any]):
 class AnnouncementReceiptWriteSerializer(serializers.Serializer[Any]):
     read = serializers.BooleanField(default=False)
     dismissed = serializers.BooleanField(default=False)
+    wave = serializers.IntegerField(min_value=1, required=False)
 
 
 class AnnouncementEventSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     surface = serializers.ChoiceField(choices=StatSurface.choices)
     event = serializers.ChoiceField(choices=StatEvent.choices)
+    wave = serializers.IntegerField(min_value=1, required=False)
 
 
 class AnnouncementEventBatchSerializer(serializers.Serializer[Any]):

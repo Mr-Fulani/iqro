@@ -46,6 +46,12 @@
       {% if publish_panel.owner_only %}
         <div>Сбор средств, окно с шагами, push и критический приоритет публикует только владелец.</div>
       {% endif %}
+      {% if publish_panel.show_reshow %}
+        <div>«Показать снова на главной» вернёт карточку и пузырь всем, кто объявление уже закрыл или прочитал{% if publish_panel.waves %} (сейчас волна {{ publish_panel.waves }}){% endif %}. В ленте «Что нового» оно есть всегда.</div>
+      {% endif %}
+      {% if publish_panel.show_reshow_on_publish %}
+        <label><input type="checkbox" name="_reshow_on_publish"> Показать снова тем, кто уже закрыл или прочитал — карточкой и пузырём на главной</label>
+      {% endif %}
       <div class="announcement-publish__buttons">{% include "admin/announcements/announcement/publish_buttons.html" %}</div>
     </section>
   {% endif %}

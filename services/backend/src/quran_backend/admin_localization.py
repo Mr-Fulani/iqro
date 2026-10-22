@@ -625,6 +625,7 @@ FIELD_LABELS: dict[str, str] = {
     "religious_reviewed_by": "Религиозный текст проверил",
     "religious_reviewed_at": "Религиозный текст проверен",
     "singleton": "Единственная запись",
+    "wave": "Волна показа",
     "window_checked_at": "Периоды проверены",
     "x": "Координата X",
     "y": "Координата Y",
@@ -646,6 +647,7 @@ MODEL_FIELD_LABELS = {
     ("announcements.Announcement", "edit_of"): "Правка объявления",
     ("announcements.Announcement", "revised_at"): "Изменено после публикации",
     ("announcements.Announcement", "revised_by"): "Изменил",
+    ("announcements.Announcement", "wave"): "Волна показа",
     ("announcements.AnnouncementSettings", "is_enabled"): "Показывать объявления",
 }
 

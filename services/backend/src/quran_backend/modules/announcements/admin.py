@@ -5,7 +5,8 @@
 The «Публикация» panel on top of the form says what the announcement is now, what
 is still missing and offers one button, «Сохранить и опубликовать». A published
 announcement stays read-only: «Изменить» opens an edit draft, and «Сохранить и
-опубликовать снова» swaps the published content for it at once.
+опубликовать снова» swaps the published content for it at once. «Показать снова
+на главной» brings it back to those who closed it; «История показов» lists each wave.
 """
 
 from __future__ import annotations
@@ -55,6 +56,7 @@ from quran_backend.modules.announcements.services import (
     is_sensitive,
     publish,
     readiness,
+    reshow,
     sign_religious_review,
     start_edit,
     submit_for_review,
@@ -426,6 +428,11 @@ OPERATIONS: dict[str, tuple[Callable[[Announcement, User], object], str]] = {
         sign_religious_review,
         "Отмечено: религиозный текст проверен.",
     ),
+    "_reshow": (
+        reshow,
+        "Объявление снова на главной у всех, кто его закрыл или прочитал. На сайте — в "
+        "течение минуты.",
+    ),
     "_withdraw": (withdraw, "Снято с публикации."),
     "_archive": (archive, "Перенесено в архив."),
 }
@@ -514,6 +521,12 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
             and announcement.needs_religious_review
             and announcement.religious_reviewed_at is None
         ),
+        "show_reshow": can_publish_this
+        and status == AnnouncementStatus.PUBLISHED
+        and (announcement.channel_bubble or announcement.channel_home_card)
+        and announcement.starts_at <= now < announcement.display_until,
+        "show_reshow_on_publish": original is not None and editable and can_publish_this,
+        "waves": announcement.wave if status == AnnouncementStatus.PUBLISHED else 0,
         "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
         "show_archive": can_publish
         and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
@@ -552,6 +565,9 @@ PANEL_STATES = {
     ),
     AnnouncementStatus.ARCHIVED: ("В архиве", "off", "Убрано и из ленты «Что нового»."),
 }
+
+
+WAVE_EVENTS = ("impression", "open", "click", "dismiss")
 
 
 def _change_url(announcement: Announcement) -> str:
@@ -596,6 +612,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "preview",
         "current_image",
         "stats_summary",
+        "waves_history",
         "religious_reviewed_by",
         "religious_reviewed_at",
         "created_by",
@@ -684,6 +701,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 ),
             },
         ),
+        ("История показов", {"fields": ("waves_history",)}),
         ("Счётчики", {"fields": ("stats_summary",)}),
         (
             "Служебные данные",
@@ -918,6 +936,45 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             ),
         )
 
+    @admin.display(description="Сколько раз выводили на главную")
+    def waves_history(self, obj: Announcement) -> str:
+        if obj._state.adding:
+            return "—"
+        waves = list(obj.waves.select_related("started_by"))
+        if not waves:
+            return "Ещё не публиковалось."
+        totals: dict[tuple[int, str], int] = {
+            (row["wave"], row["event"]): row["total"]
+            for row in obj.daily_stats.values("wave", "event").annotate(total=Sum("count"))
+        }
+        shown = sum(count for (_, event), count in totals.items() if event == "impression")
+        rows = format_html_join(
+            "",
+            "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td>"
+            "<td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+            (
+                (
+                    wave.number,
+                    f"{timezone.localtime(wave.created_at):%d.%m.%Y %H:%M}",
+                    wave.started_by or "—",
+                    wave.get_reason_display(),
+                    wave.revision,
+                    *(totals.get((wave.number, event), 0) for event in WAVE_EVENTS),
+                )
+                for wave in waves
+            ),
+        )
+        return format_html(
+            "<p><b>На главную выводилось: {} раз(а). Всего показов: {}.</b> "
+            "Только суммы по дням, без людей, устройств и адресов.</p>"
+            "<table><thead><tr><th>Волна</th><th>Когда</th><th>Кто</th><th>Повод</th>"
+            "<th>Редакция</th><th>Показы</th><th>Открытия</th><th>Нажатия</th>"
+            "<th>Закрытия</th></tr></thead><tbody>{}</tbody></table>",
+            len(waves),
+            shown,
+            rows,
+        )
+
     # The «Публикация» panel on top of the form
 
     def render_change_form(  # noqa: PLR0913, PLR0917 - Django's signature
@@ -971,7 +1028,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         user = cast(User, request.user)
         if "_publish" in request.POST and obj.edit_of_id is not None:
             original_id = obj.edit_of_id
-            self._run(request, obj, "_publish")
+            self._run(request, obj, "_publish", reshow="_reshow_on_publish" in request.POST)
             published = not Announcement.objects.filter(pk=obj.pk).exists()
             return HttpResponseRedirect(
                 reverse("admin:announcements_announcement_change", args=(original_id,))
@@ -1000,12 +1057,24 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         self.message_user(request, success, messages.INFO)
         return HttpResponseRedirect(_change_url(target))
 
-    def _run(self, request: HttpRequest, obj: Announcement, name: str) -> None:
+    def _run(
+        self,
+        request: HttpRequest,
+        obj: Announcement,
+        name: str,
+        *,
+        reshow: bool = False,
+    ) -> None:
         operation, success = OPERATIONS[name]
         if name == "_publish" and obj.is_edit:
             success = "Изменения опубликованы. На сайте и в приложении обновятся в течение минуты."
+            if reshow:
+                success += " Тем, кто его закрыл, оно снова покажется на главной."
         try:
-            operation(obj, cast(User, request.user))
+            if name == "_publish":
+                publish(obj, cast(User, request.user), reshow=reshow)
+            else:
+                operation(obj, cast(User, request.user))
         except PermissionDenied:
             self.message_user(
                 request,
@@ -1016,7 +1085,9 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         except AnnouncementNotReadyError as error:
             self.message_user(
                 request,
-                "Объявление сохранено, но не опубликовано. Что осталось:",
+                "Снова не показано:"
+                if name == "_reshow"
+                else "Объявление сохранено, но не опубликовано. Что осталось:",
                 messages.WARNING,
             )
             for problem in error.problems:

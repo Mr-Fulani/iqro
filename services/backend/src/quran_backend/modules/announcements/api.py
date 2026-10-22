@@ -30,7 +30,7 @@ from quran_backend.modules.announcements.selectors import (
     attach_reciters,
     feed_announcements,
     published_announcement,
-    published_ids,
+    published_waves,
     visible_to,
 )
 from quran_backend.modules.announcements.serializers import (
@@ -247,8 +247,8 @@ class AnnouncementRedirectView(APIView):
         }:
             record_events(
                 platform=platform,
-                events=[(announcement.id, surface, "click")],
-                published_ids={announcement.id},
+                events=[(announcement.id, surface, "click", None)],
+                published_waves={announcement.id: announcement.wave},
             )
         response = HttpResponseRedirect(announcement.action_url)
         response["Cache-Control"] = "no-store"
@@ -275,12 +275,13 @@ class AnnouncementEventsView(APIView):
         batch = AnnouncementEventBatchSerializer(data=request.data)
         batch.is_valid(raise_exception=True)
         events = [
-            (item["id"], item["surface"], item["event"]) for item in batch.validated_data["events"]
+            (item["id"], item["surface"], item["event"], item.get("wave"))
+            for item in batch.validated_data["events"]
         ]
         accepted = record_events(
             platform=batch.validated_data["platform"],
             events=events,
-            published_ids=published_ids({item[0] for item in events}),
+            published_waves=published_waves({item[0] for item in events}),
         )
         response = Response({"accepted": accepted}, status=status.HTTP_202_ACCEPTED)
         response["Cache-Control"] = "no-store"
@@ -310,7 +311,10 @@ class AnnouncementReceiptDetailView(PrivateNoStoreResponseMixin, APIView):
         operation_id="announcement_receipt_set",
         request=AnnouncementReceiptWriteSerializer,
         responses={200: AnnouncementReceiptSerializer, 400: None, 401: None, 404: None, 429: None},
-        description="Marks only move forward: read or dismissed can not be undone.",
+        description=(
+            "Marks only move forward: read or dismissed can not be undone. `wave` is the "
+            "wave the announcement was shown in: the mark hides it until the next wave."
+        ),
     )
     def put(self, request: Request, announcement_id: uuid.UUID) -> Response:
         body = AnnouncementReceiptWriteSerializer(data=request.data)
@@ -323,5 +327,6 @@ class AnnouncementReceiptDetailView(PrivateNoStoreResponseMixin, APIView):
             announcement=announcement,
             read=body.validated_data["read"],
             dismissed=body.validated_data["dismissed"],
+            wave=body.validated_data.get("wave"),
         )
         return Response(receipt_snapshot(receipt))

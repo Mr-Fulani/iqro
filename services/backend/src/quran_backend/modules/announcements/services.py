@@ -32,6 +32,8 @@ from quran_backend.modules.announcements.models import (
     AnnouncementSettings,
     AnnouncementStatus,
     AnnouncementTranslation,
+    AnnouncementWave,
+    WaveReason,
 )
 from quran_backend.modules.announcements.routes import SCREENS, external_url_allowed
 from quran_backend.modules.core.content_revalidation import enqueue_announcements_change
@@ -233,7 +235,12 @@ def publish(
     user: User,
     *,
     thumbnail: Callable[[str], str] = portrait_thumbnail,
+    reshow: bool = False,
 ) -> Announcement:
+    """Publish a draft, or an edit of a published announcement.
+
+    `reshow` (edits only): bring it back to the home screen of those who closed it.
+    """
     _require(user, PUBLISH_PERMISSION)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if not locked.is_editable:
@@ -272,12 +279,54 @@ def publish(
         locked.religious_reviewed_by = user
         locked.religious_reviewed_at = now
     if original is not None:
-        return _apply_edit(locked, original, user, now)
+        return _apply_edit(locked, original, user, now, reshow=reshow)
     locked.status = AnnouncementStatus.PUBLISHED
     locked.reviewed_by = user
     locked.reviewed_at = now
     locked.published_at = now
+    locked.wave = 1
     locked.save()
+    _record_wave(locked, user, WaveReason.PUBLISHED)
+    enqueue_announcements_change(action="published")
+    return locked
+
+
+def _record_wave(announcement: Announcement, user: User, reason: WaveReason) -> None:
+    AnnouncementWave.objects.create(
+        announcement=announcement,
+        number=announcement.wave,
+        reason=reason,
+        revision=announcement.revision,
+        started_by=user,
+    )
+
+
+@transaction.atomic
+def reshow(announcement: Announcement, user: User) -> Announcement:
+    """Put it back on the home screen of everyone who already read or closed it."""
+    _require(user, PUBLISH_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if is_sensitive(locked):
+        _require(user, SENSITIVE_PERMISSION)
+    now = timezone.now()
+    problem = None
+    if locked.status != AnnouncementStatus.PUBLISHED:
+        problem = "Показать снова можно только опубликованное объявление."
+    elif not (locked.channel_bubble or locked.channel_home_card):
+        problem = "Нет ни пузыря, ни карточки: на главной его не показать."
+    elif locked.starts_at > now:
+        problem = "Объявление ещё не началось: его и так увидят все."
+    elif locked.display_until <= now:
+        problem = (
+            f"Срок показа на главной закончился "
+            f"{timezone.localtime(locked.display_until):%d.%m.%Y}. Продлите его правкой и "
+            "опубликуйте снова с отметкой «Показать снова»."
+        )
+    if problem:
+        raise AnnouncementNotReadyError([problem])
+    locked.wave += 1
+    locked.save(update_fields=["wave", "updated_at"])
+    _record_wave(locked, user, WaveReason.RESHOW)
     enqueue_announcements_change(action="published")
     return locked
 
@@ -359,6 +408,7 @@ def _copy(source: Announcement, user: User, **values: Any) -> Announcement:
     copy.created_by = user
     copy.edit_of = None
     copy.revision = 1
+    copy.wave = 1
     for name in (
         "religious_reviewed_by",
         "religious_reviewed_at",
@@ -427,6 +477,8 @@ def _apply_edit(
     original: Announcement,
     user: User,
     now: Any,
+    *,
+    reshow: bool,
 ) -> Announcement:
     """Swap the published content for the edit in the caller's transaction."""
     for name in EDITABLE_FIELDS:
@@ -436,12 +488,16 @@ def _apply_edit(
     original.revision += 1
     original.revised_at = now
     original.revised_by = user
+    if reshow:
+        original.wave += 1
     original.translations.all().delete()
     original.step_images.all().delete()
     edit.translations.update(announcement=original)
     edit.step_images.update(announcement=original)
     edit.delete()
     original.save()
+    if reshow:
+        _record_wave(original, user, WaveReason.EDIT)
     enqueue_announcements_change(action="published")
     return original
 
@@ -458,14 +514,23 @@ def set_receipt(
     announcement: Announcement,
     read: bool,
     dismissed: bool,
+    wave: int | None = None,
 ) -> AnnouncementReceipt:
-    """Marks only move forward, so two devices can never un-read an announcement."""
+    """Marks only move forward, so two devices can never un-read an announcement.
+
+    `wave` is the wave the device showed it in (the current one if not sent): the
+    mark hides the announcement on the home screen until the next wave.
+    """
     receipt, _ = AnnouncementReceipt.objects.select_for_update().get_or_create(
         user=user,
         announcement=announcement,
     )
     now = timezone.now()
     changed = []
+    seen_wave = min(wave or announcement.wave, announcement.wave)
+    if (read or dismissed) and seen_wave > receipt.wave:
+        receipt.wave = seen_wave
+        changed.append("wave")
     if read and receipt.read_at is None:
         receipt.read_at = now
         changed.append("read_at")
@@ -482,27 +547,32 @@ def receipt_snapshot(receipt: AnnouncementReceipt) -> dict[str, Any]:
         "announcement_id": str(receipt.announcement_id),
         "read_at": receipt.read_at,
         "dismissed_at": receipt.dismissed_at,
+        "wave": receipt.wave,
     }
 
 
 def record_events(
     *,
     platform: str,
-    events: Iterable[tuple[uuid.UUID, str, str]],
-    published_ids: set[uuid.UUID],
+    events: Iterable[tuple[uuid.UUID, str, str, int | None]],
+    published_waves: dict[uuid.UUID, int],
     today: date | None = None,
 ) -> int:
-    """Add the batch to the daily sums of published announcements; return accepted events."""
+    """Add the batch to the daily sums of published announcements; return accepted events.
+
+    Each event counts in the wave the device reported, or the current one.
+    """
     day = today or timezone.localdate()
     totals = Counter(
-        (announcement_id, surface, event)
-        for announcement_id, surface, event in events
-        if announcement_id in published_ids
+        (announcement_id, _event_wave(wave, published_waves[announcement_id]), surface, event)
+        for announcement_id, surface, event, wave in events
+        if announcement_id in published_waves
     )
-    for (announcement_id, surface, event), count in totals.items():
+    for (announcement_id, wave, surface, event), count in totals.items():
         lookup = {
             "date": day,
             "announcement_id": announcement_id,
+            "wave": wave,
             "platform": platform,
             "surface": surface,
             "event": event,
@@ -516,3 +586,7 @@ def record_events(
         except IntegrityError:
             AnnouncementDailyStat.objects.filter(**lookup).update(count=F("count") + count)
     return sum(totals.values())
+
+
+def _event_wave(reported: int | None, current: int) -> int:
+    return reported if reported is not None and 1 <= reported <= current else current

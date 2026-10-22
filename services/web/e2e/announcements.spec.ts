@@ -111,3 +111,78 @@ test("impressions and closes reach the server as anonymous counters", async ({ p
     )
     .toEqual(expect.arrayContaining(["card:impression", "card:dismiss"]));
 });
+
+const MOCK_API = `http://127.0.0.1:${process.env.MOCK_PUBLIC_API_PORT || 3199}`;
+const RECITER_ID = "019a0000-0000-7000-8000-00000000a001";
+const FEATURE_ID = "019a0000-0000-7000-8000-00000000a002";
+
+test.describe("«Показать снова» in the admin", () => {
+  test.afterEach(async ({ request }) => {
+    await request.post(`${MOCK_API}/__test__/announcements/reset`);
+    await refreshHome(request);
+  });
+
+  async function refreshHome(request: import("@playwright/test").APIRequestContext) {
+    // The admin's change reaches the cached home page through the revalidation event.
+    const response = await request.post("/api/internal/content-revalidation", {
+      data: { type: "site.announcements.changed", action: "published" },
+      headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+    });
+    expect(response.ok()).toBe(true);
+  }
+
+  async function showAgain(page: import("@playwright/test").Page, id: string) {
+    const request = page.request;
+    expect((await request.post(`${MOCK_API}/__test__/announcements/show-again?id=${id}`)).ok()).toBe(true);
+    await refreshHome(request);
+    // Visitors get it once their cached copy of the list expires (5 minutes in production).
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Network.clearBrowserCache");
+  }
+
+  test("a closed card comes back on the home page in the next wave", async ({ page }) => {
+    await page.goto("/ru");
+    await page.locator("[data-announcement-card]").getByRole("button", { name: "Скрыть объявление" }).click();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: RECITER })).toHaveCount(0);
+
+    await showAgain(page, RECITER_ID);
+    await expect(async () => {
+      await page.reload();
+      await expect(page.locator("[data-announcement-card]").getByRole("heading", { name: RECITER })).toBeVisible({
+        timeout: 1_000,
+      });
+    }).toPass({ timeout: 15_000 });
+    await expect(page.getByTestId("header-news-link")).toHaveAccessibleName("Что нового, непрочитанных: 2");
+
+    // Closed again in the new wave: gone until the admin shows it once more.
+    await page.locator("[data-announcement-card]").getByRole("button", { name: "Скрыть объявление" }).click();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: RECITER })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: FEATURE })).toBeVisible();
+  });
+
+  test("the bubble's impression limit starts over in a new wave", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const spent = { shown: 5, last: "2026-01-01T00:00:00.000Z", wave: 1 };
+    await page.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [
+        "iqro_announcements_v1",
+        JSON.stringify({ bubble: { [RECITER_ID]: spent, [FEATURE_ID]: spent } }),
+      ],
+    );
+    await page.goto("/ru");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByTestId("announcement-bubble")).toHaveCount(0);
+
+    await showAgain(page, RECITER_ID);
+    await page.reload();
+    const bubble = page.getByTestId("announcement-bubble");
+    await expect(bubble).toHaveAccessibleName("Новое: 1. Открыть");
+    await bubble.click();
+    await expect(page.getByTestId("announcement-dialog").getByRole("heading", { name: RECITER })).toBeVisible();
+  });
+});
+

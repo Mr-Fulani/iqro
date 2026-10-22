@@ -39,6 +39,8 @@ from quran_backend.modules.announcements.models import (
     AnnouncementStatus,
     AnnouncementStep,
     AnnouncementTranslation,
+    AnnouncementWave,
+    WaveReason,
 )
 from quran_backend.modules.announcements.services import (
     EDIT_OF_UNPUBLISHED,
@@ -48,6 +50,7 @@ from quran_backend.modules.announcements.services import (
     duplicate,
     publish,
     readiness,
+    reshow,
     set_receipt,
     start_edit,
     withdraw,
@@ -460,6 +463,136 @@ def test_editing_a_religious_text_asks_for_the_check_again(owner: User, editor: 
     assert error.value.problems == [announcement_services.RELIGIOUS_REVIEW_NEEDED]
 
 
+# Showing again: waves
+
+
+@pytest.mark.django_db
+def test_show_again_starts_a_new_wave_that_old_marks_do_not_hide(
+    api_client: APIClient,
+    owner: User,
+    recorded_changes: list[str],
+) -> None:
+    announcement = _publish(_announcement(), owner)
+    reader = User.objects.create_user(status=UserStatus.GUEST)
+    receipt = set_receipt(user=reader, announcement=announcement, read=False, dismissed=True)
+    assert receipt.wave == 1
+    assert _active(api_client)["results"][0]["wave"] == 1
+
+    reshow(announcement, owner)
+    reshow(announcement, owner)
+
+    announcement.refresh_from_db()
+    assert announcement.wave == 3
+    assert list(announcement.waves.values_list("number", "reason", "started_by")) == [
+        (1, WaveReason.PUBLISHED, owner.pk),
+        (2, WaveReason.RESHOW, owner.pk),
+        (3, WaveReason.RESHOW, owner.pk),
+    ]
+    assert recorded_changes == ["published", "published", "published"]
+    item = _active(api_client)["results"][0]
+    assert (item["wave"], item["revision"]) == (3, 1)
+
+    api_client.force_authenticate(user=reader)
+    url = f"/api/v1/me/announcement-receipts/{announcement.id}"
+    stale = api_client.put(url, {"dismissed": True, "wave": 2}, format="json").json()
+    current = api_client.put(url, {"dismissed": True, "wave": 9}, format="json").json()
+    assert (stale["wave"], current["wave"]) == (2, 3)
+    # The first moment it was closed is kept; the wave says it is closed again.
+    assert current["dismissed_at"] == stale["dismissed_at"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("overrides", "problem"),
+    [
+        (
+            {"channel_bubble": False, "channel_home_card": False},
+            "Нет ни пузыря, ни карточки: на главной его не показать.",
+        ),
+        ({"ends_at_days": -1}, "Срок показа на главной закончился"),
+        ({"starts_at_days": 2}, "Объявление ещё не началось: его и так увидят все."),
+    ],
+)
+def test_show_again_needs_a_home_surface_and_an_open_window(
+    owner: User,
+    overrides: dict[str, Any],
+    problem: str,
+) -> None:
+    now = timezone.now()
+    starts_at = now + timedelta(days=overrides.pop("starts_at_days", 0)) - timedelta(hours=2)
+    ends_at_days = overrides.pop("ends_at_days", None)
+    announcement = _publish(_announcement(starts_at=starts_at, **overrides), owner)
+    if ends_at_days is not None:
+        Announcement.objects.filter(pk=announcement.pk).update(
+            starts_at=now - timedelta(days=3),
+            ends_at=now + timedelta(days=ends_at_days),
+        )
+
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        reshow(announcement, owner)
+
+    assert error.value.problems[0].startswith(problem)
+    withdraw(announcement, owner)
+    with pytest.raises(AnnouncementNotReadyError):
+        reshow(announcement, owner)
+
+
+@pytest.mark.django_db
+def test_showing_fundraising_again_is_the_owners_call(owner: User, editor: User) -> None:
+    fundraising = _publish(
+        _announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False), owner
+    )
+
+    with pytest.raises(PermissionDenied):
+        reshow(fundraising, editor)
+    assert reshow(fundraising, owner).wave == 2
+
+
+@pytest.mark.django_db
+def test_an_edit_shows_again_only_when_asked(owner: User) -> None:
+    announcement = _publish(_announcement(), owner)
+
+    _publish(start_edit(announcement, owner), owner)
+    announcement.refresh_from_db()
+    assert (announcement.revision, announcement.wave) == (2, 1)
+
+    edit = start_edit(announcement, owner)
+    publish(edit, owner, reshow=True)
+    announcement.refresh_from_db()
+    assert (announcement.revision, announcement.wave) == (3, 2)
+    assert announcement.waves.get(number=2).reason == WaveReason.EDIT
+    assert announcement.waves.get(number=2).revision == 3
+    assert duplicate(announcement, owner).wave == 1
+
+
+@pytest.mark.django_db
+def test_counters_are_kept_per_wave(api_client: APIClient, owner: User) -> None:
+    announcement = _publish(_announcement(), owner)
+    reshow(announcement, owner)
+    event = {"id": str(announcement.id), "surface": "card", "event": "impression"}
+
+    api_client.post(
+        "/api/v1/announcements/events",
+        {
+            "platform": "web",
+            "events": [
+                event | {"wave": 1},
+                event,
+                event | {"wave": 7},
+                {"id": str(announcement.id), "surface": "card", "event": "dismiss", "wave": 2},
+            ],
+        },
+        format="json",
+    )
+
+    counts = {
+        (row.wave, row.event): row.count
+        for row in AnnouncementDailyStat.objects.filter(announcement=announcement)
+    }
+    assert counts == {(1, "impression"): 1, (2, "impression"): 2, (2, "dismiss"): 1}
+    assert AnnouncementWave.objects.filter(announcement=announcement).count() == 2
+
+
 # Public API
 
 
@@ -681,7 +814,16 @@ def test_events_keep_only_daily_sums_of_published_announcements(
     assert counts == {("bubble", "impression"): 3, ("bubble", "open"): 1}
     assert not AnnouncementDailyStat.objects.filter(announcement=draft).exists()
     stored = {field.name for field in AnnouncementDailyStat._meta.get_fields()}
-    assert stored == {"id", "date", "announcement", "platform", "surface", "event", "count"}
+    assert stored == {
+        "id",
+        "date",
+        "announcement",
+        "wave",
+        "platform",
+        "surface",
+        "event",
+        "count",
+    }
 
 
 @pytest.mark.django_db
@@ -747,6 +889,10 @@ def test_guest_receipts_join_the_account_keeping_the_earliest_marks(owner: User)
     earlier = set_receipt(user=guest, announcement=first, read=True, dismissed=False)
     later = set_receipt(user=target, announcement=first, read=True, dismissed=True)
     set_receipt(user=guest, announcement=second, read=False, dismissed=True)
+    # The guest closed it again after «Показать снова»; the account had not.
+    reshow(first, owner)
+    first.refresh_from_db()
+    set_receipt(user=guest, announcement=first, read=False, dismissed=True)
 
     result = merge_guest_into_account(
         source_user=guest,
@@ -759,6 +905,7 @@ def test_guest_receipts_join_the_account_keeping_the_earliest_marks(owner: User)
     assert result.moved_counts["announcement_receipts"] == 2
     assert merged.read_at == earlier.read_at
     assert merged.dismissed_at == later.dismissed_at
+    assert (later.wave, merged.wave) == (1, 2)
     assert AnnouncementReceipt.objects.filter(user=target).count() == 2
     assert not AnnouncementReceipt.objects.filter(user=guest).exists()
 
@@ -938,6 +1085,55 @@ def test_admin_edits_and_publishes_again(owner: User, recorded_changes: list[str
     assert str(announcement) == "Курс намаза: новые уроки"
     assert announcement.revision == 2
     assert recorded_changes == ["published", "published"]
+
+
+@pytest.mark.django_db
+def test_admin_shows_again_and_keeps_the_history(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _publish(_announcement(languages=("ru",)), owner)
+    AnnouncementDailyStat.objects.create(
+        date=timezone.localdate(),
+        announcement=announcement,
+        wave=1,
+        platform="web",
+        surface="card",
+        event="impression",
+        count=40,
+    )
+    page = f"/admin/announcements/announcement/{announcement.pk}/change/"
+    assert 'name="_reshow" value="Показать снова на главной"' in client.get(page).content.decode()
+
+    response = client.post(page, _published_form_data(announcement) | {"_reshow": "1"}, follow=True)
+
+    body = response.content.decode()
+    assert "Объявление снова на главной у всех, кто его закрыл или прочитал." in body
+    assert "На главную выводилось: 2 раз(а). Всего показов: 40." in body
+    assert "<td>Первая публикация</td>" in body
+    assert "<td>Показать снова</td>" in body
+    announcement.refresh_from_db()
+    assert announcement.wave == 2
+
+    edit = start_edit(announcement, owner)
+    edit_body = client.get(f"/admin/announcements/announcement/{edit.pk}/change/").content.decode()
+    assert 'name="_reshow_on_publish"' in edit_body
+    translation = edit.translations.get()
+    client.post(
+        f"/admin/announcements/announcement/{edit.pk}/change/",
+        _change_form_data(edit)
+        | {
+            "translations-TOTAL_FORMS": "4",
+            "translations-INITIAL_FORMS": "1",
+            "translations-0-id": str(translation.pk),
+            "translations-0-language": "ru",
+            "translations-0-title": translation.title,
+            "translations-0-summary": translation.summary,
+            "_reshow_on_publish": "on",
+            "_publish": "1",
+        },
+    )
+    announcement.refresh_from_db()
+    assert (announcement.revision, announcement.wave) == (2, 3)
 
 
 @pytest.mark.django_db

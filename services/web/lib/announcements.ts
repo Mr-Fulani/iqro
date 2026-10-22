@@ -1,6 +1,10 @@
 // Announcements from /api/v1/announcements: parsing, the marks this device keeps
 // (read, dismissed, bubble impressions) and the bubble frequency rules.
 // Pure functions are tested with node --test; storage access is guarded.
+//
+// Waves: «Показать снова» in the admin raises an announcement's `wave`. A read or
+// closed mark hides it from the home screen only in the wave it was made in; the
+// bubble's frequency and impression limit start over in each wave.
 
 export const ANNOUNCEMENT_STORAGE_KEY = "iqro_announcements_v1";
 const SESSION_BUBBLE_KEY = "iqro_announcements_bubble_session_v1";
@@ -57,6 +61,7 @@ export type Announcement = {
     external_url: string | null;
   };
   version: string;
+  wave: number;
 };
 
 export type AnnouncementFeedPage = { next_cursor: string | null; results: Announcement[] };
@@ -64,7 +69,9 @@ export type AnnouncementFeedPage = { next_cursor: string | null; results: Announ
 export type LocalAnnouncementState = {
   read: Record<string, string>;
   dismissed: Record<string, string>;
-  bubble: Record<string, { shown: number; last: string }>;
+  /** The latest wave in which each announcement was read or closed. */
+  waves: Record<string, number>;
+  bubble: Record<string, { shown: number; last: string; wave: number }>;
   impressions: Record<string, string>;
   lastModalAt: string | null;
 };
@@ -168,7 +175,12 @@ function parseAnnouncement(value: unknown): Announcement | null {
       external_url: safeSitePath(action.external_url),
     },
     version: isString(value.version) ? value.version : "",
+    wave: wave(value.wave),
   };
+}
+
+function wave(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 1;
 }
 
 export function parseAnnouncements(value: unknown): Announcement[] {
@@ -184,7 +196,7 @@ export function parseAnnouncementFeed(value: unknown): AnnouncementFeedPage {
 }
 
 export function emptyState(): LocalAnnouncementState {
-  return { read: {}, dismissed: {}, bubble: {}, impressions: {}, lastModalAt: null };
+  return { read: {}, dismissed: {}, waves: {}, bubble: {}, impressions: {}, lastModalAt: null };
 }
 
 function stringMap(value: unknown): Record<string, string> {
@@ -210,13 +222,20 @@ export function parseState(raw: string | null): LocalAnnouncementState {
           typeof entry.shown === "number" &&
           isString(entry.last)
         ) {
-          bubble[id] = { shown: entry.shown, last: entry.last };
+          bubble[id] = { shown: entry.shown, last: entry.last, wave: wave(entry.wave) };
         }
+      }
+    }
+    const waves: Record<string, number> = {};
+    if (isRecord(value.waves)) {
+      for (const [id, number] of Object.entries(value.waves)) {
+        if (UUID_PATTERN.test(id)) waves[id] = wave(number);
       }
     }
     return {
       read: stringMap(value.read),
       dismissed: stringMap(value.dismissed),
+      waves,
       bubble,
       impressions: stringMap(value.impressions),
       lastModalAt: isString(value.lastModalAt) ? value.lastModalAt : null,
@@ -253,8 +272,14 @@ export function forAudience(
   );
 }
 
+/** The wave this device last read or closed it in; marks from before waves count as 1. */
+export function finishedWave(state: LocalAnnouncementState, id: string): number {
+  return state.waves[id] ?? (state.read[id] || state.dismissed[id] ? 1 : 0);
+}
+
+/** Read or closed in the current wave: off the home screen, still in the feed. */
 export function isFinished(item: Announcement, state: LocalAnnouncementState): boolean {
-  return Boolean(state.read[item.id] || state.dismissed[item.id]);
+  return finishedWave(state, item.id) >= item.wave;
 }
 
 /** The card on desktop: one at a time, the first that was neither read nor closed. */
@@ -278,7 +303,7 @@ export function bubbleAnnouncements(
     }
     if (shownThisSession.has(item.id)) return true;
     const seen = state.bubble[item.id];
-    if (!seen) return true;
+    if (!seen || seen.wave < item.wave) return true;
     if (seen.shown >= item.bubble.max_impressions) return false;
     return now - Date.parse(seen.last) >= BUBBLE_INTERVAL_MS[item.bubble.frequency];
   });
@@ -293,7 +318,9 @@ export function recordBubbleShown(
   const bubble = { ...state.bubble };
   for (const item of items) {
     if (shownThisSession.has(item.id)) continue;
-    bubble[item.id] = { shown: (bubble[item.id]?.shown ?? 0) + 1, last: new Date(now).toISOString() };
+    const seen = bubble[item.id];
+    const shown = seen && seen.wave >= item.wave ? seen.shown : 0;
+    bubble[item.id] = { shown: shown + 1, last: new Date(now).toISOString(), wave: item.wave };
   }
   return { ...state, bubble };
 }
@@ -316,18 +343,37 @@ export function modalAnnouncement(
   );
 }
 
-export function markRead(state: LocalAnnouncementState, id: string, now: number): LocalAnnouncementState {
-  if (state.read[id]) return state;
-  return { ...state, read: { ...state.read, [id]: new Date(now).toISOString() } };
+function finish(
+  state: LocalAnnouncementState,
+  mark: "read" | "dismissed",
+  id: string,
+  now: number,
+  wave: number,
+): LocalAnnouncementState {
+  if (state[mark][id] && finishedWave(state, id) >= wave) return state;
+  return {
+    ...state,
+    [mark]: { ...state[mark], [id]: state[mark][id] ?? new Date(now).toISOString() },
+    waves: { ...state.waves, [id]: Math.max(finishedWave(state, id), wave) },
+  };
+}
+
+export function markRead(
+  state: LocalAnnouncementState,
+  id: string,
+  now: number,
+  wave = 1,
+): LocalAnnouncementState {
+  return finish(state, "read", id, now, wave);
 }
 
 export function markDismissed(
   state: LocalAnnouncementState,
   id: string,
   now: number,
+  wave = 1,
 ): LocalAnnouncementState {
-  if (state.dismissed[id]) return state;
-  return { ...state, dismissed: { ...state.dismissed, [id]: new Date(now).toISOString() } };
+  return finish(state, "dismissed", id, now, wave);
 }
 
 /** Server receipts of a signed-in person: marks only ever move forward. */
@@ -335,14 +381,17 @@ export function mergeReceipts(state: LocalAnnouncementState, receipts: unknown):
   if (!isRecord(receipts) || !Array.isArray(receipts.results)) return state;
   const read = { ...state.read };
   const dismissed = { ...state.dismissed };
+  const waves = { ...state.waves };
   for (const receipt of receipts.results) {
     if (!isRecord(receipt) || !isString(receipt.announcement_id)) continue;
     const id = receipt.announcement_id;
     if (!UUID_PATTERN.test(id)) continue;
+    const marked = isString(receipt.read_at) || isString(receipt.dismissed_at);
+    if (marked) waves[id] = Math.max(finishedWave(state, id), wave(receipt.wave));
     if (isString(receipt.read_at) && !read[id]) read[id] = receipt.read_at;
     if (isString(receipt.dismissed_at) && !dismissed[id]) dismissed[id] = receipt.dismissed_at;
   }
-  return { ...state, read, dismissed };
+  return { ...state, read, dismissed, waves };
 }
 
 export function readBubbleSession(): Set<string> {
@@ -362,20 +411,21 @@ export function writeBubbleSession(ids: Iterable<string>): void {
   }
 }
 
-/** One impression per announcement and surface a day, decided on the device. */
+/** One impression per announcement, surface and wave a day, decided on the device. */
 export function takeImpression(
   state: LocalAnnouncementState,
   id: string,
   surface: AnnouncementSurface,
   now: number,
+  wave = 1,
 ): { state: LocalAnnouncementState; fresh: boolean } {
-  const key = `${id}:${surface}`;
+  const key = `${id}:${surface}:${wave}`;
   const day = new Date(now).toISOString().slice(0, 10);
   if (state.impressions[key] === day) return { state, fresh: false };
   return { state: { ...state, impressions: { ...state.impressions, [key]: day } }, fresh: true };
 }
 
-type QueuedEvent = { id: string; surface: AnnouncementSurface; event: AnnouncementEvent };
+type QueuedEvent = { id: string; surface: AnnouncementSurface; event: AnnouncementEvent; wave: number };
 const queue: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let flushOnHideBound = false;
@@ -406,9 +456,10 @@ export function trackAnnouncementEvent(
   id: string,
   surface: AnnouncementSurface,
   event: AnnouncementEvent,
+  wave: number,
 ): void {
   if (typeof window === "undefined") return;
-  queue.push({ id, surface, event });
+  queue.push({ id, surface, event, wave });
   if (!flushOnHideBound) {
     flushOnHideBound = true;
     document.addEventListener("visibilitychange", () => {
