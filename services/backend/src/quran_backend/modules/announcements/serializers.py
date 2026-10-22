@@ -57,6 +57,8 @@ def announcement_payload(announcement: Announcement, locale: str) -> dict[str, A
     target = action_target(announcement, locale)
     payload: dict[str, Any] = {
         "id": str(announcement.id),
+        # Raised by each published edit; lets clients decide whether to show it again.
+        "revision": announcement.revision,
         "kind": announcement.kind,
         "priority": announcement.priority,
         "pinned": announcement.pinned,
@@ -149,6 +151,7 @@ class AnnouncementAudienceSerializer(serializers.Serializer[Any]):
 
 class AnnouncementSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
+    revision = serializers.IntegerField(min_value=1)
     kind = serializers.ChoiceField(choices=AnnouncementKind.choices)
     priority = serializers.ChoiceField(choices=AnnouncementPriority.choices)
     pinned = serializers.BooleanField()

@@ -4,7 +4,9 @@
 
 One announcement carries its texts in every interface language, an optional
 image or step-by-step illustrations, one action, a display window, an audience
-and the surfaces it may use. Published announcements are signed and read-only.
+and the surfaces it may use. A published announcement is not edited in place:
+an edit is a draft of its own (`edit_of`) that replaces the published content in
+one transaction and raises `revision`, so the audience never sees half an edit.
 """
 
 from __future__ import annotations
@@ -344,6 +346,30 @@ class Announcement(BaseModel):
     review_note = models.TextField("Примечание проверяющего", blank=True, max_length=2000)
     published_at = models.DateTimeField("Опубликовано", null=True, blank=True, editable=False)
     withdrawn_at = models.DateTimeField("Снято", null=True, blank=True, editable=False)
+    edit_of = models.OneToOneField(
+        "self",
+        verbose_name="Правка объявления",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="pending_edit",
+        editable=False,
+    )
+    # Raised by every published edit: clients can tell a changed announcement from
+    # the one a person has already read.
+    revision = models.PositiveIntegerField("Редакция", default=1, editable=False)
+    revised_at = models.DateTimeField(
+        "Изменено после публикации", null=True, blank=True, editable=False
+    )
+    revised_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Изменил",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        editable=False,
+    )
 
     class Meta:
         db_table = "announcement"
@@ -391,6 +417,10 @@ class Announcement(BaseModel):
     @property
     def is_editable(self) -> bool:
         return self.status in {AnnouncementStatus.DRAFT, AnnouncementStatus.IN_REVIEW}
+
+    @property
+    def is_edit(self) -> bool:
+        return self.edit_of_id is not None
 
     @property
     def reciter(self) -> Reciter | None:

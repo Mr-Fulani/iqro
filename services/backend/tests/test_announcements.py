@@ -41,12 +41,15 @@ from quran_backend.modules.announcements.models import (
     AnnouncementTranslation,
 )
 from quran_backend.modules.announcements.services import (
+    EDIT_OF_UNPUBLISHED,
     AnnouncementNotReadyError,
     archive,
+    cancel_edit,
     duplicate,
     publish,
     readiness,
     set_receipt,
+    start_edit,
     withdraw,
 )
 from quran_backend.modules.audio.models import Reciter
@@ -341,6 +344,120 @@ def test_withdraw_archive_and_duplicate(owner: User, recorded_changes: list[str]
     assert copy.pinned is True
     assert copy.translations.count() == 3
     assert copy.step_images.count() == 1
+
+
+# Editing a published announcement
+
+
+@pytest.mark.django_db
+def test_an_edit_replaces_the_published_announcement_only_when_published(
+    api_client: APIClient,
+    owner: User,
+    recorded_changes: list[str],
+) -> None:
+    announcement = _publish(_announcement(), owner)
+    first_published_at = announcement.published_at
+    AnnouncementReceipt.objects.create(
+        user=owner, announcement=announcement, read_at=timezone.now()
+    )
+    AnnouncementStep.objects.create(announcement=announcement, order=1, image_object_key="a/1.jpg")
+
+    edit = start_edit(announcement, owner)
+    edit.translations.filter(language="ru").update(title="Новый чтец: исправленный заголовок")
+    edit.translations.filter(language="en").delete()
+    edit.step_images.all().delete()
+    edit.audience_languages = ["ru", "ar"]
+    edit.pinned = True
+    edit.save()
+
+    assert edit.status == AnnouncementStatus.DRAFT
+    assert edit.edit_of == announcement
+    assert start_edit(announcement, owner) == edit
+    # Until the edit is published, the audience keeps the old version.
+    old = _active(api_client)["results"][0]
+    assert (old["id"], old["title"], old["revision"]) == (
+        str(announcement.pk),
+        TEXTS["ru"][0],
+        1,
+    )
+
+    published = _publish(edit, owner)
+
+    assert published.pk == announcement.pk
+    assert not Announcement.objects.filter(pk=edit.pk).exists()
+    announcement.refresh_from_db()
+    assert announcement.status == AnnouncementStatus.PUBLISHED
+    assert announcement.revision == 2
+    assert announcement.revised_by == owner
+    assert announcement.revised_at is not None
+    assert announcement.published_at == first_published_at
+    assert announcement.pinned is True
+    assert announcement.audience_languages == ["ru", "ar"]
+    assert sorted(announcement.translations.values_list("language", flat=True)) == ["ar", "ru"]
+    assert announcement.step_images.count() == 0
+    assert announcement.receipts.count() == 1
+    assert recorded_changes == ["published", "published"]
+    new = _active(api_client)["results"][0]
+    assert (new["id"], new["title"], new["revision"]) == (
+        str(announcement.pk),
+        "Новый чтец: исправленный заголовок",
+        2,
+    )
+    assert new["version"] != old["version"]
+
+
+@pytest.mark.django_db
+def test_an_edit_can_be_cancelled_and_never_outlives_its_original(owner: User) -> None:
+    announcement = _publish(_announcement(), owner)
+    edit = start_edit(announcement, owner)
+
+    assert cancel_edit(edit, owner) == announcement
+    assert not Announcement.objects.filter(edit_of=announcement).exists()
+    assert announcement.translations.count() == 3
+
+    edit = start_edit(announcement, owner)
+    assert duplicate(edit, owner).edit_of is None
+    withdraw(announcement, owner)
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        _publish(edit, owner)
+    assert error.value.problems == [EDIT_OF_UNPUBLISHED]
+    with pytest.raises(AnnouncementNotReadyError):
+        start_edit(announcement, owner)
+    with pytest.raises(AnnouncementNotReadyError):
+        cancel_edit(announcement, owner)
+
+
+@pytest.mark.django_db
+def test_owner_only_announcements_are_edited_under_the_same_rules(
+    owner: User,
+    editor: User,
+) -> None:
+    fundraising = _publish(
+        _announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False), owner
+    )
+    edit = start_edit(fundraising, editor)
+    # Even turning it into an ordinary announcement is the owner's decision.
+    edit.kind = AnnouncementKind.GENERAL
+    edit.save()
+
+    with pytest.raises(PermissionDenied):
+        _publish(edit, editor)
+    _publish(edit, owner)
+
+    fundraising.refresh_from_db()
+    assert fundraising.kind == AnnouncementKind.GENERAL
+    assert fundraising.revised_by == owner
+
+
+@pytest.mark.django_db
+def test_editing_a_religious_text_asks_for_the_check_again(owner: User, editor: User) -> None:
+    announcement = _publish(_announcement(needs_religious_review=True), owner)
+    edit = start_edit(announcement, editor)
+
+    assert edit.religious_reviewed_at is None
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        _publish(edit, editor)
+    assert error.value.problems == [announcement_services.RELIGIOUS_REVIEW_NEEDED]
 
 
 # Public API
@@ -773,6 +890,99 @@ def test_admin_publish_button_reports_problems(owner: User) -> None:
     assert "Заполните текст хотя бы на одном языке." in body
     announcement.refresh_from_db()
     assert announcement.status == AnnouncementStatus.DRAFT
+
+
+@pytest.mark.django_db
+def test_admin_edits_and_publishes_again(owner: User, recorded_changes: list[str]) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _publish(_announcement(languages=("ru",)), owner)
+    page = f"/admin/announcements/announcement/{announcement.pk}/change/"
+
+    published_body = client.get(page).content.decode()
+    assert 'name="_start_edit" value="Изменить"' in published_body
+    response = client.post(page, _published_form_data(announcement) | {"_start_edit": "1"})
+    edit = Announcement.objects.get(edit_of=announcement)
+    edit_page = f"/admin/announcements/announcement/{edit.pk}/change/"
+    assert response["Location"] == edit_page
+
+    edit_body = client.get(edit_page).content.decode()
+    assert "Правка опубликованного" in edit_body
+    assert 'value="Сохранить и опубликовать снова"' in edit_body
+    assert "Отменить правку" in edit_body
+    assert 'name="_duplicate"' not in edit_body
+    assert 'value="Открыть начатую правку"' in client.get(page).content.decode()
+    listing = client.get("/admin/announcements/announcement/").content.decode()
+    assert "Правка: " in listing
+
+    translation = edit.translations.get()
+    data = _change_form_data(edit) | {
+        "translations-TOTAL_FORMS": "4",
+        "translations-INITIAL_FORMS": "1",
+        "translations-0-id": str(translation.pk),
+        "translations-0-language": "ru",
+        "translations-0-title": "Курс намаза: новые уроки",
+        "translations-0-summary": "Добавлены уроки и озвучка шагов.",
+        "translations-0-cta_label": "",
+        "translations-0-image_alt": "",
+        "_publish": "1",
+    }
+    response = client.post(edit_page, data, follow=True)
+
+    assert response.redirect_chain[-1][0] == page
+    body = response.content.decode()
+    assert "Изменения опубликованы. На сайте и в приложении обновятся в течение минуты." in body
+    assert "Изменено после публикации" in body
+    assert "(редакция 2)" in body
+    announcement.refresh_from_db()
+    assert str(announcement) == "Курс намаза: новые уроки"
+    assert announcement.revision == 2
+    assert recorded_changes == ["published", "published"]
+
+
+@pytest.mark.django_db
+def test_admin_cancels_an_edit(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _publish(_announcement(languages=("ru",)), owner)
+    edit = start_edit(announcement, owner)
+    translation = edit.translations.get()
+    data = _change_form_data(edit) | {
+        "translations-TOTAL_FORMS": "4",
+        "translations-INITIAL_FORMS": "1",
+        "translations-0-id": str(translation.pk),
+        "translations-0-language": "ru",
+        "translations-0-title": "Черновой заголовок",
+        "translations-0-summary": translation.summary,
+        "_cancel_edit": "1",
+    }
+
+    response = client.post(
+        f"/admin/announcements/announcement/{edit.pk}/change/", data, follow=True
+    )
+
+    assert response.redirect_chain[-1][0] == (
+        f"/admin/announcements/announcement/{announcement.pk}/change/"
+    )
+    assert "Правка отменена, на сайте всё как было." in response.content.decode()
+    assert not Announcement.objects.filter(pk=edit.pk).exists()
+    assert str(announcement) == TEXTS["ru"][0]
+
+
+def _published_form_data(announcement: Announcement) -> dict[str, Any]:
+    """A published page posts only the note and the read-only inlines' counters."""
+    count = str(announcement.translations.count())
+    return {
+        "review_note": "",
+        "translations-TOTAL_FORMS": count,
+        "translations-INITIAL_FORMS": count,
+        "translations-MIN_NUM_FORMS": "0",
+        "translations-MAX_NUM_FORMS": "4",
+        "step_images-TOTAL_FORMS": "0",
+        "step_images-INITIAL_FORMS": "0",
+        "step_images-MIN_NUM_FORMS": "0",
+        "step_images-MAX_NUM_FORMS": "5",
+    }
 
 
 def _change_form_data(announcement: Announcement) -> dict[str, Any]:

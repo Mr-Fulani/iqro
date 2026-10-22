@@ -3,8 +3,9 @@
 """Admin of announcements: texts in four languages, a live preview, publishing.
 
 The «Публикация» panel on top of the form says what the announcement is now, what
-is still missing and offers one button, «Сохранить и опубликовать». Published
-announcements are read-only and can only be taken down, archived or duplicated.
+is still missing and offers one button, «Сохранить и опубликовать». A published
+announcement stays read-only: «Изменить» opens an edit draft, and «Сохранить и
+опубликовать снова» swaps the published content for it at once.
 """
 
 from __future__ import annotations
@@ -43,16 +44,19 @@ from quran_backend.modules.announcements.models import (
 )
 from quran_backend.modules.announcements.routes import SCREENS
 from quran_backend.modules.announcements.services import (
+    CHANGE_PERMISSION,
     PUBLISH_PERMISSION,
     RELIGIOUS_PERMISSION,
     SENSITIVE_PERMISSION,
     AnnouncementNotReadyError,
     archive,
+    cancel_edit,
     duplicate,
     is_sensitive,
     publish,
     readiness,
     sign_religious_review,
+    start_edit,
     submit_for_review,
     uses_image,
     withdraw,
@@ -440,13 +444,14 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
             ),
             "missing": [],
             "notes": [],
+            "publish_label": "Сохранить и опубликовать",
             "show_publish": can_publish,
         }
     status = announcement.status
     editable = announcement.is_editable
-    can_publish_this = can_publish and (
-        not is_sensitive(announcement) or user.has_perm(SENSITIVE_PERMISSION)
-    )
+    original = announcement.edit_of
+    sensitive = is_sensitive(announcement) or (original is not None and is_sensitive(original))
+    can_publish_this = can_publish and (not sensitive or user.has_perm(SENSITIVE_PERMISSION))
     checks_religion = user.has_perm(RELIGIOUS_PERMISSION)
     report = (
         readiness(
@@ -466,16 +471,39 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
             f"На главной сайта и приложения до "
             f"{timezone.localtime(announcement.display_until):%d.%m.%Y}, в ленте — дальше."
         )
+    elif original is not None:
+        state = (
+            "Правка ждёт публикации"
+            if status == AnnouncementStatus.IN_REVIEW
+            else "Правка опубликованного"
+        )
+        tone = "draft"
+        hint = (
+            "На сайте и в приложении пока прежняя версия. «Сохранить и опубликовать снова» "
+            "заменит её сразу везде."
+        )
     else:
         state, tone, hint = PANEL_STATES[AnnouncementStatus(status)]
     if editable and report is not None and not report.problems and can_publish_this:
-        hint = "Всё готово: нажмите «Сохранить и опубликовать»."
+        hint = f"Всё готово: нажмите «{_publish_label(announcement)}»."
+    pending_edit = (
+        Announcement.objects.filter(edit_of=announcement).first()
+        if status == AnnouncementStatus.PUBLISHED
+        else None
+    )
     return {
         "state": state,
         "tone": tone,
         "hint": hint,
         "missing": report.problems if report else [],
         "notes": report.notes if report else [],
+        "revised": _revised_note(announcement),
+        "publish_label": _publish_label(announcement),
+        "original_url": _change_url(original) if original is not None else None,
+        "show_start_edit": status == AnnouncementStatus.PUBLISHED
+        and user.has_perm(CHANGE_PERMISSION),
+        "start_edit_label": "Открыть начатую правку" if pending_edit else "Изменить",
+        "show_cancel_edit": original is not None and editable,
         "owner_only": editable and can_publish and not can_publish_this,
         "show_publish": editable and can_publish_this,
         "show_submit_review": status == AnnouncementStatus.DRAFT and not can_publish_this,
@@ -489,8 +517,21 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
         "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
         "show_archive": can_publish
         and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
-        "show_duplicate": True,
+        "show_duplicate": original is None,
     }
+
+
+def _publish_label(announcement: Announcement) -> str:
+    return "Сохранить и опубликовать снова" if announcement.is_edit else "Сохранить и опубликовать"
+
+
+def _revised_note(announcement: Announcement) -> str:
+    if announcement.revised_at is None:
+        return ""
+    return (
+        f"Изменено после публикации {timezone.localtime(announcement.revised_at):%d.%m.%Y в %H:%M}"
+        f" (редакция {announcement.revision})."
+    )
 
 
 PANEL_STATES = {
@@ -511,6 +552,10 @@ PANEL_STATES = {
     ),
     AnnouncementStatus.ARCHIVED: ("В архиве", "off", "Убрано и из ленты «Что нового»."),
 }
+
+
+def _change_url(announcement: Announcement) -> str:
+    return reverse("admin:announcements_announcement_change", args=(announcement.pk,))
 
 
 def _image_url(announcement: Announcement) -> str | None:
@@ -558,6 +603,10 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "reviewed_at",
         "published_at",
         "withdrawn_at",
+        "edit_of",
+        "revision",
+        "revised_at",
+        "revised_by",
         "created_at",
         "updated_at",
     )
@@ -630,6 +679,8 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "religious_reviewed_by",
                     "religious_reviewed_at",
                     "withdrawn_at",
+                    ("revised_at", "revised_by", "revision"),
+                    "edit_of",
                 ),
             },
         ),
@@ -691,7 +742,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     @admin.display(description="Заголовок")
     def title_ru(self, obj: Announcement) -> str:
-        return str(obj)
+        return f"Правка: {obj}" if obj.is_edit else str(obj)
 
     @admin.display(description="Статус", ordering="status")
     def status_badge(self, obj: Announcement) -> str:
@@ -701,14 +752,17 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             AnnouncementStatus.PUBLISHED: ("#e3f3e5", "#1b5e20"),
         }
         background, color = colors.get(AnnouncementStatus(obj.status), ("#eeeeee", "#555555"))
-        auto = " · авто" if obj.source == "auto" else ""
+        label = "Правка" if obj.is_edit and obj.is_editable else obj.get_status_display()
+        extra = " · авто" if obj.source == "auto" else ""
+        if obj.revised_at is not None:
+            extra += f" · изменено {timezone.localtime(obj.revised_at):%d.%m}"
         return format_html(
             '<span style="padding:2px 7px;border-radius:4px;background:{};color:{};'
             'font-weight:700;font-size:11px;text-transform:uppercase">{}{}</span>',
             background,
             color,
-            obj.get_status_display(),
-            auto,
+            label,
+            extra,
         )
 
     @admin.display(description="Период", ordering="starts_at")
@@ -897,6 +951,9 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return super().response_add(request, obj, post_url_continue)
 
     def response_change(self, request: HttpRequest, obj: Announcement) -> HttpResponse:
+        edit_response = self._respond_to_edit(request, obj)
+        if edit_response is not None:
+            return edit_response
         if "_duplicate" in request.POST:
             copy = duplicate(obj, cast(User, request.user))
             self.message_user(request, "Создан новый черновик-копия.", messages.SUCCESS)
@@ -909,8 +966,44 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 return HttpResponseRedirect(request.path)
         return super().response_change(request, obj)
 
+    def _respond_to_edit(self, request: HttpRequest, obj: Announcement) -> HttpResponse | None:
+        """«Изменить», «Отменить правку» and publishing an edit, which leaves its own page."""
+        user = cast(User, request.user)
+        if "_publish" in request.POST and obj.edit_of_id is not None:
+            original_id = obj.edit_of_id
+            self._run(request, obj, "_publish")
+            published = not Announcement.objects.filter(pk=obj.pk).exists()
+            return HttpResponseRedirect(
+                reverse("admin:announcements_announcement_change", args=(original_id,))
+                if published
+                else request.path
+            )
+        if "_start_edit" in request.POST:
+            operation: Callable[[Announcement, User], Announcement] = start_edit
+            success = (
+                "Это правка. Пока вы её не опубликуете, на сайте и в приложении прежняя версия."
+            )
+        elif "_cancel_edit" in request.POST:
+            operation = cancel_edit
+            success = "Правка отменена, на сайте всё как было."
+        else:
+            return None
+        try:
+            target = operation(obj, user)
+        except PermissionDenied:
+            self.message_user(request, "Нет права изменять объявления.", messages.ERROR)
+            return HttpResponseRedirect(request.path)
+        except AnnouncementNotReadyError as error:
+            for problem in error.problems:
+                self.message_user(request, problem, messages.ERROR)
+            return HttpResponseRedirect(request.path)
+        self.message_user(request, success, messages.INFO)
+        return HttpResponseRedirect(_change_url(target))
+
     def _run(self, request: HttpRequest, obj: Announcement, name: str) -> None:
         operation, success = OPERATIONS[name]
+        if name == "_publish" and obj.is_edit:
+            success = "Изменения опубликованы. На сайте и в приложении обновятся в течение минуты."
         try:
             operation(obj, cast(User, request.user))
         except PermissionDenied:

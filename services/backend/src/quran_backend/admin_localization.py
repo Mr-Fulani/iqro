@@ -338,6 +338,7 @@ FIELD_LABELS: dict[str, str] = {
     "device": "Устройство",
     "dhuhr_adjustment_minutes": "Поправка Зухра, минуты",
     "duration_ms": "Продолжительность, мс",
+    "edit_of": "Правка объявления",
     "edition": "Издание",
     "edition_code": "Код издания",
     "edition_version": "Версия издания",
@@ -501,6 +502,8 @@ FIELD_LABELS: dict[str, str] = {
     "result_user": "Пользователь после входа",
     "retired_at": "Удалено",
     "revelation_type": "Место ниспослания",
+    "revised_at": "Изменено после публикации",
+    "revised_by": "Изменил",
     "revision": "Редакция",
     "range_end_ayah": "Конечный аят диапазона",
     "range_start_ayah": "Начальный аят диапазона",
@@ -640,6 +643,9 @@ MODEL_FIELD_LABELS = {
     ("announcements.Announcement", "ends_at"): "Убрать с главной после",
     ("announcements.Announcement", "image_object_key"): "Картинка",
     ("announcements.Announcement", "withdrawn_at"): "Снято",
+    ("announcements.Announcement", "edit_of"): "Правка объявления",
+    ("announcements.Announcement", "revised_at"): "Изменено после публикации",
+    ("announcements.Announcement", "revised_by"): "Изменил",
     ("announcements.AnnouncementSettings", "is_enabled"): "Показывать объявления",
 }
 

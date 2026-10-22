@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 PUBLISH_PERMISSION = "announcements.publish_announcement"
 SENSITIVE_PERMISSION = "announcements.publish_sensitive_announcement"
 RELIGIOUS_PERMISSION = "announcements.review_religious_content"
+CHANGE_PERMISSION = "announcements.change_announcement"
 
 
 class AnnouncementNotReadyError(ValueError):
@@ -237,7 +238,13 @@ def publish(
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if not locked.is_editable:
         raise AnnouncementNotReadyError(["Объявление уже опубликовано или снято."])
-    if is_sensitive(locked):
+    original = None
+    if locked.edit_of_id is not None:
+        original = Announcement.objects.select_for_update().get(pk=locked.edit_of_id)
+        if original.status != AnnouncementStatus.PUBLISHED:
+            raise AnnouncementNotReadyError([EDIT_OF_UNPUBLISHED])
+    # Taking push or a window off an owner-only announcement is the owner's call too.
+    if is_sensitive(locked) or (original is not None and is_sensitive(original)):
         _require(user, SENSITIVE_PERMISSION)
     checks_religion = user.has_perm(RELIGIOUS_PERMISSION)
     result = readiness(locked, publisher_checks_religion=checks_religion)
@@ -264,6 +271,8 @@ def publish(
     if locked.needs_religious_review and locked.religious_reviewed_at is None:
         locked.religious_reviewed_by = user
         locked.religious_reviewed_at = now
+    if original is not None:
+        return _apply_edit(locked, original, user, now)
     locked.status = AnnouncementStatus.PUBLISHED
     locked.reviewed_by = user
     locked.reviewed_at = now
@@ -298,19 +307,58 @@ def archive(announcement: Announcement, user: User) -> None:
         enqueue_announcements_change(action="archived")
 
 
-@transaction.atomic
-def duplicate(announcement: Announcement, user: User) -> Announcement:
-    """A fresh draft with the same content; read receipts stay with the original."""
-    source = Announcement.objects.get(pk=announcement.pk)
-    copy = Announcement.objects.get(pk=announcement.pk)
+# What an edit of a published announcement may change. Status, signatures and the
+# date of the first publication stay with the original.
+EDITABLE_FIELDS = (
+    "kind",
+    "priority",
+    "starts_at",
+    "ends_at",
+    "pinned",
+    "channel_bubble",
+    "channel_home_card",
+    "channel_modal",
+    "channel_web_push",
+    "bubble_frequency",
+    "bubble_max_impressions",
+    "bubble_icon",
+    "action_type",
+    "action_reciter",
+    "action_surah",
+    "action_ayah",
+    "action_slug",
+    "action_url",
+    "image_object_key",
+    "image_width",
+    "image_height",
+    "thumb_object_key",
+    "audience_languages",
+    "audience_platforms",
+    "app_version_min",
+    "app_version_max",
+    "audience_auth",
+    "needs_religious_review",
+    "religious_reviewed_by",
+    "religious_reviewed_at",
+    "review_note",
+)
+
+EDIT_OF_UNPUBLISHED = (
+    "Исходное объявление уже снято или в архиве. Сделайте копию-черновик и опубликуйте её."
+)
+
+
+def _copy(source: Announcement, user: User, **values: Any) -> Announcement:
+    """A new draft with the content of `source`, its texts and step pictures."""
+    copy = Announcement.objects.get(pk=source.pk)
     copy.pk = uuid.uuid7()
     copy._state.adding = True
     copy.status = AnnouncementStatus.DRAFT
     copy.source = "manual"
     copy.auto_key = None
-    copy.starts_at = max(source.starts_at, timezone.now())
-    copy.ends_at = None
     copy.created_by = user
+    copy.edit_of = None
+    copy.revision = 1
     for name in (
         "religious_reviewed_by",
         "religious_reviewed_at",
@@ -318,9 +366,13 @@ def duplicate(announcement: Announcement, user: User) -> Announcement:
         "reviewed_at",
         "published_at",
         "withdrawn_at",
+        "revised_at",
+        "revised_by",
     ):
         setattr(copy, name, None)
     copy.review_note = ""
+    for name, value in values.items():
+        setattr(copy, name, value)
     copy.save()
     for translation in source.translations.all():
         translation.pk = uuid.uuid7()
@@ -333,6 +385,65 @@ def duplicate(announcement: Announcement, user: User) -> Announcement:
         step.announcement = copy
         step.save()
     return copy
+
+
+@transaction.atomic
+def duplicate(announcement: Announcement, user: User) -> Announcement:
+    """A fresh draft with the same content; read receipts stay with the original."""
+    source = Announcement.objects.get(pk=announcement.pk)
+    return _copy(source, user, starts_at=max(source.starts_at, timezone.now()), ends_at=None)
+
+
+@transaction.atomic
+def start_edit(announcement: Announcement, user: User) -> Announcement:
+    """The draft of changes to a published announcement; the audience keeps the old one.
+
+    One edit at a time: a second call returns the edit already started.
+    """
+    _require(user, CHANGE_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.status != AnnouncementStatus.PUBLISHED:
+        raise AnnouncementNotReadyError(["Изменить можно только опубликованное объявление."])
+    existing = Announcement.objects.filter(edit_of=locked).first()
+    if existing is not None:
+        return existing
+    return _copy(locked, user, edit_of=locked)
+
+
+@transaction.atomic
+def cancel_edit(announcement: Announcement, user: User) -> Announcement:
+    """Throw an unpublished edit away; returns the published announcement it belonged to."""
+    _require(user, CHANGE_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    original = locked.edit_of
+    if original is None or not locked.is_editable:
+        raise AnnouncementNotReadyError(["Это не правка опубликованного объявления."])
+    locked.delete()
+    return original
+
+
+def _apply_edit(
+    edit: Announcement,
+    original: Announcement,
+    user: User,
+    now: Any,
+) -> Announcement:
+    """Swap the published content for the edit in the caller's transaction."""
+    for name in EDITABLE_FIELDS:
+        setattr(original, name, getattr(edit, name))
+    original.reviewed_by = user
+    original.reviewed_at = now
+    original.revision += 1
+    original.revised_at = now
+    original.revised_by = user
+    original.translations.all().delete()
+    original.step_images.all().delete()
+    edit.translations.update(announcement=original)
+    edit.step_images.update(announcement=original)
+    edit.delete()
+    original.save()
+    enqueue_announcements_change(action="published")
+    return original
 
 
 def announcements_enabled() -> bool:

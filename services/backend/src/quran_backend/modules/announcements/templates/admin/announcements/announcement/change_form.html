@@ -32,6 +32,8 @@
         <span class="announcement-publish__badge announcement-publish__badge--{{ publish_panel.tone }}">{{ publish_panel.state }}</span>
         <span>{{ publish_panel.hint }}</span>
       </div>
+      {% if publish_panel.revised %}<div>{{ publish_panel.revised }}</div>{% endif %}
+      {% if publish_panel.original_url %}<div><a href="{{ publish_panel.original_url }}">Опубликованная версия</a></div>{% endif %}
       {% if publish_panel.missing %}
         <div class="announcement-publish__missing">
           <b>Чтобы опубликовать, осталось:</b>
