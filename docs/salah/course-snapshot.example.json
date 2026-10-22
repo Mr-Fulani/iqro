@@ -63,7 +63,13 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 33
+        "source_number": 33,
+        "caption": {
+          "ru": "«Хисн аль-Муслим», № 33",
+          "en": "Hisn al-Muslim, no. 33",
+          "ar": "«حصن المسلم»، رقم ٣٣",
+          "tr": "Hisnü'l-Müslim, no. 33"
+        }
       }
     },
     {

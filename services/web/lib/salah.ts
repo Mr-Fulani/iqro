@@ -94,6 +94,8 @@ export type SalahFormula = {
   arabic: string;
   transliteration?: string;
   translation: string;
+  /** Where the words come from, in the course's words: «Хисн аль-Муслим», № 33. */
+  caption?: string;
   repetitions: number;
   audio?: SalahFormulaAudio;
   source: SalahFormulaSource;
@@ -210,6 +212,8 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
     if (!isRecord(formula)) throw new SalahDocumentError(`formulas.${id} must be an object`);
     requireString(formula.arabic, `formulas.${id}.arabic`);
     requirePositiveInteger(formula.repetitions, `formulas.${id}.repetitions`);
+    // A malformed caption leaves the formula without one.
+    if (typeof formula.caption !== "string" || !formula.caption.trim()) delete formula.caption;
   }
   const media: Record<string, SalahMedia> = {};
   for (const [key, item] of Object.entries(value.media)) {

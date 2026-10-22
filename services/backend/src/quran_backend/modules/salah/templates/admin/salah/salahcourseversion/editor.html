@@ -70,8 +70,12 @@
       <div class="se-tree-tools">
         <input type="search" class="se-tree-search" placeholder="Найти урок или шаг" aria-label="Найти урок или шаг">
         <label class="se-tree-filter"><input type="checkbox" class="se-tree-missing-only"> Только с непереведённым</label>
+        {% if editable %}
+          <p class="se-small se-tree-hint">↑ ↓ или перетаскивание за «⠿» — порядок, «+» — добавить, «✕» — удалить.</p>
+        {% endif %}
       </div>
       {% include "admin/salah/salahcourseversion/editor_tree.html" with entries=tree %}
+      {% if editable %}<a class="button se-tree-add" href="{{ structure_url }}?action=add-section">+ Раздел</a>{% endif %}
     </nav>
 
     <div class="se-main">
@@ -104,11 +108,38 @@
           </div>
         {% endif %}
 
+        {% if editable and node.kind != "formula" %}
+          <div class="se-structure" role="group" aria-label="Структура курса">
+            {% if node.kind == "course" %}
+              <a class="button" href="{{ structure_url }}?action=add-section">+ Добавить раздел</a>
+            {% elif node.kind == "section" %}
+              <a class="button" href="{{ structure_url }}?action=add-lesson&amp;section={{ node.data.slug|urlencode }}">+ Добавить урок в раздел</a>
+            {% elif node.kind == "lesson" %}
+              {% if can_add_step %}<a class="button" href="{{ structure_url }}?action=add-step&amp;lesson={{ node.data.slug|urlencode }}">+ Добавить шаг в конец</a>{% endif %}
+              {% if section_choices|length > 1 %}
+                <span class="se-structure-move">
+                  <label for="id-lesson-section">Раздел</label>
+                  <select name="section" id="id-lesson-section" form="se-structure">
+                    {% for value, label in section_choices %}<option value="{{ value }}"{% if value == lesson_section %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                  </select>
+                  <button type="submit" class="button" form="se-structure" formaction="{{ structure_url }}?action=lesson-section&amp;node={{ node.id|urlencode }}">Перенести</button>
+                </span>
+              {% endif %}
+            {% elif node.kind == "step" %}
+              <a class="button" href="{{ structure_url }}?action=add-step&amp;after={{ node.id|urlencode }}">+ Добавить шаг после этого</a>
+            {% endif %}
+            {% if node.kind != "course" %}
+              <a class="button se-danger" href="{{ structure_url }}?action=delete&amp;node={{ node.id|urlencode }}">Удалить {{ node_kind|lower }}…</a>
+            {% endif %}
+          </div>
+        {% endif %}
+
         {% if node.kind == "course" %}
           <section class="se-block se-howto" aria-labelledby="se-howto-title">
             <h3 id="se-howto-title">Как пользоваться редактором</h3>
             <ol>
               <li>Слева — содержание курса: раздел → урок → шаг. Откройте урок и выберите шаг; оранжевое число — сколько текстов там не переведено.</li>
+              <li>Порядок разделов, уроков и шагов меняется стрелками ↑ ↓ или перетаскиванием за «⠿» в содержании; «+» добавляет, «✕» удаляет (сначала покажет, что и где удалится). Шаг молитвы общий для всех молитв с тем же шаблоном.</li>
               <li>У каждого текста есть поле на каждом языке. Пустые поля подсвечены оранжевым. Удобнее переводить по одному языку — переключатель «По одному языку» над текстами.</li>
               <li>У шага можно добавить заметки: «?» — справка, «!» — важно или предупреждение. На сайте и в приложении они открываются по значку у шага.</li>
               <li>Озвучку шага и своей записи формулы загружайте файлом m4a или mp3 (до 2 МБ и {{ max_audio_seconds }} секунд). Справа — предпросмотр шага, как его увидит ученик.</li>
@@ -130,13 +161,23 @@
         {% if formula %}
           <section class="se-block se-formula" aria-labelledby="se-formula-title">
             <h3 id="se-formula-title">Формула</h3>
-            <p>Источник: {{ formula.origin }}. Текст формулы берётся из источника и здесь не меняется.</p>
-            {% if formula.arabic %}<p class="se-arabic" lang="ar" dir="rtl">{{ formula.arabic }}</p>{% endif %}
-            <dl class="se-formula-translations">
-              {% for item in formula.translations %}
-                <dt>{{ item.language }}</dt><dd lang="{{ item.code }}" dir="{{ item.dir }}">{{ item.text|default:"—" }}</dd>
-              {% endfor %}
-            </dl>
+            <p>Источник: {{ formula.origin }}.
+              {% if formula.kind == "inline" %}Все тексты формулы — свои, курса.{% else %}Перевод и транслитерация берутся из источника; ниже можно записать свой вариант — он хранится в черновике поверх источника.{% endif %}</p>
+            {% if formula.arabic_editable %}
+              <div class="se-field se-formula-arabic{% if formula.arabic_error %} has-error{% endif %}" data-field="arabic">
+                <label class="se-field-label" for="id-formula-arabic">{% if formula.kind == "inline" %}Арабский текст{% else %}Свой арабский текст <span class="se-optional">необязательно</span>{% endif %}</label>
+                {% if formula.kind == "dua" %}<p class="help">Пусто — арабский текст из «Хисн аль-Муслим».</p>{% endif %}
+                <textarea id="id-formula-arabic" name="formula-arabic" rows="2" lang="ar" dir="rtl" class="se-arabic" data-max="4000" placeholder="{% if formula.kind == 'inline' %}Не заполнено{% else %}Как в источнике{% endif %}"{% if formula.arabic_error %} aria-invalid="true" aria-describedby="err-formula-arabic"{% endif %}{% if not editable %} readonly{% endif %}>{{ formula.arabic_value }}</textarea>
+                {% if formula.arabic_error %}<p class="se-error" id="err-formula-arabic">{{ formula.arabic_error }}</p>{% endif %}
+                {% if formula.source_arabic %}<p class="se-source-text">Источник: <span class="se-arabic" lang="ar" dir="rtl">{{ formula.source_arabic }}</span></p>{% endif %}
+                {% if editable and formula.kind == "dua" and formula.arabic_value %}
+                  <button type="submit" class="button se-revert" name="revert" value="arabic">Вернуть текст источника</button>
+                {% endif %}
+              </div>
+            {% elif formula.arabic %}
+              <p class="se-arabic" lang="ar" dir="rtl">{{ formula.arabic }}</p>
+              <p class="help">Арабский текст аятов — из мусхафа, он не меняется.</p>
+            {% endif %}
             {% if formula.audio_url %}
               <p>Сейчас звучит: <audio controls preload="none" src="{{ formula.audio_url }}"></audio></p>
             {% endif %}
@@ -166,21 +207,79 @@
               {% endfor %}
             </div>
             {% for row in fields %}
-              <div class="se-field" data-required="{{ row.field.required|yesno:'1,0' }}" data-field="{{ row.field.name }}">
-                <div class="se-field-label">{{ row.field.label }}{% if not row.field.required %} <span class="se-optional">необязательно</span>{% endif %}</div>
+              <div class="se-field" data-required="{{ row.field.required|yesno:'1,0' }}" data-counted="{{ row.field.counted|yesno:'1,0' }}" data-field="{{ row.field.name }}">
+                <div class="se-field-label">{{ row.field.label }}{% if not row.field.required %} <span class="se-optional">необязательно</span>{% endif %}
+                  {% if editable and row.revertible %}<button type="submit" class="button se-revert" name="revert" value="{{ row.field.name }}">Вернуть текст источника</button>{% endif %}
+                </div>
                 {% if row.field.help %}<p class="help">{{ row.field.help }}</p>{% endif %}
                 <div class="se-langs">
                   {% for value in row.values %}
                     <div class="se-lang{% if value.missing %} is-missing{% endif %}{% if value.error %} has-error{% endif %}" data-lang="{{ value.code }}">
                       <label for="id-{{ value.name }}"><bdi>{{ value.language }}</bdi><span class="se-missing-mark"> — не переведено</span></label>
-                      <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="{{ row.field.rows }}" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="{{ row.field.max_length }}" data-preview="{{ row.field.name }}" placeholder="Не переведено"{% if value.error %} aria-invalid="true" aria-describedby="err-{{ value.name }}"{% endif %}{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
+                      <textarea id="id-{{ value.name }}" name="{{ value.name }}" rows="{{ row.field.rows }}" lang="{{ value.code }}" dir="{{ value.dir }}" data-max="{{ row.field.max_length }}" data-preview="{{ row.field.name }}" placeholder="{% if value.source %}Как в источнике{% elif row.field.counted %}Не переведено{% else %}Не заполнено{% endif %}"{% if value.error %} aria-invalid="true" aria-describedby="err-{{ value.name }}"{% endif %}{% if not editable %} readonly{% endif %}>{{ value.value }}</textarea>
                       <span class="se-length" aria-hidden="true"></span>
                       {% if value.error %}<p class="se-error" id="err-{{ value.name }}">{{ value.error }}</p>{% endif %}
+                      {% if value.source %}<p class="se-source-text">Источник: <span lang="{{ value.code }}" dir="{{ value.dir }}">{{ value.source }}</span></p>{% endif %}
                     </div>
                   {% endfor %}
                 </div>
               </div>
             {% endfor %}
+          </section>
+        {% endif %}
+
+        {% if properties %}
+          <section class="se-block se-props" aria-labelledby="se-props-title">
+            <h3 id="se-props-title">Свойства шага</h3>
+            <div class="se-props-grid">
+              <p class="se-prop{% if properties.errors.kind %} has-error{% endif %}">
+                <label for="id-prop-kind">Тип</label>
+                <select name="prop-kind" id="id-prop-kind"{% if not editable %} disabled{% endif %}>
+                  {% for value, label in properties.kinds %}<option value="{{ value }}"{% if value == properties.kind %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% if properties.errors.kind %}<span class="se-error">{{ properties.errors.kind }}</span>{% endif %}
+              </p>
+              <p class="se-prop">
+                <label for="id-prop-ruling">Хукм</label>
+                <select name="prop-ruling" id="id-prop-ruling"{% if not editable %} disabled{% endif %}>
+                  <option value="">— не указан —</option>
+                  {% for value, label in properties.rulings %}<option value="{{ value }}"{% if value == properties.ruling %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% if properties.errors.ruling %}<span class="se-error">{{ properties.errors.ruling }}</span>{% endif %}
+              </p>
+              <p class="se-prop">
+                <label for="id-prop-media">Картинка</label>
+                <select name="prop-media" id="id-prop-media"{% if not editable %} disabled{% endif %}>
+                  <option value="">— без картинки —</option>
+                  {% for value, label in properties.images %}<option value="{{ value }}"{% if value == properties.media %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% if properties.errors.media %}<span class="se-error">{{ properties.errors.media }}</span>{% endif %}
+              </p>
+              <p class="se-prop">
+                <label for="id-prop-repeat">Повторов</label>
+                <input type="number" name="prop-repeat" id="id-prop-repeat" min="1" max="99" value="{{ properties.repeat }}" placeholder="1"{% if properties.errors.repeat %} aria-invalid="true"{% endif %}{% if not editable %} readonly{% endif %}>
+                {% if properties.errors.repeat %}<span class="se-error">{{ properties.errors.repeat }}</span>{% endif %}
+              </p>
+            </div>
+            <div class="se-prop">
+              <span class="se-field-label">Формулы шага</span>
+              <p class="help">По порядку, как их увидит ученик. Чтобы убрать формулу, выберите «— убрать —»; последняя строка добавляет новую.</p>
+              <ol class="se-prop-formulas">
+                {% for current in properties.formulas %}
+                  <li><select name="prop-formula" aria-label="Формула {{ forloop.counter }}"{% if not editable %} disabled{% endif %}>
+                    <option value="">— убрать —</option>
+                    {% for value, label in properties.all_formulas %}<option value="{{ value }}"{% if value == current %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                  </select></li>
+                {% endfor %}
+                {% if editable %}
+                  <li><select name="prop-formula" aria-label="Добавить формулу">
+                    <option value="" selected>— добавить формулу —</option>
+                    {% for value, label in properties.all_formulas %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                  </select></li>
+                {% endif %}
+              </ol>
+              {% if properties.errors.formula %}<p class="se-error">{{ properties.errors.formula }}</p>{% endif %}
+            </div>
           </section>
         {% endif %}
 
@@ -242,7 +341,7 @@
           </section>
         {% endfor %}
 
-        {% if editable and fields or editable and audio_groups %}
+        {% if editable and fields or editable and audio_groups or editable and properties %}
           <div class="se-actions">
             <button type="submit" class="button default" name="save" value="1">Сохранить</button>
             <button type="submit" class="button" name="save_next" value="1">Сохранить и дальше →</button>
@@ -256,6 +355,13 @@
           {% if next_id %}<a href="?node={{ next_id|urlencode }}">Следующее →</a>{% endif %}
         </nav>
       </form>
+      {% if editable %}
+        <form method="post" action="{{ structure_url }}" id="se-structure" class="se-structure-form" hidden>
+          {% csrf_token %}
+          <input type="hidden" name="revision" value="{{ original.checksum_sha256 }}">
+          <input type="hidden" name="return" value="{{ node.id }}">
+        </form>
+      {% endif %}
     </div>
 
     {% if preview %}

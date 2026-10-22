@@ -8,6 +8,8 @@ sign-off requires every one (`validate_snapshot`).
 
 Node ids: `course`, `section:<slug>`, `lesson:<slug>`, `step:<step slug of the
 compiled document>` (`step:fajr.r1.ruku`, `step:wudu.face`) and `formula:<id>`.
+A formula's texts are the course's own: for a du'a or ayahs they override the
+source's wording, and empty means the source's text.
 """
 
 from __future__ import annotations
@@ -26,6 +28,8 @@ from typing import Any
 from quran_backend.modules.salah.snapshot import (
     AUDIO_SUFFIXES,
     NOTE_KINDS,
+    RULINGS,
+    STEP_KINDS,
     prayer_step_sources,
 )
 
@@ -34,6 +38,19 @@ SOURCE_LANGUAGE = "ru"
 AUDIO_ALL = "all"
 NOTE_MAX_LENGTH = 1200
 NOTE_KIND_LABELS = {"help": "Справка «?»", "warning": "Важно «!»"}
+STEP_KIND_LABELS = {
+    "action": "Действие",
+    "recitation": "Чтение формулы",
+    "info": "Пояснение",
+}
+RULING_LABELS = {
+    "shart": "Условие (шарт)",
+    "rukn": "Столп (рукн)",
+    "wajib": "Обязательно (ваджиб)",
+    "sunnah": "Сунна",
+}
+MAX_REPEAT = 99
+ARABIC_MAX_LENGTH = 4000
 
 
 @dataclass(frozen=True)
@@ -44,6 +61,8 @@ class TextField:
     max_length: int
     rows: int
     required: bool = True
+    # False: never counted as untranslated (Arabic has no transliteration).
+    counted: bool = True
 
 
 COURSE_FIELDS = (
@@ -77,6 +96,51 @@ STEP_FIELDS = (
         rows=5,
         required=False,
     ),
+)
+
+_CAPTION = TextField(
+    "caption",
+    "Подпись источника",
+    "Например: «Аль-Бухари, 797». Можно оставить пустой на всех языках.",
+    200,
+    rows=1,
+    required=False,
+)
+# A formula written for the course: its texts are its own.
+INLINE_FORMULA_FIELDS = (
+    TextField("meaning", "Перевод", "Смысл формулы.", 600, rows=2),
+    TextField(
+        "transliteration",
+        "Транслитерация",
+        "Как читать арабский текст буквами языка урока. Для арабского не нужна.",
+        400,
+        rows=2,
+        required=False,
+        counted=False,
+    ),
+    _CAPTION,
+)
+# A du'a or ayahs: each text is the course's wording over the source's, empty is the source's.
+SOURCED_FORMULA_FIELDS = (
+    TextField(
+        "meaning",
+        "Свой перевод",
+        "Пусто — перевод из источника (он показан под полем).",
+        600,
+        rows=2,
+        required=False,
+        counted=False,
+    ),
+    TextField(
+        "transliteration",
+        "Своя транслитерация",
+        "Пусто — транслитерация из источника.",
+        400,
+        rows=2,
+        required=False,
+        counted=False,
+    ),
+    _CAPTION,
 )
 
 _WHEN_SITTINGS = {
@@ -126,6 +190,21 @@ class TreeEntry:
     notes: int = 0
     audio: bool = False
     children: list[TreeEntry] = field(default_factory=list)
+    # Whether the arrows of the structure editor have somewhere to go; a drag
+    # reorders only within one group (the sections, the lessons, a rak'ah's steps).
+    can_up: bool = False
+    can_down: bool = False
+    group: str = ""
+    # A prayer's lesson takes new steps only after one of its steps.
+    prayer: bool = False
+
+    @property
+    def kind(self) -> str:
+        return self.id.partition(":")[0] if self.id else ""
+
+    @property
+    def slug(self) -> str:
+        return self.id.partition(":")[2]
 
 
 # Reading -------------------------------------------------------------------
@@ -239,7 +318,14 @@ def _step_node(snapshot: dict[str, Any], node_id: str, slug: str) -> EditorNode 
 def _formula_node(snapshot: dict[str, Any], node_id: str, formula_id: str) -> EditorNode | None:
     for formula in snapshot.get("formulas", []):
         if formula.get("id") == formula_id:
-            return EditorNode(id=node_id, kind="formula", title=formula_id, data=formula)
+            inline = (formula.get("source") or {}).get("kind") == "inline"
+            return EditorNode(
+                id=node_id,
+                kind="formula",
+                title=formula_id,
+                data=formula,
+                fields=INLINE_FORMULA_FIELDS if inline else SOURCED_FORMULA_FIELDS,
+            )
     return None
 
 
@@ -269,6 +355,63 @@ def _filled(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def node_texts(node: EditorNode, name: str) -> dict[str, str]:
+    """A field's texts by language, wherever the node keeps them."""
+    return _texts_of(node.kind, node.data, name)
+
+
+def _texts_of(kind: str, data: Mapping[str, Any], name: str) -> dict[str, str]:
+    if kind == "formula":
+        source = data.get("source") or {}
+        if name == "caption":
+            return dict(source.get("caption") or {})
+        return {
+            language: str(entry[name])
+            for language, entry in (source.get("translations") or {}).items()
+            if isinstance(entry, Mapping) and entry.get(name)
+        }
+    value = data.get(name)
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _put_texts(node: EditorNode, text_field: TextField, value: dict[str, str]) -> None:
+    if node.kind != "formula":
+        _set_text(node.data, text_field, value)
+        return
+    source = node.data["source"]
+    if text_field.name == "caption":
+        if any(_filled(text) for text in value.values()):
+            source["caption"] = value
+        else:
+            source.pop("caption", None)
+        return
+    translations = dict(source.get("translations") or {})
+    for language, text in value.items():
+        entry = dict(translations.get(language) or {})
+        if _filled(text):
+            entry[text_field.name] = text
+        else:
+            entry.pop(text_field.name, None)
+        if entry:
+            translations[language] = entry
+        else:
+            translations.pop(language, None)
+    if translations:
+        source["translations"] = translations
+    else:
+        source.pop("translations", None)
+
+
+def formula_arabic(node: EditorNode) -> tuple[str, bool]:
+    """The formula's own Arabic and whether the editor may change it.
+
+    Ayahs keep the published Mushaf text; a du'a may take a prayer's form of
+    its words (empty is the source's); a course formula is written here.
+    """
+    source = node.data.get("source") or {}
+    return str(source.get("arabic") or ""), source.get("kind") in {"inline", "dua"}
+
+
 def missing_in(value: Any, languages: Sequence[str], *, required: bool = True) -> list[str]:
     """Languages without a text. An optional text is complete when it is empty everywhere."""
     texts = value if isinstance(value, Mapping) else {}
@@ -282,8 +425,10 @@ def node_missing(node: EditorNode, languages: Sequence[str]) -> dict[str, int]:
     """Untranslated texts of the node, by language."""
     counts = dict.fromkeys(languages, 0)
     for text_field in node.fields:
+        if not text_field.counted:
+            continue
         for language in missing_in(
-            node.data.get(text_field.name), languages, required=text_field.required
+            node_texts(node, text_field.name), languages, required=text_field.required
         ):
             counts[language] += 1
     if node.has_notes:
@@ -308,6 +453,8 @@ def _all_nodes(snapshot: dict[str, Any]) -> Iterator[EditorNode]:
                     continue
                 seen_template_steps.add(source)
             yield step
+    for formula in snapshot.get("formulas", []):
+        yield find_node(snapshot, f"formula:{formula['id']}")
 
 
 def course_missing(snapshot: dict[str, Any], languages: Sequence[str]) -> dict[str, int]:
@@ -327,25 +474,35 @@ def editor_tree(snapshot: dict[str, Any], languages: Sequence[str]) -> list[Tree
     lessons = {lesson["slug"]: lesson for lesson in snapshot.get("lessons", [])}
     tree = [TreeEntry(id="course", label="Курс: описание и источник")]
     tree[0].missing = sum(node_missing(find_node(snapshot, "course"), languages).values())
-    for section in snapshot.get("sections", []):
+    sections = snapshot.get("sections", [])
+    for section_index, section in enumerate(sections):
         section_node = find_node(snapshot, f"section:{section['slug']}")
         entry = TreeEntry(
             id=section_node.id,
             label=section_node.title,
             missing=sum(node_missing(section_node, languages).values()),
+            can_up=section_index > 0,
+            can_down=section_index < len(sections) - 1,
+            group="sections",
         )
-        for lesson_slug in section.get("lessons", []):
-            lesson = lessons.get(lesson_slug)
-            if lesson is None:
-                continue
+        section_lessons = [slug for slug in section.get("lessons", []) if slug in lessons]
+        for lesson_index, lesson_slug in enumerate(section_lessons):
             lesson_node = find_node(snapshot, f"lesson:{lesson_slug}")
             lesson_entry = TreeEntry(
                 id=lesson_node.id,
                 label=lesson_node.title,
                 missing=sum(node_missing(lesson_node, languages).values()),
+                can_up=lesson_index > 0,
+                can_down=lesson_index < len(section_lessons) - 1,
+                group="lessons",
+                prayer=bool(lessons[lesson_slug].get("prayer")),
             )
-            for number, step in enumerate(lesson_steps(snapshot, lesson), start=1):
+            steps = list(lesson_steps(snapshot, lessons[lesson_slug]))
+            for number, step in enumerate(steps, start=1):
                 prefix = f"Р{step.rakat} · " if step.rakat is not None else ""
+                # A prayer's step moves within its rak'ah: the template orders each rak'ah.
+                before = steps[number - 2] if number > 1 else None
+                after = steps[number] if number < len(steps) else None
                 lesson_entry.children.append(
                     TreeEntry(
                         id=step.id,
@@ -353,19 +510,25 @@ def editor_tree(snapshot: dict[str, Any], languages: Sequence[str]) -> list[Tree
                         missing=sum(node_missing(step, languages).values()),
                         notes=len(step.data.get("notes", [])),
                         audio=_has_audio(step.data),
+                        can_up=before is not None and before.rakat == step.rakat,
+                        can_down=after is not None and after.rakat == step.rakat,
+                        group=f"{lesson_node.id}|{step.rakat or ''}",
                     )
                 )
             entry.children.append(lesson_entry)
         tree.append(entry)
-    formulas = TreeEntry(id="", label="Формулы: записи")
+    formulas = TreeEntry(id="", label="Формулы: тексты и записи")
     for formula in snapshot.get("formulas", []):
+        formula_node = find_node(snapshot, f"formula:{formula['id']}")
         formulas.children.append(
             TreeEntry(
-                id=f"formula:{formula['id']}",
+                id=formula_node.id,
                 label=formula["id"],
+                missing=sum(node_missing(formula_node, languages).values()),
                 audio=_has_audio(formula.get("source") or {}),
             )
         )
+        formulas.missing += formulas.children[-1].missing
     tree.append(formulas)
     return tree
 
@@ -493,36 +656,57 @@ def formula_steps(snapshot: dict[str, Any], formula_id: str) -> list[EditorNode]
 
 @dataclass
 class NodeEdit:
-    """A parsed form: texts by field and language, and the notes in their new order."""
+    """A parsed form: texts by field and language, the notes in their new order, a
+    formula's own Arabic and a step's properties (None: the form does not show them)."""
 
     texts: dict[str, dict[str, str]]
     notes: list[dict[str, Any]] | None
     errors: dict[str, str]
+    arabic: str | None = None
+    properties: dict[str, Any] | None = None
 
 
 def clean_text(value: str) -> str:
     return re.sub(r"[ \t]+\n", "\n", value.replace("\r\n", "\n").replace("\r", "\n")).strip()
 
 
-def parse_node_form(
-    node: EditorNode, data: Mapping[str, Any], languages: Sequence[str]
-) -> NodeEdit:
-    """Reads `text-<field>-<lang>` and the notes `note-<uid>-…` listed in `notes_order`.
+def _too_long(text: str, maximum: int) -> str:
+    return f"Слишком длинно: {len(text)} знаков, допустимо до {maximum}."
 
-    Untranslated texts are allowed in a draft; too long ones and unknown note
-    kinds are errors keyed by the form field, so the form shows them in place.
+
+def _values(data: Mapping[str, Any], name: str) -> list[str]:
+    if hasattr(data, "getlist"):
+        return [str(value) for value in data.getlist(name)]
+    value = data.get(name)
+    if value is None:
+        return []
+    return [str(item) for item in value] if isinstance(value, list) else [str(value)]
+
+
+def parse_node_form(
+    node: EditorNode,
+    data: Mapping[str, Any],
+    languages: Sequence[str],
+    *,
+    snapshot: Mapping[str, Any] | None = None,
+) -> NodeEdit:
+    """Reads `text-<field>-<lang>` and the notes `note-<uid>-…` listed in `notes_order`;
+    for a formula `formula-arabic`, for a step its properties `prop-…` (with `snapshot`).
+
+    Untranslated texts are allowed in a draft; too long ones, unknown kinds and
+    references to nothing are errors keyed by the form field, so the form shows
+    them in place. `revert` names a formula text to return to the source's.
     """
     errors: dict[str, str] = {}
     texts: dict[str, dict[str, str]] = {}
+    revert = str(data.get("revert") or "")
     for text_field in node.fields:
         values = {}
         for language in languages:
             name = f"text-{text_field.name}-{language}"
-            text = clean_text(str(data.get(name, "")))
+            text = "" if revert == text_field.name else clean_text(str(data.get(name, "")))
             if len(text) > text_field.max_length:
-                errors[name] = (
-                    f"Слишком длинно: {len(text)} знаков, допустимо до {text_field.max_length}."
-                )
+                errors[name] = _too_long(text, text_field.max_length)
             values[language] = text
         texts[text_field.name] = values
     notes: list[dict[str, Any]] | None = None
@@ -543,11 +727,53 @@ def parse_node_form(
                 errors[f"{prefix}-kind"] = "Выберите тип заметки: справка «?» или важно «!»."
             for language, value in note_text.items():
                 if len(value) > NOTE_MAX_LENGTH:
-                    errors[f"{prefix}-text-{language}"] = (
-                        f"Слишком длинно: {len(value)} знаков, допустимо до {NOTE_MAX_LENGTH}."
-                    )
+                    errors[f"{prefix}-text-{language}"] = _too_long(value, NOTE_MAX_LENGTH)
             notes.append({"kind": kind, "text": note_text, "uid": uid.strip()})
-    return NodeEdit(texts=texts, notes=notes, errors=errors)
+    arabic = None
+    if node.kind == "formula" and formula_arabic(node)[1] and "formula-arabic" in data:
+        arabic = "" if revert == "arabic" else clean_text(str(data.get("formula-arabic", "")))
+        if len(arabic) > ARABIC_MAX_LENGTH:
+            errors["formula-arabic"] = _too_long(arabic, ARABIC_MAX_LENGTH)
+    properties = None
+    if node.kind == "step" and snapshot is not None and "prop-kind" in data:
+        properties = _parse_properties(data, snapshot, errors)
+    return NodeEdit(texts=texts, notes=notes, errors=errors, arabic=arabic, properties=properties)
+
+
+def step_images(snapshot: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Pictures a step may show: (key, what it shows in Russian)."""
+    return [
+        (str(asset["key"]), localized_title(asset.get("alt"), str(asset["key"])))
+        for asset in snapshot.get("media", [])
+        if str(asset.get("file", "")).lower().endswith(".webp") and asset.get("key")
+    ]
+
+
+def _parse_properties(
+    data: Mapping[str, Any], snapshot: Mapping[str, Any], errors: dict[str, str]
+) -> dict[str, Any]:
+    kind = str(data.get("prop-kind") or "")
+    if kind not in STEP_KINDS:
+        errors["prop-kind"] = "Выберите тип шага."
+    ruling = str(data.get("prop-ruling") or "") or None
+    if ruling is not None and ruling not in RULINGS:
+        errors["prop-ruling"] = "Нет такого хукма."
+    media = str(data.get("prop-media") or "") or None
+    if media is not None and media not in {key for key, _ in step_images(snapshot)}:
+        errors["prop-media"] = "Такой картинки в курсе нет."
+    known = {formula.get("id") for formula in snapshot.get("formulas", [])}
+    formulas = [formula_id for formula_id in _values(data, "prop-formula") if formula_id]
+    unknown = [formula_id for formula_id in formulas if formula_id not in known]
+    if unknown:
+        errors["prop-formula"] = f"Нет формул: {', '.join(unknown)}."
+    repeat_text = str(data.get("prop-repeat") or "").strip()
+    repeat: int | None = None
+    if repeat_text:
+        if not repeat_text.isdigit() or not 1 <= int(repeat_text) <= MAX_REPEAT:
+            errors["prop-repeat"] = f"Число повторов — от 1 до {MAX_REPEAT}."
+        elif int(repeat_text) > 1:
+            repeat = int(repeat_text)
+    return {"kind": kind, "ruling": ruling, "media": media, "formulas": formulas, "repeat": repeat}
 
 
 def _merged(old: Any, new: Mapping[str, str]) -> dict[str, str]:
@@ -598,10 +824,10 @@ def apply_node_edit(
 ) -> int:
     """Writes the edit into the snapshot; returns how many other variants changed too.
 
-    With `sync_variants`, a text of the same step in another rak'ah or prayer
-    follows when it was identical in every language before the edit, so a
-    correction reaches every place that showed the same words and never
-    overwrites a text that differed.
+    With `sync_variants`, a text or a property of the same step in another
+    rak'ah or prayer follows when it was identical before the edit, so a
+    correction reaches every place that showed the same and never overwrites
+    what differed.
     """
     old = copy.deepcopy(node.data)
     variants = step_variants(snapshot, node) if sync_variants else []
@@ -609,12 +835,13 @@ def apply_node_edit(
     same_step = {id(variant) for variant in variants if _same_words(variant, old, languages)}
     touched: set[int] = set()
     for text_field in node.fields:
-        new_value = _merged(old.get(text_field.name), edit.texts[text_field.name])
-        if _same_texts(old.get(text_field.name), new_value, languages):
+        old_value = _texts_of(node.kind, old, text_field.name)
+        new_value = _merged(old_value, edit.texts[text_field.name])
+        if _same_texts(old_value, new_value, languages):
             continue
-        _set_text(node.data, text_field, new_value)
+        _put_texts(node, text_field, new_value)
         for variant in variants:
-            if _same_texts(variant.get(text_field.name), old.get(text_field.name), languages):
+            if _same_texts(variant.get(text_field.name), old_value, languages):
                 _set_text(variant, text_field, _merged(variant.get(text_field.name), new_value))
                 touched.add(id(variant))
     if edit.notes is not None:
@@ -627,7 +854,37 @@ def apply_node_edit(
                 ):
                     _set_notes(variant, copy.deepcopy(notes))
                     touched.add(id(variant))
+    if edit.arabic is not None:
+        _set_optional(node.data["source"], "arabic", edit.arabic)
+    touched |= _apply_properties(node, old, edit.properties or {}, variants)
     return len(touched)
+
+
+def _apply_properties(
+    node: EditorNode,
+    old: Mapping[str, Any],
+    properties: Mapping[str, Any],
+    variants: Sequence[dict[str, Any]],
+) -> set[int]:
+    """A variant takes a property it had the same before: never one that differed."""
+    touched: set[int] = set()
+    for name, value in properties.items():
+        if old.get(name) == value or (value is None and name not in old):
+            continue
+        _set_optional(node.data, name, value)
+        for variant in variants:
+            if variant.get(name) == old.get(name):
+                _set_optional(variant, name, copy.deepcopy(value))
+                touched.add(id(variant))
+    return touched
+
+
+def _set_optional(owner: dict[str, Any], name: str, value: Any) -> None:
+    """An empty optional value leaves the key out, as in the snapshot files."""
+    if value is None or value == "":
+        owner.pop(name, None)
+    else:
+        owner[name] = value
 
 
 def _same_words(

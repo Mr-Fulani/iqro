@@ -93,6 +93,17 @@ test("malformed notes and recordings are dropped, a newer note kind opens as hel
   assert.equal(ruku.audio, undefined);
 });
 
+test("a formula keeps its source caption and drops a malformed one", () => {
+  assert.equal(course.formulas["ruku-tasbih"]?.caption, "«Хисн аль-Муслим», № 33");
+  assert.equal(course.formulas.takbir?.caption, undefined);
+  const formulas = structuredClone(example.formulas) as Record<string, Record<string, unknown>>;
+  formulas["ruku-tasbih"]!.caption = "  ";
+  formulas.takbir!.caption = 7;
+  const parsed = parseSalahCourseDocument({ ...example, formulas });
+  assert.equal("caption" in parsed.formulas["ruku-tasbih"]!, false);
+  assert.equal("caption" in parsed.formulas.takbir!, false);
+});
+
 test("prayer kinds and rulings from a newer course do not break the document", () => {
   assert.equal(lesson("fajr").prayer?.kind_title, "Фард");
   const lessons = example.lessons as Record<string, unknown>[];

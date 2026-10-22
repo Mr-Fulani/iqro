@@ -1,0 +1,13 @@
+<span class="se-tree-ops">
+  <span class="se-tree-handle" title="Перетащите, чтобы переставить" aria-hidden="true">⠿</span>
+  <button type="submit" form="se-structure" class="se-tree-op" formaction="{{ structure_url }}?action=up&amp;node={{ entry.id|urlencode }}" title="Выше" aria-label="Выше: {{ entry.label }}"{% if not entry.can_up %} disabled{% endif %}>↑</button>
+  <button type="submit" form="se-structure" class="se-tree-op" formaction="{{ structure_url }}?action=down&amp;node={{ entry.id|urlencode }}" title="Ниже" aria-label="Ниже: {{ entry.label }}"{% if not entry.can_down %} disabled{% endif %}>↓</button>
+  {% if entry.kind == "section" %}
+    <a class="se-tree-op" href="{{ structure_url }}?action=add-lesson&amp;section={{ entry.slug|urlencode }}" title="Добавить урок в раздел" aria-label="Добавить урок в раздел {{ entry.label }}">+</a>
+  {% elif entry.kind == "lesson" and not entry.prayer %}
+    <a class="se-tree-op" href="{{ structure_url }}?action=add-step&amp;lesson={{ entry.slug|urlencode }}" title="Добавить шаг в конец урока" aria-label="Добавить шаг в урок {{ entry.label }}">+</a>
+  {% elif entry.kind == "step" %}
+    <a class="se-tree-op" href="{{ structure_url }}?action=add-step&amp;after={{ entry.id|urlencode }}" title="Добавить шаг после этого" aria-label="Добавить шаг после {{ entry.label }}">+</a>
+  {% endif %}
+  <a class="se-tree-op is-danger" href="{{ structure_url }}?action=delete&amp;node={{ entry.id|urlencode }}" title="Удалить…" aria-label="Удалить: {{ entry.label }}">✕</a>
+</span>

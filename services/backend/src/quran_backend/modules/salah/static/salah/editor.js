@@ -1,7 +1,7 @@
 // Course editor of the prayer-learning course (admin). Plain script, no build:
 // language view, untranslated highlight and counters, notes order, unsaved
-// changes guard, tree search and the live step preview. The page works without
-// it, only less conveniently.
+// changes guard, tree search and reordering by drag, and the live step preview.
+// The page works without it, only less conveniently.
 (function () {
   "use strict";
 
@@ -75,9 +75,10 @@
       const cells = Array.from(field.querySelectorAll(".se-lang"));
       const filled = cells.map((cell) => cell.querySelector("textarea").value.trim() !== "");
       const required = field.dataset.required === "1";
+      const counted = field.dataset.counted !== "0";
       const anyFilled = filled.some(Boolean);
       cells.forEach((cell, index) => {
-        const missing = !filled[index] && (required || anyFilled);
+        const missing = counted && !filled[index] && (required || anyFilled);
         cell.classList.toggle("is-missing", missing);
         if (missing) counts[cell.dataset.lang] = (counts[cell.dataset.lang] || 0) + 1;
       });
@@ -271,6 +272,27 @@
     });
   }
 
+  // Leaving with unsaved edits: the structure buttons ask first.
+  function leaveOk() {
+    if (!dirty) return true;
+    if (!window.confirm("На странице есть несохранённые правки — они пропадут. Продолжить?")) return false;
+    dirty = false;
+    return true;
+  }
+
+  root.querySelectorAll('.se-tree-op, .se-tree-add, .se-structure a, [form="se-structure"][type="submit"]').forEach((control) => {
+    control.addEventListener("click", (event) => {
+      if (!leaveOk()) event.preventDefault();
+    });
+  });
+
+  root.querySelectorAll(".se-revert").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const question = "Вернуть текст источника? Свой вариант этого текста пропадёт на всех языках, остальные правки на странице сохранятся.";
+      if (!window.confirm(question)) event.preventDefault();
+    });
+  });
+
   document.querySelectorAll("[data-confirm]").forEach((button) => {
     button.addEventListener("click", (event) => {
       if (dirty) {
@@ -336,6 +358,90 @@
       const offset = current.getBoundingClientRect().top - tree.getBoundingClientRect().top;
       tree.scrollTop += offset - tree.clientHeight / 2;
     }
+  }
+
+  // Tree: reorder by drag ----------------------------------------------------
+  // A section goes before or after a section, a lesson next to a lesson (in that
+  // lesson's section), a step next to a step of the same lesson and rak'ah. The
+  // arrows do the same without a mouse.
+  const structureForm = document.getElementById("se-structure");
+
+  function submitStructure(fields) {
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      structureForm.append(input);
+    });
+    structureForm.submit();
+  }
+
+  if (tree && structureForm) {
+    let draggedRow = null;
+    const clearDrop = () => {
+      tree.querySelectorAll(".is-drop-before, .is-drop-after").forEach((item) => {
+        item.classList.remove("is-drop-before", "is-drop-after");
+      });
+    };
+    const dropTarget = (event) => {
+      let target = event.target.closest && event.target.closest("[data-node]");
+      while (target && target.dataset.group !== draggedRow.dataset.group) {
+        target = target.parentElement.closest("[data-node]");
+      }
+      return target && target !== draggedRow && !draggedRow.contains(target) ? target : null;
+    };
+    const dropsAfter = (event, target) => {
+      const row = target.querySelector(":scope > details > summary") || target;
+      const box = row.getBoundingClientRect();
+      return event.clientY > box.top + box.height / 2;
+    };
+
+    tree.addEventListener("pointerdown", (event) => {
+      const row = event.target.closest("[data-node]");
+      if (row) row.draggable = Boolean(event.target.closest(".se-tree-handle"));
+    });
+    tree.addEventListener("dragstart", (event) => {
+      draggedRow = event.target.closest && event.target.closest("[data-node]");
+      if (!draggedRow || !draggedRow.draggable) {
+        draggedRow = null;
+        return;
+      }
+      draggedRow.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedRow.dataset.node);
+    });
+    tree.addEventListener("dragover", (event) => {
+      if (!draggedRow) return;
+      const target = dropTarget(event);
+      clearDrop();
+      if (!target) return;
+      event.preventDefault();
+      target.classList.add(dropsAfter(event, target) ? "is-drop-after" : "is-drop-before");
+    });
+    tree.addEventListener("drop", (event) => {
+      if (!draggedRow) return;
+      const target = dropTarget(event);
+      if (!target) return;
+      event.preventDefault();
+      const after = dropsAfter(event, target);
+      clearDrop();
+      if (!leaveOk()) return;
+      submitStructure({
+        action: "move",
+        node: draggedRow.dataset.node,
+        target: target.dataset.node,
+        position: after ? "after" : "before",
+      });
+    });
+    tree.addEventListener("dragend", () => {
+      if (draggedRow) {
+        draggedRow.classList.remove("is-dragging");
+        draggedRow.draggable = false;
+      }
+      clearDrop();
+      draggedRow = null;
+    });
   }
 
   // Live preview of a step ---------------------------------------------------

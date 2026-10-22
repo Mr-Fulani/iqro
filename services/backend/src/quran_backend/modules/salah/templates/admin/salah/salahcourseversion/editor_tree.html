@@ -1,11 +1,12 @@
 <ul class="se-tree-list">
   {% for entry in entries %}
-    <li class="se-tree-item{% if entry.missing %} has-missing{% endif %}" data-label="{{ entry.label|lower }}">
+    <li class="se-tree-item{% if entry.missing %} has-missing{% endif %}" data-label="{{ entry.label|lower }}"{% if editable and entry.group %} data-node="{{ entry.id }}" data-group="{{ entry.group }}"{% endif %}>
       {% if entry.children %}
         <details{% if entry.id in open_ids or not entry.id and node.kind == "formula" %} open{% endif %}>
           <summary>
             {% if entry.id %}<a href="?node={{ entry.id|urlencode }}"{% if entry.id == node.id %} aria-current="page"{% endif %}>{{ entry.label }}</a>{% else %}<span>{{ entry.label }}</span>{% endif %}
             {% if entry.missing %}<span class="se-badge is-missing" title="Не переведено здесь">{{ entry.missing }}</span>{% endif %}
+            {% if editable and entry.group %}{% include "admin/salah/salahcourseversion/editor_tree_ops.html" %}{% endif %}
           </summary>
           {% include "admin/salah/salahcourseversion/editor_tree.html" with entries=entry.children %}
         </details>
@@ -14,6 +15,7 @@
         {% if entry.missing %}<span class="se-badge is-missing" title="Не переведено полей: {{ entry.missing }}">{{ entry.missing }}</span>{% endif %}
         {% if entry.notes %}<span class="se-badge" title="Заметок: {{ entry.notes }}">?!&nbsp;{{ entry.notes }}</span>{% endif %}
         {% if entry.audio %}<span class="se-badge" title="Есть запись">♪</span>{% endif %}
+        {% if editable and entry.group %}{% include "admin/salah/salahcourseversion/editor_tree_ops.html" %}{% endif %}
       {% endif %}
     </li>
   {% endfor %}

@@ -24,11 +24,8 @@ from django.utils.html import format_html, format_html_join
 
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.object_storage import ObjectStorageError
-from quran_backend.modules.salah.editor_admin import (
-    SalahEditorAdminMixin,
-    editor_editable,
-    readonly_reason,
-)
+from quran_backend.modules.salah.editor_admin import editor_editable, readonly_reason
+from quran_backend.modules.salah.editor_structure_admin import SalahStructureAdminMixin
 from quran_backend.modules.salah.importer import (
     compile_version,
     publish_salah_version,
@@ -65,7 +62,7 @@ class SalahCourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 
 @admin.register(SalahCourseVersion)
-class SalahCourseVersionAdmin(SalahEditorAdminMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("__str__", "status", "signed", "published_at", "editor_link")
     list_filter = ("status", "course")
     actions = ("sign_versions", "publish_versions", "recompile_versions")
@@ -156,6 +153,7 @@ class SalahCourseVersionAdmin(SalahEditorAdminMixin, admin.ModelAdmin):  # type:
                 name="salah_salahcourseversion_media",
             ),
             *self.editor_urls(),
+            *self.structure_urls(),
             *super().get_urls(),
         ]
 

@@ -61,6 +61,7 @@ class _SalahFormulaCardState extends ConsumerState<SalahFormulaCard> {
       height: 1.9,
     );
     final transliteration = formula.transliteration;
+    final caption = formula.caption;
     return IqroCard(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 14),
       child: Column(
@@ -108,6 +109,17 @@ class _SalahFormulaCardState extends ConsumerState<SalahFormulaCard> {
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: scheme.primary,
                 height: 1.55,
+              ),
+            ),
+          ],
+          if (display.learning && caption != null) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              caption,
+              key: ValueKey('salah-caption-${formula.id}'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
               ),
             ),
           ],

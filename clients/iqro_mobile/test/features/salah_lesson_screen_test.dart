@@ -390,6 +390,7 @@ void main() {
       find.byKey(const ValueKey('salah-translation-ruku-tasbih')),
       findsOneWidget,
     );
+    expect(find.text('«Хисн аль-Муслим», № 33'), findsOneWidget);
     expect(find.text('Столп (рукн)'), findsOneWidget);
 
     // Transliteration switches off on its own.
@@ -421,6 +422,10 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('salah-translation-ruku-tasbih')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('salah-caption-ruku-tasbih')),
       findsNothing,
     );
     expect(find.text('Столп (рукн)'), findsNothing);
