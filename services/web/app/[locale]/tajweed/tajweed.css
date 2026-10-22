@@ -337,6 +337,26 @@ button.tajweed-course-word.is-lit {
   gap: 8px;
 }
 
+/* On a phone the Quran font (Amiri, about 130 KB) waits until the page has loaded, so the
+   lesson's title and text paint first in the system Arabic font, as in the prayer course.
+   A wider screen uses Amiri from the first paint. */
+.tajweed-lesson :is(.tajweed-lesson-letters li, .tajweed-lesson-arabic-name, .tajweed-course-ayah,
+  .tajweed-lesson-word, .tajweed-inline-arabic) {
+  font-family: "Scheherazade New", "Traditional Arabic", serif;
+}
+
+.tajweed-lesson.has-arabic-font :is(.tajweed-lesson-letters li, .tajweed-lesson-arabic-name,
+  .tajweed-course-ayah, .tajweed-lesson-word, .tajweed-inline-arabic) {
+  font-family: var(--font-arabic);
+}
+
+@media (min-width: 900px) {
+  .tajweed-lesson :is(.tajweed-lesson-letters li, .tajweed-lesson-arabic-name, .tajweed-course-ayah,
+    .tajweed-lesson-word, .tajweed-inline-arabic) {
+    font-family: var(--font-arabic);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tajweed-course-card,
   .tajweed-course-word {

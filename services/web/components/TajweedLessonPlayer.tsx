@@ -27,6 +27,7 @@ import {
   type TajweedCourseTarget,
   type TajweedOccurrence,
 } from "../lib/tajweed-course";
+import { usePageLoaded } from "../lib/use-page-loaded";
 import { useTajweedProgressSync } from "../lib/use-tajweed-progress";
 import { StepNav } from "./StepNav";
 import { ClipButtons, useAyahAudio, useClipPlayer } from "./TajweedAudio";
@@ -80,8 +81,11 @@ function useCourseRecitation(needed: boolean): string | null {
   return recitationId;
 }
 
-function Paragraphs({ text }: { text: string }) {
-  return text.split(/\n{2,}/).filter(Boolean).map((paragraph, index) => <Explanation key={index} text={paragraph} />);
+/** Paragraphs of a lesson; in Arabic the whole text is interface text, not Quran quotes in their font. */
+function Paragraphs({ text, plain }: { text: string; plain: boolean }) {
+  return text.split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (plain
+    ? <p key={index}>{paragraph}</p>
+    : <Explanation key={index} text={paragraph} />));
 }
 
 function WordText({ word, occurrence }: { word: { position: number; text: string }; occurrence: TajweedOccurrence | null }) {
@@ -190,6 +194,8 @@ export function TajweedLessonPlayer({
   const [completed, setCompleted] = useState(false);
   const [slow, setSlow] = useState(false);
   const [readingMs, setReadingMs] = useState<number | null>(null);
+  // The Quran font comes after the page has loaded on a phone (tajweed.css, .has-arabic-font).
+  const arabicFont = usePageLoaded();
   const sync = useTajweedProgressSync(courseSlug);
 
   const loaded = examples.status === "ready" ? examples : null;
@@ -383,7 +389,7 @@ export function TajweedLessonPlayer({
               <span className="tajweed-lesson-arabic-name" lang="ar" dir="rtl">{target.arabic_name}</span>
             ) : null}
           </h2>
-          <Paragraphs text={lesson.explanation} />
+          <Paragraphs text={lesson.explanation} plain={locale === "ar"} />
           {lesson.letters ? (
             <>
               <h3>{t("tajweedCourse.letters")}</h3>
@@ -401,7 +407,7 @@ export function TajweedLessonPlayer({
       return (
         <>
           <h2>{t("tajweed.howToRead")}</h2>
-          <Paragraphs text={lesson.how} />
+          <Paragraphs text={lesson.how} plain={locale === "ar"} />
         </>
       );
     }
@@ -499,7 +505,12 @@ export function TajweedLessonPlayer({
   };
 
   return (
-    <section className="surface tajweed-lesson" aria-label={lesson.title} aria-busy={!ready} data-testid="tajweed-lesson">
+    <section
+      className={`surface tajweed-lesson${arabicFont ? " has-arabic-font" : ""}`}
+      aria-label={lesson.title}
+      aria-busy={!ready}
+      data-testid="tajweed-lesson"
+    >
       <div className="tajweed-lesson-status">
         <p aria-live="polite" data-testid="tajweed-lesson-counter">
           {t("tajweedCourse.stepOf", { current: formatNumber(index + 1), total: formatNumber(steps.length) })}
