@@ -185,14 +185,14 @@ export default function DuaPage({ initialData }: { initialData?: PublishedDuaIni
       const leading = chapters.length + topics.length;
       body = (
         <div className="dua-search-results">
-          {chapters.map((chapter) => <DuaChapterRow key={chapter.id} chapter={chapter} locale={locale} />)}
+          {chapters.map((chapter) => <DuaChapterRow key={chapter.id} chapter={chapter} locale={locale} t={t} />)}
           {topics.map((topic) => (
             <DuaTopicTile key={topic.id} topic={topic} count={count(topicEntryCount(topic, items))} />
           ))}
           {pending ? (
-            <DuaLoading locale={locale} />
+            <DuaLoading t={t} />
           ) : search.status === "error" ? (
-            <DuaError locale={locale} onRetry={() => setSearchAttempt((value) => value + 1)} />
+            <DuaError t={t} onRetry={() => setSearchAttempt((value) => value + 1)} />
           ) : search.status === "done" && search.entries.length > 0 ? (
             <DuaEntrySummaryList entries={search.entries} locale={locale} />
           ) : leading === 0 ? (
@@ -203,8 +203,8 @@ export default function DuaPage({ initialData }: { initialData?: PublishedDuaIni
     }
   } else if (categories === null) {
     body = catalogFailed
-      ? <DuaError locale={locale} onRetry={() => setCatalogAttempt((value) => value + 1)} />
-      : <DuaLoading locale={locale} />;
+      ? <DuaError t={t} onRetry={() => setCatalogAttempt((value) => value + 1)} />
+      : <DuaLoading t={t} />;
   } else if (items.length === 0) {
     body = <DuaEmpty message={t("dua.noCategories")} />;
   } else {
@@ -249,7 +249,7 @@ export default function DuaPage({ initialData }: { initialData?: PublishedDuaIni
 
   return (
     <div className="dua-page">
-      <DuaTopBar locale={locale} title={t("dua.title")} subtitle={t("dua.subtitle")} />
+      <DuaTopBar locale={locale} t={t} title={t("dua.title")} subtitle={t("dua.subtitle")} />
       <label className="dua-search">
         <DuaSearchIcon />
         <span className="sr-only">{t("dua.search")}</span>

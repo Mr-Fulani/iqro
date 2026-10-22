@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isLocale, localeTag, translate, type Locale } from "@/lib/i18n";
+import { isLocale, localeTag, type Locale } from "@/lib/i18n";
+import { translate } from "@/lib/translate";
 import {
   getPublishedAyah,
   getPublishedEdition,
