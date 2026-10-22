@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<p>Объявления уйдут из ленты «Что нового» и с главной. Вернуть их из архива нельзя — только сделать копию-черновик.</p>
+<ul>{% for announcement in announcements %}<li>{{ announcement }} — {{ announcement.get_status_display }}</li>{% endfor %}</ul>
+<form method="post">{% csrf_token %}
+  {% for announcement in announcements %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ announcement.pk }}">{% endfor %}
+  <input type="hidden" name="action" value="{{ action }}">
+  <input type="hidden" name="confirmed" value="yes">
+  <input type="submit" value="Да, перенести в архив">
+  <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">Нет, вернуться</a>
+</form>
+{% endblock %}

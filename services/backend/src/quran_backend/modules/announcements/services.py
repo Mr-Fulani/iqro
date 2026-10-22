@@ -9,7 +9,7 @@ import uuid
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from django.core.exceptions import PermissionDenied
@@ -244,7 +244,7 @@ def publish(
     _require(user, PUBLISH_PERMISSION)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if not locked.is_editable:
-        raise AnnouncementNotReadyError(["Объявление уже опубликовано или снято."])
+        raise AnnouncementNotReadyError([NOT_A_DRAFT[AnnouncementStatus(locked.status)]])
     original = None
     if locked.edit_of_id is not None:
         original = Announcement.objects.select_for_update().get(pk=locked.edit_of_id)
@@ -287,6 +287,58 @@ def publish(
     locked.wave = 1
     locked.save()
     _record_wave(locked, user, WaveReason.PUBLISHED)
+    enqueue_announcements_change(action="published")
+    return locked
+
+
+NOT_A_DRAFT = {
+    AnnouncementStatus.PUBLISHED: "Уже опубликовано.",
+    AnnouncementStatus.WITHDRAWN: "Снято с публикации: нажмите «Опубликовать снова».",
+    AnnouncementStatus.ARCHIVED: "В архиве: сделайте копию-черновик и опубликуйте её.",
+}
+
+
+@transaction.atomic
+def republish(announcement: Announcement, user: User) -> Announcement:
+    """Bring a withdrawn announcement back: a new wave, so earlier closes do not hide it."""
+    _require(user, PUBLISH_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.status != AnnouncementStatus.WITHDRAWN:
+        raise AnnouncementNotReadyError(["Опубликовать снова можно только снятое объявление."])
+    if is_sensitive(locked):
+        _require(user, SENSITIVE_PERMISSION)
+    result = readiness(locked, publisher_checks_religion=user.has_perm(RELIGIOUS_PERMISSION))
+    if not result.ready:
+        raise AnnouncementNotReadyError(result.problems)
+    now = timezone.now()
+    locked.status = AnnouncementStatus.PUBLISHED
+    locked.withdrawn_at = None
+    locked.reviewed_by = user
+    locked.reviewed_at = now
+    if locked.needs_religious_review and locked.religious_reviewed_at is None:
+        locked.religious_reviewed_by = user
+        locked.religious_reviewed_at = now
+    locked.wave += 1
+    locked.save()
+    _record_wave(locked, user, WaveReason.REPUBLISHED)
+    enqueue_announcements_change(action="published")
+    return locked
+
+
+EXTEND_DAYS = 7
+
+
+@transaction.atomic
+def extend_display(announcement: Announcement, user: User) -> Announcement:
+    """Keep a published announcement on the home screen a week longer than now or planned."""
+    _require(user, PUBLISH_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.status != AnnouncementStatus.PUBLISHED:
+        raise AnnouncementNotReadyError(["Продлить можно только опубликованное объявление."])
+    if is_sensitive(locked):
+        _require(user, SENSITIVE_PERMISSION)
+    locked.ends_at = max(locked.display_until, timezone.now()) + timedelta(days=EXTEND_DAYS)
+    locked.save(update_fields=["ends_at", "updated_at"])
     enqueue_announcements_change(action="published")
     return locked
 
