@@ -1045,62 +1045,51 @@ test.describe("sound bars with native media", () => {
   });
 });
 
-test("persistent player actions adapt without overflow on mobile and tablet", async ({ page }) => {
+test("persistent player is the app's mini player on phones and tablets and the dock on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
 
-  const player = page.getByTestId("global-audio-player");
-  const settingsButton = player.getByRole("button", { name: "Повтор, диапазон и таймер", exact: true });
-  const audio = player.locator("audio");
-  await expect(player).toBeVisible();
-  await expect(player.getByRole("button", { name: "▶ Продолжить", exact: true })).toHaveCount(0);
-  await expect(settingsButton).toBeVisible();
-  expect((await settingsButton.boundingBox())!.width).toBe(44);
-  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
+  const bar = page.getByTestId("mobile-audio-player");
+  const audio = bar.locator("audio");
+  await expect(bar).toBeVisible();
+  await expect(page.getByTestId("global-audio-player")).toHaveCount(0);
+  await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
+  await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
+  expect((await bar.boundingBox())!.height).toBe(66);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
-
-  await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
-  expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
-  expect((await audio.boundingBox())!.width).toBeGreaterThan(300);
-  await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
+  await audio.evaluate((element) => {
+    (element as HTMLAudioElement).currentTime = 12.5;
+  });
 
   await page.locator('.brand-link[href="/ru"]').click();
   await expect(page).toHaveURL("/ru");
-  expect((await settingsButton.boundingBox())!.width).toBe(44);
-  expect((await audio.boundingBox())!.width).toBeGreaterThan(220);
-  const audioLink = player.getByRole("link", { name: "Открыть аудио", exact: true });
-  await expect(audioLink).toBeVisible();
-  expect((await audioLink.boundingBox())!.width).toBe(44);
-  expect((await player.boundingBox())!.y + (await player.boundingBox())!.height)
-    .toBeLessThanOrEqual((await page.locator(".mobile-navigation").boundingBox())!.y - 7);
+  await expect(bar).toBeVisible();
+  expect((await bar.boundingBox())!.y + 66)
+    .toBeLessThanOrEqual((await page.locator(".mobile-navigation").boundingBox())!.y - 5);
+  expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
 
+  // Tablets show the bottom navigation, so they get the bar as well.
   await page.setViewportSize({ width: 768, height: 1024 });
-  const tabletPlayerBox = await player.boundingBox();
-  const tabletAudioBox = await audio.boundingBox();
-  const tabletSettingsBox = await settingsButton.boundingBox();
-  const tabletAudioLinkBox = await audioLink.boundingBox();
-  expect(tabletPlayerBox).not.toBeNull();
-  expect(tabletAudioBox).not.toBeNull();
-  expect(tabletSettingsBox).not.toBeNull();
-  expect(tabletAudioLinkBox).not.toBeNull();
-  expect(tabletPlayerBox!.height).toBeLessThan(110);
-  expect(tabletAudioBox!.width).toBeGreaterThan(250);
-  expect(Math.abs(tabletSettingsBox!.y - tabletAudioBox!.y)).toBeLessThan(12);
-  expect(Math.abs(tabletAudioLinkBox!.y - tabletAudioBox!.y)).toBeLessThan(12);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-    await page.evaluate(() => document.documentElement.clientWidth),
-  );
+  await expect(bar).toBeVisible();
+  expect((await bar.boundingBox())!.height).toBe(66);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(768);
 
+  // The desktop dock takes over around the same <audio> element.
   await page.setViewportSize({ width: 900, height: 900 });
-  const compactDesktopAudioBox = await audio.boundingBox();
-  const compactDesktopSettingsBox = await settingsButton.boundingBox();
-  expect(compactDesktopAudioBox).not.toBeNull();
-  expect(compactDesktopSettingsBox).not.toBeNull();
-  expect(compactDesktopSettingsBox!.width).toBeGreaterThan(100);
-  expect(Math.abs(compactDesktopSettingsBox!.y - compactDesktopAudioBox!.y)).toBeLessThan(12);
+  const dock = page.getByTestId("global-audio-player");
+  await expect(dock).toBeVisible();
+  await expect(bar).toHaveCount(0);
+  const dockAudio = dock.locator("audio");
+  await expect(dockAudio).toHaveAttribute("src", tracks[0].asset.url);
+  expect(await dockAudio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
+  const settingsButton = dock.getByRole("button", { name: "Повтор, диапазон и таймер", exact: true });
+  const audioLink = dock.getByRole("link", { name: "Открыть аудио", exact: true });
+  await expect(audioLink).toBeVisible();
+  expect((await settingsButton.boundingBox())!.width).toBeGreaterThan(100);
+  expect(Math.abs((await settingsButton.boundingBox())!.y - (await dockAudio.boundingBox())!.y)).toBeLessThan(12);
 });
 
 test("reader defaults to Mushaf, selects every fragment and starts ayah playback", async ({ page }) => {

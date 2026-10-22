@@ -313,6 +313,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             : t("common.surah", { surah: pending.surahNumber }),
           artist: reciterName(selectedReciter),
           album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
+          artworkUrl: reciterPortraitUrl(selectedReciter),
           autoPlay: false,
         });
         pendingReciterPlaybackRef.current = null;
@@ -351,6 +352,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
         title: t("common.surah", { surah: track.surah_number }),
         artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
         album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
+        artworkUrl: selectedReciter ? reciterPortraitUrl(selectedReciter) : null,
         autoPlay: true,
       };
       startPlayback(request);

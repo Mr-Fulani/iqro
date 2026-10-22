@@ -78,10 +78,13 @@ export function PlayerBackgroundPicker({
   options,
   value,
   onChange,
+  tile,
 }: {
   options: readonly PlayerBackground[];
   value: string;
   onChange: (id: string) => void;
+  /** Drawn as one of the phone player's option tiles, with the chosen background's name. */
+  tile?: { icon: ReactNode; value: string };
 }) {
   const { locale, t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -91,15 +94,25 @@ export function PlayerBackgroundPicker({
   return (
     <div className="player-background-picker">
       <button
-        className="btn btn-secondary btn-sm player-background-toggle"
+        className={tile ? "mobile-player-tile player-background-toggle" : "btn btn-secondary btn-sm player-background-toggle"}
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
         title={label}
         onClick={() => setOpen((current) => !current)}
       >
-        <span aria-hidden="true">🖼</span>
-        <span className="player-background-toggle-label">{label}</span>
+        {tile ? (
+          <>
+            {tile.icon}
+            <span className="mobile-player-tile-label">{label}</span>
+            <strong className="mobile-player-tile-value">{tile.value}</strong>
+          </>
+        ) : (
+          <>
+            <span aria-hidden="true">🖼</span>
+            <span className="player-background-toggle-label">{label}</span>
+          </>
+        )}
       </button>
       {open && (
         <fieldset className="player-background-options" id={panelId}>
