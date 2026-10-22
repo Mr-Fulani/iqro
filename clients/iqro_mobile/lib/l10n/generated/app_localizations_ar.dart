@@ -2241,4 +2241,50 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tajweedAudioError => 'تعذّر تشغيل الكلمة.';
+
+  @override
+  String get tajweedBreakdown => 'شرح التجويد';
+
+  @override
+  String get tajweedPlayAyah => 'استمع إلى الآية كاملة';
+
+  @override
+  String tajweedStepOf(int current, int total) {
+    return '$current من $total';
+  }
+
+  @override
+  String tajweedStepNumber(int number) {
+    return 'الخطوة $number';
+  }
+
+  @override
+  String get tajweedPrevious => 'السابق';
+
+  @override
+  String get tajweedNext => 'التالي';
+
+  @override
+  String get tajweedToSummary => 'الخلاصة';
+
+  @override
+  String get tajweedDone => 'تم';
+
+  @override
+  String get tajweedSummary => 'الخلاصة';
+
+  @override
+  String get tajweedSummaryTitle => 'الأحكام الواردة في هذه الآية';
+
+  @override
+  String get tajweedRestart => 'ابدأ من جديد';
+
+  @override
+  String get tajweedBackToSummary => 'العودة إلى الخلاصة';
+
+  @override
+  String get tajweedNextStep => 'الخطوة التالية';
+
+  @override
+  String get tajweedPreviousStep => 'الخطوة السابقة';
 }

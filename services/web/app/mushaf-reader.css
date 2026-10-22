@@ -315,6 +315,19 @@ body:has(.quran-reader-boot) .app-footer {
   pointer-events: auto;
 }
 
+.mushaf-tajweed-breakdown {
+  display: none;
+}
+
+.is-reader-immersive .mushaf-tajweed-breakdown {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
+  box-shadow: 0 2px 8px #37270f1f;
+  pointer-events: auto;
+}
+
 .is-reader-immersive .mushaf-tajweed-legend .tajweed-chip {
   flex: none;
   background: color-mix(in srgb, var(--panel) 94%, transparent);

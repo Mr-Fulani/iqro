@@ -9,7 +9,11 @@ import {
   presentRules,
   ruleOccurrences,
   ruleText,
+  stepRules,
+  stepTiming,
+  tajweedSteps,
   tajweedWordIndex,
+  timedPosition,
   tajweedWordKey,
   wordTiming,
 } from "./tajweed.ts";
@@ -145,4 +149,64 @@ test("Arabic examples inside an explanation are split out for isolation", () => 
     { text: ".", arabic: false },
   ]);
   assert.deepEqual(arabicParts("2 counts."), [{ text: "2 counts.", arabic: false }]);
+});
+
+test("breakdown steps follow the reading order, one rule in one place each", () => {
+  const steps = tajweedSteps(IKHLAS_4, REFERENCE);
+  // The idgham spans يَكُن لَّهُۥ: one step, shown on both words.
+  assert.deepEqual(
+    steps.map((step) => [step.code, step.variant, step.parts.map((part) => part.word.position)]),
+    [
+      ["idgham_wo_ghunnah", null, [2, 3]],
+      ["madda_normal", "silah_sughra", [3]],
+      ["qalaqah", "stop", [5]],
+    ],
+  );
+  // Each step keeps only its own letters of the word.
+  assert.deepEqual(steps[1].parts[0].fragment, IKHLAS_4.words[1].rules[1]);
+});
+
+test("breakdown steps split several rules of one word and skip unknown rules", () => {
+  const ayah: TajweedAyah = {
+    ...IKHLAS_4,
+    words: [
+      {
+        position: 1,
+        text: "ٱللَّهُ",
+        rules: [
+          { code: "ham_wasl", start: 0, end: 1 },
+          { code: "laam_shamsiyah", start: 1, end: 2 },
+          { code: "madda_normal", start: 3, end: 5 },
+        ],
+      },
+    ],
+  };
+  assert.deepEqual(tajweedSteps(ayah, REFERENCE).map((step) => step.code), ["ham_wasl", "madda_normal"]);
+});
+
+test("a rule continued from a missing word still makes its own step", () => {
+  const ayah: TajweedAyah = { ...IKHLAS_4, words: [IKHLAS_4.words[1]] };
+  const steps = tajweedSteps(ayah, REFERENCE);
+  assert.deepEqual(steps.map((step) => step.code), ["idgham_wo_ghunnah", "madda_normal"]);
+  assert.equal(steps[0].parts.length, 1);
+});
+
+test("the summary lists each rule once, with its steps, in order of appearance", () => {
+  const steps = tajweedSteps(IKHLAS_4, REFERENCE);
+  assert.deepEqual(stepRules([...steps, steps[0]]), [
+    { code: "idgham_wo_ghunnah", steps: [0, 3] },
+    { code: "madda_normal", steps: [1] },
+    { code: "qalaqah", steps: [2] },
+  ]);
+});
+
+test("a step plays from its first word to its last; the ayah lights the sounding word", () => {
+  const [idgham, madd] = tajweedSteps(IKHLAS_4, REFERENCE);
+  const words = [[2, 9155, 9675], [3, 9675, 10200], [5, 11000, 12000]];
+  assert.deepEqual(stepTiming(words, idgham), { startMs: 9155, endMs: 10200 });
+  assert.deepEqual(stepTiming(words, madd), { startMs: 9675, endMs: 10200 });
+  assert.equal(stepTiming([[2, 9155, 9675]], idgham), null);
+  assert.equal(timedPosition(words, 9675), 3);
+  assert.equal(timedPosition(words, 10500), null);
+  assert.equal(timedPosition(undefined, 9675), null);
 });

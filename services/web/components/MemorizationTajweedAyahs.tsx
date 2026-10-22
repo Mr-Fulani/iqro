@@ -22,6 +22,7 @@ import { TajweedLegend } from "./TajweedLegend";
 import { useTajweed as useTajweedRules } from "./useTajweed";
 
 const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
+const TajweedBreakdown = dynamic(() => import("./TajweedBreakdown"), { ssr: false });
 
 type MemorizationTajweedAyahsProps = {
   ayahs: Ayah[];
@@ -87,8 +88,9 @@ export function MemorizationTajweedAyahs({
   onReveal,
   recitationId = null,
 }: MemorizationTajweedAyahsProps) {
-  const { formatNumber, locale, t } = useI18n();
+  const { direction, formatNumber, locale, t } = useI18n();
   const [card, setCard] = useState<{ selection: TajweedSelection; ayahs: TajweedAyah[] } | null>(null);
+  const [breakdown, setBreakdown] = useState<{ ayah: TajweedAyah; words: TajweedWord[] } | null>(null);
   const [mushaf, setMushaf] = useState<QuranFoundationMushaf | null>(null);
   const [pages, setPages] = useState<QuranFoundationMushafPage[]>([]);
   const [readyPages, setReadyPages] = useState<Set<number>>(new Set());
@@ -311,10 +313,33 @@ export function MemorizationTajweedAyahs({
                   onSelectRule={(code) => setCard({ selection: { kind: "rule", code }, ayahs: [ruleAyah] })}
                 />
               )}
+              {!hidden && useTajweed && rules && ruleAyah && ruleAyah.words.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm memorization-tajweed-breakdown"
+                  lang={locale}
+                  dir={direction}
+                  onClick={() => setBreakdown({ ayah: ruleAyah, words: tajweedWords })}
+                  aria-haspopup="dialog"
+                  aria-label={`${t("tajweed.breakdown")}: ${t("common.ayah", { ayah: verseKey })}`}
+                  data-testid="tajweed-breakdown-open"
+                >
+                  {t("tajweed.breakdown")}
+                </button>
+              )}
             </article>
           );
         })}
       </div>
+      {breakdown && rules && (
+        <TajweedBreakdown
+          reference={rules.reference}
+          ayah={breakdown.ayah}
+          words={breakdown.words}
+          recitationId={recitationId}
+          onClose={() => setBreakdown(null)}
+        />
+      )}
       {card && rules && (
         <TajweedCard
           reference={rules.reference}

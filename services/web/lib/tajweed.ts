@@ -15,6 +15,15 @@ export type TajweedSelection =
 
 export type TajweedRun = { text: string; code: string | null };
 
+/** A word of an ayah as the QCF V4 page font draws it. */
+export type TajweedGlyph = {
+  key: string;
+  text: string;
+  fontFamily: string;
+  /** Quran.Foundation position of a word in its ayah; null for the ayah end. */
+  position: number | null;
+};
+
 /** A word and the part of one rule it carries. */
 export type TajweedPart = { verseKey: string; word: TajweedWord; fragment: TajweedFragment };
 
@@ -170,6 +179,56 @@ export function ruleOccurrences(ayahs: readonly TajweedAyah[], code: string): Ta
     }
   }
   return occurrences;
+}
+
+/** One step of an ayah's breakdown: one rule in one place, in reading order. */
+export type TajweedStep = { code: string; variant: string | null; parts: TajweedPart[] };
+
+/**
+ * The steps of a tajweed breakdown: every rule of the ayah where it occurs, word
+ * after word. Several rules in one word are several steps; a rule that crosses
+ * into the next word is one step, shown on both words.
+ */
+export function tajweedSteps(ayah: TajweedAyah, reference: TajweedReference): TajweedStep[] {
+  const known = new Set(reference.rules.map((rule) => rule.code));
+  const steps: TajweedStep[] = [];
+  for (const word of [...ayah.words].sort((left, right) => left.position - right.position)) {
+    for (const fragment of word.rules) {
+      if (!known.has(fragment.code)) continue;
+      const parts = joinedParts(ayah, word, fragment);
+      // A rule continued from the previous word is that word's step.
+      if (parts[0].word !== word) continue;
+      steps.push({ code: fragment.code, variant: fragment.variant ?? null, parts });
+    }
+  }
+  return steps;
+}
+
+/** The rules a breakdown met, in the order they first occur, with their step indexes. */
+export function stepRules(steps: readonly TajweedStep[]): { code: string; steps: number[] }[] {
+  const rules = new Map<string, number[]>();
+  steps.forEach((step, index) => {
+    const indexes = rules.get(step.code) ?? [];
+    indexes.push(index);
+    rules.set(step.code, indexes);
+  });
+  return [...rules].map(([code, indexes]) => ({ code, steps: indexes }));
+}
+
+/** `[start_ms, end_ms)` of a step's words, from the first word to the last. */
+export function stepTiming(
+  words: readonly (readonly number[])[] | undefined,
+  step: TajweedStep,
+): { startMs: number; endMs: number } | null {
+  const first = wordTiming(words, step.parts[0].word.position);
+  const last = wordTiming(words, step.parts.at(-1)!.word.position);
+  return first && last && last.endMs > first.startMs ? { startMs: first.startMs, endMs: last.endMs } : null;
+}
+
+/** The word sounding at `ms` of the reciter's track, if it is timed. */
+export function timedPosition(words: readonly (readonly number[])[] | undefined, ms: number): number | null {
+  const row = words?.find((item) => item.length === 3 && item[1] <= ms && ms < item[2]);
+  return row ? row[0] : null;
 }
 
 export function findTajweedWord(

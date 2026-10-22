@@ -19,6 +19,8 @@ import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
+import '../tajweed/tajweed_breakdown.dart';
+import '../tajweed/tajweed_models.dart';
 import 'ayah_annotations.dart';
 import 'ayah_action_sheet.dart';
 import 'native_mushaf_page.dart';
@@ -687,6 +689,22 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
+  /// The tajweed of an ayah on a QF Mushaf 19 page, once the page has it.
+  ({TajweedReference reference, TajweedAyah ayah})? _tajweedAyah(
+    QuranAyahReference reference,
+    int page,
+  ) {
+    final pageData = ref.read(mushafPageProvider(page)).valueOrNull;
+    if (pageData?.foundation?.sourceId != tajweedMushafId) return null;
+    final rules = ref.read(tajweedRulesProvider).valueOrNull;
+    final ayah = ref
+        .read(tajweedPageProvider(page))
+        .valueOrNull
+        ?.ayah(reference.key);
+    if (rules == null || ayah == null || ayah.words.isEmpty) return null;
+    return (reference: rules, ayah: ayah);
+  }
+
   /// The reciter the play button would use, for words played from a card.
   Future<String?> _tajweedRecitationId() async {
     final recitations = await ref
@@ -1324,13 +1342,27 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       if (!_isCurrentAccount(scope) || !mounted) return;
+      final tajweed = _tajweedAyah(reference, page);
+      var breakdown = false;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: false,
         backgroundColor: Colors.transparent,
-        builder: (context) => AyahActionSheet(reference: reference, page: page),
+        builder: (context) => AyahActionSheet(
+          reference: reference,
+          page: page,
+          onTajweedBreakdown: tajweed == null ? null : () => breakdown = true,
+        ),
       );
+      if (breakdown && tajweed != null && mounted) {
+        await showTajweedBreakdown(
+          context,
+          reference: tajweed.reference,
+          ayah: tajweed.ayah,
+          recitation: _tajweedRecitationId,
+        );
+      }
     } finally {
       _detailsOpen = false;
       if (mounted && _isCurrentAccount(scope)) {

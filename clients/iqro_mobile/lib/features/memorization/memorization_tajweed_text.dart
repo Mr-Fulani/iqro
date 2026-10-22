@@ -7,6 +7,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../quran/foundation_mushaf_page.dart';
 import '../quran/mushaf_edition.dart';
 import '../quran/quran_models.dart';
+import '../tajweed/tajweed_breakdown.dart';
 import '../tajweed/tajweed_models.dart';
 import '../tajweed/tajweed_sheet.dart';
 
@@ -155,6 +156,26 @@ class MemorizationTajweedAyah extends ConsumerWidget {
               title: context.l10n.tajweedLegendAyah,
               rules: reference!.present(tajweed.rules),
               onSelected: (code) => open(TajweedRuleSelection(code)),
+            ),
+          ),
+        if (tajweed != null && tajweed.words.isNotEmpty)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: OutlinedButton.icon(
+                key: ValueKey('tajweed-breakdown-${ayah.number}'),
+                onPressed: () => showTajweedBreakdown(
+                  context,
+                  reference: reference!,
+                  ayah: tajweed,
+                  recitation: recitation == null
+                      ? null
+                      : () async => recitation,
+                ),
+                icon: const Icon(Icons.school_outlined),
+                label: Text(context.l10n.tajweedBreakdown),
+              ),
             ),
           ),
       ],

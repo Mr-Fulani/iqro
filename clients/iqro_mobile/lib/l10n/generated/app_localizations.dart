@@ -4079,6 +4079,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not play this word.'**
   String get tajweedAudioError;
+
+  /// No description provided for @tajweedBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed breakdown'**
+  String get tajweedBreakdown;
+
+  /// No description provided for @tajweedPlayAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to the whole ayah'**
+  String get tajweedPlayAyah;
+
+  /// No description provided for @tajweedStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String tajweedStepOf(int current, int total);
+
+  /// No description provided for @tajweedStepNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {number}'**
+  String tajweedStepNumber(int number);
+
+  /// No description provided for @tajweedPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get tajweedPrevious;
+
+  /// No description provided for @tajweedNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get tajweedNext;
+
+  /// No description provided for @tajweedToSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get tajweedToSummary;
+
+  /// No description provided for @tajweedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get tajweedDone;
+
+  /// No description provided for @tajweedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get tajweedSummary;
+
+  /// No description provided for @tajweedSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules met in this ayah'**
+  String get tajweedSummaryTitle;
+
+  /// No description provided for @tajweedRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get tajweedRestart;
+
+  /// No description provided for @tajweedBackToSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to summary'**
+  String get tajweedBackToSummary;
+
+  /// No description provided for @tajweedNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get tajweedNextStep;
+
+  /// No description provided for @tajweedPreviousStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get tajweedPreviousStep;
 }
 
 class _AppLocalizationsDelegate

@@ -323,3 +323,65 @@ List<List<TajweedPart>> tajweedOccurrences(
         if (fragment.code == code && !fragment.joinsPrevious)
           tajweedJoinedParts(ayah, word, fragment),
 ];
+
+/// One step of an ayah's tajweed breakdown: one rule in one place.
+typedef TajweedStep = ({
+  String code,
+  String? variant,
+
+  /// The step's word and, for a rule crossing into the next word, that word.
+  List<TajweedPart> parts,
+});
+
+/// The steps of a breakdown in reading order, as on the web: several rules of
+/// one word are several steps; a rule crossing a word boundary is one step.
+List<TajweedStep> tajweedSteps(TajweedAyah ayah, TajweedReference reference) {
+  final words = [...ayah.words]
+    ..sort((left, right) => left.position.compareTo(right.position));
+  return [
+    for (final word in words)
+      for (final fragment in word.rules)
+        if (reference.rule(fragment.code) != null)
+          if (tajweedJoinedParts(ayah, word, fragment) case final parts
+              when parts.first.word == word)
+            (code: fragment.code, variant: fragment.variant, parts: parts),
+  ];
+}
+
+/// The rules a breakdown met, in order of first appearance, with their steps.
+List<({String code, List<int> steps})> tajweedStepRules(
+  List<TajweedStep> steps,
+) {
+  final rules = <String, List<int>>{};
+  for (final (index, step) in steps.indexed) {
+    rules.putIfAbsent(step.code, () => []).add(index);
+  }
+  return [
+    for (final MapEntry(:key, :value) in rules.entries)
+      (code: key, steps: value),
+  ];
+}
+
+/// `[start, end)` of a step's words in the reciter's track, from the first
+/// word to the last; null when one of them is not timed.
+({Duration start, Duration end})? tajweedStepTiming(
+  Map<int, ({Duration start, Duration end})> words,
+  TajweedStep step,
+) {
+  final first = words[step.parts.first.word.position];
+  final last = words[step.parts.last.word.position];
+  return first == null || last == null || last.end <= first.start
+      ? null
+      : (start: first.start, end: last.end);
+}
+
+/// The word sounding at [position] of the reciter's track, if it is timed.
+int? tajweedTimedPosition(
+  Map<int, ({Duration start, Duration end})> words,
+  Duration position,
+) {
+  for (final MapEntry(:key, :value) in words.entries) {
+    if (value.start <= position && position < value.end) return key;
+  }
+  return null;
+}

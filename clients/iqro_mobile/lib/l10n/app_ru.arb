@@ -689,5 +689,19 @@
   "tajweedSlowLabel": "Медленнее, 0,75×",
   "tajweedClose": "Закрыть",
   "tajweedReviewNote": "Пояснения проходят проверку у преподавателя таджвида.",
-  "tajweedAudioError": "Не удалось воспроизвести фрагмент."
+  "tajweedAudioError": "Не удалось воспроизвести фрагмент.",
+  "tajweedBreakdown": "Разбор таджвида",
+  "tajweedPlayAyah": "Прослушать весь аят",
+  "tajweedStepOf": "{current} из {total}",
+  "tajweedStepNumber": "Шаг {number}",
+  "tajweedPrevious": "Назад",
+  "tajweedNext": "Далее",
+  "tajweedToSummary": "Итог",
+  "tajweedDone": "Готово",
+  "tajweedSummary": "Итог",
+  "tajweedSummaryTitle": "Правила, которые встретились в аяте",
+  "tajweedRestart": "Начать сначала",
+  "tajweedBackToSummary": "К итогу",
+  "tajweedNextStep": "Следующий шаг",
+  "tajweedPreviousStep": "Предыдущий шаг"
 }

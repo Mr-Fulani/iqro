@@ -503,7 +503,23 @@ test("coloured memorization text explains a tapped tajweed word", async ({ page 
   await expect(page.getByTestId("tajweed-listen")).toHaveCount(0);
   await page.keyboard.press("Escape");
 
+  // Each coloured ayah has its step-by-step breakdown with the plan's reciter.
+  const breakdowns = page.getByTestId("tajweed-breakdown-open");
+  await expect(breakdowns).toHaveCount(2);
+  await breakdowns.first().click();
+  const breakdown = page.getByRole("dialog", { name: /^Разбор таджвида/ });
+  await expect(breakdown.getByTestId("tajweed-step-counter")).toHaveText("1 из 1: Хамзату-ль-васль");
+  await expect(breakdown.locator(".tajweed-breakdown-word.is-step")).toHaveAttribute("data-word-position", "1");
+  await expect(breakdown.getByTestId("tajweed-listen")).toBeVisible();
+  await expect(breakdown.getByRole("button", { name: "Прослушать весь аят" })).toBeVisible();
+  await breakdown.getByRole("button", { name: "Итог" }).click();
+  await expect(breakdown.getByTestId("tajweed-summary").getByRole("button", { name: "Хамзату-ль-васль" })).toBeVisible();
+  await breakdown.getByRole("button", { name: "Готово" }).click();
+  await expect(breakdown).toHaveCount(0);
+  await expect(breakdowns.first()).toBeFocused();
+
   // Recall practice hides the ayahs, and with them every tajweed hint.
   await page.getByRole("tab", { name: "Проверить себя" }).click();
   await expect(page.getByTestId("tajweed-legend")).toHaveCount(0);
+  await expect(page.getByTestId("tajweed-breakdown-open")).toHaveCount(0);
 });

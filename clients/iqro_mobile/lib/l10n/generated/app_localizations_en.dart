@@ -2261,4 +2261,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tajweedAudioError => 'Could not play this word.';
+
+  @override
+  String get tajweedBreakdown => 'Tajweed breakdown';
+
+  @override
+  String get tajweedPlayAyah => 'Listen to the whole ayah';
+
+  @override
+  String tajweedStepOf(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String tajweedStepNumber(int number) {
+    return 'Step $number';
+  }
+
+  @override
+  String get tajweedPrevious => 'Back';
+
+  @override
+  String get tajweedNext => 'Next';
+
+  @override
+  String get tajweedToSummary => 'Summary';
+
+  @override
+  String get tajweedDone => 'Done';
+
+  @override
+  String get tajweedSummary => 'Summary';
+
+  @override
+  String get tajweedSummaryTitle => 'Rules met in this ayah';
+
+  @override
+  String get tajweedRestart => 'Start over';
+
+  @override
+  String get tajweedBackToSummary => 'Back to summary';
+
+  @override
+  String get tajweedNextStep => 'Next step';
+
+  @override
+  String get tajweedPreviousStep => 'Previous step';
 }

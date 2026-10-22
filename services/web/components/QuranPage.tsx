@@ -20,7 +20,7 @@ import { useTajweed } from "./useTajweed";
 import { TajweedLegend } from "./TajweedLegend";
 import { MushafPageTurn } from "./MushafPageTurn";
 import { MushafGestureSurface } from "./MushafGestureSurface";
-import { QuranFoundationMushafPageView } from "./QuranFoundationMushafPage";
+import { ayahGlyphs, QuranFoundationMushafPageView } from "./QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
   type PrayerReadingSessionConfig,
@@ -78,6 +78,7 @@ import { isTajweedMushaf, tajweedWordIndex, type TajweedSelection } from "../lib
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
 const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
+const TajweedBreakdown = dynamic(() => import("./TajweedBreakdown"), { ssr: false });
 // The share dialog is loaded again after a failed load, as React.lazy keeps it.
 const loadAyahShareDialog = () => lazy(() => import("./AyahShareDialog"));
 let AyahShareDialog = loadAyahShareDialog();
@@ -403,6 +404,7 @@ function QuranContent() {
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [mushafRecitationId, setMushafRecitationId] = useState("");
   const [tajweedSelection, setTajweedSelection] = useState<TajweedSelection | null>(null);
+  const [breakdownAyah, setBreakdownAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isImmersiveReader, setIsImmersiveReader] = useState(false);
   const [playAyahRequest, setPlayAyahRequest] = useState<AyahPlaybackTrigger | null>(null);
@@ -2337,6 +2339,18 @@ function QuranContent() {
           {selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) && (
             <div className="mushaf-ayah-actions">
               <span>{t("common.ayah", { ayah: selectedMushafAyah })}</span>
+              {tajweedPage?.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  onClick={() => setBreakdownAyah(selectedMushafAyah)}
+                  aria-haspopup="dialog"
+                  aria-label={`${t("tajweed.breakdown")}: ${t("common.ayah", { ayah: selectedMushafAyah })}`}
+                  data-testid="tajweed-breakdown-open"
+                >
+                  {t("tajweed.breakdown")}
+                </button>
+              )}
               <button
                 className={`btn btn-secondary btn-sm${ayahAnnotations[selectedMushafAyah] ? " is-active" : ""}`}
                 type="button"
@@ -2362,6 +2376,18 @@ function QuranContent() {
 
           {tajweed && tajweedPage && (
             <div className="mushaf-tajweed-legend">
+              {/* The full-screen reader hides the ayah menu; the breakdown rides with the chips. */}
+              {selectedMushafAyah && tajweedPage.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
+                <button
+                  className="btn btn-primary btn-sm mushaf-tajweed-breakdown"
+                  type="button"
+                  onClick={() => setBreakdownAyah(selectedMushafAyah)}
+                  aria-haspopup="dialog"
+                  data-testid="tajweed-breakdown-open-reader"
+                >
+                  {t("tajweed.breakdown")} · {selectedMushafAyah}
+                </button>
+              )}
               <TajweedLegend
                 reference={tajweed.reference}
                 codes={tajweedPage.rules}
@@ -2482,6 +2508,16 @@ function QuranContent() {
           recitationId={mushafRecitationId || null}
           onSelect={setTajweedSelection}
           onClose={() => setTajweedSelection(null)}
+        />
+      )}
+      {breakdownAyah && tajweed && tajweedPage && selectedFoundationMushaf && foundationMushafPage
+        && tajweedPage.ayahs.some((ayah) => ayah.verse_key === breakdownAyah) && (
+        <TajweedBreakdown
+          reference={tajweed.reference}
+          ayah={tajweedPage.ayahs.find((ayah) => ayah.verse_key === breakdownAyah)!}
+          words={ayahGlyphs(selectedFoundationMushaf, foundationMushafPage, breakdownAyah)}
+          recitationId={mushafRecitationId || null}
+          onClose={() => setBreakdownAyah(null)}
         />
       )}
       {shareTarget && (

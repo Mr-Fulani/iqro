@@ -2222,4 +2222,50 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tajweedAudioError => 'Kelime çalınamadı.';
+
+  @override
+  String get tajweedBreakdown => 'Tecvid incelemesi';
+
+  @override
+  String get tajweedPlayAyah => 'Ayetin tamamını dinle';
+
+  @override
+  String tajweedStepOf(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String tajweedStepNumber(int number) {
+    return 'Adım $number';
+  }
+
+  @override
+  String get tajweedPrevious => 'Geri';
+
+  @override
+  String get tajweedNext => 'İleri';
+
+  @override
+  String get tajweedToSummary => 'Özet';
+
+  @override
+  String get tajweedDone => 'Tamam';
+
+  @override
+  String get tajweedSummary => 'Özet';
+
+  @override
+  String get tajweedSummaryTitle => 'Bu ayette geçen kurallar';
+
+  @override
+  String get tajweedRestart => 'Baştan başla';
+
+  @override
+  String get tajweedBackToSummary => 'Özete dön';
+
+  @override
+  String get tajweedNextStep => 'Sonraki adım';
+
+  @override
+  String get tajweedPreviousStep => 'Önceki adım';
 }

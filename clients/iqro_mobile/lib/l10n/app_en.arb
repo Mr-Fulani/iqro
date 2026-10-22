@@ -780,5 +780,21 @@
   "tajweedSlowLabel": "Slower, 0.75×",
   "tajweedClose": "Close",
   "tajweedReviewNote": "These explanations are being reviewed by a tajweed teacher.",
-  "tajweedAudioError": "Could not play this word."
+  "tajweedAudioError": "Could not play this word.",
+  "tajweedBreakdown": "Tajweed breakdown",
+  "tajweedPlayAyah": "Listen to the whole ayah",
+  "tajweedStepOf": "{current} of {total}",
+  "@tajweedStepOf": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "tajweedStepNumber": "Step {number}",
+  "@tajweedStepNumber": {"placeholders": {"number": {"type": "int"}}},
+  "tajweedPrevious": "Back",
+  "tajweedNext": "Next",
+  "tajweedToSummary": "Summary",
+  "tajweedDone": "Done",
+  "tajweedSummary": "Summary",
+  "tajweedSummaryTitle": "Rules met in this ayah",
+  "tajweedRestart": "Start over",
+  "tajweedBackToSummary": "Back to summary",
+  "tajweedNextStep": "Next step",
+  "tajweedPreviousStep": "Previous step"
 }

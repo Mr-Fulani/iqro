@@ -7213,9 +7213,138 @@ svg.track-surah-name-ar {
   font-size: 0.75rem;
 }
 
+/* Tajweed breakdown: one ayah, rule by rule, with the step's words lit. */
+.tajweed-sheet-title small {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.tajweed-breakdown-ayah {
+  margin: 12px 0 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-size: 1.75rem;
+  line-height: 2;
+  text-align: center;
+}
+
+.tajweed-breakdown-word {
+  border-radius: 6px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tajweed-breakdown-word.is-step {
+  background: color-mix(in srgb, var(--tajweed-color) 18%, transparent);
+  box-shadow: inset 0 -2px 0 var(--tajweed-color);
+}
+
+.tajweed-breakdown-word.is-reading {
+  background: var(--primary-subtle);
+  box-shadow: 0 0 0 2px var(--primary-border);
+}
+
+.tajweed-breakdown-listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tajweed-breakdown-status {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tajweed-breakdown-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tajweed-breakdown-progress {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--border);
+}
+
+.tajweed-breakdown-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: inline-size 0.2s ease;
+}
+
+.tajweed-step {
+  margin-top: 12px;
+}
+
+.tajweed-step-word {
+  text-align: center;
+}
+
+.tajweed-breakdown-summary {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.tajweed-breakdown-summary h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tajweed-breakdown-back {
+  margin-bottom: 12px;
+}
+
+.tajweed-step-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.tajweed-step-nav .btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+.tajweed-keyboard-hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.memorization-tajweed-breakdown {
+  justify-self: start;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tajweed-breakdown-word,
+  .tajweed-breakdown-progress > span {
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .mushaf-tajweed-legend {
     padding-inline: 16px;
+  }
+
+  .tajweed-keyboard-hint {
+    display: none;
   }
 
   .tajweed-sheet {
