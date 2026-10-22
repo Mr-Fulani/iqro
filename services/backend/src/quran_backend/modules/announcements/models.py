@@ -574,6 +574,7 @@ class WaveReason(models.TextChoices):
     PUBLISHED = "published", "Первая публикация"
     EDIT = "edit", "Правка с повторным показом"
     RESHOW = "reshow", "Показать снова"
+    REPUBLISHED = "republished", "Опубликовано снова после снятия"
 
 
 class AnnouncementWave(BaseModel):

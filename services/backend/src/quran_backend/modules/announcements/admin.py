@@ -17,10 +17,12 @@ from typing import Any, ClassVar, cast
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.db.models import Case, Q, QuerySet, Sum, Value, When
 from django.forms.models import BaseInlineFormSet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
@@ -46,6 +48,7 @@ from quran_backend.modules.announcements.models import (
 from quran_backend.modules.announcements.routes import SCREENS
 from quran_backend.modules.announcements.services import (
     CHANGE_PERMISSION,
+    EXTEND_DAYS,
     PUBLISH_PERMISSION,
     RELIGIOUS_PERMISSION,
     SENSITIVE_PERMISSION,
@@ -53,9 +56,11 @@ from quran_backend.modules.announcements.services import (
     archive,
     cancel_edit,
     duplicate,
+    extend_display,
     is_sensitive,
     publish,
     readiness,
+    republish,
     reshow,
     sign_religious_review,
     start_edit,
@@ -433,6 +438,11 @@ OPERATIONS: dict[str, tuple[Callable[[Announcement, User], object], str]] = {
         "Объявление снова на главной у всех, кто его закрыл или прочитал. На сайте — в "
         "течение минуты.",
     ),
+    "_republish": (
+        republish,
+        "Опубликовано снова. Всем, кто его закрывал, оно снова покажется на главной; на сайте "
+        "и в приложении — в течение минуты.",
+    ),
     "_withdraw": (withdraw, "Снято с публикации."),
     "_archive": (archive, "Перенесено в архив."),
 }
@@ -465,7 +475,7 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
             announcement,
             publisher_checks_religion=checks_religion and can_publish_this,
         )
-        if editable
+        if editable or status == AnnouncementStatus.WITHDRAWN
         else None
     )
     now = timezone.now()
@@ -527,6 +537,7 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
         and announcement.starts_at <= now < announcement.display_until,
         "show_reshow_on_publish": original is not None and editable and can_publish_this,
         "waves": announcement.wave if status == AnnouncementStatus.PUBLISHED else 0,
+        "show_republish": can_publish_this and status == AnnouncementStatus.WITHDRAWN,
         "show_withdraw": can_publish and status == AnnouncementStatus.PUBLISHED,
         "show_archive": can_publish
         and status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN},
@@ -561,13 +572,18 @@ PANEL_STATES = {
     AnnouncementStatus.WITHDRAWN: (
         "Снято",
         "off",
-        "Не показывается. Можно перенести в архив или сделать копию для новой публикации.",
+        "Не показывается ни в ленте, ни на главной. «Опубликовать снова» вернёт его всем, "
+        "в том числе тем, кто его закрыл. Можно и перенести в архив или сделать копию.",
     ),
     AnnouncementStatus.ARCHIVED: ("В архиве", "off", "Убрано и из ленты «Что нового»."),
 }
 
 
 WAVE_EVENTS = ("impression", "open", "click", "dismiss")
+NO_RIGHT = (
+    "нет права. Сбор средств, окно с шагами, push и обязательное обновление публикует, "
+    "снимает с главной и показывает снова только владелец."
+)
 
 
 def _change_url(announcement: Announcement) -> str:
@@ -605,7 +621,15 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = ("status", "kind", "source")
     search_fields = ("translations__title",)
     date_hierarchy = "starts_at"
-    actions = ("publish_selected", "withdraw_selected", "archive_selected")
+    actions = (
+        "publish_selected",
+        "republish_selected",
+        "reshow_selected",
+        "extend_selected",
+        "withdraw_selected",
+        "archive_selected",
+        "duplicate_selected",
+    )
     readonly_fields = (
         "status",
         "source",
@@ -1085,9 +1109,10 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         except AnnouncementNotReadyError as error:
             self.message_user(
                 request,
-                "Снова не показано:"
-                if name == "_reshow"
-                else "Объявление сохранено, но не опубликовано. Что осталось:",
+                {
+                    "_reshow": "Снова не показано:",
+                    "_republish": "Не опубликовано снова. Что осталось:",
+                }.get(name, "Объявление сохранено, но не опубликовано. Что осталось:"),
                 messages.WARNING,
             )
             for problem in error.problems:
@@ -1096,47 +1121,102 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             self.log_change(request, obj, success)
             self.message_user(request, success, messages.SUCCESS)
 
-    @admin.action(description="Опубликовать")
-    def publish_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
-        for announcement in queryset.filter(
-            status__in=(AnnouncementStatus.DRAFT, AnnouncementStatus.IN_REVIEW)
-        ):
+    # Actions on the list: every selected announcement gets its own message.
+
+    def _bulk(
+        self,
+        request: HttpRequest,
+        queryset: QuerySet[Announcement],
+        operation: Callable[[Announcement, User], object],
+        done: Callable[[Announcement, Any], str],
+    ) -> None:
+        user = cast(User, request.user)
+        for announcement in queryset:
             try:
-                publish(announcement, cast(User, request.user))
+                result = operation(announcement, user)
             except PermissionDenied:
-                self.message_user(
-                    request, f"{announcement}: публикует только владелец.", messages.ERROR
-                )
+                self.message_user(request, f"{announcement}: {NO_RIGHT}", messages.ERROR)
             except AnnouncementNotReadyError as error:
                 self.message_user(
                     request,
-                    f"{announcement}: не опубликовано — {'; '.join(error.problems)}",
-                    messages.ERROR,
+                    f"{announcement}: не сделано — {' '.join(error.problems)}",
+                    messages.WARNING,
                 )
             else:
-                self.message_user(request, f"{announcement}: опубликовано.", messages.SUCCESS)
+                self.log_change(request, announcement, done(announcement, result))
+                self.message_user(request, done(announcement, result), messages.SUCCESS)
+
+    @admin.action(description="Опубликовать")
+    def publish_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        self._bulk(request, queryset, publish, lambda item, _: f"{item}: опубликовано.")
+
+    @admin.action(description="Опубликовать снова (снятые)")
+    def republish_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        self._bulk(
+            request,
+            queryset,
+            republish,
+            lambda item, _: f"{item}: опубликовано снова, вернётся на главную и тем, кто закрыл.",
+        )
+
+    @admin.action(description="Показать снова на главной")
+    def reshow_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        self._bulk(
+            request,
+            queryset,
+            reshow,
+            lambda item, result: f"{item}: снова на главной, волна {result.wave}.",
+        )
+
+    @admin.action(description=f"Продлить показ на главной на {EXTEND_DAYS} дней")
+    def extend_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        self._bulk(
+            request,
+            queryset,
+            extend_display,
+            lambda item, result: (
+                f"{item}: на главной до {timezone.localtime(result.ends_at):%d.%m.%Y}."
+            ),
+        )
 
     @admin.action(description="Снять с публикации")
     def withdraw_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
-        for announcement in queryset.filter(status=AnnouncementStatus.PUBLISHED):
-            try:
-                withdraw(announcement, cast(User, request.user))
-            except PermissionDenied:
-                self.message_user(request, "Нет права снимать объявления.", messages.ERROR)
-                return
-            self.message_user(request, f"{announcement}: снято.", messages.SUCCESS)
+        self._bulk(
+            request,
+            queryset,
+            withdraw,
+            lambda item, _: f"{item}: снято. Вернуть можно «Опубликовать снова».",
+        )
 
-    @admin.action(description="Перенести в архив")
-    def archive_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
-        for announcement in queryset.filter(
-            status__in=(AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN)
-        ):
-            try:
-                archive(announcement, cast(User, request.user))
-            except PermissionDenied:
-                self.message_user(request, "Нет права архивировать объявления.", messages.ERROR)
-                return
-            self.message_user(request, f"{announcement}: в архиве.", messages.SUCCESS)
+    @admin.action(description="Перенести в архив…")
+    def archive_selected(
+        self, request: HttpRequest, queryset: QuerySet[Announcement]
+    ) -> TemplateResponse | None:
+        # Archived announcements leave the feed and cannot come back: ask first.
+        if "confirmed" not in request.POST:
+            return TemplateResponse(
+                request,
+                "admin/announcements/announcement/archive_confirmation.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": "Перенести в архив?",
+                    "opts": self.model._meta,
+                    "announcements": list(queryset),
+                    "action": "archive_selected",
+                    "action_checkbox_name": ACTION_CHECKBOX_NAME,
+                },
+            )
+        self._bulk(
+            request,
+            queryset,
+            archive,
+            lambda item, _: f"{item}: в архиве, убрано и из ленты.",
+        )
+        return None
+
+    @admin.action(description="Сделать копию (черновик)")
+    def duplicate_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
+        self._bulk(request, queryset, duplicate, lambda item, _: f"{item}: создан черновик-копия.")
 
 
 @admin.register(AnnouncementSettings)
