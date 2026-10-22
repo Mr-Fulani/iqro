@@ -124,6 +124,7 @@ Future<void> _pumpApp(
   Locale locale = const Locale('ru'),
   Map<String?, AnnouncementFeedPage> pages = const {},
   AnnouncementLocalState stored = const AnnouncementLocalState(),
+  bool dark = false,
 }) async {
   tester.view.physicalSize = _size;
   tester.view.devicePixelRatio = _pixelRatio;
@@ -217,6 +218,8 @@ Future<void> _pumpApp(
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
           theme: _withArabic(IqroTheme.light()),
+          darkTheme: _withArabic(IqroTheme.dark()),
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
           routerConfig: router,
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -274,6 +277,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('announcement-next')));
     await _settle(tester);
     await _capture(tester, 'app-window-feature-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('the bubble glows in the dark theme', (tester) async {
+    await _pumpApp(
+      tester,
+      location: '/app?tab=0',
+      active: <Announcement>[featureAnnouncement(), ..._announcements()],
+      dark: true,
+    );
+    await _capture(tester, 'app-home-bubble-dark-ru');
   }, skip: _directory.isEmpty);
 
   testWidgets('More shows unread news', (tester) async {

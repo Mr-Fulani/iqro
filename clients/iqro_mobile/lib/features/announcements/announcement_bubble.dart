@@ -12,19 +12,84 @@ import 'announcement_dialog.dart';
 import 'announcement_logic.dart';
 import 'announcement_parts.dart';
 
-const announcementBubbleSize = 52.0;
+// Sizes and motion agreed with the site's phone bubble.
+const announcementBubbleSize = 68.0;
+const _faceSize = 46.0;
 const _popDuration = Duration(milliseconds: 380);
 const _openAfter = Duration(milliseconds: 320);
+// Rising in (600 ms), then two larger bobs (1.6 s), then the calm bob.
+const _introDuration = Duration(milliseconds: 2200);
+const _riseShare = 600 / 2200;
+const _rise = Cubic(.34, 1.56, .64, 1);
 
-// Where the six drops fly when the bubble pops, as on the site.
+// Where the six drops fly when the bubble pops.
 const _drops = <(Offset, Color)>[
-  (Offset(-30, -22), Color(0xFF91D7C3)),
-  (Offset(30, -24), Color(0xFF91D7C3)),
-  (Offset(-34, 16), Color(0xFF91D7C3)),
-  (Offset(32, 20), Color(0xFF91D7C3)),
-  (Offset(0, -36), Color(0xFFF3D7A1)),
-  (Offset(-4, 34), Color(0xFFC4B5FD)),
+  (Offset(-39, -29), Color(0xFF34D399)),
+  (Offset(39, -31), Color(0xFF34D399)),
+  (Offset(-44, 21), Color(0xFF38BDF8)),
+  (Offset(42, 26), Color(0xFF34D399)),
+  (Offset(0, -47), Color(0xFFFBBF24)),
+  (Offset(-5, 44), Color(0xFFA78BFA)),
 ];
+
+/// Keeps the bubble's place among the top bar's buttons and draws it above
+/// the bar: the bar clips its buttons, and the bubble with its glow, rise and
+/// pop is larger than the bar.
+class AnnouncementBubbleHost extends StatefulWidget {
+  const AnnouncementBubbleHost({required this.builder, super.key});
+
+  /// Builds the screen; [slot] goes among the top bar's actions.
+  final Widget Function(BuildContext context, Widget slot) builder;
+
+  @override
+  State<AnnouncementBubbleHost> createState() => _AnnouncementBubbleHostState();
+}
+
+class _AnnouncementBubbleHostState extends State<AnnouncementBubbleHost> {
+  final _link = LayerLink();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        widget.builder(context, _BubbleSlot(link: _link)),
+        Positioned(
+          left: 0,
+          top: 0,
+          child: CompositedTransformFollower(
+            link: _link,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.center,
+            followerAnchor: Alignment.center,
+            child: const AnnouncementBubble(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BubbleSlot extends ConsumerWidget {
+  const _BubbleSlot({required this.link});
+
+  final LayerLink link;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final signedIn = announcementSignedIn(
+      ref.watch(sessionProvider.select((value) => value.valueOrNull)),
+    );
+    final shown = ref.watch(
+      announcementsProvider.select(
+        (value) => value.bubble(signedIn: signedIn).isNotEmpty,
+      ),
+    );
+    return CompositedTransformTarget(
+      link: link,
+      child: SizedBox(width: shown ? announcementBubbleSize + 4 : 0),
+    );
+  }
+}
 
 /// The live bubble in the top corner of the home screen. A tap pops it and
 /// opens the window; it comes back by the admin's frequency until read.
@@ -37,12 +102,14 @@ class AnnouncementBubble extends ConsumerStatefulWidget {
 
 class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  late final AnimationController _intro;
   late final AnimationController _float;
   late final AnimationController _spin;
   late final AnimationController _pop;
   String? _locale;
   var _popping = false;
   var _moving = false;
+  DateTime? _introducedFor;
   Timer? _openTimer;
 
   AnnouncementsController get _controller =>
@@ -51,6 +118,12 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
   @override
   void initState() {
     super.initState();
+    // At rest until a visit plays the rise.
+    _intro = AnimationController(vsync: this, duration: _introDuration)
+      ..value = 1
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && _moving) _float.repeat();
+      });
     _float = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3400),
@@ -90,21 +163,33 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _openTimer?.cancel();
+    _intro.dispose();
     _float.dispose();
     _spin.dispose();
     _pop.dispose();
     super.dispose();
   }
 
-  void _setMoving(bool moving) {
-    if (moving == _moving) return;
+  /// The first sight of a visit rises in and bobs twice, then calms down.
+  void _setMoving(bool moving, DateTime visit) {
     _moving = moving;
-    if (moving) {
-      _float.repeat();
-      _spin.repeat();
-    } else {
+    if (!moving) {
+      _intro
+        ..stop()
+        ..value = 1;
       _float.stop();
       _spin.stop();
+      return;
+    }
+    if (!_spin.isAnimating) _spin.repeat();
+    if (_introducedFor != visit) {
+      _introducedFor = visit;
+      _float
+        ..stop()
+        ..value = 0;
+      _intro.forward(from: 0);
+    } else if (!_intro.isAnimating && !_float.isAnimating) {
+      _float.repeat();
     }
   }
 
@@ -141,6 +226,9 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     final items = ref.watch(
       announcementsProvider.select((value) => value.bubble(signedIn: signedIn)),
     );
+    final visit = ref.watch(
+      announcementsProvider.select((value) => value.openedAt),
+    );
     final reduced = MediaQuery.disableAnimationsOf(context);
     // Home may sit under another tab or screen: then the bubble is not seen,
     // neither counted nor moving.
@@ -149,7 +237,7 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     final visible = items.isNotEmpty && !_popping && onScreen;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _setMoving(visible && !reduced);
+      _setMoving(visible && !reduced, visit);
       if (visible) _controller.recordShown(items);
     });
     if (items.isEmpty && !_popping) return const SizedBox.shrink();
@@ -158,65 +246,93 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     final onTap = first == null || _popping
         ? null
         : () => unawaited(_open(items));
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 4),
-      child: Semantics(
-        button: true,
-        label: context.l10n.newsBubble(items.length),
-        onTap: onTap,
-        excludeSemantics: true,
-        child: SizedBox.square(
-          dimension: announcementBubbleSize,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: <Widget>[
-              if (_popping && !reduced) _Burst(animation: _pop),
-              AnimatedBuilder(
-                animation: Listenable.merge(<Listenable>[_float, _pop]),
-                builder: (context, child) {
-                  // The site's bob: up 4 px and 4 % larger at the middle.
-                  final phase = (1 - math.cos(_float.value * 2 * math.pi)) / 2;
-                  final pop = _pop.value;
-                  final popScale = pop < .45
-                      ? 1 + .3 * (pop / .45)
-                      : 1.3 + .4 * ((pop - .45) / .55);
-                  final popOpacity = pop < .45
-                      ? 1 - .15 * (pop / .45)
-                      : .85 * (1 - (pop - .45) / .55);
-                  return Opacity(
-                    opacity: _popping
-                        ? (reduced ? 0 : popOpacity.clamp(0, 1))
-                        : 1,
-                    child: Transform.translate(
-                      offset: Offset(0, -4 * phase),
-                      child: Transform.scale(
-                        scale: (1 + .04 * phase) * (_popping ? popScale : 1),
-                        child: child,
-                      ),
+    return Semantics(
+      button: true,
+      label: context.l10n.newsBubble(items.length),
+      onTap: onTap,
+      excludeSemantics: true,
+      child: SizedBox.square(
+        dimension: announcementBubbleSize,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: <Widget>[
+            if (_popping && !reduced) _Burst(animation: _pop),
+            AnimatedBuilder(
+              animation: Listenable.merge(<Listenable>[_intro, _float, _pop]),
+              builder: (context, child) {
+                final motion = _motion();
+                final pop = _pop.value;
+                final popScale = pop < .45
+                    ? 1 + .3 * (pop / .45)
+                    : 1.3 + .4 * ((pop - .45) / .55);
+                final popOpacity = pop < .45
+                    ? 1 - .15 * (pop / .45)
+                    : .85 * (1 - (pop - .45) / .55);
+                return Opacity(
+                  opacity: _popping
+                      ? (reduced ? 0 : popOpacity.clamp(0, 1))
+                      : motion.opacity,
+                  child: Transform.translate(
+                    offset: Offset(0, motion.dy),
+                    child: Transform.scale(
+                      scale: motion.scale * (_popping ? popScale : 1),
+                      child: child,
                     ),
-                  );
-                },
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    key: const ValueKey('announcement-bubble'),
-                    customBorder: const CircleBorder(),
-                    onTap: onTap,
-                    child: _BubbleBody(spin: _spin, first: first),
                   ),
-                ),
+                );
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      key: const ValueKey('announcement-bubble'),
+                      customBorder: const CircleBorder(),
+                      onTap: onTap,
+                      child: _BubbleBody(spin: _spin, first: first),
+                    ),
+                  ),
+                  if (items.length > 1 && !_popping)
+                    PositionedDirectional(
+                      top: -4,
+                      end: -4,
+                      child: _Count(count: items.length),
+                    ),
+                ],
               ),
-              if (items.length > 1 && !_popping)
-                PositionedDirectional(
-                  top: -3,
-                  end: -3,
-                  child: _Count(count: items.length),
-                ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  ({double scale, double dy, double opacity}) _motion() {
+    var scale = 1.0;
+    var dy = 0.0;
+    var opacity = 1.0;
+    final intro = _intro.value;
+    if (intro < _riseShare) {
+      final progress = intro / _riseShare;
+      final rise = _rise.transform(progress);
+      scale = .4 + .6 * rise;
+      dy = 12 * (1 - rise);
+      opacity = (progress / .4).clamp(0, 1);
+    } else {
+      // Two full bobs, up 8 px and 8 % larger at their tops.
+      final progress = (intro - _riseShare) / (1 - _riseShare);
+      final phase = (1 - math.cos(progress * 4 * math.pi)) / 2;
+      scale = 1 + .08 * phase;
+      dy = -8 * phase;
+    }
+    // The calm bob: up 4 px and 4 % larger at the middle.
+    final phase = (1 - math.cos(_float.value * 2 * math.pi)) / 2;
+    return (
+      scale: scale * (1 + .04 * phase),
+      dy: dy - 4 * phase,
+      opacity: opacity,
     );
   }
 }
@@ -230,12 +346,13 @@ class _BubbleBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final item = first;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final portrait = item != null && item.bubbleIcon == 'portrait'
         ? item.image?.thumbUrl ?? item.image?.url
         : null;
     final icon = Icon(
       announcementIcon(item?.bubbleIcon ?? 'megaphone'),
-      size: 20,
+      size: 26,
       color: announcementFaceInk,
     );
     return SizedBox.square(
@@ -243,7 +360,7 @@ class _BubbleBody extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          // The film: a soft shine and a tinted edge.
+          // The film: a soft shine, a tinted edge and an emerald glow.
           DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -262,12 +379,17 @@ class _BubbleBody extends StatelessWidget {
                 // The site's circle reaches the corners of the box.
                 radius: .7071,
               ),
-              boxShadow: const <BoxShadow>[
-                // Smaller than the site's: the top bar ends 6 px below.
+              boxShadow: <BoxShadow>[
                 BoxShadow(
-                  color: Color(0x2E073E34),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
+                  color: dark
+                      ? const Color(0x9934D399)
+                      : const Color(0x5934D399),
+                  blurRadius: dark ? 14 : 10,
+                ),
+                const BoxShadow(
+                  color: Color(0x33073E34),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
                 ),
               ],
             ),
@@ -298,15 +420,15 @@ class _BubbleBody extends StatelessWidget {
             ),
           ),
           Container(
-            width: 34,
-            height: 34,
+            width: _faceSize,
+            height: _faceSize,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: announcementFaceGradient,
               border: Border.all(
-                color: Colors.white.withValues(alpha: .8),
-                width: 1.5,
+                color: Colors.white.withValues(alpha: .9),
+                width: 2,
               ),
             ),
             child: portrait == null
@@ -322,22 +444,24 @@ class _BubbleBody extends StatelessWidget {
 class _RimPainter extends CustomPainter {
   const _RimPainter();
 
+  static const _width = 3.5;
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = _width
       ..shader = const SweepGradient(
         colors: <Color>[
-          Color(0xE691D7C3),
-          Color(0xE6F3D7A1),
-          Color(0xE6C4B5FD),
-          Color(0xE67DD3FC),
-          Color(0xE691D7C3),
+          Color(0xFF34D399),
+          Color(0xFFFBBF24),
+          Color(0xFFA78BFA),
+          Color(0xFF38BDF8),
+          Color(0xFF34D399),
         ],
       ).createShader(rect);
-    canvas.drawCircle(rect.center, size.width / 2 - 1.25, paint);
+    canvas.drawCircle(rect.center, size.width / 2 - _width / 2, paint);
   }
 
   @override
@@ -354,8 +478,8 @@ class _Count extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
       child: Container(
-        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 5),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: context.iqroColors.gold,
@@ -369,7 +493,7 @@ class _Count extends StatelessWidget {
           '$count',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             height: 1.1,
           ),
@@ -407,7 +531,7 @@ class _Burst extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xF291D7C3),
+                        color: const Color(0xF234D399),
                         width: 2,
                       ),
                     ),
@@ -424,8 +548,8 @@ class _Burst extends StatelessWidget {
                     child: Transform.scale(
                       scale: 1 - .6 * t,
                       child: Container(
-                        width: 6,
-                        height: 6,
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,

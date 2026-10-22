@@ -27,6 +27,7 @@ Future<void> _pump(
   bool reduced = true,
   double textScale = 1,
   AuthSession? session,
+  bool settle = true,
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.75;
@@ -34,28 +35,12 @@ Future<void> _pump(
   final router = GoRouter(
     initialLocation: location,
     routes: <RouteBase>[
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const Scaffold(
-          appBar: IqroTopBar(
-            title: 'IQRO',
-            actions: <Widget>[AnnouncementBubble(), SizedBox(width: 6)],
-          ),
-          body: SizedBox.expand(),
-        ),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const _Home()),
       // Home kept alive under another tab.
       GoRoute(
         path: '/hidden',
-        builder: (context, state) => const Visibility.maintain(
-          visible: false,
-          child: Scaffold(
-            appBar: IqroTopBar(
-              title: 'IQRO',
-              actions: <Widget>[AnnouncementBubble()],
-            ),
-          ),
-        ),
+        builder: (context, state) =>
+            const Visibility.maintain(visible: false, child: _Home()),
       ),
       GoRoute(path: '/news', builder: (context, state) => const NewsScreen()),
       GoRoute(
@@ -105,7 +90,7 @@ Future<void> _pump(
       ),
     ),
   );
-  await _settle(tester, reduced: reduced);
+  if (settle) await _settle(tester, reduced: reduced);
 }
 
 /// Lets the post-frame loads finish; a moving bubble never settles.
@@ -138,7 +123,17 @@ void main() {
     await _pump(tester, repository: repository);
 
     expect(_bubble, findsOneWidget);
+    // Large enough to catch the eye; the counter is a badge, not a dot.
+    expect(tester.getSize(_bubble), const Size(68, 68));
     expect(find.text('2'), findsOneWidget);
+    final badge = tester.getSize(
+      find.ancestor(of: find.text('2'), matching: find.byType(Container)),
+    );
+    expect(badge.height, 22);
+    expect(badge.width, greaterThanOrEqualTo(22));
+    // Beside the settings button, not over it or the page.
+    final settings = tester.getRect(find.byIcon(Icons.settings));
+    expect(tester.getRect(_bubble).right, lessThanOrEqualTo(settings.left));
     expect(
       tester.getSemantics(find.bySemanticsLabel('Новое: 2. Открыть')),
       matchesSemantics(
@@ -226,6 +221,23 @@ void main() {
   ) async {
     final repository = FakeAnnouncementRepository(active: [testAnnouncement()]);
     await _pump(tester, repository: repository, reduced: false);
+    expect(tester.hasRunningAnimations, isTrue);
+    // The first sight of a visit rises in, then bobs.
+    double opacity() => tester
+        .widget<Opacity>(
+          find.ancestor(of: _bubble, matching: find.byType(Opacity)).first,
+        )
+        .opacity;
+    await tester.pumpWidget(const SizedBox());
+    final rising = FakeAnnouncementRepository(active: [testAnnouncement()]);
+    await _pump(tester, repository: rising, reduced: false, settle: false);
+    for (var frame = 0; frame < 3; frame++) {
+      await tester.pump();
+    }
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(opacity(), lessThan(1));
+    await tester.pump(const Duration(seconds: 2));
+    expect(opacity(), 1);
     expect(tester.hasRunningAnimations, isTrue);
     await tester.tap(_bubble);
     // The pop plays first, then the window grows out of the bubble.
@@ -431,4 +443,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Новый чтец: Ясир ад-Даусари'), findsOneWidget);
   });
+}
+
+class _Home extends StatelessWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context) => AnnouncementBubbleHost(
+    builder: (context, bubble) => Scaffold(
+      appBar: IqroTopBar(
+        title: 'IQRO',
+        actions: <Widget>[
+          bubble,
+          IconButton(onPressed: () {}, icon: const Icon(Icons.settings)),
+          const SizedBox(width: 6),
+        ],
+      ),
+      body: const SizedBox.expand(),
+    ),
+  );
 }
