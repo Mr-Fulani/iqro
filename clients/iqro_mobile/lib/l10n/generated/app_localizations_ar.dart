@@ -252,6 +252,82 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
+  String get newsTitle => 'ما الجديد';
+
+  @override
+  String get newsDescription => 'قرّاء جدد وميزات ومحتوى على الموقع والتطبيق.';
+
+  @override
+  String get newsEmpty => 'لا توجد أخبار بعد.';
+
+  @override
+  String get newsLoadMore => 'عرض المزيد';
+
+  @override
+  String get newsLoadError => 'تعذّر تحميل الأخبار. حاول لاحقًا.';
+
+  @override
+  String get newsAll => 'الكل';
+
+  @override
+  String get newsFilterLabel => 'نوع الخبر';
+
+  @override
+  String get newsFilterReciter => 'القرّاء';
+
+  @override
+  String get newsFilterFeature => 'الميزات';
+
+  @override
+  String get newsFilterContent => 'المحتوى';
+
+  @override
+  String get newsFilterAppRelease => 'التطبيق';
+
+  @override
+  String get newsFilterGeneral => 'عام';
+
+  @override
+  String get newsKindReciter => 'قارئ جديد';
+
+  @override
+  String get newsKindFeature => 'ما الجديد';
+
+  @override
+  String get newsKindAppRelease => 'إصدار جديد';
+
+  @override
+  String get newsKindContent => 'محتوى جديد';
+
+  @override
+  String get newsKindGeneral => 'إعلان';
+
+  @override
+  String get newsUnread => 'غير مقروء';
+
+  @override
+  String get newsHowTo => 'طريقة الاستخدام';
+
+  @override
+  String get newsMore => 'التفاصيل';
+
+  @override
+  String get newsPrevious => 'السابق';
+
+  @override
+  String get newsNext => 'التالي';
+
+  @override
+  String newsCounter(int current, int total) {
+    return '$current من $total';
+  }
+
+  @override
+  String newsBubble(int count) {
+    return 'جديد: $count. افتح';
+  }
+
+  @override
   String get continueLabel => 'متابعة';
 
   @override

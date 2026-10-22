@@ -8,6 +8,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../announcements/announcement_bubble.dart';
 import '../audio/mini_player.dart';
 import '../calendar/hijri_calendar_service.dart';
 import '../calendar/calendar_catalog.dart';
@@ -96,6 +97,7 @@ class HomeScreen extends ConsumerWidget {
           child: Center(child: IqroAnimatedLogo(size: 36)),
         ),
         actions: <Widget>[
+          const AnnouncementBubble(),
           IconButton(
             tooltip: context.l10n.settings,
             onPressed: () => context.push('/settings'),

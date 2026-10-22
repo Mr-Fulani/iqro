@@ -252,6 +252,84 @@ class AppLocalizationsTr extends AppLocalizations {
   String get retry => 'Tekrar dene';
 
   @override
+  String get newsTitle => 'Yenilikler';
+
+  @override
+  String get newsDescription =>
+      'Sitede ve uygulamada yeni kâriler, özellikler ve içerikler.';
+
+  @override
+  String get newsEmpty => 'Henüz haber yok.';
+
+  @override
+  String get newsLoadMore => 'Daha fazla göster';
+
+  @override
+  String get newsLoadError =>
+      'Haberler yüklenemedi. Daha sonra tekrar deneyin.';
+
+  @override
+  String get newsAll => 'Tümü';
+
+  @override
+  String get newsFilterLabel => 'Haber türü';
+
+  @override
+  String get newsFilterReciter => 'Kâriler';
+
+  @override
+  String get newsFilterFeature => 'Özellikler';
+
+  @override
+  String get newsFilterContent => 'İçerik';
+
+  @override
+  String get newsFilterAppRelease => 'Uygulama';
+
+  @override
+  String get newsFilterGeneral => 'Genel';
+
+  @override
+  String get newsKindReciter => 'Yeni kâri';
+
+  @override
+  String get newsKindFeature => 'Yenilik';
+
+  @override
+  String get newsKindAppRelease => 'Yeni sürüm';
+
+  @override
+  String get newsKindContent => 'Yeni içerik';
+
+  @override
+  String get newsKindGeneral => 'Duyuru';
+
+  @override
+  String get newsUnread => 'Okunmadı';
+
+  @override
+  String get newsHowTo => 'Nasıl kullanılır';
+
+  @override
+  String get newsMore => 'Ayrıntılar';
+
+  @override
+  String get newsPrevious => 'Önceki';
+
+  @override
+  String get newsNext => 'Sonraki';
+
+  @override
+  String newsCounter(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String newsBubble(int count) {
+    return 'Yeni: $count. Aç';
+  }
+
+  @override
   String get continueLabel => 'Devam';
 
   @override
