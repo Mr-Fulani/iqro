@@ -53,6 +53,8 @@ import '../features/tajweed/tajweed_repository.dart';
 import '../features/tajweed_course/tajweed_course_models.dart';
 import '../features/tajweed_course/tajweed_course_progress.dart';
 import '../features/tajweed_course/tajweed_course_repository.dart';
+import '../features/tajweed_course/tajweed_practice.dart';
+import '../features/tajweed_course/tajweed_practice_store.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
 
@@ -1018,6 +1020,30 @@ final tajweedProgressSyncProvider = Provider<TajweedProgressSync>(
     session: () => ref.read(sessionProvider).valueOrNull,
     onMerged: (course) => ref.invalidate(tajweedCourseProgressProvider(course)),
   ),
+);
+final tajweedPracticeStoreProvider = Provider<TajweedPracticeStore>(
+  (ref) => TajweedPracticeStore(ref.watch(localDatabaseProvider)),
+);
+final tajweedPracticeProvider = FutureProvider.autoDispose
+    .family<TajweedPracticeLocal, String>((ref, course) {
+      // The practice belongs to the account; switching it reads the new
+      // owner's.
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(tajweedPracticeStoreProvider).read(course);
+    });
+final tajweedPracticeSyncProvider = Provider<TajweedPracticeSync>(
+  (ref) => TajweedPracticeSync(
+    remote: ref.watch(tajweedCourseGatewayProvider),
+    store: ref.watch(tajweedPracticeStoreProvider),
+    database: ref.watch(localDatabaseProvider),
+    session: () => ref.read(sessionProvider).valueOrNull,
+    onChanged: (course) => ref.invalidate(tajweedPracticeProvider(course)),
+  ),
+);
+
+/// The time of practice answers and sessions; tests fix it.
+final tajweedPracticeClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
 );
 
 /// Resolves the reciter whose timings play the course examples: the one

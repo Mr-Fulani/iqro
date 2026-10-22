@@ -4337,6 +4337,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The course is not available yet.'**
   String get tajweedCourseUnavailable;
+
+  /// No description provided for @tajweedPracticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed practice'**
+  String get tajweedPracticeTitle;
+
+  /// No description provided for @tajweedPracticeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get tajweedPracticeShort;
+
+  /// No description provided for @tajweedPracticeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks on the lessons you have passed: find a rule in an ayah, name it, recognise it by ear.'**
+  String get tajweedPracticeDescription;
+
+  /// No description provided for @tajweedPracticeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise the rules you have passed on ayahs from the whole Quran.'**
+  String get tajweedPracticeCta;
+
+  /// No description provided for @tajweedPracticeOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the practice'**
+  String get tajweedPracticeOpen;
+
+  /// No description provided for @tajweedPracticeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start practising'**
+  String get tajweedPracticeStart;
+
+  /// No description provided for @tajweedPracticeNoLessons.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass at least one lesson of the course first: the practice is built from the rules you have passed.'**
+  String get tajweedPracticeNoLessons;
+
+  /// No description provided for @tajweedPracticeToCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'To the course'**
+  String get tajweedPracticeToCourse;
+
+  /// No description provided for @tajweedPracticeScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get tajweedPracticeScore;
+
+  /// No description provided for @tajweedPracticeStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get tajweedPracticeStreak;
+
+  /// No description provided for @tajweedPracticeStreakDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days in a row'**
+  String tajweedPracticeStreakDays(int count);
+
+  /// No description provided for @tajweedPracticeReviewCount.
+  ///
+  /// In en, this message translates to:
+  /// **'To review: {count}'**
+  String tajweedPracticeReviewCount(int count);
+
+  /// No description provided for @tajweedPracticeLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules you have passed'**
+  String get tajweedPracticeLearned;
+
+  /// No description provided for @tajweedPracticeTaskOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Task {current} of {total}'**
+  String tajweedPracticeTaskOf(int current, int total);
+
+  /// No description provided for @tajweedPracticeReviewBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get tajweedPracticeReviewBadge;
+
+  /// No description provided for @tajweedPracticeFindPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Find in the ayah: {rule}'**
+  String tajweedPracticeFindPrompt(String rule);
+
+  /// No description provided for @tajweedPracticeIdentifyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which rule is in the marked place?'**
+  String get tajweedPracticeIdentifyPrompt;
+
+  /// No description provided for @tajweedPracticeListenPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen and name the rule'**
+  String get tajweedPracticeListenPrompt;
+
+  /// No description provided for @tajweedPracticeOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers'**
+  String get tajweedPracticeOptions;
+
+  /// No description provided for @tajweedPracticeCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct!'**
+  String get tajweedPracticeCorrect;
+
+  /// No description provided for @tajweedPracticeWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Not quite. This is {rule}.'**
+  String tajweedPracticeWrong(String rule);
+
+  /// No description provided for @tajweedPracticeLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Building the tasks…'**
+  String get tajweedPracticeLoading;
+
+  /// No description provided for @tajweedPracticeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not build the tasks.'**
+  String get tajweedPracticeError;
+
+  /// No description provided for @tajweedPracticeNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get tajweedPracticeNext;
+
+  /// No description provided for @tajweedPracticePrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get tajweedPracticePrevious;
+
+  /// No description provided for @tajweedPracticeFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get tajweedPracticeFinish;
+
+  /// No description provided for @tajweedPracticeSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{correct} of {total} correct'**
+  String tajweedPracticeSummary(int correct, int total);
+
+  /// No description provided for @tajweedPracticeAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise again'**
+  String get tajweedPracticeAgain;
 }
 
 class _AppLocalizationsDelegate

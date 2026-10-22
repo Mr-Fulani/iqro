@@ -67,6 +67,16 @@ export default async function TajweedCoursePage({ params }: { params: Promise<Ro
         <TajweedCourseProgress lessons={courseLessons(document).map(lessonOutline)} />
       </header>
 
+      <section className="surface tajweed-course-practice" aria-labelledby="tajweed-practice-title">
+        <div>
+          <h2 id="tajweed-practice-title">{translate(locale, "tajweedPractice.short")}</h2>
+          <p>{translate(locale, "tajweedPractice.cta")}</p>
+        </div>
+        <Link href={localizedPath(locale, "/tajweed/practice")} className="btn btn-secondary">
+          {translate(locale, "tajweedPractice.open")}
+        </Link>
+      </section>
+
       {document.sections.map((section) => (
         <section
           key={section.slug}

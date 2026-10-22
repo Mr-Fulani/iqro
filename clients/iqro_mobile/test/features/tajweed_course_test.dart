@@ -584,4 +584,8 @@ class _FakeRemote implements TajweedCourseRemoteGateway {
     stored = merged.toJson()['lessons']! as Map<String, Object?>;
     return <String, Object?>{'course': course, 'lessons': stored};
   }
+
+  // The practice calls are tested in tajweed_practice_test.dart.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

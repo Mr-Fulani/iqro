@@ -1892,6 +1892,32 @@ export class ApiClient {
     );
   }
 
+  public async getTajweedPractice(
+    course: string,
+    query: { lessons: string[]; count: number; seed: number; review: string[] },
+  ): Promise<unknown> {
+    const params = new URLSearchParams({
+      lessons: query.lessons.join(","),
+      count: String(query.count),
+      seed: String(query.seed),
+    });
+    if (query.review.length) params.set("review", query.review.join(","));
+    return this.request<unknown>(`/api/v1/tajweed/courses/${encodeURIComponent(course)}/practice?${params}`);
+  }
+
+  public async getTajweedPracticeState(course: string): Promise<unknown> {
+    return this.request<unknown>(`/api/v1/me/tajweed/practice/${encodeURIComponent(course)}`, { cache: "no-store" });
+  }
+
+  /** Stores a finished practice session once; the answer is the practice state after it. */
+  public async saveTajweedPracticeSession(session: object): Promise<unknown> {
+    return this.request<unknown>("/api/v1/me/tajweed/practice-sessions", {
+      method: "POST",
+      body: JSON.stringify(session),
+      cache: "no-store",
+    });
+  }
+
   /** Merges the local lesson progress with the account's; the answer is the merged progress. */
   public async mergeTajweedProgress(course: string, progress: { lessons: object }): Promise<unknown> {
     return this.request<unknown>(`/api/v1/me/tajweed/progress/${encodeURIComponent(course)}`, {

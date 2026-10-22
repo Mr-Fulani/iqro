@@ -29,6 +29,7 @@ import '../features/settings/offline_storage_screen.dart';
 import '../features/share/share_screen.dart';
 import '../features/tajweed_course/tajweed_course_home_screen.dart';
 import '../features/tajweed_course/tajweed_lesson_screen.dart';
+import '../features/tajweed_course/tajweed_practice_screen.dart';
 import 'app_shell.dart';
 
 const _supportedWebLinkLocales = <String>{'ru', 'en', 'ar', 'tr'};
@@ -235,6 +236,10 @@ GoRouter createRouter({required bool onboardingComplete}) {
       GoRoute(
         path: '/tajweed',
         builder: (context, state) => const TajweedCourseHomeScreen(),
+      ),
+      GoRoute(
+        path: '/tajweed/practice',
+        builder: (context, state) => const TajweedPracticeScreen(),
       ),
       GoRoute(
         path: '/tajweed/lesson/:slug',

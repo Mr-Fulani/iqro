@@ -2411,4 +2411,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tajweedCourseUnavailable => 'The course is not available yet.';
+
+  @override
+  String get tajweedPracticeTitle => 'Tajweed practice';
+
+  @override
+  String get tajweedPracticeShort => 'Practice';
+
+  @override
+  String get tajweedPracticeDescription =>
+      'Tasks on the lessons you have passed: find a rule in an ayah, name it, recognise it by ear.';
+
+  @override
+  String get tajweedPracticeCta =>
+      'Practise the rules you have passed on ayahs from the whole Quran.';
+
+  @override
+  String get tajweedPracticeOpen => 'Open the practice';
+
+  @override
+  String get tajweedPracticeStart => 'Start practising';
+
+  @override
+  String get tajweedPracticeNoLessons =>
+      'Pass at least one lesson of the course first: the practice is built from the rules you have passed.';
+
+  @override
+  String get tajweedPracticeToCourse => 'To the course';
+
+  @override
+  String get tajweedPracticeScore => 'Score';
+
+  @override
+  String get tajweedPracticeStreak => 'Streak';
+
+  @override
+  String tajweedPracticeStreakDays(int count) {
+    return '$count days in a row';
+  }
+
+  @override
+  String tajweedPracticeReviewCount(int count) {
+    return 'To review: $count';
+  }
+
+  @override
+  String get tajweedPracticeLearned => 'Rules you have passed';
+
+  @override
+  String tajweedPracticeTaskOf(int current, int total) {
+    return 'Task $current of $total';
+  }
+
+  @override
+  String get tajweedPracticeReviewBadge => 'Review';
+
+  @override
+  String tajweedPracticeFindPrompt(String rule) {
+    return 'Find in the ayah: $rule';
+  }
+
+  @override
+  String get tajweedPracticeIdentifyPrompt =>
+      'Which rule is in the marked place?';
+
+  @override
+  String get tajweedPracticeListenPrompt => 'Listen and name the rule';
+
+  @override
+  String get tajweedPracticeOptions => 'Answers';
+
+  @override
+  String get tajweedPracticeCorrect => 'Correct!';
+
+  @override
+  String tajweedPracticeWrong(String rule) {
+    return 'Not quite. This is $rule.';
+  }
+
+  @override
+  String get tajweedPracticeLoading => 'Building the tasks…';
+
+  @override
+  String get tajweedPracticeError => 'Could not build the tasks.';
+
+  @override
+  String get tajweedPracticeNext => 'Next';
+
+  @override
+  String get tajweedPracticePrevious => 'Back';
+
+  @override
+  String get tajweedPracticeFinish => 'Finish';
+
+  @override
+  String tajweedPracticeSummary(int correct, int total) {
+    return '$correct of $total correct';
+  }
+
+  @override
+  String get tajweedPracticeAgain => 'Practise again';
 }

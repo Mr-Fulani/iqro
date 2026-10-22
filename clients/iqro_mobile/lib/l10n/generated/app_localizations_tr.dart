@@ -2372,4 +2372,103 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tajweedCourseUnavailable => 'Kurs henüz kullanılamıyor.';
+
+  @override
+  String get tajweedPracticeTitle => 'Tecvid alıştırması';
+
+  @override
+  String get tajweedPracticeShort => 'Alıştırma';
+
+  @override
+  String get tajweedPracticeDescription =>
+      'Tamamladığınız derslerden görevler: kuralı ayette bulun, adını söyleyin, kulakla tanıyın.';
+
+  @override
+  String get tajweedPracticeCta =>
+      'Tamamladığınız kuralları Kur\'an\'ın tamamından ayetlerle pekiştirin.';
+
+  @override
+  String get tajweedPracticeOpen => 'Alıştırmayı aç';
+
+  @override
+  String get tajweedPracticeStart => 'Alıştırmaya başla';
+
+  @override
+  String get tajweedPracticeNoLessons =>
+      'Önce kurstan en az bir dersi tamamlayın: alıştırma tamamladığınız kurallardan oluşur.';
+
+  @override
+  String get tajweedPracticeToCourse => 'Kursa dön';
+
+  @override
+  String get tajweedPracticeScore => 'Puan';
+
+  @override
+  String get tajweedPracticeStreak => 'Seri';
+
+  @override
+  String tajweedPracticeStreakDays(int count) {
+    return '$count gün üst üste';
+  }
+
+  @override
+  String tajweedPracticeReviewCount(int count) {
+    return 'Tekrar edilecek: $count';
+  }
+
+  @override
+  String get tajweedPracticeLearned => 'Tamamlanan kurallar';
+
+  @override
+  String tajweedPracticeTaskOf(int current, int total) {
+    return 'Görev $current/$total';
+  }
+
+  @override
+  String get tajweedPracticeReviewBadge => 'Tekrar';
+
+  @override
+  String tajweedPracticeFindPrompt(String rule) {
+    return 'Ayette bulun: $rule';
+  }
+
+  @override
+  String get tajweedPracticeIdentifyPrompt => 'İşaretli yerdeki kural hangisi?';
+
+  @override
+  String get tajweedPracticeListenPrompt => 'Dinleyin ve kuralı belirleyin';
+
+  @override
+  String get tajweedPracticeOptions => 'Cevaplar';
+
+  @override
+  String get tajweedPracticeCorrect => 'Doğru!';
+
+  @override
+  String tajweedPracticeWrong(String rule) {
+    return 'Değil. Burada $rule var.';
+  }
+
+  @override
+  String get tajweedPracticeLoading => 'Görevler hazırlanıyor…';
+
+  @override
+  String get tajweedPracticeError => 'Görevler hazırlanamadı.';
+
+  @override
+  String get tajweedPracticeNext => 'İleri';
+
+  @override
+  String get tajweedPracticePrevious => 'Geri';
+
+  @override
+  String get tajweedPracticeFinish => 'Bitir';
+
+  @override
+  String tajweedPracticeSummary(int correct, int total) {
+    return '$total görevden $correct doğru';
+  }
+
+  @override
+  String get tajweedPracticeAgain => 'Tekrar';
 }

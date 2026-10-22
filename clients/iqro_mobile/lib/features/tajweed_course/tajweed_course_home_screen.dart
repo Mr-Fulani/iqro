@@ -17,6 +17,8 @@ const _arabicFallback = <String>[IqroTheme.arabicFontFamily];
 String tajweedLessonPath(String lesson) =>
     '/tajweed/lesson/${Uri.encodeComponent(lesson)}';
 
+const tajweedPracticePath = '/tajweed/practice';
+
 /// Course home: progress and «Continue», then the sections with lesson cards.
 class TajweedCourseHomeScreen extends ConsumerStatefulWidget {
   const TajweedCourseHomeScreen({
@@ -78,6 +80,8 @@ class _CourseContents extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _OverviewCard(document: document, progress: progress, onOpen: open),
+          const SizedBox(height: 12),
+          _PracticeCard(onOpen: () => context.push(tajweedPracticePath)),
           for (final section in document.sections)
             if (document.sectionLessons(section) case final lessons
                 when lessons.isNotEmpty) ...<Widget>[
@@ -183,6 +187,62 @@ class _OverviewCard extends StatelessWidget {
               key: const ValueKey('tajweed-course-all-completed'),
               style: theme.textTheme.bodyMedium,
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// «Practice»: tasks on the passed rules from the whole Quran.
+class _PracticeCard extends StatelessWidget {
+  const _PracticeCard({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IqroCard(
+      key: const ValueKey('tajweed-practice-card'),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: context.iqroColors.sand,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.fact_check_outlined,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  context.l10n.tajweedPracticeShort,
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  context.l10n.tajweedPracticeCta,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('tajweed-practice-open'),
+                  onPressed: onOpen,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: Text(context.l10n.tajweedPracticeOpen),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

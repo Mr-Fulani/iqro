@@ -383,3 +383,114 @@ button.tajweed-course-word.is-lit {
     min-width: 0;
   }
 }
+
+/* Practice ---------------------------------------------------------------- */
+.tajweed-course-practice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tajweed-course-practice h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.tajweed-course-practice p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.tajweed-practice {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tajweed-practice h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.tajweed-practice-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.tajweed-practice-stats > div {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.tajweed-practice-stats dt {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tajweed-practice-stats dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.tajweed-practice-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tajweed-practice-rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  font-size: 14px;
+}
+
+.tajweed-practice-actions,
+.tajweed-practice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tajweed-practice-option {
+  min-height: 44px;
+}
+
+.btn.tajweed-practice-option.is-correct {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+}
+
+.btn.tajweed-practice-option.is-wrong {
+  border-color: var(--danger-border);
+  background: var(--danger-subtle);
+  color: var(--text-primary);
+}
+
+.tajweed-practice-result {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.tajweed-practice-review {
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+}
