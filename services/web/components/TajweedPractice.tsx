@@ -27,6 +27,7 @@ import {
   type PracticeTaskType,
 } from "../lib/tajweed-practice";
 import { useCourseRecitationState } from "../lib/use-course-recitation";
+import { usePageLoaded } from "../lib/use-page-loaded";
 import { readPracticeStore, usePracticeStore, useTajweedPracticeSync, writePracticeStore } from "../lib/use-tajweed-practice";
 import { useTajweedProgress } from "../lib/use-tajweed-progress";
 import { StepNav } from "./StepNav";
@@ -131,6 +132,8 @@ export function TajweedPractice({
   const [slow, setSlow] = useState(false);
   // Due reviews are counted on the start and summary screens, at the moment they open.
   const [now, setNow] = useState(() => new Date());
+  // The Quran font comes after the page has loaded on a phone (tajweed.css, .has-arabic-font).
+  const arabicFont = usePageLoaded();
   const { index, setIndex, go, onKeyDown } = useStepNavigation(Math.max(1, tasks.length), direction);
 
   const passed = useMemo(
@@ -289,7 +292,11 @@ export function TajweedPractice({
   const showAyah = type !== "listen" || answered;
 
   return (
-    <section className="surface tajweed-practice tajweed-lesson" aria-label={t("tajweedPractice.title")} data-testid="tajweed-practice">
+    <section
+      className={`surface tajweed-practice tajweed-lesson${arabicFont ? " has-arabic-font" : ""}`}
+      aria-label={t("tajweedPractice.title")}
+      data-testid="tajweed-practice"
+    >
       <div className="tajweed-lesson-status">
         <p aria-live="polite" data-testid="tajweed-practice-counter">
           {t("tajweedPractice.taskOf", { current: formatNumber(index + 1), total: formatNumber(tasks.length) })}
