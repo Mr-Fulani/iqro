@@ -103,7 +103,7 @@ test("impressions and closes reach the server as anonymous counters", async ({ p
   await expect
     .poll(
       async () => {
-        const response = await request.get("http://127.0.0.1:3199/__test__/announcement-events");
+        const response = await request.get(`http://127.0.0.1:${process.env.MOCK_PUBLIC_API_PORT || 3199}/__test__/announcement-events`);
         const { events } = (await response.json()) as { events: { surface: string; event: string }[] };
         return events.map((item) => `${item.surface}:${item.event}`);
       },
