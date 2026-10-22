@@ -57,7 +57,8 @@ function announcementFixtures(locale) {
       ...base,
       id: "019a0000-0000-7000-8000-00000000a001",
       kind: "reciter",
-      starts_at: "2026-10-21T08:00:00Z",
+      // Late evening in UTC: already the next day for most of the world.
+      starts_at: "2026-10-21T22:30:00Z",
       bubble: { icon: "portrait", frequency: "daily", max_impressions: 5 },
       title: texts.reciter[0],
       summary: texts.reciter[1],

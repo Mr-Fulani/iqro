@@ -21,7 +21,7 @@ import {
   useReceiptSync,
 } from "./announcement-store";
 import { AnnouncementDialog } from "./AnnouncementDialog";
-import { AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
+import { AnnouncementDate, AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
 
 // Runs before the first paint: a card this visitor already closed or read must
 // not flash and then collapse the page (the home page is cached for everyone).
@@ -34,7 +34,7 @@ const DESKTOP = "(min-width: 769px)";
 
 /** The desktop card under the hero; phones get the bubble in the header instead. */
 export function AnnouncementCard({ items }: { items: Announcement[] }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const { session } = useAuth();
   const state = useAnnouncementState();
   const [explained, setExplained] = useState<Announcement | null>(null);
@@ -80,7 +80,7 @@ export function AnnouncementCard({ items }: { items: Announcement[] }) {
         <div className="announcement-card-text">
           <div className="announcement-card-meta">
             <span className="announcement-chip">{t(KIND_LABELS[item.kind])}</span>
-            <time dateTime={item.starts_at}>{formatDate(item.starts_at, { day: "numeric", month: "long" })}</time>
+            <AnnouncementDate item={item} />
           </div>
           <h2 id={`announcement-${item.id}`} className="announcement-card-title">{item.title}</h2>
           <p className="announcement-summary">{item.summary}</p>

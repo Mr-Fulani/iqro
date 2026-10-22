@@ -15,7 +15,7 @@ import type { MessageKey } from "../../lib/i18n";
 import { IntentPrefetchLink } from "../IntentPrefetchLink";
 import { clickAnnouncement, readAnnouncement, useAnnouncementState, useReceiptSync } from "./announcement-store";
 import { AnnouncementDialog } from "./AnnouncementDialog";
-import { AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
+import { AnnouncementDate, AnnouncementPicture, KIND_LABELS } from "./AnnouncementParts";
 
 const FILTERS: { kind: AnnouncementKind | null; label: MessageKey }[] = [
   { kind: null, label: "news.all" },
@@ -29,7 +29,7 @@ const FILTERS: { kind: AnnouncementKind | null; label: MessageKey }[] = [
 
 /** «What's new»: the whole history, newest first, pinned items on top. */
 export function NewsFeed({ initialPage }: { initialPage: AnnouncementFeedPage }) {
-  const { locale, t, formatDate } = useI18n();
+  const { locale, t } = useI18n();
   const { session } = useAuth();
   const state = useAnnouncementState();
   const [kind, setKind] = useState<AnnouncementKind | null>(null);
@@ -97,9 +97,7 @@ export function NewsFeed({ initialPage }: { initialPage: AnnouncementFeedPage })
               <div className="news-item-text">
                 <div className="announcement-card-meta">
                   <span className="announcement-chip">{t(KIND_LABELS[item.kind])}</span>
-                  <time dateTime={item.starts_at}>
-                    {formatDate(item.starts_at, { day: "numeric", month: "long", year: "numeric" })}
-                  </time>
+                  <AnnouncementDate item={item} year />
                 </div>
                 <h2 className="news-item-title">{item.title}</h2>
                 <p className="announcement-summary">{item.summary}</p>

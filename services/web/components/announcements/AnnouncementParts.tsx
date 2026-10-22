@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { boldSegments, bodyBlocks, type Announcement } from "../../lib/announcements";
 import type { MessageKey } from "../../lib/i18n";
+import { useI18n } from "../../lib/i18n-context";
+import { useHydrated } from "../../lib/use-hydrated";
 
 const ICON_PATHS: Record<string, ReactNode> = {
   headphones: <path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z" />,
@@ -20,6 +22,22 @@ export function AnnouncementIcon({ name, size = 24 }: { name: string; size?: num
       {ICON_PATHS[name] ?? ICON_PATHS.megaphone}
     </svg>
   );
+}
+
+/**
+ * The publication date. The server renders in UTC, the visitor may already be
+ * in the next day: the first paint uses UTC on both sides, then the local date.
+ */
+export function AnnouncementDate({ item, year = false }: { item: Announcement; year?: boolean }) {
+  const { formatDate } = useI18n();
+  const hydrated = useHydrated();
+  const date = formatDate(item.starts_at, {
+    day: "numeric",
+    month: "long",
+    ...(year ? { year: "numeric" as const } : {}),
+    ...(hydrated ? {} : { timeZone: "UTC" }),
+  });
+  return <time dateTime={item.starts_at}>{date}</time>;
 }
 
 /** The portrait (or its 96 px thumbnail) when there is one, otherwise the kind's icon. */
