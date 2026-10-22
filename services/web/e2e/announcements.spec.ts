@@ -62,6 +62,56 @@ test("phone bubble pops into the window and then stays away", async ({ page }) =
   await expect(page.getByTestId("announcement-bubble")).toHaveCount(0);
 });
 
+test("the phone bubble floats over the home screen, clear of the header and the navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru");
+  const bubble = page.getByTestId("announcement-bubble");
+  await expect(bubble).toBeVisible();
+  // Its own layer, not a part of the header.
+  await expect(page.locator("header").getByTestId("announcement-bubble")).toHaveCount(0);
+  const header = (await page.locator("header").boundingBox())!;
+  const nav = (await page.locator(".mobile-navigation").boundingBox())!;
+
+  const positions = new Set<string>();
+  for (let sample = 0; sample < 8; sample += 1) {
+    await page.waitForTimeout(900);
+    for (const part of [bubble, bubble.locator(".announcement-bubble-count")]) {
+      const box = (await part.boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+      expect(box.y + box.height).toBeLessThanOrEqual(nav.y);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(390);
+    }
+    const box = (await bubble.boundingBox())!;
+    positions.add(`${Math.round(box.x)}:${Math.round(box.y)}`);
+  }
+  expect(positions.size).toBeGreaterThan(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  // A focused bubble holds still, so the focus ring does not run away.
+  await bubble.focus();
+  await page.waitForTimeout(400);
+  const focused = await bubble.boundingBox();
+  await page.waitForTimeout(800);
+  expect(await bubble.boundingBox()).toEqual(focused);
+
+  await page.goto("/ru/dua");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("announcement-float")).toHaveCount(0);
+});
+
+test("with reduced motion the bubble stands still in the top corner", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru");
+  const bubble = page.getByTestId("announcement-bubble");
+  await expect(bubble).toBeVisible();
+  const first = (await bubble.boundingBox())!;
+  await page.waitForTimeout(1500);
+  expect(await bubble.boundingBox()).toEqual(first);
+  expect(first.x + first.width).toBeGreaterThan(390 - 100);
+});
+
 test("phone bubble and window in Arabic follow the right-to-left layout", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
