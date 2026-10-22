@@ -41,4 +41,23 @@ if (fontFiles.length === 0) {
   throw new Error("Production build integrity check found no self-hosted fonts in .next/static/media.");
 }
 
+// Each locale's strings are a chunk of their own (lib/i18n-context.tsx). A client
+// module importing lib/translate would put all four back into every page.
+const localeProbes = await Promise.all(
+  ["ru", "en", "ar", "tr"].map(async (locale) =>
+    (await import(`../lib/messages/${locale}.ts`)).default["common.loading"]),
+);
+const jsFiles = (await readdir(chunksDirectory)).filter((name) => name.endsWith(".js"));
+const multilingualChunks = [];
+for (const name of jsFiles) {
+  const source = await readFile(join(chunksDirectory, name), "utf8");
+  if (localeProbes.filter((text) => source.includes(text)).length > 1) multilingualChunks.push(name);
+}
+if (multilingualChunks.length > 0) {
+  throw new Error(
+    `Client chunks bundle the messages of several locales: ${multilingualChunks.join(", ")}. ` +
+      "Client components translate through useI18n(), not lib/translate.",
+  );
+}
+
 console.log(`Production build integrity verified: ${cssFiles.length} CSS chunk(s), ${compiledBytes} bytes.`);

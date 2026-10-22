@@ -3,8 +3,8 @@ import {
   type Locale,
   type MessageKey,
   SUPPORTED_LOCALES,
-  translate,
 } from "./i18n";
+import { translate } from "./translate";
 import { localizedAlternates, localizedPath } from "./routing";
 
 export const SITE_NAME = "Quran Platform";

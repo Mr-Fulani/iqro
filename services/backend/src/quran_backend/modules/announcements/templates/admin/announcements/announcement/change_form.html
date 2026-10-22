@@ -7,20 +7,51 @@
   .announcement-tabs button[aria-selected="true"] { background: var(--body-bg, #fff); font-weight: 700; margin-bottom: -1px; border-bottom: 1px solid var(--body-bg, #fff); }
   .announcement-tabs .mark-ok { color: #2e7d32; }
   .announcement-tabs .mark-missing { color: #8a5a00; font-weight: 700; }
-  .announcement-signoff { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .announcement-publish { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--hairline-color, #e8e8e8); border-radius: 6px; background: var(--darkened-bg, #f8f8f8); display: flex; flex-direction: column; gap: 10px; }
+  .announcement-publish__state { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .announcement-publish__badge { padding: 3px 10px; border-radius: 4px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .announcement-publish__badge--draft { background: #fff3c4; color: #6b4b00; }
+  .announcement-publish__badge--scheduled { background: #e1eef5; color: #205067; }
+  .announcement-publish__badge--published { background: #e3f3e5; color: #1b5e20; }
+  .announcement-publish__badge--off { background: #eeeeee; color: #555555; }
+  .announcement-publish ul { margin: 0; padding-left: 20px; }
+  .announcement-publish__missing li { color: var(--error-fg, #ba2121); }
+  .announcement-publish__notes li { color: var(--body-quiet-color, #666); }
+  .announcement-publish__buttons, .announcement-signoff { display: flex; flex-wrap: wrap; gap: 8px; }
+  .announcement-signoff { justify-content: flex-end; }
 </style>
 {% endblock %}
 
+{% block form_top %}{{ block.super }}
+  {% if publish_panel %}
+    {# Enter in a text field presses the first submit button: let it save, never publish. #}
+    <input type="submit" name="_continue" value="Сохранить" tabindex="-1" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
+
+    <section class="announcement-publish" aria-label="Публикация">
+      <div class="announcement-publish__state">
+        <span class="announcement-publish__badge announcement-publish__badge--{{ publish_panel.tone }}">{{ publish_panel.state }}</span>
+        <span>{{ publish_panel.hint }}</span>
+      </div>
+      {% if publish_panel.missing %}
+        <div class="announcement-publish__missing">
+          <b>Чтобы опубликовать, осталось:</b>
+          <ul>{% for item in publish_panel.missing %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+      {% endif %}
+      {% if publish_panel.notes %}
+        <ul class="announcement-publish__notes">{% for item in publish_panel.notes %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if publish_panel.owner_only %}
+        <div>Сбор средств, окно с шагами, push и критический приоритет публикует только владелец.</div>
+      {% endif %}
+      <div class="announcement-publish__buttons">{% include "admin/announcements/announcement/publish_buttons.html" %}</div>
+    </section>
+  {% endif %}
+{% endblock %}
+
 {% block submit_buttons_bottom %}
-  {% if show_signoff %}
-    <div class="submit-row announcement-signoff">
-      {% if show_submit_review %}<input type="submit" name="_submit_review" value="На проверку">{% endif %}
-      {% if show_religious_review %}<input type="submit" name="_religious_review" value="Подписать религиозную проверку">{% endif %}
-      {% if show_publish %}<input type="submit" class="default" name="_publish" value="Подписать и опубликовать">{% endif %}
-      {% if show_withdraw %}<input type="submit" name="_withdraw" value="Снять с публикации">{% endif %}
-      {% if show_archive %}<input type="submit" name="_archive" value="В архив">{% endif %}
-      <input type="submit" name="_duplicate" value="Дублировать в новый черновик">
-    </div>
+  {% if publish_panel %}
+    <div class="submit-row announcement-signoff">{% include "admin/announcements/announcement/publish_buttons.html" %}</div>
   {% endif %}
   {{ block.super }}
 {% endblock %}

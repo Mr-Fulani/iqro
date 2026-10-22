@@ -80,8 +80,18 @@ def uses_image(announcement: Announcement) -> bool:
     return bool(announcement.image_object_key or (reciter and reciter.portrait_object_key))
 
 
-def readiness(announcement: Announcement) -> Readiness:
-    """Everything that must hold before the announcement may be signed."""
+RELIGIOUS_REVIEW_NEEDED = (
+    "Отмечено «Есть аят, хадис или фетва»: перед публикацией текст проверяет человек "
+    "из группы «Проверяющий религиозные тексты» — кнопка «Религиозный текст проверен»."
+)
+
+
+def readiness(announcement: Announcement, *, publisher_checks_religion: bool = False) -> Readiness:
+    """Everything that must hold before the announcement may be published.
+
+    `publisher_checks_religion`: the person about to publish may confirm the religious
+    text themselves, so publishing records that check instead of waiting for it.
+    """
     result = Readiness()
     translations = translations_by_language(announcement)
     _check_languages(announcement, translations, result)
@@ -89,7 +99,12 @@ def readiness(announcement: Announcement) -> Readiness:
     result.problems.extend(_action_problems(announcement))
     result.problems.extend(_channel_problems(announcement, steps))
     if announcement.needs_religious_review and announcement.religious_reviewed_at is None:
-        result.problems.append("Нужна подпись проверяющего религиозные тексты.")
+        if publisher_checks_religion:
+            result.notes.append(
+                "Есть аят, хадис или фетва: публикуя, вы подтверждаете, что текст проверен."
+            )
+        else:
+            result.problems.append(RELIGIOUS_REVIEW_NEEDED)
     if announcement.ends_at and announcement.ends_at <= announcement.starts_at:
         result.problems.append("Окончание показа должно быть позже начала.")
     return result
@@ -205,7 +220,7 @@ def sign_religious_review(announcement: Announcement, user: User) -> None:
     _require(user, RELIGIOUS_PERMISSION)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if not locked.is_editable:
-        raise AnnouncementNotReadyError(["Опубликованное объявление уже нельзя подписать заново."])
+        raise AnnouncementNotReadyError(["Объявление уже опубликовано."])
     locked.religious_reviewed_by = user
     locked.religious_reviewed_at = timezone.now()
     locked.save(update_fields=["religious_reviewed_by", "religious_reviewed_at", "updated_at"])
@@ -224,7 +239,8 @@ def publish(
         raise AnnouncementNotReadyError(["Объявление уже опубликовано или снято."])
     if is_sensitive(locked):
         _require(user, SENSITIVE_PERMISSION)
-    result = readiness(locked)
+    checks_religion = user.has_perm(RELIGIOUS_PERMISSION)
+    result = readiness(locked, publisher_checks_religion=checks_religion)
     if not result.ready:
         raise AnnouncementNotReadyError(result.problems)
 
@@ -245,6 +261,9 @@ def publish(
             # The bubble falls back to an icon; publishing must not wait for the CDN.
             logger.warning("Reciter portrait thumbnail failed", extra={"announcement": locked.pk})
     now = timezone.now()
+    if locked.needs_religious_review and locked.religious_reviewed_at is None:
+        locked.religious_reviewed_by = user
+        locked.religious_reviewed_at = now
     locked.status = AnnouncementStatus.PUBLISHED
     locked.reviewed_by = user
     locked.reviewed_at = now
