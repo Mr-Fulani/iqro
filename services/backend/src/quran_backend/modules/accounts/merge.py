@@ -52,7 +52,7 @@ from quran_backend.modules.reading.services import (
 )
 from quran_backend.modules.reminders.models import ReminderRule, RetiredReminderId
 from quran_backend.modules.reminders.services import reminder_sync_snapshot
-from quran_backend.modules.tajweed.models import TajweedCourseProgress
+from quran_backend.modules.tajweed.models import TajweedCourseProgress, TajweedPracticeSession
 from quran_backend.modules.tajweed.progress import merge_lessons
 
 
@@ -311,6 +311,9 @@ def _merge_tajweed_progress(*, source: User, target: User, counts: dict[str, int
         existing.save(update_fields=["lessons", "updated_at"])
         row.delete()
     counts["tajweed_progress"] = len(rows)
+    counts["tajweed_practice_sessions"] = TajweedPracticeSession.objects.filter(user=source).update(
+        user=target
+    )
 
 
 def _merge_announcement_receipts(*, source: User, target: User, counts: dict[str, int]) -> None:

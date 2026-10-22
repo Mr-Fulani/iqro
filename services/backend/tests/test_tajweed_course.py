@@ -439,7 +439,7 @@ def test_guest_progress_moves_to_the_account_and_is_deleted_with_it() -> None:
     )
     counts: dict[str, int] = {}
     _merge_tajweed_progress(source=guest, target=account, counts=counts)
-    assert counts == {"tajweed_progress": 2}
+    assert counts == {"tajweed_progress": 2, "tajweed_practice_sessions": 0}
     assert not TajweedCourseProgress.objects.filter(user=guest).exists()
     merged = TajweedCourseProgress.objects.get(user=account, course="tajweed").lessons
     assert merged["izhar"]["status"] == "completed"

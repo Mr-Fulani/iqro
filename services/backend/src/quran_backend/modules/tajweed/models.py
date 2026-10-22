@@ -302,3 +302,30 @@ class TajweedCourseProgress(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.course}"
+
+
+class TajweedPracticeSession(BaseModel):
+    """One finished practice session: the answers, as the client sent them.
+
+    The id comes from the client, so a session sent twice is stored once. The
+    score, streak and review list are computed from all sessions
+    (`practice.practice_state`), never stored.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tajweed_practice"
+    )
+    course = models.SlugField(max_length=64)
+    local_date = models.DateField()
+    finished_at = models.DateTimeField()
+    answers = models.JSONField(default=list)
+
+    class Meta:
+        db_table = "tajweed_practice_session"
+        ordering = ["user", "finished_at"]
+        indexes = [
+            models.Index(fields=["user", "course"], name="tajweed_practice_user_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.course}:{self.local_date}"
