@@ -125,6 +125,7 @@ Future<void> _pumpApp(
   Map<String?, AnnouncementFeedPage> pages = const {},
   AnnouncementLocalState stored = const AnnouncementLocalState(),
   bool dark = false,
+  bool still = true,
 }) async {
   tester.view.physicalSize = _size;
   tester.view.devicePixelRatio = _pixelRatio;
@@ -225,14 +226,14 @@ Future<void> _pumpApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            data: MediaQuery.of(context).copyWith(disableAnimations: still),
             child: child!,
           ),
         ),
       ),
     ),
   );
-  await _settle(tester);
+  if (still) await _settle(tester);
 }
 
 /// Image decoding runs outside the fake clock.
@@ -245,8 +246,12 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Future<void> _capture(WidgetTester tester, String name) async {
-  await _settle(tester);
+Future<void> _capture(
+  WidgetTester tester,
+  String name, {
+  bool settle = true,
+}) async {
+  if (settle) await _settle(tester);
   final boundary =
       _boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
   final bytes = await tester.runAsync(() async {
@@ -287,6 +292,25 @@ void main() {
       dark: true,
     );
     await _capture(tester, 'app-home-bubble-dark-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('the bubble floats over the page', (tester) async {
+    await _pumpApp(
+      tester,
+      location: '/app?tab=0',
+      active: _announcements(),
+      still: false,
+    );
+    // The portrait decodes outside the fake clock; then 25 s of drift.
+    for (var frame = 0; frame < 60; frame++) {
+      await tester.pump(const Duration(milliseconds: 500));
+      if (frame % 10 == 0) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+      }
+    }
+    await _capture(tester, 'app-home-bubble-floating-ru', settle: false);
   }, skip: _directory.isEmpty);
 
   testWidgets('More shows unread news', (tester) async {

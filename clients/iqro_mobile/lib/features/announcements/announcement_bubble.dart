@@ -17,8 +17,12 @@ const announcementBubbleSize = 68.0;
 const _faceSize = 46.0;
 const _popDuration = Duration(milliseconds: 380);
 const _openAfter = Duration(milliseconds: 320);
-// Rising in (600 ms), then two larger bobs (1.6 s), then the calm bob.
+// Rising in (600 ms), then two larger bobs (1.6 s), then the drift.
 const _introDuration = Duration(milliseconds: 2200);
+// Every period of the drift divides this, so the path closes without a jump.
+const _driftSeconds = 144.0;
+// Clear of the screen's edges and the bars, with room for the badge.
+const _edge = 12.0;
 const _riseShare = 600 / 2200;
 const _rise = Cubic(.34, 1.56, .64, 1);
 
@@ -32,38 +36,52 @@ const _drops = <(Offset, Color)>[
   (Offset(-5, 44), Color(0xFFA78BFA)),
 ];
 
-/// Keeps the bubble's place among the top bar's buttons and draws it above
-/// the bar: the bar clips its buttons, and the bubble with its glow, rise and
-/// pop is larger than the bar.
-class AnnouncementBubbleHost extends StatefulWidget {
-  const AnnouncementBubbleHost({required this.builder, super.key});
+/// Lets the bubble float over the home screen, between the top bar and the
+/// bottom navigation, above the page and below windows; it takes no room in
+/// the layout.
+class AnnouncementBubbleLayer extends StatelessWidget {
+  const AnnouncementBubbleLayer({
+    required this.child,
+    this.topBarHeight = 64,
+    super.key,
+  });
 
-  /// Builds the screen; [slot] goes among the top bar's actions.
-  final Widget Function(BuildContext context, Widget slot) builder;
+  /// The home screen with its top bar.
+  final Widget child;
 
-  @override
-  State<AnnouncementBubbleHost> createState() => _AnnouncementBubbleHostState();
-}
-
-class _AnnouncementBubbleHostState extends State<AnnouncementBubbleHost> {
-  final _link = LayerLink();
+  /// Height of [child]'s top bar below the status bar.
+  final double topBarHeight;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
-        widget.builder(context, _BubbleSlot(link: _link)),
-        Positioned(
-          left: 0,
-          top: 0,
-          child: CompositedTransformFollower(
-            link: _link,
-            showWhenUnlinked: false,
-            targetAnchor: Alignment.center,
-            followerAnchor: Alignment.center,
-            // Its bob rises up to 8 px: kept clear of the status bar.
-            offset: const Offset(0, 4),
-            child: const AnnouncementBubble(),
+        child,
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The bottom inset includes the navigation the page extends
+              // under.
+              final padding = MediaQuery.paddingOf(context);
+              const half = announcementBubbleSize / 2;
+              final left = padding.left + _edge + half;
+              final top = padding.top + topBarHeight + _edge + half;
+              final right = math.max(
+                left,
+                constraints.maxWidth - padding.right - _edge - half,
+              );
+              final bottom = math.max(
+                top,
+                constraints.maxHeight - padding.bottom - _edge - half,
+              );
+              return Stack(
+                children: <Widget>[
+                  AnnouncementBubble(
+                    zone: Rect.fromLTRB(left, top, right, bottom),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -71,32 +89,14 @@ class _AnnouncementBubbleHostState extends State<AnnouncementBubbleHost> {
   }
 }
 
-class _BubbleSlot extends ConsumerWidget {
-  const _BubbleSlot({required this.link});
-
-  final LayerLink link;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final signedIn = announcementSignedIn(
-      ref.watch(sessionProvider.select((value) => value.valueOrNull)),
-    );
-    final shown = ref.watch(
-      announcementsProvider.select(
-        (value) => value.bubble(signedIn: signedIn).isNotEmpty,
-      ),
-    );
-    return CompositedTransformTarget(
-      link: link,
-      child: SizedBox(width: shown ? announcementBubbleSize + 4 : 0),
-    );
-  }
-}
-
-/// The live bubble in the top corner of the home screen. A tap pops it and
-/// opens the window; it comes back by the admin's frequency until read.
+/// The live bubble drifting over the home screen like a soap bubble in the
+/// air. A tap pops it and opens the window; it comes back by the admin's
+/// frequency until read.
 class AnnouncementBubble extends ConsumerStatefulWidget {
-  const AnnouncementBubble({super.key});
+  const AnnouncementBubble({required this.zone, super.key});
+
+  /// Where the bubble's centre may go, in the layer's coordinates.
+  final Rect zone;
 
   @override
   ConsumerState<AnnouncementBubble> createState() => _AnnouncementBubbleState();
@@ -105,12 +105,14 @@ class AnnouncementBubble extends ConsumerStatefulWidget {
 class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _intro;
-  late final AnimationController _float;
+  late final AnimationController _drift;
   late final AnimationController _spin;
   late final AnimationController _pop;
   String? _locale;
   var _popping = false;
   var _moving = false;
+  // Focused from the keyboard or a screen reader: it holds still.
+  var _held = false;
   DateTime? _introducedFor;
   Timer? _openTimer;
 
@@ -124,11 +126,13 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     _intro = AnimationController(vsync: this, duration: _introDuration)
       ..value = 1
       ..addStatusListener((status) {
-        if (status == AnimationStatus.completed && _moving) _float.repeat();
+        if (status == AnimationStatus.completed && _moving && !_held) {
+          _drift.repeat();
+        }
       });
-    _float = AnimationController(
+    _drift = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3400),
+      duration: Duration(milliseconds: (_driftSeconds * 1000).round()),
     );
     _spin = AnimationController(
       vsync: this,
@@ -166,33 +170,60 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     WidgetsBinding.instance.removeObserver(this);
     _openTimer?.cancel();
     _intro.dispose();
-    _float.dispose();
+    _drift.dispose();
     _spin.dispose();
     _pop.dispose();
     super.dispose();
   }
 
-  /// The first sight of a visit rises in and bobs twice, then calms down.
+  /// The first sight of a visit rises in at the top end and bobs twice, then
+  /// drifts; still it stays where it is.
   void _setMoving(bool moving, DateTime visit) {
     _moving = moving;
     if (!moving) {
       _intro
         ..stop()
         ..value = 1;
-      _float.stop();
+      _drift.stop();
       _spin.stop();
       return;
     }
     if (!_spin.isAnimating) _spin.repeat();
     if (_introducedFor != visit) {
       _introducedFor = visit;
-      _float
+      _drift
         ..stop()
         ..value = 0;
       _intro.forward(from: 0);
-    } else if (!_intro.isAnimating && !_float.isAnimating) {
-      _float.repeat();
+    } else if (!_intro.isAnimating && !_drift.isAnimating && !_held) {
+      _drift.repeat();
     }
+  }
+
+  void _hold(bool held) {
+    if (held == _held) return;
+    _held = held;
+    if (held) {
+      _drift.stop();
+    } else if (_moving && !_intro.isAnimating) {
+      _drift.repeat();
+    }
+  }
+
+  /// The drift: two waves across and two down, slow and never repeating
+  /// within a visit's glance. It starts at the top end of the zone and keeps
+  /// to its upper half, clear of the player and the bottom buttons.
+  Offset _position() {
+    final seconds = _drift.value * _driftSeconds;
+    double wave(double period) => math.cos(2 * math.pi * seconds / period);
+    final across = .65 + .35 * (.6 * wave(16) + .4 * wave(9));
+    final down = .25 * (1 - (.6 * wave(12) + .4 * wave(14.4)));
+    final zone = widget.zone;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return Offset(
+      rtl ? zone.right - across * zone.width : zone.left + across * zone.width,
+      zone.top + down * zone.height,
+    );
   }
 
   Future<void> _open(List<Announcement> items) async {
@@ -206,7 +237,15 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
       await opened.future;
       if (!mounted) return;
     }
-    await showAnnouncementDialog(context, items: items, surface: 'bubble');
+    final box = context.findRenderObject() as RenderBox?;
+    await showAnnouncementDialog(
+      context,
+      items: items,
+      surface: 'bubble',
+      origin: box != null && box.hasSize
+          ? box.localToGlobal(box.size.center(Offset.zero))
+          : null,
+    );
     if (!mounted) return;
     _pop.reset();
     setState(() => _popping = false);
@@ -248,66 +287,74 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
     final onTap = first == null || _popping
         ? null
         : () => unawaited(_open(items));
-    return Semantics(
+    final core = Semantics(
       button: true,
       label: context.l10n.newsBubble(items.length),
       onTap: onTap,
+      onDidGainAccessibilityFocus: () => _hold(true),
+      onDidLoseAccessibilityFocus: () => _hold(false),
       excludeSemantics: true,
-      child: SizedBox.square(
-        dimension: announcementBubbleSize,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: <Widget>[
-            if (_popping && !reduced) _Burst(animation: _pop),
-            AnimatedBuilder(
-              animation: Listenable.merge(<Listenable>[_intro, _float, _pop]),
-              builder: (context, child) {
-                final motion = _motion();
-                final pop = _pop.value;
-                final popScale = pop < .45
-                    ? 1 + .3 * (pop / .45)
-                    : 1.3 + .4 * ((pop - .45) / .55);
-                final popOpacity = pop < .45
-                    ? 1 - .15 * (pop / .45)
-                    : .85 * (1 - (pop - .45) / .55);
-                return Opacity(
-                  opacity: _popping
-                      ? (reduced ? 0 : popOpacity.clamp(0, 1))
-                      : motion.opacity,
-                  child: Transform.translate(
-                    offset: Offset(0, motion.dy),
-                    child: Transform.scale(
-                      scale: motion.scale * (_popping ? popScale : 1),
-                      child: child,
-                    ),
-                  ),
-                );
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  Material(
-                    type: MaterialType.transparency,
-                    child: InkWell(
-                      key: const ValueKey('announcement-bubble'),
-                      customBorder: const CircleBorder(),
-                      onTap: onTap,
-                      child: _BubbleBody(spin: _spin, first: first),
-                    ),
-                  ),
-                  if (items.length > 1 && !_popping)
-                    PositionedDirectional(
-                      top: -4,
-                      end: -4,
-                      child: _Count(count: items.length),
-                    ),
-                ],
-              ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              key: const ValueKey('announcement-bubble'),
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              onFocusChange: _hold,
+              child: _BubbleBody(spin: _spin, first: first),
             ),
-          ],
-        ),
+          ),
+          if (items.length > 1 && !_popping)
+            PositionedDirectional(
+              top: -4,
+              end: -4,
+              child: _Count(count: items.length),
+            ),
+        ],
       ),
+    );
+    return AnimatedBuilder(
+      animation: Listenable.merge(<Listenable>[_intro, _drift, _pop]),
+      child: core,
+      builder: (context, core) {
+        final at = _position();
+        final motion = _motion();
+        final pop = _pop.value;
+        final popScale = pop < .45
+            ? 1 + .3 * (pop / .45)
+            : 1.3 + .4 * ((pop - .45) / .55);
+        final popOpacity = pop < .45
+            ? 1 - .15 * (pop / .45)
+            : .85 * (1 - (pop - .45) / .55);
+        return Positioned(
+          left: at.dx - announcementBubbleSize / 2,
+          top: at.dy - announcementBubbleSize / 2,
+          width: announcementBubbleSize,
+          height: announcementBubbleSize,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: <Widget>[
+              if (_popping && !reduced) _Burst(animation: _pop),
+              Opacity(
+                opacity: _popping
+                    ? (reduced ? 0 : popOpacity.clamp(0, 1))
+                    : motion.opacity,
+                child: Transform.translate(
+                  offset: Offset(0, motion.dy),
+                  child: Transform.scale(
+                    scale: motion.scale * (_popping ? popScale : 1),
+                    child: core,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -329,13 +376,10 @@ class _AnnouncementBubbleState extends ConsumerState<AnnouncementBubble>
       scale = 1 + .08 * phase;
       dy = -8 * phase;
     }
-    // The calm bob: up 4 px and 4 % larger at the middle.
-    final phase = (1 - math.cos(_float.value * 2 * math.pi)) / 2;
-    return (
-      scale: scale * (1 + .04 * phase),
-      dy: dy - 4 * phase,
-      opacity: opacity,
-    );
+    // Breathing while it drifts: 4 % larger every 3.6 s.
+    final seconds = _drift.value * _driftSeconds;
+    final phase = (1 - math.cos(2 * math.pi * seconds / 3.6)) / 2;
+    return (scale: scale * (1 + .04 * phase), dy: dy, opacity: opacity);
   }
 }
 

@@ -131,16 +131,12 @@ void main() {
     );
     expect(badge.height, 22);
     expect(badge.width, greaterThanOrEqualTo(22));
-    // Beside the settings button, not over it, the status bar or the page.
-    final settings = tester.getRect(find.byIcon(Icons.settings));
+    // It starts at the top end of the page, below the top bar.
     final bubble = tester.getRect(_bubble);
-    final bar = tester.getRect(find.byType(AppBar));
-    expect(bubble.right, lessThanOrEqualTo(settings.left));
-    expect(bubble.top, greaterThanOrEqualTo(bar.top));
-    expect(bubble.bottom, lessThanOrEqualTo(bar.bottom + 8));
+    expect(bubble.top, greaterThan(tester.getRect(find.byType(AppBar)).bottom));
     expect(
       tester.getSemantics(find.bySemanticsLabel('Новое: 2. Открыть')),
-      matchesSemantics(
+      isSemantics(
         label: 'Новое: 2. Открыть',
         isButton: true,
         hasTapAction: true,
@@ -302,6 +298,88 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the bubble drifts over home, never under the bars', (
+    tester,
+  ) async {
+    final repository = FakeAnnouncementRepository(active: [testAnnouncement()]);
+    await _pump(tester, repository: repository, reduced: false);
+    // Past the rise and the two bobs.
+    await tester.pump(const Duration(seconds: 2));
+    final screen = Offset.zero & tester.view.physicalSize / 2.75;
+    final bar = tester.getRect(find.byType(AppBar));
+    final navigation = tester.getRect(find.byType(NavigationBar));
+    final centres = <Offset>{};
+    var elapsed = 0;
+    for (final seconds in <int>[0, 3, 5, 8, 13, 21, 34, 55, 89, 144]) {
+      // In half-second frames, as the screen would draw it.
+      for (; elapsed < seconds * 2; elapsed++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      final rect = tester.getRect(_bubble);
+      expect(rect.overlaps(bar), isFalse, reason: 'over the top bar at $rect');
+      expect(
+        rect.overlaps(navigation),
+        isFalse,
+        reason: 'over the navigation at $rect',
+      );
+      expect(screen.contains(rect.topLeft), isTrue, reason: '$rect');
+      expect(screen.contains(rect.bottomRight), isTrue, reason: '$rect');
+      // Kept to the upper half, clear of the player and bottom buttons.
+      expect(rect.center.dy, lessThan(screen.height * .6));
+      centres.add(rect.center);
+    }
+    expect(centres.length, greaterThan(5), reason: 'it should move');
+    final xs = centres.map((centre) => centre.dx);
+    expect(
+      xs.reduce((a, b) => a > b ? a : b) - xs.reduce((a, b) => a < b ? a : b),
+      greaterThan(screen.width * .3),
+    );
+  });
+
+  testWidgets('reduce motion keeps the bubble in place', (tester) async {
+    final repository = FakeAnnouncementRepository(active: [testAnnouncement()]);
+    await _pump(tester, repository: repository);
+    final before = tester.getRect(_bubble);
+    await tester.pump(const Duration(seconds: 20));
+    expect(tester.getRect(_bubble), before);
+  });
+
+  testWidgets('focus from the keyboard or a screen reader stops the drift', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final repository = FakeAnnouncementRepository(active: [testAnnouncement()]);
+    await _pump(tester, repository: repository, reduced: false);
+    Future<void> advance(int seconds) async {
+      for (var frame = 0; frame < seconds * 2; frame++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+    }
+
+    await advance(5);
+    final node = find.semantics.byLabel('Новое: 1. Открыть');
+    tester.semantics.didGainAccessibilityFocus(node);
+    await tester.pump();
+    final held = tester.getRect(_bubble);
+    await advance(6);
+    expect(tester.getRect(_bubble), held);
+    tester.semantics.didLoseAccessibilityFocus(node);
+    await advance(3);
+    expect(tester.getRect(_bubble), isNot(held));
+
+    // The bubble's own focus, as Tab from a keyboard would give it.
+    Focus.of(
+      tester.element(
+        find.descendant(of: _bubble, matching: find.byType(RotationTransition)),
+      ),
+    ).requestFocus();
+    await tester.pump();
+    final focused = tester.getRect(_bubble);
+    await advance(6);
+    expect(tester.getRect(_bubble), focused);
+    semantics.dispose();
+  });
+
   testWidgets('a bubble under another tab is neither counted nor moving', (
     tester,
   ) async {
@@ -449,21 +527,32 @@ void main() {
   });
 }
 
+/// Home as the app shows it: its top bar inside, the bottom navigation of the
+/// shell outside, with the page extending under it.
 class _Home extends StatelessWidget {
   const _Home();
 
   @override
-  Widget build(BuildContext context) => AnnouncementBubbleHost(
-    builder: (context, bubble) => Scaffold(
-      appBar: IqroTopBar(
-        title: 'IQRO',
-        actions: <Widget>[
-          bubble,
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings)),
-          const SizedBox(width: 6),
-        ],
+  Widget build(BuildContext context) => Scaffold(
+    extendBody: true,
+    body: AnnouncementBubbleLayer(
+      child: Scaffold(
+        appBar: IqroTopBar(
+          title: 'IQRO',
+          actions: <Widget>[
+            IconButton(onPressed: () {}, icon: const Icon(Icons.settings)),
+            const SizedBox(width: 6),
+          ],
+        ),
+        body: const SizedBox.expand(),
       ),
-      body: const SizedBox.expand(),
+    ),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: 0,
+      destinations: const <Widget>[
+        NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+        NavigationDestination(icon: Icon(Icons.grid_view), label: 'More'),
+      ],
     ),
   );
 }

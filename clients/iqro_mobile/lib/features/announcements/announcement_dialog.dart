@@ -9,11 +9,12 @@ import 'announcement_logic.dart';
 import 'announcement_parts.dart';
 
 /// Opens the window of one or several announcements. From the bubble it grows
-/// out of the bubble's corner, as on the site.
+/// out of the bubble, at [origin] on the screen.
 Future<void> showAnnouncementDialog(
   BuildContext context, {
   required List<Announcement> items,
   required String surface,
+  Offset? origin,
 }) {
   final router = GoRouter.of(context);
   final reduced = MediaQuery.disableAnimationsOf(context);
@@ -36,13 +37,17 @@ Future<void> showAnnouncementDialog(
         curve: const Cubic(.2, .9, .25, 1.08),
         reverseCurve: Curves.easeIn,
       );
+      final size = MediaQuery.sizeOf(context);
       return FadeTransition(
         opacity: animation,
         child: ScaleTransition(
           scale: Tween<double>(begin: .08, end: 1).animate(grow),
-          alignment: AlignmentDirectional.topEnd.resolve(
-            Directionality.of(context),
-          ),
+          alignment: origin == null || size.isEmpty
+              ? AlignmentDirectional.topEnd.resolve(Directionality.of(context))
+              : Alignment(
+                  origin.dx / size.width * 2 - 1,
+                  origin.dy / size.height * 2 - 1,
+                ),
           child: child,
         ),
       );

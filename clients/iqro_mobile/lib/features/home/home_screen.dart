@@ -89,8 +89,8 @@ class HomeScreen extends ConsumerWidget {
                   .map((event) => event.title(locale))
                   .join(' · ') ??
               '';
-    return AnnouncementBubbleHost(
-      builder: (context, bubble) => Scaffold(
+    return AnnouncementBubbleLayer(
+      child: Scaffold(
         appBar: IqroTopBar(
           title: 'IQRO',
           leading: const Padding(
@@ -98,7 +98,6 @@ class HomeScreen extends ConsumerWidget {
             child: Center(child: IqroAnimatedLogo(size: 36)),
           ),
           actions: <Widget>[
-            bubble,
             IconButton(
               tooltip: context.l10n.settings,
               onPressed: () => context.push('/settings'),
