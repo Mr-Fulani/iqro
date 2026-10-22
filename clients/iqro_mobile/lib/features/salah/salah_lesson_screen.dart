@@ -139,12 +139,12 @@ class SalahStepPlayer extends ConsumerStatefulWidget {
 
 class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     with WidgetsBindingObserver {
-  late final IqroStepController _steps;
+  late final IqroStepController _pager;
   var _finishing = false;
   final _three = Salah3DController();
   late final List<SalahMediaScene?> _scenes = salahStepScenes(
     widget.document,
-    _lessonSteps,
+    _steps,
   );
 
   // The lesson owns the recordings of its steps in the shared player: leaving
@@ -153,15 +153,15 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   // Kept for dispose, when ref can no longer be read.
   late AudioController _audio;
 
-  List<SalahStep> get _lessonSteps => widget.lesson.steps;
+  List<SalahStep> get _steps => widget.lesson.steps;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _audio = ref.read(audioControllerProvider.notifier);
-    final initial = widget.initialIndex.clamp(0, _lessonSteps.length - 1);
-    _steps = IqroStepController(initialIndex: initial);
+    final initial = widget.initialIndex.clamp(0, _steps.length - 1);
+    _pager = IqroStepController(initialIndex: initial);
     unawaited(_record(initial));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -189,7 +189,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopAudio();
-    _steps.dispose();
+    _pager.dispose();
     _three.dispose();
     super.dispose();
   }
@@ -209,8 +209,8 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
 
   /// Loads the next step's image ahead, so turning the page shows it at once.
   void _precache(int index) {
-    if (index < 0 || index >= _lessonSteps.length) return;
-    final media = widget.document.stepMedia(_lessonSteps[index]);
+    if (index < 0 || index >= _steps.length) return;
+    final media = widget.document.stepMedia(_steps[index]);
     if (media == null) return;
     unawaited(
       precacheImage(
@@ -228,7 +228,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
           .recordStep(
             course: widget.courseSlug,
             lesson: widget.lesson.slug,
-            stepSlug: _lessonSteps[index].slug,
+            stepSlug: _steps[index].slug,
             contentVersion: widget.document.course.version,
           );
       if (mounted) ref.invalidate(salahProgressProvider(widget.courseSlug));
@@ -237,18 +237,18 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     }
   }
 
-  void _goTo(int index) => _steps.goTo(context, index, _lessonSteps.length);
+  void _goTo(int index) => _pager.goTo(context, index, _steps.length);
 
   void _next() {
-    final index = _steps.index.value;
-    if (index >= _lessonSteps.length - 1) {
+    final index = _pager.index.value;
+    if (index >= _steps.length - 1) {
       unawaited(_finish());
     } else {
       _goTo(index + 1);
     }
   }
 
-  void _previous() => _goTo(_steps.index.value - 1);
+  void _previous() => _goTo(_pager.index.value - 1);
 
   Future<void> _finish() async {
     if (_finishing) return;
@@ -260,7 +260,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
           .complete(
             course: widget.courseSlug,
             lesson: widget.lesson.slug,
-            stepSlug: _lessonSteps.last.slug,
+            stepSlug: _steps.last.slug,
             contentVersion: widget.document.course.version,
           );
     } on Object {
@@ -296,33 +296,33 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
               child: _ModeSwitch(),
             ),
             ValueListenableBuilder<int>(
-              valueListenable: _steps.index,
+              valueListenable: _pager.index,
               builder: (context, index, _) => _LessonHeader(
                 lesson: lesson,
-                step: _lessonSteps[index],
+                step: _steps[index],
                 index: index,
               ),
             ),
             Expanded(
               child: IqroStepPager(
-                controller: _steps,
+                controller: _pager,
                 keyPrefix: 'salah',
                 nextLabel: context.l10n.salahNextStep,
                 previousLabel: context.l10n.salahPreviousStep,
                 onNext: _next,
                 onPrevious: _previous,
-                itemCount: _lessonSteps.length,
+                itemCount: _steps.length,
                 onPageChanged: _onPageChanged,
                 itemBuilder: (context, index) => _StepPage(
-                  key: ValueKey(_lessonSteps[index].slug),
+                  key: ValueKey(_steps[index].slug),
                   courseSlug: widget.courseSlug,
                   document: widget.document,
                   lesson: lesson,
-                  step: _lessonSteps[index],
+                  step: _steps[index],
                   audioOwner: _audioOwner,
                   visual: _StepVisualState(
                     index: index,
-                    current: _steps.index,
+                    current: _pager.index,
                     scene: _scenes[index],
                     three: _three,
                   ),
@@ -330,11 +330,11 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
               ),
             ),
             ValueListenableBuilder<int>(
-              valueListenable: _steps.index,
+              valueListenable: _pager.index,
               builder: (context, index, _) => IqroStepButtons(
                 keyPrefix: 'salah',
                 isFirst: index == 0,
-                isLast: index == _lessonSteps.length - 1,
+                isLast: index == _steps.length - 1,
                 onBack: _previous,
                 onNext: _next,
                 backLabel: context.l10n.salahBack,
