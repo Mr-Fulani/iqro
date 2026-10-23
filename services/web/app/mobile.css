@@ -1158,8 +1158,10 @@
     outline-offset: 2px;
   }
 
-  /* The full player: a dark sheet over the whole screen, as player_screen.dart. */
-  .mobile-audio-player.is-full {
+  /* The full player: a dark sheet over the whole screen, as player_screen.dart.
+     The sheet's size follows the state: "full" and "closing" (sinking away) are
+     the sheet, anything else is the 66 px bar above. */
+  .mobile-audio-player:is(.is-full, .is-closing) {
     inset: 0;
     z-index: 100;
     display: grid;
@@ -1175,7 +1177,8 @@
     transition: transform 0.26s cubic-bezier(0.2, 0, 0, 1);
   }
 
-  .mobile-audio-player.is-full.is-closing {
+  .mobile-audio-player.is-closing {
+    pointer-events: none;
     animation: mobile-player-sink 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
   }
 
@@ -1191,14 +1194,14 @@
     }
   }
 
-  .mobile-audio-player.is-full > .global-audio-player-backdrop,
-  .mobile-audio-player.is-full > .mobile-player-sheet-body {
+  .mobile-audio-player:is(.is-full, .is-closing) > .global-audio-player-backdrop,
+  .mobile-audio-player:is(.is-full, .is-closing) > .mobile-player-sheet-body {
     grid-area: 1 / 1;
     min-width: 0;
     min-height: 0;
   }
 
-  .mobile-audio-player.is-full > .mobile-player-sheet-body {
+  .mobile-audio-player:is(.is-full, .is-closing) > .mobile-player-sheet-body {
     position: relative;
     inset: auto;
     flex-direction: column;
@@ -1263,7 +1266,7 @@
     text-overflow: ellipsis;
   }
 
-  .mobile-audio-player.is-full .mobile-player-engine {
+  .mobile-audio-player:is(.is-full, .is-closing) .mobile-player-engine {
     flex: 1 1 auto;
     flex-direction: column;
     align-items: stretch;
@@ -1284,6 +1287,53 @@
 
   .mobile-player-summary.is-full > .mobile-player-artwork {
     margin-bottom: 20px;
+  }
+
+  .mobile-player-copy,
+  .mobile-player-controls {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .mobile-player-copy {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-player-controls {
+    gap: 10px;
+  }
+
+  /* A tap on the body hides the controls over 250 ms, as the app's AnimatedOpacity;
+     the picture loses its scrim, the portrait and the sound bars stay. */
+  .mobile-player-full-head,
+  .mobile-player-copy,
+  .mobile-player-controls,
+  .mobile-player-options,
+  .mobile-audio-player .global-audio-player-scrim {
+    transition: opacity 0.25s ease;
+  }
+
+  .mobile-audio-player.is-controls-hidden :is(.mobile-player-full-head, .mobile-player-copy, .mobile-player-controls, .mobile-player-options),
+  .mobile-audio-player.is-controls-hidden .global-audio-player-scrim {
+    opacity: 0;
+  }
+
+  .mobile-player-reveal {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-player-reveal:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: -6px;
+    border-radius: 12px;
   }
 
   .mobile-player-eyebrow {
@@ -1647,8 +1697,14 @@ html.is-mobile-player-open {
 @media (prefers-reduced-motion: reduce) {
   .mobile-audio-player,
   .mobile-audio-player.is-full,
+  .mobile-audio-player.is-closing,
   .mobile-player-sheet-body,
-  .mobile-player-fab {
+  .mobile-player-fab,
+  .mobile-player-full-head,
+  .mobile-player-copy,
+  .mobile-player-controls,
+  .mobile-player-options,
+  .mobile-audio-player .global-audio-player-scrim {
     transition: none;
     animation: none;
   }
