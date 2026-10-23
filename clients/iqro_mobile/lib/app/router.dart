@@ -6,8 +6,10 @@ import '../core/widgets/home_widget_routes.dart';
 import 'audio_navigation_boundary.dart';
 import '../features/account/account_screen.dart';
 import '../features/account/devices_screen.dart';
+import '../features/announcements/news_screen.dart';
 import '../features/calendar/hijri_calendar_screen.dart';
 import '../features/audio/player_screen.dart';
+import '../features/audio/reciter_launch_screen.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_screen.dart';
 import '../features/feedback/feedback_models.dart';
@@ -122,6 +124,14 @@ GoRouter createRouter({required bool onboardingComplete}) {
         path: '/player',
         builder: (context, state) => const PlayerScreen(),
       ),
+      GoRoute(
+        path: '/audio/reciter/:id',
+        builder: (context, state) => ReciterLaunchScreen(
+          reciterId: state.pathParameters['id'] ?? '',
+          autoplay: state.uri.queryParameters['play'] == '1',
+        ),
+      ),
+      GoRoute(path: '/news', builder: (context, state) => const NewsScreen()),
       GoRoute(
         path: '/after-prayer',
         builder: (context, state) =>

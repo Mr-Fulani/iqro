@@ -8,6 +8,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../announcements/announcement_bubble.dart';
 import '../audio/mini_player.dart';
 import '../calendar/hijri_calendar_service.dart';
 import '../calendar/calendar_catalog.dart';
@@ -88,189 +89,198 @@ class HomeScreen extends ConsumerWidget {
                   .map((event) => event.title(locale))
                   .join(' · ') ??
               '';
-    return Scaffold(
-      appBar: IqroTopBar(
-        title: 'IQRO',
-        leading: const Padding(
-          padding: EdgeInsetsDirectional.only(start: 10, end: 8),
-          child: Center(child: IqroAnimatedLogo(size: 36)),
-        ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: context.l10n.settings,
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(Icons.settings_outlined),
+    return AnnouncementBubbleLayer(
+      child: Scaffold(
+        appBar: IqroTopBar(
+          title: 'IQRO',
+          leading: const Padding(
+            padding: EdgeInsetsDirectional.only(start: 10, end: 8),
+            child: Center(child: IqroAnimatedLogo(size: 36)),
           ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: IqroPage(
-        padding: iqroRootTabPadding(
-          playerActive: player.track != null,
-          playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+          actions: <Widget>[
+            IconButton(
+              tooltip: context.l10n.settings,
+              onPressed: () => context.push('/settings'),
+              icon: const Icon(Icons.settings_outlined),
+            ),
+            const SizedBox(width: 6),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            HomePrayerCard(
-              schedule: prayerState.valueOrNull,
-              loading: prayerState.isLoading && prayerState.valueOrNull == null,
-              clock: clock,
-              onTap: () => context.push('/prayer'),
-              onReminders: () => context.push('/reminders'),
-            ),
-            const SizedBox(height: 12),
-            HomeContinueReadingCard(
-              surahName: position == null
-                  ? context.l10n.loading
-                  : currentSurahName,
-              ayah: position?.ayah,
-              page: position?.page,
-              error: positionState.hasError && position == null,
-              onBookmarks: () => context.push('/favorites'),
-              onTap: position == null
-                  ? positionState.hasError && accountScopeKey != null
-                        ? () => ref.invalidate(
-                            readingPositionProvider(accountScopeKey),
-                          )
-                        : null
-                  : () {
-                      if (readerMode == ReaderMode.mushaf) {
-                        context.push(
-                          '/mushaf?page=${position.page}'
-                          '&surah=${position.surah}&ayah=${position.ayah}',
-                        );
-                      } else {
-                        context.push(
-                          '/reader/${position.surah}?ayah=${position.ayah}',
-                        );
-                      }
-                    },
-            ),
-            const SizedBox(height: 12),
-            HomePlanCard(
-              achieved: achieved,
-              target: target,
-              metric: planMetric,
-              loading: planLoading,
-              error: planState.hasError && plan == null,
-              palm: plan == null ? null : palmGrowthFor(plan),
-              onTap: () => context.go('/app?tab=2'),
-            ),
-            const SizedBox(height: 16),
-            IqroActionGrid(
-              children: [
-                HomeFeatureCard(
-                  icon: Icons.schedule_outlined,
-                  title: context.l10n.afterPrayer,
-                  subtitle: planLoading
-                      ? context.l10n.loading
-                      : planState.hasError && plan == null
-                      ? context.l10n.openPlan
-                      : '$prayerPages ${context.l10n.pages}',
-                  onTap: () => context.push('/after-prayer'),
-                ),
-                HomeFeatureCard(
-                  icon: Icons.school_outlined,
-                  title: context.l10n.memorization,
-                  subtitle: _memorizationTitle(
-                    context,
-                    memorizationState,
-                    memorization,
-                    memorizationSurah,
-                    locale,
-                  ),
-                  onTap: () => context.push('/memorization'),
-                ),
-                HomeFeatureCard(
-                  icon: Icons.headphones_outlined,
-                  title: context.l10n.navAudio,
-                  subtitle:
-                      reciter?.nameFor(locale) ?? context.l10n.allReciters,
-                  onTap: () => context.go('/app?tab=3'),
-                  action: player.track == null
-                      ? null
-                      : IconButton.filledTonal(
-                          tooltip: player.playing
-                              ? context.l10n.pause
-                              : context.l10n.play,
-                          onPressed: player.buffering
-                              ? null
-                              : ref.read(audioControllerProvider).channel ==
-                                        AudioPlaybackChannel.listening &&
-                                    ref
-                                            .read(audioControllerProvider)
-                                            .standalone ==
-                                        null
-                              ? audioController.toggle
-                              : audioController.activateListening,
-                          icon: player.buffering
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Icon(
-                                  player.playing
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                ),
-                        ),
-                ),
-                HomeFeatureCard(
-                  icon: Icons.nights_stay_outlined,
-                  title: context.l10n.dua,
-                  subtitle: _duaSubtitle(context, duaState, dailyDua),
-                  onTap: () => dailyDua == null
-                      ? context.push('/dua')
-                      : context.push(duaEntryRoute(dailyDua), extra: dailyDua),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            IqroCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Column(
+        body: IqroPage(
+          padding: iqroRootTabPadding(
+            playerActive: player.track != null,
+            playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              HomePrayerCard(
+                schedule: prayerState.valueOrNull,
+                loading:
+                    prayerState.isLoading && prayerState.valueOrNull == null,
+                clock: clock,
+                onTap: () => context.push('/prayer'),
+                onReminders: () => context.push('/reminders'),
+              ),
+              const SizedBox(height: 12),
+              HomeContinueReadingCard(
+                surahName: position == null
+                    ? context.l10n.loading
+                    : currentSurahName,
+                ayah: position?.ayah,
+                page: position?.page,
+                error: positionState.hasError && position == null,
+                onBookmarks: () => context.push('/favorites'),
+                onTap: position == null
+                    ? positionState.hasError && accountScopeKey != null
+                          ? () => ref.invalidate(
+                              readingPositionProvider(accountScopeKey),
+                            )
+                          : null
+                    : () {
+                        if (readerMode == ReaderMode.mushaf) {
+                          context.push(
+                            '/mushaf?page=${position.page}'
+                            '&surah=${position.surah}&ayah=${position.ayah}',
+                          );
+                        } else {
+                          context.push(
+                            '/reader/${position.surah}?ayah=${position.ayah}',
+                          );
+                        }
+                      },
+              ),
+              const SizedBox(height: 12),
+              HomePlanCard(
+                achieved: achieved,
+                target: target,
+                metric: planMetric,
+                loading: planLoading,
+                error: planState.hasError && plan == null,
+                palm: plan == null ? null : palmGrowthFor(plan),
+                onTap: () => context.go('/app?tab=2'),
+              ),
+              const SizedBox(height: 16),
+              IqroActionGrid(
                 children: [
-                  HomeUtilityRow(
-                    icon: Icons.bookmarks_outlined,
-                    title: context.l10n.favorites,
-                    subtitle: context.l10n.homeSavedHint,
-                    onTap: () => context.push('/favorites'),
+                  HomeFeatureCard(
+                    icon: Icons.schedule_outlined,
+                    title: context.l10n.afterPrayer,
+                    subtitle: planLoading
+                        ? context.l10n.loading
+                        : planState.hasError && plan == null
+                        ? context.l10n.openPlan
+                        : '$prayerPages ${context.l10n.pages}',
+                    onTap: () => context.push('/after-prayer'),
                   ),
-                  const Divider(height: 1),
-                  HomeUtilityRow(
-                    icon: Icons.calendar_month_outlined,
-                    title: context.l10n.hijriCalendar,
-                    subtitle: [
-                      if (hijri != null) hijriDateLabel(context, hijri),
-                      if (calendarEvents.isNotEmpty) calendarEvents,
-                    ].join(' · '),
-                    onTap: () => context.push('/calendar'),
+                  HomeFeatureCard(
+                    icon: Icons.school_outlined,
+                    title: context.l10n.memorization,
+                    subtitle: _memorizationTitle(
+                      context,
+                      memorizationState,
+                      memorization,
+                      memorizationSurah,
+                      locale,
+                    ),
+                    onTap: () => context.push('/memorization'),
                   ),
-                  const Divider(height: 1),
-                  HomeUtilityRow(
-                    icon: Icons.download_outlined,
-                    title: context.l10n.homeDownloads,
-                    subtitle: context.l10n.offlineStorageSettingsSubtitle,
-                    onTap: () => context.push('/settings/offline-storage'),
+                  HomeFeatureCard(
+                    icon: Icons.headphones_outlined,
+                    title: context.l10n.navAudio,
+                    subtitle:
+                        reciter?.nameFor(locale) ?? context.l10n.allReciters,
+                    onTap: () => context.go('/app?tab=3'),
+                    action: player.track == null
+                        ? null
+                        : IconButton.filledTonal(
+                            tooltip: player.playing
+                                ? context.l10n.pause
+                                : context.l10n.play,
+                            onPressed: player.buffering
+                                ? null
+                                : ref.read(audioControllerProvider).channel ==
+                                          AudioPlaybackChannel.listening &&
+                                      ref
+                                              .read(audioControllerProvider)
+                                              .standalone ==
+                                          null
+                                ? audioController.toggle
+                                : audioController.activateListening,
+                            icon: player.buffering
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(
+                                    player.playing
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                  ),
+                          ),
+                  ),
+                  HomeFeatureCard(
+                    icon: Icons.nights_stay_outlined,
+                    title: context.l10n.dua,
+                    subtitle: _duaSubtitle(context, duaState, dailyDua),
+                    onTap: () => dailyDua == null
+                        ? context.push('/dua')
+                        : context.push(
+                            duaEntryRoute(dailyDua),
+                            extra: dailyDua,
+                          ),
                   ),
                 ],
               ),
-            ),
-            if (session?.isGuest == true) ...<Widget>[
-              const SizedBox(height: 14),
-              IqroStatusBanner(
-                icon: Icons.shield_outlined,
-                title: context.l10n.readingAsGuest,
-                message: context.l10n.guestSyncHint,
-                actionLabel: context.l10n.signIn,
-                onAction: () => context.push('/account'),
-                color: context.iqroColors.lavender,
+              const SizedBox(height: 16),
+              IqroCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Column(
+                  children: [
+                    HomeUtilityRow(
+                      icon: Icons.bookmarks_outlined,
+                      title: context.l10n.favorites,
+                      subtitle: context.l10n.homeSavedHint,
+                      onTap: () => context.push('/favorites'),
+                    ),
+                    const Divider(height: 1),
+                    HomeUtilityRow(
+                      icon: Icons.calendar_month_outlined,
+                      title: context.l10n.hijriCalendar,
+                      subtitle: [
+                        if (hijri != null) hijriDateLabel(context, hijri),
+                        if (calendarEvents.isNotEmpty) calendarEvents,
+                      ].join(' · '),
+                      onTap: () => context.push('/calendar'),
+                    ),
+                    const Divider(height: 1),
+                    HomeUtilityRow(
+                      icon: Icons.download_outlined,
+                      title: context.l10n.homeDownloads,
+                      subtitle: context.l10n.offlineStorageSettingsSubtitle,
+                      onTap: () => context.push('/settings/offline-storage'),
+                    ),
+                  ],
+                ),
               ),
+              if (session?.isGuest == true) ...<Widget>[
+                const SizedBox(height: 14),
+                IqroStatusBanner(
+                  icon: Icons.shield_outlined,
+                  title: context.l10n.readingAsGuest,
+                  message: context.l10n.guestSyncHint,
+                  actionLabel: context.l10n.signIn,
+                  onAction: () => context.push('/account'),
+                  color: context.iqroColors.lavender,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
