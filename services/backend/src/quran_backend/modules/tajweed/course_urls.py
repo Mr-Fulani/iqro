@@ -6,6 +6,7 @@ from quran_backend.modules.tajweed.course_api import (
     TajweedCourseDocumentView,
     TajweedCourseListView,
     TajweedLessonExamplesView,
+    TajweedPracticeView,
 )
 
 urlpatterns = [
@@ -15,5 +16,8 @@ urlpatterns = [
         "courses/<slug:slug>/lessons/<slug:lesson>/examples",
         TajweedLessonExamplesView.as_view(),
         name="tajweed-lesson-examples",
+    ),
+    path(
+        "courses/<slug:slug>/practice", TajweedPracticeView.as_view(), name="tajweed-practice-tasks"
     ),
 ]

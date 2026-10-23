@@ -118,14 +118,16 @@ class TajweedCourseSound extends ChangeNotifier {
   }
 }
 
-/// «Listen to the fragment» with «0.75×», and «Listen to the whole ayah».
-/// Without the reciter's timings the buttons are not there.
+/// «Listen to the fragment» with «0.75×», and «Listen to the whole ayah»
+/// unless [wholeAyah] is false. Without the reciter's timings the buttons
+/// are not there.
 class TajweedCourseSoundControls extends ConsumerWidget {
   const TajweedCourseSoundControls({
     required this.sound,
     required this.example,
     required this.occurrence,
     required this.part,
+    this.wholeAyah = true,
     super.key,
   });
 
@@ -135,6 +137,7 @@ class TajweedCourseSoundControls extends ConsumerWidget {
 
   /// Names the fragment's clip.
   final String part;
+  final bool wholeAyah;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -159,7 +162,8 @@ class TajweedCourseSoundControls extends ConsumerWidget {
           if (audio == null) return const SizedBox.shrink();
           final playback = audio.playback;
           final fragment = tajweedOccurrenceTiming(playback.words, occurrence);
-          final whole = playback.start == null || playback.end == null
+          final whole =
+              !wholeAyah || playback.start == null || playback.end == null
               ? null
               : (start: playback.start!, end: playback.end!);
           final fragmentId = sound.clipId(audio, example.verseKey, part);

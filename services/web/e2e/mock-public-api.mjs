@@ -157,6 +157,26 @@ const tajweedCourseExamples = JSON.parse(
   readFileSync(new URL("./fixtures/tajweed-course-examples.json", import.meta.url), "utf8"),
 );
 
+// Practice sessions sent by signed-in visitors; the state is a simple tally of them.
+const tajweedPracticeSessions = new Map();
+
+function tajweedPracticeState() {
+  const answers = [...tajweedPracticeSessions.values()].flatMap((session) => session.answers);
+  const days = [...tajweedPracticeSessions.values()].map((session) => session.local_date).sort();
+  const correct = answers.filter((answer) => answer.correct).length;
+  return {
+    course: "tajweed",
+    sessions: tajweedPracticeSessions.size,
+    answers: answers.length,
+    correct,
+    score: correct,
+    streak: { current: days.length ? 1 : 0, best: days.length ? 1 : 0, last_date: days.at(-1) ?? null },
+    review: answers.filter((answer) => !answer.correct).map((answer) => ({
+      key: answer.key, target: answer.target, type: answer.type, box: 1, due_at: answer.at,
+    })),
+  };
+}
+
 function tajweedCourse(language) {
   const document = structuredClone(tajweedCourseExample);
   document.course.language = language;
@@ -515,6 +535,49 @@ const server = createServer(async (request, response) => {
       next_offset: offset + limit < lesson.examples.length ? offset + limit : null,
       examples,
     });
+  }
+  if (path === "/api/v1/tajweed/courses/tajweed/practice") {
+    // Deterministic tasks from the lesson examples: lessons in turn, the seed picks the ayah.
+    const lessons = (url.searchParams.get("lessons") ?? "").split(",").filter((slug) => tajweedCourseExamples[slug]);
+    if (!lessons.length) return sendJson(response, 400, { lessons: "No lesson of this course." });
+    const targets = lessons.map((slug) => tajweedCourseExamples[slug].target);
+    const count = Number(url.searchParams.get("count") ?? 8);
+    const seed = Number(url.searchParams.get("seed") ?? 0);
+    const types = targets.length > 1 ? ["find", "identify", "listen"] : ["find"];
+    const task = (type, example, target, review) => ({
+      key: `${type}~${example.verse_key}~${target}`,
+      type,
+      target,
+      review,
+      example,
+      focus: 0,
+      ...(type === "find" ? {} : { options: [target, ...targets.filter((item) => item !== target).slice(0, 3)] }),
+    });
+    const tasks = [];
+    for (const key of (url.searchParams.get("review") ?? "").split(",").filter(Boolean)) {
+      const [type, verseKey, target] = key.split("~");
+      const lesson = lessons.find((slug) => tajweedCourseExamples[slug].target === target);
+      const example = lesson && tajweedCourseExamples[lesson].examples.find((item) => item.verse_key === verseKey);
+      if (example) tasks.push(task(targets.length > 1 ? type : "find", example, target, true));
+    }
+    for (let index = 0; tasks.length < count; index += 1) {
+      const lesson = tajweedCourseExamples[lessons[index % lessons.length]];
+      const example = lesson.examples[(seed + index) % lesson.examples.length];
+      if (!tasks.some((item) => item.example.verse_key === example.verse_key && item.target === lesson.target)) {
+        tasks.push(task(types[index % types.length], example, lesson.target, false));
+      }
+      if (index > count * 4) break;
+    }
+    return sendJson(response, 200, { seed, tasks: tasks.slice(0, count) });
+  }
+  if (path === "/api/v1/me/tajweed/practice-sessions" && request.method === "POST") {
+    const input = await readJson(request);
+    const known = tajweedPracticeSessions.has(input.id);
+    tajweedPracticeSessions.set(input.id, input);
+    return sendJson(response, known ? 200 : 201, tajweedPracticeState());
+  }
+  if (path === "/api/v1/me/tajweed/practice/tajweed") {
+    return sendJson(response, 200, tajweedPracticeState());
   }
   if (path === "/api/v1/me/tajweed/progress/tajweed") {
     const input = request.method === "PUT" ? await readJson(request) : { lessons: {} };

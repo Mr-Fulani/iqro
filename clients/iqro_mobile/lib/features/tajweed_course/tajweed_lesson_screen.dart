@@ -11,7 +11,8 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../tajweed/tajweed_sheet.dart'
     show TajweedRuleDot, tajweedArabicStyle, tajweedBodyStyle, tajweedLabel;
-import 'tajweed_course_home_screen.dart' show tajweedLessonPath;
+import 'tajweed_course_home_screen.dart'
+    show tajweedLessonPath, tajweedPracticePath;
 import 'tajweed_course_models.dart';
 import 'tajweed_course_progress.dart';
 import 'tajweed_course_sound.dart';
@@ -473,6 +474,7 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
                 next: widget.document.nextLesson(lesson.slug),
                 onNext: (next) =>
                     context.pushReplacement(tajweedLessonPath(next.slug)),
+                onPractice: () => context.pushReplacement(tajweedPracticePath),
                 onAllLessons: _allLessons,
               )
             : Column(
@@ -1028,16 +1030,19 @@ class _FindPage extends StatelessWidget {
   }
 }
 
-/// «Lesson completed», the next lesson and the way back to all of them.
+/// «Lesson completed», the next lesson, the practice and the way back to
+/// all lessons.
 class _CompletedView extends StatelessWidget {
   const _CompletedView({
     required this.next,
     required this.onNext,
+    required this.onPractice,
     required this.onAllLessons,
   });
 
   final TajweedCourseLesson? next;
   final ValueChanged<TajweedCourseLesson> onNext;
+  final VoidCallback onPractice;
   final VoidCallback onAllLessons;
 
   @override
@@ -1082,6 +1087,13 @@ class _CompletedView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
               ],
+              FilledButton.tonalIcon(
+                key: const ValueKey('tajweed-course-practice'),
+                onPressed: onPractice,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(context.l10n.tajweedPracticeShort),
+              ),
+              const SizedBox(height: 10),
               OutlinedButton(
                 key: const ValueKey('tajweed-course-all-lessons'),
                 onPressed: onAllLessons,

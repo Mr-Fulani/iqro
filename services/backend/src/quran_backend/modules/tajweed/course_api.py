@@ -34,6 +34,12 @@ from quran_backend.modules.tajweed.models import (
     TajweedCourseStatus,
     TajweedCourseVersion,
 )
+from quran_backend.modules.tajweed.practice import (
+    DEFAULT_TASKS,
+    MAX_REVIEW,
+    MAX_TASKS,
+    practice_tasks,
+)
 from quran_backend.modules.tajweed.selectors import (
     published_tajweed_ayahs,
     published_tajweed_edition,
@@ -193,3 +199,67 @@ class TajweedLessonExamplesView(PublicReadOnlyViewMixin, APIView):
             limit=query.validated_data["limit"],
         )
         return Response({"lesson": lesson, **page})
+
+
+class TajweedPracticeQuerySerializer(serializers.Serializer[Any]):
+    lessons = serializers.CharField(max_length=2000, help_text="Пройденные уроки через запятую.")
+    count = serializers.IntegerField(min_value=1, max_value=MAX_TASKS, default=DEFAULT_TASKS)
+    seed = serializers.IntegerField(min_value=0, max_value=2**31 - 1, default=0)
+    review = serializers.CharField(
+        max_length=2000,
+        required=False,
+        default="",
+        allow_blank=True,
+        help_text="Ключи заданий на повторение через запятую: type~verse_key~target.",
+    )
+
+
+class TajweedPracticeTaskSerializer(serializers.Serializer[Any]):
+    key = serializers.CharField()
+    type = serializers.ChoiceField(choices=["find", "identify", "listen"])
+    target = serializers.CharField()
+    review = serializers.BooleanField()
+    example = TajweedExampleSerializer()
+    focus = serializers.IntegerField(min_value=0)
+    options = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+class TajweedPracticeResponseSerializer(serializers.Serializer[Any]):
+    seed = serializers.IntegerField()
+    tasks = TajweedPracticeTaskSerializer(many=True)
+
+
+MAX_PRACTICE_LESSONS = 30
+
+
+class TajweedPracticeView(PublicReadOnlyViewMixin, APIView):
+    @extend_schema(
+        tags=["tajweed"],
+        parameters=[TajweedPracticeQuerySerializer],
+        responses=TajweedPracticeResponseSerializer,
+        description="Задания практики по целям пройденных уроков (docs/tajweed/practice.md).",
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        query = TajweedPracticeQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        passed = set(query.validated_data["lessons"].split(",")[:MAX_PRACTICE_LESSONS])
+        version = published_course_version(slug)
+        targets = [
+            lesson["target"]
+            for section in version.snapshot["sections"]
+            for lesson_slug in section["lessons"]
+            for lesson in version.snapshot["lessons"]
+            if lesson["slug"] == lesson_slug and lesson_slug in passed
+        ]
+        if not targets:
+            raise ValidationError({"lessons": "Нет ни одного урока этого курса."})
+        review = [key for key in query.validated_data["review"].split(",") if key][:MAX_REVIEW]
+        seed = query.validated_data["seed"]
+        tasks = practice_tasks(
+            published_course_ayahs(),
+            targets=targets,
+            count=query.validated_data["count"],
+            seed=seed,
+            review=review,
+        )
+        return Response({"seed": seed, "tasks": tasks})

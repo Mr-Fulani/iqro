@@ -2466,4 +2466,103 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tajweedCourseUnavailable => 'الدورة غير متاحة بعد.';
+
+  @override
+  String get tajweedPracticeTitle => 'تدريبات التجويد';
+
+  @override
+  String get tajweedPracticeShort => 'تدريب';
+
+  @override
+  String get tajweedPracticeDescription =>
+      'تمارين على الدروس التي أتممتها: ابحث عن الحكم في الآية، وسمِّه، وتعرّف عليه بالسماع.';
+
+  @override
+  String get tajweedPracticeCta =>
+      'ثبّت الأحكام التي أتممتها على آيات من القرآن كله.';
+
+  @override
+  String get tajweedPracticeOpen => 'افتح التدريب';
+
+  @override
+  String get tajweedPracticeStart => 'ابدأ التدريب';
+
+  @override
+  String get tajweedPracticeNoLessons =>
+      'أتمم درسًا واحدًا على الأقل: يُبنى التدريب على الأحكام التي أتممتها.';
+
+  @override
+  String get tajweedPracticeToCourse => 'إلى الدورة';
+
+  @override
+  String get tajweedPracticeScore => 'النقاط';
+
+  @override
+  String get tajweedPracticeStreak => 'السلسلة';
+
+  @override
+  String tajweedPracticeStreakDays(int count) {
+    return '$count أيام متتالية';
+  }
+
+  @override
+  String tajweedPracticeReviewCount(int count) {
+    return 'للمراجعة: $count';
+  }
+
+  @override
+  String get tajweedPracticeLearned => 'الأحكام التي أتممتها';
+
+  @override
+  String tajweedPracticeTaskOf(int current, int total) {
+    return 'المهمة $current من $total';
+  }
+
+  @override
+  String get tajweedPracticeReviewBadge => 'مراجعة';
+
+  @override
+  String tajweedPracticeFindPrompt(String rule) {
+    return 'ابحث في الآية عن: $rule';
+  }
+
+  @override
+  String get tajweedPracticeIdentifyPrompt => 'ما الحكم في الموضع المحدَّد؟';
+
+  @override
+  String get tajweedPracticeListenPrompt => 'استمع وحدّد الحكم';
+
+  @override
+  String get tajweedPracticeOptions => 'الإجابات';
+
+  @override
+  String get tajweedPracticeCorrect => 'صحيح!';
+
+  @override
+  String tajweedPracticeWrong(String rule) {
+    return 'ليس كذلك. هنا $rule.';
+  }
+
+  @override
+  String get tajweedPracticeLoading => 'نُعِدّ المهام…';
+
+  @override
+  String get tajweedPracticeError => 'تعذّر إعداد المهام.';
+
+  @override
+  String get tajweedPracticeNext => 'التالي';
+
+  @override
+  String get tajweedPracticePrevious => 'السابق';
+
+  @override
+  String get tajweedPracticeFinish => 'إنهاء';
+
+  @override
+  String tajweedPracticeSummary(int correct, int total) {
+    return '$correct صحيحة من $total';
+  }
+
+  @override
+  String get tajweedPracticeAgain => 'مرة أخرى';
 }

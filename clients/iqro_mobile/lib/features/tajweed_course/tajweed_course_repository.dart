@@ -4,6 +4,7 @@ import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import '../dua/dua_repository.dart' show canUseUnverifiedDuaFallback;
 import 'tajweed_course_models.dart';
+import 'tajweed_practice.dart';
 
 abstract interface class TajweedCourseRemoteGateway {
   Future<Object?> courses();
@@ -22,6 +23,29 @@ abstract interface class TajweedCourseRemoteGateway {
   Future<Object?> saveProgress(
     String course,
     Map<String, Object?> body, {
+    AccountScopeSnapshot? accountScope,
+  });
+
+  /// `GET /tajweed/courses/<slug>/practice`: tasks on the targets of
+  /// [lessons], the [review] keys first.
+  Future<Object?> practice(
+    String slug, {
+    required List<String> lessons,
+    required int count,
+    required int seed,
+    required List<String> review,
+  });
+
+  /// `POST /me/tajweed/practice-sessions`: the answer is the practice state
+  /// after the session.
+  Future<Object?> savePracticeSession(
+    Map<String, Object?> body, {
+    AccountScopeSnapshot? accountScope,
+  });
+
+  /// `GET /me/tajweed/practice/<course>`.
+  Future<Object?> practiceState(
+    String course, {
     AccountScopeSnapshot? accountScope,
   });
 }
@@ -62,6 +86,43 @@ class ApiTajweedCourseGateway implements TajweedCourseRemoteGateway {
   }) => _api.put(
     '/me/tajweed/progress/${Uri.encodeComponent(course)}',
     data: body,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> practice(
+    String slug, {
+    required List<String> lessons,
+    required int count,
+    required int seed,
+    required List<String> review,
+  }) => _api.get(
+    '/tajweed/courses/${Uri.encodeComponent(slug)}/practice',
+    query: <String, Object?>{
+      'lessons': lessons.join(','),
+      'count': count,
+      'seed': seed,
+      if (review.isNotEmpty) 'review': review.join(','),
+    },
+    public: true,
+  );
+
+  @override
+  Future<Object?> savePracticeSession(
+    Map<String, Object?> body, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.post(
+    '/me/tajweed/practice-sessions',
+    data: body,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> practiceState(
+    String course, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.get(
+    '/me/tajweed/practice/${Uri.encodeComponent(course)}',
     accountScope: accountScope,
   );
 }
@@ -137,6 +198,24 @@ class TajweedCourseRepository {
     required int limit,
   }) async => TajweedExamplesPage.fromJson(
     await _remote.examples(slug, lesson, offset: offset, limit: limit),
+  );
+
+  /// Tasks of a practice session on the targets of [lessons]; [review] keys
+  /// come first. The same [seed] gives the same tasks.
+  Future<List<TajweedPracticeTask>> practice(
+    String slug, {
+    required List<String> lessons,
+    required int seed,
+    List<String> review = const [],
+    int count = tajweedPracticeTasks,
+  }) async => parseTajweedPracticeTasks(
+    await _remote.practice(
+      slug,
+      lessons: lessons,
+      count: count,
+      seed: seed,
+      review: review,
+    ),
   );
 
   Future<String> _activeVersion(String slug) async {

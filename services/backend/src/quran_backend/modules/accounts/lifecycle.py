@@ -291,7 +291,10 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
         ReminderRule,
         RetiredReminderId,
     )
-    from quran_backend.modules.tajweed.models import TajweedCourseProgress  # noqa: PLC0415
+    from quran_backend.modules.tajweed.models import (  # noqa: PLC0415
+        TajweedCourseProgress,
+        TajweedPracticeSession,
+    )
 
     FeedbackTicket.objects.filter(reporter=user).update(contact_email=None)
     FeedbackMessage.objects.filter(author=user).update(author=None)
@@ -302,6 +305,7 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
     MemorizationSession.objects.filter(user=user).delete()
     MemorizationPlan.objects.filter(user=user).delete()
     TajweedCourseProgress.objects.filter(user=user).delete()
+    TajweedPracticeSession.objects.filter(user=user).delete()
     PrayerProfile.objects.filter(user=user).delete()
     PrayerReadingCheckIn.objects.filter(user=user).delete()
     PrayerReadingPlan.objects.filter(user=user).delete()

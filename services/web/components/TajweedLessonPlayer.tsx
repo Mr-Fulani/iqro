@@ -5,8 +5,6 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import { api } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
-import { latestRecitationsByVariant } from "../lib/reciter-catalog";
-import { loadReciterPreference, preferredRecitation } from "../lib/reciter-preference";
 import { localizedPath } from "../lib/routing";
 import { timedPosition } from "../lib/tajweed";
 import {
@@ -27,6 +25,7 @@ import {
   type TajweedCourseTarget,
   type TajweedOccurrence,
 } from "../lib/tajweed-course";
+import { useCourseRecitation } from "../lib/use-course-recitation";
 import { usePageLoaded } from "../lib/use-page-loaded";
 import { useTajweedProgressSync } from "../lib/use-tajweed-progress";
 import { StepNav } from "./StepNav";
@@ -47,39 +46,6 @@ type Examples =
 type FindState = { wrong: number[]; found: number | null; revealed: boolean };
 const NO_ANSWER: FindState = { wrong: [], found: null, revealed: false };
 const MISSES_BEFORE_ANSWER = 2;
-
-let courseRecitation: Promise<string | null> | null = null;
-
-/** The reciter of the course clips: the Mushaf's, else Mishary al-Afasy, else the first one. */
-function loadCourseRecitation(): Promise<string | null> {
-  courseRecitation ??= api.getAllRecitations({ quran_edition: "madani-hafs" })
-    .then((catalog) => {
-      const available = latestRecitationsByVariant(catalog, "ayah_playback");
-      const fallback = available
-        .filter((item) => item.code.startsWith("qf-7-"))
-        .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
-      return (preferredRecitation(available, loadReciterPreference("mushaf")) || fallback || available[0])?.id ?? null;
-    })
-    .catch(() => {
-      courseRecitation = null;
-      return null;
-    });
-  return courseRecitation;
-}
-
-/** The course reciter, looked up once a step has something to play. */
-function useCourseRecitation(needed: boolean): string | null {
-  const [recitationId, setRecitationId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!needed) return;
-    let cancelled = false;
-    void loadCourseRecitation().then((id) => {
-      if (!cancelled) setRecitationId(id);
-    });
-    return () => { cancelled = true; };
-  }, [needed]);
-  return recitationId;
-}
 
 /** Paragraphs of a lesson; in Arabic the whole text is interface text, not Quran quotes in their font. */
 function Paragraphs({ text, plain }: { text: string; plain: boolean }) {
@@ -550,6 +516,9 @@ export function TajweedLessonPlayer({
                 {t("tajweedCourse.nextLesson", { title: nextLesson.title })}
               </Link>
             ) : null}
+            <Link className="btn btn-secondary" href={localizedPath(locale, "/tajweed/practice")}>
+              {t("tajweedPractice.short")}
+            </Link>
             <Link className="btn btn-secondary" href={localizedPath(locale, "/tajweed")}>
               {t("tajweedCourse.allLessons")}
             </Link>

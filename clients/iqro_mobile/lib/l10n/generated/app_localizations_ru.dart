@@ -2511,4 +2511,104 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tajweedCourseUnavailable => 'Курс пока недоступен.';
+
+  @override
+  String get tajweedPracticeTitle => 'Практика таджвида';
+
+  @override
+  String get tajweedPracticeShort => 'Практика';
+
+  @override
+  String get tajweedPracticeDescription =>
+      'Задания по пройденным урокам: найдите правило в аяте, назовите его, узнайте на слух.';
+
+  @override
+  String get tajweedPracticeCta =>
+      'Закрепите пройденные правила на аятах всего Корана.';
+
+  @override
+  String get tajweedPracticeOpen => 'Открыть практику';
+
+  @override
+  String get tajweedPracticeStart => 'Начать практику';
+
+  @override
+  String get tajweedPracticeNoLessons =>
+      'Пройдите хотя бы один урок курса: практика строится по пройденным правилам.';
+
+  @override
+  String get tajweedPracticeToCourse => 'К курсу';
+
+  @override
+  String get tajweedPracticeScore => 'Счёт';
+
+  @override
+  String get tajweedPracticeStreak => 'Серия';
+
+  @override
+  String tajweedPracticeStreakDays(int count) {
+    return '$count дн. подряд';
+  }
+
+  @override
+  String tajweedPracticeReviewCount(int count) {
+    return 'На повторение: $count';
+  }
+
+  @override
+  String get tajweedPracticeLearned => 'Пройденные правила';
+
+  @override
+  String tajweedPracticeTaskOf(int current, int total) {
+    return 'Задание $current из $total';
+  }
+
+  @override
+  String get tajweedPracticeReviewBadge => 'Повторение';
+
+  @override
+  String tajweedPracticeFindPrompt(String rule) {
+    return 'Найдите в аяте: «$rule»';
+  }
+
+  @override
+  String get tajweedPracticeIdentifyPrompt =>
+      'Какое правило в выделенном месте?';
+
+  @override
+  String get tajweedPracticeListenPrompt => 'Послушайте и определите правило';
+
+  @override
+  String get tajweedPracticeOptions => 'Варианты ответа';
+
+  @override
+  String get tajweedPracticeCorrect => 'Верно!';
+
+  @override
+  String tajweedPracticeWrong(String rule) {
+    return 'Неверно. Здесь «$rule».';
+  }
+
+  @override
+  String get tajweedPracticeLoading => 'Собираем задания…';
+
+  @override
+  String get tajweedPracticeError => 'Не удалось собрать задания.';
+
+  @override
+  String get tajweedPracticeNext => 'Далее';
+
+  @override
+  String get tajweedPracticePrevious => 'Назад';
+
+  @override
+  String get tajweedPracticeFinish => 'Завершить';
+
+  @override
+  String tajweedPracticeSummary(int correct, int total) {
+    return 'Верно $correct из $total';
+  }
+
+  @override
+  String get tajweedPracticeAgain => 'Ещё раз';
 }
