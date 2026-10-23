@@ -727,11 +727,16 @@ class LocalDatabase {
       }
     }
 
-    // Share analytics are append-only rather than mutable entity intent.
+    // Share analytics and announcement marks are append-only rather than
+    // mutable entity intent.
     final shareEvents = await db.query(
       'outbox',
-      where: 'owner_id = ? AND entity_type = ?',
-      whereArgs: <Object?>[sourceOwnerId, 'share_event'],
+      where: 'owner_id = ? AND entity_type IN (?, ?)',
+      whereArgs: <Object?>[
+        sourceOwnerId,
+        'share_event',
+        'announcement_receipt',
+      ],
     );
     for (final sourceRow in shareEvents) {
       final targetRows = await db.query(

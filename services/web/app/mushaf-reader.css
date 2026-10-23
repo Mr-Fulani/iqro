@@ -172,6 +172,8 @@ body:has(.quran-reader-boot) .app-footer {
 .is-reader-immersive .mushaf-page-container {
   container-type: size;
   display: flex;
+  /* The sheet, then its tajweed chips. */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
@@ -270,8 +272,13 @@ body:has(.quran-reader-boot) .app-footer {
 .is-reader-immersive .qf-mushaf-chapter-intro.is-compact .qf-mushaf-chapter-title { font-size: 2cqw; }
 .is-reader-immersive .qf-mushaf-chapter-intro.is-compact .qf-mushaf-bismillah { font-size: 2.3333cqw; }
 
+/* The reader bar floats over the bottom: the centred sheet and its chips stay above it. */
+.is-reader-immersive[data-reader-orientation="portrait"] .mushaf-page-container {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--reader-bottom-reserve, 0px));
+}
+
 .is-reader-immersive[data-reader-orientation="landscape"] .mushaf-page-container {
-  align-items: flex-start;
+  justify-content: flex-start;
   /* MushafReaderLayout measures the visible bottom overlays. */
   padding-bottom: calc(var(--reader-bottom-reserve, calc(120px + env(safe-area-inset-bottom, 0px))) + 8px);
 }
@@ -280,23 +287,27 @@ body:has(.quran-reader-boot) .app-footer {
   width: var(--reader-sheet-width, 100cqw);
 }
 
-/* Tajweed chips float above the folded reader bar in one scrolling row, as
-   under the page in the app, and step aside while the reader menu is open. */
+/* In the full-screen reader the tajweed chips follow the sheet in its scroller,
+   in one scrolling row as under the page in the app. They come and go with the
+   reader controls: reading with the controls folded shows the page alone. */
 .is-reader-immersive .mushaf-tajweed-legend {
-  position: absolute;
-  z-index: 205;
-  inset-inline: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: var(--reader-sheet-width, 100%);
+  max-width: 100%;
+  margin-top: 6px;
   padding-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px));
-  pointer-events: none;
 }
 
-.quran-page-layout:has(.reader-actions:not(.is-folded)) .mushaf-tajweed-legend,
-.quran-page-layout:has(.reader-panel-backdrop) .mushaf-tajweed-legend {
+.quran-page-layout:has(.reader-actions.is-folded) .mushaf-tajweed-legend {
   display: none;
 }
 
 .is-reader-immersive .mushaf-tajweed-legend .tajweed-legend {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
 }
 
@@ -317,7 +328,6 @@ body:has(.quran-reader-boot) .app-footer {
   padding-block: 2px;
   overflow-x: auto;
   scrollbar-width: none;
-  pointer-events: auto;
 }
 
 .mushaf-tajweed-breakdown {
@@ -326,11 +336,8 @@ body:has(.quran-reader-boot) .app-footer {
 
 .is-reader-immersive .mushaf-tajweed-breakdown {
   display: flex;
-  width: max-content;
-  max-width: 100%;
-  margin: 0 auto 8px;
-  box-shadow: 0 2px 8px #37270f1f;
-  pointer-events: auto;
+  flex: none;
+  white-space: nowrap;
 }
 
 .is-reader-immersive .mushaf-tajweed-legend .tajweed-legend-list > li {
@@ -344,8 +351,6 @@ body:has(.quran-reader-boot) .app-footer {
   min-height: 32px;
   padding: 4px 10px;
   font-size: 0.8125rem;
-  background: color-mix(in srgb, var(--panel) 94%, transparent);
-  box-shadow: 0 2px 8px #37270f1f;
 }
 
 .reader-actions {

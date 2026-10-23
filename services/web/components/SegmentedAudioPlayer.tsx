@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AudioTrack, AyahAudioSegment } from "../lib/api";
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey, TranslationVariables } from "../lib/i18n";
 import { formatClock } from "../lib/audio-content";
+import { seekPositionMs } from "../lib/mini-player";
+import type { PlayerBackground } from "../lib/player-backgrounds";
 
 export type AudioPlaybackRequest = {
   requestId: number;
@@ -19,6 +22,8 @@ export type AudioPlaybackRequest = {
   artist: string;
   album?: string;
   autoPlay?: boolean;
+  /** The reciter's portrait, shown by the phone player. */
+  artworkUrl?: string | null;
 };
 
 export type RepeatMode = "off" | "ayah" | "selection";
@@ -31,6 +36,73 @@ export type AudioPlayerControlRequest = {
   action: "toggle-playback" | "toggle-ayah-repeat" | "cycle-speed";
 };
 type SleepMode = "off" | "ayah" | "5" | "15" | "30" | "60";
+
+export type ReciterControls = {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+};
+
+export type MobilePlayerSetting = {
+  key: "speed" | "sleep" | "repeat" | "pause";
+  label: string;
+  control: ReactNode;
+  note?: string | null;
+};
+
+/** What the phone parts read from the player; every handler is the desktop one. */
+export type MobilePlayerEngine = {
+  presentation: "mini" | "full";
+  request: AudioPlaybackRequest | null;
+  plan: { startMs: number; endMs: number } | null;
+  activeAyah: AyahAudioSegment | null;
+  isPlaying: boolean;
+  statusLabel: string;
+  error: string | null;
+  title: string;
+  /** The mounted <audio> element. */
+  audio: HTMLAudioElement | null;
+  togglePlayback: () => void;
+  seekBy: (seconds: number) => void;
+  seekToMs: (milliseconds: number) => void;
+  settings: MobilePlayerSetting[];
+  range: { start: ReactNode; end: ReactNode; play: () => void; disabled: boolean; label: string | null };
+};
+
+export type MobilePlayerSurahControls = {
+  change: (direction: -1 | 1) => void;
+  busy: boolean;
+  error: string | null;
+};
+
+export type MobilePlayerProps = {
+  // Loaded on phone widths only (components/MobileAudioPlayer.tsx).
+  parts: MobilePlayerParts | null;
+  artworkUrl: string | null;
+  buffering: boolean;
+  onOpen: () => void;
+  onCollapse: () => void;
+  surah: MobilePlayerSurahControls;
+  reciterControls: ReciterControls | null;
+  equalizer: { enabled: boolean; playing: boolean };
+  background: { options: readonly PlayerBackground[]; value: PlayerBackground; onChange: (id: string) => void };
+};
+
+export type MobilePlayerPartProps = { engine: MobilePlayerEngine; mobile: MobilePlayerProps };
+export type MobilePlayerHeaderProps = {
+  subtitle: string | null;
+  onClose: () => void;
+  onDragOffset: (offsetPx: number) => void;
+  onDismiss: () => void;
+};
+export type MobilePlayerParts = {
+  Summary: ComponentType<MobilePlayerPartProps>;
+  Transport: ComponentType<MobilePlayerPartProps>;
+  Options: ComponentType<MobilePlayerPartProps>;
+  FullHeader: ComponentType<MobilePlayerHeaderProps>;
+  CollapsedButton: ComponentType<{ playing: boolean; onExpand: () => void }>;
+};
 
 type RuntimePlan = {
   kind: AudioPlaybackRequest["kind"];
@@ -57,6 +129,9 @@ type SegmentedAudioPlayerProps = {
   controlRequest?: AudioPlayerControlRequest | null;
   pauseOnNavigationKey?: string;
   compact?: boolean;
+  /** The phone bar or full player instead of the desktop markup. */
+  presentation?: "desktop" | "mini" | "full";
+  mobile?: MobilePlayerProps;
   readerControls?: {
     container: HTMLElement | null;
     ayahKey: string | null;
@@ -134,6 +209,8 @@ export function SegmentedAudioPlayer({
   controlRequest,
   pauseOnNavigationKey,
   compact = false,
+  presentation = "desktop",
+  mobile,
   readerControls,
 }: SegmentedAudioPlayerProps) {
   const { t, formatNumber } = useI18n();
@@ -176,6 +253,12 @@ export function SegmentedAudioPlayer({
   const [rangeEndAyah, setRangeEndAyah] = useState<number | null>(null);
   const [activeAyah, setActiveAyah] = useState<AyahAudioSegment | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(!compact);
+  // The element as state too: the phone seek bar listens to it from an effect.
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const attachAudio = useCallback((node: HTMLAudioElement | null) => {
+    audioRef.current = node;
+    setAudioElement(node);
+  }, []);
 
   useEffect(() => {
     onActiveAyahChangeRef.current = onActiveAyahChange;
@@ -610,6 +693,19 @@ export function SegmentedAudioPlayer({
     handleTimeUpdate();
   }, [handleTimeUpdate]);
 
+  const seekToMs = useCallback((milliseconds: number) => {
+    const audio = audioRef.current;
+    const plan = planRef.current;
+    if (!audio || !plan) return;
+    audio.currentTime = seekPositionMs(milliseconds, plan.startMs, plan.endMs) / 1000;
+    handleTimeUpdate();
+  }, [handleTimeUpdate]);
+
+  const togglePlayback = useCallback(() => {
+    if (isPlaying) stopAtCurrentPosition({ key: "player.status.paused" });
+    else resumePlayback();
+  }, [isPlaying, resumePlayback, stopAtCurrentPosition]);
+
   useEffect(() => {
     if (
       !controlRequest ||
@@ -701,6 +797,12 @@ export function SegmentedAudioPlayer({
     () => [...new Set((activeRequest?.segments || []).map((segment) => segment.ayah_number))],
     [activeRequest],
   );
+  const planStartMs = activePlan?.startMs ?? null;
+  const planEndMs = activePlan?.endMs ?? null;
+  const planBounds = useMemo(
+    () => (planStartMs === null || planEndMs === null ? null : { startMs: planStartMs, endMs: planEndMs }),
+    [planEndMs, planStartMs],
+  );
 
   const startRange = () => {
     if (!activeRequest || rangeStartAyah === null || rangeEndAyah === null) return;
@@ -749,6 +851,148 @@ export function SegmentedAudioPlayer({
     onBufferingChangeRef.current?.(false);
   };
 
+  const mobilePresentation = presentation === "desktop" ? null : presentation;
+  const fieldId = (name: string) => `${name}-${activeRequest?.track.id || "empty"}`;
+
+  const repeatSelect = (
+    <select
+      id={fieldId("repeat-mode")}
+      aria-label={t("player.repeatAria")}
+      value={repeatMode}
+      onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}
+      disabled={!activeRequest}
+    >
+      <option value="off">{t("player.repeatOff")}</option>
+      <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.repeatAyah")}</option>
+      <option value="selection">{t("player.repeatSelection")}</option>
+    </select>
+  );
+  const speedSelect = (
+    <select
+      id={fieldId("playback-rate")}
+      aria-label={t("player.speedAria")}
+      value={playbackRate}
+      onChange={(event) => setPlaybackRate(Number(event.target.value))}
+      disabled={!activeRequest}
+    >
+      {SPEED_OPTIONS.map((speed) => (
+        <option key={speed} value={speed}>{formatNumber(speed)}×</option>
+      ))}
+    </select>
+  );
+  const pauseSelect = (
+    <select
+      id={fieldId("ayah-pause")}
+      aria-label={t("player.pause")}
+      value={pauseMs}
+      onChange={(event) => setPauseMs(Number(event.target.value))}
+      disabled={!activeRequest || availableAyahs.length === 0}
+    >
+      {PAUSE_OPTIONS.map((milliseconds) => (
+        <option key={milliseconds} value={milliseconds}>
+          {milliseconds === 0
+            ? t("player.noPause")
+            : t("player.seconds", { value: formatNumber(milliseconds / 1000) })}
+        </option>
+      ))}
+    </select>
+  );
+  const sleepSelect = (
+    <select
+      id={fieldId("sleep-timer")}
+      aria-label={t("player.sleep")}
+      value={sleepMode}
+      onChange={(event) => handleSleepModeChange(event.target.value as SleepMode)}
+      disabled={!activeRequest}
+    >
+      <option value="off">{t("player.off")}</option>
+      <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.afterAyah")}</option>
+      <option value="5">{t("player.afterMinutes", { count: 5 })}</option>
+      <option value="15">{t("player.afterMinutes", { count: 15 })}</option>
+      <option value="30">{t("player.afterMinutes", { count: 30 })}</option>
+      <option value="60">{t("player.afterMinutes", { count: 60 })}</option>
+    </select>
+  );
+  const sleepRemainingLabel = sleepRemainingMs !== null
+    ? t("player.remaining", { time: formatRemaining(sleepRemainingMs) })
+    : null;
+  const rangeStartField = (
+    <div className="form-group">
+      <label className="form-label" htmlFor={fieldId("range-start")}>{t("player.fromAyah")}</label>
+      <select
+        id={fieldId("range-start")}
+        aria-label={t("player.rangeStartAria")}
+        value={rangeStartAyah ?? ""}
+        disabled={availableAyahs.length === 0}
+        onChange={(event) => {
+          const nextStart = Number(event.target.value);
+          setRangeStartAyah(nextStart);
+          setRangeEndAyah((current) => current === null || current < nextStart ? nextStart : current);
+        }}
+      >
+        {availableAyahs.length === 0 && <option value="">—</option>}
+        {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+      </select>
+    </div>
+  );
+  const rangeEndField = (
+    <div className="form-group">
+      <label className="form-label" htmlFor={fieldId("range-end")}>{t("player.toAyah")}</label>
+      <select
+        id={fieldId("range-end")}
+        aria-label={t("player.rangeEndAria")}
+        value={rangeEndAyah ?? ""}
+        disabled={availableAyahs.length === 0}
+        onChange={(event) => {
+          const nextEnd = Number(event.target.value);
+          setRangeEndAyah(nextEnd);
+          setRangeStartAyah((current) => current === null || current > nextEnd ? nextEnd : current);
+        }}
+      >
+        {availableAyahs.length === 0 && <option value="">—</option>}
+        {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+      </select>
+    </div>
+  );
+
+  // The phone parts read the same state and call the same handlers as the
+  // desktop markup; nothing about playback changes with the presentation.
+  // The object is only handed to them, never read here: it holds callbacks
+  // that touch refs, which the compiler lint keeps out of render.
+  const mobileActive = mobilePresentation !== null && mobile !== undefined;
+  const Parts = mobileActive ? mobile?.parts ?? null : null;
+  const engine: MobilePlayerEngine = {
+    presentation: mobilePresentation ?? "mini",
+    request: activeRequest,
+    plan: planBounds,
+    activeAyah,
+    isPlaying,
+    statusLabel,
+    error,
+    title: currentSelectionLabel,
+    audio: audioElement,
+    togglePlayback,
+    seekBy,
+    seekToMs,
+    settings: [
+      { key: "speed", label: t("player.speed"), control: speedSelect },
+      { key: "sleep", label: t("player.sleep"), control: sleepSelect, note: sleepRemainingLabel },
+      { key: "repeat", label: t("player.repeat"), control: repeatSelect },
+      { key: "pause", label: t("player.pause"), control: pauseSelect },
+    ],
+    range: {
+      start: rangeStartField,
+      end: rangeEndField,
+      play: startRange,
+      disabled: availableAyahs.length === 0,
+      label: rangeStartAyah !== null && rangeEndAyah !== null
+        ? t("player.rangeValue", { start: rangeStartAyah, end: rangeEndAyah })
+        : null,
+    },
+  };
+
+  // Each child below keeps its slot in every presentation, so the <audio>
+  // element is never remounted and playback survives a change of view.
   return (
     <div className={`segmented-audio-player ${className}`.trim()}>
       {readerControls?.container && createPortal(
@@ -773,28 +1017,32 @@ export function SegmentedAudioPlayer({
           </button>
         </div>, readerControls.container,
       )}
-      <div className="segmented-audio-summary">
-        <div>
-          <strong>{currentSelectionLabel}</strong>
-          <p className="kpi-desc">
-            {activeRequest?.artist || t("player.chooseRecording")}
-            {activeAyah ? ` · ${t("player.activeAyah", { surah: activeAyah.surah_number, ayah: activeAyah.ayah_number })}` : ""}
-          </p>
+      {mobileActive && mobile ? (
+        Parts && <Parts.Summary engine={engine} mobile={mobile} />
+      ) : (
+        <div className="segmented-audio-summary">
+          <div>
+            <strong>{currentSelectionLabel}</strong>
+            <p className="kpi-desc">
+              {activeRequest?.artist || t("player.chooseRecording")}
+              {activeAyah ? ` · ${t("player.activeAyah", { surah: activeAyah.surah_number, ayah: activeAyah.ayah_number })}` : ""}
+            </p>
+          </div>
+          <span
+            className={`status-chip${isPlaying ? " ok" : ""}`}
+            aria-live="polite"
+            title={compact ? statusLabel : undefined}
+          >
+            {statusLabel}
+          </span>
         </div>
-        <span
-          className={`status-chip${isPlaying ? " ok" : ""}`}
-          aria-live="polite"
-          title={compact ? statusLabel : undefined}
-        >
-          {statusLabel}
-        </span>
-      </div>
+      )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && !mobileActive && <div className="alert alert-error">{error}</div>}
 
       <div className="segmented-audio-native-controls">
         <audio
-          ref={audioRef}
+          ref={attachAudio}
           controls
           preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
@@ -850,139 +1098,66 @@ export function SegmentedAudioPlayer({
         />
       </div>
 
-      <button
-        className="btn btn-secondary btn-sm segmented-audio-settings-toggle"
-        type="button"
-        aria-expanded={settingsOpen}
-        aria-label={settingsActionLabel}
-        title={compact ? settingsActionLabel : undefined}
-        onClick={() => setSettingsOpen((current) => !current)}
-      >
-        {compact && <span aria-hidden="true">⚙</span>}
-        <span className="segmented-audio-settings-label">
-          {compact ? t("player.settingsShort") : settingsActionLabel}
-        </span>
-      </button>
+      {mobileActive && mobile ? (
+        Parts && <Parts.Transport engine={engine} mobile={mobile} />
+      ) : (
+        <button
+          className="btn btn-secondary btn-sm segmented-audio-settings-toggle"
+          type="button"
+          aria-expanded={settingsOpen}
+          aria-label={settingsActionLabel}
+          title={compact ? settingsActionLabel : undefined}
+          onClick={() => setSettingsOpen((current) => !current)}
+        >
+          {compact && <span aria-hidden="true">⚙</span>}
+          <span className="segmented-audio-settings-label">
+            {compact ? t("player.settingsShort") : settingsActionLabel}
+          </span>
+        </button>
+      )}
 
-      {settingsOpen && (
+      {mobileActive && mobile ? (
+        mobilePresentation === "full" && Parts && <Parts.Options engine={engine} mobile={mobile} />
+      ) : settingsOpen && (
         <>
           <div className="segmented-audio-settings">
         <div className="form-group">
-          <label className="form-label" htmlFor={`repeat-mode-${activeRequest?.track.id || "empty"}`}>
+          <label className="form-label" htmlFor={fieldId("repeat-mode")}>
             {t("player.repeat")}
           </label>
-          <select
-            id={`repeat-mode-${activeRequest?.track.id || "empty"}`}
-            aria-label={t("player.repeatAria")}
-            value={repeatMode}
-            onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}
-            disabled={!activeRequest}
-          >
-            <option value="off">{t("player.repeatOff")}</option>
-            <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.repeatAyah")}</option>
-            <option value="selection">{t("player.repeatSelection")}</option>
-          </select>
+          {repeatSelect}
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor={`playback-rate-${activeRequest?.track.id || "empty"}`}>
+          <label className="form-label" htmlFor={fieldId("playback-rate")}>
             {t("player.speed")}
           </label>
-          <select
-            id={`playback-rate-${activeRequest?.track.id || "empty"}`}
-            aria-label={t("player.speedAria")}
-            value={playbackRate}
-            onChange={(event) => setPlaybackRate(Number(event.target.value))}
-            disabled={!activeRequest}
-          >
-            {SPEED_OPTIONS.map((speed) => (
-              <option key={speed} value={speed}>{formatNumber(speed)}×</option>
-            ))}
-          </select>
+          {speedSelect}
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor={`ayah-pause-${activeRequest?.track.id || "empty"}`}>
+          <label className="form-label" htmlFor={fieldId("ayah-pause")}>
             {t("player.pause")}
           </label>
-          <select
-            id={`ayah-pause-${activeRequest?.track.id || "empty"}`}
-            aria-label={t("player.pause")}
-            value={pauseMs}
-            onChange={(event) => setPauseMs(Number(event.target.value))}
-            disabled={!activeRequest || availableAyahs.length === 0}
-          >
-            {PAUSE_OPTIONS.map((milliseconds) => (
-              <option key={milliseconds} value={milliseconds}>
-                {milliseconds === 0
-                  ? t("player.noPause")
-                  : t("player.seconds", { value: formatNumber(milliseconds / 1000) })}
-              </option>
-            ))}
-          </select>
+          {pauseSelect}
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor={`sleep-timer-${activeRequest?.track.id || "empty"}`}>
+          <label className="form-label" htmlFor={fieldId("sleep-timer")}>
             {t("player.sleep")}
           </label>
-          <select
-            id={`sleep-timer-${activeRequest?.track.id || "empty"}`}
-            aria-label={t("player.sleep")}
-            value={sleepMode}
-            onChange={(event) => handleSleepModeChange(event.target.value as SleepMode)}
-            disabled={!activeRequest}
-          >
-            <option value="off">{t("player.off")}</option>
-            <option value="ayah" disabled={availableAyahs.length === 0}>{t("player.afterAyah")}</option>
-            <option value="5">{t("player.afterMinutes", { count: 5 })}</option>
-            <option value="15">{t("player.afterMinutes", { count: 15 })}</option>
-            <option value="30">{t("player.afterMinutes", { count: 30 })}</option>
-            <option value="60">{t("player.afterMinutes", { count: 60 })}</option>
-          </select>
-          {sleepRemainingMs !== null && (
+          {sleepSelect}
+          {sleepRemainingLabel && (
             <span className="kpi-desc" aria-live="polite">
-              {t("player.remaining", { time: formatRemaining(sleepRemainingMs) })}
+              {sleepRemainingLabel}
             </span>
           )}
         </div>
           </div>
 
           <div className="segmented-audio-range" aria-label={t("player.rangeAria")}>
-              <div className="form-group">
-                <label className="form-label" htmlFor={`range-start-${activeRequest?.track.id || "empty"}`}>{t("player.fromAyah")}</label>
-                <select
-                  id={`range-start-${activeRequest?.track.id || "empty"}`}
-                  aria-label={t("player.rangeStartAria")}
-                  value={rangeStartAyah ?? ""}
-                  disabled={availableAyahs.length === 0}
-                  onChange={(event) => {
-                    const nextStart = Number(event.target.value);
-                    setRangeStartAyah(nextStart);
-                    setRangeEndAyah((current) => current === null || current < nextStart ? nextStart : current);
-                  }}
-                >
-                  {availableAyahs.length === 0 && <option value="">—</option>}
-                  {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor={`range-end-${activeRequest?.track.id || "empty"}`}>{t("player.toAyah")}</label>
-                <select
-                  id={`range-end-${activeRequest?.track.id || "empty"}`}
-                  aria-label={t("player.rangeEndAria")}
-                  value={rangeEndAyah ?? ""}
-                  disabled={availableAyahs.length === 0}
-                  onChange={(event) => {
-                    const nextEnd = Number(event.target.value);
-                    setRangeEndAyah(nextEnd);
-                    setRangeStartAyah((current) => current === null || current > nextEnd ? nextEnd : current);
-                  }}
-                >
-                  {availableAyahs.length === 0 && <option value="">—</option>}
-                  {availableAyahs.map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
-                </select>
-              </div>
+              {rangeStartField}
+              {rangeEndField}
               <button
                 className="btn btn-primary btn-sm"
                 type="button"

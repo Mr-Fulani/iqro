@@ -111,37 +111,47 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
     const element = root.current;
     const stage = element?.querySelector<HTMLElement>(".mushaf-page-container");
     if (!immersive || !element || !stage) return;
-    // A landscape page scrolls past the bottom overlays (reader bar, tajweed
-    // chips): keep only their current height free below it, not a fixed band.
+    // The reader bar floats over the bottom of the stage: keep only its current
+    // height free below the sheet, not a fixed band. A portrait page ignores the
+    // folded bar, which stays clear of a centred sheet.
     const reserveBottom = () => {
       const bottom = stage.getBoundingClientRect().bottom;
-      const tops = [...element.querySelectorAll<HTMLElement>(".reader-actions, .mushaf-tajweed-legend")]
-        .filter((overlay) => overlay.getClientRects().length > 0)
+      const tops = [...element.querySelectorAll<HTMLElement>(".reader-actions")]
+        .filter((overlay) => overlay.getClientRects().length > 0 && (landscape || !overlay.classList.contains("is-folded")))
         .map((overlay) => overlay.getBoundingClientRect().top);
       element.style.setProperty("--reader-bottom-reserve", `${Math.ceil(Math.max(0, ...tops.map((top) => bottom - top)))}px`);
     };
+    // The tajweed chips follow the sheet in the stage. A portrait sheet leaves
+    // them room, so the page and its chips fit above the reader bar together.
+    const fitSheet = () => {
+      const style = getComputedStyle(stage);
+      const width = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const height = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const legend = stage.querySelector<HTMLElement>(":scope > .mushaf-tajweed-legend");
+      const legendHeight = legend?.getClientRects().length
+        ? legend.getBoundingClientRect().height + parseFloat(getComputedStyle(legend).marginTop)
+        : 0;
+      const sheetWidth = landscape ? width : Math.min(width, Math.max(0, height - legendHeight) * pageRatio);
+      element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
+    };
     // Observe the actual reader box after rotation/browser-bar changes, rather
     // than retaining a width calculated against the previous viewport.
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target !== stage) continue;
-        const { width, height } = entry.contentRect;
-        const sheetWidth = landscape ? width : Math.min(width, height * pageRatio);
-        element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
-      }
+    const observer = new ResizeObserver(() => {
       reserveBottom();
+      fitSheet();
     });
-    const observeOverlays = () => {
-      element.querySelectorAll(".reader-actions, .mushaf-tajweed-legend").forEach((overlay) => observer.observe(overlay));
+    const observeParts = () => {
+      element.querySelectorAll(".reader-actions, .mushaf-tajweed-legend").forEach((part) => observer.observe(part));
     };
-    // The tajweed legend mounts with each page's rules.
-    const overlays = new MutationObserver(observeOverlays);
+    // The reader bar and the tajweed legend mount and unmount with their state.
+    const parts = new MutationObserver(observeParts);
     const surface = element.querySelector(".mushaf-reader-surface");
-    if (surface) overlays.observe(surface, { childList: true });
+    if (surface) parts.observe(surface, { childList: true });
+    parts.observe(stage, { childList: true });
     observer.observe(stage);
-    observeOverlays();
+    observeParts();
     return () => {
-      overlays.disconnect();
+      parts.disconnect();
       observer.disconnect();
       element.style.removeProperty("--reader-sheet-width");
       element.style.removeProperty("--reader-bottom-reserve");
@@ -193,7 +203,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
         data-reader-compact={compact}
         onClick={(event) => {
           const target = event.target as Element;
-          if (immersive && !panel && target.closest(".mushaf-page-container") && !target.closest("button, a, input, select, [role='button']")) {
+          if (immersive && !panel && target.closest(".mushaf-page-container") && !target.closest("button, a, input, select, [role='button'], .mushaf-tajweed-legend")) {
             setControlsVisible((visible) => !visible);
           }
         }}

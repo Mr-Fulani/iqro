@@ -262,6 +262,83 @@ class AppLocalizationsRu extends AppLocalizations {
   String get retry => 'Повторить';
 
   @override
+  String get newsTitle => 'Что нового';
+
+  @override
+  String get newsDescription =>
+      'Новые чтецы, функции и материалы на сайте и в приложении.';
+
+  @override
+  String get newsEmpty => 'Пока новостей нет.';
+
+  @override
+  String get newsLoadMore => 'Показать ещё';
+
+  @override
+  String get newsLoadError => 'Не удалось загрузить новости. Попробуйте позже.';
+
+  @override
+  String get newsAll => 'Все';
+
+  @override
+  String get newsFilterLabel => 'Тип новости';
+
+  @override
+  String get newsFilterReciter => 'Чтецы';
+
+  @override
+  String get newsFilterFeature => 'Функции';
+
+  @override
+  String get newsFilterContent => 'Содержание';
+
+  @override
+  String get newsFilterAppRelease => 'Приложение';
+
+  @override
+  String get newsFilterGeneral => 'Общее';
+
+  @override
+  String get newsKindReciter => 'Новый чтец';
+
+  @override
+  String get newsKindFeature => 'Что нового';
+
+  @override
+  String get newsKindAppRelease => 'Новая версия';
+
+  @override
+  String get newsKindContent => 'Новое содержание';
+
+  @override
+  String get newsKindGeneral => 'Объявление';
+
+  @override
+  String get newsUnread => 'Не прочитано';
+
+  @override
+  String get newsHowTo => 'Как пользоваться';
+
+  @override
+  String get newsMore => 'Подробнее';
+
+  @override
+  String get newsPrevious => 'Предыдущее';
+
+  @override
+  String get newsNext => 'Следующее';
+
+  @override
+  String newsCounter(int current, int total) {
+    return '$current из $total';
+  }
+
+  @override
+  String newsBubble(int count) {
+    return 'Новое: $count. Открыть';
+  }
+
+  @override
   String get continueLabel => 'Продолжить';
 
   @override

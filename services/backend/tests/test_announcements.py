@@ -48,8 +48,10 @@ from quran_backend.modules.announcements.services import (
     archive,
     cancel_edit,
     duplicate,
+    extend_display,
     publish,
     readiness,
+    republish,
     reshow,
     set_receipt,
     start_edit,
@@ -591,6 +593,76 @@ def test_counters_are_kept_per_wave(api_client: APIClient, owner: User) -> None:
     }
     assert counts == {(1, "impression"): 1, (2, "impression"): 2, (2, "dismiss"): 1}
     assert AnnouncementWave.objects.filter(announcement=announcement).count() == 2
+
+
+# Publishing again after withdrawal, extending the window
+
+
+@pytest.mark.django_db
+def test_a_withdrawn_announcement_is_published_again_in_a_new_wave(
+    api_client: APIClient,
+    owner: User,
+    recorded_changes: list[str],
+) -> None:
+    announcement = _publish(_announcement(), owner)
+    withdraw(announcement, owner)
+    assert _active(api_client)["results"] == []
+
+    republish(announcement, owner)
+
+    announcement.refresh_from_db()
+    assert announcement.status == AnnouncementStatus.PUBLISHED
+    assert announcement.withdrawn_at is None
+    assert announcement.wave == 2
+    assert list(announcement.waves.values_list("number", "reason")) == [
+        (1, WaveReason.PUBLISHED),
+        (2, WaveReason.REPUBLISHED),
+    ]
+    assert _active(api_client)["results"][0]["wave"] == 2
+    assert recorded_changes == ["published", "withdrawn", "published"]
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        republish(announcement, owner)
+    assert error.value.problems == ["Опубликовать снова можно только снятое объявление."]
+    with pytest.raises(AnnouncementNotReadyError) as error:
+        _publish(announcement, owner)
+    assert error.value.problems == ["Уже опубликовано."]
+
+
+@pytest.mark.django_db
+def test_publishing_fundraising_again_is_the_owners_call(owner: User, editor: User) -> None:
+    fundraising = _publish(
+        _announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False), owner
+    )
+    withdraw(fundraising, owner)
+
+    with pytest.raises(PermissionDenied):
+        republish(fundraising, editor)
+    with pytest.raises(PermissionDenied):
+        extend_display(
+            _publish(_announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False), owner),
+            editor,
+        )
+    assert republish(fundraising, owner).status == AnnouncementStatus.PUBLISHED
+
+
+@pytest.mark.django_db
+def test_extending_keeps_it_on_the_home_screen_a_week_longer(owner: User) -> None:
+    announcement = _publish(_announcement(), owner)
+    planned = announcement.display_until
+
+    extended = extend_display(announcement, owner)
+    assert extended.ends_at == planned + timedelta(days=7)
+
+    Announcement.objects.filter(pk=announcement.pk).update(
+        starts_at=timezone.now() - timedelta(days=30),
+        ends_at=timezone.now() - timedelta(days=1),
+    )
+    before = timezone.now()
+    extended = extend_display(announcement, owner)
+    assert before + timedelta(days=7) <= extended.ends_at <= timezone.now() + timedelta(days=7)
+    withdraw(announcement, owner)
+    with pytest.raises(AnnouncementNotReadyError):
+        extend_display(announcement, owner)
 
 
 # Public API
@@ -1179,6 +1251,157 @@ def _published_form_data(announcement: Announcement) -> dict[str, Any]:
         "step_images-MIN_NUM_FORMS": "0",
         "step_images-MAX_NUM_FORMS": "5",
     }
+
+
+def _titled(title: str, **overrides: Any) -> Announcement:
+    announcement = _announcement(languages=("ru",), **overrides)
+    announcement.translations.update(title=title)
+    return announcement
+
+
+def _run_action(client: Client, action: str, items: list[Announcement], **extra: str) -> list[str]:
+    response = client.post(
+        "/admin/announcements/announcement/",
+        {"action": action, "_selected_action": [str(item.pk) for item in items], **extra},
+        follow=True,
+    )
+    assert response.status_code == 200
+    return [str(message) for message in response.context["messages"]]
+
+
+@pytest.mark.django_db
+def test_list_actions_report_on_every_selected_announcement(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    draft = _titled("Черновик")
+    unfinished = _titled("Без кнопки", action_type="surah")
+    published = _publish(_titled("Опубликованное"), owner)
+    withdrawn = _publish(_titled("Снятое"), owner)
+    withdraw(withdrawn, owner)
+
+    reports = _run_action(client, "publish_selected", [draft, unfinished, published, withdrawn])
+
+    assert sorted(reports) == sorted(
+        [
+            "Черновик: опубликовано.",
+            "Без кнопки: не сделано — Укажите номер суры.",
+            "Опубликованное: не сделано — Уже опубликовано.",
+            "Снятое: не сделано — Снято с публикации: нажмите «Опубликовать снова».",
+        ]
+    )
+    assert sorted(_run_action(client, "republish_selected", [withdrawn, published])) == sorted(
+        [
+            "Снятое: опубликовано снова, вернётся на главную и тем, кто закрыл.",
+            "Опубликованное: не сделано — Опубликовать снова можно только снятое объявление.",
+        ]
+    )
+    assert _run_action(client, "reshow_selected", [published]) == [
+        "Опубликованное: снова на главной, волна 2."
+    ]
+    extended = _run_action(client, "extend_selected", [published, unfinished])
+    assert extended[0].startswith("Опубликованное: на главной до ")
+    assert (
+        extended[1] == "Без кнопки: не сделано — Продлить можно только опубликованное объявление."
+    )
+    assert _run_action(client, "duplicate_selected", [published]) == [
+        "Опубликованное: создан черновик-копия."
+    ]
+    assert Announcement.objects.filter(status=AnnouncementStatus.DRAFT).count() == 2
+    assert sorted(_run_action(client, "withdraw_selected", [published, unfinished])) == sorted(
+        [
+            "Опубликованное: снято. Вернуть можно «Опубликовать снова».",
+            "Без кнопки: не сделано — Снять можно только опубликованное объявление.",
+        ]
+    )
+
+
+@pytest.mark.django_db
+def test_list_actions_tell_an_editor_what_only_the_owner_does(owner: User, editor: User) -> None:
+    client = Client()
+    client.force_login(editor)
+    fundraising = _titled("Сбор", kind=AnnouncementKind.FUNDRAISING, channel_bubble=False)
+    ordinary = _titled("Обычное")
+
+    reports = _run_action(client, "publish_selected", [fundraising, ordinary])
+
+    assert sorted(reports) == sorted(
+        [
+            "Обычное: опубликовано.",
+            "Сбор: нет права. Сбор средств, окно с шагами, push и обязательное обновление "
+            "публикует, снимает с главной и показывает снова только владелец.",
+        ]
+    )
+
+
+@pytest.mark.django_db
+def test_archiving_from_the_list_asks_first(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    withdrawn = _publish(_titled("Старое"), owner)
+    withdraw(withdrawn, owner)
+
+    question = client.post(
+        "/admin/announcements/announcement/",
+        {"action": "archive_selected", "_selected_action": [str(withdrawn.pk)]},
+    )
+    assert question.status_code == 200
+    body = question.content.decode()
+    assert "Перенести в архив?" in body
+    assert "Вернуть их из архива нельзя" in body
+    withdrawn.refresh_from_db()
+    assert withdrawn.status == AnnouncementStatus.WITHDRAWN
+
+    reports = _run_action(client, "archive_selected", [withdrawn], confirmed="yes")
+    assert reports == ["Старое: в архиве, убрано и из ленты."]
+    withdrawn.refresh_from_db()
+    assert withdrawn.status == AnnouncementStatus.ARCHIVED
+
+
+@pytest.mark.django_db
+def test_withdrawn_page_offers_publishing_again(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _publish(_announcement(languages=("ru",)), owner)
+    withdraw(announcement, owner)
+    page = f"/admin/announcements/announcement/{announcement.pk}/change/"
+
+    body = client.get(page).content.decode()
+    assert 'name="_republish" value="Опубликовать снова"' in body
+    assert "«Опубликовать снова» вернёт его всем" in body
+    response = client.post(
+        page, _published_form_data(announcement) | {"_republish": "1"}, follow=True
+    )
+
+    assert "Опубликовано снова." in response.content.decode()
+    announcement.refresh_from_db()
+    assert (announcement.status, announcement.wave) == (AnnouncementStatus.PUBLISHED, 2)
+
+
+@pytest.mark.django_db
+def test_admin_list_and_forms_have_no_english_placeholders(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _announcement()
+
+    listing = client.get("/admin/announcements/announcement/").content.decode()
+    form = client.get(
+        f"/admin/announcements/announcement/{announcement.pk}/change/"
+    ).content.decode()
+
+    for body in (listing, form):
+        for english in ("Select an option", "---------", ">Go<", "Run the selected action"):
+            assert english not in body
+        assert "— выберите —" in body
+    assert "Filter by" not in listing
+    assert "Фильтр: Показывать с" in listing
+    for label in (
+        "Опубликовать снова (снятые)",
+        "Показать снова на главной",
+        "Продлить показ на главной на 7 дней",
+        "Перенести в архив…",
+        "Сделать копию (черновик)",
+    ):
+        assert f">{label}</option>" in listing
 
 
 def _change_form_data(announcement: Announcement) -> dict[str, Any]:
