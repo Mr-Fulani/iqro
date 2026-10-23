@@ -684,6 +684,7 @@ const en: Messages = {
   "player.surahAyah": "Surah {surah} · ayah {ayah}",
   "player.range": "Range",
   "player.rangeValue": "Ayahs {start}–{end}",
+  "player.showControls": "Show the controls",
   "mushafAudio.reciter": "Quran.Foundation reciter",
   "mushafAudio.coverage": "{count}/114 surahs",
   "mushafAudio.chooseAyah": "Choose an ayah",

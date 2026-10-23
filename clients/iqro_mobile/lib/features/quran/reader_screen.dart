@@ -12,6 +12,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
+import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../plan/plan_repository.dart';
 import 'ayah_annotations.dart';
@@ -634,6 +635,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           recitations
               .where((item) => item.reciter.id == activeReciterId)
               .firstOrNull ??
+          teachingRecitation(recitations) ??
           recitations
               .where((item) => item.code.startsWith('qf-7-'))
               .firstOrNull ??
@@ -663,20 +665,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         startAyah: ayah.number,
         endAyah: ayah.number,
       );
-      if (_isCurrentAudioRequest(
-            scope,
-            controller,
-            request,
-            navigationEpoch: navigationEpoch,
-          ) &&
-          ref.read(appPreferencesProvider).mushafRecitationId !=
-              recitation.id) {
-        unawaited(
-          ref
-              .read(appPreferencesProvider.notifier)
-              .setMushafRecitation(recitation.id),
-        );
-      }
     } on AccountScopeChanged {
       return;
     } on Object {

@@ -1335,9 +1335,10 @@ def test_recitation_list_is_free_of_serializer_n_plus_one_queries(
 
     assert response.status_code == 200
     assert len(response.json()["results"]) == 2
-    # The page itself, one query for every public recitation's summary and one
-    # for the surahs each of them holds.
-    assert len(cold) == 3
-    # Summaries come from the cache: only the page is queried.
-    assert len(warm) == 1
+    # The page itself, one query for every public recitation's summary, one
+    # for the surahs each of them holds, and two for the teaching reciter: the
+    # admin's choice and the recitation it names.
+    assert len(cold) == 5
+    # Summaries come from the cache: the page and the teaching reciter are queried.
+    assert len(warm) == 3
     assert cached.json() == response.json()

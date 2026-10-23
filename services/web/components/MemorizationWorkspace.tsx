@@ -14,11 +14,7 @@ import { useAuth } from "../lib/auth-context";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
-import {
-  loadReciterPreference,
-  preferredRecitation,
-  rememberReciterPreference,
-} from "../lib/reciter-preference";
+import { learningRecitation, rememberReciterPreference } from "../lib/reciter-preference";
 import { MemorizationAudioLoop } from "./MemorizationAudioLoop";
 import { MemorizationTajweedAyahs } from "./MemorizationTajweedAyahs";
 
@@ -125,10 +121,7 @@ export function MemorizationWorkspace() {
             "memorization",
           );
         } else if (!nextDashboard.plan) {
-          const remembered = preferredRecitation(
-            availableRecitations,
-            loadReciterPreference("memorization"),
-          );
+          const remembered = learningRecitation(availableRecitations, "memorization");
           if (remembered) setRecitationId(remembered.id);
         }
         if (!nextDashboard.plan && !deepLinkApplied.current) {

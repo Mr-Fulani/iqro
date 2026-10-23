@@ -328,10 +328,17 @@ class PreferencesStore {
     return _preferences.getString(_accountRecitationKey(ownerId, role));
   }
 
+  // The v1 Mushaf key was written on every playback with whatever played, as
+  // if chosen; v2 holds only the user's own choice, so the catalog's teaching
+  // reciter plays for everyone else.
   static String _accountRecitationKey(
     String ownerId,
     RecitationPreferenceRole role,
-  ) => 'account:${Uri.encodeComponent(ownerId)}:recitation_${role.name}_v1';
+  ) {
+    final version = role == RecitationPreferenceRole.mushaf ? 'v2' : 'v1';
+    return 'account:${Uri.encodeComponent(ownerId)}:'
+        'recitation_${role.name}_$version';
+  }
 
   Future<void> writeAccountRecitation(
     String ownerId,

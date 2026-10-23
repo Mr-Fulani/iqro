@@ -58,6 +58,20 @@ void main() {
     expect(complete.timingsComplete, isTrue);
   });
 
+  test('the teaching flag is read from the catalog and is off by default', () {
+    expect(parse().teachingDefault, isFalse);
+    final teaching = Recitation.fromJson(<String, Object?>{
+      'id': 'teaching',
+      'code': 'qf-12-muallim',
+      'style': 'muallim',
+      'reciter': <String, Object?>{'id': 'reciter', 'slug': 'reciter'},
+      'rights': <String, Object?>{'stream': true},
+      'coverage': <String, Object?>{'surah_count': 114},
+      'teaching_default': true,
+    });
+    expect(teaching.teachingDefault, isTrue);
+  });
+
   test('a recitation built without capabilities needs complete timings', () {
     const reciter = Reciter(
       id: 'reciter',

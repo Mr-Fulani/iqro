@@ -30,6 +30,7 @@ from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 
 from quran_backend.modules.audio.models import (
+    AudioCatalogSettings,
     AudioPlaybackPosition,
     AudioRendition,
     AudioTimingVersion,
@@ -64,6 +65,7 @@ from quran_backend.modules.audio.selectors import (
     forget_recitation_summaries,
     public_recitation_base,
     public_reciters,
+    timed_recitation_candidates,
 )
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.audio.surah_upload import (
@@ -1237,3 +1239,24 @@ class AyahAudioSegmentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "ayah__surah__edition_version__edition",
             )
         )
+
+
+@admin.register(AudioCatalogSettings)
+class AudioCatalogSettingsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """One row: which published, timed recitation teaches by default."""
+
+    list_display = ("__str__", "updated_at")
+    fields = ("teaching_recitation",)
+
+    def formfield_for_foreignkey(self, db_field: Any, request: HttpRequest, **kwargs: Any) -> Any:
+        if db_field.name == "teaching_recitation":
+            kwargs["queryset"] = timed_recitation_candidates().order_by(
+                "reciter__name_ru", "style", "-published_at"
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return not AudioCatalogSettings.objects.exists() and super().has_add_permission(request)
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False

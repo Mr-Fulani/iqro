@@ -126,6 +126,9 @@ body:has(.quran-reader-boot) .app-footer {
 }
 
 .quran-page-layout.is-reader-immersive {
+  /* A landscape phone reports a camera cutout on one side only. Keep both
+     sides equal so the page and its controls stay centred on the screen. */
+  --reader-inline-inset: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   --panel: #fffdf8;
   --bg: #f7f4ec;
   --primary: #0b5d4a;
@@ -180,7 +183,7 @@ body:has(.quran-reader-boot) .app-footer {
   height: 100%;
   min-height: 0;
   margin: 0;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  padding: env(safe-area-inset-top, 0px) var(--reader-inline-inset) env(safe-area-inset-bottom, 0px);
   border: 0;
   border-radius: 0;
   background: var(--panel);
@@ -298,7 +301,7 @@ body:has(.quran-reader-boot) .app-footer {
   width: var(--reader-sheet-width, 100%);
   max-width: 100%;
   margin-top: 6px;
-  padding-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px));
+  padding-inline: max(12px, var(--reader-inline-inset));
 }
 
 .quran-page-layout:has(.reader-actions.is-folded) .mushaf-tajweed-legend {
@@ -356,7 +359,7 @@ body:has(.quran-reader-boot) .app-footer {
 .reader-actions {
   position: absolute;
   z-index: 210;
-  inset-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
+  inset-inline: max(8px, var(--reader-inline-inset, 0px));
   bottom: max(8px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;

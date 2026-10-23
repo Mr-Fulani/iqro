@@ -79,9 +79,21 @@ legacy `timings` fields:
     "ayah_playback": true,
     "memorization": true,
     "offline": false
-  }
+  },
+  "teaching_default": false
 }
 ```
+
+`teaching_default` marks the one recitation the Mushaf reader, Memorization and
+the salah and tajweed courses play until the user picks a reciter: the admin's
+choice in «Аудио → Учебный чтец» (`AudioCatalogSettings`), else the newest
+published recitation whose code is `QURAN_TEACHING_RECITATION_CODE` (al-Husary's
+muallim recording, `qf-12-muallim-01a15bc65dc9`, by default). It is `true` for at
+most one recitation and only while that recitation is published, not
+listening-only and has verified timings; when none carries it, clients keep
+their own fallback rules. The listening player ignores it. The flag is read with
+the catalog, so a change reaches the site within the API's 5-minute cache and
+the app within its 12-hour catalog cache.
 
 `listen` describes a streamable surah catalog. `ayah_playback` and
 `memorization` require verified timing coverage for every ayah in the active

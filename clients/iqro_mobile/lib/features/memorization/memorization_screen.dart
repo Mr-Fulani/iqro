@@ -12,6 +12,7 @@ import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import '../audio/recitation_style_label.dart';
+import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../quran/quran_models.dart';
 import 'memorization_repository.dart';
@@ -180,19 +181,28 @@ class _MemorizationScreenBodyState
       _showError(context.l10n.memorizationRangeInvalid);
       return;
     }
+    // The form showed the teaching reciter when nothing was chosen: save that.
+    final recitationId =
+        preferredRecitation(
+          ref.read(memorizationRecitationsProvider).valueOrNull ??
+              const <Recitation>[],
+          preferredId: _recitationId,
+          role: AudioRecitationRole.memorization,
+        )?.id ??
+        _recitationId;
     setState(() => _saving = true);
     try {
       await widget.controller.savePlan(
         MemorizationPlanDraft(
           startAyahId: start.id,
           endAyahId: end.id,
-          recitationId: _recitationId,
+          recitationId: recitationId,
           dailyRepetitions: _dailyRepetitions,
           pauseSeconds: _pauseSeconds,
         ),
         baseRevision: dashboard.plan?.revision ?? 0,
       );
-      final selectedRecitationId = _recitationId?.trim();
+      final selectedRecitationId = recitationId?.trim();
       if (selectedRecitationId != null && selectedRecitationId.isNotEmpty) {
         await ref
             .read(appPreferencesProvider.notifier)
@@ -348,10 +358,14 @@ class _PlanEditor extends ConsumerWidget {
     final surahItems = catalog.valueOrNull?.surahs ?? const <Surah>[];
     final ayahItems = ayahs.valueOrNull ?? const <QuranAyah>[];
     final recitationItems = recitations.valueOrNull ?? const <Recitation>[];
+    // The user's choice, else the catalog's teaching reciter, as on the site.
     final activeRecitationId =
-        recitationItems.any((item) => item.id == recitationId)
-        ? recitationId!
-        : '';
+        preferredRecitation(
+          recitationItems,
+          preferredId: recitationId,
+          role: AudioRecitationRole.memorization,
+        )?.id ??
+        '';
     return Column(
       children: <Widget>[
         IqroCard(

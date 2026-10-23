@@ -6,11 +6,7 @@ import { reciterName } from "../lib/audio-content";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
 import { useMushafReader } from "./MushafReaderLayout";
-import {
-  loadReciterPreference,
-  preferredRecitation,
-  rememberReciterPreference,
-} from "../lib/reciter-preference";
+import { learningRecitation, rememberReciterPreference } from "../lib/reciter-preference";
 import {
   AudioPlaybackRequest,
   SegmentedAudioPlayer,
@@ -114,13 +110,13 @@ export function MushafAudioPlayer({
         if (cancelled) return;
         const available = latestRecitationsByVariant(catalog, "ayah_playback");
         setRecitations(available);
-        const remembered = preferredRecitation(available, loadReciterPreference("mushaf"));
         const fallback = available
           .filter((item) => item.code.startsWith("qf-7-"))
           .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
-        const selected = remembered || fallback || available[0];
+        // The visitor's choice, else the catalog's teaching reciter; only a
+        // choice is remembered, so a new teaching reciter reaches everyone else.
+        const selected = learningRecitation(available, "mushaf") || fallback || available[0];
         setSelectedRecitationId(selected?.id || "");
-        if (selected) rememberReciterPreference(selected.reciter, selected, "mushaf");
       })
       .catch((reason) => {
         if (!cancelled) setError(api.normalizeError(reason));
