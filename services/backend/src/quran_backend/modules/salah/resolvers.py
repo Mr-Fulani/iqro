@@ -19,6 +19,7 @@ from quran_backend.modules.audio.selectors import (
     ordered_renditions,
     public_recitations,
     public_surah_tracks,
+    teaching_recitation,
     verified_audio_segments,
 )
 from quran_backend.modules.audio.serializers import audio_asset_payload, public_audio_url
@@ -177,8 +178,17 @@ class FormulaResolver:
                 self._quran_translations[language][(row.surah_number, row.ayah_number)] = row.text
 
     def _quran_audio_for(self, surah: int, start: int, end: int) -> dict[str, Any] | None:
-        """The first public recitation with verified timings for every ayah."""
-        for recitation in public_recitations()[:20]:
+        """The teaching recitation when it has verified timings for every ayah,
+        else the first public recitation that has.
+        """
+        teaching = teaching_recitation()
+        candidates = [] if teaching is None else [teaching]
+        candidates.extend(
+            recitation
+            for recitation in public_recitations()[:20]
+            if teaching is None or recitation.id != teaching.id
+        )
+        for recitation in candidates:
             track = public_surah_tracks(recitation.id, surah).first()
             if track is None:
                 continue

@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import (
     Case,
@@ -20,7 +21,9 @@ from django.db.models import (
 )
 
 from quran_backend.modules.audio.models import (
+    AudioCatalogSettings,
     AudioRendition,
+    AudioTimingVersion,
     AudioTrack,
     AudioTrackScope,
     AyahAudioSegment,
@@ -196,6 +199,43 @@ def attach_recitation_summaries(recitations: Iterable[RecitationEdition]) -> Non
     for item in items:
         for field, value in summaries.get(str(item.id), {}).items():
             setattr(item, field, value)
+
+
+def timed_recitation_candidates() -> QuerySet[RecitationEdition]:
+    """Public recitations with verified ayah timings: the ones that may teach."""
+
+    verified_timings = AudioTimingVersion.objects.filter(
+        recitation_edition_id=OuterRef("pk"),
+        verified_at__isnull=False,
+    )
+    return (
+        public_recitation_base()
+        .filter(listening_only=False)
+        .alias(has_verified_timings=Exists(verified_timings))
+        .filter(has_verified_timings=True)
+    )
+
+
+def teaching_recitation() -> RecitationEdition | None:
+    """The recitation the Mushaf, Memorization and the courses play by default.
+
+    The admin's choice wins while it is public and timed; otherwise the newest
+    published version with the configured code; otherwise nothing, and clients
+    keep their own fallback rules.
+    """
+
+    candidates = timed_recitation_candidates()
+    chosen_id = AudioCatalogSettings.objects.values_list(
+        "teaching_recitation_id", flat=True
+    ).first()
+    if chosen_id is not None:
+        chosen = candidates.filter(id=chosen_id).first()
+        if chosen is not None:
+            return chosen
+    code = settings.QURAN_TEACHING_RECITATION_CODE
+    if not code:
+        return None
+    return candidates.filter(code=code).order_by("-published_at", "-version", "-id").first()
 
 
 def public_reciters() -> QuerySet[Reciter]:

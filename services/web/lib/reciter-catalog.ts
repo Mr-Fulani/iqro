@@ -103,6 +103,11 @@ export function recitationsForRole(
   return recitations.filter((recitation) => supportsRecitationRole(recitation, role));
 }
 
+/** The catalog's teaching reciter: what the Mushaf, Memorization and the courses play by default. */
+export function teachingRecitation(recitations: Recitation[]): Recitation | undefined {
+  return recitations.find((item) => item.teaching_default === true);
+}
+
 function publishedTimestamp(recitation: Recitation): number {
   const timestamp = Date.parse(recitation.published_at);
   return Number.isFinite(timestamp) ? timestamp : 0;

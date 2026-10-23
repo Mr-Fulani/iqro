@@ -665,6 +665,8 @@ export type Recitation = {
     memorization: boolean;
     offline: boolean;
   };
+  /** The recording the Mushaf, Memorization and the courses play until the visitor picks one. */
+  teaching_default?: boolean;
   published_at: string;
 };
 

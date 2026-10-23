@@ -206,7 +206,8 @@ function planSnapshot() {
   };
 }
 
-async function installMocks(page: Page) {
+async function installMocks(page: Page, options: { recitations?: object[] } = {}) {
+  const recitations = options.recitations ?? [recitation];
   const testFont = await readFile(
     new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
   );
@@ -285,7 +286,7 @@ async function installMocks(page: Page) {
       return route.fulfill({ json: ayahs });
     }
     if (url.pathname === "/api/v1/recitations") {
-      return route.fulfill({ json: { next: null, previous: null, results: [recitation] } });
+      return route.fulfill({ json: { next: null, previous: null, results: recitations } });
     }
     if (url.pathname === `/api/v1/recitations/${recitation.id}/surahs/1`) {
       return route.fulfill({ json: surahPlayback });
@@ -300,6 +301,27 @@ async function installMocks(page: Page) {
   });
   return writes;
 }
+
+test("the plan form starts on the catalog's teaching reciter until the learner picks one", async ({ page }) => {
+  const teaching = {
+    ...recitation,
+    id: "00000000-0000-7000-8000-000000000917",
+    code: "test-muallim",
+    style: "muallim",
+    teaching_default: true,
+  };
+  await installMocks(page, { recitations: [recitation, teaching] });
+
+  await page.goto("/ru/memorization");
+  const reciterField = page.getByLabel("Чтец для повторения");
+  await expect(reciterField).toHaveValue(teaching.id);
+  // The default is not written as a choice: a new teaching reciter would reach this learner.
+  expect(await page.evaluate(() => window.localStorage.getItem("quran_reciter_preference_v1:memorization"))).toBeNull();
+
+  await reciterField.selectOption(recitation.id);
+  await page.reload();
+  await expect(page.getByLabel("Чтец для повторения")).toHaveValue(recitation.id);
+});
 
 test("creates a synced plan, tests recall, and records self-assessment", async ({ page }) => {
   const writes = await installMocks(page);

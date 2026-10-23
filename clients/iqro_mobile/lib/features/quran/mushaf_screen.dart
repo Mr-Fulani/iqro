@@ -663,17 +663,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         startAyah: reference.ayah,
         endAyah: reference.ayah,
       );
-      if (ownsRequest()) {
-        if (ref.read(appPreferencesProvider).mushafRecitationId !=
-            recitation.id) {
-          unawaited(
-            ref
-                .read(appPreferencesProvider.notifier)
-                .setMushafRecitation(recitation.id),
-          );
-        }
-        setState(() => _playerExpanded = true);
-      }
+      if (ownsRequest()) setState(() => _playerExpanded = true);
     } on AccountScopeChanged {
       return;
     } on Object {

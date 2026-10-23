@@ -193,6 +193,7 @@ class Recitation {
     this.timingsComplete = false,
     this.capabilities,
     this.coverage,
+    this.teachingDefault = false,
   });
 
   factory Recitation.fromJson(Map<String, Object?> json) {
@@ -231,6 +232,7 @@ class Recitation {
         legacyOffline: rights['offline_download'] == true,
       ),
       coverage: RecitationCoverage.fromJson(coverage),
+      teachingDefault: json['teaching_default'] == true,
     );
   }
 
@@ -247,6 +249,10 @@ class Recitation {
   final bool offlineDownloadAllowed;
   final RecitationCapabilities? capabilities;
   final RecitationCoverage? coverage;
+
+  /// The catalog's teaching reciter: what the Mushaf, Memorization and the
+  /// courses play until the user picks one. The Audio tab ignores it.
+  final bool teachingDefault;
 
   /// Listening recitations may hold only some surahs. Catalogs from before
   /// the surah list only ever held complete recitations.
