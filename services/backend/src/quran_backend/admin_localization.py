@@ -95,6 +95,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     ),
     "audio.Reciter": ("чтец", "чтецы"),
     "audio.PlayerBackground": ("фон плеера", "фоны плеера"),
+    "audio.AudioCatalogSettings": ("настройка аудиокаталога", "учебный чтец"),
     "audio.RecitationEdition": ("вариант чтения", "варианты чтения"),
     "audio.AudioTimingVersion": ("версия таймкодов", "версии таймкодов"),
     "audio.AudioTrack": ("аудиодорожка", "аудиодорожки"),
@@ -390,6 +391,7 @@ FIELD_LABELS: dict[str, str] = {
     "is_available": "Доступен",
     "is_default": "По умолчанию",
     "is_enabled": "Включено",
+    "teaching_recitation": "Учебный чтец",
     "include_in_seo": "Добавлять в SEO",
     "is_staff": "Доступ в админку",
     "is_superuser": "Суперпользователь",
@@ -652,6 +654,7 @@ MODEL_FIELD_LABELS = {
     ("announcements.Announcement", "revised_by"): "Изменил",
     ("announcements.Announcement", "wave"): "Волна показа",
     ("announcements.AnnouncementSettings", "is_enabled"): "Показывать объявления",
+    ("audio.AudioCatalogSettings", "teaching_recitation"): "Учебный чтец",
 }
 
 

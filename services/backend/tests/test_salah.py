@@ -5,6 +5,7 @@ import json
 import shutil
 import struct
 import subprocess
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -12,6 +13,8 @@ from unittest.mock import patch
 import pytest
 from django.contrib import admin
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.test import RequestFactory
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.core.object_storage import ImmutableObjectSpec, StoredObject
@@ -689,3 +692,72 @@ def test_formulas_resolve_from_the_published_hisn_al_muslim() -> None:
 )
 def test_count_notes_are_trimmed_from_formula_texts(raw: str, clean: str) -> None:
     assert clean_note(raw) == clean
+
+
+@pytest.mark.django_db
+def test_recompile_rebuilds_the_published_documents_in_place(
+    imported: tuple[SalahCourseVersion, FakeUploader], api_client: Any
+) -> None:
+    """The teaching reciter changes after publication: the signed snapshot stays,
+    its formulas are resolved again by the command or the admin action."""
+    version, _ = imported
+    owner = User.objects.create_user(email="owner@example.test", password="x" * 16, status="active")
+    with (
+        patch("quran_backend.modules.salah.importer.FormulaResolver", FakeResolver),
+        patch("quran_backend.modules.salah.importer.enqueue_salah_content_change"),
+    ):
+        version.sign(owner)
+        publish_salah_version(version)
+    checksum = version.checksum_sha256
+
+    class RecompiledResolver(FakeResolver):
+        def resolve(self, language: str) -> dict[str, dict[str, Any]]:
+            return {
+                formula_id: {**formula, "audio": {"url": "https://media.iqro.forum/teaching.mp3"}}
+                for formula_id, formula in super().resolve(language).items()
+            }
+
+    with (
+        patch("quran_backend.modules.salah.importer.FormulaResolver", RecompiledResolver),
+        patch(
+            "quran_backend.modules.salah.management.commands.recompile_salah_course."
+            "enqueue_salah_content_change"
+        ) as revalidate,
+    ):
+        out = StringIO()
+        call_command("recompile_salah_course", stdout=out)
+    assert "документы пересобраны" in out.getvalue()
+    revalidate.assert_called_once_with(
+        action="activated", course="hanbali-umdah", version="2026-10-18"
+    )
+    version.refresh_from_db()
+    assert version.status == SalahPublicationStatus.PUBLISHED
+    assert version.checksum_sha256 == checksum
+    payload = api_client.get("/api/v1/salah/courses/hanbali-umdah?language=ru").json()
+    assert payload["formulas"]["takbir"]["audio"] == {
+        "url": "https://media.iqro.forum/teaching.mp3"
+    }
+
+    # The admin action does the same for the published version.
+    class ActionResolver(FakeResolver):
+        def resolve(self, language: str) -> dict[str, dict[str, Any]]:
+            return {
+                formula_id: {**formula, "audio": {"url": "https://media.iqro.forum/action.mp3"}}
+                for formula_id, formula in super().resolve(language).items()
+            }
+
+    model_admin = admin.site._registry[SalahCourseVersion]
+    assert isinstance(model_admin, SalahCourseVersionAdmin)
+    request = RequestFactory().get("/admin/")
+    with (
+        patch("quran_backend.modules.salah.importer.FormulaResolver", ActionResolver),
+        patch("quran_backend.modules.salah.admin.enqueue_salah_content_change") as revalidate,
+        patch.object(model_admin, "message_user") as message_user,
+    ):
+        model_admin.recompile_versions(request, SalahCourseVersion.objects.filter(pk=version.pk))
+    message_user.assert_called_once()
+    revalidate.assert_called_once_with(
+        action="activated", course="hanbali-umdah", version="2026-10-18"
+    )
+    payload = api_client.get("/api/v1/salah/courses/hanbali-umdah?language=ru").json()
+    assert payload["formulas"]["takbir"]["audio"] == {"url": "https://media.iqro.forum/action.mp3"}

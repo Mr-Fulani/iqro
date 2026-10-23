@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any
 
 from django.conf import settings
@@ -21,6 +22,7 @@ from quran_backend.modules.audio.models import (
     RecitationStyle,
     Reciter,
 )
+from quran_backend.modules.audio.selectors import teaching_recitation
 from quran_backend.modules.audio.variant_resolver import (
     quran_foundation_ayah_variant_id,
     recitation_variant_id,
@@ -171,6 +173,7 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
     coverage = serializers.SerializerMethodField()
     timings = serializers.SerializerMethodField()
     capabilities = serializers.SerializerMethodField()
+    teaching_default = serializers.SerializerMethodField()
 
     class Meta:
         model = RecitationEdition
@@ -188,8 +191,15 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "coverage",
             "timings",
             "capabilities",
+            "teaching_default",
             "published_at",
         )
+
+    # One lookup per response: a list shares its child serializer across items.
+    @cached_property
+    def _teaching_recitation_id(self) -> Any:
+        recitation = teaching_recitation()
+        return None if recitation is None else recitation.id
 
     def get_variant_id(self, obj: RecitationEdition) -> str:
         return recitation_variant_id(obj.id)
@@ -259,6 +269,11 @@ class RecitationEditionSerializer(serializers.ModelSerializer[RecitationEdition]
             "memorization": ayah_roles,
             "offline": bool(obj.offline_download_allowed),
         }
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_teaching_default(self, obj: RecitationEdition) -> bool:
+        """The recitation the Mushaf, Memorization and the courses play until the user chooses."""
+        return bool(obj.id == self._teaching_recitation_id)
 
 
 class QuranFoundationAyahCoverageSerializer(serializers.Serializer[Any]):

@@ -23,6 +23,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html, format_html_join
 
 from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.content_revalidation import enqueue_salah_content_change
 from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.salah.editor_admin import editor_editable, readonly_reason
 from quran_backend.modules.salah.editor_structure_admin import SalahStructureAdminMixin
@@ -297,12 +298,21 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
     def recompile_versions(
         self, request: HttpRequest, queryset: QuerySet[SalahCourseVersion]
     ) -> None:
-        for version in queryset.filter(status=SalahPublicationStatus.DRAFT):
+        """Drafts and the published version: its snapshot stays signed, only the
+        resolved formulas (such as the teaching reciter's audio) are rebuilt.
+        """
+        for version in queryset.filter(
+            status__in=(SalahPublicationStatus.DRAFT, SalahPublicationStatus.PUBLISHED)
+        ).select_related("course"):
             try:
                 compile_version(version)
             except SalahFormulaError as error:
                 self.message_user(request, f"{version}: {error}", messages.ERROR)
             else:
+                if version.status == SalahPublicationStatus.PUBLISHED:
+                    enqueue_salah_content_change(
+                        action="activated", course=version.course.slug, version=version.version
+                    )
                 self.message_user(request, f"{version}: пересобрана.", messages.SUCCESS)
 
 

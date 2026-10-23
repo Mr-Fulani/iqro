@@ -1,16 +1,20 @@
 import type { Recitation, Reciter } from "./api";
-import { reciterPersonKey } from "./reciter-catalog.ts";
+import { reciterPersonKey, teachingRecitation } from "./reciter-catalog.ts";
 
 const LEGACY_STORAGE_KEY = "quran_reciter_preference_v1";
+// The v1 Mushaf key held the automatic fallback (al-Afasy) as if the visitor
+// had chosen it; v2 holds only the visitor's own choice, so the catalog's
+// teaching reciter plays for everyone else.
 const STORAGE_KEYS = {
   listening: "quran_reciter_preference_v1:listening",
-  mushaf: "quran_reciter_preference_v1:mushaf",
+  mushaf: "quran_reciter_preference_v2:mushaf",
   memorization: "quran_reciter_preference_v1:memorization",
 } as const;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
 export type ReciterPreferenceRole = keyof typeof STORAGE_KEYS;
+export type LearningRole = Exclude<ReciterPreferenceRole, "listening">;
 
 export type ReciterPreference = {
   personKey: string;
@@ -111,4 +115,20 @@ export function preferredRecitation(
     (item) => reciterPersonKey(item.reciter) === preference.personKey,
   );
   return samePerson.find((item) => item.style === preference.style) || samePerson[0];
+}
+
+/**
+ * What the Mushaf, Memorization and the courses play: the visitor's remembered
+ * choice, else the catalog's teaching reciter. The listening player keeps its
+ * own rules.
+ */
+export function learningRecitation(
+  recitations: Recitation[],
+  role: LearningRole,
+  storage?: Storage,
+): Recitation | undefined {
+  return (
+    preferredRecitation(recitations, loadReciterPreference(role, storage)) ||
+    teachingRecitation(recitations)
+  );
 }

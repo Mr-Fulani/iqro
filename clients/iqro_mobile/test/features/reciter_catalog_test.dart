@@ -35,6 +35,41 @@ void main() {
     );
   });
 
+  test('Mushaf and Memorization default to the teaching reciter', () {
+    final husary = _reciter('6', 'qf-6-mahmoud-khaleel-al-husary');
+    final murattal = _timed('qf-6-murattal', 'murattal', husary);
+    final teaching = _timed(
+      'qf-12-muallim',
+      'muallim',
+      _reciter('12', 'qf-12-mahmoud-khaleel-al-husary'),
+      teachingDefault: true,
+    );
+    final variants = <Recitation>[murattal, teaching];
+
+    for (final role in <AudioRecitationRole>[
+      AudioRecitationRole.ayahPlayback,
+      AudioRecitationRole.memorization,
+    ]) {
+      expect(preferredRecitation(variants, role: role), same(teaching));
+      // The user's own choice wins; one that is no longer offered gives way.
+      expect(
+        preferredRecitation(variants, preferredId: murattal.id, role: role),
+        same(murattal),
+      );
+      expect(
+        preferredRecitation(variants, preferredId: 'gone', role: role),
+        same(teaching),
+      );
+    }
+    // The Audio tab keeps the first murattal as its default.
+    expect(
+      preferredRecitation(variants, role: AudioRecitationRole.listening),
+      same(murattal),
+    );
+    expect(teachingRecitation(variants), same(teaching));
+    expect(teachingRecitation(<Recitation>[murattal]), isNull);
+  });
+
   test('all recitation variants resolve the same person portrait', () {
     final mujawwad = _reciter(
       '1',
@@ -76,4 +111,22 @@ Recitation _recitation(String style, Reciter reciter) => Recitation(
   surahCount: 114,
   streamAllowed: true,
   offlineDownloadAllowed: false,
+);
+
+Recitation _timed(
+  String code,
+  String style,
+  Reciter reciter, {
+  bool teachingDefault = false,
+}) => Recitation(
+  id: '$code-id',
+  code: code,
+  reciter: reciter,
+  style: style,
+  timingsAvailable: true,
+  timingsComplete: true,
+  surahCount: 114,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+  teachingDefault: teachingDefault,
 );

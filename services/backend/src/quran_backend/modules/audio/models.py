@@ -1404,3 +1404,40 @@ class PlayerBackground(BaseModel):
         if not self.image_object_key:
             self.is_active = False
         super().save(*args, **kwargs)
+
+
+class AudioCatalogSettings(BaseModel):
+    """Catalog-wide choices; one row, edited in the admin."""
+
+    singleton = models.BooleanField(default=True, unique=True, editable=False)
+    teaching_recitation = models.ForeignKey(
+        RecitationEdition,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="Учебный чтец",
+        help_text=(
+            "Запись, которую читалка Мусхафа, заучивание, курсы намаза и таджвида играют, "
+            "пока пользователь не выбрал другого чтеца. Плеер «Аудио» её не навязывает. "
+            "Пусто — берётся запись, чей код задан настройкой сервера "
+            "QURAN_TEACHING_RECITATION_CODE (учебное чтение аль-Хусари). Смена чтеца доходит "
+            "до курса намаза после пересборки документов: действие «Пересобрать документы» "
+            "для опубликованной версии."
+        ),
+    )
+
+    class Meta:
+        db_table = "audio_catalog_settings"
+        verbose_name = "настройка аудиокаталога"
+        verbose_name_plural = "Учебный чтец"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(singleton=True),
+                name="audio_catalog_settings_singleton",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        chosen = self.teaching_recitation if self.teaching_recitation_id else None
+        return f"Учебный чтец: {chosen}" if chosen else "Учебный чтец: по настройке сервера"

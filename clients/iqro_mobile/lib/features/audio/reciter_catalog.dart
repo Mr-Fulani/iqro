@@ -71,6 +71,17 @@ List<ReciterPerson> groupRecitersByPerson(List<Reciter> reciters) {
       .toList(growable: false);
 }
 
+/// The catalog's teaching reciter, as the site's `teachingRecitation`.
+Recitation? teachingRecitation(Iterable<Recitation> recitations) {
+  for (final recitation in recitations) {
+    if (recitation.teachingDefault) return recitation;
+  }
+  return null;
+}
+
+/// The recitation to play for [role]: [preferredId] when it is offered, else
+/// the catalog's teaching reciter for the Mushaf and Memorization roles, else
+/// the first murattal. Listening keeps the first murattal as its default.
 Recitation? preferredRecitation(
   List<Recitation> recitations, {
   String? preferredId,
@@ -84,6 +95,10 @@ Recitation? preferredRecitation(
     for (final recitation in supported) {
       if (recitation.id == preferredId) return recitation;
     }
+  }
+  if (role != AudioRecitationRole.listening) {
+    final teaching = teachingRecitation(supported);
+    if (teaching != null) return teaching;
   }
   final candidates = supported;
   for (final recitation in candidates) {

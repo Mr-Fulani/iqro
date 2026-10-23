@@ -407,6 +407,11 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 PUBLIC_MEDIA_BASE_URL = os.getenv("PUBLIC_MEDIA_BASE_URL", "http://localhost:8000/media/")
 PUBLIC_AUDIO_BASE_URL = os.getenv("PUBLIC_AUDIO_BASE_URL", PUBLIC_MEDIA_BASE_URL)
+# The recitation the Mushaf reader, Memorization and the salah and tajweed
+# courses play until the user picks a reciter; the admin may choose another one.
+QURAN_TEACHING_RECITATION_CODE = os.getenv(
+    "QURAN_TEACHING_RECITATION_CODE", "qf-12-muallim-01a15bc65dc9"
+)
 MEDIA_OBJECT_STORAGE_ENABLED = env_bool("MEDIA_OBJECT_STORAGE_ENABLED", False)
 MEDIA_OBJECT_STORAGE_REQUIRED = False
 MEDIA_OBJECT_STORAGE_ALLOW_HTTP = env_bool("MEDIA_OBJECT_STORAGE_ALLOW_HTTP", DEBUG)
