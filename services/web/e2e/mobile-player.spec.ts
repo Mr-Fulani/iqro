@@ -233,6 +233,137 @@ for (const phone of PHONES) {
   });
 }
 
+// The full player closes through a sinking state that ends on its animation's end
+// (lib/mini-player.ts); whatever the timing, each cycle ends with the 66 px bar,
+// no dialog and a page that is no longer inert.
+test("ten quick open and close cycles always end with the bar and a reachable page", async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors = watchConsole(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  const bar = page.getByTestId("mobile-audio-player");
+  await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
+
+  for (const pause of [50, 400, 100, 300, 150, 250, 200, 350, 75, 125]) {
+    await bar.locator(".mobile-player-titles").dispatchEvent("click");
+    await expect(page.getByRole("dialog", { name: "Сейчас играет" })).toBeVisible();
+    await page.waitForTimeout(pause);
+    // The back arrow is pressed while the sheet may still be rising or sinking.
+    await page.getByRole("button", { name: "Назад", exact: true }).dispatchEvent("click");
+    await page.waitForTimeout(pause);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect.poll(async () => (await bar.boundingBox())!.height).toBe(66);
+    await expect(bar).toHaveClass(/is-bar/);
+    await expect(bar).not.toHaveClass(/is-closing|is-full/);
+    await expect(page.locator(".app-container")).not.toHaveAttribute("inert", "");
+    await expect(page.locator("html")).not.toHaveClass(/is-mobile-player-open/);
+    await expect(bar.locator(".mobile-player-titles")).toBeVisible();
+  }
+  // Closing twice in a row and reopening while the sheet still sinks both end well.
+  await bar.locator(".mobile-player-titles").dispatchEvent("click");
+  const full = page.getByRole("dialog", { name: "Сейчас играет" });
+  await expect(full).toBeVisible();
+  await settled(full);
+  const back = full.getByRole("button", { name: "Назад", exact: true });
+  await back.dispatchEvent("click");
+  await back.dispatchEvent("click");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(66);
+  await bar.locator(".mobile-player-titles").dispatchEvent("click");
+  await expect(full).toBeVisible();
+  await expect(full).toHaveClass(/is-full/);
+  await page.evaluate(() => (document.querySelector('[data-testid="mobile-audio-player"] .mobile-player-back') as HTMLElement).click());
+  await expect(full).toHaveClass(/is-closing/);
+  // A tap on the bar's place while the sheet sinks reaches nothing: the sheet ignores pointers.
+  await expect(full).toHaveCSS("pointer-events", "none");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(bar).toHaveClass(/is-bar/);
+  // The bar's colours settle after their own short transition from the sheet.
+  await expect.poll(() => page.evaluate(() => document.querySelector('[data-testid="mobile-audio-player"]')!.getAnimations().length)).toBe(0);
+  await expect(page.locator(".app-container")).not.toHaveAttribute("inert", "");
+  expect(errors).toEqual([]);
+});
+
+// As in the app: a tap on the body hides the controls, leaving the picture, the
+// portrait and the sound bars; the next tap brings them back; Esc still closes.
+test("a tap on the full player's body hides the controls and the next tap shows them", async ({ page }) => {
+  const errors = watchConsole(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  const bar = page.getByTestId("mobile-audio-player");
+  await bar.locator(".mobile-player-titles").click();
+  const full = page.getByRole("dialog", { name: "Сейчас играет" });
+  await expect(full).toBeVisible();
+  await settled(full);
+  const head = full.locator(".mobile-player-full-head");
+  const copy = full.locator(".mobile-player-copy");
+  const controls = full.locator(".mobile-player-controls");
+  const options = full.locator(".mobile-player-options");
+  const body = full.locator(".mobile-player-engine");
+  const reveal = full.getByRole("button", { name: "Показать элементы управления", exact: true });
+  await expect(full.getByRole("button", { name: "Назад", exact: true })).toBeFocused();
+  await expect(reveal).toHaveCount(0);
+
+  // A tap on a control is a control's tap, not a hide.
+  await full.getByRole("button", { name: "Поставить на паузу", exact: true }).click();
+  await expect(full.getByRole("button", { name: "Воспроизвести", exact: true })).toBeVisible();
+  await expect(full).not.toHaveClass(/is-controls-hidden/);
+  await full.getByRole("button", { name: "Воспроизвести", exact: true }).click();
+
+  // The padding beside the portrait is empty body.
+  await body.click({ position: { x: 8, y: 120 } });
+  await expect(full).toHaveClass(/is-controls-hidden/);
+  for (const part of [head, copy, controls, options]) {
+    await expect(part).toHaveAttribute("inert", "");
+    await expect(part).toHaveCSS("opacity", "0");
+  }
+  await expect(full.locator(".global-audio-player-scrim")).toHaveCSS("opacity", "0");
+  await expect(full.locator(".mobile-player-artwork")).toBeVisible();
+  await expect(full.getByTestId("player-equalizer")).toHaveCSS("opacity", "1");
+  await expect(reveal).toBeFocused();
+
+  await reveal.click();
+  await expect(full).not.toHaveClass(/is-controls-hidden/);
+  for (const part of [head, copy, controls, options]) {
+    await expect(part).not.toHaveAttribute("inert", "");
+    await expect(part).toHaveCSS("opacity", "1");
+  }
+  await expect(full.locator(".global-audio-player-scrim")).toHaveCSS("opacity", "1");
+  await expect(full.getByRole("button", { name: "Назад", exact: true })).toBeFocused();
+
+  // Hidden controls do not keep Esc from closing; reopening shows them again.
+  await body.click({ position: { x: 8, y: 120 } });
+  await expect(full).toHaveClass(/is-controls-hidden/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(66);
+  await bar.locator(".mobile-player-titles").click();
+  await expect(full).toBeVisible();
+  await expect(full).not.toHaveClass(/is-controls-hidden/);
+  await expect(full.getByRole("button", { name: "Назад", exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("with reduced motion the controls hide and show without a transition", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  const bar = page.getByTestId("mobile-audio-player");
+  await bar.locator(".mobile-player-titles").click();
+  const full = page.getByRole("dialog", { name: "Сейчас играет" });
+  await expect(full).toBeVisible();
+  await full.locator(".mobile-player-engine").click({ position: { x: 8, y: 120 } });
+  await expect(full).toHaveClass(/is-controls-hidden/);
+  await expect(full.locator(".mobile-player-full-head")).toHaveCSS("transition-duration", "0s");
+  await expect(full.locator(".mobile-player-full-head")).toHaveCSS("opacity", "0");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect((await bar.boundingBox())!.height).toBe(66);
+});
+
 test("a downward swipe on the header closes the full player; a short one springs back", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");

@@ -3477,6 +3477,50 @@ test.describe("Landscape Mushaf bottom space", () => {
     await page.setViewportSize({ width: 844, height: 390 });
     await expectBothControlStates(page);
   });
+
+  // Android reports a landscape camera cutout on one side only.
+  for (const { locale, width, height, cutout } of [
+    { locale: "ru", width: 844, height: 390, cutout: "left" },
+    { locale: "ru", width: 851, height: 393, cutout: "left" },
+    { locale: "ru", width: 915, height: 412, cutout: "right" },
+    { locale: "ar", width: 844, height: 390, cutout: "right" },
+  ] as const) {
+    test(`${locale} ${width}x${height} centres the page beside a ${cutout} camera cutout`, async ({ page }) => {
+      await page.setViewportSize({ width: height, height: width });
+      await page.goto(`/${locale}/quran?surah=6&page=128`);
+      const stage = page.locator(".mushaf-page-container").filter({ visible: true });
+      await expect(stage.locator(".qf-mushaf-line").last()).toBeVisible();
+      await page.setViewportSize({ width, height });
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 0, bottom: 0, left: 0, right: 0, [cutout]: 34 } });
+      await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveAttribute("data-reader-orientation", "landscape");
+
+      const layout = () => stage.evaluate((element) => {
+        element.scrollTop = 0;
+        const sheet = element.querySelector(".qf-mushaf-sheet")!.getBoundingClientRect();
+        const bar = document.querySelector(".reader-actions")!.getBoundingClientRect();
+        return {
+          sheetMargins: [Math.round(sheet.left), Math.round(innerWidth - sheet.right)],
+          barMargins: [Math.round(bar.left), Math.round(innerWidth - bar.right)],
+          sheetTop: Math.round(sheet.top),
+          scrolls: element.scrollHeight > element.clientHeight,
+          pageWidth: document.documentElement.scrollWidth,
+        };
+      });
+      await expect.poll(async () => {
+        const { sheetMargins: [left, right] } = await layout();
+        return Math.abs(left - right) <= 2 && Math.min(left, right) >= 34;
+      }).toBe(true);
+      const { barMargins, sheetTop, scrolls, pageWidth } = await layout();
+      expect(Math.abs(barMargins[0] - barMargins[1])).toBeLessThanOrEqual(2);
+      // A tall landscape page starts at the top and scrolls; it is never left off screen.
+      expect(sheetTop).toBe(0);
+      expect(scrolls).toBe(true);
+      expect(pageWidth).toBe(width);
+      await expectFittedBottom(page);
+      await cdp.detach();
+    });
+  }
 });
 
 test.describe("Desktop Mushaf page arrows", () => {
