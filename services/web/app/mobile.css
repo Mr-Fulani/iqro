@@ -838,68 +838,726 @@
     justify-content: center;
   }
 
-  /* The global audio dock always clears the five-tab bar and home indicator. */
-  .global-audio-player-dock {
+  /* The phone player, as the app's mini player (mini_player.dart): the desktop
+     dock stays hidden here and lib/audio-player-context.tsx mounts the bar
+     after hydration. The fallback keeps the dock if the phone parts fail to load. */
+  .global-audio-player-dock:not(.is-fallback),
+  .global-audio-player-spacer:not(.is-mobile) {
+    display: none;
+  }
+
+  .global-audio-player-dock.is-fallback {
     bottom: calc(var(--mobile-nav-space) + 8px);
     width: calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
     max-height: calc(100dvh - var(--mobile-nav-space) - env(safe-area-inset-top, 0px) - 24px);
-    border-color: var(--border);
-    border-radius: 22px;
-    background: var(--panel);
-    box-shadow: 0 6px 24px #073e3426;
+  }
+
+  .global-audio-player-spacer.is-mobile {
+    height: 72px;
+  }
+
+  /* The bar: 66 px, radius 17, 10 px from the edges, 6 px above the navigation. */
+  .mobile-audio-player {
+    position: fixed;
+    z-index: 80;
+    inset-inline: max(10px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--mobile-nav-space) + 6px);
+    height: 66px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 17px;
+    background: rgba(7, 62, 52, 0.9);
+    color: #ffffff;
+    backdrop-filter: blur(14px);
+    clip-path: inset(0 round 17px);
+    transition:
+      clip-path 0.42s cubic-bezier(0.2, 0, 0, 1),
+      border-color 0.42s cubic-bezier(0.2, 0, 0, 1),
+      background-color 0.42s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  body:has(.is-reader-immersive) .mobile-audio-player {
+    display: none;
+  }
+
+  /* Collapsed: the 60 px round button at the end of the row, as _CollapsiblePlayer. */
+  .mobile-audio-player.is-collapsed {
+    clip-path: inset(3px 0 3px calc(100% - 60px) round 26px);
+    border-color: transparent;
+    background: var(--primary);
+    backdrop-filter: none;
+  }
+
+  [dir="rtl"] .mobile-audio-player.is-collapsed {
+    clip-path: inset(3px calc(100% - 60px) 3px 0 round 26px);
+  }
+
+  .mobile-player-sheet-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding-inline: 8px 6px;
+    transition: opacity 0.25s ease 0.12s;
+  }
+
+  .mobile-audio-player.is-collapsed .mobile-player-sheet-body {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .mobile-player-fab {
+    position: absolute;
+    top: 2px;
+    inset-inline-end: -1px;
+    display: grid;
+    place-items: center;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #ffffff;
+    cursor: pointer;
+    animation: mobile-player-fab-in 0.3s ease 0.12s both;
+  }
+
+  @keyframes mobile-player-fab-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .mobile-audio-player .segmented-audio-native-controls {
+    display: none;
+  }
+
+  /* The player's root is a column on desktop; the bar lays its slots out in a row. */
+  .mobile-player-engine {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+  }
+
+  /* Portrait 44, collapse button 44, then the title; the artwork and the title
+     are one button that opens the full player. */
+  .mobile-player-summary {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+    min-height: 48px;
+  }
+
+  .mobile-player-open {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 0;
+    padding-inline: 96px 6px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-player-open:disabled {
+    cursor: default;
+  }
+
+  .mobile-player-open > .mobile-player-artwork {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .mobile-player-collapse {
+    position: absolute;
+    inset-inline-start: 48px;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    transform: translateY(-50%);
+    cursor: pointer;
+  }
+
+  .mobile-player-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .mobile-player-titles strong,
+  .mobile-player-titles span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-player-titles strong {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .mobile-player-titles span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .mobile-player-titles .is-error,
+  .mobile-player-status.is-error {
+    color: #ffd0cb;
+  }
+
+  .mobile-player-transport {
+    display: flex;
+    flex: 0 0 144px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* 48 px controls with 23 px icons; play is the filled 25 px one. */
+  .mobile-player-control {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-player-control:disabled {
+    color: rgba(255, 255, 255, 0.24);
+    cursor: default;
+  }
+
+  .mobile-player-control.is-play {
+    background: #9bdecb;
+    color: #08241d;
+  }
+
+  .mobile-player-control.is-play:disabled {
+    background: rgba(155, 222, 203, 0.2);
+    color: rgba(8, 36, 29, 0.6);
+  }
+
+  .mobile-player-control.is-large {
+    width: 72px;
+    height: 72px;
+    background: var(--primary);
+    color: #ffffff;
+  }
+
+  .mobile-player-control.is-large:disabled {
+    background: rgba(11, 93, 74, 0.4);
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .mobile-player-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: mobile-player-spin 0.8s linear infinite;
+  }
+
+  @keyframes mobile-player-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .mobile-player-icon .is-directional {
+    transform-box: view-box;
+    transform-origin: 12px 12px;
+  }
+
+  [dir="rtl"] .mobile-player-icon .is-directional {
+    transform: scaleX(-1);
+  }
+
+  /* The framed portrait of PremiumReciterPortrait: 3 px frame, 7 px from 150. */
+  .mobile-player-artwork {
+    --artwork-inset: 3px;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--artwork-size);
+    height: var(--artwork-size);
+    padding: var(--artwork-inset);
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e8dcc4 0%, #9a8a70 40%, #fff8e9 65%, #9f8e72 100%);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  }
+
+  .mobile-player-artwork.is-selected {
+    --artwork-inset: 7px;
+    background: linear-gradient(135deg, #ffe6ae 0%, #ac7936 40%, #fff2cf 65%, #ba8d47 100%);
+  }
+
+  .mobile-player-artwork img,
+  .mobile-player-artwork-fallback {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .mobile-player-artwork-fallback {
+    background: #163c33;
+    color: #f5ead5;
+    font-size: calc(var(--artwork-size) * 0.24);
+    font-weight: 600;
+  }
+
+  .mobile-player-artwork-fallback .mobile-player-icon {
+    color: #b6e8d9;
+  }
+
+  .mobile-player-open:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: -3px;
+  }
+
+  .mobile-player-collapse:focus-visible,
+  .mobile-player-control:focus-visible,
+  .mobile-player-fab:focus-visible,
+  .mobile-player-back:focus-visible,
+  .mobile-player-tile:focus-visible,
+  .mobile-player-tile:focus-within,
+  .mobile-player-reciter:focus-within,
+  .mobile-player-seek input:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  /* The full player: a dark sheet over the whole screen, as player_screen.dart. */
+  .mobile-audio-player.is-full {
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: #061d18;
+    color-scheme: dark;
+    backdrop-filter: none;
+    clip-path: none;
+    animation: mobile-player-rise 0.32s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.26s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .mobile-audio-player.is-full.is-closing {
+    animation: mobile-player-sink 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  @keyframes mobile-player-rise {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes mobile-player-sink {
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  .mobile-audio-player.is-full > .global-audio-player-backdrop,
+  .mobile-audio-player.is-full > .mobile-player-sheet-body {
+    grid-area: 1 / 1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .mobile-audio-player.is-full > .mobile-player-sheet-body {
+    position: relative;
+    inset: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .mobile-player-full-head {
+    position: relative;
+    display: grid;
+    flex: none;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    align-items: center;
+    gap: 8px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 8px 6px;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .mobile-player-grabber {
+    position: absolute;
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateX(-50%);
+  }
+
+  .mobile-player-back {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+  }
+
+  .mobile-player-full-title {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .mobile-player-full-title strong {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .mobile-player-full-title span {
+    overflow: hidden;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-audio-player.is-full .mobile-player-engine {
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    padding: 14px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
     overscroll-behavior: contain;
   }
 
-  .global-audio-player-dock.is-compact,
-  .global-audio-player-dock.is-compact.has-reciter-controls {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .mobile-player-summary.is-full {
+    position: static;
+    flex: none;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    text-align: center;
   }
 
-  .global-audio-player-dock.is-compact .global-audio-player-head {
-    grid-column: 1 / -1;
-    padding: 0;
+  .mobile-player-summary.is-full > .mobile-player-artwork {
+    margin-bottom: 20px;
+  }
+
+  .mobile-player-eyebrow {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.72);
+    letter-spacing: 1.6px;
+  }
+
+  .mobile-player-title {
+    max-width: 100%;
+    margin: 0;
+    color: #ffffff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-player-reciter {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    border-radius: 12px;
+    color: #ffffff;
+  }
+
+  .mobile-player-reciter select {
+    max-width: 100%;
+    min-height: 44px;
+    padding: 8px;
+    padding-inline-end: 32px;
     border: 0;
+    border-radius: 12px;
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    text-overflow: ellipsis;
+    appearance: none;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-player {
-    grid-template-columns: minmax(0, 1fr) 44px;
+  .mobile-player-reciter > .mobile-player-icon {
+    position: absolute;
+    inset-inline-end: 8px;
+    pointer-events: none;
+  }
+
+  .mobile-player-artist {
+    margin: 0;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .mobile-player-status {
+    min-height: 1.4em;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+  }
+
+  .mobile-player-transport.is-full {
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 26px;
+  }
+
+  .mobile-player-seek {
+    display: flex;
+    flex-direction: column;
     gap: 6px;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-summary {
-    grid-column: 1;
+  .mobile-player-seek input[type="range"] {
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    appearance: none;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-native-controls {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .mobile-player-seek input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #0b5d4a var(--seek-progress, 0%), rgba(255, 255, 255, 0.9) var(--seek-progress, 0%));
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle {
+  [dir="rtl"] .mobile-player-seek input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(to left, #0b5d4a var(--seek-progress, 0%), rgba(255, 255, 255, 0.9) var(--seek-progress, 0%));
+  }
+
+  .mobile-player-seek input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border: 0;
+    border-radius: 50%;
+    background: #0b5d4a;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+    appearance: none;
+  }
+
+  .mobile-player-seek input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .mobile-player-seek input[type="range"]::-moz-range-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: #0b5d4a;
+  }
+
+  .mobile-player-seek input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 50%;
+    background: #0b5d4a;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+  }
+
+  .mobile-player-seek input[type="range"]:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .mobile-player-times {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mobile-player-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    margin-top: 10px;
+  }
+
+  /* Option tiles, two per row, as the app's _PlayerOption. */
+  .mobile-player-options {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .mobile-player-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .mobile-player-tile,
+  .mobile-player-tile.player-background-toggle {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 9px;
+    align-items: center;
+    align-content: center;
+    min-height: 72px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 16px;
+    background: #0d3029;
+    color: #ffffff;
+    font: inherit;
+    text-align: start;
+    white-space: normal;
+    cursor: pointer;
+  }
+
+  .mobile-player-tile:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .mobile-player-tile > .mobile-player-icon {
+    grid-row: 1 / span 2;
+    color: #b6e8d9;
+  }
+
+  .mobile-player-tile-label,
+  .mobile-player-tile-value,
+  .mobile-player-tile-note,
+  .mobile-player-tile select {
     grid-column: 2;
-    grid-row: 1;
+    min-width: 0;
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle,
-  .global-audio-player-actions .btn {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px;
+  .mobile-player-tile-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    line-height: 1.3;
   }
 
-  .global-audio-player-actions {
-    align-self: start;
-    flex-wrap: wrap;
-    max-width: 44px;
+  .mobile-player-tile-value {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
-  .global-audio-player-spacer.is-compact {
-    height: 170px;
+  .mobile-player-tile-note {
+    color: #b6e8d9;
+    font-size: 11px;
   }
 
-  .global-audio-player-spacer.is-compact.has-reciter-controls {
-    height: 230px;
+  .mobile-player-tile select {
+    width: 100%;
+    min-height: 28px;
+    padding: 0;
+    padding-inline-end: 20px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23b6e8d9'%3E%3Cpath d='M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z'/%3E%3C/svg%3E") no-repeat right center / 18px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    appearance: none;
+  }
+
+  [dir="rtl"] .mobile-player-tile select {
+    background-position: left center;
+  }
+
+  .mobile-player-tile select:disabled {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .mobile-player-tiles .player-background-options {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-player-tiles .player-background-thumb {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: #0d3029;
+  }
+
+  .mobile-player-tiles .player-background-option input:checked + .player-background-thumb {
+    border-color: #9bdecb;
+    box-shadow: 0 0 0 2px rgba(155, 222, 203, 0.5);
+  }
+
+  .mobile-player-tiles .player-background-name {
+    color: #d5e3df;
+  }
+
+  .mobile-player-range {
+    border-color: rgba(255, 255, 255, 0.32);
+    background: transparent;
+  }
+
+  .mobile-player-range .form-label {
+    color: #d5e3df;
   }
 
   .app-footer {
@@ -957,24 +1615,6 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .global-audio-player-dock.is-compact .segmented-audio-player {
-    grid-template-columns: minmax(100px, 0.6fr) minmax(0, 1.4fr) 44px;
-  }
-
-  .global-audio-player-dock.is-compact .segmented-audio-native-controls {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .global-audio-player-dock.is-compact .segmented-audio-settings-toggle {
-    grid-column: 3;
-  }
-
-  .global-audio-player-actions {
-    align-self: center;
-    max-width: none;
-    flex-wrap: nowrap;
-  }
 }
 
 @media (max-width: 360px) {
@@ -996,5 +1636,20 @@
   .surface.mushaf-reader-surface {
     padding: 0;
     border-radius: 0;
+  }
+}
+
+/* The full player locks the page behind it, like a pushed route. */
+html.is-mobile-player-open {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-audio-player,
+  .mobile-audio-player.is-full,
+  .mobile-player-sheet-body,
+  .mobile-player-fab {
+    transition: none;
+    animation: none;
   }
 }
