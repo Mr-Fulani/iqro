@@ -1618,6 +1618,31 @@ function QuranContent() {
     }
   };
 
+  // In the full-screen reader the chips sit right under the sheet, inside its
+  // scroller, as under the page in the app; elsewhere they follow the page.
+  const tajweedLegend = tajweed && tajweedPage ? (
+    <div className="mushaf-tajweed-legend">
+      {/* The full-screen reader hides the ayah menu; the breakdown rides with the chips. */}
+      {selectedMushafAyah && tajweedPage.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
+        <button
+          className="btn btn-primary btn-sm mushaf-tajweed-breakdown"
+          type="button"
+          onClick={() => setBreakdownAyah(selectedMushafAyah)}
+          aria-haspopup="dialog"
+          data-testid="tajweed-breakdown-open-reader"
+        >
+          {t("tajweed.breakdown")} · {selectedMushafAyah}
+        </button>
+      )}
+      <TajweedLegend
+        reference={tajweed.reference}
+        codes={tajweedPage.rules}
+        title={t("tajweed.legendPage")}
+        onSelectRule={(code) => setTajweedSelection({ kind: "rule", code })}
+      />
+    </div>
+  ) : null;
+
   return (
     <MushafReaderLayout
       active={viewMode === "mushaf"}
@@ -2335,6 +2360,7 @@ function QuranContent() {
               ) : (
                 <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
               )}
+              {isImmersiveReader && tajweedLegend}
             </MushafGestureSurface>
             {/* Next lies to the left as in a printed Mushaf, in every interface language. */}
             {(["next", "previous"] as const).map((direction) => {
@@ -2398,28 +2424,7 @@ function QuranContent() {
             </div>
           )}
 
-          {tajweed && tajweedPage && (
-            <div className="mushaf-tajweed-legend">
-              {/* The full-screen reader hides the ayah menu; the breakdown rides with the chips. */}
-              {selectedMushafAyah && tajweedPage.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
-                <button
-                  className="btn btn-primary btn-sm mushaf-tajweed-breakdown"
-                  type="button"
-                  onClick={() => setBreakdownAyah(selectedMushafAyah)}
-                  aria-haspopup="dialog"
-                  data-testid="tajweed-breakdown-open-reader"
-                >
-                  {t("tajweed.breakdown")} · {selectedMushafAyah}
-                </button>
-              )}
-              <TajweedLegend
-                reference={tajweed.reference}
-                codes={tajweedPage.rules}
-                title={t("tajweed.legendPage")}
-                onSelectRule={(code) => setTajweedSelection({ kind: "rule", code })}
-              />
-            </div>
-          )}
+          {!isImmersiveReader && tajweedLegend}
 
           <div className="mushaf-page-navigation">
             <span className="mushaf-page-navigation-status">

@@ -66,6 +66,7 @@ dependencies:
   video_player: 2.11.1
   geomag: ^0.3.0
   webview_flutter: ^4.14.1
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

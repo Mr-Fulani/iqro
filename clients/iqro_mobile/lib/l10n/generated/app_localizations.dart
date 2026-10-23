@@ -504,6 +504,150 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get retry;
 
+  /// No description provided for @newsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get newsTitle;
+
+  /// No description provided for @newsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'New reciters, features and content on the site and in the app.'**
+  String get newsDescription;
+
+  /// No description provided for @newsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No news yet.'**
+  String get newsEmpty;
+
+  /// No description provided for @newsLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get newsLoadMore;
+
+  /// No description provided for @newsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the news. Try again later.'**
+  String get newsLoadError;
+
+  /// No description provided for @newsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get newsAll;
+
+  /// No description provided for @newsFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'News type'**
+  String get newsFilterLabel;
+
+  /// No description provided for @newsFilterReciter.
+  ///
+  /// In en, this message translates to:
+  /// **'Reciters'**
+  String get newsFilterReciter;
+
+  /// No description provided for @newsFilterFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'Features'**
+  String get newsFilterFeature;
+
+  /// No description provided for @newsFilterContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get newsFilterContent;
+
+  /// No description provided for @newsFilterAppRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get newsFilterAppRelease;
+
+  /// No description provided for @newsFilterGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get newsFilterGeneral;
+
+  /// No description provided for @newsKindReciter.
+  ///
+  /// In en, this message translates to:
+  /// **'New reciter'**
+  String get newsKindReciter;
+
+  /// No description provided for @newsKindFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get newsKindFeature;
+
+  /// No description provided for @newsKindAppRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'New version'**
+  String get newsKindAppRelease;
+
+  /// No description provided for @newsKindContent.
+  ///
+  /// In en, this message translates to:
+  /// **'New content'**
+  String get newsKindContent;
+
+  /// No description provided for @newsKindGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Announcement'**
+  String get newsKindGeneral;
+
+  /// No description provided for @newsUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get newsUnread;
+
+  /// No description provided for @newsHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'How to use it'**
+  String get newsHowTo;
+
+  /// No description provided for @newsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get newsMore;
+
+  /// No description provided for @newsPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get newsPrevious;
+
+  /// No description provided for @newsNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get newsNext;
+
+  /// No description provided for @newsCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String newsCounter(int current, int total);
+
+  /// No description provided for @newsBubble.
+  ///
+  /// In en, this message translates to:
+  /// **'New: {count}. Open'**
+  String newsBubble(int count);
+
   /// No description provided for @continueLabel.
   ///
   /// In en, this message translates to:

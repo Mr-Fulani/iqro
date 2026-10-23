@@ -193,6 +193,86 @@ void main() {
     },
   );
 
+  test('announcement marks reach the server with their wave; a mark on a '
+      'withdrawn announcement is dropped', () async {
+    const id = '01a16092-1950-77f9-9d76-0ea6de5279b8';
+    const withdrawn = '01a16092-1950-77f9-9d76-0ea6de5279b9';
+    final store = _FakeStore(
+      auxiliary: <SyncOutboxEntry>[
+        _auxiliaryOperation(
+          'mark-1',
+          'announcement_receipt',
+          entityId: id,
+          payload: '{"announcement_id":"$id","dismissed":true,"wave":2}',
+        ),
+        _auxiliaryOperation(
+          'mark-2',
+          'announcement_receipt',
+          entityId: withdrawn,
+          payload: '{"announcement_id":"$withdrawn","read":true,"wave":1}',
+        ),
+      ],
+    );
+    final puts = <String, Object?>{};
+    final remote = _FakeRemote(
+      onPut: (path, data) {
+        puts[path] = data;
+        if (path.endsWith(withdrawn)) {
+          throw const ApiException(message: 'Not found', statusCode: 404);
+        }
+        return <String, Object?>{};
+      },
+      onGet: (_, _) => _incremental(cursor: 0),
+    );
+
+    final report = await SyncService.withDependencies(
+      remote: remote,
+      store: store,
+    ).synchronize();
+
+    expect(puts, <String, Object?>{
+      '/me/announcement-receipts/$id': <String, Object?>{
+        'dismissed': true,
+        'wave': 2,
+      },
+      '/me/announcement-receipts/$withdrawn': <String, Object?>{
+        'read': true,
+        'wave': 1,
+      },
+    });
+    expect(report.status, SyncStatus.idle);
+    expect(report.pending, 0);
+    expect(store.failureCounts, isEmpty);
+  });
+
+  test('an announcement mark stays pending while the server is down', () async {
+    const id = '01a16092-1950-77f9-9d76-0ea6de5279b8';
+    final store = _FakeStore(
+      auxiliary: <SyncOutboxEntry>[
+        _auxiliaryOperation(
+          'mark-1',
+          'announcement_receipt',
+          entityId: id,
+          payload: '{"announcement_id":"$id","read":true,"wave":1}',
+        ),
+      ],
+    );
+    final remote = _FakeRemote(
+      onPut: (_, _) =>
+          throw const ApiException(message: 'Unavailable', statusCode: 503),
+      onGet: (_, _) => _incremental(cursor: 0),
+    );
+
+    final report = await SyncService.withDependencies(
+      remote: remote,
+      store: store,
+    ).synchronize();
+
+    expect(report.pending, 1);
+    expect(report.shouldRetry, isTrue);
+    expect(store.failureCounts['mark-1'], 1);
+  });
+
   test(
     'omitted push result fails safely without acknowledging outbox',
     () async {

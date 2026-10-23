@@ -30,8 +30,10 @@
   transform: scaleY(0.62);
 }
 
-/* White bars with a soft shadow over the picture, as in the app. */
-:global(.has-player-background) .equalizer {
+/* White bars with a soft shadow over the picture, as in the app; the phone's
+   full player is dark even without a picture. */
+:global(.has-player-background) .equalizer,
+:global(.mobile-audio-player) .equalizer {
   color: rgba(255, 255, 255, 0.92);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
 }

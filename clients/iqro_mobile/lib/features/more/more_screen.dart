@@ -8,6 +8,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_action_grid.dart';
 import '../dua/dua_thematic_icon.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../announcements/announcement_controller.dart';
 import '../audio/mini_player.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -31,6 +32,8 @@ class MoreScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            const _NewsEntry(),
+            const SizedBox(height: 16),
             const MoreToolsGrid(),
             const SizedBox(height: 24),
             IqroSectionHeader(title: context.l10n.account),
@@ -95,6 +98,65 @@ class MoreScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// «What's new», with a dot while something on the home screen is unread.
+class _NewsEntry extends ConsumerStatefulWidget {
+  const _NewsEntry();
+
+  @override
+  ConsumerState<_NewsEntry> createState() => _NewsEntryState();
+}
+
+class _NewsEntryState extends ConsumerState<_NewsEntry> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = Localizations.localeOf(context).languageCode;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !ref.read(announcementsProvider).loaded) {
+        ref.read(announcementsProvider.notifier).load(locale);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final signedIn = announcementSignedIn(
+      ref.watch(sessionProvider.select((value) => value.valueOrNull)),
+    );
+    final unread = ref.watch(
+      announcementsProvider.select((value) => value.unread(signedIn: signedIn)),
+    );
+    return IqroCard(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: IqroListTile(
+        key: const ValueKey('more-news'),
+        icon: Icons.auto_awesome_outlined,
+        title: context.l10n.newsTitle,
+        subtitle: context.l10n.newsDescription,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (unread > 0)
+              Semantics(
+                label: context.l10n.newsUnread,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () => context.push('/news'),
       ),
     );
   }

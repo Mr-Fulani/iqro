@@ -11,6 +11,7 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/audio/audio_screen.dart';
+import 'package:iqro_mobile/features/audio/reciter_launch_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -41,6 +42,35 @@ void main() {
     expect(harness.engine.playCalls, 1);
     expect(find.text('PLAYER'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an announcement opens its reciter straight in the player', (
+    tester,
+  ) async {
+    final harness = await _pumpAudioScreen(
+      tester,
+      location: '/audio/reciter/reciter-2?play=1',
+    );
+
+    expect(harness.repository.requestedRecitationId, 'recitation-2');
+    expect(harness.controller.state.reciter?.id, 'reciter-2');
+    expect(harness.engine.playCalls, 1);
+    expect(harness.preferences.state.listeningRecitationId, 'recitation-2');
+    expect(find.text('PLAYER'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an unknown reciter leads back to all reciters', (tester) async {
+    final harness = await _pumpAudioScreen(
+      tester,
+      location: '/audio/reciter/missing?play=1',
+    );
+
+    expect(harness.engine.playCalls, 0);
+    expect(find.text('PLAYER'), findsNothing);
+    await tester.tap(find.text('Все чтецы'));
+    await tester.pumpAndSettle();
+    expect(find.text('Тестовый чтец'), findsOneWidget);
   });
 
   testWidgets('recitation style filters reciters and defaults to Murattal', (
@@ -142,7 +172,10 @@ void main() {
   });
 }
 
-Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
+Future<_AudioTestHarness> _pumpAudioScreen(
+  WidgetTester tester, {
+  String location = '/audio',
+}) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
   final rawDatabase = await tester.runAsync(
@@ -157,9 +190,17 @@ Future<_AudioTestHarness> _pumpAudioScreen(WidgetTester tester) async {
   final engine = _RecordingAudioEngine();
   final controller = AudioController(engine: engine);
   final router = GoRouter(
-    initialLocation: '/audio',
+    initialLocation: location,
     routes: <RouteBase>[
       GoRoute(path: '/audio', builder: (context, state) => const AudioScreen()),
+      GoRoute(path: '/app', builder: (context, state) => const AudioScreen()),
+      GoRoute(
+        path: '/audio/reciter/:id',
+        builder: (context, state) => ReciterLaunchScreen(
+          reciterId: state.pathParameters['id']!,
+          autoplay: state.uri.queryParameters['play'] == '1',
+        ),
+      ),
       GoRoute(
         path: '/player',
         builder: (context, state) => const Scaffold(body: Text('PLAYER')),

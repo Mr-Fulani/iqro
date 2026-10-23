@@ -259,6 +259,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Try again';
 
   @override
+  String get newsTitle => 'What\'s new';
+
+  @override
+  String get newsDescription =>
+      'New reciters, features and content on the site and in the app.';
+
+  @override
+  String get newsEmpty => 'No news yet.';
+
+  @override
+  String get newsLoadMore => 'Show more';
+
+  @override
+  String get newsLoadError => 'Could not load the news. Try again later.';
+
+  @override
+  String get newsAll => 'All';
+
+  @override
+  String get newsFilterLabel => 'News type';
+
+  @override
+  String get newsFilterReciter => 'Reciters';
+
+  @override
+  String get newsFilterFeature => 'Features';
+
+  @override
+  String get newsFilterContent => 'Content';
+
+  @override
+  String get newsFilterAppRelease => 'App';
+
+  @override
+  String get newsFilterGeneral => 'General';
+
+  @override
+  String get newsKindReciter => 'New reciter';
+
+  @override
+  String get newsKindFeature => 'What\'s new';
+
+  @override
+  String get newsKindAppRelease => 'New version';
+
+  @override
+  String get newsKindContent => 'New content';
+
+  @override
+  String get newsKindGeneral => 'Announcement';
+
+  @override
+  String get newsUnread => 'Unread';
+
+  @override
+  String get newsHowTo => 'How to use it';
+
+  @override
+  String get newsMore => 'Details';
+
+  @override
+  String get newsPrevious => 'Previous';
+
+  @override
+  String get newsNext => 'Next';
+
+  @override
+  String newsCounter(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String newsBubble(int count) {
+    return 'New: $count. Open';
+  }
+
+  @override
   String get continueLabel => 'Continue';
 
   @override

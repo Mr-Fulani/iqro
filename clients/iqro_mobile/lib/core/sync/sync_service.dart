@@ -221,6 +221,14 @@ class SyncService {
               'is_favorite': row.body['is_favorite'] == true,
             },
           );
+        } else if (row.entityType == 'announcement_receipt') {
+          await _remote.put(
+            '/me/announcement-receipts/${row.body['announcement_id']}',
+            data: <String, Object?>{
+              for (final key in const <String>['read', 'dismissed', 'wave'])
+                if (row.body.containsKey(key)) key: row.body[key],
+            },
+          );
         } else {
           await _store.markFailure(row.operationId, 'unsupported_outbox_type');
           issue ??= const _SyncIssue(
@@ -238,10 +246,13 @@ class SyncService {
           await _store.rejectDuaFavorite(row);
           continue;
         }
-        if (row.entityType == 'share_event' &&
-            (error.statusCode == 400 || error.statusCode == 409)) {
+        if ((row.entityType == 'share_event' &&
+                (error.statusCode == 400 || error.statusCode == 409)) ||
+            (row.entityType == 'announcement_receipt' &&
+                (error.statusCode == 400 || error.statusCode == 404))) {
           // The server made a terminal decision; retrying an invalid analytics
-          // or favorite payload forever would permanently block the queue.
+          // payload or a mark on a withdrawn announcement forever would
+          // permanently block the queue.
           await _store.acknowledge(row.operationId);
           continue;
         }

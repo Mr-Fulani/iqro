@@ -241,3 +241,11 @@ msgstr "Сообщение добавлено"
 
 msgid "Reopened"
 msgstr "Открыто повторно"
+
+# Django 6.1 strings the bundled Russian admin catalog does not translate yet.
+msgid "- Select an option -"
+msgstr "— выберите —"
+
+#, python-format
+msgid "Filter by %(field_name)s"
+msgstr "Фильтр: %(field_name)s"

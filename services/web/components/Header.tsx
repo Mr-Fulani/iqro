@@ -8,7 +8,6 @@ import { useI18n } from "../lib/i18n-context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { localizedPath, stripLocalePrefix } from "../lib/routing";
 import { forAudience, isFinished } from "../lib/announcements";
-import { AnnouncementBubble } from "./announcements/AnnouncementBubble";
 import { AnnouncementIcon } from "./announcements/AnnouncementParts";
 import { useActiveAnnouncements, useAnnouncementState } from "./announcements/announcement-store";
 
@@ -105,7 +104,6 @@ export function Header() {
               : t("auth.guest")}
         </div>
 
-        {routePathname === "/" ? <AnnouncementBubble /> : null}
 
         {(isActiveAccount || isPendingDeletion) && (
           <button

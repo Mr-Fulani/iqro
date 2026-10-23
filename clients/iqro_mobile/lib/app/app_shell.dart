@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../core/design_system/iqro_icon.dart';
 import '../core/design_system/iqro_lazy_indexed_stack.dart';
 import '../core/design_system/iqro_widgets.dart';
+import '../features/announcements/announcement_controller.dart';
 import '../features/audio/audio_screen.dart';
 import '../features/audio/mini_player.dart';
 import '../features/home/home_screen.dart';
@@ -14,6 +15,7 @@ import '../features/more/more_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/quran/quran_screen.dart';
 import '../features/quran/surah_name_art.dart';
+import 'providers.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({this.initialIndex = 0, this.child, super.key});
@@ -64,6 +66,17 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Widget _buildShell(BuildContext context) {
+    // Unread news shows as a dot on More, where «What's new» lives.
+    final signedIn = announcementSignedIn(
+      ref.watch(sessionProvider.select((value) => value.valueOrNull)),
+    );
+    final unreadNews =
+        ref.watch(
+          announcementsProvider.select(
+            (value) => value.unread(signedIn: signedIn),
+          ),
+        ) >
+        0;
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -120,8 +133,14 @@ class _AppShellState extends ConsumerState<AppShell> {
                   label: context.l10n.navAudio,
                 ),
                 NavigationDestination(
-                  icon: const Icon(Icons.grid_view_outlined),
-                  selectedIcon: const Icon(Icons.grid_view),
+                  icon: Badge(
+                    isLabelVisible: unreadNews,
+                    child: const Icon(Icons.grid_view_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: unreadNews,
+                    child: const Icon(Icons.grid_view),
+                  ),
                   label: context.l10n.navMore,
                 ),
               ],
