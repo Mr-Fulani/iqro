@@ -5,15 +5,26 @@
  * apart from the components.
  */
 
-export type MiniPlayerView = "collapsed" | "bar" | "full";
+/** "closing" is the full player sinking out of view; it ends in "bar". */
+export type MiniPlayerView = "collapsed" | "bar" | "full" | "closing";
+
+export type MiniPlayerState = {
+  view: MiniPlayerView;
+  /** The full player's controls are hidden by a tap on its body, as in the app. */
+  controlsHidden: boolean;
+};
 
 export type MiniPlayerAction =
   | { type: "collapse" }
   | { type: "expand" }
   | { type: "open-full" }
   | { type: "close-full" }
+  | { type: "closed" }
+  | { type: "toggle-controls" }
   | { type: "route-change" }
   | { type: "request-change"; hasRequest: boolean };
+
+export const INITIAL_MINI_PLAYER_STATE: MiniPlayerState = { view: "bar", controlsHidden: false };
 
 export const MINI_PLAYER_BAR_HEIGHT = 66;
 export const MINI_PLAYER_BUTTON_SIZE = 60;
@@ -25,23 +36,37 @@ export const MINI_PLAYER_GAP = 6;
 export const MINI_PLAYER_SPACER_HEIGHT = MINI_PLAYER_BAR_HEIGHT + MINI_PLAYER_GAP;
 /** The site's bottom navigation shows up to this width (app/mobile.css). */
 export const MOBILE_PLAYER_MEDIA_QUERY = "(max-width: 768px)";
+/** The sink animation in app/mobile.css; "closed" follows its animationend, or this fallback. */
+export const SHEET_CLOSE_MS = 260;
+export const SHEET_CLOSE_FALLBACK_MS = SHEET_CLOSE_MS + 200;
 
-export function miniPlayerReducer(view: MiniPlayerView, action: MiniPlayerAction): MiniPlayerView {
+/** The full player is on screen while open and while it sinks away. */
+export function sheetShown(view: MiniPlayerView): boolean {
+  return view === "full" || view === "closing";
+}
+
+export function miniPlayerReducer(state: MiniPlayerState, action: MiniPlayerAction): MiniPlayerState {
+  const { view } = state;
   switch (action.type) {
     case "collapse":
-      return view === "full" ? view : "collapsed";
+      return view === "bar" ? { ...state, view: "collapsed" } : state;
     case "expand":
-      return view === "collapsed" ? "bar" : view;
+      return view === "collapsed" ? { ...state, view: "bar" } : state;
     case "open-full":
-      return "full";
+      // A tap while the sheet still sinks brings it straight back.
+      return view === "full" ? state : { view: "full", controlsHidden: false };
     case "close-full":
-      return view === "full" ? "bar" : view;
+      return view === "full" ? { ...state, view: "closing" } : state;
+    case "closed":
+      return view === "closing" ? { view: "bar", controlsHidden: false } : state;
+    case "toggle-controls":
+      return view === "full" ? { ...state, controlsHidden: !state.controlsHidden } : state;
     case "route-change":
       // The app's player is a pushed route: leaving the screen closes it.
-      return view === "full" ? "bar" : view;
+      return sheetShown(view) ? { view: "bar", controlsHidden: false } : state;
     case "request-change":
       // The full player has nothing to show once playback is cleared.
-      return !action.hasRequest && view === "full" ? "bar" : view;
+      return !action.hasRequest && sheetShown(view) ? { view: "bar", controlsHidden: false } : state;
   }
 }
 
@@ -62,6 +87,10 @@ export function swipeDismisses({ deltaY, durationMs }: SwipeSample): boolean {
   const velocity = durationMs > 0 ? deltaY / durationMs : 0;
   return deltaY >= 24 && velocity >= SWIPE_DISMISS_VELOCITY;
 }
+
+/** A tap on the full player's body hides its controls; taps on controls do not. */
+export const PLAYER_CONTROL_SELECTOR =
+  "button, a, input, select, textarea, label, [role='slider'], .player-background-options";
 
 /** The surah the previous/next buttons move to, or null at either end of the Quran. */
 export function adjacentSurah(current: number | null | undefined, direction: -1 | 1): number | null {

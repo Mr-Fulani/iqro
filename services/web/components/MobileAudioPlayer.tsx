@@ -122,6 +122,7 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
   return (
     <div className="mobile-player-summary is-full">
       <PlayerArtwork url={mobile.artworkUrl} name={request?.artist} size={210} selected />
+      <div className="mobile-player-copy" inert={mobile.controlsHidden || undefined}>
       <p className="eyebrow mobile-player-eyebrow">
         {t("player.surahAyah", { surah: request?.track.surah_number ?? "—", ayah: activeAyah?.ayah_number ?? "—" })}
       </p>
@@ -144,6 +145,7 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
         <p className="mobile-player-artist">{artist}</p>
       )}
       <p className={`mobile-player-status${problem ? " is-error" : ""}`} aria-live="polite">{problem ?? engine.statusLabel}</p>
+      </div>
     </div>
   );
 }
@@ -271,6 +273,7 @@ function Transport({ engine, mobile }: MobilePlayerPartProps) {
   return (
     <div className="mobile-player-transport is-full">
       {mobile.equalizer.enabled && <PlayerEqualizer playing={mobile.equalizer.playing} />}
+      <div className="mobile-player-controls" inert={mobile.controlsHidden || undefined}>
       <SeekBar engine={engine} />
       <div className="mobile-player-buttons">
         <button type="button" className="mobile-player-control" aria-label={t("player.replay10")} onClick={() => engine.seekBy(-10)} disabled={!request}>
@@ -282,6 +285,7 @@ function Transport({ engine, mobile }: MobilePlayerPartProps) {
         <button type="button" className="mobile-player-control" aria-label={t("player.forward10")} onClick={() => engine.seekBy(10)} disabled={!request}>
           <Icon name="forward" size={28} label="10" directional />
         </button>
+      </div>
       </div>
     </div>
   );
@@ -297,7 +301,7 @@ function Options({ engine, mobile }: MobilePlayerPartProps) {
   const settings = new Map(engine.settings.map((setting) => [setting.key, setting]));
 
   return (
-    <div className="mobile-player-options">
+    <div className="mobile-player-options" inert={mobile.controlsHidden || undefined}>
       <div className="mobile-player-tiles">
         {TILE_ORDER.map((key) => {
           if (key === "range") {
@@ -355,7 +359,7 @@ function Options({ engine, mobile }: MobilePlayerPartProps) {
 type Drag = { pointerId: number; startY: number; startedAt: number };
 
 /** The app bar of the full player; dragging it down closes the sheet. */
-function FullHeader({ subtitle, onClose, onDragOffset, onDismiss }: MobilePlayerHeaderProps) {
+function FullHeader({ subtitle, hidden, onClose, onDragOffset, onDismiss }: MobilePlayerHeaderProps) {
   const { t } = useI18n();
   const backRef = useRef<HTMLButtonElement>(null);
   const drag = useRef<Drag | null>(null);
@@ -377,6 +381,7 @@ function FullHeader({ subtitle, onClose, onDragOffset, onDismiss }: MobilePlayer
   return (
     <header
       className="mobile-player-full-head"
+      inert={hidden || undefined}
       onPointerDown={(event) => {
         if (event.button !== 0 || (event.target as Element).closest("button")) return;
         drag.current = { pointerId: event.pointerId, startY: event.clientY, startedAt: performance.now() };

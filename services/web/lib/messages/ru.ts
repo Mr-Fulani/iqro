@@ -687,6 +687,7 @@ const ru = {
   "player.surahAyah": "Сура {surah} · аят {ayah}",
   "player.range": "Диапазон",
   "player.rangeValue": "Аяты {start}–{end}",
+  "player.showControls": "Показать элементы управления",
   "mushafAudio.reciter": "Чтец Quran.Foundation",
   "mushafAudio.coverage": "{count}/114 сур",
   "mushafAudio.chooseAyah": "Выберите аят",
