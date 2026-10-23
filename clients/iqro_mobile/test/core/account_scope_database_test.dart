@@ -206,6 +206,41 @@ void main() {
       },
     );
 
+    test('a guest\'s unsent announcement marks move to the account', () async {
+      const source = 'guest-a';
+      const target = 'verified-b';
+      await database.insert('outbox', <String, Object?>{
+        'owner_id': source,
+        'operation_id': 'mark-1',
+        'entity_type': 'announcement_receipt',
+        'entity_id': 'announcement-1',
+        'payload': jsonEncode(<String, Object?>{
+          'announcement_id': 'announcement-1',
+          'read': true,
+          'wave': 2,
+        }),
+        'created_at': '2026-10-22T10:00:00Z',
+      });
+      final local = LocalDatabase.forTesting(
+        database,
+        accountScope: AccountScope.forTesting(source),
+      );
+
+      await local.transferAccountData(source, target);
+
+      final moved = await database.query(
+        'outbox',
+        where: 'owner_id = ? AND entity_type = ?',
+        whereArgs: const <Object?>[target, 'announcement_receipt'],
+      );
+      expect(moved.single['operation_id'], 'mark-1');
+      expect(jsonDecode(moved.single['payload']! as String), <String, Object?>{
+        'announcement_id': 'announcement-1',
+        'read': true,
+        'wave': 2,
+      });
+    });
+
     test(
       'confirmed transfer is copy-first, preserves newer target rows, resets '
       'cursor, and finalizes source separately',

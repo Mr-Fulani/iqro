@@ -7449,21 +7449,111 @@ svg.track-surah-name-ar {
   color: var(--primary);
 }
 
-/* The bubble lives in the phone header only. */
+/* The bubble floats over the phone home screen, in a layer of its own between
+   the header and the bottom navigation: it takes no room in the page and lets
+   taps through everywhere but on itself. Same sizes and path as the app's
+   AnnouncementBubble: 68 px, a 46 px face, a 22 px badge.
+   Its centre keeps 46 px (8 + radius 34 + badge 4) from the edges, so the free
+   range is (100% − 92 px) each way. In those terms, with u = 1 at the inline
+   end and v = 0 at the top, it starts in the top end corner and moves as
+     u = 0.65 + 0.35·(0.6·cos(2πt/16) + 0.4·cos(2πt/9))
+     v = 0.25·(1 − (0.6·cos(2πt/12) + 0.4·cos(2πt/14.4)))
+   Each cosine is a layer going there and back over half its period with the
+   ease-in-out-sine curve, which follows a cosine within 1 %. All periods divide
+   144 s, so the path closes without a jerk. Transform only; still under
+   reduced motion; paused while focused, so the focus ring stays put. */
+.announcement-float {
+  --float-dir: -1;
+  --float-ease: cubic-bezier(0.37, 0, 0.63, 1);
+  position: fixed;
+  z-index: 80;
+  inset: calc(env(safe-area-inset-top, 0px) + 72px) 0 calc(var(--mobile-nav-space, 64px) + 8px);
+  display: none;
+  container-type: size;
+  pointer-events: none;
+}
+
+[dir="rtl"] .announcement-float {
+  --float-dir: 1;
+}
+
+.announcement-float-u1 {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  width: 68px;
+  height: 68px;
+  animation: announcement-float-u1 8s var(--float-ease) infinite alternate;
+}
+
+.announcement-float-u2 {
+  animation: announcement-float-u2 4.5s var(--float-ease) infinite alternate;
+}
+
+.announcement-float-v1 {
+  animation: announcement-float-v1 6s var(--float-ease) infinite alternate;
+}
+
+.announcement-float-v2 {
+  animation: announcement-float-v2 7.2s var(--float-ease) infinite alternate;
+}
+
+.announcement-float-u2,
+.announcement-float-v1,
+.announcement-float-v2,
+.announcement-bubble-slot {
+  width: 68px;
+  height: 68px;
+}
+
+/* The drift starts once the bubble has risen and bobbed in its corner. */
+.announcement-float.is-entering :is(.announcement-float-u1, .announcement-float-u2, .announcement-float-v1, .announcement-float-v2) {
+  animation-delay: 2.2s;
+}
+
 .announcement-bubble-slot {
   position: relative;
-  display: none;
-  width: 52px;
-  height: 52px;
-  flex: none;
+  pointer-events: auto;
+}
+
+.announcement-float:focus-within
+  :is(.announcement-float-u1, .announcement-float-u2, .announcement-float-v1, .announcement-float-v2, .announcement-bubble:not(.is-popping)) {
+  animation-play-state: paused;
+}
+
+@media (hover: hover) {
+  .announcement-float:hover
+    :is(.announcement-float-u1, .announcement-float-u2, .announcement-float-v1, .announcement-float-v2, .announcement-bubble:not(.is-popping)) {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes announcement-float-u1 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(var(--float-dir) * 0.42 * (100cqw - 92px))); }
+}
+
+@keyframes announcement-float-u2 {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(var(--float-dir) * 0.28 * (100cqw - 92px))); }
+}
+
+@keyframes announcement-float-v1 {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(0.3 * (100cqh - 92px))); }
+}
+
+@keyframes announcement-float-v2 {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(0.2 * (100cqh - 92px))); }
 }
 
 .announcement-bubble {
   position: relative;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 68px;
+  height: 68px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -7474,8 +7564,17 @@ svg.track-surah-name-ar {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.85),
     inset -5px -7px 12px rgba(11, 93, 74, 0.22),
+    0 0 10px rgba(52, 211, 153, 0.35),
     0 8px 18px rgba(7, 62, 52, 0.2);
-  animation: announcement-bob 3.4s ease-in-out infinite;
+  animation: announcement-breathe 1.8s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+}
+
+/* The first time it shows in a visit: rise, two big bobs, then it breathes. */
+.announcement-bubble.is-entering {
+  animation:
+    announcement-rise 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    announcement-bob-big 0.8s ease-in-out 0.6s 2,
+    announcement-breathe 1.8s cubic-bezier(0.37, 0, 0.63, 1) 2.2s infinite alternate;
 }
 
 .announcement-bubble:focus-visible {
@@ -7486,13 +7585,12 @@ svg.track-surah-name-ar {
 .announcement-bubble-rim {
   position: absolute;
   inset: -1px;
-  padding: 2.5px;
+  padding: 3.5px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, #91d7c3, #f3d7a1, #c4b5fd, #7dd3fc, #91d7c3);
+  background: conic-gradient(from 0deg, #34d399, #fbbf24, #a78bfa, #38bdf8, #34d399);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: 0.9;
   pointer-events: none;
   animation: announcement-spin 5s linear infinite;
 }
@@ -7500,12 +7598,12 @@ svg.track-surah-name-ar {
 .announcement-bubble-face {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   overflow: hidden;
   border-radius: 50%;
   background: radial-gradient(circle at 32% 26%, #6ee7b7 0%, #059669 45%, #064e3b 100%);
-  color: #ecfdf5;
+  color: #ffffff;
   box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8);
 }
 
@@ -7517,19 +7615,20 @@ svg.track-surah-name-ar {
 
 .announcement-bubble-count {
   position: absolute;
-  top: -3px;
-  inset-inline-end: -3px;
+  top: -4px;
+  inset-inline-end: -4px;
   display: grid;
   place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
   border: 2px solid var(--bg);
   border-radius: var(--radius-full);
   background: var(--accent-gold);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .announcement-bubble.is-popping {
@@ -7557,16 +7656,27 @@ svg.track-surah-name-ar {
   animation: announcement-drop 0.38s ease-out forwards;
 }
 
-.announcement-bubble-burst .drop-1 { --dx: -30px; --dy: -22px; }
-.announcement-bubble-burst .drop-2 { --dx: 30px; --dy: -24px; }
-.announcement-bubble-burst .drop-3 { --dx: -34px; --dy: 16px; }
-.announcement-bubble-burst .drop-4 { --dx: 32px; --dy: 20px; }
-.announcement-bubble-burst .drop-5 { --dx: 0px; --dy: -36px; background: #f3d7a1; }
-.announcement-bubble-burst .drop-6 { --dx: -4px; --dy: 34px; background: #c4b5fd; }
+.announcement-bubble-burst .drop-1 { --dx: -39px; --dy: -29px; }
+.announcement-bubble-burst .drop-2 { --dx: 39px; --dy: -31px; }
+.announcement-bubble-burst .drop-3 { --dx: -44px; --dy: 21px; }
+.announcement-bubble-burst .drop-4 { --dx: 42px; --dy: 26px; }
+.announcement-bubble-burst .drop-5 { --dx: 0px; --dy: -47px; background: #f3d7a1; }
+.announcement-bubble-burst .drop-6 { --dx: -5px; --dy: 44px; background: #c4b5fd; }
 
-@keyframes announcement-bob {
+@keyframes announcement-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
+}
+
+@keyframes announcement-rise {
+  0% { transform: translateY(12px) scale(0.4); opacity: 0; }
+  70% { transform: translateY(0) scale(1.1); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes announcement-bob-big {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-4px) scale(1.04); }
+  50% { transform: translateY(-8px) scale(1.08); }
 }
 
 @keyframes announcement-spin {
@@ -7859,19 +7969,15 @@ svg.track-surah-name-ar {
     display: none;
   }
 
-  .announcement-bubble-slot {
+  .announcement-float {
     display: block;
   }
 
+  /* Grows out of the point where the bubble was tapped (viewport coordinates). */
   .announcement-dialog--bubble {
     margin: 84px 12px auto;
-    transform-origin: calc(100% - 40px) -40px;
+    transform-origin: calc(var(--grow-x, 100vw) - 12px) calc(var(--grow-y, 0px) - 84px);
     animation: announcement-grow 0.36s cubic-bezier(0.2, 0.9, 0.25, 1.08) both;
-  }
-
-  [dir="rtl"] .announcement-dialog--bubble {
-    margin: 84px 12px auto;
-    transform-origin: 40px -40px;
   }
 
   .news-item {
@@ -7904,7 +8010,12 @@ svg.track-surah-name-ar {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .announcement-float-u1,
+  .announcement-float-u2,
+  .announcement-float-v1,
+  .announcement-float-v2,
   .announcement-bubble,
+  .announcement-bubble.is-entering,
   .announcement-bubble-rim,
   .announcement-bubble.is-popping,
   .announcement-bubble-burst,

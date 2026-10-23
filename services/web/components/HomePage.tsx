@@ -24,6 +24,7 @@ import {
   loadPrayerLocationPreference,
 } from "../lib/prayer-location";
 import { SurahNameArt } from "./SurahNameArt";
+import { AnnouncementBubble } from "./announcements/AnnouncementBubble";
 import { AnnouncementCard } from "./announcements/AnnouncementCard";
 import type { Announcement } from "../lib/announcements";
 
@@ -229,6 +230,7 @@ export default function HomePage({
       </section>
 
       <AnnouncementCard items={announcements} />
+      <AnnouncementBubble />
 
       <TodayReadingCard />
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
@@ -21,7 +22,16 @@ def _targets(executor: MigrationExecutor, migration: str) -> list[tuple[str, str
     ]
 
 
+@pytest.fixture
+def back_to_latest() -> Iterator[None]:
+    yield
+    # Later transactional tests expect every app at its latest migration.
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("back_to_latest")
 def test_announcements_published_before_waves_get_their_first_wave() -> None:
     executor = MigrationExecutor(connection)
     previous = _targets(executor, PREVIOUS_MIGRATION)

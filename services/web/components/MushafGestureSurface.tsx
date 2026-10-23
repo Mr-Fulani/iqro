@@ -46,8 +46,10 @@ export function MushafGestureSurface({ children, label, onTurnPage }: {
         suppressClick = true;
         return;
       }
-      // Ayahs support both a tap and a drag. Other controls keep their own input.
+      // Ayahs support both a tap and a drag. Other controls keep their own input,
+      // and so does the tajweed chip row under the sheet, which scrolls sideways.
       if (target.closest("button, a, input, select, [role='button']") && !target.closest("[data-ayah-key]")) return;
+      if (target.closest(".mushaf-tajweed-legend")) return;
       suppressClick = false;
       gesture = { source, id, x, y, time, axis: "pending", moved: false };
     };

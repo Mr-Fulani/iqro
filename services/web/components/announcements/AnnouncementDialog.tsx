@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { externalLink, type Announcement, type AnnouncementSurface } from "../../lib/announcements";
 import { useI18n } from "../../lib/i18n-context";
 import { IntentPrefetchLink } from "../IntentPrefetchLink";
@@ -9,15 +9,18 @@ import { AnnouncementBody, AnnouncementPicture, KIND_LABELS } from "./Announceme
 
 /**
  * The window of one or several announcements: from the bubble on a phone it
- * grows out of the bubble's corner; on a computer it is the step window.
+ * grows out of the point where the bubble was tapped; on a computer it is the
+ * step window.
  */
 export function AnnouncementDialog({
   items,
   surface,
+  origin = null,
   onClose,
 }: {
   items: Announcement[];
   surface: AnnouncementSurface;
+  origin?: { x: number; y: number } | null;
   onClose: () => void;
 }) {
   const { t, formatDate } = useI18n();
@@ -44,6 +47,7 @@ export function AnnouncementDialog({
     <dialog
       ref={dialog}
       className={`announcement-dialog announcement-dialog--${surface}`}
+      style={origin ? ({ "--grow-x": `${origin.x}px`, "--grow-y": `${origin.y}px` } as CSSProperties) : undefined}
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(event) => {
